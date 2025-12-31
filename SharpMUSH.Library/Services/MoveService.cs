@@ -22,17 +22,14 @@ public class MoveService(
 	/// </summary>
 	private static class MoveAttributes
 	{
-		// Enter hooks - triggered when entering a new location
 		public const string Enter = "ENTER";       // Seen by the object entering
 		public const string OEnter = "OENTER";     // Seen by others in the destination
 		public const string OXEnter = "OXENTER";   // Seen by the object entering (from others' perspective)
 		
-		// Leave hooks - triggered when leaving a location
 		public const string Leave = "LEAVE";       // Seen by the object leaving
 		public const string OLeave = "OLEAVE";     // Seen by others in the old location
 		public const string OXLeave = "OXLEAVE";   // Seen by the object leaving (from others' perspective)
 		
-		// Teleport hooks - triggered on teleportation specifically
 		public const string OTeleport = "OTELEPORT";   // Seen by others in destination
 		public const string OXTeleport = "OXTELEPORT"; // Seen by the teleported object
 	}
@@ -43,44 +40,34 @@ public class MoveService(
 	/// </summary>
 	public async ValueTask<bool> WouldCreateLoop(AnySharpContent objectToMove, AnySharpContainer destination)
 	{
-		// If we're not moving into a container, no loop is possible
 		if (!destination.IsThing && !destination.IsPlayer)
 		{
 			return false;
 		}
 
-		// Get the object's DBRef for comparison
 		var objectDBRef = objectToMove.Object().DBRef;
 		
-		// Traverse up the containment chain from the destination
-		// If we find the object we're trying to move, it would create a loop
 		var current = destination;
 		var visited = new HashSet<string> { current.Object().DBRef.ToString() };
 		
 		while (true)
 		{
-			// Check if the current container is the object we're trying to move
 			if (current.Object().DBRef.Equals(objectDBRef))
 			{
 				return true; // Found a loop
 			}
 			
-			// Get the location of the current container
 			var location = await current.Match<ValueTask<AnySharpContainer>>(
 				async player => await player.Location.WithCancellation(CancellationToken.None),
 				room => ValueTask.FromResult<AnySharpContainer>(room),
 				async thing => await thing.Location.WithCancellation(CancellationToken.None)
 			);
 			
-			// If we've reached a room (rooms don't have locations other than themselves)
-			// or if we've already visited this location (another way to detect loops),
-			// we're done and no loop exists
 			if (location.IsRoom || visited.Contains(location.Object().DBRef.ToString()))
 			{
 				return false;
 			}
 			
-			// Continue traversing up the chain
 			visited.Add(location.Object().DBRef.ToString());
 			current = location;
 		}
@@ -102,7 +89,6 @@ public class MoveService(
 		var destObj = destination.Object();
 		var enactorRef = enactor ?? targetObj.DBRef;
 		
-		// Get enactor object for permission checks
 		var enactorQuery = await mediator.Send(new GetObjectNodeQuery(enactorRef));
 		if (enactorQuery.IsNone)
 		{
@@ -199,7 +185,6 @@ public class MoveService(
 		AnySharpContent objectToMove,
 		AnySharpContainer destination)
 	{
-		// Convert to AnySharpObject for permission checks
 		var target = objectToMove.Match<AnySharpObject>(
 			player => player,
 			exit => exit,
@@ -210,19 +195,16 @@ public class MoveService(
 			room => room,
 			thing => thing);
 		
-		// Check if the enactor controls the object being moved
 		if (!await permissionService.Controls(who, target))
 		{
 			return false;
 		}
 		
-		// Check ENTER lock on the destination
 		if (!permissionService.PassesLock(who, dest, LockType.Enter))
 		{
 			return false;
 		}
 		
-		// If moving from a location, check LEAVE lock on current location
 		var currentLocation = await objectToMove.Match<ValueTask<DBRef?>>(
 			async player =>
 			{

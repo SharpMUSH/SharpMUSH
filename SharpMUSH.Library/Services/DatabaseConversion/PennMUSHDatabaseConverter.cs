@@ -119,7 +119,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			ReportProgress("Creating objects", 0.0);
 			
-			// First pass: Create all objects without relationships (25% of work)
 			var objectCounts = await CreateObjectsAsync(pennDatabase, errors, warnings, cancellationToken);
 			playersConverted = objectCounts.players;
 			roomsConverted = objectCounts.rooms;
@@ -127,15 +126,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			exitsConverted = objectCounts.exits;
 			ReportProgress("Objects created", 0.25);
 
-			// Second pass: Set up relationships (25% of work)
 			await EstablishRelationshipsAsync(pennDatabase, errors, warnings, cancellationToken);
 			ReportProgress("Relationships established", 0.50);
 
-			// Third pass: Create attributes (25% of work)
 			attributesConverted = await CreateAttributesAsync(pennDatabase, errors, warnings, cancellationToken);
 			ReportProgress("Attributes created", 0.75);
 
-			// Fourth pass: Set up locks (25% of work)
 			locksConverted = await CreateLocksAsync(pennDatabase, errors, warnings, cancellationToken);
 			ReportProgress("Locks created", 1.0);
 
