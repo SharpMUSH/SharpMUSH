@@ -33,8 +33,8 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allhalt"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("All objects halted")));
 	}
 
 	[Test]
@@ -214,8 +214,8 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("poll") || s.Value.ToString()!.Contains("Poll")));
 	}
 
 	[Test]
@@ -373,7 +373,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Purge complete") || s.Value.ToString()!.Contains("GOING_TWICE")));
 	}
 
 	[Test]
@@ -383,7 +383,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("startup")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("startup") || s.Value.ToString()!.Contains("SharpMUSH loads")));
 	}
 
 	[Test]
@@ -393,7 +393,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("SHUTDOWN") || s.Contains("web application")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("SHUTDOWN") || s.Value.ToString()!.Contains("web") || s.Value.ToString()!.Contains("orchestration")));
 	}
 
 	[Test]
@@ -403,7 +403,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("REBOOT") || s.Contains("web")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("REBOOT") || s.Value.ToString()!.Contains("web") || s.Value.ToString()!.Contains("orchestration")));
 	}
 
 	[Test]
@@ -415,7 +415,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Permission denied") || s.Value.ToString()!.Contains("objects") || s.Value.ToString()!.Contains("ownership")));
 	}
 
 	[Test]
@@ -426,29 +426,29 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Suggestion categories") || s.Value.ToString()!.Contains("No suggestion categories")));
 	}
 
 	[Test]
 	[DependsOn(nameof(SuggestListCommand))]
 	public async ValueTask SuggestAddCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/add test=word"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/add testcat547=testword923"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("Added")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Added 'testword923' to category 'testcat547'")));
 	}
 
 	[Test]
 	[DependsOn(nameof(SuggestAddCommand))]
 	public async ValueTask PollSetCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll Test poll message"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll TestPollMessage897"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("set") || s.Contains("Permission")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Poll message set") || s.Value.ToString()!.Contains("Permission")));
 	}
 
 	[Test]
@@ -459,7 +459,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<string>(s => s.Contains("cleared") || s.Contains("Permission")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Poll message cleared") || s.Value.ToString()!.Contains("Permission")));
 	}
 
 

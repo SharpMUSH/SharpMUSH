@@ -1,6 +1,7 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Pages.Admin;
 using SharpMUSH.Library.ExpandedObjectData;
@@ -14,12 +15,17 @@ namespace SharpMUSH.Tests.Client.Components;
 /// </summary>
 public class SuggestionManagementTests : MudBlazorTestContext
 {
+	private void SetupHttpClient(SuggestionData data, int delayMs = 0)
+	{
+		var httpClient = CreateMockHttpClient(data, delayMs);
+		Services.AddScoped(_ => httpClient);
+	}
+
 	[Test]
 	public async Task SuggestionManagement_InitialLoad_DisplaysEmptyState()
 	{
 		// Arrange
-		var httpClient = CreateMockHttpClient(new SuggestionData());
-		Services.AddScoped(_ => httpClient);
+		SetupHttpClient(new SuggestionData());
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -33,17 +39,14 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_WithCategories_DisplaysCategoryList()
 	{
 		// Arrange
-		var suggestionData = new SuggestionData
+		SetupHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
 				{ "commands", new HashSet<string> { "@create", "@destroy", "@dig" } },
 				{ "functions", new HashSet<string> { "add", "sub" } }
 			}
-		};
-		
-		var httpClient = CreateMockHttpClient(suggestionData);
-		Services.AddScoped(_ => httpClient);
+		});
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -58,17 +61,14 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_Statistics_DisplaysCorrectCounts()
 	{
 		// Arrange
-		var suggestionData = new SuggestionData
+		SetupHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
 				{ "commands", new HashSet<string> { "@create", "@destroy", "@dig" } },
 				{ "functions", new HashSet<string> { "add", "sub" } }
 			}
-		};
-		
-		var httpClient = CreateMockHttpClient(suggestionData);
-		Services.AddScoped(_ => httpClient);
+		});
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -89,16 +89,13 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_ClickRefresh_ReloadsData()
 	{
 		// Arrange
-		var suggestionData = new SuggestionData
+		SetupHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
 				{ "commands", new HashSet<string> { "@create" } }
 			}
-		};
-		
-		var httpClient = CreateMockHttpClient(suggestionData);
-		Services.AddScoped(_ => httpClient);
+		});
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -119,8 +116,7 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_Title_DisplaysCorrectly()
 	{
 		// Arrange
-		var httpClient = CreateMockHttpClient(new SuggestionData());
-		Services.AddScoped(_ => httpClient);
+		SetupHttpClient(new SuggestionData());
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -134,8 +130,7 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_Description_DisplaysCorrectly()
 	{
 		// Arrange
-		var httpClient = CreateMockHttpClient(new SuggestionData());
-		Services.AddScoped(_ => httpClient);
+		SetupHttpClient(new SuggestionData());
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -149,8 +144,7 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_HasAddCategoryButton()
 	{
 		// Arrange
-		var httpClient = CreateMockHttpClient(new SuggestionData());
-		Services.AddScoped(_ => httpClient);
+		SetupHttpClient(new SuggestionData());
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -164,8 +158,7 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_HasRefreshButton()
 	{
 		// Arrange
-		var httpClient = CreateMockHttpClient(new SuggestionData());
-		Services.AddScoped(_ => httpClient);
+		SetupHttpClient(new SuggestionData());
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -179,7 +172,7 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_WithMultipleCategories_DisplaysAllCategories()
 	{
 		// Arrange
-		var suggestionData = new SuggestionData
+		SetupHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
@@ -187,10 +180,7 @@ public class SuggestionManagementTests : MudBlazorTestContext
 				{ "functions", new HashSet<string> { "add" } },
 				{ "help", new HashSet<string> { "intro" } }
 			}
-		};
-		
-		var httpClient = CreateMockHttpClient(suggestionData);
-		Services.AddScoped(_ => httpClient);
+		});
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -209,16 +199,13 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_CategoryWithWords_DisplaysWordCount()
 	{
 		// Arrange
-		var suggestionData = new SuggestionData
+		SetupHttpClient(new SuggestionData
 		{
 			Categories = new Dictionary<string, HashSet<string>>
 			{
 				{ "commands", new HashSet<string> { "@create", "@destroy", "@dig", "@emit" } }
 			}
-		};
-		
-		var httpClient = CreateMockHttpClient(suggestionData);
-		Services.AddScoped(_ => httpClient);
+		});
 
 		// Act
 		var cut = Render<SuggestionManagement>();
@@ -236,8 +223,7 @@ public class SuggestionManagementTests : MudBlazorTestContext
 	public async Task SuggestionManagement_LoadingState_ShowsProgressIndicator()
 	{
 		// Arrange
-		var httpClient = CreateMockHttpClient(new SuggestionData(), delayMs: 1000);
-		Services.AddScoped(_ => httpClient);
+		SetupHttpClient(new SuggestionData(), delayMs: 1000);
 
 		// Act
 		var cut = Render<SuggestionManagement>();
