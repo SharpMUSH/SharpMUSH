@@ -2384,6 +2384,96 @@ public partial class ArangoDatabase(
 		}
 	}
 
+	public async IAsyncEnumerable<SharpObject> GetFilteredObjectsAsync(ObjectSearchFilter filter, [EnumeratorCancellation] CancellationToken ct = default)
+	{
+		// Build AQL query with filters applied at database level
+		var filters = new List<string>();
+		var bindVars = new Dictionary<string, object>();
+
+		// Type filter
+		if (filter.Types != null && filter.Types.Length > 0)
+		{
+			filters.Add("v.Type IN @types");
+			bindVars["types"] = filter.Types;
+		}
+
+		// Name pattern filter (case-insensitive substring match)
+		if (!string.IsNullOrEmpty(filter.NamePattern))
+		{
+			filters.Add("CONTAINS(LOWER(v.Name), LOWER(@namePattern))");
+			bindVars["namePattern"] = filter.NamePattern;
+		}
+
+		// DBRef range filters
+		if (filter.MinDbRef.HasValue)
+		{
+			filters.Add("TO_NUMBER(v._key) >= @minDbRef");
+			bindVars["minDbRef"] = filter.MinDbRef.Value;
+		}
+		if (filter.MaxDbRef.HasValue)
+		{
+			filters.Add("TO_NUMBER(v._key) <= @maxDbRef");
+			bindVars["maxDbRef"] = filter.MaxDbRef.Value;
+		}
+
+		// Owner filter - requires traversing the HasObjectOwner edge
+		if (filter.Owner.HasValue)
+		{
+			filters.Add($@"LENGTH(FOR owner IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphObjectOwners}' 
+				FILTER owner._key == @ownerKey 
+				RETURN 1) > 0");
+			bindVars["ownerKey"] = filter.Owner.Value.Number.ToString();
+		}
+
+		// Zone filter - requires checking zone relationship
+		if (filter.Zone.HasValue)
+		{
+			filters.Add($@"LENGTH(FOR zone IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphZones}' 
+				FILTER zone._key == @zoneKey 
+				RETURN 1) > 0");
+			bindVars["zoneKey"] = filter.Zone.Value.Number.ToString();
+		}
+
+		// Parent filter - requires checking parent relationship
+		if (filter.Parent.HasValue)
+		{
+			filters.Add($@"LENGTH(FOR parent IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphParents}' 
+				FILTER parent._key == @parentKey 
+				RETURN 1) > 0");
+			bindVars["parentKey"] = filter.Parent.Value.Number.ToString();
+		}
+
+		// Flag filter - requires checking flags array
+		if (!string.IsNullOrEmpty(filter.HasFlag))
+		{
+			filters.Add("@flagName IN v.Flags[*].Name");
+			bindVars["flagName"] = filter.HasFlag;
+		}
+
+		// Power filter - requires checking powers array
+		if (!string.IsNullOrEmpty(filter.HasPower))
+		{
+			filters.Add("@powerName IN v.Powers[*].Name");
+			bindVars["powerName"] = filter.HasPower;
+		}
+
+		// Build the complete query
+		var filterClause = filters.Count > 0 ? $"FILTER {string.Join(" AND ", filters)}" : "";
+		var query = $"FOR v IN {DatabaseConstants.Objects:@} {filterClause} RETURN v._id";
+
+		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle, query, bindVars, cancellationToken: ct) 
+			?? AsyncEnumerable.Empty<string>();
+
+		await foreach (var id in objectIds.WithCancellation(ct))
+		{
+			var optionalObj = await GetObjectNodeAsync(id, ct);
+			if (!optionalObj.IsNone)
+			{
+				yield return optionalObj.Known.Object();
+			}
+		}
+	}
+
 	public async IAsyncEnumerable<SharpPlayer> GetAllPlayersAsync([EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var playerIds = arangoDb.Query.ExecuteStreamAsync<string>(handle,

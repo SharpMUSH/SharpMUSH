@@ -442,6 +442,16 @@ public interface ISharpDatabase
 	IAsyncEnumerable<SharpObject> GetAllObjectsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Get objects from the database with filtering applied at the database level.
+	/// This is more efficient than loading all objects and filtering in application code.
+	/// Lock evaluation must happen in application code, but other filters can be pushed to the database.
+	/// </summary>
+	/// <param name="filter">Filter criteria to apply at database level</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>An async enumerable of filtered SharpObjects</returns>
+	IAsyncEnumerable<SharpObject> GetFilteredObjectsAsync(ObjectSearchFilter filter, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Gets all players in the database as a streaming AsyncEnumerable.
 	/// This allows for efficient processing of all players without loading them all into memory.
 	/// </summary>
