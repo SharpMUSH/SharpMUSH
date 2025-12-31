@@ -335,14 +335,12 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		
-		// Check permissions - God-level command
 		if (!executor.IsGod())
 		{
 			await NotifyService!.Notify(executor, "Permission denied.");
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 		
-		// Determine log type and action
 		var logTypes = new[] { "CMD", "CONN", "ERR", "TRACE", "WIZ" };
 		var actions = new[] { "ROTATE", "TRIM", "WIPE", "CHECK" };
 		
@@ -351,7 +349,6 @@ public partial class Commands
 		
 		if (specifiedLogType == null && specifiedAction == "CHECK")
 		{
-			// Show current log status
 			await NotifyService!.Notify(executor, "Log Management Status:");
 			await NotifyService!.Notify(executor, "  SharpMUSH uses .NET logging infrastructure");
 			await NotifyService!.Notify(executor, "  Logs are managed by configured logging providers");
@@ -380,11 +377,9 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		
-		// Parse: @lset <object>/<lock type>=[!]<flag>
 		var objectLock = args["0"].Message!.ToPlainText();
 		var flagValue = args["1"].Message!.ToPlainText();
 		
-		// Split object/locktype
 		var slashIndex = objectLock.LastIndexOf('/');
 		if (slashIndex == -1)
 		{
@@ -395,23 +390,19 @@ public partial class Commands
 		var objectName = objectLock[..slashIndex];
 		var lockType = objectLock[(slashIndex + 1)..];
 		
-		// Determine if we're setting or clearing the flag
 		var isClearing = flagValue.StartsWith('!');
 		var flagName = isClearing ? flagValue[1..] : flagValue;
 		
-		// Validate flag name
 		if (!LockService!.LockPrivileges.TryGetValue(flagName.ToLower(), out var flagInfo))
 		{
 			await NotifyService!.Notify(executor, $"Invalid flag: {flagName}");
 			return new CallState("#-1 INVALID FLAG");
 		}
 		
-		// Locate the object
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,
 			async obj =>
 			{
-				// Check permissions
 				if (!await PermissionService!.Controls(executor, obj))
 				{
 					return await NotifyService!.NotifyAndReturn(
@@ -421,14 +412,12 @@ public partial class Commands
 						shouldNotify: true);
 				}
 				
-				// Check if lock exists
 				if (!obj.Object().Locks.TryGetValue(lockType, out var lockData))
 				{
 					await NotifyService!.Notify(executor, $"No such lock: {lockType}");
 					return new CallState("#-1 NO SUCH LOCK");
 				}
 				
-				// Update the lock flags
 				var currentFlags = lockData.Flags;
 				var newFlags = isClearing 
 					? currentFlags & ~flagInfo.Item2  // Clear the flag

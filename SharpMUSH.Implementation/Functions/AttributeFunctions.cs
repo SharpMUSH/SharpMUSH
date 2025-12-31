@@ -404,7 +404,6 @@ public partial class Functions
 					return attributes.AsError;
 				}
 
-				// Filter attributes whose values contain the substring
 				var matchingAttrs = new List<string>();
 				var comparison = caseInsensitive 
 					? StringComparison.OrdinalIgnoreCase 

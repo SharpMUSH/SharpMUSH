@@ -145,18 +145,15 @@ public partial class Commands
 		var list = MModule.split(" ", parser.CurrentState.Arguments["0"].Message!);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
-		// Check if we should run inline or queue
 		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
 
 		if (isInline)
 		{
-			// Inline execution - run immediately (original behavior)
 			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
 			var wrappedIteration = new IterationWrapper<MString>
 				{ Value = MModule.empty(), Break = false, NoBreak = noBreak, Iteration = 0 };
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
-			// Use context-based batching that batches notifications to any target
 			using (NotifyService!.BeginBatchingContext())
 			{
 				var lastCallState = CallState.Empty;
@@ -187,7 +184,6 @@ public partial class Commands
 		}
 		else
 		{
-			// Default behavior - queue each iteration with proper iteration context
 			var iteration = 0u;
 			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
 			
@@ -195,7 +191,6 @@ public partial class Commands
 			{
 				iteration++;
 				
-				// Create iteration context for this queued command
 				var iterationWrapper = new IterationWrapper<MString>
 				{
 					Value = item!,
@@ -204,7 +199,6 @@ public partial class Commands
 					Iteration = iteration
 				};
 				
-				// Clone the current parser state and add the iteration context
 				var iterationStack = new ConcurrentStack<IterationWrapper<MString>>();
 				iterationStack.Push(iterationWrapper);
 				
@@ -213,7 +207,6 @@ public partial class Commands
 					IterationRegisters = iterationStack
 				};
 				
-				// Queue each iteration as a separate command with its iteration context
 				await Mediator!.Send(new QueueCommandListRequest(
 					command,
 					stateForIteration,
@@ -807,14 +800,11 @@ public partial class Commands
 
 		var exitObj = exit.AsExit;
 		
-		// Check if the exit has a DESTINATION attribute (variable exit)
-		// Variable exits have home set to #-1 and use DESTINATION attribute
 		var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
 		AnySharpContainer destination;
 		
 		if (homeLocation.Object().DBRef.Number == -1)
 		{
-			// This is a variable exit - check for DESTINATION attribute
 			var destAttr = await AttributeService!.GetAttributeAsync(
 				executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
 			
@@ -825,7 +815,6 @@ public partial class Commands
 			}
 			
 			var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
-			// Locate the destination
 			var located = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
@@ -839,7 +828,6 @@ public partial class Commands
 				return CallState.Empty;
 			}
 			
-			// Get the actual object and ensure it's a container (room, thing, or player)
 			var locatedObj = located.WithoutError().WithoutNone();
 			if (!locatedObj.IsContainer)
 			{
@@ -851,7 +839,6 @@ public partial class Commands
 		}
 		else
 		{
-			// Regular exit - use home
 			destination = homeLocation;
 		}
 
@@ -861,7 +848,6 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Check for containment loops before moving
 		if (await MoveService!.WouldCreateLoop(executor.AsContent, destination))
 		{
 			await NotifyService!.Notify(executor, "You can't go that way - it would create a containment loop.");
@@ -1094,7 +1080,6 @@ public partial class Commands
 			return new CallState("#-1 NO TARGET SPECIFIED");
 		}
 		
-		// Locate the target object
 		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
 			executor,
@@ -1109,7 +1094,6 @@ public partial class Commands
 		
 		var target = maybeTarget.WithoutError().WithoutNone();
 		
-		// Check permissions - need to control the object OR have HALT power
 		var hasHaltPower = await executor.HasPower("HALT");
 		var canHalt = await PermissionService!.Controls(executor, target) || 
 		              await executor.IsWizard() || hasHaltPower;
@@ -1124,13 +1108,10 @@ public partial class Commands
 		var hasReplacementActions = args.Count >= 2;
 		var replacementActions = hasReplacementActions ? args["1"].Message : null;
 		
-		// For players - halt player and all owned objects
 		if (target.IsPlayer)
 		{
-			// Halt the player
 			await scheduler.Halt(targetObject.DBRef);
 			
-			// Halt all objects owned by the player
 			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
@@ -1149,18 +1130,15 @@ public partial class Commands
 		}
 		else
 		{
-			// Halt the object
 			await scheduler.Halt(targetObject.DBRef);
 			
 			if (hasReplacementActions)
 			{
-				// Queue replacement actions instead of setting HALT flag
 				await scheduler.WriteCommandList(replacementActions!, parser.CurrentState);
 				await NotifyService!.Notify(executor, $"Halted {targetObject.Name} with replacement actions.");
 			}
 			else
 			{
-				// Set HALT flag on the object
 				var haltFlag = await Mediator!.Send(new GetObjectFlagQuery("HALT"));
 				if (haltFlag != null)
 				{
@@ -3627,7 +3605,6 @@ public partial class Commands
 				error => "FugueEdit > ");
 		}
 		
-		// Split object/attribute pattern
 		string? attributePattern = null;
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec);
 		AnyOptionalSharpObject target;
@@ -3679,7 +3656,6 @@ public partial class Commands
 		
 		var targetKnown = target.Known();
 		
-		// Check permission to examine/decompile
 		var canExamine = await PermissionService!.CanExamine(executor, targetKnown);
 		if (!canExamine)
 		{
@@ -3695,7 +3671,6 @@ public partial class Commands
 		var skipDefaults = switches.Contains("SKIPDEFAULTS");
 		var isTf = switches.Contains("TF");
 		
-		// If attribute pattern is provided, only show attributes
 		if (!string.IsNullOrEmpty(attributePattern))
 		{
 			showFlags = false;
@@ -3705,7 +3680,6 @@ public partial class Commands
 		var objectRef = useDbRef ? $"#{obj.DBRef.Number}" : obj.Name;
 		var outputs = new List<string>();
 		
-		// Output flags section if requested
 		if (showFlags)
 		{
 			// @create command based on object type
@@ -3719,11 +3693,9 @@ public partial class Commands
 			};
 			outputs.Add($"{prefix}{createCmd}");
 			
-			// Set flags
 			var flags = await obj.Flags.Value.ToArrayAsync();
 			foreach (var flag in flags)
 			{
-				// Skip default flags if requested
 				if (skipDefaults && IsDefaultFlag(obj.Type, flag.Name))
 				{
 					continue;
@@ -3731,21 +3703,18 @@ public partial class Commands
 				outputs.Add($"{prefix}@set {objectRef}={flag.Name}");
 			}
 			
-			// Set powers
 			var powers = await obj.Powers.Value.ToArrayAsync();
 			foreach (var power in powers)
 			{
 				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
 			}
 			
-			// Set locks
 			foreach (var lockEntry in obj.Locks)
 			{
 				var lockName = lockEntry.Key;
 				var lockData = lockEntry.Value;
 				var lockValue = lockData.LockString;
 				
-				// For basic lock, use @lock without slash
 				if (lockName.Equals("Basic", StringComparison.OrdinalIgnoreCase))
 				{
 					outputs.Add($"{prefix}@lock {objectRef}={lockValue}");
@@ -3759,10 +3728,8 @@ public partial class Commands
 			// TODO: Set parent if not default
 		}
 		
-		// Output attributes section if requested
 		if (showAttribs)
 		{
-			// Get attributes
 			SharpAttributesOrError atrs;
 			if (!string.IsNullOrEmpty(attributePattern))
 			{
