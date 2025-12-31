@@ -5154,15 +5154,20 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var uptimeData = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
 
-		var result = MModule.multipleWithDelimiter(
-			MModule.single("\n"),
-			[
-				MModule.concat(MModule.single("You are connected to "),
-					MModule.single(Configuration!.CurrentValue.Net.MudName)),
-				MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
-				MModule.single("SharpMUSH version 0"),
-				MModule.single($"Last restarted: {uptimeData!.LastRebootTime:ddd MMM dd HH:mm:ss yyyy}")
-			]);
+		var lines = new List<MString>
+		{
+			MModule.concat(MModule.single("You are connected to "),
+				MModule.single(Configuration!.CurrentValue.Net.MudName)),
+			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
+			MModule.single("SharpMUSH version 0")
+		};
+
+		if (uptimeData != null)
+		{
+			lines.Add(MModule.single($"Last restarted: {uptimeData.LastRebootTime:ddd MMM dd HH:mm:ss yyyy}"));
+		}
+
+		var result = MModule.multipleWithDelimiter(MModule.single("\n"), lines.ToArray());
 
 		await NotifyService!.Notify(executor, result);
 
