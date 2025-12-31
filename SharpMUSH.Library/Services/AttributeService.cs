@@ -636,7 +636,6 @@ public class AttributeService(
 	/// <param name="patternMode"></param>
 	/// <param name="clearMode"></param>
 	/// <returns></returns>
-	/// <exception cref="NotImplementedException"></exception>
 	public async ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
