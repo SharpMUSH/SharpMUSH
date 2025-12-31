@@ -219,15 +219,67 @@ public partial class Functions
 		}
 
 		var exits = Mediator!.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
-		var entrances = new List<string>();
+		var entrances = new List<AnySharpObject>();
 
 		await foreach (var exit in exits)
 		{
-			entrances.Add(exit.Object.DBRef.ToString());
+			entrances.Add(exit);
 		}
 
-		// TODO: Implement type, start, and count filtering when arguments are provided
-		return new CallState(string.Join(" ", entrances));
+		// Parse type filter (default: all)
+		var typeFilter = "a";
+		if (args.TryGetValue("1", out var typeArg))
+		{
+			typeFilter = typeArg.Message!.ToPlainText()?.ToLower() ?? "a";
+		}
+
+		// Parse begin filter (default: 0)
+		var beginFilter = 0;
+		if (args.TryGetValue("2", out var beginArg))
+		{
+			if (int.TryParse(beginArg.Message!.ToPlainText(), out var begin))
+			{
+				beginFilter = begin;
+			}
+		}
+
+		// Parse end filter (default: int.MaxValue)
+		var endFilter = int.MaxValue;
+		if (args.TryGetValue("3", out var endArg))
+		{
+			if (int.TryParse(endArg.Message!.ToPlainText(), out var end))
+			{
+				endFilter = end;
+			}
+		}
+
+		// Filter by type and dbref range
+		var filtered = entrances.Where(entrance =>
+		{
+			var obj = entrance.Object();
+			var dbrefNum = obj.DBRef.Number;
+
+			// Filter by dbref range
+			if (dbrefNum < beginFilter || dbrefNum > endFilter)
+			{
+				return false;
+			}
+
+			// Filter by type
+			if (typeFilter.Contains('a'))
+			{
+				return true; // 'a' means all types
+			}
+
+			if (typeFilter.Contains('e') && entrance.IsExit) return true;
+			if (typeFilter.Contains('t') && entrance.IsThing) return true;
+			if (typeFilter.Contains('p') && entrance.IsPlayer) return true;
+			if (typeFilter.Contains('r') && entrance.IsRoom) return true;
+
+			return false;
+		}).Select(e => e.Object().DBRef.ToString());
+
+		return new CallState(string.Join(" ", filtered));
 	}
 
 	[SharpFunction(Name = "exit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -269,7 +321,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Followers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// followers() returns list of objects following the target
-		// Requires a following/follower tracking system which is not yet implemented
+		// Objects follow by setting their FOLLOWING attribute to the target's dbref
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -277,10 +329,28 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// TODO: Implement follower tracking system
-				// For now, return empty list
-				await ValueTask.CompletedTask;
-				return new CallState(string.Empty);
+				// Query all objects that have FOLLOWING attribute set to this object's dbref
+				var targetDbref = found.Object().DBRef.ToString();
+				var followers = new List<string>();
+				
+				// Get all objects and check their FOLLOWING attribute
+				var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
+				
+				await foreach (var obj in allObjects)
+				{
+					// Get the FOLLOWING attribute for this object
+					var objAttributes = obj.Attributes.Value;
+					await foreach (var attr in objAttributes)
+					{
+						if (attr.LongName == "FOLLOWING" && attr.Value.ToPlainText() == targetDbref)
+						{
+							followers.Add(obj.DBRef.ToString());
+							break;
+						}
+					}
+				}
+				
+				return new CallState(string.Join(" ", followers));
 			});
 	}
 
@@ -288,7 +358,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Following(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// following() returns the object that the target is following
-		// Requires a following/follower tracking system which is not yet implemented
+		// Objects track who they follow via the FOLLOWING attribute
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -296,9 +366,16 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// TODO: Implement following tracking system
-				// For now, return empty
-				await ValueTask.CompletedTask;
+				// Get the FOLLOWING attribute from the target object
+				var followingAttr = await AttributeService!.GetAttributeAsync(
+					executor, found, "FOLLOWING", IAttributeService.AttributeMode.Read, false);
+				
+				if (followingAttr.IsAttribute)
+				{
+					// Return the dbref stored in the FOLLOWING attribute
+					return new CallState(followingAttr.AsAttribute.Last().Value.ToPlainText());
+				}
+				
 				return new CallState(string.Empty);
 			});
 	}

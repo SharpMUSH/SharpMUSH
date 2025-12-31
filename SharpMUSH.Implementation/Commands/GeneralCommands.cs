@@ -667,8 +667,8 @@ public partial class Commands
 		}
 		else
 		{
-			// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
-			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
+			// Match PennMUSH date format: "ddd MMM dd HH:mm:ss yyyy"
+			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
 		}
 
 		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
@@ -1303,8 +1303,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> NoSpoofPrompt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Noisy, Silent, NoEval
-
+		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -1327,6 +1326,12 @@ public partial class Commands
 		}
 
 		await NotifyService!.Prompt(found, message, executor, INotifyService.NotificationType.NSEmit);
+
+		// SILENT: Don't notify the executor
+		if (!switches.Contains("SILENT"))
+		{
+			await NotifyService!.Notify(executor, $"You prompted {found.Object().Name}.");
+		}
 
 		return new CallState(message);
 	}
@@ -1498,8 +1503,8 @@ public partial class Commands
 		{
 			if (expr is null) break;
 
-			// TODO: Make this use a glob.
-			if (expr.Message! == strArg)
+			// Use wildcard/glob pattern matching
+			if (MModule.isWildcardMatch(strArg.Message!, expr.Message!))
 			{
 				matched = true;
 				// This is Inline.
@@ -3875,7 +3880,6 @@ public partial class Commands
 		MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Make NoEval work
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
@@ -5148,16 +5152,22 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Version(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var uptimeData = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
 
-		// TODO: Last Restarted
-		var result = MModule.multipleWithDelimiter(
-			MModule.single("\n"),
-			[
-				MModule.concat(MModule.single("You are connected to "),
-					MModule.single(Configuration!.CurrentValue.Net.MudName)),
-				MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
-				MModule.single("SharpMUSH version 0")
-			]);
+		var lines = new List<MString>
+		{
+			MModule.concat(MModule.single("You are connected to "),
+				MModule.single(Configuration!.CurrentValue.Net.MudName)),
+			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
+			MModule.single("SharpMUSH version 0")
+		};
+
+		if (uptimeData != null)
+		{
+			lines.Add(MModule.single($"Last restarted: {uptimeData.LastRebootTime:ddd MMM dd HH:mm:ss yyyy}"));
+		}
+
+		var result = MModule.multipleWithDelimiter(MModule.single("\n"), lines.ToArray());
 
 		await NotifyService!.Notify(executor, result);
 

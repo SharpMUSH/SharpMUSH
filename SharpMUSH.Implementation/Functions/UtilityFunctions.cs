@@ -74,9 +74,15 @@ public partial class Functions
 		{
 			var code = cde.AsSpan();
 			var curHilight = false;
-			if (code.StartsWith(['#']) || code.StartsWith("/#"))
+			if (code.StartsWith("/#"))
 			{
-				// TODO: Handle background.
+				// Handle background RGB color
+				background = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[2..].ToString()));
+				continue;
+			}
+			if (code.StartsWith(['#']))
+			{
+				// Handle foreground RGB color
 				foreground = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[1..].ToString()));
 				continue;
 			}

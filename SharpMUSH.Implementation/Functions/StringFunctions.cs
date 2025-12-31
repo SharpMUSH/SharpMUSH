@@ -1132,39 +1132,39 @@ public partial class Functions
 	/// </summary>
 	internal static string ConvertAnsiColorToCode(ANSI.AnsiColor color, bool isBackground = false)
 	{
-		// TODO: That's not how we do backgrounds here!
-		var prefix = ""; // isBackground ? "b" : "";
-
 		return color switch
 		{
-			ANSI.AnsiColor.RGB rgb => $"{prefix}{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}",
+			ANSI.AnsiColor.RGB rgb => isBackground 
+				? $"/{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}"
+				: $"{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}",
 			AnsiColor.ANSI ansi
 				=> ansi.Item switch
 				{
-					[0, 30] => $"{prefix}x", // black
-					[0, 31] => $"{prefix}r", // red  
-					[0, 32] => $"{prefix}g", // green
-					[0, 33] => $"{prefix}y", // yellow
-					[0, 34] => $"{prefix}b", // blue
-					[0, 35] => $"{prefix}m", // magenta
-					[0, 36] => $"{prefix}c", // cyan
-					[0, 37] => $"{prefix}w", // white
-					[1, 30] => $"{prefix}hx", // bright black
-					[1, 31] => $"{prefix}hr", // bright red  
-					[1, 32] => $"{prefix}hg", // bright green
-					[1, 33] => $"{prefix}hy", // bright yellow
-					[1, 34] => $"{prefix}hb", // bright blue
-					[1, 35] => $"{prefix}hm", // bright magenta
-					[1, 36] => $"{prefix}hc", // bright cyan
-					[1, 37] => $"{prefix}hw", // bright white
-					[.., 90] => $"{prefix}hx", // bright black
-					[.., 91] => $"{prefix}hr", // bright red
-					[.., 92] => $"{prefix}hg", // bright green
-					[.., 93] => $"{prefix}hy", // bright yellow
-					[.., 94] => $"{prefix}hb", // bright blue
-					[.., 95] => $"{prefix}hm", // bright magenta
-					[.., 96] => $"{prefix}hc", // bright cyan
-					[.., 97] => $"{prefix}hw", // bright white
+					// Background colors use uppercase, foreground uses lowercase
+					[0, 30] or [0, 40] => isBackground ? "X" : "x", // black
+					[0, 31] or [0, 41] => isBackground ? "R" : "r", // red
+					[0, 32] or [0, 42] => isBackground ? "G" : "g", // green
+					[0, 33] or [0, 43] => isBackground ? "Y" : "y", // yellow
+					[0, 34] or [0, 44] => isBackground ? "B" : "b", // blue
+					[0, 35] or [0, 45] => isBackground ? "M" : "m", // magenta
+					[0, 36] or [0, 46] => isBackground ? "C" : "c", // cyan
+					[0, 37] or [0, 47] => isBackground ? "W" : "w", // white
+					[1, 30] or [1, 40] => isBackground ? "hX" : "hx", // bright black
+					[1, 31] or [1, 41] => isBackground ? "hR" : "hr", // bright red
+					[1, 32] or [1, 42] => isBackground ? "hG" : "hg", // bright green
+					[1, 33] or [1, 43] => isBackground ? "hY" : "hy", // bright yellow
+					[1, 34] or [1, 44] => isBackground ? "hB" : "hb", // bright blue
+					[1, 35] or [1, 45] => isBackground ? "hM" : "hm", // bright magenta
+					[1, 36] or [1, 46] => isBackground ? "hC" : "hc", // bright cyan
+					[1, 37] or [1, 47] => isBackground ? "hW" : "hw", // bright white
+					[.., 90] or [.., 100] => isBackground ? "hX" : "hx", // bright black
+					[.., 91] or [.., 101] => isBackground ? "hR" : "hr", // bright red
+					[.., 92] or [.., 102] => isBackground ? "hG" : "hg", // bright green
+					[.., 93] or [.., 103] => isBackground ? "hY" : "hy", // bright yellow
+					[.., 94] or [.., 104] => isBackground ? "hB" : "hb", // bright blue
+					[.., 95] or [.., 105] => isBackground ? "hM" : "hm", // bright magenta
+					[.., 96] or [.., 106] => isBackground ? "hC" : "hc", // bright cyan
+					[.., 97] or [.., 107] => isBackground ? "hW" : "hw", // bright white
 					_ => ""
 				},
 			_ => ""
