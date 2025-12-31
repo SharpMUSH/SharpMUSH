@@ -321,7 +321,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Followers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// followers() returns list of objects following the target
-		// Requires a following/follower tracking system which is not yet implemented
+		// Objects follow by setting their FOLLOWING attribute to the target's dbref
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -329,10 +329,28 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// TODO: Implement follower tracking system
-				// For now, return empty list
-				await ValueTask.CompletedTask;
-				return new CallState(string.Empty);
+				// Query all objects that have FOLLOWING attribute set to this object's dbref
+				var targetDbref = found.Object().DBRef.ToString();
+				var followers = new List<string>();
+				
+				// Get all objects and check their FOLLOWING attribute
+				var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
+				
+				await foreach (var obj in allObjects)
+				{
+					// Get the FOLLOWING attribute for this object
+					var objAttributes = obj.Attributes.Value;
+					await foreach (var attr in objAttributes)
+					{
+						if (attr.LongName == "FOLLOWING" && attr.Value.ToPlainText() == targetDbref)
+						{
+							followers.Add(obj.DBRef.ToString());
+							break;
+						}
+					}
+				}
+				
+				return new CallState(string.Join(" ", followers));
 			});
 	}
 
@@ -340,7 +358,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Following(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// following() returns the object that the target is following
-		// Requires a following/follower tracking system which is not yet implemented
+		// Objects track who they follow via the FOLLOWING attribute
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -348,9 +366,16 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// TODO: Implement following tracking system
-				// For now, return empty
-				await ValueTask.CompletedTask;
+				// Get the FOLLOWING attribute from the target object
+				var followingAttr = await AttributeService!.GetAttributeAsync(
+					executor, found, "FOLLOWING", IAttributeService.AttributeMode.Read, false);
+				
+				if (followingAttr.IsAttribute)
+				{
+					// Return the dbref stored in the FOLLOWING attribute
+					return new CallState(followingAttr.AsAttribute.Last().Value.ToPlainText());
+				}
+				
 				return new CallState(string.Empty);
 			});
 	}

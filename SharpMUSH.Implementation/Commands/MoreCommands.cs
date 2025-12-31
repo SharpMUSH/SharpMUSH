@@ -854,8 +854,33 @@ public partial class Commands
 			await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
 				IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 			
-			// TODO: Clear all FOLLOWING attributes pointing to us
-			// This requires a database-wide query capability not yet available
+			// Clear all FOLLOWING attributes pointing to us
+			var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
+			var clearedCount = 0;
+			var executorDbref = executor.Object().DBRef.ToString();
+			
+			await foreach (var obj in allObjects)
+			{
+				var objAttributes = obj.Attributes.Value;
+				await foreach (var attr in objAttributes)
+				{
+					if (attr.LongName == "FOLLOWING" && attr.Value.ToPlainText() == executorDbref)
+					{
+						// Need to locate this object to clear its attribute
+						var locateResult = await LocateService!.Locate(parser, executor, executor, 
+							obj.DBRef.ToString(), LocateFlags.All);
+						if (locateResult.IsValid())
+						{
+							var objAny = locateResult.AsAnyObject;
+							await AttributeService!.ClearAttributeAsync(executor, objAny, "FOLLOWING",
+								IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+							clearedCount++;
+						}
+						break;
+					}
+				}
+			}
+			
 			await NotifyService!.Notify(executor, "You stop following and dismiss all followers.");
 			return CallState.Empty;
 		}
@@ -918,9 +943,35 @@ public partial class Commands
 		// If no argument given, dismiss everyone following us
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			// TODO: Iterate through all objects with FOLLOWING attribute pointing to us
-			// This requires a database-wide query capability not yet available
-			await NotifyService!.Notify(executor, "You dismiss all your followers.");
+			// Iterate through all objects with FOLLOWING attribute pointing to us
+			var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
+			var dismissedCount = 0;
+			var executorDbref = executor.Object().DBRef.ToString();
+			
+			await foreach (var obj in allObjects)
+			{
+				var objAttributes = obj.Attributes.Value;
+				await foreach (var attr in objAttributes)
+				{
+					if (attr.LongName == "FOLLOWING" && attr.Value.ToPlainText() == executorDbref)
+					{
+						// Need to locate this object to clear its attribute and notify it
+						var locateResult = await LocateService!.Locate(parser, executor, executor, 
+							obj.DBRef.ToString(), LocateFlags.All);
+						if (locateResult.IsValid())
+						{
+							var objAny = locateResult.AsAnyObject;
+							await AttributeService!.ClearAttributeAsync(executor, objAny, "FOLLOWING",
+								IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+							await NotifyService!.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
+							dismissedCount++;
+						}
+						break;
+					}
+				}
+			}
+			
+			await NotifyService!.Notify(executor, $"You dismiss all your followers. ({dismissedCount} dismissed)");
 			return CallState.Empty;
 		}
 		
