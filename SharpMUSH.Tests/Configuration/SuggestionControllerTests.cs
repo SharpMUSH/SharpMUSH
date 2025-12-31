@@ -7,6 +7,7 @@ using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Tests.Configuration;
 
+[NotInParallel]
 public class SuggestionControllerTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]

@@ -7,6 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class WizardCommandTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
