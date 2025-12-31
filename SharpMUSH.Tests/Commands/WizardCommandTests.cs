@@ -28,7 +28,7 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
-	[Test, Skip("Test causes deadlock - command implementation needs review")]
+	[Test]
 	public async ValueTask AllhaltCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allhalt"));

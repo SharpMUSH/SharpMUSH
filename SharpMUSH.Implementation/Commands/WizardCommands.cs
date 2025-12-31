@@ -15,6 +15,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
@@ -35,7 +36,7 @@ public partial class Commands
 		
 		await foreach (var obj in objects)
 		{
-			await TaskSchedulerService!.Halt(obj.DBRef);
+			await Mediator!.Send(new HaltObjectQueueRequest(obj.DBRef));
 			haltedCount++;
 		}
 		
