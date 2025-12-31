@@ -1498,8 +1498,8 @@ public partial class Commands
 		{
 			if (expr is null) break;
 
-			// TODO: Make this use a glob.
-			if (expr.Message! == strArg)
+			// Use wildcard/glob pattern matching
+			if (MModule.isWildcardMatch(strArg.Message!, expr.Message!))
 			{
 				matched = true;
 				// This is Inline.
