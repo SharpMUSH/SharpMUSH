@@ -37,9 +37,7 @@ public partial class Functions
 		var found = locateResult.AsSharpObject;
 
 		return await found.Match<ValueTask<CallState>>(
-			// Player - return location
 			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			// Room - return location (drop-to) or #-1
 			async room =>
 			{
 				var location = await room.Location.WithCancellation(CancellationToken.None);
@@ -49,7 +47,6 @@ public partial class Functions
 					thing => thing.Object.DBRef.ToString(),
 					_ => "#-1");
 			},
-			// Exit - return destination (#-1 for unlinked, #-2 for variable, #-3 for "home")
 			async exit =>
 			{
 				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
@@ -80,7 +77,6 @@ public partial class Functions
 					return "#-1";
 				}
 			},
-			// Thing - return location
 			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
 		);
 	}
@@ -210,7 +206,6 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
-		// Get target location (defaults to executor's location)
 		AnySharpObject target = executor;
 		if (args.TryGetValue("0", out var locArg))
 		{
@@ -223,7 +218,6 @@ public partial class Functions
 			target = maybeTarget.AsAnyObject;
 		}
 
-		// Get all exits that lead to the target location using the new database query
 		var exits = Mediator!.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
 		var entrances = new List<string>();
 

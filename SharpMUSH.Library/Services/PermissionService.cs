@@ -37,26 +37,20 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 	{
-		// Check if executor controls the target object first
 		if (!await Controls(executor, target))
 			return false;
 
-		// If no attributes provided, just use object control
 		if (attribute.Length == 0)
 			return true;
 
-		// Check the final attribute in the chain for additional restrictions
 		var finalAttr = attribute[^1];
 		
-		// God can control anything
 		if (executor.IsGod())
 			return true;
 
-		// Wizards can control non-wizard attributes
 		if (await executor.IsWizard() && !finalAttr.IsWizard())
 			return true;
 
-		// If attribute is locked, only the attribute owner can control it (unless they also own the object)
 		if (finalAttr.IsLocked())
 		{
 			var attrOwner = await finalAttr.Owner.WithCancellation(CancellationToken.None);
@@ -68,28 +62,21 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		return true;
 	}
 
-	// Optimized version for checking multiple attributes at once
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params SharpAttribute[] attribute)
 	{
-		// Quick check: if viewer can examine target, they can view any attribute
 		if (await CanExamine(viewer, target))
 			return true;
 
-		// Check the full attribute path for visibility permissions
-		// All attributes in the path must be visual for the viewer to see the final attribute
 		return attribute.Length > 0 && attribute.All(attr => attr.IsVisual());
 	}
 
 	public async ValueTask<bool> CanViewAttribute(AnySharpObject viewer, AnySharpObject target,
 		params LazySharpAttribute[] attribute)
 	{
-		// Quick check: if viewer can examine target, they can view any attribute
 		if (await CanExamine(viewer, target))
 			return true;
 
-		// Check the full attribute path for visibility permissions
-		// All attributes in the path must be visual for the viewer to see the final attribute
 		return attribute.Length > 0 && attribute.All(attr => attr.IsVisual());
 	}
 
