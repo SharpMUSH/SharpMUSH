@@ -667,8 +667,8 @@ public partial class Commands
 		}
 		else
 		{
-			// TODO: Match proper date format: Mon Feb 26 18:05:10 2007
-			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
+			// Match PennMUSH date format: "ddd MMM dd HH:mm:ss yyyy"
+			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
 		}
 
 		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
@@ -1303,8 +1303,7 @@ public partial class Commands
 		MinArgs = 2, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> NoSpoofPrompt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Noisy, Silent, NoEval
-
+		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -1327,6 +1326,12 @@ public partial class Commands
 		}
 
 		await NotifyService!.Prompt(found, message, executor, INotifyService.NotificationType.NSEmit);
+
+		// SILENT: Don't notify the executor
+		if (!switches.Contains("SILENT"))
+		{
+			await NotifyService!.Notify(executor, $"You prompted {found.Object().Name}.");
+		}
 
 		return new CallState(message);
 	}
