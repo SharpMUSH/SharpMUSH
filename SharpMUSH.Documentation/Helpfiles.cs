@@ -1,10 +1,11 @@
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
 
 namespace SharpMUSH.Documentation;
 
-public partial class Helpfiles(DirectoryInfo directory)
+public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logger = null)
 {
 	public Dictionary<string, string> IndexedHelp { get; } = [];
 
@@ -17,7 +18,7 @@ public partial class Helpfiles(DirectoryInfo directory)
 			 var maybeIndexedFile = Index(file);
 			 if (maybeIndexedFile.IsT1)
 			 {
-				 // TODO: LOGGING
+				 logger?.LogWarning("Failed to index helpfile {FilePath}: {Error}", file.FullName, maybeIndexedFile.AsT1.Value);
 				 continue;
 			 }
 
@@ -27,7 +28,7 @@ public partial class Helpfiles(DirectoryInfo directory)
 			 {
 				 if (IndexedHelp.ContainsKey(kv.Key))
 				 {
-					 // TODO: LOGGING
+					 logger?.LogWarning("Duplicate help index '{HelpIndex}' found in file {FilePath}, skipping", kv.Key, file.FullName);
 					 continue;
 				 }
 				 IndexedHelp.Add(kv.Key, kv.Value);
