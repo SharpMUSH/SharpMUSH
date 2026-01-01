@@ -2421,6 +2421,7 @@ public partial class ArangoDatabase(
 		{
 			filters.Add($@"LENGTH(FOR owner IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphObjectOwners}' 
 				FILTER owner._key == @ownerKey 
+				LIMIT 1
 				RETURN 1) > 0");
 			bindVars["ownerKey"] = filter.Owner.Value.Number.ToString();
 		}
@@ -2430,6 +2431,7 @@ public partial class ArangoDatabase(
 		{
 			filters.Add($@"LENGTH(FOR zone IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphZones}' 
 				FILTER zone._key == @zoneKey 
+				LIMIT 1
 				RETURN 1) > 0");
 			bindVars["zoneKey"] = filter.Zone.Value.Number.ToString();
 		}
@@ -2439,6 +2441,7 @@ public partial class ArangoDatabase(
 		{
 			filters.Add($@"LENGTH(FOR parent IN 1..1 OUTBOUND v._id GRAPH '{DatabaseConstants.GraphParents}' 
 				FILTER parent._key == @parentKey 
+				LIMIT 1
 				RETURN 1) > 0");
 			bindVars["parentKey"] = filter.Parent.Value.Number.ToString();
 		}

@@ -1037,9 +1037,7 @@ LOCATE()
 	{
 		// Lock evaluation requires runtime evaluation and cannot be done in the database
 		// This would need access to the LockService to evaluate the lock
-		// For now, return true (match all) as lock evaluation is complex
-		// TODO: Implement proper lock evaluation for lsearch
-		return true;
+		throw new NotImplementedException("Lock filtering in lsearch is not yet implemented. Lock evaluation requires runtime parsing and cannot be efficiently done at the database level.");
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
