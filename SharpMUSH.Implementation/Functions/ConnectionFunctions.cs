@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -1369,10 +1370,9 @@ public partial class Functions
 	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> Poll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		// TODO: Get the current @poll value from configuration or game state
-		// For now, return a default empty value since @poll infrastructure isn't implemented
-		return new CallState(string.Empty);
+		// Get the current @poll value from expanded server data
+		var pollData = await ObjectDataService!.GetExpandedServerDataAsync<PollData>();
+		return new CallState(pollData?.Message ?? string.Empty);
 	}
 
 	[SharpFunction(Name = "ports", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
