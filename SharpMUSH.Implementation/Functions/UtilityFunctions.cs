@@ -137,8 +137,7 @@ public partial class Functions
 						clear = true; // TODO: This PROBABLY needs better handling. No doubt this is not correct due to the tree structure.
 						break;
 					case 'd':
-						// TODO: Inline this as a function.
-						foreground = StringExtensions.ansiByte(39);
+						foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 39));
 						break;
 					case 'x':
 						foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 30));
