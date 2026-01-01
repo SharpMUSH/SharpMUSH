@@ -34,8 +34,7 @@ public partial class ValidateService(
 			IValidateService.ValidationType.PlayerAlias when target is { IsT0: true }
 				=> ValidatePlayerAlias(value, target.AsT0),
 			IValidateService.ValidationType.AttributeName
-				=> true,
-				//=> TODO: ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
+				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.AttributeValue when target is { IsT1: true }
 				=> ValidateAttributeValue(value, target.AsT1),
 			IValidateService.ValidationType.ColorName
