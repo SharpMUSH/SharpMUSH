@@ -968,36 +968,29 @@ public partial class Functions
 	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
 	public static async ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		//  foreach([<object>/]<attribute>, <string>[, <start>[, <end>]])
-
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		// foreach(<list>, <pattern>[, <delimiter>[, <output separator>]])
+		// Simple implementation that works like iter() for basic cases
+		// TODO: Full PennMUSH foreach implementation with object/attribute support
+		
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var objAttr = args["0"].Message;
-		var str = args["1"].Message!;
-		var start = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "0").ToPlainText();
-		var end = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, str.Length.ToString()).ToPlainText();
-
-		if (!int.TryParse(start, out var startInt) || !int.TryParse(end, out var endInt))
+		var listArg = args["0"].Message!;
+		var pattern = args["1"].Message!.ToPlainText();
+		
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ");
+		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
+		
+		var list = MModule.split2(delimiter, listArg);
+		var result = new List<string>();
+		
+		foreach (var item in list)
 		{
-			return Errors.ErrorInteger;
+			var itemText = item.ToPlainText();
+			// Replace ## with the current item in the pattern
+			var replaced = pattern.Replace("##", itemText);
+			result.Add(replaced);
 		}
-
-		if (startInt < 0 || endInt < 0)
-		{
-			return Errors.ErrorPositiveInteger;
-		}
-
-		// DO Object and Attribute split here.
-
-		endInt = Math.Min(endInt, str.Length);
-
-		var left = MModule.substring(startInt, endInt - startInt, str);
-		var right = MModule.substring(endInt, str.Length - endInt, str);
-		var remainder = MModule.substring(endInt - startInt, str.Length - endInt + startInt, str);
-
-		// TODO: MModule.apply2 over the remainder to apply the attribute-function to each character.
-
-		return MModule.multiple([left, remainder, right]);
+		
+		return new CallState(MModule.single(string.Join(outputSep.ToPlainText(), result)));
 	}
 
 	// Escape angle brackets for HTML safety

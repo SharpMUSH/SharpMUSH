@@ -727,8 +727,18 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var splitList = MModule.split2(delimiter, list) ?? [];
 
-		return ValueTask.FromResult<CallState>(splitList
-			.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MModule.empty());
+		// Return the 1-based index of the first matching element, or 0 if not found
+		var index = 0;
+		foreach (var (item, idx) in splitList.Select((x, i) => (x, i)))
+		{
+			if (regex.IsMatch(item.ToPlainText()))
+			{
+				index = idx + 1; // 1-based index
+				break;
+			}
+		}
+
+		return ValueTask.FromResult<CallState>(MModule.single(index.ToString()));
 	}
 
 	[SharpFunction(Name = "matchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

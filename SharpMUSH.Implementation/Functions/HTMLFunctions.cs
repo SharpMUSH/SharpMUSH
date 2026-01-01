@@ -23,11 +23,49 @@ public partial class Functions
 
 	[SharpFunction(Name = "tag", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> Tag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>("#-1 USE TAGWRAP INSTEAD");
+	{
+		// tag(tagname, content[, attributes...])
+		// Returns <tagname>content</tagname> or <tagname attributes...>content</tagname>
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var tagName = args["0"].Message!.ToPlainText();
+		
+		if (args.Count < 2)
+		{
+			// No content provided, just return opening tag
+			return ValueTask.FromResult<CallState>(MModule.single($"<{tagName}>"));
+		}
+		
+		var content = args["1"].Message!.ToPlainText();
+		
+		// Build opening tag with any additional attributes
+		var openingTag = new System.Text.StringBuilder();
+		openingTag.Append('<').Append(tagName);
+		
+		// Add any additional arguments as attributes
+		for (int i = 2; i < args.Count; i++)
+		{
+			var attr = args[i.ToString()].Message!.ToPlainText();
+			if (!string.IsNullOrEmpty(attr))
+			{
+				openingTag.Append(' ').Append(attr);
+			}
+		}
+		
+		openingTag.Append('>');
+		
+		// Return <tagname>content</tagname>
+		return ValueTask.FromResult<CallState>(
+			MModule.single($"{openingTag}{content}</{tagName}>"));
+	}
 
 	[SharpFunction(Name = "endtag", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> EndTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>("#-1 USE TAGWRAP INSTEAD");
+	{
+		// endtag(tagname)
+		// Returns </tagname>
+		var tagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		return ValueTask.FromResult<CallState>(MModule.single($"</{tagName}>"));
+	}
 
 	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
