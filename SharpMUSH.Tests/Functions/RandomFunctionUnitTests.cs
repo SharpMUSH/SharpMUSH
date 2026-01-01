@@ -40,7 +40,6 @@ public class RandomFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("shuffle(a b c d e)", "")]
 	public async Task Shuffle(string str, string expected)
 	{
@@ -49,7 +48,6 @@ public class RandomFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("scramble(test)", "")]
 	public async Task Scramble(string str, string expected)
 	{

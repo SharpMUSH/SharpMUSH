@@ -101,7 +101,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ceil(3.14)", "4")]
 	public async Task Ceil(string str, string expected)
 	{
@@ -110,7 +109,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("atan2(1,1)", "")]
 	public async Task Atan2(string str, string expected)
 	{
@@ -119,7 +117,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("power(2,3)", "8")]
 	public async Task Power(string str, string expected)
 	{
@@ -128,7 +125,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("remainder(10,3)", "1")]
 	public async Task Remainder(string str, string expected)
 	{
@@ -146,7 +142,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("dec(100)", "99")]
 	public async Task Dec(string str, string expected)
 	{

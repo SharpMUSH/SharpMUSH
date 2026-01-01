@@ -10,7 +10,6 @@ public class WebFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("urlencode(test string)", "test+string")]
 	public async Task Urlencode(string str, string expected)
 	{
@@ -19,7 +18,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("urldecode(test+string)", "test string")]
 	public async Task Urldecode(string str, string expected)
 	{
