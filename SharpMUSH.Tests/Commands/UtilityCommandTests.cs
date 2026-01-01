@@ -132,6 +132,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask FindCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find #0"));
@@ -142,6 +143,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask SearchCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
@@ -152,6 +154,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask EntrancesCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances #0"));

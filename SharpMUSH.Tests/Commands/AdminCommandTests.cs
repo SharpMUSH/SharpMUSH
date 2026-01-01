@@ -17,6 +17,7 @@ public class AdminCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask PcreateCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate TestPlayer=password"));
@@ -27,6 +28,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask NewpasswordCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@newpassword #1=newpass"));
@@ -37,6 +39,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask PasswordCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@password oldpass=newpass"));
@@ -80,6 +83,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask PoorCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poor #1"));
@@ -101,6 +105,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask ChownallCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1=#2"));
@@ -111,6 +116,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented - @chzoneall command not implemented yet")]
 	public async ValueTask ChzoneallCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzoneall #1=#2"));

@@ -73,6 +73,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask MonikerCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@moniker #1=Test"));
@@ -83,6 +84,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask MotdCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@motd"));

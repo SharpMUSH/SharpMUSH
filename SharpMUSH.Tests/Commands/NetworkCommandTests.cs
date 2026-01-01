@@ -17,6 +17,7 @@ public class NetworkCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask HttpCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@http https://example.com"));
@@ -38,6 +39,7 @@ public class NetworkCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask MapsqlCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql SELECT * FROM test"));

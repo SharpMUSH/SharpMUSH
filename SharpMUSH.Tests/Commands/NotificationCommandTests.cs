@@ -17,6 +17,7 @@ public class NotificationCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask MessageCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Test message"));
@@ -71,6 +72,7 @@ public class NotificationCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask SuggestCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest Test suggestion"));

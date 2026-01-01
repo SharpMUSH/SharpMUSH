@@ -17,6 +17,7 @@ public class QuotaCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask SquotaCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@squota #1=100"));

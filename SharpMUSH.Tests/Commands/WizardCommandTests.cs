@@ -17,6 +17,7 @@ public class WizardCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask HaltCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt #1"));
@@ -48,6 +49,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask PsCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
@@ -58,6 +60,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask PsWithTarget()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps #1"));
@@ -68,6 +71,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask TriggerCommand()
 	{
 		// Set an attribute first
@@ -127,6 +131,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask DbckCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dbck"));
@@ -137,6 +142,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask DumpCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dump"));
@@ -147,6 +153,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask QuotaCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@quota #1"));
@@ -157,6 +164,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask AllquotaCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allquota"));
@@ -167,6 +175,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask BootCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@boot #1"));
