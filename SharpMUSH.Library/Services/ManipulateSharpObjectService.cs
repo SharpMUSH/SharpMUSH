@@ -177,7 +177,7 @@ public class ManipulateSharpObjectService(
 		
 		// Check flag set/unset permissions
 		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
-		if (requiredPermissions.Length > 0)
+		if (requiredPermissions is not null && requiredPermissions.Length > 0)
 		{
 			var hasPermission = false;
 			foreach (var permission in requiredPermissions)

@@ -154,7 +154,7 @@ public partial class ValidateService(
 			_ => false
 		};
 
-	[GeneratedRegex("^[!\"#%&\\(\\)\\+,\\-\\./0-9A-Z:;\\<\\>=\\?@`_]+$")]
+	[GeneratedRegex("^[!\"#%&\\(\\)\\+,\\-\\./0-9A-Za-z:;\\<\\>=\\?@`_]+$")]
 	private static partial Regex ValidAttributeNameRegex();
 
 	[GeneratedRegex("^[^:;\"#\\\\&\\]\\[\\p{C}]+$")]
