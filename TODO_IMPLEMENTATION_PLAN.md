@@ -1,12 +1,36 @@
 # SharpMUSH TODO Implementation Plan
 
-**Last Updated:** 2025-12-30  
-**Total TODOs:** 235  
-**Completed in This PR:** 62 (from original 283)
+**Last Updated:** 2026-01-01  
+**Total TODOs:** 154 (down from 235 in last documented count)  
+**Completed in Latest Session:** 4
 
 ## Executive Summary
 
-This document provides a comprehensive analysis of all remaining TODOs in the SharpMUSH codebase after fresh analysis. The codebase currently has 235 TODOs distributed across commands (61), functions (70), services (23), parser/visitors (13), and other components.
+After detailed analysis, the SharpMUSH codebase currently has 154 TODO comments. The majority of these TODOs fall into the following categories:
+- **Complex Features** (35+): Require new systems like quota, text files, fuzzy matching
+- **Design Decisions** (20+): Need architectural decisions before implementation
+- **Parser Optimizations** (13): Performance improvements requiring careful analysis
+- **Implementation Gaps** (40+): Missing command switches, edge cases, and features
+- **Test Infrastructure** (15+): Skipped/failing tests and test improvements
+- **Documentation/Rendering** (4): Markdown and help system improvements
+- **ANSI/Markup** (5): Markup string handling improvements
+
+Most remaining TODOs are legitimate markers of incomplete features or areas needing future enhancement, rather than simple bugs or oversights.
+
+---
+
+## Recent Progress (2026-01-01 Session)
+
+### Completed TODOs (4 items)
+1. ✅ **Helpfiles.cs (lines 20, 30)** - Added ILogger dependency injection with warnings for failed indexing and duplicate entries
+2. ✅ **ValidateService.cs (line 38)** - Enabled AttributeName validation using existing ValidAttributeNameRegex
+3. ✅ **UtilityFunctions.cs (line 140)** - Inlined default color setting to use highlightFunc pattern consistently
+
+### Changes Made
+- Added `Microsoft.Extensions.Logging.Abstractions` package to Documentation project
+- Updated Helpfiles constructor to accept optional ILogger parameter
+- Enabled proper attribute name validation in ValidateService
+- Improved code consistency in ANSI color handling
 
 ---
 
