@@ -17,7 +17,6 @@ public class MailCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask MailCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mail #1=Test subject/Test message"));
@@ -28,7 +27,6 @@ public class MailCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask MaliasCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@malias add all=*"));

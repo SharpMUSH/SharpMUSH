@@ -60,7 +60,6 @@ public class ChannelCommandTests
 	}
 	
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ChatCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
@@ -73,7 +72,6 @@ public class ChannelCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ChannelCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/list"));
@@ -132,7 +130,6 @@ public class ChannelCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ClistCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@clist"));
