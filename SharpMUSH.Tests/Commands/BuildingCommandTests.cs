@@ -160,7 +160,6 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(DigRoomWithExits))]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask LinkExit()
 	{
 		// Create room and exit
@@ -181,7 +180,6 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(LinkExit))]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask CloneObject()
 	{
 		// Create an object
@@ -460,7 +458,6 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(ChzoneObject))]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask RecycleObject()
 	{
 		// Create an object
@@ -512,7 +509,6 @@ public class BuildingCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask LockObject()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@lock #1=me"));
@@ -527,7 +523,6 @@ public class BuildingCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlockObject()
 	{
 		// Lock first
