@@ -52,7 +52,6 @@ public class SearchFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lsearchr(#0,name,test*)", "")]
 	public async Task Lsearchr(string str, string expected)
 	{
@@ -74,7 +73,6 @@ public class SearchFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("scan(%#)", "")]
 	public async Task Scan(string str, string expected)
 	{
@@ -83,7 +81,6 @@ public class SearchFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nearby(%#,%#)", "1")]
 	public async Task Nearby(string str, string expected)
 	{

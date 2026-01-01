@@ -10,7 +10,6 @@ public class TextFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("textentries(file)", "0")]
 	public async Task Textentries(string str, string expected)
 	{
@@ -20,7 +19,6 @@ public class TextFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("textfile(file)", "")]
 	public async Task Textfile(string str, string expected)
 	{
@@ -30,7 +28,6 @@ public class TextFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("textsearch(file,pattern)", "")]
 	public async Task Textsearch(string str, string expected)
 	{

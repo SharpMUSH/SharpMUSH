@@ -90,7 +90,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("powers(%#)", "")]
 	public async Task Powers(string str, string expected)
 	{
@@ -107,7 +106,6 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("hidden(%#)", "0")]
 	public async Task Hidden(string str, string expected)
 	{
@@ -125,7 +123,6 @@ public class InformationFunctionUnitTests
 	}
 	
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("version()", "")]
 	public async Task Version(string str, string expected)
 	{
