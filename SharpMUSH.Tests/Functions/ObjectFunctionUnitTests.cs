@@ -10,7 +10,6 @@ public class ObjectFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("create(TestObject)", "")]
 	public async Task Create(string str, string expected)
 	{
@@ -19,7 +18,6 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("dig(TestRoom)", "")]
 	public async Task Dig(string str, string expected)
 	{
@@ -28,7 +26,6 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("clone(%#)", "")]
 	public async Task Clone(string str, string expected)
 	{
@@ -37,7 +34,6 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("link(%#,#0)", "")]
 	public async Task Link(string str, string expected)
 	{
@@ -46,7 +42,6 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("open(TestExit,#0)", "")]
 	public async Task Open(string str, string expected)
 	{
@@ -55,7 +50,6 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("tel(%#,#0)", "")]
 	public async Task Tel(string str, string expected)
 	{
@@ -64,7 +58,6 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("wipe(%#/testattr)", "")]
 	public async Task Wipe(string str, string expected)
 	{

@@ -42,7 +42,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("oob(test)", "")]
 	public async Task Oob(string str, string expected)
 	{
@@ -51,7 +50,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("pueblo()", "0")]
 	public async Task Pueblo(string str, string expected)
 	{
@@ -60,7 +58,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ssl(%#)", "0")]
 	public async Task Ssl(string str, string expected)
 	{
@@ -69,7 +66,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("terminfo(%#)", "")]
 	public async Task Terminfo(string str, string expected)
 	{
@@ -78,7 +74,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("width(%#)", "78")]
 	public async Task Width(string str, string expected)
 	{

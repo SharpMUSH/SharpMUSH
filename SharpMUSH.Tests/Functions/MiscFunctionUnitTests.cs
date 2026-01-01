@@ -20,7 +20,6 @@ public class MiscFunctionUnitTests
  }
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("foreach(a b c,##)", "a b c")]
 	public async Task Foreach(string str, string expected)
 	{
@@ -29,7 +28,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("match(a b c,b)", "2")]
 	public async Task Match(string str, string expected)
 	{
@@ -47,7 +45,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("malias(%#)", "")]
 	public async Task Malias(string str, string expected)
 	{
@@ -56,7 +53,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("message(test)", "")]
 	public async Task Message(string str, string expected)
 	{
@@ -65,7 +61,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("prompt(%#,test)", "")]
 	public async Task Prompt(string str, string expected)
 	{
@@ -74,7 +69,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("mwhoid()", "")]
 	public async Task Mwhoid(string str, string expected)
 	{
@@ -83,7 +77,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nmwho()", "")]
 	public async Task Nmwho(string str, string expected)
 	{
@@ -92,7 +85,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("zwho()", "")]
 	public async Task Zwho(string str, string expected)
 	{
@@ -150,7 +142,7 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Test]
 	[Arguments("folderstats()", "")]
 	public async Task Folderstats(string str, string expected)
 	{
@@ -159,7 +151,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("open(exit,#0)", "")]
 	public async Task Open(string str, string expected)
 	{
@@ -168,7 +159,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("tel(%#,#0)", "")]
 	public async Task Tel(string str, string expected)
 	{
@@ -177,7 +167,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("wipe(%#/testattr)", "")]
 	public async Task Wipe(string str, string expected)
 	{
@@ -186,7 +175,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("fullalias(%#)", "")]
 	public async Task Fullalias(string str, string expected)
 	{
@@ -195,7 +183,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("cmsgs(channelname)", "")]
 	public async Task Cmsgs(string str, string expected)
 	{
@@ -204,7 +191,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("cbuffer(channelname)", "")]
 	public async Task Cbuffer(string str, string expected)
 	{
@@ -213,7 +199,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("cbufferadd(channelname,msg)", "")]
 	public async Task Cbufferadd(string str, string expected)
 	{
@@ -222,7 +207,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("cdesc(channelname)", "")]
 	public async Task Cdesc(string str, string expected)
 	{
@@ -231,7 +215,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("clflags(channelname)", "")]
 	public async Task Clflags(string str, string expected)
 	{
@@ -240,7 +223,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("cmogrifier(channelname)", "")]
 	public async Task Cmogrifier(string str, string expected)
 	{
@@ -249,7 +231,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ctitle(channelname,%#)", "")]
 	public async Task Ctitle(string str, string expected)
 	{
@@ -258,7 +239,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("cusers(channelname)", "")]
 	public async Task Cusers(string str, string expected)
 	{
@@ -267,7 +247,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("zfun(#0,func,arg)", "")]
 	public async Task Zfun(string str, string expected)
 	{
@@ -277,7 +256,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("zmwho()", "")]
 	public async Task Zmwho(string str, string expected)
 	{

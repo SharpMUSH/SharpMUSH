@@ -74,7 +74,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("table(a b c,10,2)", "")]
 	public async Task Table(string str, string expected)
 	{

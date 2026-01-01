@@ -18,7 +18,6 @@ public class ObjectListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lvexits(#0)", "")]
 	public async Task Lvexits(string str, string expected)
 	{
@@ -27,7 +26,6 @@ public class ObjectListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lvplayers(#0)", "")]
 	public async Task Lvplayers(string str, string expected)
 	{
@@ -36,7 +34,6 @@ public class ObjectListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lvthings(#0)", "")]
 	public async Task Lvthings(string str, string expected)
 	{
@@ -45,7 +42,6 @@ public class ObjectListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nlsearch(all,type,player)", "")]
 	public async Task Nlsearch(string str, string expected)
 	{

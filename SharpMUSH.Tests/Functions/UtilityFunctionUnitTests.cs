@@ -39,7 +39,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("fn(testfunc)", "")]
 	public async Task Fn(string str, string expected)
 	{
