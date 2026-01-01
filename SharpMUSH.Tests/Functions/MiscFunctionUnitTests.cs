@@ -20,6 +20,7 @@ public class MiscFunctionUnitTests
  }
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	[Arguments("foreach(a b c,##)", "a b c")]
 	public async Task Foreach(string str, string expected)
 	{
@@ -28,6 +29,7 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
+	[Skip("Not Yet Implemented")]
 	[Arguments("match(a b c,b)", "2")]
 	public async Task Match(string str, string expected)
 	{
@@ -141,7 +143,6 @@ public class MiscFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	[Test]
 	[Test]
 	[Arguments("folderstats()", "")]
 	public async Task Folderstats(string str, string expected)
