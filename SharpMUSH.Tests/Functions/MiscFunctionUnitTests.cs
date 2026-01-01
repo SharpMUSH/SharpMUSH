@@ -29,7 +29,7 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[Skip("Causes deadlock - implementation triggers existing GetAttributeQueryHandler/GetExitsQueryHandler .GetAwaiter().GetResult() issues")]
 	[Arguments("match(a b c,b)", "2")]
 	public async Task Match(string str, string expected)
 	{
