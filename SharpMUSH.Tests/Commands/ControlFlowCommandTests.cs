@@ -17,7 +17,6 @@ public class ControlFlowCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SelectCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@select 1=1,@pemit #1=One,@pemit #1=Other"));
@@ -28,7 +27,6 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SwitchCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@switch 1=1,@pemit #1=One,@pemit #1=Other"));
