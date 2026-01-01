@@ -40,7 +40,6 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask EditCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/DESC=old=new"));
@@ -172,7 +171,6 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask PromptCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@prompt #1=Enter value:"));
@@ -183,7 +181,6 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask NspromptCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nsprompt #1=Enter value:"));

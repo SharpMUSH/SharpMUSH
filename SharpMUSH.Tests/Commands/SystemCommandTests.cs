@@ -17,7 +17,6 @@ public class SystemCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask FlagCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
@@ -28,7 +27,6 @@ public class SystemCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask PowerCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
@@ -39,7 +37,6 @@ public class SystemCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask HookCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hook/list"));
@@ -50,7 +47,6 @@ public class SystemCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask FunctionCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function/list"));
@@ -72,7 +68,6 @@ public class SystemCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask HideCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide #1"));
@@ -83,7 +78,6 @@ public class SystemCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask KickCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@kick #1"));
@@ -94,7 +88,6 @@ public class SystemCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask AttributeCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TEST=wizard"));
@@ -105,7 +98,6 @@ public class SystemCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrlockCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/TEST=me"));
@@ -116,7 +108,6 @@ public class SystemCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrchownCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrchown #1/TEST=#2"));
