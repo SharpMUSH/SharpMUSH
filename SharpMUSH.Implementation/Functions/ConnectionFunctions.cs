@@ -588,7 +588,7 @@ public partial class Functions
 		var arg0 = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
 		var arg1 = args.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
-			: ["offline"];
+			: ["online"];
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var looker = executor;
@@ -610,53 +610,141 @@ public partial class Functions
 			return "#-1 INVALID SECOND ARGUMENT";
 		}
 
-		if (!((string[])["online", "offline", "all"]).Contains(arg1.First()))
+		var status = arg1.First();
+		if (!((string[])["online", "offline", "all"]).Contains(status))
 		{
 			return "#-1 INVALID SECOND ARGUMENT";
 		}
 
-		// TODO NEEDED: 'Get All Players'.
-		var allConnectionsDbRefs = ConnectionService!
+		// Check if looker has See_All permission for offline/all status
+		var hasSeeAll = await looker.HasPower("SEE_ALL");
+		if ((status == "offline" || status == "all") && !hasSeeAll)
+		{
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		// Get connected player DBRefs
+		var connectedRefs = ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(player => $"#{player.Object().DBRef.Number}");
+			.Select(x => x.Ref!.Value);
+		var connectedDbRefs = new HashSet<DBRef>(await connectedRefs.ToListAsync());
 
-		return new CallState(string.Join(" ", await allConnectionsDbRefs.ToArrayAsync()));
-	}
+		var result = new List<string>();
 
-	[SharpFunction(Name = "lwhoid", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var looker = executor;
-
-		if (args.ContainsKey("0"))
+		// Get all players from database
+		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
+		await foreach (var player in allPlayers)
 		{
-			var arg0 = args["0"].Message!.ToPlainText();
-			if (!string.IsNullOrWhiteSpace(arg0))
-			{
-				var maybeLocate =
-					await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
-				if (maybeLocate.IsError)
-				{
-					return maybeLocate.AsError;
-				}
+			var dbref = player.Object.DBRef;
+			var isConnected = connectedDbRefs.Contains(dbref);
 
-				looker = maybeLocate.AsSharpObject;
+			// Filter based on status
+			var shouldInclude = status switch
+			{
+				"online" => isConnected,
+				"offline" => !isConnected,
+				"all" => true,
+				_ => false
+			};
+
+			if (!shouldInclude)
+			{
+				continue;
+			}
+
+			// Apply permission check
+			AnySharpObject playerObj = player;
+			if (await PermissionService!.CanSee(looker, playerObj))
+			{
+				result.Add($"#{dbref.Number}");
 			}
 		}
 
-		var allConnectionsObjIds = ConnectionService!
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
-			.Select(x => x.Object().DBRef);
+		return new CallState(string.Join(" ", result));
+	}
 
-		return new CallState(string.Join(" ", allConnectionsObjIds));
+	[SharpFunction(Name = "lwhoid", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var arg0 = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		var arg1 = args.ContainsKey("1")
+			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
+			: ["online"];
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var looker = executor;
+
+		if (arg0 != null)
+		{
+			var maybeLocate =
+				await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+			if (maybeLocate.IsError)
+			{
+				return maybeLocate.AsError;
+			}
+
+			looker = maybeLocate.AsSharpObject;
+		}
+
+		if (arg1.Length > 1)
+		{
+			return "#-1 INVALID SECOND ARGUMENT";
+		}
+
+		var status = arg1.First();
+		if (!((string[])["online", "offline", "all"]).Contains(status))
+		{
+			return "#-1 INVALID SECOND ARGUMENT";
+		}
+
+		// Check if looker has See_All permission for offline/all status
+		var hasSeeAll = await looker.HasPower("SEE_ALL");
+		if ((status == "offline" || status == "all") && !hasSeeAll)
+		{
+			return new CallState(Errors.ErrorPerm);
+		}
+
+		// Get connected player DBRefs
+		var connectedRefsId = ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null)
+			.Select(x => x.Ref!.Value);
+		var connectedDbRefsId = new HashSet<DBRef>(await connectedRefsId.ToListAsync());
+
+		var resultId = new List<string>();
+
+		// Get all players from database
+		var allPlayersId = Mediator!.CreateStream(new GetAllPlayersQuery())!;
+		await foreach (var player in allPlayersId)
+		{
+			var dbref = player.Object.DBRef;
+			var isConnected = connectedDbRefsId.Contains(dbref);
+
+			// Filter based on status
+			var shouldInclude = status switch
+			{
+				"online" => isConnected,
+				"offline" => !isConnected,
+				"all" => true,
+				_ => false
+			};
+
+			if (!shouldInclude)
+			{
+				continue;
+			}
+
+			// Apply permission check
+			AnySharpObject playerObj = player;
+			if (await PermissionService!.CanSee(looker, playerObj))
+			{
+				resultId.Add(dbref.ToString());
+			}
+		}
+
+		return new CallState(string.Join(" ", resultId));
 	}
 
 	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
