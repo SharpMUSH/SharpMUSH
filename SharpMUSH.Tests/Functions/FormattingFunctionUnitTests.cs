@@ -18,7 +18,7 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Test deadlocks - likely due to existing .GetAwaiter().GetResult() calls in codebase")]
+	[Skip("Deadlocks - requires fixing .GetAwaiter().GetResult() calls in codebase (see ListFunctions.cs:1518, GetAttributeQueryHandler.cs, etc.)")]
 	[Arguments("tag(b,text)", "<b>text</b>")]
 	public async Task Tag(string str, string expected)
 	{
@@ -35,7 +35,7 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Test deadlocks - likely due to existing .GetAwaiter().GetResult() calls in codebase")]
+	[Skip("Deadlocks - requires fixing .GetAwaiter().GetResult() calls in codebase (see ListFunctions.cs:1518, GetAttributeQueryHandler.cs, etc.)")]
 	[Arguments("endtag(b)", "</b>")]
 	public async Task Endtag(string str, string expected)
 	{

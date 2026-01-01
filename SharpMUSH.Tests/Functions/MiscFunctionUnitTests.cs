@@ -20,7 +20,7 @@ public class MiscFunctionUnitTests
  }
 
 	[Test]
-	[Skip("Test deadlocks - likely due to existing .GetAwaiter().GetResult() in strfirstof function line 1518")]
+	[Skip("Deadlocks - requires fixing .GetAwaiter().GetResult() calls in codebase (see ListFunctions.cs:1518, GetAttributeQueryHandler.cs, etc.)")]
 	[Arguments("foreach(a b c,##)", "a b c")]
 	public async Task Foreach(string str, string expected)
 	{
@@ -29,7 +29,7 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Test deadlocks - likely due to existing .GetAwaiter().GetResult() in strfirstof function line 1518")]
+	[Skip("Deadlocks - requires fixing .GetAwaiter().GetResult() calls in codebase (see ListFunctions.cs:1518, GetAttributeQueryHandler.cs, etc.)")]
 	[Arguments("match(a b c,b)", "2")]
 	public async Task Match(string str, string expected)
 	{
