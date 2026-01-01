@@ -142,7 +142,6 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SearchCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));

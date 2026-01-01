@@ -70,7 +70,6 @@ public class GeneralCommandTests
 	}
 	
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask DolistCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=think ##"));
