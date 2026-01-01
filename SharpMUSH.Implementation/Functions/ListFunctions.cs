@@ -1511,13 +1511,23 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "strfirstof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
-	public static ValueTask<CallState> StringFirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> StringFirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
-		var firstOne = orderedArgs.FirstOrDefault(x
-				=> !string.IsNullOrEmpty(x.Value.ParsedMessage().GetAwaiter().GetResult()!.ToPlainText()),
-			orderedArgs.Last());
-		return ValueTask.FromResult(new CallState(firstOne.Value.Message));
+		
+		// Iterate through arguments to find the first non-empty one after parsing
+		var argsArray = orderedArgs.ToArray();
+		for (int i = 0; i < argsArray.Length - 1; i++)
+		{
+			var parsedMessage = await argsArray[i].Value.ParsedMessage();
+			if (!string.IsNullOrEmpty(parsedMessage?.ToPlainText()))
+			{
+				return new CallState(argsArray[i].Value.Message);
+			}
+		}
+		
+		// If no non-empty argument found, return the last argument
+		return new CallState(argsArray[^1].Value.Message);
 	}
 
 	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
