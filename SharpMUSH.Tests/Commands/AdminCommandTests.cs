@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -19,31 +20,31 @@ public class AdminCommandTests
 	[Test]
 	public async ValueTask PcreateCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate TestPlayer=password"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate TestPlayerPcreate=passwordPcreate"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask NewpasswordCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@newpassword #1=newpass"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@newpassword #1=newpassNewpassword"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask PasswordCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@password oldpass=newpass"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@password oldpassPassword=newpassPassword"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -82,11 +83,11 @@ public class AdminCommandTests
 	[Test]
 	public async ValueTask PoorCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@poor #1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poor #1001"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -103,20 +104,20 @@ public class AdminCommandTests
 	[Test]
 	public async ValueTask ChownallCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1=#2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1002=#2002"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask ChzoneallCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzoneall #1=#2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzoneall #1003=#2003"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 }
