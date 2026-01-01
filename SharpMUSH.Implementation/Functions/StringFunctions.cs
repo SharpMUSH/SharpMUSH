@@ -966,7 +966,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
-	public static async ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// foreach(<list>, <pattern>[, <delimiter>[, <output separator>]])
 		// Simple implementation that works like iter() for basic cases
@@ -990,7 +990,7 @@ public partial class Functions
 			result.Add(replaced);
 		}
 		
-		return new CallState(MModule.single(string.Join(outputSep.ToPlainText(), result)));
+		return ValueTask.FromResult(new CallState(MModule.single(string.Join(outputSep.ToPlainText(), result))));
 	}
 
 	// Escape angle brackets for HTML safety
