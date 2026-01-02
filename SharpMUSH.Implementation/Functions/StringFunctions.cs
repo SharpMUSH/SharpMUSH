@@ -1709,7 +1709,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
+		Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -1750,7 +1750,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
+		Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
