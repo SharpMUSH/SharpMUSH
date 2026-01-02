@@ -221,28 +221,50 @@ public partial class Functions
 	public static ValueTask<CallState> AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(string.Empty));
 
-	[SharpFunction(Name = "allof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "allof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var allTrue = true;
-		CallState? lastResult = null;
+		
+		// If single argument, split it by spaces and check each element
+		if (args.Count == 1)
+		{
+			var singleArg = await parser.FunctionParse(args["0"].Message!);
+			var elements = singleArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			
+			var allTrue = true;
+			foreach (var element in elements)
+			{
+				if (string.IsNullOrEmpty(element) ||
+						element == "0" ||
+						element.StartsWith("#-1") ||
+						element.Equals("false", StringComparison.OrdinalIgnoreCase))
+				{
+					allTrue = false;
+					break;
+				}
+			}
+			return new CallState(allTrue ? "1" : "0");
+		}
 
+		// Multi-argument case: parse each argument and check
+		var allTruthy = true;
 		foreach (var arg in args)
 		{
-			lastResult = await parser.FunctionParse(arg.Value.Message!);
-			var resultStr = MModule.plainText(lastResult!.Message).Trim();
+			var result = await parser.FunctionParse(arg.Value.Message!);
+			var resultStr = MModule.plainText(result!.Message).Trim();
 
 			if (string.IsNullOrEmpty(resultStr) ||
 					resultStr == "0" ||
 					resultStr.StartsWith("#-1") ||
 					resultStr.Equals("false", StringComparison.OrdinalIgnoreCase))
 			{
-				allTrue = false;
+				allTruthy = false;
+				break;
 			}
 		}
 
-		return new CallState(allTrue ? "1" : "0");
+		return new CallState(allTruthy ? "1" : "0");
 	}
 
 	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
