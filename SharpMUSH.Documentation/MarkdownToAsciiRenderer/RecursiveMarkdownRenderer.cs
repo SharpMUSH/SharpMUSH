@@ -17,6 +17,16 @@ public class RecursiveMarkdownRenderer
 	private readonly Ansi _boldStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true);
 	private readonly Ansi _headingStyle = Ansi.Create(underlined: true, bold: true);
 	private readonly Ansi _heading3Style = Ansi.Create(underlined: true);
+	private readonly int _maxWidth;
+
+	/// <summary>
+	/// Initializes a new instance of the RecursiveMarkdownRenderer
+	/// </summary>
+	/// <param name="maxWidth">Maximum width for rendered output. Used to constrain table column widths. Default is 80.</param>
+	public RecursiveMarkdownRenderer(int maxWidth = 80)
+	{
+		_maxWidth = maxWidth > 0 ? maxWidth : 80;
+	}
 
 	/// <summary>
 	/// Main entry point - renders any MarkdownObject to MString
@@ -223,6 +233,23 @@ public class RecursiveMarkdownRenderer
 		{
 			columnWidths[col] = allRows.Max(r => col < r.Cells.Count ? r.Cells[col].ToPlainText().Length : 0);
 			columnWidths[col] = Math.Max(columnWidths[col], 3);
+		}
+		
+		// Apply max width constraint by distributing available space across columns
+		// Format: "| cell1 | cell2 | cell3 |"
+		// Borders: "| " at start (2 chars) + " |" at end (2 chars) + " | " between cells (3 chars each)
+		var borderAndSeparatorWidth = 2 + 2 + (columnCount - 1) * 3; // Start + end + separators between
+		var availableWidth = _maxWidth - borderAndSeparatorWidth;
+		var totalWidth = columnWidths.Sum();
+		
+		if (totalWidth > availableWidth && availableWidth > columnCount * 3)
+		{
+			// Scale down column widths proportionally
+			for (int col = 0; col < columnCount; col++)
+			{
+				var proportion = (double)columnWidths[col] / totalWidth;
+				columnWidths[col] = Math.Max(3, (int)(availableWidth * proportion));
+			}
 		}
 		
 		// Build column specifications with alignment
