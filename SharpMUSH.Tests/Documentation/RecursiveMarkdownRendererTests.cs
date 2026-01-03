@@ -264,4 +264,51 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("Link Text");
 		await Assert.That(result.ToString()).IsEqualTo("Link Text");
 	}
+
+	[Test]
+	public async Task RenderTable_ShouldFitToWidth()
+	{
+		// Arrange
+		var markdown = @"| A | B |
+|---|---|
+| 1 | 2 |";
+		
+		// Act - use default width of 78
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		var lines = result.ToPlainText().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		
+		// Assert - table should expand to use available width
+		// With 2 columns and borders, total width should be close to 78
+		// Each line should be the same length and close to maxWidth
+		var firstLineLength = lines[0].Length;
+		await Assert.That(firstLineLength).IsGreaterThan(20); // Should be expanded, not minimal
+		await Assert.That(firstLineLength).IsLessThanOrEqualTo(78); // Should fit within maxWidth
+		
+		// All data rows should have the same length
+		foreach (var line in lines.Where(l => !l.Contains("---")))
+		{
+			await Assert.That(line.Length).IsEqualTo(firstLineLength);
+		}
+	}
+
+	[Test]
+	public async Task RenderTable_DefaultWidthIs78()
+	{
+		// Arrange
+		var markdown = @"| Column 1 | Column 2 | Column 3 |
+|---|---|---|
+| A | B | C |";
+		
+		// Act - use default width (should be 78)
+		var resultDefault = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		var linesDefault = resultDefault.ToPlainText().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		
+		// Act - explicitly use 78
+		var result78 = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown, maxWidth: 78);
+		var lines78 = result78.ToPlainText().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		
+		// Assert - both should produce the same output
+		await Assert.That(linesDefault[0].Length).IsEqualTo(lines78[0].Length);
+		await Assert.That(resultDefault.ToPlainText()).IsEqualTo(result78.ToPlainText());
+	}
 }

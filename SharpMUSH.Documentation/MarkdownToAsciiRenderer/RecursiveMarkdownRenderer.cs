@@ -27,10 +27,10 @@ public class RecursiveMarkdownRenderer
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
 	/// </summary>
-	/// <param name="maxWidth">Maximum width for rendered output. Used to constrain table column widths. Default is 80.</param>
-	public RecursiveMarkdownRenderer(int maxWidth = 80)
+	/// <param name="maxWidth">Maximum width for rendered output. Tables will fit to this width with nice column spacing. Default is 78.</param>
+	public RecursiveMarkdownRenderer(int maxWidth = 78)
 	{
-		_maxWidth = maxWidth > 0 ? maxWidth : 80;
+		_maxWidth = maxWidth > 0 ? maxWidth : 78;
 	}
 
 	/// <summary>
@@ -206,7 +206,7 @@ public class RecursiveMarkdownRenderer
 			columnWidths[col] = Math.Max(columnWidths[col], 3);
 		}
 		
-		// Apply max width constraint by distributing available space across columns
+		// Fit table to available width by distributing space across columns
 		// Format: "| cell1 | cell2 | cell3 |"
 		// Total width = START_BORDER + content widths + separators + END_BORDER
 		var borderAndSeparatorWidth = START_BORDER_WIDTH + END_BORDER_WIDTH + 
@@ -216,11 +216,21 @@ public class RecursiveMarkdownRenderer
 		
 		if (totalWidth > availableWidth && availableWidth > columnCount * 3)
 		{
-			// Scale down column widths proportionally
+			// Scale down column widths proportionally when table is too wide
 			for (int col = 0; col < columnCount; col++)
 			{
 				var proportion = (double)columnWidths[col] / totalWidth;
 				columnWidths[col] = Math.Max(3, (int)(availableWidth * proportion));
+			}
+		}
+		else if (totalWidth < availableWidth)
+		{
+			// Expand columns proportionally to fit the available width for nice spacing
+			var extraSpace = availableWidth - totalWidth;
+			for (int col = 0; col < columnCount; col++)
+			{
+				var proportion = (double)columnWidths[col] / totalWidth;
+				columnWidths[col] += (int)(extraSpace * proportion);
 			}
 		}
 		
