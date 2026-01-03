@@ -465,29 +465,39 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var actualColumnArgCount = args.Count - 1;
 		var widths = args["0"].Message!.ToPlainText();
 
-		var expectedColumnCount = widths.Split(' ').Length;
-		var minRequiredColumnCount = actualColumnArgCount - 3;
-
-		switch (expectedColumnCount)
+		var widthSpecs = widths.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		if (widthSpecs.Length == 0)
 		{
-			case 0:
-				return "#-1 INVALID ALIGN STRING";
-			case var _ when expectedColumnCount > actualColumnArgCount:
-				return "#-1 NOT ENOUGH COLUMNS FOR ALIGN";
-			case var _ when expectedColumnCount < minRequiredColumnCount:
-				return "#-1 TOO MANY COLUMNS FOR ALIGN";
+			return "#-1 INVALID ALIGN STRING";
 		}
 
+		var expectedColumnCount = widthSpecs.Length;
+		var totalArgs = args.Count - 1; // Exclude the widths argument
+
+		// We need at least expectedColumnCount arguments for the column data
+		if (totalArgs < expectedColumnCount)
+		{
+			return "#-1 NOT ENOUGH COLUMNS FOR ALIGN";
+		}
+
+		// We can have at most expectedColumnCount + 3 arguments (columns + filler + colsep + rowsep)
+		if (totalArgs > expectedColumnCount + 3)
+		{
+			return "#-1 TOO MANY COLUMNS FOR ALIGN";
+		}
+
+		// Take exactly expectedColumnCount arguments as column data
 		var columnArguments = args
 			.Skip(1)
-			.SkipLast(expectedColumnCount - actualColumnArgCount)
+			.Take(expectedColumnCount)
 			.Select(x => x.Value.Message!);
 
+		// The remaining arguments are filler, colsep, rowsep (in that order)
 		var remainder = args
-			.Skip(1 + expectedColumnCount).Select(x => x.Value.Message!)
+			.Skip(1 + expectedColumnCount)
+			.Select(x => x.Value.Message!)
 			.ToArray();
 
 		return TextAlignerModule.align(widths,
@@ -504,22 +514,19 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var widths = args["0"].Message!.ToPlainText()!;
 		var cols = args["1"].Message!;
-		var colDelim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
-		var filler = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
-		var columnSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
-		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MModule.single("\n"));
+		var colDelim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var filler = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
+		var columnSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MModule.single(" "));
+		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, MModule.single("\n"));
 
-		var actualColumnArgCount = args.Count - 1;
-		var expectedColumnCount = widths.Split(' ').Length;
-		var minRequiredColumnCount = actualColumnArgCount - 3;
-
-		return expectedColumnCount switch
+		var widthSpecs = widths.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		
+		if (widthSpecs.Length == 0)
 		{
-			0 => "#-1 INVALID ALIGN STRING",
-			_ when expectedColumnCount > actualColumnArgCount => "#-1 NOT ENOUGH COLUMNS FOR ALIGN",
-			_ when expectedColumnCount < minRequiredColumnCount => "#-1 TOO MANY COLUMNS FOR ALIGN",
-			_ => TextAlignerModule.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator)
-		};
+			return "#-1 INVALID ALIGN STRING";
+		}
+
+		return TextAlignerModule.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator);
 	}
 
 	[SharpFunction(Name = "alphamax", MinArgs = 1, MaxArgs = int.MaxValue,
