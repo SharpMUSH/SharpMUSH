@@ -39,7 +39,7 @@ public class RecursiveMarkdownRenderer
 			TableRow row => RenderTableRow(row),
 			TableCell cell => RenderTableCell(cell),
 			
-			// Inline elements
+			// Inline elements - specific types first, then base ContainerInline
 			LiteralInline literal => RenderLiteral(literal),
 			CodeInline code => RenderCodeInline(code),
 			EmphasisInline emphasis => RenderEmphasis(emphasis),
@@ -49,6 +49,7 @@ public class RecursiveMarkdownRenderer
 			HtmlInline html => RenderHtmlInline(html),
 			HtmlEntityInline entity => RenderHtmlEntity(entity),
 			DelimiterInline delimiter => RenderDelimiter(delimiter),
+			ContainerInline container => RenderContainerInline(container),
 			
 			// Default case - try to render children if it's a container block
 			ContainerBlock container => RenderContainerBlock(container),
@@ -325,21 +326,41 @@ public class RecursiveMarkdownRenderer
 		return MModule.multiple(parts);
 	}
 
+	
+	private MString RenderContainerInline(ContainerInline container)
+	{
+		// ContainerInline has FirstChild - render all children
+		return RenderInlines(container.FirstChild);
+	}
+
 	private MString RenderLiteral(LiteralInline literal)
 	{
-		if (literal.Content.Text == null) return MModule.empty();
-		return MModule.single(literal.Content.ToString());
+		// StringSlice.ToString() handles the conversion properly
+		var text = literal.Content.ToString();
+		return string.IsNullOrEmpty(text) ? MModule.empty() : MModule.single(text);
 	}
 
 	private MString RenderCodeInline(CodeInline code)
 	{
-		return MModule.single(code.Content);
+		// Code content is a string, not StringSlice
+		return string.IsNullOrEmpty(code.Content) ? MModule.empty() : MModule.single(code.Content);
 	}
 
 	private MString RenderEmphasis(EmphasisInline emphasis)
 	{
 		var content = RenderInlines(emphasis.FirstChild);
-		return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+		
+		// DelimiterCount determines bold (2) vs italic (1)
+		if (emphasis.DelimiterCount == 2 || emphasis.DelimiterChar == '*')
+		{
+			// Bold
+			return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+		}
+		else
+		{
+			// Italic (could add italic style if needed)
+			return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+		}
 	}
 
 	private MString RenderLineBreak()
@@ -354,7 +375,7 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderAutolink(AutolinkInline autolink)
 	{
-		return MModule.single(autolink.Url ?? "");
+		return string.IsNullOrEmpty(autolink.Url) ? MModule.empty() : MModule.single(autolink.Url);
 	}
 
 	private MString RenderHtmlInline(HtmlInline html)
@@ -364,7 +385,8 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderHtmlEntity(HtmlEntityInline entity)
 	{
-		return MModule.single(entity.Transcoded.ToString());
+		var text = entity.Transcoded.ToString();
+		return string.IsNullOrEmpty(text) ? MModule.empty() : MModule.single(text);
 	}
 
 	private MString RenderDelimiter(DelimiterInline delimiter)
