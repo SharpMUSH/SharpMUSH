@@ -349,4 +349,89 @@ public class StringFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	// Comprehensive tests for align() function
+	[Test]
+	[Arguments("align(10 10,left,right)", "left       right     ")]
+	[Arguments("align(>10 >10,left,right)", "      left      right")]
+	[Arguments("align(-10 -10,left,right)", "   left      right   ")]
+	public async Task AlignJustification(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("align(5X 5X,hello world,test foo)", "hello test ")]
+	[Arguments("align(10x 10x,hello%rworld,test%rfoo)", "hello      test      \nworld      foo       ")]
+	public async Task AlignTruncate(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("align(10#,test)", "test      ")]
+	[Arguments("align(10# 10,test,more)", "test      more      ")]
+	public async Task AlignNoColSep(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("align(10 10,text,data,-,|)", "text------|data------")]
+	[Arguments("align(10 10,text,data,.,=,|)", "text......=data......")]
+	public async Task AlignCustomSeparators(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("align(5,this is a long text)", "this \nis a \nlong \ntext ")]
+	[Arguments("align(10,word wrap test here)", "word wrap \ntest here ")]
+	public async Task AlignWrapping(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Comprehensive tests for lalign() function
+	[Test]
+	[Arguments("lalign(10 10,col1|col2,|)", "col1       col2      ")]
+	[Arguments("lalign(>10 >10,left|right,|)", "      left      right")]
+	public async Task LAlign(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("lalign(10 10,first|second,|,%b)", "first      second    ")]
+	[Arguments("lalign(10 10,a|b,|,-,|)", "a---------|b---------")]
+	[Arguments("lalign(5 5,x|y,|,.,|)", "x....|y....")]
+	public async Task LAlignCustomDelimitersAndSeparators(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("lalign(10 10,a b,%b)", "a          b         ")]
+	[Arguments("lalign(5 5 5 5,one|two|three|four,|)", "one   two   three four ")]
+	public async Task LAlignMultipleColumns(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("lalign(10$,single,|)", "single")]
+	[Arguments("lalign(5. 5,a|b,|)", "a     b    ")]
+	public async Task LAlignOptions(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
