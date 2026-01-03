@@ -177,7 +177,8 @@ public class RecursiveMarkdownRenderer
 	private MString RenderHtmlBlock(HtmlBlock html)
 	{
 		// Parse HTML block and convert to ANSI markup
-		return ParseHtmlToAnsi(html.Lines.ToString());
+		var htmlContent = string.Join("\n", html.Lines.Lines.Select(line => line.Slice.ToString()));
+		return ParseHtmlToAnsi(htmlContent);
 	}
 
 	private MString RenderTable(Table table)
@@ -430,7 +431,7 @@ public class RecursiveMarkdownRenderer
 	{
 		var start = tag.StartsWith("</") ? 2 : 1;
 		var end = tag.IndexOfAny([' ', '>', '/'], start);
-		if (end == -1) end = tag.Length - 1;
+		if (end == -1) end = tag.Length;
 		return tag.Substring(start, end - start).ToLowerInvariant();
 	}
 
@@ -524,11 +525,11 @@ public class RecursiveMarkdownRenderer
 					var b = Convert.ToByte(colorStr.Substring(5, 2), 16);
 					return Color.FromArgb(r, g, b);
 				}
-				else if (colorStr.Length == 4) // #RGB
+				else if (colorStr.Length == 4) // #RGB - expand each digit
 				{
-					var r = Convert.ToByte(colorStr.Substring(1, 1) + colorStr.Substring(1, 1), 16);
-					var g = Convert.ToByte(colorStr.Substring(2, 1) + colorStr.Substring(2, 1), 16);
-					var b = Convert.ToByte(colorStr.Substring(3, 1) + colorStr.Substring(3, 1), 16);
+					var r = (byte)(Convert.ToByte(colorStr.Substring(1, 1), 16) * 17);
+					var g = (byte)(Convert.ToByte(colorStr.Substring(2, 1), 16) * 17);
+					var b = (byte)(Convert.ToByte(colorStr.Substring(3, 1), 16) * 17);
 					return Color.FromArgb(r, g, b);
 				}
 			}
