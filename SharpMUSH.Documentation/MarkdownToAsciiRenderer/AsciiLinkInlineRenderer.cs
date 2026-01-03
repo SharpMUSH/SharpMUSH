@@ -7,12 +7,12 @@ public class AsciiLinkInlineRenderer : AsciiObjectRenderer<LinkInline>
 {
 	protected override void Write(MarkdownToAsciiRenderer renderer, LinkInline obj)
 	{
-		var link = obj.Url;
-		var label = obj.Label ?? obj.Url;
-		var linkOption = new FSharpOption<string>(link ?? "");
-		var labelOption = new FSharpOption<string>(label ?? "");
-		var ascii = MModule.markupSingle(Ansi.Create(linkUrl: linkOption, linkText: labelOption), label);
+		var link = obj.Url ?? "";
 		
-		renderer.Write(ascii.ToString());
+		// Create link markup
+		var linkOption = new FSharpOption<string>(link);
+		// For now, just render the children without special link formatting
+		// TODO: Properly wrap link children in link markup when we have a way to capture inline content
+		renderer.WriteChildren(obj);
 	}
 }
