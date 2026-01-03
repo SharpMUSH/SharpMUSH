@@ -19,6 +19,11 @@ public class RecursiveMarkdownRenderer
 	private readonly Ansi _heading3Style = Ansi.Create(underlined: true);
 	private readonly int _maxWidth;
 
+	// Table border and separator character counts
+	private const int START_BORDER_WIDTH = 2; // "| "
+	private const int END_BORDER_WIDTH = 2; // " |"
+	private const int COLUMN_SEPARATOR_WIDTH = 3; // " | "
+	
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
 	/// </summary>
@@ -70,29 +75,19 @@ public class RecursiveMarkdownRenderer
 	
 	private MString RenderContainerBlock(ContainerBlock container)
 	{
-		var parts = new List<MString>();
-		foreach (var child in container)
-		{
-			var rendered = Render(child);
-			if (rendered.Length > 0)
-			{
-				parts.Add(rendered);
-			}
-		}
+		var parts = container
+			.Select(child => Render(child))
+			.Where(rendered => rendered.Length > 0)
+			.ToList();
 		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
 	}
 
 	private MString RenderDocument(MarkdownDocument doc)
 	{
-		var parts = new List<MString>();
-		foreach (var child in doc)
-		{
-			var rendered = Render(child);
-			if (rendered.Length > 0)
-			{
-				parts.Add(rendered);
-			}
-		}
+		var parts = doc
+			.Select(child => Render(child))
+			.Where(rendered => rendered.Length > 0)
+			.ToList();
 		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
 	}
 
@@ -117,68 +112,52 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderCodeBlock(CodeBlock code)
 	{
-		var lines = new List<MString>();
-		if (code.Lines.Lines != null)
-		{
-			foreach (var line in code.Lines.Lines)
-			{
-				if (line.Slice.Text != null)
-				{
-					lines.Add(MModule.single(line.Slice.ToString()));
-				}
-			}
-		}
+		var lines = code.Lines.Lines?
+			.Where(line => line.Slice.Text != null)
+			.Select(line => MModule.single(line.Slice.ToString()))
+			.ToList() ?? new List<MString>();
+		
 		return MModule.multipleWithDelimiter(MModule.single("\n"), lines);
 	}
 
 	private MString RenderList(ListBlock list)
 	{
-		var items = new List<MString>();
 		var itemIndex = 1;
-		
-		foreach (var item in list)
-		{
-			if (item is ListItemBlock listItem)
+		var items = list
+			.OfType<ListItemBlock>()
+			.Select(listItem =>
 			{
 				var prefix = list.IsOrdered 
 					? MModule.markupSingle(_dimStyle, $"{itemIndex}. ")
 					: MModule.markupSingle(_dimStyle, "- ");
 				
 				var content = RenderListItem(listItem);
-				items.Add(MModule.concat(prefix, content));
 				itemIndex++;
-			}
-		}
+				return MModule.concat(prefix, content);
+			})
+			.ToList();
 		
 		return MModule.multipleWithDelimiter(MModule.single("\n"), items);
 	}
 
 	private MString RenderListItem(ListItemBlock listItem)
 	{
-		var parts = new List<MString>();
-		foreach (var child in listItem)
-		{
-			var rendered = Render(child);
-			if (rendered.Length > 0)
-			{
-				parts.Add(rendered);
-			}
-		}
+		var parts = listItem
+			.Select(child => Render(child))
+			.Where(rendered => rendered.Length > 0)
+			.ToList();
+		
 		// Join list item blocks without newlines between them
 		return MModule.multiple(parts);
 	}
 
 	private MString RenderQuote(QuoteBlock quote)
 	{
-		var parts = new List<MString>();
-		foreach (var child in quote)
-		{
-			var rendered = Render(child);
-			if (rendered.Length > 0)
-			{
-				parts.Add(rendered);
-			}
-		}
+		var parts = quote
+			.Select(child => Render(child))
+			.Where(rendered => rendered.Length > 0)
+			.ToList();
+		
 		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
 		
 		// Add 2-space indentation to each line
@@ -204,24 +183,16 @@ public class RecursiveMarkdownRenderer
 	{
 		var borderStyle = _dimStyle;
 		
-		// Collect all rows with their cell contents
-		var allRows = new List<(bool IsHeader, List<MString> Cells)>();
-		
-		foreach (var rowObj in table)
-		{
-			if (rowObj is TableRow row)
-			{
-				var cells = new List<MString>();
-				foreach (var cellObj in row)
-				{
-					if (cellObj is TableCell cell)
-					{
-						cells.Add(RenderTableCell(cell));
-					}
-				}
-				allRows.Add((row.IsHeader, cells));
-			}
-		}
+		// Collect all rows with their cell contents using LINQ
+		var allRows = table
+			.OfType<TableRow>()
+			.Select(row => (
+				IsHeader: row.IsHeader,
+				Cells: row.OfType<TableCell>()
+					.Select(cell => RenderTableCell(cell))
+					.ToList()
+			))
+			.ToList();
 		
 		if (allRows.Count == 0) return MModule.empty();
 		
@@ -237,8 +208,9 @@ public class RecursiveMarkdownRenderer
 		
 		// Apply max width constraint by distributing available space across columns
 		// Format: "| cell1 | cell2 | cell3 |"
-		// Borders: "| " at start (2 chars) + " |" at end (2 chars) + " | " between cells (3 chars each)
-		var borderAndSeparatorWidth = 2 + 2 + (columnCount - 1) * 3; // Start + end + separators between
+		// Total width = START_BORDER + content widths + separators + END_BORDER
+		var borderAndSeparatorWidth = START_BORDER_WIDTH + END_BORDER_WIDTH + 
+		                               (columnCount - 1) * COLUMN_SEPARATOR_WIDTH;
 		var availableWidth = _maxWidth - borderAndSeparatorWidth;
 		var totalWidth = columnWidths.Sum();
 		
@@ -323,15 +295,11 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderTableCell(TableCell cell)
 	{
-		var parts = new List<MString>();
-		foreach (var child in cell)
-		{
-			var rendered = Render(child);
-			if (rendered.Length > 0)
-			{
-				parts.Add(rendered);
-			}
-		}
+		var parts = cell
+			.Select(child => Render(child))
+			.Where(rendered => rendered.Length > 0)
+			.ToList();
+		
 		// Join cell blocks without newlines between them
 		return MModule.multiple(parts);
 	}

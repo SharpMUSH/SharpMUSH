@@ -110,7 +110,8 @@ public class RecursiveMarkdownRendererTests
 		
 		// Assert - verify table contains all content
 		var plainText = result.ToPlainText();
-		await Assert.That(plainText).IsEqualTo(plainText.Trim()); // Just verify it's not empty
+		await Assert.That(plainText.Length).IsGreaterThan(0);
+		
 		// Verify all data is present
 		await Assert.That(plainText.Contains("Left")).IsTrue();
 		await Assert.That(plainText.Contains("Center")).IsTrue();
