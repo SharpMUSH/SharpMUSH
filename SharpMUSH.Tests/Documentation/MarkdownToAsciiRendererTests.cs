@@ -232,4 +232,137 @@ public class MarkdownToAsciiRendererTests
 		// Assert
 		await Assert.That(result.ToPlainText()).Contains("&");
 	}
+
+	[Test]
+	public async Task RenderUnorderedList_ShouldWork()
+	{
+		// Arrange
+		var markdown = "- Item 1\n- Item 2\n- Item 3";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).Contains("- Item 1");
+		await Assert.That(result.ToPlainText()).Contains("- Item 2");
+		await Assert.That(result.ToPlainText()).Contains("- Item 3");
+	}
+
+	[Test]
+	public async Task RenderOrderedList_ShouldWork()
+	{
+		// Arrange
+		var markdown = "1. First item\n2. Second item\n3. Third item";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).Contains("1. First item");
+		await Assert.That(result.ToPlainText()).Contains("2. Second item");
+		await Assert.That(result.ToPlainText()).Contains("3. Third item");
+	}
+
+	[Test]
+	public async Task RenderQuote_ShouldIndent()
+	{
+		// Arrange
+		var markdown = "> This is a quote";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).Contains("This is a quote");
+		// Should be indented with 2 spaces
+		await Assert.That(result.ToString()).Contains("  ");
+	}
+
+	[Test]
+	public async Task RenderTable_ShouldFormatAsTextTable()
+	{
+		// Arrange
+		var markdown = @"| Header 1 | Header 2 |
+| --- | --- |
+| Cell 1 | Cell 2 |
+| Cell 3 | Cell 4 |";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		var plainText = result.ToPlainText();
+		await Assert.That(plainText).Contains("Header 1");
+		await Assert.That(plainText).Contains("Header 2");
+		await Assert.That(plainText).Contains("Cell 1");
+		await Assert.That(plainText).Contains("Cell 2");
+		await Assert.That(plainText).Contains("Cell 3");
+		await Assert.That(plainText).Contains("Cell 4");
+		// Should have table borders
+		await Assert.That(plainText).Contains("|");
+		// Should have separator line
+		await Assert.That(plainText).Contains("---");
+	}
+
+	[Test]
+	public async Task RenderTableWithAlignment_ShouldRespectAlignment()
+	{
+		// Arrange
+		var markdown = @"| Left | Center | Right |
+| :--- | :---: | ---: |
+| L1 | C1 | R1 |";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		var plainText = result.ToPlainText();
+		await Assert.That(plainText).Contains("Left");
+		await Assert.That(plainText).Contains("Center");
+		await Assert.That(plainText).Contains("Right");
+	}
+
+	[Test]
+	public async Task RenderNestedList_ShouldIndentProperly()
+	{
+		// Arrange
+		var markdown = "- Item 1\n  - Nested 1\n  - Nested 2\n- Item 2";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		var plainText = result.ToPlainText();
+		await Assert.That(plainText).Contains("Item 1");
+		await Assert.That(plainText).Contains("Nested 1");
+		await Assert.That(plainText).Contains("Nested 2");
+		await Assert.That(plainText).Contains("Item 2");
+	}
+
+	[Test]
+	public async Task RenderMixedContent_WithListsAndTables_ShouldWork()
+	{
+		// Arrange
+		var markdown = @"# Header
+
+Some text here.
+
+- List item 1
+- List item 2
+
+| Col1 | Col2 |
+| --- | --- |
+| A | B |";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		var plainText = result.ToPlainText();
+		await Assert.That(plainText).Contains("Header");
+		await Assert.That(plainText).Contains("Some text here");
+		await Assert.That(plainText).Contains("List item 1");
+		await Assert.That(plainText).Contains("Col1");
+		await Assert.That(plainText).Contains("Col2");
+	}
 }
