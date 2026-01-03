@@ -10,7 +10,6 @@ public class FlagFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("andflags(%#,PLAYER)", "1")]
 	public async Task Andflags(string str, string expected)
 	{
@@ -19,7 +18,6 @@ public class FlagFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("orflags(%#,PLAYER WIZARD)", "1")]
 	public async Task Orflags(string str, string expected)
 	{
@@ -28,7 +26,6 @@ public class FlagFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("andlflags(%#,PLAYER)", "1")]
 	public async Task Andlflags(string str, string expected)
 	{
@@ -37,7 +34,6 @@ public class FlagFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("orlflags(%#,PLAYER WIZARD)", "1")]
 	public async Task Orlflags(string str, string expected)
 	{
@@ -46,7 +42,6 @@ public class FlagFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("andlpowers(%#,)", "")]
 	public async Task Andlpowers(string str, string expected)
 	{
@@ -55,7 +50,6 @@ public class FlagFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("orlpowers(%#,)", "")]
 	public async Task Orlpowers(string str, string expected)
 	{

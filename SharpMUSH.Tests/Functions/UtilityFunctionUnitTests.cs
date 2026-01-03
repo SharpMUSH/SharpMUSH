@@ -39,7 +39,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("fn(testfunc)", "")]
 	public async Task Fn(string str, string expected)
 	{
@@ -78,7 +77,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("valid(attrname,TEST)", "1")]
 	[Arguments("valid(attrname,123)", "0")]
 	public async Task Valid(string str, string expected)
@@ -88,7 +86,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("visible(%#,%#)", "1")]
 	public async Task Visible(string str, string expected)
 	{
@@ -97,7 +94,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("poll()", "")]
 	public async Task Poll(string str, string expected)
 	{
@@ -177,7 +173,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("r(0)", "0")]
 	public async Task R(string str, string expected)
 	{
@@ -187,7 +182,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("recv()", "")]
 	public async Task Recv(string str, string expected)
 	{
@@ -197,7 +191,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("sent()", "")]
 	public async Task Sent(string str, string expected)
 	{
@@ -241,7 +234,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("suggest(test)", "test")]
 	public async Task Suggest(string str, string expected)
 	{

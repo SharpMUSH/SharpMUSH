@@ -97,7 +97,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("host(%#)", "")]
 	public async Task Host(string str, string expected)
 	{
@@ -106,7 +105,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ipaddr(%#)", "")]
 	public async Task Ipaddr(string str, string expected)
 	{
@@ -115,7 +113,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lports()", "")]
 	public async Task Lports(string str, string expected)
 	{
@@ -124,7 +121,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("mwho()", "")]
 	public async Task Mwho(string str, string expected)
 	{
@@ -133,7 +129,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nwho()", "1")]
 	public async Task Nwho(string str, string expected)
 	{
@@ -142,7 +137,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("lwhoid()", "")]
 	public async Task Lwhoid(string str, string expected)
 	{
@@ -152,7 +146,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ncon()", "0")]
 	public async Task Ncon(string str, string expected)
 	{
@@ -171,7 +164,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nplayers()", "0")]
 	public async Task Nplayers(string str, string expected)
 	{
@@ -181,7 +173,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nthings()", "0")]
 	public async Task Nthings(string str, string expected)
 	{
@@ -191,7 +182,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nvcon()", "0")]
 	public async Task Nvcon(string str, string expected)
 	{
@@ -201,7 +191,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nvexits()", "0")]
 	public async Task Nvexits(string str, string expected)
 	{
@@ -211,7 +200,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nvplayers()", "0")]
 	public async Task Nvplayers(string str, string expected)
 	{
@@ -221,7 +209,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nvthings()", "0")]
 	public async Task Nvthings(string str, string expected)
 	{
@@ -231,7 +218,6 @@ public class ConnectionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ports()", "4201")]
 	public async Task Ports(string str, string expected)
 	{

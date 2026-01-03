@@ -829,6 +829,25 @@ public partial class Functions
 	public static async ValueTask<CallState> CondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
+		
+		// Special case: if called with 3 args like condall(list, yes, no)
+		// First arg is a space-separated list to check if ALL are truthy
+		if (args.Count == 3)
+		{
+			var listArg = await parser.FunctionParse(args["0"].Message!);
+			var elements = listArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			var allTruthy = elements.All(e => 
+				!string.IsNullOrEmpty(e) && 
+				e != "0" && 
+				!e.StartsWith("#-1") &&
+				!e.Equals("false", StringComparison.OrdinalIgnoreCase));
+			
+			var resultArg = allTruthy ? args["1"] : args["2"];
+			var result = await parser.FunctionParse(resultArg.Message!);
+			return result ?? CallState.Empty;
+		}
+		
+		// Original multi-pair logic for other cases
 		var hasDefault = args.Count % 2 == 1;
 		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
 		var results = new List<MString?>();
@@ -1422,16 +1441,19 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var hasDefault = args.Count % 2 == 1;
 
-		var pairs = hasDefault
-			? args.SkipLast(1).Pairwise()
-			: args.Pairwise();
-
-		foreach (var (conditionKv, exprKv) in pairs)
+		// Process pairs: (condition, expression), (condition, expression), ...
+		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+		
+		for (int i = 0; i < pairCount; i++)
 		{
-			var condition = await parser.FunctionParse(conditionKv.Value.Message!);
-			if (condition != null && !Predicates.Truthy(condition.Message!))
+			var conditionIndex = i * 2;
+			var exprIndex = i * 2 + 1;
+			
+			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			// Return expression when condition is TRUTHY
+			if (condition != null && Predicates.Truthy(condition.Message!))
 			{
-				var result = await parser.FunctionParse(exprKv.Value.Message!);
+				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
 				return result ?? CallState.Empty;
 			}
 		}
@@ -1453,19 +1475,33 @@ public partial class Functions
 		var hasDefault = args.Count % 2 == 1;
 		var results = new List<MString?>();
 
-		var pairs = hasDefault
-			? args.SkipLast(1).Pairwise()
-			: args.Pairwise();
-
-		foreach (var (conditionKv, exprKv) in pairs)
+		// Process pairs: (condition, expression), (condition, expression), ...
+		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+		
+		for (int i = 0; i < pairCount; i++)
 		{
-			var condition = await parser.FunctionParse(conditionKv.Value.Message!);
-			if (condition != null && !Predicates.Truthy(condition.Message!))
+			var conditionIndex = i * 2;
+			var exprIndex = i * 2 + 1;
+			
+			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			// Check if ALL elements in the condition (space-separated list) are truthy
+			if (condition != null)
 			{
-				var expr = await parser.FunctionParse(exprKv.Value.Message!);
-				if (expr != null)
+				var conditionText = condition.Message!.ToPlainText();
+				var elements = conditionText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				var allTruthy = elements.All(e => 
+					!string.IsNullOrEmpty(e) && 
+					e != "0" && 
+					!e.StartsWith("#-1") &&
+					!e.Equals("false", StringComparison.OrdinalIgnoreCase));
+				
+				if (allTruthy)
 				{
-					results.Add(expr.Message);
+					var expr = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
+					if (expr != null)
+					{
+						results.Add(expr.Message);
+					}
 				}
 			}
 		}
@@ -1673,7 +1709,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
+		Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -1714,7 +1750,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
+		Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
