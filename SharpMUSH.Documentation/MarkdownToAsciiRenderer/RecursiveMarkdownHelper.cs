@@ -17,6 +17,7 @@ public static class RecursiveMarkdownHelper
 	{
 		var pipeline = new MarkdownPipelineBuilder()
 			.UsePipeTables()
+			.EnableTrackTrivia() // Track HTML
 			.Build();
 		
 		var document = Markdown.Parse(markdown, pipeline);

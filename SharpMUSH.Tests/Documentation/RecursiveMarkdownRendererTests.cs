@@ -311,4 +311,106 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(linesDefault[0].Length).IsEqualTo(lines78[0].Length);
 		await Assert.That(resultDefault.ToPlainText()).IsEqualTo(result78.ToPlainText());
 	}
+
+	[Test]
+	public async Task RenderHtml_BoldTag_ShouldApplyMarkup()
+	{
+		// Arrange
+		var markdown = "This is <b>bold</b> text";
+		
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).IsEqualTo("This is bold text");
+		
+		// Verify ANSI formatting is present
+		var fullString = result.ToString();
+		await Assert.That(fullString.Contains(Bold)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderHtml_ItalicTag_ShouldApplyMarkup()
+	{
+		// Arrange
+		var markdown = "This is <i>italic</i> text";
+		
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).IsEqualTo("This is italic text");
+		
+		// Verify italic ANSI code is present
+		var fullString = result.ToString();
+		await Assert.That(fullString.Contains("\u001b[3m")).IsTrue(); // Italic code
+	}
+
+	[Test]
+	public async Task RenderHtml_UnderlineTag_ShouldApplyMarkup()
+	{
+		// Arrange
+		var markdown = "This is <u>underlined</u> text";
+		
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).IsEqualTo("This is underlined text");
+		
+		// Verify underline ANSI code is present
+		var fullString = result.ToString();
+		await Assert.That(fullString.Contains(Underlined)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderHtml_FontColorTag_ShouldApplyMarkup()
+	{
+		// Arrange
+		var markdown = @"This is <font color=""red"">red</font> text";
+		
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
+		
+		// Verify color ANSI code is present (foreground color)
+		var fullString = result.ToString();
+		await Assert.That(fullString.Contains("\u001b[38;2;")).IsTrue(); // RGB foreground code
+	}
+
+	[Test]
+	public async Task RenderHtml_SpanWithStyle_ShouldApplyMarkup()
+	{
+		// Arrange
+		var markdown = @"This is <span style=""color: #FF0000"">red</span> text";
+		
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
+		
+		// Verify color ANSI code is present
+		var fullString = result.ToString();
+		await Assert.That(fullString.Contains("\u001b[38;2;")).IsTrue(); // RGB foreground code
+	}
+
+	[Test]
+	public async Task RenderHtml_SpanWithBackgroundColor_ShouldApplyMarkup()
+	{
+		// Arrange
+		var markdown = @"This is <span style=""background-color: blue"">highlighted</span> text";
+		
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		
+		// Assert
+		await Assert.That(result.ToPlainText()).IsEqualTo("This is highlighted text");
+		
+		// Verify background color ANSI code is present
+		var fullString = result.ToString();
+		await Assert.That(fullString.Contains("\u001b[48;2;")).IsTrue(); // RGB background code
+	}
 }

@@ -176,7 +176,8 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderHtmlBlock(HtmlBlock html)
 	{
-		return MModule.empty(); // Skip HTML blocks
+		// Parse HTML block and convert to ANSI markup
+		return ParseHtmlToAnsi(html.Lines.ToString());
 	}
 
 	private MString RenderTable(Table table)
@@ -385,7 +386,8 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderHtmlInline(HtmlInline html)
 	{
-		return MModule.empty();
+		// Parse HTML inline and convert to ANSI markup
+		return ParseHtmlToAnsi(html.Tag);
 	}
 
 	private MString RenderHtmlEntity(HtmlEntityInline entity)
@@ -397,5 +399,150 @@ public class RecursiveMarkdownRenderer
 	private MString RenderDelimiter(DelimiterInline delimiter)
 	{
 		return RenderInlines(delimiter.FirstChild);
+	}
+
+	/// <summary>
+	/// Parses HTML tags and converts them to ANSI markup.
+	/// Supports basic color tags, bold, italic, underline, etc.
+	/// </summary>
+	private MString ParseHtmlToAnsi(string tag)
+	{
+		if (string.IsNullOrWhiteSpace(tag))
+			return MModule.empty();
+
+		var tagName = ExtractTagName(tag);
+		var isClosing = tag.StartsWith("</");
+
+		if (isClosing)
+		{
+			// Closing tag - return clear formatting as actual ANSI string
+			return MModule.single(ANSILibrary.ANSI.Clear);
+		}
+		else
+		{
+			// Opening tag - convert to ANSI code string
+			var ansiCode = ConvertHtmlTagToAnsiCode(tag, tagName);
+			return string.IsNullOrEmpty(ansiCode) ? MModule.empty() : MModule.single(ansiCode);
+		}
+	}
+
+	private string ExtractTagName(string tag)
+	{
+		var start = tag.StartsWith("</") ? 2 : 1;
+		var end = tag.IndexOfAny([' ', '>', '/'], start);
+		if (end == -1) end = tag.Length - 1;
+		return tag.Substring(start, end - start).ToLowerInvariant();
+	}
+
+	private string ConvertHtmlTagToAnsiCode(string tag, string tagName)
+	{
+		return tagName switch
+		{
+			"b" or "strong" => ANSILibrary.ANSI.Bold + ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(Color.White)),
+			"i" or "em" => ANSILibrary.ANSI.Italic,
+			"u" => ANSILibrary.ANSI.Underlined,
+			"s" or "strike" or "del" => ANSILibrary.ANSI.StrikeThrough,
+			"font" => ParseFontTagToAnsiCode(tag),
+			"span" => ParseSpanTagToAnsiCode(tag),
+			"color" => ParseColorTagToAnsiCode(tag),
+			_ => ""
+		};
+	}
+
+	private string ParseFontTagToAnsiCode(string tag)
+	{
+		// Extract color attribute: <font color="red"> or <font color="#FF0000">
+		var colorMatch = System.Text.RegularExpressions.Regex.Match(tag, @"color\s*=\s*[""']([^""']+)[""']", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		if (colorMatch.Success)
+		{
+			var color = ParseColorValue(colorMatch.Groups[1].Value);
+			if (color.HasValue)
+				return ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(color.Value));
+		}
+		return "";
+	}
+
+	private string ParseSpanTagToAnsiCode(string tag)
+	{
+		// Extract style attribute: <span style="color: red"> or <span style="background-color: blue">
+		var styleMatch = System.Text.RegularExpressions.Regex.Match(tag, @"style\s*=\s*[""']([^""']+)[""']", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		if (styleMatch.Success)
+		{
+			var style = styleMatch.Groups[1].Value;
+			
+			// Parse color
+			var colorMatch = System.Text.RegularExpressions.Regex.Match(style, @"color\s*:\s*([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+			var bgColorMatch = System.Text.RegularExpressions.Regex.Match(style, @"background-color\s*:\s*([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+			
+			var result = "";
+			
+			if (colorMatch.Success)
+			{
+				var fg = ParseColorValue(colorMatch.Groups[1].Value.Trim());
+				if (fg.HasValue)
+					result += ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(fg.Value));
+			}
+			
+			if (bgColorMatch.Success)
+			{
+				var bg = ParseColorValue(bgColorMatch.Groups[1].Value.Trim());
+				if (bg.HasValue)
+					result += ANSILibrary.ANSI.Background(ANSILibrary.ANSI.AnsiColor.NewRGB(bg.Value));
+			}
+			
+			return result;
+		}
+		return "";
+	}
+
+	private string ParseColorTagToAnsiCode(string tag)
+	{
+		// Extract color value: <color red> or <color #FF0000>
+		var match = System.Text.RegularExpressions.Regex.Match(tag, @"<color\s+([^>]+)>", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		if (match.Success)
+		{
+			var color = ParseColorValue(match.Groups[1].Value.Trim());
+			if (color.HasValue)
+				return ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(color.Value));
+		}
+		return "";
+	}
+
+	private Color? ParseColorValue(string colorStr)
+	{
+		colorStr = colorStr.Trim();
+		
+		// Hex color: #RRGGBB or #RGB
+		if (colorStr.StartsWith("#"))
+		{
+			try
+			{
+				if (colorStr.Length == 7) // #RRGGBB
+				{
+					var r = Convert.ToByte(colorStr.Substring(1, 2), 16);
+					var g = Convert.ToByte(colorStr.Substring(3, 2), 16);
+					var b = Convert.ToByte(colorStr.Substring(5, 2), 16);
+					return Color.FromArgb(r, g, b);
+				}
+				else if (colorStr.Length == 4) // #RGB
+				{
+					var r = Convert.ToByte(colorStr.Substring(1, 1) + colorStr.Substring(1, 1), 16);
+					var g = Convert.ToByte(colorStr.Substring(2, 1) + colorStr.Substring(2, 1), 16);
+					var b = Convert.ToByte(colorStr.Substring(3, 1) + colorStr.Substring(3, 1), 16);
+					return Color.FromArgb(r, g, b);
+				}
+			}
+			catch { return null; }
+		}
+		
+		// Named colors
+		try
+		{
+			return Color.FromName(colorStr);
+		}
+		catch
+		{
+			return null;
+		}
 	}
 }
