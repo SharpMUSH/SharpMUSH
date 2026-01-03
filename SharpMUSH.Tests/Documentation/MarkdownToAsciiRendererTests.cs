@@ -365,4 +365,48 @@ Some text here.
 		await Assert.That(plainText).Contains("Col1");
 		await Assert.That(plainText).Contains("Col2");
 	}
+
+	[Test]
+	public async Task TableBorders_ShouldUseMarkupString()
+	{
+		// Arrange
+		var markdown = @"| Header |
+| --- |
+| Cell |";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		// The result should contain ANSI formatting codes (not just plain text)
+		// This verifies that the borders are styled with markup
+		var stringOutput = result.ToString();
+		var plainText = result.ToPlainText();
+		
+		// The string representation should be longer due to ANSI codes
+		await Assert.That(stringOutput.Length).IsGreaterThan(plainText.Length);
+		// Should contain the SGR escape sequence for faint/dim
+		await Assert.That(stringOutput).Contains("\u001b[");
+	}
+
+	[Test]
+	public async Task ListBullets_ShouldUseMarkupString()
+	{
+		// Arrange
+		var markdown = "- Item 1\n- Item 2";
+		
+		// Act
+		var result = RenderMarkdown(markdown);
+		
+		// Assert
+		// The result should contain ANSI formatting codes (not just plain text)
+		// This verifies that the bullets are styled with markup
+		var stringOutput = result.ToString();
+		var plainText = result.ToPlainText();
+		
+		// The string representation should be longer due to ANSI codes
+		await Assert.That(stringOutput.Length).IsGreaterThan(plainText.Length);
+		// Should contain the SGR escape sequence for faint/dim
+		await Assert.That(stringOutput).Contains("\u001b[");
+	}
 }

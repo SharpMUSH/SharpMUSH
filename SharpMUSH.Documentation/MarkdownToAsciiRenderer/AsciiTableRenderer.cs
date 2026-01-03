@@ -1,5 +1,7 @@
+using System.Drawing;
 using System.Globalization;
 using System.Text;
+using ANSILibrary;
 using Markdig.Extensions.Tables;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -10,6 +12,9 @@ public class AsciiTableRenderer : AsciiObjectRenderer<Table>
 	{
 		renderer.EnsureLine();
 		
+		// Create a dimmed style for table borders
+		var borderStyle = Ansi.Create(faint: true);
+		
 		// Render table rows with simple ASCII art table formatting
 		bool isFirstRow = true;
 		
@@ -17,8 +22,8 @@ public class AsciiTableRenderer : AsciiObjectRenderer<Table>
 		{
 			var row = (TableRow)rowObj;
 			
-			// Start the row
-			renderer.Write("| ");
+			// Start the row with styled border
+			renderer.Write(MModule.markupSingle(borderStyle, "| "));
 			
 			// Render each cell
 			for (int i = 0; i < row.Count; i++)
@@ -28,7 +33,9 @@ public class AsciiTableRenderer : AsciiObjectRenderer<Table>
 				
 				// Write cell content
 				renderer.WriteChildren(cell);
-				renderer.Write(" | ");
+				
+				// Write cell separator with styled border
+				renderer.Write(MModule.markupSingle(borderStyle, " | "));
 			}
 			
 			renderer.EnsureLine();
@@ -36,11 +43,13 @@ public class AsciiTableRenderer : AsciiObjectRenderer<Table>
 			// Add separator line after header row
 			if (row.IsHeader || isFirstRow)
 			{
-				renderer.Write("|");
+				var separatorBuilder = new StringBuilder();
+				separatorBuilder.Append("|");
 				for (int i = 0; i < row.Count; i++)
 				{
-					renderer.Write("---|");
+					separatorBuilder.Append("---|");
 				}
+				renderer.Write(MModule.markupSingle(borderStyle, separatorBuilder.ToString()));
 				renderer.EnsureLine();
 			}
 			
