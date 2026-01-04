@@ -59,7 +59,7 @@ public class RecursiveMarkdownRenderer
 			CodeInline code => RenderCodeInline(code),
 			EmphasisInline emphasis => RenderEmphasis(emphasis),
 			LineBreakInline _ => RenderLineBreak(),
-			LinkInline link => RenderLink(link),
+			LinkInline link => RenderLink(link, RenderInlines(link.FirstChild)),
 			AutolinkInline autolink => RenderAutolink(autolink),
 			HtmlInline html => RenderHtmlInline(html),
 			HtmlEntityInline entity => RenderHtmlEntity(entity),
@@ -91,7 +91,7 @@ public class RecursiveMarkdownRenderer
 		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
 	}
 
-	private MString RenderHeading(HeadingBlock heading)
+	protected virtual MString RenderHeading(HeadingBlock heading)
 	{
 		var style = heading.Level switch
 		{
@@ -110,7 +110,7 @@ public class RecursiveMarkdownRenderer
 		return RenderInlines(para.Inline);
 	}
 
-	private MString RenderCodeBlock(CodeBlock code)
+	protected virtual MString RenderCodeBlock(CodeBlock code)
 	{
 		var lines = code.Lines.Lines?
 			.Where(line => line.Slice.Text != null)
@@ -122,16 +122,16 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderList(ListBlock list)
 	{
-		var itemIndex = 1;
+		var itemIndex = 0;
 		var items = list
 			.OfType<ListItemBlock>()
 			.Select(listItem =>
 			{
 				var prefix = list.IsOrdered 
-					? MModule.markupSingle(_dimStyle, $"{itemIndex}. ")
+					? MModule.markupSingle(_dimStyle, $"{itemIndex + 1}. ")
 					: MModule.markupSingle(_dimStyle, "- ");
 				
-				var content = RenderListItem(listItem);
+				var content = RenderListItem(listItem, itemIndex, list.IsOrdered);
 				itemIndex++;
 				return MModule.concat(prefix, content);
 			})
@@ -140,7 +140,7 @@ public class RecursiveMarkdownRenderer
 		return MModule.multipleWithDelimiter(MModule.single("\n"), items);
 	}
 
-	private MString RenderListItem(ListItemBlock listItem)
+	protected virtual MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
 	{
 		var parts = listItem
 			.Select(child => Render(child))
@@ -151,7 +151,7 @@ public class RecursiveMarkdownRenderer
 		return MModule.multiple(parts);
 	}
 
-	private MString RenderQuote(QuoteBlock quote)
+	protected virtual MString RenderQuote(QuoteBlock quote)
 	{
 		var parts = quote
 			.Select(child => Render(child))
@@ -181,7 +181,7 @@ public class RecursiveMarkdownRenderer
 		return ParseHtmlToAnsi(htmlContent);
 	}
 
-	private MString RenderTable(Table table)
+	protected virtual MString RenderTable(Table table)
 	{
 		var borderStyle = _dimStyle;
 		
@@ -350,7 +350,7 @@ public class RecursiveMarkdownRenderer
 	private MString RenderCodeInline(CodeInline code)
 	{
 		// Code content is a string, not StringSlice
-		return string.IsNullOrEmpty(code.Content) ? MModule.empty() : MModule.single(code.Content);
+		return string.IsNullOrEmpty(code.Content) ? MModule.empty() : RenderInlineCode(code.Content);
 	}
 
 	private MString RenderEmphasis(EmphasisInline emphasis)
@@ -361,13 +361,47 @@ public class RecursiveMarkdownRenderer
 		if (emphasis.DelimiterCount == 2 || emphasis.DelimiterChar == '*')
 		{
 			// Bold
-			return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+			return RenderBold(content);
 		}
 		else
 		{
-			// Italic (could add italic style if needed)
-			return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+			// Italic
+			return RenderItalic(content);
 		}
+	}
+
+	/// <summary>
+	/// Render bold text. Can be overridden for custom rendering.
+	/// </summary>
+	protected virtual MString RenderBold(MString content)
+	{
+		return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+	}
+
+	/// <summary>
+	/// Render italic text. Can be overridden for custom rendering.
+	/// </summary>
+	protected virtual MString RenderItalic(MString content)
+	{
+		// Default uses same style as bold (ANSI italic support varies)
+		return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+	}
+
+	/// <summary>
+	/// Render underlined text. Can be overridden for custom rendering.
+	/// </summary>
+	protected virtual MString RenderUnderline(MString content)
+	{
+		var underlineStyle = Ansi.Create(underlined: true);
+		return MModule.concat(MModule.markupSingle(underlineStyle, ""), content);
+	}
+
+	/// <summary>
+	/// Render inline code. Can be overridden for custom rendering.
+	/// </summary>
+	protected virtual MString RenderInlineCode(string content)
+	{
+		return MModule.single(content);
 	}
 
 	private MString RenderLineBreak()
@@ -375,7 +409,7 @@ public class RecursiveMarkdownRenderer
 		return MModule.single("\n");
 	}
 
-	private MString RenderLink(LinkInline link)
+	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
 		return RenderInlines(link.FirstChild);
 	}

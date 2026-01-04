@@ -26,6 +26,22 @@ public static class RecursiveMarkdownHelper
 	}
 	
 	/// <summary>
+	/// Renders markdown text to MString using a custom renderer
+	/// </summary>
+	/// <param name="markdown">The markdown text to render</param>
+	/// <param name="renderer">Custom renderer instance to use</param>
+	public static MString RenderMarkdown(string markdown, RecursiveMarkdownRenderer renderer)
+	{
+		var pipeline = new MarkdownPipelineBuilder()
+			.UsePipeTables()
+			.EnableTrackTrivia() // Track HTML
+			.Build();
+		
+		var document = Markdown.Parse(markdown, pipeline);
+		return renderer.Render(document);
+	}
+	
+	/// <summary>
 	/// Renders a parsed MarkdownDocument to MString using the recursive renderer
 	/// </summary>
 	/// <param name="document">The parsed markdown document</param>
