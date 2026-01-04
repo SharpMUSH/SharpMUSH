@@ -356,7 +356,7 @@ public class RecursiveMarkdownRenderer
 	private MString RenderCodeInline(CodeInline code)
 	{
 		// Code content is a string, not StringSlice
-		return string.IsNullOrEmpty(code.Content) ? MModule.empty() : RenderInlineCode(code.Content);
+		return string.IsNullOrEmpty(code.Content) ? MModule.empty() : RenderInlineCode(code);
 	}
 
 	private MString RenderEmphasis(EmphasisInline emphasis)
@@ -407,9 +407,9 @@ public class RecursiveMarkdownRenderer
 	/// <summary>
 	/// Render inline code. Can be overridden for custom rendering.
 	/// </summary>
-	protected virtual MString RenderInlineCode(string content)
+	protected virtual MString RenderInlineCode(CodeInline code)
 	{
-		return MModule.single(content);
+		return MModule.single(code.Content);
 	}
 
 	private MString RenderLineBreak()
@@ -440,7 +440,7 @@ public class RecursiveMarkdownRenderer
 		return MModule.markupSingle(linkMarkup, contentText);
 	}
 
-	private MString RenderAutolink(AutolinkInline autolink)
+	protected virtual MString RenderAutolink(AutolinkInline autolink)
 	{
 		if (string.IsNullOrEmpty(autolink.Url))
 		{
