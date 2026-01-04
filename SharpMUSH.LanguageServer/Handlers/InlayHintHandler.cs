@@ -1,6 +1,7 @@
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
+using Serilog;
 using SharpMUSH.LanguageServer.Services;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
@@ -51,9 +52,7 @@ public class InlayHintHandler : InlayHintsHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
-			Console.Error.WriteLine($"Error generating inlay hints: {ex.Message}");
-			#pragma warning restore VSTHRD103
+			Log.Error(ex, "Error generating inlay hints");
 			return Task.FromResult<InlayHintContainer?>(null);
 		}
 	}
@@ -189,10 +188,12 @@ public class InlayHintHandler : InlayHintsHandlerBase
 		};
 	}
 
-	// Resolve method for inlay hints (not used in this implementation)
+	/// <summary>
+	/// Resolve method for inlay hints. This implementation provides all hint information
+	/// upfront in the Handle method, so resolution is not needed. The hint is returned as-is.
+	/// </summary>
 	public override Task<InlayHint> Handle(InlayHint request, CancellationToken cancellationToken)
 	{
-		// Resolution not implemented - return the hint as-is
 		return Task.FromResult(request);
 	}
 }
