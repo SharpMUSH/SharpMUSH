@@ -69,85 +69,85 @@ public class InlayHintHandler : InlayHintsHandlerBase
 		{
 			var functionName = match.Groups[1].Value;
 			var argsText = match.Groups[2].Value;
-			var argsStart = match.Groups[2].Index;
+			var argsAbsoluteStart = match.Groups[2].Index;
 
 			// Look up the function in the library
 			if (_parser.FunctionLibrary.TryGetValue(functionName.ToUpperInvariant(), out var functionDef))
 			{
 				var attr = functionDef.LibraryInformation.Attribute;
 				
-				// Split arguments by commas (simplistic approach)
-				var args = SplitArguments(argsText);
+				// Process arguments character by character to get accurate positions
+				var argPositions = FindArgumentPositions(argsText);
 				
 				// Add hints for each argument
-				var currentPosition = argsStart;
-				for (int i = 0; i < args.Count && i < attr.MaxArgs; i++)
+				for (int i = 0; i < argPositions.Count && i < attr.MaxArgs; i++)
 				{
-					var arg = args[i];
+					var argPos = argPositions[i];
 					
 					// Create parameter name hint
 					var paramName = GetParameterName(functionName, i, attr);
 					
-					// Add hint at the start of this argument
+					// Add hint at the start of this argument (absolute position in line)
 					hints.Add(new InlayHint
 					{
-						Position = new Position(lineNum, currentPosition),
+						Position = new Position(lineNum, argsAbsoluteStart + argPos),
 						Label = new StringOrInlayHintLabelParts($"{paramName}:"),
 						Kind = InlayHintKind.Parameter,
 						PaddingRight = true,
 						Tooltip = new StringOrMarkupContent($"Parameter {i + 1} of {functionName}")
 					});
-
-					// Move position past this argument and comma
-					currentPosition += arg.Length;
-					if (i < args.Count - 1)
-					{
-						// Skip comma and whitespace
-						while (currentPosition < line.Length && (line[currentPosition] == ',' || char.IsWhiteSpace(line[currentPosition])))
-						{
-							currentPosition++;
-						}
-					}
 				}
 			}
 		}
 	}
 
-	private static List<string> SplitArguments(string argsText)
+	private static List<int> FindArgumentPositions(string argsText)
 	{
-		var args = new List<string>();
-		var current = string.Empty;
+		var positions = new List<int>();
 		var depth = 0;
+		var i = 0;
 
-		foreach (var ch in argsText)
+		// Skip leading whitespace to find first argument
+		while (i < argsText.Length && char.IsWhiteSpace(argsText[i]))
 		{
-			if (ch == '(' || ch == '[' || ch == '{')
+			i++;
+		}
+
+		if (i < argsText.Length)
+		{
+			positions.Add(i); // First argument position
+		}
+
+		// Find subsequent argument positions
+		while (i < argsText.Length)
+		{
+			if (argsText[i] == '(' || argsText[i] == '[' || argsText[i] == '{')
 			{
 				depth++;
-				current += ch;
 			}
-			else if (ch == ')' || ch == ']' || ch == '}')
+			else if (argsText[i] == ')' || argsText[i] == ']' || argsText[i] == '}')
 			{
 				depth--;
-				current += ch;
 			}
-			else if (ch == ',' && depth == 0)
+			else if (argsText[i] == ',' && depth == 0)
 			{
-				args.Add(current.Trim());
-				current = string.Empty;
+				// Found argument separator - skip comma and whitespace
+				i++;
+				while (i < argsText.Length && char.IsWhiteSpace(argsText[i]))
+				{
+					i++;
+				}
+				if (i < argsText.Length)
+				{
+					positions.Add(i); // Next argument position
+				}
+				continue;
 			}
-			else
-			{
-				current += ch;
-			}
+
+			i++;
 		}
 
-		if (!string.IsNullOrWhiteSpace(current))
-		{
-			args.Add(current.Trim());
-		}
-
-		return args;
+		return positions;
 	}
 
 	private static string GetParameterName(string functionName, int index, Library.Attributes.SharpFunctionAttribute attr)
