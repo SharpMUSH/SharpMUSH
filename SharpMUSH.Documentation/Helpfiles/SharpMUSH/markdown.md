@@ -85,67 +85,79 @@ Output: Numbered list with ANSI-styled bullets
 # RENDERMARKDOWNCUSTOM()
 `rendermarkdowncustom(<markdown>, <object>[, <width>])`
 
-**STATUS: PLANNED FOR FUTURE IMPLEMENTATION**
-
-Renders CommonMark/Markdown text with customizable rendering controlled by attributes on the specified object. This will allow you to define custom ANSI styles, colors, and formatting for each markdown element type.
+Renders CommonMark/Markdown text with customizable rendering controlled by attributes on the specified object. This allows you to define custom ANSI styles, colors, and formatting for each markdown element type.
 
 **Parameters:**
 - `<markdown>` - The markdown/CommonMark text to render
 - `<object>` - Object reference (dbref) containing rendering template attributes
 - `<width>` - Optional. Maximum width for rendered output (default: 78). Must be between 10-1000.
 
-**Planned Architecture:**
+**Custom Template System:**
 
-The function will look for attributes on `<object>` with specific names that define how to render each markdown element. These attributes will contain softcode that is evaluated with markdown content passed as arguments.
+The function looks for attributes on `<object>` with specific names that define how to render each markdown element. These attributes contain softcode that is evaluated with markdown content passed as arguments. If a template attribute is not found, the default rendering is used.
 
-**Template Attribute Names (Planned):**
+**Supported Template Attributes:**
 
-- `RENDERMARKUP`BOLD` - Bold text rendering
-- `RENDERMARKUP`ITALIC` - Italic text rendering  
-- `RENDERMARKUP`CODE` - Inline code rendering
+**Supported Template Attributes:**
+
 - `RENDERMARKUP`H1` - Heading level 1 rendering
+  - `%0` - The heading content (already formatted with base styles)
+  
 - `RENDERMARKUP`H2` - Heading level 2 rendering
+  - `%0` - The heading content (already formatted with base styles)
+  
 - `RENDERMARKUP`H3` - Heading level 3 rendering
-- `RENDERMARKUP`LINK` - Link rendering
-- `RENDERMARKUP`AUTOLINK` - Autolink rendering
-- `RENDERMARKUP`LIST`BULLET` - Unordered list bullet rendering
-- `RENDERMARKUP`LIST`NUMBER` - Ordered list number rendering
-- `RENDERMARKUP`QUOTE` - Block quote rendering
-- `RENDERMARKUP`TABLE`BORDER` - Table border rendering
-- `RENDERMARKUP`TABLE`SEPARATOR` - Table separator rendering
-- `RENDERMARKUP`TABLE`CELL` - Table cell rendering
+  - `%0` - The heading content (already formatted with base styles)
+  
 - `RENDERMARKUP`CODEBLOCK` - Code block rendering
+  - `%0` - The code content (plain text, newlines separated)
+  
+- `RENDERMARKUP`LISTITEM` - List item rendering
+  - `%0` - Is ordered list? (1 for ordered, 0 for unordered)
+  - `%1` - Item index (0-based)
+  - `%2` - The list item content
+  
+- `RENDERMARKUP`QUOTE` - Block quote rendering
+  - `%0` - The quote content (already rendered)
 
-**Example Planned Usage:**
+**Example Usage:**
 
-Set up custom green color for bold text:
+Set up custom green color for headings:
 ```
-&RENDERMARKUP`BOLD #123=[ansi(hg,%0)]
-```
-
-Set up custom red headings:
-```
-&RENDERMARKUP`H1 #123=[ansi(hr,%0)]
-&RENDERMARKUP`H2 #123=[ansi(hr,%0)]
+&RENDERMARKUP`H1 #123=[ansi(hg,%0)]
+&RENDERMARKUP`H2 #123=[ansi(hc,%0)]
 ```
 
-Set up custom link display with cyan color:
+Set up custom code block with background:
 ```
-&RENDERMARKUP`LINK #123=[ansi(hc,%0)] %(%1%)
+&RENDERMARKUP`CODEBLOCK #123=[ansi(hy,CODE:)]%r[ansi(h,%0)]
+```
+
+Set up custom list items with different bullets:
+```
+&RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,[add(%1,1)].) %2,ansi(hb,*) %2)]
 ```
 
 Use custom rendering:
 ```
-think rendermarkdowncustom(This is **bold** text, #123)
+think rendermarkdowncustom(**Bold** and *italic*, #123)
+think rendermarkdowncustom(# My Heading%r%rParagraph text, #123)
+think rendermarkdowncustom(1. First%r2. Second, #123, 60)
 ```
 
-**Implementation Note:**
+**Notes:**
+- If a template attribute is not found on the object, the default rendering is used
+- Templates are evaluated as softcode with the element content passed as arguments
+- Custom templates receive already-rendered content for some elements (headings, quotes)
+- List items receive metadata (%0 for ordered/unordered, %1 for index)
+- All error handling follows standard MUSH patterns
+- Falls back gracefully to default rendering if template evaluation fails
 
-This function is planned for future implementation. The architecture for custom rendering is established in the RecursiveMarkdownRenderer class through virtual methods (RenderBold(), RenderItalic(), etc.), which can be overridden by a custom renderer class that evaluates object attributes as templates.
-
-**Current Workaround:**
-
-Until this function is implemented, you can use the base `rendermarkdown()` function and post-process the output with custom ANSI codes using standard MUSH softcode functions.
+**Error Handling:**
+- Returns `#-1 INVALID WIDTH (must be 10-1000)` if width parameter is out of range
+- Returns `#-1 <locate error>` if template object cannot be found
+- Returns `#-1 ERROR RENDERING MARKDOWN: <error>` if markdown parsing fails
+- Falls back to default rendering if template attribute evaluation fails
 
 ## See Also
 - [rendermarkdown()]
