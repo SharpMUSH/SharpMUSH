@@ -29,7 +29,7 @@ public partial class Functions
 {
 	private static readonly Dictionary<(string, string), Regex> SpeechPatternCache = new();
 
-	[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "substring"])]
 	public static ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -47,14 +47,15 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "lit", MinArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse)]
+	[SharpFunction(Name = "lit", MinArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
 	public static ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(MModule.single(","),
 			parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message)));
 	}
 
-	[SharpFunction(Name = "speak", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "speak", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["speaker", "string", "say-string", "transform-attr", "isnull-attr", "open", "close"])]
 	public static async ValueTask<CallState> Speak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		/*
