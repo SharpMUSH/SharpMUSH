@@ -585,4 +585,85 @@ public class MarkdownFunctionUnitTests
 		// Do full byte-wise comparison
 		await AssertMarkupStringEquals(result!, expected);
 	}
+
+	[Test]
+	public async Task RenderMarkdownCustom_AllCustomTemplates_NonDefaultBehavior()
+	{
+		// Comprehensive test that verifies all custom template attributes work correctly
+		// and produce non-default output that is clearly distinguishable
+		
+		// Create a test object to hold custom attributes
+		var createResult = (await Parser.FunctionParse(MModule.single("create(MarkdownCustomTestObj)")))?.Message?.ToString()!;
+		await Assert.That(createResult).IsNotNull();
+		var testDbref = createResult.Trim();
+		
+		// Set up custom templates for all supported element types
+		// Each template produces distinctly different output from default rendering
+		
+		// H1: Prefix with ">>> " and use high green color
+		var h1Set = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`H1,[ansi(hg,>>> %0)])"));
+		
+		// H2: Prefix with ">> " and use high cyan color
+		var h2Set = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`H2,[ansi(hc,>> %0)])"));
+		
+		// H3: Prefix with "> " and use high magenta color
+		var h3Set = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`H3,[ansi(hm,> %0)])"));
+		
+		// CODEBLOCK: Wrap in brackets with high yellow color
+		var cbSet = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`CODEBLOCK,[ansi(hy,%[CODE:%])]%r[ansi(h,%0)])"));
+		
+		// LISTITEM: Custom bullet for unordered (★) and custom number format for ordered
+		var liSet = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`LISTITEM,[if(%0,[ansi(hr,%(%1%). %2)],[ansi(hb,★ %2)])])"));
+		
+		// QUOTE: Prefix with "QUOTE: " in high blue
+		var qSet = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`QUOTE,[ansi(hb,QUOTE: %0)])"));
+		
+		// Test markdown with all element types
+		var markdown = "# H1 Title%r## H2 Title%r### H3 Title%r%r```%rcode line 1%rcode line 2%r```%r%r1. First item%r2. Second item%r%r- Bullet one%r- Bullet two%r%r> This is a quote";
+		
+		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdowncustom({markdown},{testDbref})")))?.Message;
+		await Assert.That(result).IsNotNull();
+		
+		var plainText = result!.ToPlainText();
+		
+		// Verify H1 custom template is applied (should have ">>> " prefix, not default underline)
+		await Assert.That(plainText).Contains(">>> H1 Title");
+		
+		// Verify H2 custom template is applied (should have ">> " prefix)
+		await Assert.That(plainText).Contains(">> H2 Title");
+		
+		// Verify H3 custom template is applied (should have "> " prefix)
+		await Assert.That(plainText).Contains("> H3 Title");
+		
+		// Verify CODEBLOCK custom template is applied (should have "[CODE:]" prefix)
+		await Assert.That(plainText).Contains("[CODE:]");
+		
+		// Verify LISTITEM custom template for ordered lists (should have "(1)." format, not "1.")
+		await Assert.That(plainText).Contains("(1). First item");
+		await Assert.That(plainText).Contains("(2). Second item");
+		
+		// Verify LISTITEM custom template for unordered lists (should have "★" not "-")
+		await Assert.That(plainText).Contains("★ Bullet one");
+		await Assert.That(plainText).Contains("★ Bullet two");
+		
+		// Verify QUOTE custom template is applied (should have "QUOTE: " prefix)
+		await Assert.That(plainText).Contains("QUOTE: This is a quote");
+		
+		// Verify ANSI colors are present in the output (not just plain text)
+		var fullString = result.ToString();
+		
+		// High green for H1 (ANSI code: \u001b[38;2;0;255;0m or similar)
+		await Assert.That(fullString).Contains("\u001b[");
+		
+		// Verify custom rendering is NOT using default behavior
+		// Default H1 would have underline, custom should not
+		var h1Line = plainText.Split('\n').FirstOrDefault(l => l.Contains(">>> H1 Title"));
+		await Assert.That(h1Line).IsNotNull();
+		
+		// Verify that we're getting custom output, not default
+		// Default would be just "H1 Title" with underline on next line
+		// Custom is ">>> H1 Title" with no underline
+		await Assert.That(plainText).DoesNotContain("==="); // Default H1 uses === underline
+		await Assert.That(plainText).DoesNotContain("---"); // Default H2 uses --- underline (also used in tables but we don't have tables in this test)
+	}
 }
