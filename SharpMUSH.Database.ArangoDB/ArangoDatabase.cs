@@ -2462,7 +2462,17 @@ public partial class ArangoDatabase(
 
 		// Build the complete query
 		var filterClause = filters.Count > 0 ? $"FILTER {string.Join(" AND ", filters)}" : "";
-		var query = $"FOR v IN {DatabaseConstants.Objects:@} {filterClause} RETURN v._id";
+		
+		// Add LIMIT clause for pagination (START/COUNT)
+		var limitClause = "";
+		if (filter.Skip.HasValue || filter.Limit.HasValue)
+		{
+			var skip = filter.Skip ?? 0;
+			var limit = filter.Limit.HasValue ? filter.Limit.Value.ToString() : "";
+			limitClause = string.IsNullOrEmpty(limit) ? $"LIMIT {skip}, null" : $"LIMIT {skip}, {limit}";
+		}
+		
+		var query = $"FOR v IN {DatabaseConstants.Objects:@} {filterClause} {limitClause} RETURN v._id".Trim();
 
 		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle, query, bindVars, cancellationToken: ct) 
 			?? AsyncEnumerable.Empty<string>();

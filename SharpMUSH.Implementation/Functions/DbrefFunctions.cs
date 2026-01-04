@@ -931,6 +931,8 @@ LOCATE()
 		DBRef? parent = null;
 		string? hasFlag = null;
 		string? hasPower = null;
+		int? start = null;
+		int? count = null;
 
 		// Process criteria as positional class/restriction pairs
 		var appLevelCriteria = new List<(string key, string value)>();
@@ -989,6 +991,12 @@ LOCATE()
 				case "MAXDB":
 					if (int.TryParse(restriction, out var max)) maxDbRef = max;
 					break;
+				case "START":
+					if (int.TryParse(restriction, out var startVal)) start = startVal;
+					break;
+				case "COUNT":
+					if (int.TryParse(restriction, out var countVal)) count = countVal;
+					break;
 				case "ZONE":
 					var maybeZone = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object().DBRef;
@@ -1011,7 +1019,7 @@ LOCATE()
 					hasPower = restriction;
 					break;
 				default:
-					// Lock evaluation and other criteria must happen in application code
+					// Lock evaluation, COMMAND, LISTEN, and other criteria must happen in application code
 					appLevelCriteria.Add((classType, restriction));
 					break;
 			}
@@ -1028,7 +1036,9 @@ LOCATE()
 			Parent = parent,
 			HasFlag = hasFlag,
 			HasPower = hasPower,
-			Owner = classObj?.Object().DBRef
+			Owner = classObj?.Object().DBRef,
+			Skip = start,
+			Limit = count
 		};
 
 		// Pre-compile lock strings and eval expressions for efficiency (compile once, evaluate many times)
@@ -1067,14 +1077,26 @@ LOCATE()
 				case "ETHING" or "EOBJECT":
 					compiledEvals.Add((value, "THING"));
 					break;
+				
+				case "LISTEN":
+				case "COMMAND":
+					// These require attribute pattern matching - store for app-level evaluation
+					// Will be handled in the filtering loop below
+					break;
 			}
 		}
+		
+		// Extract LISTEN and COMMAND criteria for app-level evaluation
+		var listenPattern = appLevelCriteria.FirstOrDefault(x => x.key == "LISTEN").value;
+		var commandPattern = appLevelCriteria.FirstOrDefault(x => x.key == "COMMAND").value;
+		var hasListenCriteria = !string.IsNullOrEmpty(listenPattern);
+		var hasCommandCriteria = !string.IsNullOrEmpty(commandPattern);
 
 		// Query database with filters applied at database level
 		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
 		
 		// Check if we need to convert SharpObject to AnySharpObject for app-level criteria
-		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0;
+		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria;
 		
 		if (!hasAppLevelCriteria)
 		{
@@ -1132,6 +1154,72 @@ LOCATE()
 					}
 				}
 			}
+			
+			// Evaluate LISTEN pattern if specified
+			if (matches && hasListenCriteria)
+			{
+				// Check if the object has any @listen attributes matching the pattern
+				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
+				if (!attributesResult.IsError)
+				{
+					var hasMatchingListen = false;
+					
+					foreach (var attr in attributesResult.AsAttributes.Where(a => a.Name.Equals("LISTEN", StringComparison.OrdinalIgnoreCase) || 
+					                                           a.Name.StartsWith("LISTEN`", StringComparison.OrdinalIgnoreCase)))
+					{
+						var attrValue = attr.Value?.ToPlainText() ?? "";
+						// Check if the listen pattern matches our search pattern
+						// This is a wildcard match where * matches any characters
+						if (IsWildcardMatch(attrValue, listenPattern!))
+						{
+							hasMatchingListen = true;
+							break;
+						}
+					}
+					
+					if (!hasMatchingListen)
+					{
+						matches = false;
+					}
+				}
+				else
+				{
+					// If we can't get attributes, object doesn't match
+					matches = false;
+				}
+			}
+			
+			// Evaluate COMMAND pattern if specified
+			if (matches && hasCommandCriteria)
+			{
+				// Check if the object has any $-commands matching the pattern
+				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
+				if (!attributesResult.IsError)
+				{
+					var hasMatchingCommand = false;
+					
+					foreach (var attr in attributesResult.AsAttributes)
+					{
+						var attrValue = attr.Value?.ToPlainText() ?? "";
+						// Check if the attribute contains a $-command matching our pattern
+						if (attrValue.Contains('$') && IsWildcardMatch(attrValue, commandPattern!))
+						{
+							hasMatchingCommand = true;
+							break;
+						}
+					}
+					
+					if (!hasMatchingCommand)
+					{
+						matches = false;
+					}
+				}
+				else
+				{
+					// If we can't get attributes, object doesn't match
+					matches = false;
+				}
+			}
 
 			if (matches)
 			{
@@ -1140,6 +1228,18 @@ LOCATE()
 		}
 
 		return new CallState(string.Join(" ", finalResults));
+	}
+	
+	/// <summary>
+	/// Simple wildcard pattern matching for LISTEN and COMMAND searches.
+	/// Supports * as a wildcard that matches any sequence of characters.
+	/// </summary>
+	private static bool IsWildcardMatch(string value, string pattern)
+	{
+		// Convert pattern to regex: escape special chars except *, then replace * with .*
+		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+		return System.Text.RegularExpressions.Regex.IsMatch(value, regexPattern, 
+			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
 
 	/// <summary>

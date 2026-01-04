@@ -262,4 +262,44 @@ public class SearchFunctionUnitTests
 		// Should return objects in range #0-#2
 		await Assert.That(resultText).Contains("#0");
 	}
+
+	[Test]
+	public async Task Lsearch_StartFilter_SkipsResults()
+	{
+		// Test lsearch with START (pagination - skip first N results)
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,start,1,maxdb,2)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Should skip the first result (depends on sort order, but should not be empty if there are >1 objects)
+	}
+
+	[Test]
+	public async Task Lsearch_CountFilter_LimitsResults()
+	{
+		// Test lsearch with COUNT (pagination - limit number of results)
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,count,1)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Should return at most 1 result
+		var results = resultText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(results.Length).IsLessThanOrEqualTo(1);
+	}
+
+	[Test]
+	public async Task Lsearch_StartAndCount_PaginatesResults()
+	{
+		// Test lsearch with START and COUNT together (pagination)
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,start,1,count,2)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Should skip first result and return at most 2 results
+		var results = resultText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(results.Length).IsLessThanOrEqualTo(2);
+	}
 }
