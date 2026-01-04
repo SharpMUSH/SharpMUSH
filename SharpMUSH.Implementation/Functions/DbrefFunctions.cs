@@ -1201,11 +1201,22 @@ LOCATE()
 					foreach (var attr in attributesResult.AsAttributes)
 					{
 						var attrValue = attr.Value?.ToPlainText() ?? "";
-						// Check if the attribute contains a $-command matching our pattern
-						if (attrValue.Contains('$') && IsWildcardMatch(attrValue, commandPattern!))
+						// $-commands are in format: $command-pattern:action
+						// We need to extract the command pattern (between $ and :) and match it
+						var dollarIndex = attrValue.IndexOf('$');
+						if (dollarIndex >= 0)
 						{
-							hasMatchingCommand = true;
-							break;
+							var colonIndex = attrValue.IndexOf(':', dollarIndex);
+							if (colonIndex > dollarIndex)
+							{
+								// Extract just the command pattern part (after $ and before :)
+								var commandPart = attrValue.Substring(dollarIndex + 1, colonIndex - dollarIndex - 1);
+								if (IsWildcardMatch(commandPart, commandPattern))
+								{
+									hasMatchingCommand = true;
+									break;
+								}
+							}
 						}
 					}
 					
