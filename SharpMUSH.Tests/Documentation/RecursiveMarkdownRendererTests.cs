@@ -260,9 +260,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert - Links now show as "text (url)"
-		await Assert.That(result.ToPlainText()).IsEqualTo("Link Text (https://example.com)");
-		await Assert.That(result.ToString()).IsEqualTo("Link Text (https://example.com)");
+		// Assert - Links use ANSI hyperlink with text as visible content
+		// The URL is embedded in ANSI OSC 8 escape codes
+		await Assert.That(result.ToPlainText()).IsEqualTo("Link Text");
+		// Verify the full string contains the hyperlink escape sequence with URL
+		var fullString = result.ToString();
+		await Assert.That(fullString).Contains("https://example.com");
+		await Assert.That(fullString).Contains("\u001b]8;;");
 	}
 
 	[Test]

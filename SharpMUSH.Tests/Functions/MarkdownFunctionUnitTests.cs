@@ -125,23 +125,30 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_Link_ExactMatch()
 	{
-		// Test link - should show text and URL
+		// Test link - should use ANSI hyperlink with text as visible content
 		// Escape square brackets with backslash for MUSH parser
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(\\[Click here\\](https://example.com))")))?.Message;
 		await Assert.That(result).IsNotNull();
-		// Links now show as "text (url)"
-		await Assert.That(result!.ToPlainText()).IsEqualTo("Click here (https://example.com)");
+		// With hyperlink markup, only the link text is visible in plain text
+		// The URL is embedded in ANSI escape codes
+		await Assert.That(result!.ToPlainText()).IsEqualTo("Click here");
+		// Verify the full string contains the hyperlink escape sequence
+		var fullString = result.ToString();
+		await Assert.That(fullString).Contains("https://example.com");
 	}
 
 	[Test]
 	public async Task RenderMarkdown_Link_WithUrlOnly_ExactMatch()
 	{
-		// Test link with URL but no text
-		// Escape square brackets with backslash for MUSH parser
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(\\[\\](https://example.com))")))?.Message;
+		// Test autolink (URL by itself in angle brackets)
+		// This is the proper markdown way to show just a URL
+		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(<https://example.com>)")))?.Message;
 		await Assert.That(result).IsNotNull();
-		// When no text, just show URL  
+		// Autolinks show the URL as both text and link
 		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
+		// Verify the hyperlink escape sequence is present
+		var fullString = result.ToString();
+		await Assert.That(fullString).Contains("\u001b]8;;");
 	}
 
 	[Test]
@@ -151,8 +158,11 @@ public class MarkdownFunctionUnitTests
 		// Escape square brackets with backslash for MUSH parser
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(\\[https://example.com\\](https://example.com))")))?.Message;
 		await Assert.That(result).IsNotNull();
-		// When text equals URL, just show URL once
+		// Link text is shown, URL is in hyperlink metadata
 		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
+		// Verify the hyperlink escape sequence is present  
+		var fullString = result.ToString();
+		await Assert.That(fullString).Contains("\u001b]8;;");
 	}
 
 	[Test]

@@ -4,6 +4,7 @@ using ANSILibrary;
 using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using Microsoft.FSharp.Core;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -418,8 +419,7 @@ public class RecursiveMarkdownRenderer
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
-		// Format links to include URL: "text (url)"
-		// If text is empty or same as URL, just show URL
+		// Create hyperlink using ANSI OSC 8 escape sequence
 		var url = link.Url ?? string.Empty;
 		var contentText = content.ToPlainText().Trim();
 		
@@ -429,19 +429,27 @@ public class RecursiveMarkdownRenderer
 			return content;
 		}
 		
-		if (string.IsNullOrWhiteSpace(contentText) || contentText == url)
+		if (string.IsNullOrWhiteSpace(contentText))
 		{
-			// No text or text is same as URL, just show URL
-			return MModule.single(url);
+			// No text, use URL as display text
+			contentText = url;
 		}
 		
-		// Show both text and URL: "text (url)"
-		return MModule.single($"{contentText} ({url})");
+		// Create hyperlink markup with linkUrl parameter
+		var linkMarkup = Ansi.Create(linkUrl: FSharpOption<string>.Some(url));
+		return MModule.markupSingle(linkMarkup, contentText);
 	}
 
 	private MString RenderAutolink(AutolinkInline autolink)
 	{
-		return string.IsNullOrEmpty(autolink.Url) ? MModule.empty() : MModule.single(autolink.Url);
+		if (string.IsNullOrEmpty(autolink.Url))
+		{
+			return MModule.empty();
+		}
+		
+		// Create hyperlink with URL as both the text and the link
+		var linkMarkup = Ansi.Create(linkUrl: FSharpOption<string>.Some(autolink.Url));
+		return MModule.markupSingle(linkMarkup, autolink.Url);
 	}
 
 	private MString RenderHtmlInline(HtmlInline html)
