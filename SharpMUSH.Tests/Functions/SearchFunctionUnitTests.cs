@@ -30,15 +30,19 @@ public class SearchFunctionUnitTests
 	{
 		// Create a test object with unique name
 		var uniqueName = $"LSearchTest_{Guid.NewGuid():N}";
-		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
 		
 		// Test lsearch with name filter
 		// Correct syntax: lsearch(player, class, restriction)
 		var result = (await Parser.FunctionParse(MModule.single($"lsearch(all,name,{uniqueName})")))?.Message!;
 		var resultText = result.ToPlainText();
 		
-		await Assert.That(resultText).IsNotNull();
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Should return exactly one object with the unique name
 		await Assert.That(resultText).IsNotEmpty();
+		// Result should be a valid dbref
+		await Assert.That(resultText).Matches(@"#\d+");
 	}
 
 	[Test]
@@ -55,11 +59,16 @@ public class SearchFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("lsearchr(#0,name,test*)", "")]
-	public async Task Lsearchr(string str, string expected)
+	public async Task Lsearchr_ReturnsObjectsInReverseOrder()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		// lsearchr returns results in reverse dbref order (highest to lowest)
+		// Search for all rooms to get a predictable set of results
+		var result = (await Parser.FunctionParse(MModule.single("lsearchr(all,type,ROOM,maxdbref,5)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should return room #0, and result should not be an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		await Assert.That(resultText).Contains("#0");
 	}
 
 	[Test]
@@ -77,11 +86,18 @@ public class SearchFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("scan(%#)", "")]
-	public async Task Scan(string str, string expected)
+	public async Task Scan_ReturnsVisibleObjects()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		// scan() returns objects visible to the executor  
+		// %# is the executor (#1 in tests)
+		// scan(%#) should return objects visible from the executor's location
+		var result = (await Parser.FunctionParse(MModule.single("scan(%#)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Result may be empty if executor is in an empty location, which is valid
+		// Just verify it doesn't error out
 	}
 
 	[Test]
@@ -104,9 +120,10 @@ public class SearchFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,elock,FLAG^WIZARD)")))?.Message!;
 		var resultText = result.ToPlainText();
 		
-		// Should return some result (at least not throw an exception)
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
 		// The result should include wizard objects (player #1 is wizard by default)
-		await Assert.That(resultText).IsNotNull();
+		await Assert.That(resultText).Contains("#1");
 	}
 
 	[Test]
@@ -121,8 +138,11 @@ public class SearchFunctionUnitTests
 		var resultText = result.ToPlainText();
 		
 		// Should return objects 0, 1, 2 since eval=1 always returns true
-		await Assert.That(resultText).IsNotNull();
-		await Assert.That(resultText).IsNotEmpty();
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Should contain object #0 (always exists) and #1 (player)
+		await Assert.That(resultText).Contains("#0");
+		await Assert.That(resultText).Contains("#1");
 	}
 
 	[Test]
@@ -136,8 +156,9 @@ public class SearchFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,eplayer,1)")))?.Message!;
 		var resultText = result.ToPlainText();
 		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
 		// Should return at least player #1 (God)
-		await Assert.That(resultText).IsNotNull();
 		await Assert.That(resultText).Contains("#1");
 	}
 
@@ -152,8 +173,9 @@ public class SearchFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,eroom,1)")))?.Message!;
 		var resultText = result.ToPlainText();
 		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
 		// Should return at least room #0
-		await Assert.That(resultText).IsNotNull();
 		await Assert.That(resultText).Contains("#0");
 	}
 
@@ -168,8 +190,9 @@ public class SearchFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,type,PLAYER,eval,1)")))?.Message!;
 		var resultText = result.ToPlainText();
 		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
 		// Should return player #1
-		await Assert.That(resultText).IsNotNull();
 		await Assert.That(resultText).Contains("#1");
 	}
 
@@ -188,9 +211,9 @@ public class SearchFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(@"lsearch(all,eval,\[strmatch\(##\,#1:*\)\])")))?.Message!;
 		var resultText = result.ToPlainText();
 		
-		// Should return object #1 with its full dbref (including timestamp)
-		// Note: Test validates syntax works, actual match depends on object #1 existing
-		await Assert.That(resultText).IsNotNull();
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Should return object #1 with its full dbref (including timestamp), or be empty (no match)
 		// If we have results, they should contain #1:
 		if (!string.IsNullOrEmpty(resultText))
 		{
