@@ -78,6 +78,7 @@ try
 			.WithHandler<RenameHandler>()
 			.WithHandler<DocumentFormattingHandler>()
 			.WithHandler<WorkspaceSymbolsHandler>()
+			.WithHandler<InlayHintHandler>()
 			.OnInitialize(async (server, request, cancellationToken) =>
 			{
 				Log.Information("Language server initialized");
