@@ -294,7 +294,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object/attribute"])]
 	public static async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
@@ -818,7 +818,7 @@ public partial class Functions
 	public static ValueTask<CallState> ObjectMemory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>("0");
 
-	[SharpFunction(Name = "owner", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "owner", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Owner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndMaybeArg =
@@ -1315,7 +1315,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "set", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "set", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object/attribute", "flag or attribute:value"])]
 	public static async ValueTask<CallState> Set(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;

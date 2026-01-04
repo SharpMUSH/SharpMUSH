@@ -21,7 +21,7 @@ public partial class Functions
 	private const string LinkTypeVariable = "variable";
 	private const string LinkTypeHome = "home";
 
-	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
