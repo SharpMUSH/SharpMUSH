@@ -163,4 +163,24 @@ public class SearchFunctionUnitTests
 		await Assert.That(resultText).IsNotNull();
 		await Assert.That(resultText).Contains("#1");
 	}
+
+	[Test]
+	public async Task Lsearch_EvalWithEscapedBrackets_ReturnsMatchingObjects()
+	{
+		// Test lsearch with eval using escaped brackets as shown in PennMUSH documentation
+		// From pennfunc.md: lsearch(all, eplayer, \[eq(money(##),100)\])
+		// "any brackets, percent signs, or other special characters should be escaped"
+		// The code is evaluated twice:
+		// 1. Once as an argument to lsearch()
+		// 2. Again for each object with ## replaced by the dbref
+		
+		// Using escaped example: \[eq\(##\,1\)\] which should match object with dbref 1
+		// Escaping: brackets \[ \], parentheses \( \), and comma \,
+		var result = (await Parser.FunctionParse(MModule.single(@"lsearch(all,eval=\[eq\(##\,1\)\])")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should return object #1
+		await Assert.That(resultText).IsNotNull();
+		await Assert.That(resultText).Contains("#1");
+	}
 }
