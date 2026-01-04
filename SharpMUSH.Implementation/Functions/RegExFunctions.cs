@@ -14,7 +14,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "regmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public static ValueTask<CallState> regmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegMatchInternal(parser, false);
@@ -26,25 +26,25 @@ public partial class Functions
 		return RegMatchInternal(parser, true);
 	}
 
-	[SharpFunction(Name = "regrab", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regrab", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> regrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, false, false);
 	}
 
-	[SharpFunction(Name = "regraball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regraball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> regraball(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, false, true);
 	}
 
-	[SharpFunction(Name = "regraballi", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regraballi", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> regraballi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, true, true);
 	}
 
-	[SharpFunction(Name = "regrabi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regrabi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> regrabi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, true, false);
