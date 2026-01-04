@@ -71,6 +71,10 @@ try
 			.WithHandler<CompletionHandler>()
 			.WithHandler<HoverHandler>()
 			.WithHandler<DefinitionHandler>()
+			.WithHandler<ReferencesHandler>()
+			.WithHandler<CodeActionHandler>()
+			.WithHandler<SignatureHelpHandler>()
+			.WithHandler<DocumentSymbolHandler>()
 			.OnInitialize(async (server, request, cancellationToken) =>
 			{
 				Log.Information("Language server initialized");
