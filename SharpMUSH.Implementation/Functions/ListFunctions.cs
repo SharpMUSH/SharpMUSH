@@ -13,7 +13,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "elements", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "elements", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "positions", "delimiter"])]
 	public static async ValueTask<CallState> Elements(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
@@ -59,7 +59,7 @@ public partial class Functions
 				splitList));
 	}
 
-	[SharpFunction(Name = "extract", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "extract", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "start", "length", "delimiter"])]
 	public static async ValueTask<CallState> Extract(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
@@ -91,7 +91,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 	}
 
-	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
 	public static async ValueTask<CallState> Filter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Arg0: Object/Attribute
@@ -178,7 +178,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "filterbool", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "filterbool", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public static async ValueTask<CallState> FilterBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -261,7 +261,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "first", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "first", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public static ValueTask<CallState> FirstInList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -286,7 +286,7 @@ public partial class Functions
 		return first;
 	}
 
-	[SharpFunction(Name = "fold", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "fold", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "base"])]
 	public static async ValueTask<CallState> Fold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Arg0: Object/Attribute
@@ -395,7 +395,7 @@ public partial class Functions
 		return new CallState(accumulator);
 	}
 
-	[SharpFunction(Name = "grab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "grab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> Grab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
@@ -410,7 +410,7 @@ public partial class Functions
 			.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MModule.empty());
 	}
 
-	[SharpFunction(Name = "graball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "graball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> GrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
@@ -426,7 +426,7 @@ public partial class Functions
 			MModule.multipleWithDelimiter(outputSep, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
 	}
 
-	[SharpFunction(Name = "index", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "index", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "element", "delimiter"])]
 	public static ValueTask<CallState> Index(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -488,7 +488,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "items", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "items", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "delimiter"])]
 	public static ValueTask<CallState> Items(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message!;
@@ -516,7 +516,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(count));
 	}
 
-	[SharpFunction(Name = "itemize", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "itemize", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter", "conjunction", "punctuation"])]
 	public static ValueTask<CallState> Itemize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -600,7 +600,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(iteration));
 	}
 
-	[SharpFunction(Name = "last", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "last", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "count", "delimiter"])]
 	public static ValueTask<CallState> Last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -612,7 +612,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(last));
 	}
 
-	[SharpFunction(Name = "ldelete", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "ldelete", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "delimiter"])]
 	public static ValueTask<CallState> ListDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -644,7 +644,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, result));
 	}
 
-	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> Map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Arg0: Object/Attribute
@@ -716,7 +716,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "match", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "match", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> Match(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
@@ -731,7 +731,7 @@ public partial class Functions
 			.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MModule.empty());
 	}
 
-	[SharpFunction(Name = "matchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "matchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> MatchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
@@ -746,7 +746,7 @@ public partial class Functions
 			MModule.multipleWithDelimiter(delimiter, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
 	}
 
-	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.StripAnsi, ParameterNames = ["list", "element", "delimiter"])]
 	public static ValueTask<CallState> Member(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -758,7 +758,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(splitList.IndexOf(word) + 1);
 	}
 
-	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> Mix(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Arg0: Object/Attribute
@@ -862,7 +862,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 	}
 
-	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list3", "delimiter"])]
 	public static async ValueTask<CallState> Munge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Arg0: Object/Attribute
@@ -1151,7 +1151,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, list));
 	}
 
-	[SharpFunction(Name = "rest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "rest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public static ValueTask<CallState> Rest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1161,7 +1161,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delim, list.Skip(1))));
 	}
 
-	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public static async ValueTask<CallState> ReverseList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
@@ -1173,7 +1173,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, list.Reverse()));
 	}
 
-	[SharpFunction(Name = "shuffle", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "shuffle", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public static ValueTask<CallState> Shuffle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1188,7 +1188,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result);
 	}
 
-	[SharpFunction(Name = "sort", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "sort", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "sort-type", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> Sort(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message!;
@@ -1204,7 +1204,7 @@ public partial class Functions
 		return MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync());
 	}
 
-	[SharpFunction(Name = "sortby", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "sortby", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> SortBy(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1387,7 +1387,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "position", "delimiter"])]
 	public static async ValueTask<CallState> Splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
@@ -1702,7 +1702,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
 	}
 
-	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
 	public static async ValueTask<CallState> SetUnion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1722,7 +1722,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "setdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "setdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
 	public static async ValueTask<CallState> SetDifference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1746,7 +1746,7 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "setinter", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "setinter", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
 	public static async ValueTask<CallState> SetIntersection(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
