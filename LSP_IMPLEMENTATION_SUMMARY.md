@@ -80,7 +80,8 @@ SharpMUSH.LanguageServer/
 │   ├── DocumentSymbolHandler.cs       # Document outline
 │   ├── RenameHandler.cs               # Symbol renaming
 │   ├── DocumentFormattingHandler.cs   # Code formatting
-│   └── WorkspaceSymbolsHandler.cs     # Workspace symbol search
+│   ├── WorkspaceSymbolsHandler.cs     # Workspace symbol search
+│   └── InlayHintHandler.cs            # Inline parameter name hints
 ├── Services/
 │   ├── DocumentManager.cs             # Document state management
 │   └── LSPMUSHCodeParser.cs           # Stateless parser wrapper
@@ -128,9 +129,9 @@ SharpMUSH.LanguageServer/
 - `textDocument/rename` - Safe symbol renaming with whole-word matching
 - `textDocument/formatting` - Auto-format MUSH code with consistent style
 - `workspace/symbol` - Search for symbols across all open documents
+- `textDocument/inlayHint` - Show parameter names inline in function calls
 
-### Not Available in Current LSP Library ❌
-- `textDocument/inlayHint` - Inline parameter names (LSP library version limitation)
+**Total: 19 LSP protocol methods implemented**
 
 ## Semantic Token Types
 

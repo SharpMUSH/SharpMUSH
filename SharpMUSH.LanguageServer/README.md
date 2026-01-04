@@ -54,6 +54,11 @@ The SharpMUSH Language Server provides syntax validation, error diagnostics, and
   - Locate functions and commands
   - Fuzzy search support
   - Organized by symbol type
+- **Inlay Hints**: Show parameter names inline
+  - Display parameter names in function calls
+  - Context-aware names for well-known functions (GET, SET, ADD, etc.)
+  - Generic `arg1`, `arg2` names for other functions
+  - Tooltips with parameter descriptions
 - **Semantic Highlighting**: Context-aware syntax highlighting that understands MUSH semantics
   - Built-in functions vs user-defined functions
   - Object references (#123, %#, etc.)
@@ -284,7 +289,9 @@ The SharpMUSH Language Server currently implements:
 - ✅ `textDocument/rename` - Safe symbol renaming
 - ✅ `textDocument/formatting` - Auto-format MUSH code
 - ✅ `workspace/symbol` - Search symbols across all files
-- ❌ `textDocument/inlayHint` (not available in current LSP library version)
+- ✅ `textDocument/inlayHint` - Show parameter names inline in function calls
+
+**Total: 19 LSP protocol methods implemented**
 
 ## Development
 
@@ -304,7 +311,8 @@ SharpMUSH.LanguageServer/
 │   ├── DocumentSymbolHandler.cs     # Document outline
 │   ├── RenameHandler.cs             # Symbol renaming
 │   ├── DocumentFormattingHandler.cs # Code formatting
-│   └── WorkspaceSymbolsHandler.cs   # Workspace-wide symbol search
+│   ├── WorkspaceSymbolsHandler.cs   # Workspace-wide symbol search
+│   └── InlayHintHandler.cs          # Inline parameter name hints
 ├── Services/
 │   ├── DocumentManager.cs           # Document state management
 │   └── LSPMUSHCodeParser.cs         # Stateless parser wrapper
