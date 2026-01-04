@@ -73,7 +73,11 @@ SharpMUSH.LanguageServer/
 │   ├── SemanticTokensHandler.cs       # Semantic highlighting
 │   ├── CompletionHandler.cs           # Code completion
 │   ├── HoverHandler.cs                # Hover information
-│   └── DefinitionHandler.cs           # Go to definition
+│   ├── DefinitionHandler.cs           # Go to definition
+│   ├── ReferencesHandler.cs           # Find all references
+│   ├── CodeActionHandler.cs           # Quick fixes and code actions
+│   ├── SignatureHelpHandler.cs        # Parameter hints
+│   └── DocumentSymbolHandler.cs       # Document outline
 ├── Services/
 │   ├── DocumentManager.cs             # Document state management
 │   └── LSPMUSHCodeParser.cs           # Stateless parser wrapper
@@ -113,15 +117,17 @@ SharpMUSH.LanguageServer/
 - `textDocument/completion` - Code completion for functions, commands, and patterns
 - `textDocument/hover` - Show function/command documentation and signatures
 - `textDocument/definition` - Navigate to attribute definitions
+- `textDocument/references` - Find all usages of symbols across the document
+- `textDocument/codeAction` - Quick fixes for common errors (unclosed parentheses, typos)
+- `textDocument/signatureHelp` - Parameter hints while typing function calls
+- `textDocument/documentSymbol` - Document outline with attributes, functions, and commands
 
 ### Planned for Future 📋
-- `textDocument/semanticTokens/range` - Partial highlighting
-- `textDocument/references` - Find all references
-- `textDocument/codeAction` - Quick fixes
-- `textDocument/signatureHelp` - Parameter hints while typing
+- `textDocument/semanticTokens/range` - Partial highlighting for large files
 - `textDocument/rename` - Symbol renaming
-- `textDocument/documentSymbol` - Document outline
+- `textDocument/formatting` - Code formatting
 - `workspace/symbol` - Workspace-wide symbol search
+- `textDocument/inlayHint` - Inline parameter names
 
 ## Semantic Token Types
 

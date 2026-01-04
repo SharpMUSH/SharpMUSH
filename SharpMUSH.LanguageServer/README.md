@@ -22,6 +22,24 @@ The SharpMUSH Language Server provides syntax validation, error diagnostics, and
 - **Go to Definition**: Navigate to attribute definitions
   - Jump to &attribute definitions
   - Jump to @set attribute declarations
+- **Find All References**: Locate all usages of symbols
+  - Find attribute references across the document
+  - Locate function calls
+  - Track object references
+- **Code Actions/Quick Fixes**: Intelligent error correction
+  - Auto-fix unclosed parentheses
+  - Suggest corrections for function name typos
+  - Quick fixes for common errors
+- **Signature Help**: Parameter hints while typing
+  - Show function parameter lists
+  - Highlight current parameter
+  - Display parameter documentation
+  - Mark optional vs required parameters
+- **Document Symbols**: Outline view of code structure
+  - List all attribute definitions
+  - Show function calls
+  - Display MUSH commands
+  - Navigate document structure
 - **Semantic Highlighting**: Context-aware syntax highlighting that understands MUSH semantics
   - Built-in functions vs user-defined functions
   - Object references (#123, %#, etc.)
@@ -243,10 +261,14 @@ The SharpMUSH Language Server currently implements:
 - ✅ `textDocument/completion` - Function, command, and pattern completion
 - ✅ `textDocument/hover` - Show signatures and documentation
 - ✅ `textDocument/definition` - Navigate to attribute definitions
+- ✅ `textDocument/references` - Find all usages of symbols
+- ✅ `textDocument/codeAction` - Quick fixes and suggestions
+- ✅ `textDocument/signatureHelp` - Parameter hints while typing
+- ✅ `textDocument/documentSymbol` - Document outline view
 - ❌ `textDocument/semanticTokens/range` (planned)
-- ❌ `textDocument/references` (planned)
-- ❌ `textDocument/codeAction` (planned)
-- ❌ `textDocument/signatureHelp` (planned)
+- ❌ `textDocument/rename` (planned)
+- ❌ `textDocument/formatting` (planned)
+- ❌ `workspace/symbol` (planned)
 
 ## Development
 
@@ -259,7 +281,11 @@ SharpMUSH.LanguageServer/
 │   ├── SemanticTokensHandler.cs     # Semantic highlighting
 │   ├── CompletionHandler.cs         # Code completion
 │   ├── HoverHandler.cs              # Hover information
-│   └── DefinitionHandler.cs         # Go to definition
+│   ├── DefinitionHandler.cs         # Go to definition
+│   ├── ReferencesHandler.cs         # Find all references
+│   ├── CodeActionHandler.cs         # Quick fixes and code actions
+│   ├── SignatureHelpHandler.cs      # Parameter hints
+│   └── DocumentSymbolHandler.cs     # Document outline
 ├── Services/
 │   ├── DocumentManager.cs           # Document state management
 │   └── LSPMUSHCodeParser.cs         # Stateless parser wrapper
