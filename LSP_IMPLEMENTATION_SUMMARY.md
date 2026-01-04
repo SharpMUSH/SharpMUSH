@@ -70,14 +70,17 @@ Successfully implemented a complete Language Server Protocol (LSP) server for Sh
 SharpMUSH.LanguageServer/
 ├── Handlers/
 │   ├── TextDocumentSyncHandler.cs     # Document lifecycle & diagnostics
-│   ├── SemanticTokensHandler.cs       # Semantic highlighting
+│   ├── SemanticTokensHandler.cs       # Semantic highlighting (full & range)
 │   ├── CompletionHandler.cs           # Code completion
 │   ├── HoverHandler.cs                # Hover information
 │   ├── DefinitionHandler.cs           # Go to definition
 │   ├── ReferencesHandler.cs           # Find all references
 │   ├── CodeActionHandler.cs           # Quick fixes and code actions
 │   ├── SignatureHelpHandler.cs        # Parameter hints
-│   └── DocumentSymbolHandler.cs       # Document outline
+│   ├── DocumentSymbolHandler.cs       # Document outline
+│   ├── RenameHandler.cs               # Symbol renaming
+│   ├── DocumentFormattingHandler.cs   # Code formatting
+│   └── WorkspaceSymbolsHandler.cs     # Workspace symbol search
 ├── Services/
 │   ├── DocumentManager.cs             # Document state management
 │   └── LSPMUSHCodeParser.cs           # Stateless parser wrapper
@@ -114,6 +117,7 @@ SharpMUSH.LanguageServer/
 - `textDocument/didSave` - Document saved
 - `textDocument/publishDiagnostics` - Error reporting
 - `textDocument/semanticTokens/full` - Semantic highlighting
+- `textDocument/semanticTokens/range` - Efficient highlighting for large files
 - `textDocument/completion` - Code completion for functions, commands, and patterns
 - `textDocument/hover` - Show function/command documentation and signatures
 - `textDocument/definition` - Navigate to attribute definitions
@@ -121,13 +125,12 @@ SharpMUSH.LanguageServer/
 - `textDocument/codeAction` - Quick fixes for common errors (unclosed parentheses, typos)
 - `textDocument/signatureHelp` - Parameter hints while typing function calls
 - `textDocument/documentSymbol` - Document outline with attributes, functions, and commands
+- `textDocument/rename` - Safe symbol renaming with whole-word matching
+- `textDocument/formatting` - Auto-format MUSH code with consistent style
+- `workspace/symbol` - Search for symbols across all open documents
 
-### Planned for Future 📋
-- `textDocument/semanticTokens/range` - Partial highlighting for large files
-- `textDocument/rename` - Symbol renaming
-- `textDocument/formatting` - Code formatting
-- `workspace/symbol` - Workspace-wide symbol search
-- `textDocument/inlayHint` - Inline parameter names
+### Not Available in Current LSP Library ❌
+- `textDocument/inlayHint` - Inline parameter names (LSP library version limitation)
 
 ## Semantic Token Types
 

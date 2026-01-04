@@ -40,12 +40,27 @@ The SharpMUSH Language Server provides syntax validation, error diagnostics, and
   - Show function calls
   - Display MUSH commands
   - Navigate document structure
+- **Rename Symbol**: Safe refactoring across files
+  - Rename attributes and symbols
+  - Whole-word matching
+  - Atomic workspace edits
+- **Code Formatting**: Auto-format with consistent style
+  - Trim trailing whitespace
+  - Normalize spacing around operators
+  - Add space after commands
+  - Consistent indentation
+- **Workspace Symbols**: Search across all files
+  - Find attributes across workspace
+  - Locate functions and commands
+  - Fuzzy search support
+  - Organized by symbol type
 - **Semantic Highlighting**: Context-aware syntax highlighting that understands MUSH semantics
   - Built-in functions vs user-defined functions
   - Object references (#123, %#, etc.)
   - Substitutions (%0-%9, %N, etc.)
   - Registers and variables
   - Commands and keywords
+  - Range support for efficient large file handling
 
 ## Architecture
 
@@ -258,6 +273,7 @@ The SharpMUSH Language Server currently implements:
 - ✅ `textDocument/didSave`
 - ✅ `textDocument/publishDiagnostics`
 - ✅ `textDocument/semanticTokens/full`
+- ✅ `textDocument/semanticTokens/range` - Efficient highlighting for large files
 - ✅ `textDocument/completion` - Function, command, and pattern completion
 - ✅ `textDocument/hover` - Show signatures and documentation
 - ✅ `textDocument/definition` - Navigate to attribute definitions
@@ -265,10 +281,10 @@ The SharpMUSH Language Server currently implements:
 - ✅ `textDocument/codeAction` - Quick fixes and suggestions
 - ✅ `textDocument/signatureHelp` - Parameter hints while typing
 - ✅ `textDocument/documentSymbol` - Document outline view
-- ❌ `textDocument/semanticTokens/range` (planned)
-- ❌ `textDocument/rename` (planned)
-- ❌ `textDocument/formatting` (planned)
-- ❌ `workspace/symbol` (planned)
+- ✅ `textDocument/rename` - Safe symbol renaming
+- ✅ `textDocument/formatting` - Auto-format MUSH code
+- ✅ `workspace/symbol` - Search symbols across all files
+- ❌ `textDocument/inlayHint` (not available in current LSP library version)
 
 ## Development
 
@@ -278,14 +294,17 @@ The SharpMUSH Language Server currently implements:
 SharpMUSH.LanguageServer/
 ├── Handlers/
 │   ├── TextDocumentSyncHandler.cs   # Document sync and diagnostics
-│   ├── SemanticTokensHandler.cs     # Semantic highlighting
+│   ├── SemanticTokensHandler.cs     # Semantic highlighting (full & range)
 │   ├── CompletionHandler.cs         # Code completion
 │   ├── HoverHandler.cs              # Hover information
 │   ├── DefinitionHandler.cs         # Go to definition
 │   ├── ReferencesHandler.cs         # Find all references
 │   ├── CodeActionHandler.cs         # Quick fixes and code actions
 │   ├── SignatureHelpHandler.cs      # Parameter hints
-│   └── DocumentSymbolHandler.cs     # Document outline
+│   ├── DocumentSymbolHandler.cs     # Document outline
+│   ├── RenameHandler.cs             # Symbol renaming
+│   ├── DocumentFormattingHandler.cs # Code formatting
+│   └── WorkspaceSymbolsHandler.cs   # Workspace-wide symbol search
 ├── Services/
 │   ├── DocumentManager.cs           # Document state management
 │   └── LSPMUSHCodeParser.cs         # Stateless parser wrapper
