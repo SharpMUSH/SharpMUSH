@@ -30,42 +30,106 @@ Basic text formatting:
 ```
 think rendermarkdown(This is **bold** and *italic* text)
 ```
-Output: "This is **bold** and *italic* text" (with ANSI formatting)
+Output:
+```
+This is bold and italic text
+```
+(with ANSI codes for bold and italic styling)
 
 Headings:
 ```
 think rendermarkdown(# My Heading%r%rThis is a paragraph)
 ```
+Output:
+```
+My Heading
+==========
+
+This is a paragraph
+```
+(heading is underlined and bold with ANSI codes)
 
 Links (note the escaping):
 ```
 think rendermarkdown(%[Click here%]%(https://example.com%))
 ```
-Output: Clickable "Click here" hyperlink
+Output:
+```
+Click here
+```
+(with ANSI OSC 8 hyperlink - clickable in compatible terminals)
 
 Tables:
 ```
 think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |%r| Bob | 25 |)
 ```
-Output: Formatted ASCII table with borders
+Output:
+```
+| Name                          | Age                           |
+|-------------------------------|-------------------------------|
+| Alice                         | 30                            |
+| Bob                           | 25                            |
+```
+(table expands to use default 78 character width, borders styled with ANSI faint)
 
 Tables with custom width:
 ```
 think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |, 50)
 ```
-Output: Table constrained to 50 characters width
+Output:
+```
+| Name              | Age               |
+|-------------------|-------------------|
+| Alice             | 30                |
+| Bob               | 25                |
+```
+(table fits within 50 character width)
 
 Code blocks:
 ```
 think rendermarkdown(``````%rvar x = 42;%rvar y = 100;%r```````)
 ```
-Output: Code block with 2-space indentation
+Output:
+```
+  var x = 42;
+  var y = 100;
+```
+(2-space indentation on all code lines)
 
-Lists:
+Ordered lists:
 ```
 think rendermarkdown(1. First item%r2. Second item%r3. Third item)
 ```
-Output: Numbered list with ANSI-styled bullets
+Output:
+```
+1. First item
+2. Second item
+3. Third item
+```
+(numbers styled with ANSI faint)
+
+Unordered lists:
+```
+think rendermarkdown(- First item%r- Second item%r- Third item)
+```
+Output:
+```
+- First item
+- Second item
+- Third item
+```
+(bullets styled with ANSI faint)
+
+Block quotes:
+```
+think rendermarkdown(> This is a quote%r> spanning multiple lines)
+```
+Output:
+```
+  This is a quote
+  spanning multiple lines
+```
+(2-space indentation on all quote lines)
 
 **Error Handling:**
 - Returns `#-1 INVALID WIDTH (must be 10-1000)` if width parameter is out of range
@@ -126,24 +190,71 @@ Set up custom green color for headings:
 ```
 &RENDERMARKUP`H1 #123=[ansi(hg,%0)]
 &RENDERMARKUP`H2 #123=[ansi(hc,%0)]
+think rendermarkdowncustom(# My Heading, #123)
 ```
+Output:
+```
+My Heading
+==========
+```
+(heading rendered in bright green with ANSI code hg)
 
-Set up custom code block with background:
+Set up custom code block with yellow header:
 ```
 &RENDERMARKUP`CODEBLOCK #123=[ansi(hy,CODE:)]%r[ansi(h,%0)]
+think rendermarkdowncustom(``````%rvar x = 42;%r```````, #123)
 ```
+Output:
+```
+CODE:
+  var x = 42;
+```
+(CODE: in bright yellow, code content in white)
 
-Set up custom list items with different bullets:
+Set up custom list items with colored bullets:
 ```
 &RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,[add(%1,1)].) %2,ansi(hb,*) %2)]
+think rendermarkdowncustom(- First%r- Second%r- Third, #123)
 ```
+Output:
+```
+* First
+* Second
+* Third
+```
+(bullets in bright blue via ANSI code hb)
 
-Use custom rendering:
+Ordered list with custom template:
 ```
-think rendermarkdowncustom(**Bold** and *italic*, #123)
-think rendermarkdowncustom(# My Heading%r%rParagraph text, #123)
-think rendermarkdowncustom(1. First%r2. Second, #123, 60)
+&RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,[add(%1,1)].) %2,ansi(hb,*) %2)]
+think rendermarkdowncustom(1. First%r2. Second%r3. Third, #123)
 ```
+Output:
+```
+1. First
+2. Second
+3. Third
+```
+(numbers in bright red via ANSI code hr)
+
+Complete example with multiple custom elements:
+```
+&RENDERMARKUP`H1 #123=[ansi(hc,%0)]
+&RENDERMARKUP`LISTITEM #123=[ansi(hg,→)] %2
+&RENDERMARKUP`QUOTE #123=[ansi(hy,%0)]
+think rendermarkdowncustom(# Tasks%r%r- Do this%r- Do that%r%r> Important note, #123)
+```
+Output:
+```
+Tasks
+=====
+
+→ Do this
+→ Do that
+
+  Important note
+```
+(heading in cyan, arrow bullets in green, quote in yellow)
 
 **Notes:**
 - If a template attribute is not found on the object, the default rendering is used
