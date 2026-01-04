@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "addrlog", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "addrlog", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> AddressLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -144,7 +144,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "connlog", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
+		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ConnectionLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration!.CurrentValue.Log.UseConnLog)
@@ -278,7 +278,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "connrecord", MinArgs = 1, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
+		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ConnectionRecord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration!.CurrentValue.Log.UseConnLog)
@@ -384,7 +384,7 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> HostName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -473,7 +473,7 @@ public partial class Functions
 			.MinAsync());
 	}
 
-	[SharpFunction(Name = "ipaddr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "ipaddr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> IpAddress(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -515,7 +515,7 @@ public partial class Functions
 			: new CallState(connectionData.InternetProtocolAddress);
 	}
 
-	[SharpFunction(Name = "lports", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lports", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListPorts(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -665,7 +665,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", result));
 	}
 
-	[SharpFunction(Name = "lwhoid", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lwhoid", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -765,7 +765,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", await nonHiddenConnections.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "mwhoid", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "mwhoid", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
@@ -782,7 +782,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", await nonHiddenConnectionsObjIds.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "nmwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "nmwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> NumberMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Count all connected players that are not hidden
@@ -796,7 +796,7 @@ public partial class Functions
 		return new CallState(count.ToString(CultureInfo.InvariantCulture));
 	}
 
-	[SharpFunction(Name = "nwho", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nwho", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> NumberWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -920,7 +920,7 @@ public partial class Functions
 			: new CallState(connectionData.Metadata.GetValueOrDefault("SENT", "0"));
 	}
 
-	[SharpFunction(Name = "ssl", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "ssl", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> SecureSocketLayer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -966,7 +966,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "terminfo", MinArgs = 1, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "capability"])]
 	public static async ValueTask<CallState> TerminalInformation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1042,7 +1042,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "xmwhoid", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xmwhoid", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> NumberRangeMortalWhoObjectId(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1070,7 +1070,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "xwho", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xwho", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> NumberRangeWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -1127,7 +1127,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "xwhoid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xwhoid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> NumberRangeWhoObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;

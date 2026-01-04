@@ -349,7 +349,7 @@ public partial class Functions
 			.Select(x => x.Value.Message)
 			.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" "))));
 
-	[SharpFunction(Name = "accent", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "accent", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "template"])]
 	public static ValueTask<CallState> Accent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -695,7 +695,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "caseall", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
+		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly, ParameterNames = ["string", "expression...|list...", "default"])]
 	public static async ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -804,7 +804,7 @@ public partial class Functions
 		return null;
 	}
 
-	[SharpFunction(Name = "cond", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "cond", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...|result...", "default"])]
 	public static async ValueTask<CallState> Cond(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -834,7 +834,7 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "condall", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "condall", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...|result...", "default"])]
 	public static async ValueTask<CallState> CondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1444,7 +1444,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MModule.substring(firstInt, midLength, str));
 	}
 
-	[SharpFunction(Name = "ncond", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "ncond", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...|result...", "default"])]
 	public static async ValueTask<CallState> NCond(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1477,7 +1477,7 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "ncondall", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "ncondall", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...|result...", "default"])]
 	public static async ValueTask<CallState> NCondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1718,7 +1718,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse)]
+		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public static async ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -1759,7 +1759,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse)]
+		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public static async ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();

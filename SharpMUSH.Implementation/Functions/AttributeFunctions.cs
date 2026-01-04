@@ -19,7 +19,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "aposs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "aposs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> AbsolutePossessivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -367,7 +367,7 @@ public partial class Functions
 		return GrepInternal(parser, false, false);
 	}
 
-	[SharpFunction(Name = "pgrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "pgrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern", "flags"])]
 	public static ValueTask<CallState> ParentGrep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return GrepInternal(parser, false, true);
@@ -647,7 +647,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "lflags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lflags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (parser.CurrentState.Arguments.Count == 0)
@@ -814,7 +814,7 @@ public partial class Functions
 			found => ValueTask.FromResult<CallState>(found.Object().DBRef));
 	}
 
-	[SharpFunction(Name = "objmem", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "objmem", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static ValueTask<CallState> ObjectMemory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>("0");
 
@@ -862,7 +862,7 @@ public partial class Functions
 		);
 	}
 
-	[SharpFunction(Name = "poss", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "poss", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> PossessivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -881,13 +881,13 @@ public partial class Functions
 				}));
 	}
 
-	[SharpFunction(Name = "regedit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "regedit", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["string", "pattern", "replacement"])]
 	public static async ValueTask<CallState> RegularExpressionEdit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegEditInternal(parser, false, false);
 	}
 
-	[SharpFunction(Name = "regeditall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "regeditall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["string", "pattern", "replacement"])]
 	public static async ValueTask<CallState> RegularExpressionEditAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegEditInternal(parser, false, true);
@@ -1215,7 +1215,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "regxattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regxattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> RegularExpressionNumberRangeAttributes(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1399,7 +1399,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "subj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "subj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> SubjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1470,7 +1470,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "uldefault", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse | FunctionFlags.Localize)]
+	[SharpFunction(Name = "uldefault", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse | FunctionFlags.Localize, ParameterNames = ["object/attribute", "default..."])]
 	public static async ValueTask<CallState> UserAttributeLocalizedDefault(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1541,7 +1541,7 @@ public partial class Functions
 		return new CallState(result);
 	}
 
-	[SharpFunction(Name = "pfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "pfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["object", "function", "arguments..."])]
 	public static async ValueTask<CallState> ParentFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr = parser.CurrentState.Arguments["0"].Message!;
@@ -1698,7 +1698,7 @@ public partial class Functions
 	public static ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? string.Empty);
 
-	[SharpFunction(Name = "visible", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "visible", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "looker"])]
 	public static async ValueTask<CallState> Visible(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;

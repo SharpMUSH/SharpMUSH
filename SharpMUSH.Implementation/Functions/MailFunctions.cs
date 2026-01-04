@@ -233,7 +233,7 @@ public partial class Functions
 
 		return false;
 	}
-	[SharpFunction(Name = "maillist", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "maillist", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["folder", "flags"])]
 	public static async ValueTask<CallState> maillist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -326,7 +326,7 @@ public partial class Functions
 		var from = await mail.From.WithCancellation(CancellationToken.None);
 		return new CallState(from.Object()?.DBRef.ToString() ?? "#-1");
 	}
-	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["player", "subject", "message"])]
 	public static async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
@@ -617,7 +617,7 @@ public partial class Functions
 
 		return new CallState(mail.DateSent.ToUnixTimeSeconds().ToString());
 	}
-	[SharpFunction(Name = "malias", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "malias", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["alias"])]
 	public static async ValueTask<CallState> malias(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Mail aliases are not yet implemented in the system

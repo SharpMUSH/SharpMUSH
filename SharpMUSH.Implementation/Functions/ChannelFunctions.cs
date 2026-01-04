@@ -37,7 +37,7 @@ public partial class Functions
 		return (maybePlayer.AsSharpObject, maybeChannel.AsChannel, null);
 	}
 
-	[SharpFunction(Name = "cbufferadd", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "cbufferadd", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["channel", "message"])]
 	public static async ValueTask<CallState> ChannelBufferAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
@@ -382,7 +382,7 @@ public partial class Functions
 		return new CallState(owner.Object.DBRef.ToString());
 	}
 
-	[SharpFunction(Name = "crecall", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "crecall", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel", "lines", "start"])]
 	public static async ValueTask<CallState> ChannelRecall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
@@ -566,7 +566,7 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "cbuffer", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "cbuffer", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]
 	public static async ValueTask<CallState> ChannelBuffer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
