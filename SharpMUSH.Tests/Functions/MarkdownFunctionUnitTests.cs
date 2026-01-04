@@ -26,6 +26,9 @@ public class MarkdownFunctionUnitTests
 		var actualBytes = Encoding.Unicode.GetBytes(actual.ToString());
 		var expectedBytes = Encoding.Unicode.GetBytes(expected.ToString());
 
+		// Ensure both strings have the same length before byte-wise comparison
+		await Assert.That(actualBytes.Length).IsEqualTo(expectedBytes.Length);
+
 		foreach (var (actualByte, expectedByte) in actualBytes.Zip(expectedBytes))
 		{
 			await Assert.That(actualByte).IsEqualTo(expectedByte);
@@ -510,6 +513,7 @@ public class MarkdownFunctionUnitTests
 		
 		// "Very Very Long Column" should have the widest column
 		// This verifies proportional scaling is working
+		// Safely access array elements after length check
 		var shortWidth = cells[0].Trim().Length;
 		var mediumWidth = cells[1].Trim().Length;
 		var longWidth = cells[2].Trim().Length;
