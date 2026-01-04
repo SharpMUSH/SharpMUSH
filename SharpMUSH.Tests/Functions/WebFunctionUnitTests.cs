@@ -10,7 +10,6 @@ public class WebFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("urlencode(test string)", "test+string")]
 	public async Task Urlencode(string str, string expected)
 	{
@@ -19,7 +18,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("urldecode(test+string)", "test string")]
 	public async Task Urldecode(string str, string expected)
 	{
@@ -44,7 +42,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("oob(test)", "")]
 	public async Task Oob(string str, string expected)
 	{
@@ -53,7 +50,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("pueblo()", "0")]
 	public async Task Pueblo(string str, string expected)
 	{
@@ -62,7 +58,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ssl(%#)", "0")]
 	public async Task Ssl(string str, string expected)
 	{
@@ -71,7 +66,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("terminfo(%#)", "")]
 	public async Task Terminfo(string str, string expected)
 	{
@@ -80,7 +74,6 @@ public class WebFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("width(%#)", "78")]
 	public async Task Width(string str, string expected)
 	{

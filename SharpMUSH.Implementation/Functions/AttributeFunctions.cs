@@ -404,7 +404,6 @@ public partial class Functions
 					return attributes.AsError;
 				}
 
-				// Filter attributes whose values contain the substring
 				var matchingAttrs = new List<string>();
 				var comparison = caseInsensitive 
 					? StringComparison.OrdinalIgnoreCase 
@@ -1555,10 +1554,11 @@ public partial class Functions
 			return new CallState("#-1 OBJECT HAS NO PARENT");
 		}
 
-		// TODO: CHECK TRUST AGAINST OBJECT
-		// TODO: Logic should live in EvaluateAttributeFunctionAsync, as it also needs to start considering 
-		// 'INTERNAL' etc attributes, that are not actually inheritable.
-		// Also, debug?
+		// Trust checking and attribute inheritance logic (no_inherit, INTERNAL flags, etc.)
+		// should be implemented in EvaluateAttributeFunctionAsync for consistency
+		// across all attribute evaluation contexts (ufun, pfun, get, etc.).
+		// The evalParent=true parameter enables parent inheritance here.
+		// Future work: Add trust checks and attribute flag filtering in AttributeService.
 
 		var result = await AttributeService!.EvaluateAttributeFunctionAsync(parser, parentObject.Known,
 			dbrefAndAttr,

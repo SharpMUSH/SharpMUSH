@@ -62,7 +62,6 @@ public partial class Commands
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
 		
-		// Inherit zone from creator
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
@@ -75,8 +74,6 @@ public partial class Commands
 		
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
-		// Trigger OBJECT`CREATE event
-		// PennMUSH spec: object`create (new objid, cloned-from)
 		await EventService!.TriggerEventAsync(
 			parser,
 			"OBJECT`CREATE",

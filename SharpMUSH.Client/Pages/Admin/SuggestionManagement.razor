@@ -1,0 +1,350 @@
+@page "/admin/suggestions"
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<PageTitle>Suggestion Management</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudStack Spacing="4">
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <MudIcon Icon="@Icons.Material.Filled.Spellcheck" Style="color: var(--mud-palette-primary);" />
+                        <MudText Typo="Typo.h5">Suggestion Management</MudText>
+                    </div>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="ShowAddCategoryDialog">
+                        Add Category
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadSuggestionsAsync">
+                        Refresh
+                    </MudButton>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Class="mb-4">
+                    Manage spell-check and suggestion categories used for providing alternatives to misspelled words in help entries, function names, and other user input.
+                </MudText>
+                
+                @if (_isLoading)
+                {
+                    <div class="d-flex justify-center pa-4">
+                        <MudProgressCircular Indeterminate="true" />
+                    </div>
+                }
+                else if (_categories == null || !_categories.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Info">
+                        No suggestion categories defined. Click "Add Category" to create your first category.
+                    </MudAlert>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        @if (_categories != null && _categories.Any())
+        {
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Categories (@_categories.Count)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudExpansionPanels Elevation="0">
+                        @foreach (var category in _categories.OrderBy(c => c.Key))
+                        {
+                            <MudExpansionPanel>
+                                <TitleContent>
+                                    <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                                        <MudIcon Icon="@Icons.Material.Filled.Category" />
+                                        <MudText Typo="Typo.h6">@category.Key</MudText>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info">@category.Value.Count words</MudChip>
+                                        <MudSpacer />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                       Color="Color.Error"
+                                                       Size="Size.Small"
+                                                       OnClick="@(async () => await DeleteCategoryAsync(category.Key))" />
+                                    </div>
+                                </TitleContent>
+                                <ChildContent>
+                                    <MudPaper Outlined="true" Class="pa-3">
+                                        <MudStack Spacing="3">
+                                            <!-- Add Word Form -->
+                                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                                <MudTextField @bind-Value="_newWord"
+                                                              Label="Add new word"
+                                                              Variant="Variant.Outlined"
+                                                              Margin="Margin.Dense"
+                                                              Adornment="Adornment.End"
+                                                              AdornmentIcon="@Icons.Material.Filled.Add"
+                                                              OnAdornmentClick="@(async () => await AddWordAsync(category.Key))"
+                                                              FullWidth="true" />
+                                                 <MudButton Variant="Variant.Filled"
+                                                           Color="Color.Primary"
+                                                           StartIcon="@Icons.Material.Filled.Add"
+                                                           OnClick="@(async () => await AddWordAsync(category.Key))">
+                                                    Add
+                                                </MudButton>
+                                            </MudStack>
+
+                                            <!-- Word List -->
+                                            <MudText Typo="Typo.subtitle2" Class="mt-2">Words:</MudText>
+                                            @if (category.Value.Any())
+                                            {
+                                                <MudPaper Outlined="true" Class="pa-2" Style="max-height: 400px; overflow-y: auto;">
+                                                    <MudStack Row="true" Spacing="1" Style="flex-wrap: wrap;">
+                                                        @foreach (var word in category.Value.OrderBy(w => w))
+                                                        {
+                                                            <MudChip T="string" Text="@word" 
+                                                                     Color="Color.Primary" 
+                                                                     Variant="Variant.Outlined"
+                                                                     Size="Size.Small"
+                                                                     OnClose="@(async () => await DeleteWordAsync(category.Key, word))" />
+                                                        }
+                                                    </MudStack>
+                                                </MudPaper>
+                                            }
+                                            else
+                                            {
+                                                <MudAlert Severity="Severity.Info" Dense="true">
+                                                    No words in this category yet.
+                                                </MudAlert>
+                                            }
+                                        </MudStack>
+                                    </MudPaper>
+                                </ChildContent>
+                            </MudExpansionPanel>
+                        }
+                    </MudExpansionPanels>
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <!-- Statistics Card -->
+        @if (_categories != null && _categories.Any())
+        {
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Statistics</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Outlined="true" Class="pa-4">
+                                <MudStack AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Large" Color="Color.Primary" />
+                                    <MudText Typo="Typo.h4">@_categories.Count</MudText>
+                                    <MudText Typo="Typo.body2">Categories</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Outlined="true" Class="pa-4">
+                                <MudStack AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.TextFields" Size="Size.Large" Color="Color.Success" />
+                                    <MudText Typo="Typo.h4">@_categories.Sum(c => c.Value.Count)</MudText>
+                                    <MudText Typo="Typo.body2">Total Words</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Outlined="true" Class="pa-4">
+                                <MudStack AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Info" />
+                                    <MudText Typo="Typo.h4">@(_categories.Any() ? Math.Round(_categories.Average(c => c.Value.Count), 1) : 0)</MudText>
+                                    <MudText Typo="Typo.body2">Avg. Words/Category</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        }
+    </MudStack>
+</MudContainer>
+
+<!-- Add Category Dialog -->
+<MudDialog @bind-Visible="_showAddCategoryDialog">
+    <DialogContent>
+        <MudTextField @bind-Value="_newCategoryName"
+                      Label="Category Name"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      HelperText="Enter a name for the new suggestion category (e.g., 'commands', 'functions', 'help')" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showAddCategoryDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="AddCategoryAsync">
+            Create
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private Dictionary<string, HashSet<string>>? _categories;
+    private bool _isLoading = true;
+    private string _newWord = string.Empty;
+    private string _newCategoryName = string.Empty;
+    private bool _showAddCategoryDialog = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSuggestionsAsync();
+    }
+
+    private async Task LoadSuggestionsAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<SuggestionDataResponse>("/api/suggestion");
+            _categories = response?.Categories ?? new Dictionary<string, HashSet<string>>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading suggestions: {ex.Message}", Severity.Error);
+            _categories = new Dictionary<string, HashSet<string>>();
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowAddCategoryDialog()
+    {
+        _newCategoryName = string.Empty;
+        _showAddCategoryDialog = true;
+    }
+
+    private async Task AddCategoryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newCategoryName))
+        {
+            Snackbar.Add("Category name cannot be empty", Severity.Warning);
+            return;
+        }
+
+        var categoryKey = _newCategoryName.ToLower().Trim();
+        if (_categories?.ContainsKey(categoryKey) == true)
+        {
+            Snackbar.Add($"Category '{categoryKey}' already exists", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            // Add a category by adding an empty word (which we'll remove)
+            var response = await Http.PostAsJsonAsync($"/api/suggestion/{categoryKey}", " ");
+            if (response.IsSuccessStatusCode)
+            {
+                // Remove the placeholder word
+                await Http.DeleteAsync($"/api/suggestion/{categoryKey}/ ");
+                
+                await LoadSuggestionsAsync();
+                Snackbar.Add($"Category '{categoryKey}' created successfully", Severity.Success);
+                _showAddCategoryDialog = false;
+                _newCategoryName = string.Empty;
+            }
+            else
+            {
+                Snackbar.Add($"Failed to create category: {response.ReasonPhrase}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating category: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AddWordAsync(string category)
+    {
+        if (string.IsNullOrWhiteSpace(_newWord))
+        {
+            Snackbar.Add("Word cannot be empty", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"/api/suggestion/{category}", _newWord.ToLower().Trim());
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadSuggestionsAsync();
+                Snackbar.Add($"Added '{_newWord}' to category '{category}'", Severity.Success);
+                _newWord = string.Empty;
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to add word: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding word: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteWordAsync(string category, string word)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/suggestion/{category}/{word}");
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadSuggestionsAsync();
+                Snackbar.Add($"Removed '{word}' from category '{category}'", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to delete word: {response.ReasonPhrase}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting word: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteCategoryAsync(string category)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/suggestion/{category}");
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadSuggestionsAsync();
+                Snackbar.Add($"Deleted category '{category}'", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to delete category: {response.ReasonPhrase}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting category: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // DTO for deserializing API response
+    private class SuggestionDataResponse
+    {
+        public Dictionary<string, HashSet<string>>? Categories { get; set; }
+    }
+}

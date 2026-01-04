@@ -34,8 +34,7 @@ public partial class ValidateService(
 			IValidateService.ValidationType.PlayerAlias when target is { IsT0: true }
 				=> ValidatePlayerAlias(value, target.AsT0),
 			IValidateService.ValidationType.AttributeName
-				=> true,
-				//=> TODO: ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
+				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.AttributeValue when target is { IsT1: true }
 				=> ValidateAttributeValue(value, target.AsT1),
 			IValidateService.ValidationType.ColorName
@@ -155,7 +154,7 @@ public partial class ValidateService(
 			_ => false
 		};
 
-	[GeneratedRegex("^[!\"#%&\\(\\)\\+,\\-\\./0-9A-Z:;\\<\\>=\\?@`_]+$")]
+	[GeneratedRegex("^[!\"#%&\\(\\)\\+,\\-\\./0-9A-Za-z:;\\<\\>=\\?@`_]+$")]
 	private static partial Regex ValidAttributeNameRegex();
 
 	[GeneratedRegex("^[^:;\"#\\\\&\\]\\[\\p{C}]+$")]

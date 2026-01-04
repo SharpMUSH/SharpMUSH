@@ -10,7 +10,6 @@ public class FormattingFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("render(test %r newline)", "")]
 	public async Task Render(string str, string expected)
 	{
@@ -45,7 +44,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("wrap(test,5)", "")]
 	public async Task Wrap(string str, string expected)
 	{
@@ -54,7 +52,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("ljust(test,10)", "test      ")]
 	public async Task Ljust(string str, string expected)
 	{
@@ -63,7 +60,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("rjust(test,10)", "      test")]
 	public async Task Rjust(string str, string expected)
 	{
@@ -72,7 +68,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("center(test,10)", "   test   ")]
 	public async Task Center(string str, string expected)
 	{
@@ -81,7 +76,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("table(a b c,10,2)", "")]
 	public async Task Table(string str, string expected)
 	{

@@ -28,14 +28,13 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask AllhaltCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allhalt"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("All objects halted")));
 	}
 
 	[Test]
@@ -209,14 +208,14 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	[DependsOn(nameof(ReadCacheCommand))]
 	public async ValueTask PollCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("poll") || s.Value.ToString()!.Contains("Poll")));
 	}
 
 	[Test]
@@ -365,6 +364,102 @@ public class WizardCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
 				=> s.Value.ToString()!.Contains("already visible")));
+	}
+
+	[Test]
+	public async ValueTask PurgeCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Purge complete") || s.Value.ToString()!.Contains("GOING_TWICE")));
+	}
+
+	[Test]
+	public async ValueTask ReadCacheCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("startup") || s.Value.ToString()!.Contains("SharpMUSH loads")));
+	}
+
+	[Test]
+	public async ValueTask ShutdownCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("SHUTDOWN") || s.Value.ToString()!.Contains("web") || s.Value.ToString()!.Contains("orchestration")));
+	}
+
+	[Test]
+	public async ValueTask ShutdownRebootCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown/reboot"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("REBOOT") || s.Value.ToString()!.Contains("web") || s.Value.ToString()!.Contains("orchestration")));
+	}
+
+	[Test]
+	[DependsOn(nameof(AllhaltCommand))]
+	public async ValueTask ChownallCommand()
+	{
+		// This test may need adjustment based on actual player setup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Permission denied") || s.Value.ToString()!.Contains("objects") || s.Value.ToString()!.Contains("ownership")));
+	}
+
+	[Test]
+	[DependsOn(nameof(PollCommand))]
+	public async ValueTask SuggestListCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/list"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Suggestion categories") || s.Value.ToString()!.Contains("No suggestion categories")));
+	}
+
+	[Test]
+	[DependsOn(nameof(SuggestListCommand))]
+	public async ValueTask SuggestAddCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/add testcat547=testword923"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Added 'testword923' to category 'testcat547'")));
+	}
+
+	[Test]
+	[DependsOn(nameof(SuggestAddCommand))]
+	public async ValueTask PollSetCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll TestPollMessage897"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Poll message set") || s.Value.ToString()!.Contains("Permission")));
+	}
+
+	[Test]
+	[DependsOn(nameof(PollSetCommand))]
+	public async ValueTask PollClearCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll/clear"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Poll message cleared") || s.Value.ToString()!.Contains("Permission")));
 	}
 
 

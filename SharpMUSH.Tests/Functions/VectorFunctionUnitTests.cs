@@ -33,7 +33,6 @@ public class VectorFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("vunit(3 4)", "")]
 	public async Task Vunit(string str, string expected)
 	{

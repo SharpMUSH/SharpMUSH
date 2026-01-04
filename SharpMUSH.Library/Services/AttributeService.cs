@@ -65,7 +65,6 @@ public class AttributeService(
 		// First pass: check object and all parents
 		while (true)
 		{
-			// Try to find attribute on current object
 			var attr = mediator.CreateStream(new GetAttributeQuery(currentObj.Object().DBRef, attributePath));
 			var attrArr = await attr.ToArrayAsync();
 
@@ -637,7 +636,6 @@ public class AttributeService(
 	/// <param name="patternMode"></param>
 	/// <param name="clearMode"></param>
 	/// <returns></returns>
-	/// <exception cref="NotImplementedException"></exception>
 	public async ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,

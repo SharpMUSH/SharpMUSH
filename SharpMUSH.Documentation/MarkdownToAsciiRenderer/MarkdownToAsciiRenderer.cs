@@ -8,6 +8,7 @@ public class MarkdownToAsciiRenderer : MarkupRendererBase<MarkdownToAsciiRendere
 	{
 		ObjectRenderers.Add(new AsciiCodeBlockRenderer());
 		ObjectRenderers.Add(new AsciiListRenderer());
+		ObjectRenderers.Add(new AsciiListItemRenderer());
 		ObjectRenderers.Add(new AsciiHeadingRenderer());
 		ObjectRenderers.Add(new AsciiHtmlBlockRenderer());
 		ObjectRenderers.Add(new AsciiParagraphRenderer());

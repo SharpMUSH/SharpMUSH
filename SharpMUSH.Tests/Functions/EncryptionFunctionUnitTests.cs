@@ -73,7 +73,6 @@ public class EncryptionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("hmac(test,key,sha256)", "")]
 	public async Task Hmac(string str, string expected)
 	{
@@ -82,7 +81,6 @@ public class EncryptionFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("digest(test,sha256)", "")]
 	public async Task Digest(string str, string expected)
 	{

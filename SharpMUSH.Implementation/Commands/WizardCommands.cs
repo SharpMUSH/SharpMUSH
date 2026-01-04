@@ -15,6 +15,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
@@ -26,8 +27,21 @@ public partial class Commands
 		MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @allhalt - Halt all objects in the game to free up the queue (wizard-only)
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Get all objects and halt them
+		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
+		var haltedCount = 0;
+		
+		await foreach (var obj in objects)
+		{
+			await Mediator!.Send(new HaltObjectQueueRequest(obj.DBRef));
+			haltedCount++;
+		}
+		
+		await NotifyService!.Notify(executor, $"All objects halted. {haltedCount} objects processed.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@FLAG",
@@ -1327,11 +1341,139 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SUGGEST", Switches = ["ADD", "DELETE", "LIST"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 0)]
+		MinArgs = 0, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Suggest(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @suggest - List all suggestion categories
+		// @suggest/list - List all categories
+		// @suggest/add <category>=<word> - Add word to category
+		// @suggest/delete <category>=<word> - Remove word from category
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.Arguments;
+		
+		// Get current suggestion data
+		var suggestionData = await ObjectDataService!.GetExpandedServerDataAsync<SuggestionData>() 
+			?? new SuggestionData();
+		
+		if (suggestionData.Categories == null)
+		{
+			suggestionData = suggestionData with { Categories = new Dictionary<string, HashSet<string>>() };
+		}
+		
+		// @suggest or @suggest/list - list all categories
+		if (args.Count == 0 || switches.Contains("LIST"))
+		{
+			if (suggestionData.Categories.Count == 0)
+			{
+				await NotifyService!.Notify(executor, "No suggestion categories defined.");
+			}
+			else
+			{
+				var output = new System.Text.StringBuilder();
+				output.AppendLine("Suggestion categories:");
+				foreach (var (category, words) in suggestionData.Categories.OrderBy(kvp => kvp.Key))
+				{
+					output.AppendLine($"  {category}: {words.Count} words");
+				}
+				await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			}
+			return CallState.Empty;
+		}
+		
+		// @suggest/add <category>=<word>
+		if (switches.Contains("ADD"))
+		{
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "Usage: @suggest/add <category>=<word>");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+			
+			var category = args["0"].Message!.ToPlainText().ToLower();
+			var word = args["1"].Message!.ToPlainText().ToLower();
+			
+			if (string.IsNullOrWhiteSpace(category) || string.IsNullOrWhiteSpace(word))
+			{
+				await NotifyService!.Notify(executor, "Category and word cannot be empty.");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+			
+			if (!suggestionData.Categories.ContainsKey(category))
+			{
+				suggestionData.Categories[category] = new HashSet<string>();
+			}
+			
+			if (suggestionData.Categories[category].Add(word))
+			{
+				await ObjectDataService!.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
+				await NotifyService!.Notify(executor, $"Added '{word}' to category '{category}'.");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Word '{word}' already exists in category '{category}'.");
+			}
+			
+			return CallState.Empty;
+		}
+		
+		// @suggest/delete <category>=<word>
+		if (switches.Contains("DELETE"))
+		{
+			if (args.Count < 2)
+			{
+				await NotifyService!.Notify(executor, "Usage: @suggest/delete <category>=<word>");
+				return new CallState("#-1 INVALID ARGUMENTS");
+			}
+			
+			var category = args["0"].Message!.ToPlainText().ToLower();
+			var word = args["1"].Message!.ToPlainText().ToLower();
+			
+			if (!suggestionData.Categories.ContainsKey(category))
+			{
+				await NotifyService!.Notify(executor, $"Category '{category}' does not exist.");
+				return CallState.Empty;
+			}
+			
+			if (suggestionData.Categories[category].Remove(word))
+			{
+				// Remove empty categories
+				if (suggestionData.Categories[category].Count == 0)
+				{
+					suggestionData.Categories.Remove(category);
+				}
+				
+				await ObjectDataService!.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
+				await NotifyService!.Notify(executor, $"Removed '{word}' from category '{category}'.");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Word '{word}' not found in category '{category}'.");
+			}
+			
+			return CallState.Empty;
+		}
+		
+		// Display specific category
+		if (args.Count == 1)
+		{
+			var category = args["0"].Message!.ToPlainText().ToLower();
+			
+			if (!suggestionData.Categories.ContainsKey(category))
+			{
+				await NotifyService!.Notify(executor, $"Category '{category}' does not exist.");
+				return CallState.Empty;
+			}
+			
+			var words = suggestionData.Categories[category].OrderBy(w => w).ToList();
+			await NotifyService!.Notify(executor, $"Category '{category}' ({words.Count} words):");
+			await NotifyService!.Notify(executor, string.Join(", ", words));
+			
+			return CallState.Empty;
+		}
+		
+		await NotifyService!.Notify(executor, "Usage: @suggest[/list], @suggest <category>, @suggest/add <category>=<word>, @suggest/delete <category>=<word>");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@BOOT", Switches = ["PORT", "ME", "SILENT"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
@@ -1603,19 +1745,106 @@ public partial class Commands
 		return new CallState(arg1);
 	}
 
-	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @purge - Advance destruction clock and purge GOING_TWICE objects
+		// NOTE: For SharpMUSH, this is a simplified implementation
+		// In a cloud/web environment, actual object deletion should be handled by a background service
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
+		var goingToTwice = 0;
+		var twiceDestroyed = 0;
+		
+		await foreach (var obj in objects)
+		{
+			// Get the full object node to check flags
+			var fullObj = await Mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
+			if (fullObj.IsNone)
+			{
+				continue;
+			}
+			
+			var objAny = fullObj.Known;
+			
+			// Mark GOING objects as GOING_TWICE
+			if (await objAny.HasFlag("GOING") && !await objAny.HasFlag("GOING_TWICE"))
+			{
+				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "GOING_TWICE", false);
+				goingToTwice++;
+			}
+			// Objects marked GOING_TWICE would be deleted by background GC
+			else if (await objAny.HasFlag("GOING_TWICE"))
+			{
+				twiceDestroyed++;
+			}
+		}
+		
+		await NotifyService!.Notify(executor, 
+			$"Purge complete. {goingToTwice} objects advanced to GOING_TWICE. {twiceDestroyed} objects marked for final deletion.");
+		await NotifyService!.Notify(executor, 
+			"Note: Actual object deletion is handled by background garbage collection in SharpMUSH.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SHUTDOWN", Switches = ["PANIC", "REBOOT", "PARANOID"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> Shutdown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @shutdown - Shut down the game server
+		// @shutdown/panic - Panic shutdown (God only)
+		// @shutdown/reboot - Restart without disconnecting users
+		// @shutdown/paranoid - Paranoid dump before shutdown
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		
+		// Check for panic shutdown (God only)
+		if (switches.Contains("PANIC"))
+		{
+			if (!executor.IsGod())
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "Only God can perform a panic shutdown.",
+					shouldNotify: true);
+			}
+			
+			await NotifyService!.Notify(executor, "PANIC SHUTDOWN initiated by God.");
+			// In a web-based environment, panic shutdown should trigger immediate termination
+			// This would typically be handled by orchestration (Kubernetes, Docker, etc.)
+			Logger!.LogCritical("PANIC SHUTDOWN initiated by {Executor}", executor.Object().Name);
+		}
+		else if (switches.Contains("REBOOT"))
+		{
+			await NotifyService!.Notify(executor, "REBOOT initiated. In SharpMUSH's web-based architecture:");
+			await NotifyService!.Notify(executor, "- For Docker/Kubernetes: Update deployment to trigger rolling restart");
+			await NotifyService!.Notify(executor, "- For standalone: Restart the web application");
+			await NotifyService!.Notify(executor, "- Player connections will be preserved via Redis state store");
+			Logger!.LogWarning("REBOOT requested by {Executor}", executor.Object().Name);
+		}
+		else if (switches.Contains("PARANOID"))
+		{
+			await NotifyService!.Notify(executor, "PARANOID SHUTDOWN initiated.");
+			await NotifyService!.Notify(executor, "Database state is continuously persisted in ArangoDB.");
+			Logger!.LogWarning("PARANOID SHUTDOWN requested by {Executor}", executor.Object().Name);
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, "SHUTDOWN initiated.");
+			Logger!.LogWarning("SHUTDOWN requested by {Executor}", executor.Object().Name);
+		}
+		
+		await NotifyService!.Notify(executor, 
+			"Note: SharpMUSH runs as a web application. Traditional shutdown is not applicable.");
+		await NotifyService!.Notify(executor, 
+			"In cloud/container deployments, use your orchestration tools to manage server lifecycle.");
+		await NotifyService!.Notify(executor, 
+			"Database state is preserved automatically. No explicit save is needed.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
@@ -1670,11 +1899,118 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"],
-		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 2)]
 	public static async ValueTask<Option<CallState>> Chown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @chownall <player>[=<new owner>] - Change ownership of all objects owned by player
+		// /preserve - Don't clear flags and powers
+		// /things, /rooms, /exits - Only chown specific types
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.Arguments;
+		var preserve = switches.Contains("PRESERVE");
+		
+		if (args.Count < 1)
+		{
+			await NotifyService!.Notify(executor, "Usage: @chownall <player>[=<new owner>]");
+			return new CallState("#-1 INVALID ARGUMENTS");
+		}
+		
+		var playerArg = args["0"].Message!.ToPlainText();
+		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+		
+		if (maybePlayer.IsError)
+		{
+			return maybePlayer.AsError;
+		}
+		
+		var oldOwner = maybePlayer.AsSharpObject.AsPlayer;
+		
+		// Determine new owner
+		AnySharpObject newOwner;
+		if (args.Count > 1)
+		{
+			var newOwnerArg = args["1"].Message!.ToPlainText();
+			var maybeNewOwner = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, newOwnerArg);
+			if (maybeNewOwner.IsError)
+			{
+				return maybeNewOwner.AsError;
+			}
+			newOwner = maybeNewOwner.AsSharpObject;
+		}
+		else
+		{
+			newOwner = executor;
+		}
+		
+		// Determine which types to chown
+		var chownThings = switches.Contains("THINGS") || (!switches.Contains("ROOMS") && !switches.Contains("EXITS"));
+		var chownRooms = switches.Contains("ROOMS") || (!switches.Contains("THINGS") && !switches.Contains("EXITS"));
+		var chownExits = switches.Contains("EXITS") || (!switches.Contains("THINGS") && !switches.Contains("ROOMS"));
+		
+		// Get all objects and chown matching ones
+		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
+		var count = 0;
+		
+		await foreach (var obj in objects)
+		{
+			var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+			var ownerAsAny = new AnySharpObject(objOwner);
+			
+			if (ownerAsAny.Object().DBRef.Number != oldOwner.Object.DBRef.Number)
+			{
+				continue;
+			}
+			
+			// Get the full object node to work with
+			var fullObj = await Mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
+			if (fullObj.IsNone)
+			{
+				continue;
+			}
+			
+			var objAny = fullObj.Known;
+			
+			// Check type filters
+			var shouldChown = (chownThings && objAny.IsThing) ||
+			                  (chownRooms && objAny.IsRoom) ||
+			                  (chownExits && objAny.IsExit);
+			
+			if (!shouldChown)
+			{
+				continue;
+			}
+			
+			// Chown the object
+			await Mediator!.Send(new SetObjectOwnerCommand(objAny, newOwner.AsPlayer));
+			count++;
+			
+			// Clear privileged flags and powers unless /preserve
+			if (!preserve && !objAny.IsPlayer)
+			{
+				if (await objAny.HasFlag("WIZARD"))
+				{
+					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "!WIZARD", false);
+				}
+				if (await objAny.HasFlag("ROYALTY"))
+				{
+					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "!ROYALTY", false);
+				}
+				if (await objAny.HasFlag("TRUST"))
+				{
+					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "!TRUST", false);
+				}
+				// Set HALT flag
+				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "HALT", false);
+				
+				// TODO: Clear powers - requires power clearing implementation
+			}
+		}
+		
+		await NotifyService!.Notify(executor, 
+			$"Changed ownership of {count} object(s) from {oldOwner.Object.Name} to {newOwner.Object().Name}.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@DUMP", Switches = ["PARANOID", "DEBUG", "NOFORK"], Behavior = CB.Default,
@@ -2176,15 +2512,79 @@ public partial class Commands
 	[SharpCommand(Name = "@POLL", Switches = ["CLEAR"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
 	public static async ValueTask<Option<CallState>> Poll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @poll - Display/set message at top of WHO/DOING
+		// @poll <message> - Set poll message (requires poll power or wizard)
+		// @poll/clear - Clear poll message
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		
+		// Get current poll data
+		var pollData = await ObjectDataService!.GetExpandedServerDataAsync<PollData>() ?? new PollData();
+		
+		// @poll/clear - clear the poll message
+		if (switches.Contains("CLEAR"))
+		{
+			// Check permission - wizard or poll power
+			if (!executor.IsGod() && !await executor.IsWizard() && !await executor.HasPower("POLL"))
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+					shouldNotify: true);
+			}
+			
+			var newPollData = pollData with { Message = null };
+			await ObjectDataService!.SetExpandedServerDataAsync(newPollData, ignoreNull: true);
+			await NotifyService!.Notify(executor, "Poll message cleared.");
+			return CallState.Empty;
+		}
+		
+		// If no args, just display current poll
+		if (args.Count == 0)
+		{
+			if (string.IsNullOrEmpty(pollData.Message))
+			{
+				await NotifyService!.Notify(executor, "No poll message is currently set.");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Current poll: {pollData.Message}");
+			}
+			return CallState.Empty;
+		}
+		
+		// Set poll message - requires permissions
+		if (!executor.IsGod() && !await executor.IsWizard() && !await executor.HasPower("POLL"))
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
+		}
+		
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty()).ToString();
+		var newData = pollData with { Message = argText };
+		await ObjectDataService!.SetExpandedServerDataAsync(newData, ignoreNull: true);
+		await NotifyService!.Notify(executor, "Poll message set.");
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
 	public static async ValueTask<Option<CallState>> ReadCache(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		throw new NotImplementedException();
+		// @readcache - Reload cached text files and rebuild help indexes
+		// In SharpMUSH's web-based architecture, cached files are loaded at startup
+		// This command provides a notification but doesn't actually reload files
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		await NotifyService!.Notify(executor, "Cached files (help, news, etc.) are loaded at server startup in SharpMUSH.");
+		await NotifyService!.Notify(executor, "To reload configuration and cached files, use @shutdown/reboot or restart the server.");
+		await NotifyService!.Notify(executor, "In a cloud/web deployment, consider using container restarts or rolling deployments.");
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",

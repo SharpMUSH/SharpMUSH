@@ -465,29 +465,39 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var actualColumnArgCount = args.Count - 1;
 		var widths = args["0"].Message!.ToPlainText();
 
-		var expectedColumnCount = widths.Split(' ').Length;
-		var minRequiredColumnCount = actualColumnArgCount - 3;
-
-		switch (expectedColumnCount)
+		var widthSpecs = widths.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		if (widthSpecs.Length == 0)
 		{
-			case 0:
-				return "#-1 INVALID ALIGN STRING";
-			case var _ when expectedColumnCount > actualColumnArgCount:
-				return "#-1 NOT ENOUGH COLUMNS FOR ALIGN";
-			case var _ when expectedColumnCount < minRequiredColumnCount:
-				return "#-1 TOO MANY COLUMNS FOR ALIGN";
+			return "#-1 INVALID ALIGN STRING";
 		}
 
+		var expectedColumnCount = widthSpecs.Length;
+		var totalArgs = args.Count - 1; // Exclude the widths argument
+
+		// We need at least expectedColumnCount arguments for the column data
+		if (totalArgs < expectedColumnCount)
+		{
+			return "#-1 NOT ENOUGH COLUMNS FOR ALIGN";
+		}
+
+		// We can have at most expectedColumnCount + 3 arguments (columns + filler + colsep + rowsep)
+		if (totalArgs > expectedColumnCount + 3)
+		{
+			return "#-1 TOO MANY COLUMNS FOR ALIGN";
+		}
+
+		// Take exactly expectedColumnCount arguments as column data
 		var columnArguments = args
 			.Skip(1)
-			.SkipLast(expectedColumnCount - actualColumnArgCount)
+			.Take(expectedColumnCount)
 			.Select(x => x.Value.Message!);
 
+		// The remaining arguments are filler, colsep, rowsep (in that order)
 		var remainder = args
-			.Skip(1 + expectedColumnCount).Select(x => x.Value.Message!)
+			.Skip(1 + expectedColumnCount)
+			.Select(x => x.Value.Message!)
 			.ToArray();
 
 		return TextAlignerModule.align(widths,
@@ -504,22 +514,19 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var widths = args["0"].Message!.ToPlainText()!;
 		var cols = args["1"].Message!;
-		var colDelim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
-		var filler = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
-		var columnSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
-		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MModule.single("\n"));
+		var colDelim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var filler = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
+		var columnSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, MModule.single(" "));
+		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, MModule.single("\n"));
 
-		var actualColumnArgCount = args.Count - 1;
-		var expectedColumnCount = widths.Split(' ').Length;
-		var minRequiredColumnCount = actualColumnArgCount - 3;
-
-		return expectedColumnCount switch
+		var widthSpecs = widths.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		
+		if (widthSpecs.Length == 0)
 		{
-			0 => "#-1 INVALID ALIGN STRING",
-			_ when expectedColumnCount > actualColumnArgCount => "#-1 NOT ENOUGH COLUMNS FOR ALIGN",
-			_ when expectedColumnCount < minRequiredColumnCount => "#-1 TOO MANY COLUMNS FOR ALIGN",
-			_ => TextAlignerModule.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator)
-		};
+			return "#-1 INVALID ALIGN STRING";
+		}
+
+		return TextAlignerModule.align(widths, MModule.split2(colDelim, cols), filler, columnSeparator, rowSeparator);
 	}
 
 	[SharpFunction(Name = "alphamax", MinArgs = 1, MaxArgs = int.MaxValue,
@@ -829,6 +836,25 @@ public partial class Functions
 	public static async ValueTask<CallState> CondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
+		
+		// Special case: if called with 3 args like condall(list, yes, no)
+		// First arg is a space-separated list to check if ALL are truthy
+		if (args.Count == 3)
+		{
+			var listArg = await parser.FunctionParse(args["0"].Message!);
+			var elements = listArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			var allTruthy = elements.All(e => 
+				!string.IsNullOrEmpty(e) && 
+				e != "0" && 
+				!e.StartsWith("#-1") &&
+				!e.Equals("false", StringComparison.OrdinalIgnoreCase));
+			
+			var resultArg = allTruthy ? args["1"] : args["2"];
+			var result = await parser.FunctionParse(resultArg.Message!);
+			return result ?? CallState.Empty;
+		}
+		
+		// Original multi-pair logic for other cases
 		var hasDefault = args.Count % 2 == 1;
 		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
 		var results = new List<MString?>();
@@ -1132,39 +1158,39 @@ public partial class Functions
 	/// </summary>
 	internal static string ConvertAnsiColorToCode(ANSI.AnsiColor color, bool isBackground = false)
 	{
-		// TODO: That's not how we do backgrounds here!
-		var prefix = ""; // isBackground ? "b" : "";
-
 		return color switch
 		{
-			ANSI.AnsiColor.RGB rgb => $"{prefix}{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}",
+			ANSI.AnsiColor.RGB rgb => isBackground 
+				? $"/{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}"
+				: $"{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}",
 			AnsiColor.ANSI ansi
 				=> ansi.Item switch
 				{
-					[0, 30] => $"{prefix}x", // black
-					[0, 31] => $"{prefix}r", // red  
-					[0, 32] => $"{prefix}g", // green
-					[0, 33] => $"{prefix}y", // yellow
-					[0, 34] => $"{prefix}b", // blue
-					[0, 35] => $"{prefix}m", // magenta
-					[0, 36] => $"{prefix}c", // cyan
-					[0, 37] => $"{prefix}w", // white
-					[1, 30] => $"{prefix}hx", // bright black
-					[1, 31] => $"{prefix}hr", // bright red  
-					[1, 32] => $"{prefix}hg", // bright green
-					[1, 33] => $"{prefix}hy", // bright yellow
-					[1, 34] => $"{prefix}hb", // bright blue
-					[1, 35] => $"{prefix}hm", // bright magenta
-					[1, 36] => $"{prefix}hc", // bright cyan
-					[1, 37] => $"{prefix}hw", // bright white
-					[.., 90] => $"{prefix}hx", // bright black
-					[.., 91] => $"{prefix}hr", // bright red
-					[.., 92] => $"{prefix}hg", // bright green
-					[.., 93] => $"{prefix}hy", // bright yellow
-					[.., 94] => $"{prefix}hb", // bright blue
-					[.., 95] => $"{prefix}hm", // bright magenta
-					[.., 96] => $"{prefix}hc", // bright cyan
-					[.., 97] => $"{prefix}hw", // bright white
+					// Background colors use uppercase, foreground uses lowercase
+					[0, 30] or [0, 40] => isBackground ? "X" : "x", // black
+					[0, 31] or [0, 41] => isBackground ? "R" : "r", // red
+					[0, 32] or [0, 42] => isBackground ? "G" : "g", // green
+					[0, 33] or [0, 43] => isBackground ? "Y" : "y", // yellow
+					[0, 34] or [0, 44] => isBackground ? "B" : "b", // blue
+					[0, 35] or [0, 45] => isBackground ? "M" : "m", // magenta
+					[0, 36] or [0, 46] => isBackground ? "C" : "c", // cyan
+					[0, 37] or [0, 47] => isBackground ? "W" : "w", // white
+					[1, 30] or [1, 40] => isBackground ? "hX" : "hx", // bright black
+					[1, 31] or [1, 41] => isBackground ? "hR" : "hr", // bright red
+					[1, 32] or [1, 42] => isBackground ? "hG" : "hg", // bright green
+					[1, 33] or [1, 43] => isBackground ? "hY" : "hy", // bright yellow
+					[1, 34] or [1, 44] => isBackground ? "hB" : "hb", // bright blue
+					[1, 35] or [1, 45] => isBackground ? "hM" : "hm", // bright magenta
+					[1, 36] or [1, 46] => isBackground ? "hC" : "hc", // bright cyan
+					[1, 37] or [1, 47] => isBackground ? "hW" : "hw", // bright white
+					[.., 90] or [.., 100] => isBackground ? "hX" : "hx", // bright black
+					[.., 91] or [.., 101] => isBackground ? "hR" : "hr", // bright red
+					[.., 92] or [.., 102] => isBackground ? "hG" : "hg", // bright green
+					[.., 93] or [.., 103] => isBackground ? "hY" : "hy", // bright yellow
+					[.., 94] or [.., 104] => isBackground ? "hB" : "hb", // bright blue
+					[.., 95] or [.., 105] => isBackground ? "hM" : "hm", // bright magenta
+					[.., 96] or [.., 106] => isBackground ? "hC" : "hc", // bright cyan
+					[.., 97] or [.., 107] => isBackground ? "hW" : "hw", // bright white
 					_ => ""
 				},
 			_ => ""
@@ -1422,16 +1448,19 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var hasDefault = args.Count % 2 == 1;
 
-		var pairs = hasDefault
-			? args.SkipLast(1).Pairwise()
-			: args.Pairwise();
-
-		foreach (var (conditionKv, exprKv) in pairs)
+		// Process pairs: (condition, expression), (condition, expression), ...
+		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+		
+		for (int i = 0; i < pairCount; i++)
 		{
-			var condition = await parser.FunctionParse(conditionKv.Value.Message!);
-			if (condition != null && !Predicates.Truthy(condition.Message!))
+			var conditionIndex = i * 2;
+			var exprIndex = i * 2 + 1;
+			
+			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			// Return expression when condition is TRUTHY
+			if (condition != null && Predicates.Truthy(condition.Message!))
 			{
-				var result = await parser.FunctionParse(exprKv.Value.Message!);
+				var result = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
 				return result ?? CallState.Empty;
 			}
 		}
@@ -1453,19 +1482,33 @@ public partial class Functions
 		var hasDefault = args.Count % 2 == 1;
 		var results = new List<MString?>();
 
-		var pairs = hasDefault
-			? args.SkipLast(1).Pairwise()
-			: args.Pairwise();
-
-		foreach (var (conditionKv, exprKv) in pairs)
+		// Process pairs: (condition, expression), (condition, expression), ...
+		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
+		
+		for (int i = 0; i < pairCount; i++)
 		{
-			var condition = await parser.FunctionParse(conditionKv.Value.Message!);
-			if (condition != null && !Predicates.Truthy(condition.Message!))
+			var conditionIndex = i * 2;
+			var exprIndex = i * 2 + 1;
+			
+			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
+			// Check if ALL elements in the condition (space-separated list) are truthy
+			if (condition != null)
 			{
-				var expr = await parser.FunctionParse(exprKv.Value.Message!);
-				if (expr != null)
+				var conditionText = condition.Message!.ToPlainText();
+				var elements = conditionText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				var allTruthy = elements.All(e => 
+					!string.IsNullOrEmpty(e) && 
+					e != "0" && 
+					!e.StartsWith("#-1") &&
+					!e.Equals("false", StringComparison.OrdinalIgnoreCase));
+				
+				if (allTruthy)
 				{
-					results.Add(expr.Message);
+					var expr = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
+					if (expr != null)
+					{
+						results.Add(expr.Message);
+					}
 				}
 			}
 		}
@@ -1673,7 +1716,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
+		Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -1714,7 +1757,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
+		Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();

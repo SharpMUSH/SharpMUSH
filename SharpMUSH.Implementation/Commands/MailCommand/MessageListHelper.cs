@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -71,11 +72,7 @@ public static class MessageListHelper
 		{
 			_ when msgList.Contains(' ')
 				=> new Error<string>("MAIL: Invalid message specification"),
-			['*', .. var person] // TODO: Fix this to use a Locate() to find the person.
-				=> ErrorOrMailList.FromAsyncEnumerable(mailList
-					.Where(async (x,_) =>
-						(await x.From.WithCancellation(CancellationToken.None))
-						.Object()?.Name.StartsWith(person) ?? false)),
+			['*', .. var person] => await FilterMailByPerson(parser, executor, mailList, person),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
 				                                                           && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay))),
@@ -174,5 +171,36 @@ public static class MessageListHelper
 		};
 
 		return filteredList;
+	}
+
+	private static async ValueTask<ErrorOrMailList> FilterMailByPerson(
+		IMUSHCodeParser parser, 
+		AnySharpObject executor, 
+		IAsyncEnumerable<SharpMail> mailList, 
+		string personName)
+	{
+		// Try to locate the person using the Locate service
+		var locateService = parser.ServiceProvider.GetRequiredService<ILocateService>();
+		var locateResult = await locateService.Locate(parser, executor, executor, personName, LocateFlags.PlayersPreference);
+		
+		if (!locateResult.IsValid() || !locateResult.IsPlayer)
+		{
+			// If person not found or not a player, fall back to string matching
+			return ErrorOrMailList.FromAsyncEnumerable(mailList
+				.Where(async (x, _) =>
+				{
+					var from = await x.From.WithCancellation(CancellationToken.None);
+					return from.Object()?.Name.StartsWith(personName, StringComparison.OrdinalIgnoreCase) ?? false;
+				}));
+		}
+		
+		// Filter by exact player dbref match
+		var targetPlayerDbref = locateResult.AsPlayer.Object.DBRef;
+		return ErrorOrMailList.FromAsyncEnumerable(mailList
+			.Where(async (x, _) =>
+			{
+				var fromPlayer = await x.From.WithCancellation(CancellationToken.None);
+				return fromPlayer.Object()?.DBRef == targetPlayerDbref;
+			}));
 	}
 }

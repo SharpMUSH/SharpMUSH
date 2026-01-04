@@ -200,7 +200,7 @@ public class AnsiStringUnitTests
 		{
 			MModule.MarkupTypes.MarkedupText { Item: M { Details: var structure} } =>
 				$"ansi({ItemName(structure)},{y})",
-			_ => throw new NotImplementedException("???")
+			_ => y
 		});
 		
 		await Assert.That(result).IsEqualTo("ansi(Red,ansi(/Yellow,red))");

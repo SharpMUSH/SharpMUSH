@@ -116,7 +116,6 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("rloc(#1,0)", "#0")]
 	public async Task Rloc(string str, string expected)
 	{
@@ -126,7 +125,6 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("slev()", "")]
 	public async Task Slev(string str, string expected)
 	{
@@ -136,7 +134,6 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("stext()", "")]
 	public async Task Stext(string str, string expected)
 	{

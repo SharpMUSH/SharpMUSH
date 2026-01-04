@@ -114,7 +114,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nsprompt(#1,test)", "")]
 	public async Task Nsprompt(string str, string expected)
 	{
@@ -124,7 +123,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nsremit(#0,test)", "")]
 	public async Task Nsremit(string str, string expected)
 	{
@@ -134,7 +132,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("nszemit(#0,test)", "")]
 	public async Task Nszemit(string str, string expected)
 	{

@@ -39,7 +39,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("fn(testfunc)", "")]
 	public async Task Fn(string str, string expected)
 	{
@@ -78,7 +77,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("valid(attrname,TEST)", "1")]
 	[Arguments("valid(attrname,123)", "0")]
 	public async Task Valid(string str, string expected)
@@ -88,7 +86,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("visible(%#,%#)", "1")]
 	public async Task Visible(string str, string expected)
 	{
@@ -97,7 +94,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("poll()", "")]
 	public async Task Poll(string str, string expected)
 	{
@@ -177,7 +173,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("r(0)", "0")]
 	public async Task R(string str, string expected)
 	{
@@ -187,7 +182,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("recv()", "")]
 	public async Task Recv(string str, string expected)
 	{
@@ -197,7 +191,6 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("sent()", "")]
 	public async Task Sent(string str, string expected)
 	{
@@ -206,8 +199,41 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	[Test, NotInParallel]
+	public async Task SuggestFunction()
+	{
+		var dataService = WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
+		
+		// Set up suggestion data with a test category
+		var suggestionData = new Library.ExpandedObjectData.SuggestionData(new Dictionary<string, HashSet<string>>
+		{
+			["test"] = new HashSet<string> { "apple", "application", "apply", "appreciate", "apricot", "banana", "grape" }
+		});
+		
+		await dataService.SetExpandedServerDataAsync(suggestionData);
+		
+		// Test basic suggestion - should suggest words similar to "aple" (misspelled apple)
+		var result1 = (await Parser.FunctionParse(MModule.single("suggest(test,aple)")))?.Message?.ToString();
+		await Assert.That(result1).IsNotNull();
+		await Assert.That(result1).Contains("apple"); // Should suggest apple as closest match
+		
+		// Test with custom separator
+		var result2 = (await Parser.FunctionParse(MModule.single("suggest(test,aple,|)")))?.Message?.ToString();
+		await Assert.That(result2).IsNotNull();
+		await Assert.That(result2).Contains("|"); // Should use pipe separator
+		
+		// Test with limit
+		var result3 = (await Parser.FunctionParse(MModule.single("suggest(test,app,|,2)")))?.Message?.ToString();
+		await Assert.That(result3).IsNotNull();
+		var suggestions = result3!.Split('|');
+		await Assert.That(suggestions.Length).IsLessThanOrEqualTo(2); // Should limit to 2 suggestions
+		
+		// Test non-existent category
+		var result4 = (await Parser.FunctionParse(MModule.single("suggest(nonexistent,word)")))?.Message?.ToString();
+		await Assert.That(result4).IsEqualTo(string.Empty); // Should return empty for non-existent category
+	}
+
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("suggest(test)", "test")]
 	public async Task Suggest(string str, string expected)
 	{

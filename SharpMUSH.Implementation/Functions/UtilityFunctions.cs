@@ -9,6 +9,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -74,9 +75,15 @@ public partial class Functions
 		{
 			var code = cde.AsSpan();
 			var curHilight = false;
-			if (code.StartsWith(['#']) || code.StartsWith("/#"))
+			if (code.StartsWith("/#"))
 			{
-				// TODO: Handle background.
+				// Handle background RGB color
+				background = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[2..].ToString()));
+				continue;
+			}
+			if (code.StartsWith(['#']))
+			{
+				// Handle foreground RGB color
 				foreground = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[1..].ToString()));
 				continue;
 			}
@@ -131,8 +138,7 @@ public partial class Functions
 						clear = true; // TODO: This PROBABLY needs better handling. No doubt this is not correct due to the tree structure.
 						break;
 					case 'd':
-						// TODO: Inline this as a function.
-						foreground = StringExtensions.ansiByte(39);
+						foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 39));
 						break;
 					case 'x':
 						foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 30));
@@ -215,28 +221,50 @@ public partial class Functions
 	public static ValueTask<CallState> AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(string.Empty));
 
-	[SharpFunction(Name = "allof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "allof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public static async ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var allTrue = true;
-		CallState? lastResult = null;
+		
+		// If single argument, split it by spaces and check each element
+		if (args.Count == 1)
+		{
+			var singleArg = await parser.FunctionParse(args["0"].Message!);
+			var elements = singleArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			
+			var allTrue = true;
+			foreach (var element in elements)
+			{
+				if (string.IsNullOrEmpty(element) ||
+						element == "0" ||
+						element.StartsWith("#-1") ||
+						element.Equals("false", StringComparison.OrdinalIgnoreCase))
+				{
+					allTrue = false;
+					break;
+				}
+			}
+			return new CallState(allTrue ? "1" : "0");
+		}
 
+		// Multi-argument case: parse each argument and check
+		var allTruthy = true;
 		foreach (var arg in args)
 		{
-			lastResult = await parser.FunctionParse(arg.Value.Message!);
-			var resultStr = MModule.plainText(lastResult!.Message).Trim();
+			var result = await parser.FunctionParse(arg.Value.Message!);
+			var resultStr = MModule.plainText(result!.Message).Trim();
 
 			if (string.IsNullOrEmpty(resultStr) ||
 					resultStr == "0" ||
 					resultStr.StartsWith("#-1") ||
 					resultStr.Equals("false", StringComparison.OrdinalIgnoreCase))
 			{
-				allTrue = false;
+				allTruthy = false;
+				break;
 			}
 		}
 
-		return new CallState(allTrue ? "1" : "0");
+		return new CallState(allTruthy ? "1" : "0");
 	}
 
 	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1298,10 +1326,95 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "suggest", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> Suggest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Suggest(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement suggest - requires fuzzy string matching/suggestion algorithm
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var category = args["0"].Message!.ToPlainText();
+		var word = args["1"].Message!.ToPlainText();
+		var separator = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : " ";
+		var limit = 20;
+		
+		if (args.ContainsKey("3"))
+		{
+			if (!int.TryParse(args["3"].Message!.ToPlainText(), out limit) || limit < 1)
+			{
+				return new CallState(Errors.ErrorIntegers);
+			}
+		}
+
+		// Get suggestion data from expanded server data
+		var suggestionData = await ObjectDataService!.GetExpandedServerDataAsync<SuggestionData>();
+		if (suggestionData?.Categories == null || !suggestionData.Categories.ContainsKey(category))
+		{
+			// If category doesn't exist, return empty string
+			return new CallState(string.Empty);
+		}
+
+		var vocabulary = suggestionData.Categories[category];
+		if (vocabulary == null || vocabulary.Count == 0)
+		{
+			return new CallState(string.Empty);
+		}
+
+		// Calculate Levenshtein distance for each word and sort by distance
+		var suggestions = vocabulary
+			.Select(v => new { Word = v, Distance = CalculateLevenshteinDistance(word.ToLower(), v.ToLower()) })
+			.OrderBy(x => x.Distance)
+			.ThenBy(x => x.Word) // Secondary sort by word for consistency
+			.Take(limit)
+			.Select(x => x.Word);
+
+		return new CallState(string.Join(separator, suggestions));
+	}
+
+	/// <summary>
+	/// Calculates the Levenshtein distance between two strings.
+	/// This is the minimum number of single-character edits (insertions, deletions, or substitutions)
+	/// required to change one word into the other.
+	/// </summary>
+	private static int CalculateLevenshteinDistance(string source, string target)
+	{
+		if (string.IsNullOrEmpty(source))
+		{
+			return string.IsNullOrEmpty(target) ? 0 : target.Length;
+		}
+
+		if (string.IsNullOrEmpty(target))
+		{
+			return source.Length;
+		}
+
+		var sourceLength = source.Length;
+		var targetLength = target.Length;
+		var distance = new int[sourceLength + 1, targetLength + 1];
+
+		// Initialize first column and row
+		for (var i = 0; i <= sourceLength; i++)
+		{
+			distance[i, 0] = i;
+		}
+
+		for (var j = 0; j <= targetLength; j++)
+		{
+			distance[0, j] = j;
+		}
+
+		// Calculate distances
+		for (var i = 1; i <= sourceLength; i++)
+		{
+			for (var j = 1; j <= targetLength; j++)
+			{
+				var cost = source[i - 1] == target[j - 1] ? 0 : 1;
+
+				distance[i, j] = Math.Min(
+					Math.Min(
+						distance[i - 1, j] + 1,      // Deletion
+						distance[i, j - 1] + 1),     // Insertion
+					distance[i - 1, j - 1] + cost);  // Substitution
+			}
+		}
+
+		return distance[sourceLength, targetLength];
 	}
 
 	[SharpFunction(Name = "slev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]

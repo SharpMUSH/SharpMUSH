@@ -10,7 +10,6 @@ public class SystemFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("restarts()", "")]
 	public async Task Restarts(string str, string expected)
 	{
@@ -19,7 +18,6 @@ public class SystemFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("restarttime()", "")]
 	public async Task Restarttime(string str, string expected)
 	{
@@ -28,7 +26,6 @@ public class SystemFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("numversion()", "")]
 	public async Task Numversion(string str, string expected)
 	{
@@ -37,7 +34,6 @@ public class SystemFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("getpids()", "")]
 	public async Task Getpids(string str, string expected)
 	{
@@ -46,7 +42,6 @@ public class SystemFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
 	[Arguments("pidinfo(1234)", "")]
 	public async Task Pidinfo(string str, string expected)
 	{

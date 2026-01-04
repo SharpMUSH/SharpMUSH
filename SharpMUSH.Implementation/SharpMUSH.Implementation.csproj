@@ -34,6 +34,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
+		<ProjectReference Include="..\SharpMUSH.Documentation\SharpMUSH.Documentation.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj" OutputItemType="Analyzer" />
 		<ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />

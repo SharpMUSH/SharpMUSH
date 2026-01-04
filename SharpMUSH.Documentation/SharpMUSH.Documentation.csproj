@@ -10,6 +10,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Markdig" Version="0.44.0"/>
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0"/>
 		<PackageReference Include="OneOf" Version="3.0.271"/>
 	</ItemGroup>
 

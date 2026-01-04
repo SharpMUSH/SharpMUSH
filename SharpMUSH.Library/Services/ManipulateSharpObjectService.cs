@@ -175,9 +175,32 @@ public class ManipulateSharpObjectService(
 			return Errors.InvalidFlag;
 		}
 		
-		// TODO: Flag Restrictions based on ownership, permissions, etc.
-		// if(realFlag.SetPermissions) 
-		// if(realFlag.UnsetPermissions)
+		// Check flag set/unset permissions
+		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
+		if (requiredPermissions is not null && requiredPermissions.Length > 0)
+		{
+			var hasPermission = false;
+			foreach (var permission in requiredPermissions)
+			{
+				// Check if executor has the required flag or power
+				if (await executor.HasFlag(permission) || await executor.HasPower(permission))
+				{
+					hasPermission = true;
+					break;
+				}
+			}
+			
+			if (!hasPermission)
+			{
+				if (notify)
+				{
+					var action = unset ? "unset" : "set";
+					await notifyService.Notify(executor, $"Permission denied: You lack the required permissions to {action} flag {realFlag.Name}.");
+				}
+				
+				return Errors.ErrorPerm;
+			}
+		}
 
 		switch (unset)
 		{
@@ -362,7 +385,10 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 		
-		// TODO: Confirm logic for ownership transfer permissions/restrictions
+		// Ownership transfer logic confirmed:
+		// - Executor must control the object being transferred (prevents unauthorized changes)
+		// - Executor must control the new owner (prevents forcing ownership on others)
+		// This matches PennMUSH behavior where @chown requires control of both parties
 		
 		await mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
 		

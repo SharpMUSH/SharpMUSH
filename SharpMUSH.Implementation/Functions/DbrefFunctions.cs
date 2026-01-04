@@ -37,9 +37,7 @@ public partial class Functions
 		var found = locateResult.AsSharpObject;
 
 		return await found.Match<ValueTask<CallState>>(
-			// Player - return location
 			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			// Room - return location (drop-to) or #-1
 			async room =>
 			{
 				var location = await room.Location.WithCancellation(CancellationToken.None);
@@ -49,7 +47,6 @@ public partial class Functions
 					thing => thing.Object.DBRef.ToString(),
 					_ => "#-1");
 			},
-			// Exit - return destination (#-1 for unlinked, #-2 for variable, #-3 for "home")
 			async exit =>
 			{
 				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
@@ -80,7 +77,6 @@ public partial class Functions
 					return "#-1";
 				}
 			},
-			// Thing - return location
 			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
 		);
 	}
@@ -210,7 +206,6 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
-		// Get target location (defaults to executor's location)
 		AnySharpObject target = executor;
 		if (args.TryGetValue("0", out var locArg))
 		{
@@ -223,17 +218,68 @@ public partial class Functions
 			target = maybeTarget.AsAnyObject;
 		}
 
-		// Get all exits that lead to the target location using the new database query
 		var exits = Mediator!.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
-		var entrances = new List<string>();
+		var entrances = new List<AnySharpObject>();
 
 		await foreach (var exit in exits)
 		{
-			entrances.Add(exit.Object.DBRef.ToString());
+			entrances.Add(exit);
 		}
 
-		// TODO: Implement type, start, and count filtering when arguments are provided
-		return new CallState(string.Join(" ", entrances));
+		// Parse type filter (default: all)
+		var typeFilter = "a";
+		if (args.TryGetValue("1", out var typeArg))
+		{
+			typeFilter = typeArg.Message!.ToPlainText()?.ToLower() ?? "a";
+		}
+
+		// Parse begin filter (default: 0)
+		var beginFilter = 0;
+		if (args.TryGetValue("2", out var beginArg))
+		{
+			if (int.TryParse(beginArg.Message!.ToPlainText(), out var begin))
+			{
+				beginFilter = begin;
+			}
+		}
+
+		// Parse end filter (default: int.MaxValue)
+		var endFilter = int.MaxValue;
+		if (args.TryGetValue("3", out var endArg))
+		{
+			if (int.TryParse(endArg.Message!.ToPlainText(), out var end))
+			{
+				endFilter = end;
+			}
+		}
+
+		// Filter by type and dbref range
+		var filtered = entrances.Where(entrance =>
+		{
+			var obj = entrance.Object();
+			var dbrefNum = obj.DBRef.Number;
+
+			// Filter by dbref range
+			if (dbrefNum < beginFilter || dbrefNum > endFilter)
+			{
+				return false;
+			}
+
+			// Filter by type
+			if (typeFilter.Contains('a'))
+			{
+				return true; // 'a' means all types
+			}
+
+			if (typeFilter.Contains('e') && entrance.IsExit) return true;
+			if (typeFilter.Contains('t') && entrance.IsThing) return true;
+			if (typeFilter.Contains('p') && entrance.IsPlayer) return true;
+			if (typeFilter.Contains('r') && entrance.IsRoom) return true;
+
+			return false;
+		}).Select(e => e.Object().DBRef.ToString());
+
+		return new CallState(string.Join(" ", filtered));
 	}
 
 	[SharpFunction(Name = "exit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -275,7 +321,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Followers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// followers() returns list of objects following the target
-		// Requires a following/follower tracking system which is not yet implemented
+		// Objects follow by setting their FOLLOWING attribute to the target's dbref
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -283,10 +329,30 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// TODO: Implement follower tracking system
-				// For now, return empty list
-				await ValueTask.CompletedTask;
-				return new CallState(string.Empty);
+				// Query all objects that have FOLLOWING attribute set to this object's dbref
+				var targetDbref = found.Object().DBRef.ToString();
+				var followers = new List<string>();
+				
+				// Use filtered query to get all objects more efficiently
+				// Note: We can't filter by attribute value in the database easily, 
+				// so we still need to check attributes in application code
+				var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
+				
+				await foreach (var obj in allObjects)
+				{
+					// Get the FOLLOWING attribute for this object
+					var objAttributes = obj.Attributes.Value;
+					await foreach (var attr in objAttributes)
+					{
+						if (attr.LongName == "FOLLOWING" && attr.Value.ToPlainText() == targetDbref)
+						{
+							followers.Add(obj.DBRef.ToString());
+							break;
+						}
+					}
+				}
+				
+				return new CallState(string.Join(" ", followers));
 			});
 	}
 
@@ -294,7 +360,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Following(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// following() returns the object that the target is following
-		// Requires a following/follower tracking system which is not yet implemented
+		// Objects track who they follow via the FOLLOWING attribute
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -302,9 +368,16 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// TODO: Implement following tracking system
-				// For now, return empty
-				await ValueTask.CompletedTask;
+				// Get the FOLLOWING attribute from the target object
+				var followingAttr = await AttributeService!.GetAttributeAsync(
+					executor, found, "FOLLOWING", IAttributeService.AttributeMode.Read, false);
+				
+				if (followingAttr.IsAttribute)
+				{
+					// Return the dbref stored in the FOLLOWING attribute
+					return new CallState(followingAttr.AsAttribute.Last().Value.ToPlainText());
+				}
+				
 				return new CallState(string.Empty);
 			});
 	}
@@ -832,10 +905,6 @@ LOCATE()
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
-		// Get all objects to search
-		var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
-		var results = new List<string>();
-
 		// First argument is the class (who owns the objects to search)
 		var classArg = args["0"].Message!.ToPlainText();
 		AnySharpObject? classObj = null;
@@ -850,37 +919,102 @@ LOCATE()
 			classObj = maybeClass.AsAnyObject;
 		}
 
-		// Process search criteria
-		await foreach (var obj in allObjects)
+		// Build database-level filter from search criteria
+		var filter = new ObjectSearchFilter();
+		var types = new List<string>();
+		var namePattern = (string?)null;
+		int? minDbRef = null;
+		int? maxDbRef = null;
+		DBRef? zone = null;
+		DBRef? parent = null;
+		string? hasFlag = null;
+		string? hasPower = null;
+
+		// Process criteria to build database filter
+		var appLevelCriteria = new List<(string key, string value)>();
+		
+		for (int i = 1; i < args.Count; i++)
 		{
-			// Check ownership if class is specified
-			if (classObj != null)
+			var criterion = args[i.ToString()].Message!.ToPlainText();
+			var parts = criterion.Split('=', 2);
+			if (parts.Length != 2)
 			{
-				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
-				if (owner.Object.DBRef != classObj.Object().DBRef)
-				{
-					continue;
-				}
+				continue;
 			}
 
-			// Check if object matches all criteria
-			bool matches = true;
-			for (int i = 1; i < args.Count; i++)
+			var key = parts[0].Trim().ToUpperInvariant();
+			var value = parts[1].Trim();
+
+			// Categorize criteria: database-level vs application-level
+			switch (key)
 			{
-				var criterion = args[i.ToString()].Message!.ToPlainText();
-				var parts = criterion.Split('=', 2);
-				if (parts.Length != 2)
-				{
-					continue;
-				}
+				case "TYPE":
+					types.Add(value.ToUpperInvariant());
+					break;
+				case "NAME":
+					namePattern = value;
+					break;
+				case "MINDBREF":
+					if (int.TryParse(value, out var min)) minDbRef = min;
+					break;
+				case "MAXDBREF":
+					if (int.TryParse(value, out var max)) maxDbRef = max;
+					break;
+				case "ZONE":
+					var maybeZone = await LocateService!.Locate(parser, executor, executor, value, LocateFlags.All);
+					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object().DBRef;
+					break;
+				case "PARENT":
+					var maybeParent = await LocateService!.Locate(parser, executor, executor, value, LocateFlags.All);
+					if (maybeParent.IsValid()) parent = maybeParent.AsAnyObject.Object().DBRef;
+					break;
+				case "FLAG":
+				case "FLAGS":
+					hasFlag = value;
+					break;
+				case "POWER":
+				case "POWERS":
+					hasPower = value;
+					break;
+				default:
+					// Lock evaluation and other criteria must happen in application code
+					appLevelCriteria.Add((key, value));
+					break;
+			}
+		}
 
-				var key = parts[0].Trim().ToUpperInvariant();
-				var value = parts[1].Trim();
+		// Build filter object
+		filter = new ObjectSearchFilter
+		{
+			Types = types.Count > 0 ? [.. types] : null,
+			NamePattern = namePattern,
+			MinDbRef = minDbRef,
+			MaxDbRef = maxDbRef,
+			Zone = zone,
+			Parent = parent,
+			HasFlag = hasFlag,
+			HasPower = hasPower,
+			Owner = classObj?.Object().DBRef
+		};
 
+		// Query database with filters applied at database level
+		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
+		var results = new List<string>();
+
+		// Apply application-level criteria (locks, etc.)
+		await foreach (var obj in filteredObjects)
+		{
+			bool matches = true;
+			
+			// Process application-level criteria
+			foreach (var (key, value) in appLevelCriteria)
+			{
+				// Handle lock evaluation and other complex criteria here
+				// For now, we support the basics handled at the database level
+				// Lock evaluation would require checking lock strings which can't be done in the database
 				matches = key switch
 				{
-					"TYPE" => obj.Type.Equals(value, StringComparison.OrdinalIgnoreCase),
-					"NAME" => obj.Name.Contains(value, StringComparison.OrdinalIgnoreCase),
+					"LOCK" => EvaluateLockCriteria(obj, value, executor),
 					_ => true // Unknown criteria, skip
 				};
 
@@ -894,6 +1028,16 @@ LOCATE()
 		}
 
 		return new CallState(string.Join(" ", results));
+	}
+
+	/// <summary>
+	/// Evaluates lock criteria for lsearch. This must happen in application code, not in the database.
+	/// </summary>
+	private static bool EvaluateLockCriteria(SharpObject obj, string lockName, AnySharpObject executor)
+	{
+		// Lock evaluation requires runtime evaluation and cannot be done in the database
+		// This would need access to the LockService to evaluate the lock
+		throw new NotImplementedException("Lock filtering in lsearch is not yet implemented. Lock evaluation requires runtime parsing and cannot be efficiently done at the database level.");
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]

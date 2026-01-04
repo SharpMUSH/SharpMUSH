@@ -91,50 +91,140 @@ public partial class Functions
 	public static ValueTask<CallState> SecsCalc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+		var timeStr = args["0"].Message!.ToPlainText().Trim();
 		
-		// For now, implement basic duration string parsing like "1d2h3m4s"
-		// The first argument should be the time string
-		if (args.Count == 1)
+		// Parse the initial timestring
+		DateTimeOffset baseTime;
+		bool isUnixEpoch = false;
+		
+		// Handle "now" keyword
+		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase))
 		{
-			var timeStr = args["0"].Message!.ToPlainText().Trim();
-			
-			// Parse time string which can be "1d 2h 3m 4s" or "1d2h3m4s"
-			// Use generated regex to extract all number-unit pairs
+			baseTime = DateTimeOffset.UtcNow;
+		}
+		// Try to parse as Julian day (just a number)
+		else if (long.TryParse(timeStr, out var julianOrEpoch))
+		{
+			// If it's a large number, treat as seconds since epoch (will be modified by unixepoch modifier if needed)
+			baseTime = DateTimeOffset.FromUnixTimeSeconds(julianOrEpoch);
+			isUnixEpoch = true;
+		}
+		// Try various datetime formats
+		else if (DateTimeOffset.TryParse(timeStr, out var parsedTime))
+		{
+			baseTime = parsedTime;
+		}
+		else
+		{
+			// If we can't parse it, try simple duration parsing for backward compatibility
 			var matches = DurationPattern().Matches(timeStr);
-			
-			if (matches.Count == 0)
+			if (matches.Count > 0)
 			{
-				return new ValueTask<CallState>(Errors.ErrorInteger);
-			}
-			
-			long totalSeconds = 0;
-			foreach (Match match in matches)
-			{
-				if (!double.TryParse(match.Groups["number"].Value, out var value))
+				long totalSeconds = 0;
+				foreach (Match match in matches)
 				{
-					return new ValueTask<CallState>(Errors.ErrorInteger);
+					if (!double.TryParse(match.Groups["number"].Value, out var value))
+					{
+						return new ValueTask<CallState>(Errors.ErrorInteger);
+					}
+					
+					var unit = match.Groups["unit"].Value.ToLower();
+					totalSeconds += unit switch
+					{
+						['y', ..] => (long)(value * 365 * 24 * 3600),
+						['w', ..] => (long)(value * 7 * 24 * 3600),
+						['d', ..] => (long)(value * 24 * 3600),
+						['h', ..] => (long)(value * 3600),
+						['m', ..] => (long)(value * 60),
+						['s', ..] => (long)value,
+						"" => (long)value,
+						_ => 0
+					};
 				}
-				
-				var unit = match.Groups["unit"].Value.ToLower();
-				// Use array pattern matching for first character
-				totalSeconds += unit switch
-				{
-					['y', ..] => (long)(value * 365 * 24 * 3600),
-					['w', ..] => (long)(value * 7 * 24 * 3600),
-					['d', ..] => (long)(value * 24 * 3600),
-					['h', ..] => (long)(value * 3600),
-					['m', ..] => (long)(value * 60),
-					['s', ..] => (long)value,
-					"" => (long)value, // Empty unit defaults to seconds
-					_ => 0 // Unknown unit returns 0 instead of throwing
-				};
+				return ValueTask.FromResult<CallState>(totalSeconds.ToString());
 			}
-
-			return ValueTask.FromResult<CallState>(totalSeconds.ToString());
+			
+			return new ValueTask<CallState>(Errors.ErrorBadArgumentFormat.Replace("{0}", "SECSCALC"));
 		}
 		
-		// TODO: Handle more complex time calculations with modifiers
-		return new ValueTask<CallState>(Errors.ErrorBadArgumentFormat.Replace("{0}", "SECSCALC"));
+		// Apply modifiers
+		for (int i = 1; i < args.Count; i++)
+		{
+			var modifier = args[i.ToString()].Message!.ToPlainText().Trim().ToLower();
+			
+			// Check for "unixepoch" modifier
+			if (modifier == "unixepoch")
+			{
+				// If the original number was treated as julian day, now treat it as unix epoch
+				if (isUnixEpoch)
+				{
+					// Already treated as epoch, no change needed
+				}
+				continue;
+			}
+			
+			// Check for "localtime" modifier
+			if (modifier == "localtime")
+			{
+				baseTime = baseTime.ToLocalTime();
+				continue;
+			}
+			
+			// Check for "utc" modifier
+			if (modifier == "utc")
+			{
+				baseTime = baseTime.ToUniversalTime();
+				continue;
+			}
+			
+			// Check for "start of" modifiers
+			if (modifier.StartsWith("start of "))
+			{
+				var unit = modifier.Substring(9).Trim();
+				baseTime = unit switch
+				{
+					"day" => new DateTimeOffset(baseTime.Year, baseTime.Month, baseTime.Day, 0, 0, 0, baseTime.Offset),
+					"month" => new DateTimeOffset(baseTime.Year, baseTime.Month, 1, 0, 0, 0, baseTime.Offset),
+					"year" => new DateTimeOffset(baseTime.Year, 1, 1, 0, 0, 0, baseTime.Offset),
+					_ => baseTime
+				};
+				continue;
+			}
+			
+			// Check for "weekday N" modifier
+			if (modifier.StartsWith("weekday "))
+			{
+				if (int.TryParse(modifier.Substring(8).Trim(), out var targetWeekday))
+				{
+					var currentWeekday = (int)baseTime.DayOfWeek;
+					var daysToAdd = (targetWeekday - currentWeekday + 7) % 7;
+					baseTime = baseTime.AddDays(daysToAdd);
+				}
+				continue;
+			}
+			
+			// Parse numeric modifiers like "5 days", "3 hours", etc.
+			var parts = modifier.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length == 2)
+			{
+				if (double.TryParse(parts[0], out var value))
+				{
+					var unit = parts[1];
+					baseTime = unit switch
+					{
+						"years" or "year" => baseTime.AddYears((int)value),
+						"months" or "month" => baseTime.AddMonths((int)value),
+						"days" or "day" => baseTime.AddDays(value),
+						"hours" or "hour" => baseTime.AddHours(value),
+						"minutes" or "minute" => baseTime.AddMinutes(value),
+						"seconds" or "second" => baseTime.AddSeconds(value),
+						_ => baseTime
+					};
+				}
+			}
+		}
+		
+		return ValueTask.FromResult<CallState>(baseTime.ToUnixTimeSeconds().ToString());
 	}
 
 	[SharpFunction(Name = "starttime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
