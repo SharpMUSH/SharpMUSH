@@ -161,8 +161,21 @@ After implementation, your project will have:
 ```
 SharpMUSH/
 ├── text_files/                    # New directory for text files
-│   ├── help/
+│   ├── help/                      # Category: "help" (auto-discovered)
 │   │   ├── commands.txt          # PennMUSH format help
+│   │   ├── functions.txt
+│   │   └── getting-started.md    # Markdown help
+│   ├── news/                      # Category: "news" (auto-discovered)
+│   │   └── announcements.txt
+│   ├── events/                    # Category: "events" (auto-discovered)
+│   │   └── calendar.md
+│   ├── policies/                  # Category: "policies" (custom - auto-discovered)
+│   │   └── rules.md
+│   └── backups/                  # Automated backups (not a category)
+│
+├── SharpMUSH.Library/
+│   └── Services/Interfaces/
+│       └── ITextFileService.cs   # New interface (supports dynamic categories)
 │   │   ├── functions.txt
 │   │   └── getting-started.md    # Markdown help
 │   ├── news/

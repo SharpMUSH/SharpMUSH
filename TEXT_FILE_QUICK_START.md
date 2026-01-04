@@ -4,6 +4,8 @@
 
 This is a condensed reference for implementing the text file system. For full details, see `TEXT_FILE_SYSTEM_PLAN.md`.
 
+**Key Design**: The system supports **any number of categories** through automatic directory discovery. Each subdirectory under `text_files/` becomes a category with its own merged index.
+
 ## Phase 1: Core Service (1-2 days)
 
 ### Step 1: Create Interface
@@ -12,25 +14,30 @@ This is a condensed reference for implementing the text file system. For full de
 ```csharp
 public interface ITextFileService
 {
-    Task<string> ListEntriesAsync(string fileName, string separator = " ");
-    Task<string?> GetEntryAsync(string fileName, string entryName);
-    Task<IEnumerable<string>> ListFilesAsync(string? directory = null);
-    Task<string?> GetFileContentAsync(string fileName);
+    // Category management
+    Task<IEnumerable<string>> ListCategoriesAsync();
+    
+    // File operations - supports "file" or "category/file" format
+    Task<string> ListEntriesAsync(string fileReference, string separator = " ");
+    Task<string?> GetEntryAsync(string fileReference, string entryName);
+    Task<IEnumerable<string>> ListFilesAsync(string? category = null);
+    Task<string?> GetFileContentAsync(string fileReference);
     Task ReindexAsync();
-    Dictionary<string, string> GetHelpIndex();
 }
 ```
 
 ### Step 2: Add Configuration
 **File**: `SharpMUSH.Configuration/Options/TextFileOptions.cs`
 
+**Note**: No need to configure individual categories - they are auto-discovered!
+
 ```csharp
 public record TextFileOptions(
-    [property: SharpConfig(Name = "text_files_directory", Category = "File")]
+    [property: SharpConfig(
+        Name = "text_files_directory", 
+        Description = "Base directory. All subdirectories auto-discovered as categories.",
+        Category = "File")]
     string TextFilesDirectory,
-    
-    [property: SharpConfig(Name = "help_files_directory", Category = "File")]
-    string HelpFilesDirectory,
     
     [property: SharpConfig(Name = "enable_markdown_rendering", Category = "File")]
     bool EnableMarkdownRendering,
@@ -47,7 +54,6 @@ public record SharpMUSHOptions
     // ... existing properties ...
     public TextFileOptions TextFile { get; init; } = new(
         TextFilesDirectory: "text_files",
-        HelpFilesDirectory: "help",
         EnableMarkdownRendering: true,
         CacheOnStartup: true
     );
@@ -62,7 +68,8 @@ public class TextFileService : ITextFileService
 {
     private readonly IOptions<SharpMUSHOptions> _options;
     private readonly ILogger<TextFileService> _logger;
-    private readonly Dictionary<string, Dictionary<string, string>> _indexedFiles = new();
+    // Category -> (EntryName -> Content)
+    private readonly Dictionary<string, Dictionary<string, string>> _categoryIndexes = new();
     
     public TextFileService(
         IOptions<SharpMUSHOptions> options,
@@ -73,11 +80,18 @@ public class TextFileService : ITextFileService
         
         if (_options.Value.TextFile.CacheOnStartup)
         {
-            _ = IndexAllFilesAsync();
+            _ = IndexAllCategoriesAsync();
         }
     }
     
-    public async Task<string> ListEntriesAsync(string fileName, string separator = " ")
+    public async Task<IEnumerable<string>> ListCategoriesAsync()
+    {
+        var baseDir = _options.Value.TextFile.TextFilesDirectory;
+        return Directory.GetDirectories(baseDir)
+            .Select(d => Path.GetFileName(d));
+    }
+    
+    public async Task<string> ListEntriesAsync(string fileReference, string separator = " ")
     {
         var entries = GetFileIndex(fileName);
         return string.Join(separator, entries.Keys);
@@ -199,6 +213,10 @@ builder.Services.AddSingleton<ITextFileService, TextFileService>();
 ### textentries()
 **File**: `SharpMUSH.Implementation/Functions/TextFunctions.cs`
 
+Supports flexible file references:
+- `textentries(commands.txt)` - searches all categories
+- `textentries(help/commands.txt)` - specific category
+
 ```csharp
 public partial class Functions
 {
@@ -214,14 +232,14 @@ public partial class Functions
         IMUSHCodeParser parser, SharpFunctionAttribute _2)
     {
         var args = parser.CurrentState.Arguments;
-        var fileName = args["0"].Message!.ToPlainText();
+        var fileReference = args["0"].Message!.ToPlainText();  // "file" or "category/file"
         var separator = args.TryGetValue("1", out var sep) 
             ? sep.Message!.ToPlainText() 
             : " ";
         
         try
         {
-            var entries = await TextFileService!.ListEntriesAsync(fileName, separator);
+            var entries = await TextFileService!.ListEntriesAsync(fileReference, separator);
             return new CallState(entries);
         }
         catch (FileNotFoundException)
@@ -235,12 +253,12 @@ public partial class Functions
         IMUSHCodeParser parser, SharpFunctionAttribute _2)
     {
         var args = parser.CurrentState.Arguments;
-        var fileName = args["0"].Message!.ToPlainText();
+        var fileReference = args["0"].Message!.ToPlainText();  // "file" or "category/file"
         var entryName = args["1"].Message!.ToPlainText();
         
         try
         {
-            var content = await TextFileService!.GetEntryAsync(fileName, entryName);
+            var content = await TextFileService!.GetEntryAsync(fileReference, entryName);
             return content != null 
                 ? new CallState(content)
                 : new CallState("#-1 ENTRY NOT FOUND");
@@ -314,21 +332,32 @@ public async Task<string> RenderToHtmlAsync(string content)
 
 ## Directory Structure
 
-Create these directories in your SharpMUSH installation:
+Create these directories in your SharpMUSH installation. **Any subdirectory** under `text_files/` becomes a category automatically:
 
 ```
 text_files/
-├── help/
+├── help/                    ← Category: "help"
 │   ├── commands.txt
 │   ├── functions.txt
 │   └── getting-started.md
-├── news/
+├── news/                    ← Category: "news"
 │   └── announcements.txt
-├── events/
+├── events/                  ← Category: "events"
 │   └── calendar.md
+├── policies/                ← Category: "policies" (custom)
+│   └── rules.md
+├── custom_category/         ← Category: "custom_category" (any name works!)
+│   └── whatever.txt
 └── backups/
     └── (automated backups go here)
 ```
+
+**Each category has a single merged index** from all files in that directory.
+
+Example: The "help" category index contains:
+- All entries from `commands.txt` (@EMIT, @PEMIT, etc.)
+- All entries from `functions.txt` (NAME(), LOC(), etc.)
+- The entry from `getting-started.md` (GETTING-STARTED)
 
 ## Example Help File (PennMUSH format)
 

@@ -6,36 +6,61 @@ This document presents different architectural approaches for implementing text 
 
 ## 1. File Organization Strategies
 
-### Option A: Single Directory with Subdirectories
+### Option A: Dynamic Category Discovery (RECOMMENDED ✅)
 ```
 text_files/
-├── help/
-│   ├── commands.txt
-│   ├── functions.txt
-│   └── tutorial.md
-├── news/
-│   └── announcements.txt
-├── events/
-│   └── calendar.md
-└── backups/
-    └── help/
-        └── commands_20260104_120000.txt
+├── help/         → Auto-discovered category
+├── news/         → Auto-discovered category
+├── events/       → Auto-discovered category
+├── policies/     → Auto-discovered category
+├── custom/       → Auto-discovered category
+└── any_name/     → Auto-discovered category
 ```
 
+**Implementation**:
+- Single base directory configured
+- All subdirectories automatically discovered as categories
+- Each category gets its own merged index (all files in directory)
+- No limit on number of categories
+- Add categories by creating directories
+
 **Pros**:
+- Maximum flexibility - unlimited categories
 - Simple configuration (one base path)
 - Easy to backup entire text file system
 - Clear organization
+- No code changes needed to add categories
 - Works well with file watchers
+- Self-documenting (directory = category)
 
 **Cons**:
 - All files must be under one root
 - Less flexible for multiple data sources
-- Harder to have per-category permissions
+- Need validation to prevent unwanted directories
 
-**Recommendation**: ✅ **Best for most deployments**
+**Recommendation**: ✅ **Best for most deployments - addresses user requirement**
 
-### Option B: Multiple Independent Directories
+### Option B: Single Directory with Hardcoded Categories (DEPRECATED)
+```
+text_files/
+├── help/         → Configured as HelpFilesDirectory
+├── news/         → Configured as NewsFilesDirectory
+├── events/       → Configured as EventsFilesDirectory
+```
+
+**Pros**:
+- Explicit configuration
+- Easy to validate
+
+**Cons**:
+- Limited to predefined categories
+- Requires code changes to add categories
+- More configuration options to manage
+- Not flexible
+
+**Recommendation**: ❌ **Deprecated - use Option A instead**
+
+### Option C: Multiple Independent Directories
 ```
 /var/sharpmush/help/
 /var/sharpmush/news/
@@ -57,7 +82,7 @@ text_files/
 
 **Recommendation**: Use for advanced deployments with specific requirements
 
-### Option C: Database-Backed Storage
+### Option D: Database-Backed Storage
 ```
 TextFiles Table:
 - Id (PK)

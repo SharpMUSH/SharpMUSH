@@ -23,6 +23,22 @@ This document outlines a comprehensive plan for implementing text file reading c
 
 ## Architecture Overview
 
+### Key Design Principle: Dynamic Category Discovery
+
+The text file system supports **any number of directories** (categories), not just predefined ones. Each subdirectory under the base text files directory becomes a category automatically:
+
+```
+text_files/
+├── help/         → Category: "help"
+├── news/         → Category: "news"  
+├── events/       → Category: "events"
+├── policies/     → Category: "policies"
+├── custom/       → Category: "custom"
+└── anything/     → Category: "anything"
+```
+
+Each category has a **single merged index** containing all entries from all files in that directory.
+
 ### Component Hierarchy
 ```
 SharpMUSH.Library (Interfaces)
@@ -56,48 +72,57 @@ SharpMUSH.Client (Web UI)
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
-/// Service for managing text files (help, news, events, etc.)
+/// Service for managing text files across any number of categories
 /// Supports both PennMUSH .txt format and markdown .md files
+/// Categories are auto-discovered from subdirectories
 /// </summary>
 public interface ITextFileService
 {
 	/// <summary>
-	/// Lists all entry names/indexes in a text file
+	/// Lists all available categories (subdirectories)
 	/// </summary>
-	/// <param name="fileName">Name of the text file (without path)</param>
+	/// <returns>List of category names</returns>
+	Task<IEnumerable<string>> ListCategoriesAsync();
+	
+	/// <summary>
+	/// Lists all entry names/indexes in a category
+	/// Entries are merged from all files in the category directory
+	/// </summary>
+	/// <param name="fileReference">File reference: "filename" or "category/filename"</param>
 	/// <param name="separator">Separator for the returned list (default: space)</param>
 	/// <returns>Space or separator-delimited list of entry names</returns>
-	Task<string> ListEntriesAsync(string fileName, string separator = " ");
+	Task<string> ListEntriesAsync(string fileReference, string separator = " ");
 	
 	/// <summary>
-	/// Gets the content of a specific entry from a text file
+	/// Gets the content of a specific entry
+	/// Supports both "filename" (searches all categories) and "category/filename" (specific category)
 	/// </summary>
-	/// <param name="fileName">Name of the text file</param>
+	/// <param name="fileReference">File reference: "filename" or "category/filename"</param>
 	/// <param name="entryName">Name of the entry (case-insensitive)</param>
 	/// <returns>Entry content, or null if not found</returns>
-	Task<string?> GetEntryAsync(string fileName, string entryName);
+	Task<string?> GetEntryAsync(string fileReference, string entryName);
 	
 	/// <summary>
-	/// Lists all text files in a directory
+	/// Lists all text files in a category
 	/// </summary>
-	/// <param name="directory">Directory name (help, news, etc.) or null for all</param>
+	/// <param name="category">Category name, or null for all categories</param>
 	/// <returns>List of file names</returns>
-	Task<IEnumerable<string>> ListFilesAsync(string? directory = null);
+	Task<IEnumerable<string>> ListFilesAsync(string? category = null);
 	
 	/// <summary>
 	/// Gets the full content of a text file
 	/// </summary>
-	/// <param name="fileName">Name of the text file</param>
+	/// <param name="fileReference">File reference: "filename" or "category/filename"</param>
 	/// <returns>File content, or null if not found</returns>
-	Task<string?> GetFileContentAsync(string fileName);
+	Task<string?> GetFileContentAsync(string fileReference);
 	
 	/// <summary>
-	/// Searches for entries matching a pattern in a text file
+	/// Searches for entries matching a pattern
 	/// </summary>
-	/// <param name="fileName">Name of the text file</param>
+	/// <param name="fileReference">File reference: "filename" or "category/filename"</param>
 	/// <param name="pattern">Search pattern (supports wildcards)</param>
 	/// <returns>List of matching entry names</returns>
-	Task<IEnumerable<string>> SearchEntriesAsync(string fileName, string pattern);
+	Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern);
 	
 	/// <summary>
 	/// Saves content to a text file (creates backup first)
@@ -160,27 +185,9 @@ namespace SharpMUSH.Configuration.Options;
 public record TextFileOptions(
 	[property: SharpConfig(
 		Name = "text_files_directory",
-		Description = "Base directory for text files (relative to server root)",
+		Description = "Base directory for text files (relative to server root). All subdirectories are auto-discovered as categories.",
 		Category = "File")]
 	string TextFilesDirectory,
-	
-	[property: SharpConfig(
-		Name = "help_files_directory",
-		Description = "Directory for help files (relative to text_files_directory)",
-		Category = "File")]
-	string HelpFilesDirectory,
-	
-	[property: SharpConfig(
-		Name = "news_files_directory",
-		Description = "Directory for news files (relative to text_files_directory)",
-		Category = "File")]
-	string NewsFilesDirectory,
-	
-	[property: SharpConfig(
-		Name = "events_files_directory",
-		Description = "Directory for events files (relative to text_files_directory)",
-		Category = "File")]
-	string EventsFilesDirectory,
 	
 	[property: SharpConfig(
 		Name = "enable_markdown_rendering",
@@ -217,9 +224,6 @@ public record TextFileOptions(
 **Default Values** (in `mushcnf.dst`):
 ```
 text_files_directory text_files
-help_files_directory help
-news_files_directory news
-events_files_directory events
 enable_markdown_rendering yes
 text_files_cache_on_startup yes
 text_files_watch_for_changes no
@@ -227,19 +231,42 @@ text_files_backup_enabled yes
 text_files_backup_directory backups
 ```
 
+**Note**: No need to configure individual categories (help, news, etc.) - all subdirectories under `text_files_directory` are automatically discovered and indexed as categories.
+
 ### 3. Service Implementation
 
 **Location**: `SharpMUSH.Implementation/Services/TextFileService.cs`
 
 Key implementation details:
 
-1. **File Indexing**
-   - Leverage existing `Helpfiles` class for PennMUSH `.txt` format
-   - Support both `.txt` and `.md` file formats
-   - Cache indexed entries in memory for fast lookup
-   - Support multiple directories (help, news, events)
+1. **Dynamic Category Discovery**
+   - Scan all subdirectories under `text_files_directory` on startup
+   - Each subdirectory becomes a category automatically
+   - No hardcoded category names
+   - Categories can be added/removed by creating/deleting directories
 
-2. **File Format Detection**
+2. **Per-Category Indexing**
+   - Each category has ONE merged index
+   - Index contains all entries from all files in that category's directory
+   - Example: `help/` category index includes entries from `commands.txt`, `functions.txt`, and `tutorial.md`
+   - Fast lookup: O(1) for entry retrieval within a category
+
+3. **File Reference Resolution**
+   - Support two formats:
+     - Simple filename: `"commands.txt"` - searches all categories
+     - Category path: `"help/commands.txt"` - specific category only
+   - Parse fileReference to extract category and filename
+   ```csharp
+   private (string? category, string fileName) ParseFileReference(string fileReference)
+   {
+       var parts = fileReference.Split('/', 2);
+       return parts.Length == 2 
+           ? (parts[0], parts[1])  // "help/commands.txt"
+           : (null, parts[0]);      // "commands.txt"
+   }
+   ```
+
+4. **File Format Detection**
    ```csharp
    private bool IsMarkdownFile(string fileName) => 
        fileName.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
@@ -248,16 +275,15 @@ Key implementation details:
        fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
    ```
 
-3. **Entry Parsing**
+5. **Entry Parsing**
    - For `.txt` files: Use `Helpfiles.Index()` to extract `& INDEX` entries
    - For `.md` files: Treat entire file as single entry with filename as index
+   - Merge all entries from all files in category into single index
 
-4. **Rendering**
+6. **Rendering**
    - For ANSI: Use existing `MarkdownToAsciiRenderer`
    - For HTML: Use Markdig with HTML renderer
    - Cache rendered output for performance
-
-5. **File Watching** (optional)
    ```csharp
    private FileSystemWatcher? _fileWatcher;
    
@@ -311,25 +337,29 @@ Key implementation details:
 
 #### textentries()
 
+Supports both simple filenames and category paths:
+- `textentries(commands.txt)` - searches all categories
+- `textentries(help/commands.txt)` - specific to help category
+
 ```csharp
 [SharpFunction(Name = "textentries", MinArgs = 1, MaxArgs = 2, 
     Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 public static async ValueTask<CallState> TextEntries(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 {
 	var args = parser.CurrentState.Arguments;
-	var fileName = args["0"].Message!.ToPlainText();
+	var fileReference = args["0"].Message!.ToPlainText();  // Can be "file" or "category/file"
 	var separator = args.TryGetValue("1", out var sep) 
 		? sep.Message!.ToPlainText() 
 		: " ";
 	
 	try
 	{
-		var entries = await TextFileService!.ListEntriesAsync(fileName, separator);
+		var entries = await TextFileService!.ListEntriesAsync(fileReference, separator);
 		return new CallState(entries);
 	}
 	catch (FileNotFoundException)
 	{
-		return new CallState($"#-1 FILE NOT FOUND: {fileName}");
+		return new CallState($"#-1 FILE NOT FOUND: {fileReference}");
 	}
 	catch (Exception ex)
 	{
@@ -340,18 +370,22 @@ public static async ValueTask<CallState> TextEntries(IMUSHCodeParser parser, Sha
 
 #### textfile()
 
+Supports both simple filenames and category paths:
+- `textfile(commands.txt, @EMIT)` - searches all categories
+- `textfile(help/commands.txt, @EMIT)` - specific to help category
+
 ```csharp
 [SharpFunction(Name = "textfile", MinArgs = 2, MaxArgs = 2, 
     Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 public static async ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 {
 	var args = parser.CurrentState.Arguments;
-	var fileName = args["0"].Message!.ToPlainText();
+	var fileReference = args["0"].Message!.ToPlainText();  // Can be "file" or "category/file"
 	var entryName = args["1"].Message!.ToPlainText();
 	
 	try
 	{
-		var content = await TextFileService!.GetEntryAsync(fileName, entryName);
+		var content = await TextFileService!.GetEntryAsync(fileReference, entryName);
 		
 		if (content == null)
 		{
@@ -362,7 +396,7 @@ public static async ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpF
 	}
 	catch (FileNotFoundException)
 	{
-		return new CallState($"#-1 FILE NOT FOUND: {fileName}");
+		return new CallState($"#-1 FILE NOT FOUND: {fileReference}");
 	}
 	catch (Exception ex)
 	{
@@ -373,13 +407,17 @@ public static async ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpF
 
 #### textsearch()
 
+Supports both simple filenames and category paths:
+- `textsearch(commands.txt, pattern)` - searches all categories
+- `textsearch(help/commands.txt, pattern)` - specific to help category
+
 ```csharp
 [SharpFunction(Name = "textsearch", MinArgs = 2, MaxArgs = 3,
     Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 public static async ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 {
 	var args = parser.CurrentState.Arguments;
-	var fileName = args["0"].Message!.ToPlainText();
+	var fileReference = args["0"].Message!.ToPlainText();  // Can be "file" or "category/file"
 	var pattern = args["1"].Message!.ToPlainText();
 	var separator = args.TryGetValue("2", out var sep)
 		? sep.Message!.ToPlainText()
@@ -387,7 +425,7 @@ public static async ValueTask<CallState> TextSearch(IMUSHCodeParser parser, Shar
 	
 	try
 	{
-		var entries = await TextFileService!.SearchEntriesAsync(fileName, pattern);
+		var entries = await TextFileService!.SearchEntriesAsync(fileReference, pattern);
 		return new CallState(string.Join(separator, entries));
 	}
 	catch (FileNotFoundException)
@@ -405,6 +443,8 @@ public static async ValueTask<CallState> TextSearch(IMUSHCodeParser parser, Shar
 
 **Location**: `SharpMUSH.Implementation/Commands/GeneralCommands.cs`
 
+The help command searches across **all categories** automatically, providing a unified help experience regardless of where help files are organized.
+
 ```csharp
 [SharpCommand(Name = "HELP", Switches = [], 
     Behavior = CB.Default, MinArgs = 0, MaxArgs = 1)]
@@ -413,33 +453,35 @@ public static async ValueTask<Option<CallState>> Help(IMUSHCodeParser parser, Sh
 	var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 	var args = parser.CurrentState.Arguments;
 	
-	// If no topic specified, show help index
+	// If no topic specified, show available categories and suggest usage
 	if (args.Count == 0)
 	{
-		var files = await TextFileService!.ListFilesAsync("help");
-		await NotifyService!.Notify(executor, "Available help files:");
-		await NotifyService!.Notify(executor, string.Join(", ", files));
+		var categories = await TextFileService!.ListCategoriesAsync();
+		await NotifyService!.Notify(executor, "Available help categories:");
+		await NotifyService!.Notify(executor, string.Join(", ", categories));
 		await NotifyService!.Notify(executor, "Use 'help <topic>' for specific help.");
+		await NotifyService!.Notify(executor, "Topics are searched across all categories.");
 		return CallState.Empty;
 	}
 	
 	var topic = args["0"].Message!.ToPlainText().ToUpper();
 	
-	// Try to find the topic in the help index
-	var helpIndex = TextFileService!.GetHelpIndex();
+	// Search for topic across all categories
+	// The service will search all category indexes
+	var content = await TextFileService!.GetEntryAsync("*", topic);  // "*" = search all categories
 	
-	if (!helpIndex.TryGetValue(topic, out var helpText))
+	if (content == null)
 	{
 		await NotifyService!.Notify(executor, $"No help available for '{topic}'.");
-		await NotifyService!.Notify(executor, "Try 'help' for a list of topics.");
+		await NotifyService!.Notify(executor, "Try 'help' for a list of categories.");
 		return CallState.Empty;
 	}
 	
 	// Render markdown to ANSI if enabled
-	var rendered = helpText;
+	var rendered = content;
 	if (Configuration!.CurrentValue.TextFile.EnableMarkdownRendering)
 	{
-		var markupString = await TextFileService!.RenderToAnsiAsync(helpText);
+		var markupString = await TextFileService!.RenderToAnsiAsync(content);
 		rendered = markupString.ToString();
 	}
 	
