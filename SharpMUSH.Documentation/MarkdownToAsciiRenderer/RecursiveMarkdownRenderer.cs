@@ -122,16 +122,16 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderList(ListBlock list)
 	{
-		var itemIndex = 0;
+		var itemIndex = 1;
 		var items = list
 			.OfType<ListItemBlock>()
 			.Select(listItem =>
 			{
 				var prefix = list.IsOrdered 
-					? MModule.markupSingle(_dimStyle, $"{itemIndex + 1}. ")
+					? MModule.markupSingle(_dimStyle, $"{itemIndex}. ")
 					: MModule.markupSingle(_dimStyle, "- ");
 				
-				var content = RenderListItem(listItem, itemIndex, list.IsOrdered);
+				var content = RenderListItem(listItem, itemIndex - 1, list.IsOrdered);
 				itemIndex++;
 				return MModule.concat(prefix, content);
 			})
@@ -411,7 +411,8 @@ public class RecursiveMarkdownRenderer
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
-		return RenderInlines(link.FirstChild);
+		// Use the provided content parameter (already rendered by caller)
+		return content;
 	}
 
 	private MString RenderAutolink(AutolinkInline autolink)
