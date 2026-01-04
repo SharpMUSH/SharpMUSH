@@ -897,7 +897,8 @@ LOCATE()
 	public static async ValueTask<CallState> ListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lsearch() searches the database for objects matching criteria
-		// Format: lsearch(<class>, <criteria>=<value>, ...)
+		// Format: lsearch(<player>, <class1>, <restriction1>, <class2>, <restriction2>, ...)
+		// Per PennMUSH documentation: comma-separated positional arguments, NOT equals syntax
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
@@ -906,7 +907,7 @@ LOCATE()
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
-		// First argument is the class (who owns the objects to search)
+		// First argument is the player (who owns the objects to search)
 		var classArg = args["0"].Message!.ToPlainText();
 		AnySharpObject? classObj = null;
 
@@ -931,55 +932,62 @@ LOCATE()
 		string? hasFlag = null;
 		string? hasPower = null;
 
-		// Process criteria to build database filter
+		// Process criteria as positional class/restriction pairs
 		var appLevelCriteria = new List<(string key, string value)>();
 		
-		for (int i = 1; i < args.Count; i++)
+		// Arguments come in pairs: class, restriction, class, restriction, ...
+		for (int i = 1; i < args.Count; i += 2)
 		{
-			var criterion = args[i.ToString()].Message!.ToPlainText();
-			var parts = criterion.Split('=', 2);
-			if (parts.Length != 2)
+			// Need both class and restriction
+			if (i + 1 >= args.Count)
+			{
+				// Odd number of arguments after player - invalid
+				break;
+			}
+
+			var classType = args[i.ToString()].Message!.ToPlainText().Trim().ToUpperInvariant();
+			var restriction = args[(i + 1).ToString()].Message!.ToPlainText().Trim();
+
+			// Skip if class is "none"
+			if (classType.Equals("NONE", StringComparison.OrdinalIgnoreCase))
 			{
 				continue;
 			}
 
-			var key = parts[0].Trim().ToUpperInvariant();
-			var value = parts[1].Trim();
-
 			// Categorize criteria: database-level vs application-level
-			switch (key)
+			switch (classType)
 			{
 				case "TYPE":
-					types.Add(value.ToUpperInvariant());
+					types.Add(restriction.ToUpperInvariant());
 					break;
 				case "NAME":
-					namePattern = value;
+					namePattern = restriction;
 					break;
 				case "MINDBREF":
-					if (int.TryParse(value, out var min)) minDbRef = min;
+					if (int.TryParse(restriction, out var min)) minDbRef = min;
 					break;
 				case "MAXDBREF":
-					if (int.TryParse(value, out var max)) maxDbRef = max;
+					if (int.TryParse(restriction, out var max)) maxDbRef = max;
 					break;
 				case "ZONE":
-					var maybeZone = await LocateService!.Locate(parser, executor, executor, value, LocateFlags.All);
+					var maybeZone = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object().DBRef;
 					break;
 				case "PARENT":
-					var maybeParent = await LocateService!.Locate(parser, executor, executor, value, LocateFlags.All);
+					var maybeParent = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeParent.IsValid()) parent = maybeParent.AsAnyObject.Object().DBRef;
 					break;
 				case "FLAG":
 				case "FLAGS":
-					hasFlag = value;
+					hasFlag = restriction;
 					break;
 				case "POWER":
 				case "POWERS":
-					hasPower = value;
+					hasPower = restriction;
 					break;
 				default:
 					// Lock evaluation and other criteria must happen in application code
-					appLevelCriteria.Add((key, value));
+					appLevelCriteria.Add((classType, restriction));
 					break;
 			}
 		}
