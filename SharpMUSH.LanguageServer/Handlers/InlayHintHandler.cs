@@ -151,30 +151,14 @@ public class InlayHintHandler : InlayHintsHandlerBase
 
 	private static string GetParameterName(string functionName, int index, Library.Attributes.SharpFunctionAttribute attr)
 	{
-		// Try to provide meaningful parameter names for well-known functions
-		return functionName.ToUpperInvariant() switch
+		// Use parameter names from the attribute if available
+		if (attr.ParameterNames != null && index < attr.ParameterNames.Length)
 		{
-			"ADD" => index == 0 ? "num1" : "num2",
-			"SUB" => index == 0 ? "num1" : "num2",
-			"MUL" => index == 0 ? "num1" : "num2",
-			"DIV" => index == 0 ? "dividend" : "divisor",
-			"MOD" => index == 0 ? "number" : "modulus",
-			"GET" => index == 0 ? "object" : "attribute",
-			"SET" => index switch
-			{
-				0 => "object",
-				1 => "attribute",
-				_ => "value"
-			},
-			"NAME" => index == 0 ? "object" : "default",
-			"LOC" => "object",
-			"OWNER" => "object",
-			"CONTROLS" => index == 0 ? "subject" : "object",
-			"HASFLAG" => index == 0 ? "object" : "flag",
-			"HASPOWER" => index == 0 ? "object" : "power",
-			"HASTYPE" => index == 0 ? "object" : "type",
-			_ => $"arg{index + 1}"
-		};
+			return attr.ParameterNames[index];
+		}
+		
+		// Fallback to generic parameter name
+		return $"arg{index + 1}";
 	}
 
 	protected override InlayHintRegistrationOptions CreateRegistrationOptions(

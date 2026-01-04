@@ -10,19 +10,19 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "add", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "add", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
 	public static ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc + sub);
 
-	[SharpFunction(Name = "sub", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "sub", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
 	public static ValueTask<CallState> Sub(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc - sub);
 
-	[SharpFunction(Name = "mul", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly)]
+	[SharpFunction(Name = "mul", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
 	public static ValueTask<CallState> Mul(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc * sub);
 
-	[SharpFunction(Name = "div", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly)]
+	[SharpFunction(Name = "div", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor"])]
 	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		parser.CurrentState.Arguments.Skip(1).Any(x
 				=> decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0)
