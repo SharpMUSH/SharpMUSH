@@ -17,11 +17,17 @@ public partial class Functions
 	/// <param name="parser">The MUSH code parser</param>
 	/// <param name="_2">Function attribute metadata</param>
 	/// <returns>Rendered markdown as MarkupString</returns>
-	[SharpFunction(Name = "rendermarkdown", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "rendermarkdown", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> RenderMarkdown(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var markdown = args["0"].Message!.ToPlainText();
+		
+		// Get markdown text, default to empty
+		var markdown = "";
+		if (args.TryGetValue("0", out var markdownArg))
+		{
+			markdown = markdownArg.Message!.ToPlainText();
+		}
 		
 		// Get width parameter, default to 78
 		var width = 78;

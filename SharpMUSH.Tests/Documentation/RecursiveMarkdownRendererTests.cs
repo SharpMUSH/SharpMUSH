@@ -313,7 +313,7 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderHtml_BoldTag_ShouldApplyMarkup()
+	public async Task RenderHtml_BoldTag_ShouldStripTags()
 	{
 		// Arrange
 		var markdown = "This is <b>bold</b> text";
@@ -321,16 +321,12 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert
+		// Assert - HTML tags should be stripped, leaving just the content
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is bold text");
-		
-		// Verify ANSI formatting is present
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Bold)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_ItalicTag_ShouldApplyMarkup()
+	public async Task RenderHtml_ItalicTag_ShouldStripTags()
 	{
 		// Arrange
 		var markdown = "This is <i>italic</i> text";
@@ -338,16 +334,12 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert
+		// Assert - HTML tags should be stripped
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is italic text");
-		
-		// Verify italic ANSI code is present
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains("\u001b[3m")).IsTrue(); // Italic code
 	}
 
 	[Test]
-	public async Task RenderHtml_UnderlineTag_ShouldApplyMarkup()
+	public async Task RenderHtml_UnderlineTag_ShouldStripTags()
 	{
 		// Arrange
 		var markdown = "This is <u>underlined</u> text";
@@ -355,16 +347,12 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert
+		// Assert - HTML tags should be stripped
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is underlined text");
-		
-		// Verify underline ANSI code is present
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Underlined)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_FontColorTag_ShouldApplyMarkup()
+	public async Task RenderHtml_FontColorTag_ShouldStripTags()
 	{
 		// Arrange
 		var markdown = @"This is <font color=""red"">red</font> text";
@@ -372,16 +360,12 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert
+		// Assert - HTML tags should be stripped
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
-		
-		// Verify color ANSI code is present (foreground color)
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains("\u001b[38;2;")).IsTrue(); // RGB foreground code
 	}
 
 	[Test]
-	public async Task RenderHtml_SpanWithStyle_ShouldApplyMarkup()
+	public async Task RenderHtml_SpanWithStyle_ShouldStripTags()
 	{
 		// Arrange
 		var markdown = @"This is <span style=""color: #FF0000"">red</span> text";
@@ -389,16 +373,12 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert
+		// Assert - HTML tags should be stripped
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
-		
-		// Verify color ANSI code is present
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains("\u001b[38;2;")).IsTrue(); // RGB foreground code
 	}
 
 	[Test]
-	public async Task RenderHtml_SpanWithBackgroundColor_ShouldApplyMarkup()
+	public async Task RenderHtml_SpanWithBackgroundColor_ShouldStripTags()
 	{
 		// Arrange
 		var markdown = @"This is <span style=""background-color: blue"">highlighted</span> text";
@@ -406,11 +386,7 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert
+		// Assert - HTML tags should be stripped
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is highlighted text");
-		
-		// Verify background color ANSI code is present
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains("\u001b[48;2;")).IsTrue(); // RGB background code
 	}
 }

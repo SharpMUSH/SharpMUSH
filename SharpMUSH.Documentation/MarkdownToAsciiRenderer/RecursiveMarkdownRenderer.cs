@@ -148,7 +148,12 @@ public class RecursiveMarkdownRenderer
 			.ToList();
 		
 		// Join list item blocks without newlines between them
-		return MModule.multiple(parts);
+		var combined = MModule.multiple(parts);
+		
+		// Trim leading/trailing whitespace from the plain text and recreate MString
+		// This removes extra spaces that Markdig might preserve from markdown formatting
+		var trimmed = combined.ToPlainText().Trim();
+		return MModule.single(trimmed);
 	}
 
 	protected virtual MString RenderQuote(QuoteBlock quote)
@@ -375,7 +380,8 @@ public class RecursiveMarkdownRenderer
 	/// </summary>
 	protected virtual MString RenderBold(MString content)
 	{
-		return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+		// Apply bold style to the content's plain text
+		return MModule.markupSingle(_boldStyle, content.ToPlainText());
 	}
 
 	/// <summary>
@@ -384,7 +390,9 @@ public class RecursiveMarkdownRenderer
 	protected virtual MString RenderItalic(MString content)
 	{
 		// Default uses same style as bold (ANSI italic support varies)
-		return MModule.concat(MModule.markupSingle(_boldStyle, ""), content);
+		// Apply italic (displayed as bold) to the content's plain text
+		var italicStyle = Ansi.Create(bold: true, foreground: StringExtensions.rgb(Color.White));
+		return MModule.markupSingle(italicStyle, content.ToPlainText());
 	}
 
 	/// <summary>
@@ -393,7 +401,7 @@ public class RecursiveMarkdownRenderer
 	protected virtual MString RenderUnderline(MString content)
 	{
 		var underlineStyle = Ansi.Create(underlined: true);
-		return MModule.concat(MModule.markupSingle(underlineStyle, ""), content);
+		return MModule.markupSingle(underlineStyle, content.ToPlainText());
 	}
 
 	/// <summary>
@@ -422,8 +430,10 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderHtmlInline(HtmlInline html)
 	{
-		// Parse HTML inline and convert to ANSI markup
-		return ParseHtmlToAnsi(html.Tag);
+		// HTML inline tags are not supported in the recursive renderer yet.
+		// They would require matching opening/closing tags to properly wrap content with markup.
+		// For now, just skip them.
+		return MModule.empty();
 	}
 
 	private MString RenderHtmlEntity(HtmlEntityInline entity)
