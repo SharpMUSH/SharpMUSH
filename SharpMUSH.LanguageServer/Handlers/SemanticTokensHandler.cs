@@ -89,7 +89,7 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 			{
 				Delta = false
 			},
-			Range = false
+			Range = true
 		};
 	}
 }

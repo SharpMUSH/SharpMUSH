@@ -75,6 +75,9 @@ try
 			.WithHandler<CodeActionHandler>()
 			.WithHandler<SignatureHelpHandler>()
 			.WithHandler<DocumentSymbolHandler>()
+			.WithHandler<RenameHandler>()
+			.WithHandler<DocumentFormattingHandler>()
+			.WithHandler<WorkspaceSymbolsHandler>()
 			.OnInitialize(async (server, request, cancellationToken) =>
 			{
 				Log.Information("Language server initialized");

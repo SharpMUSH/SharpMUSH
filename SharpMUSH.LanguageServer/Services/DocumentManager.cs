@@ -35,6 +35,11 @@ public class DocumentManager
 	{
 		return _documents.ContainsKey(uri);
 	}
+
+	public IEnumerable<(string uri, DocumentState document)> GetAllDocuments()
+	{
+		return _documents.Select(kvp => (kvp.Key, kvp.Value));
+	}
 }
 
 /// <summary>
