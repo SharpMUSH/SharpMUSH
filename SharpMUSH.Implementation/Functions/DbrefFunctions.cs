@@ -1014,8 +1014,7 @@ LOCATE()
 				// Lock evaluation would require checking lock strings which can't be done in the database
 				matches = key switch
 				{
-					"LOCK" => EvaluateLockCriteria(obj, value, executor),
-					"ELOCK" => EvaluateLockCriteria(obj, value, executor),
+					"LOCK" or "ELOCK" => await EvaluateLockCriteria(obj, value, executor),
 					_ => true // Unknown criteria, skip
 				};
 
@@ -1039,11 +1038,11 @@ LOCATE()
 	/// <param name="lockString">The lock string to evaluate (e.g., "FLAG^WIZARD", "sex:m*")</param>
 	/// <param name="executor">The player running the lsearch</param>
 	/// <returns>True if the object passes the lock evaluation</returns>
-	private static bool EvaluateLockCriteria(SharpObject obj, string lockString, AnySharpObject executor)
+	private static async Task<bool> EvaluateLockCriteria(SharpObject obj, string lockString, AnySharpObject executor)
 	{
 		// Lock evaluation requires runtime evaluation and cannot be done in the database
 		// Convert the raw SharpObject to a properly-typed AnySharpObject
-		var typedObj = CreateAnySharpObjectFromSharpObject(obj);
+		var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
 		
 		// Evaluate the lock: does this object pass the given lock string when tested by the executor?
 		// In elock searches, we're checking if the object passes a lock (not if executor passes object's lock)
@@ -1054,12 +1053,12 @@ LOCATE()
 	/// Creates an AnySharpObject from a SharpObject based on its Type property.
 	/// This is needed when we have a raw SharpObject from the database but need to work with the discriminated union.
 	/// </summary>
-	private static AnySharpObject CreateAnySharpObjectFromSharpObject(SharpObject obj)
+	private static async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(SharpObject obj)
 	{
 		// The object needs to be fetched properly from the database to get the correct type-specific object
-		// For now, we use the Mediator to fetch the fully-typed object
+		// We use the Mediator to fetch the fully-typed object asynchronously
 		var dbref = new DBRef(obj.Key, obj.CreationTime);
-		var result = Mediator!.Send(new GetObjectNodeQuery(dbref)).GetAwaiter().GetResult();
+		var result = await Mediator!.Send(new GetObjectNodeQuery(dbref));
 		
 		if (result.IsNone)
 		{
