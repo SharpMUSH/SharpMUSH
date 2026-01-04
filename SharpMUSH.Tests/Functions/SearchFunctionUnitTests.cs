@@ -174,13 +174,13 @@ public class SearchFunctionUnitTests
 		// 1. Once as an argument to lsearch()
 		// 2. Again for each object with ## replaced by the dbref
 		
-		// Using escaped example: \[eq\(##\,1\)\] which should match object with dbref 1
-		// Escaping: brackets \[ \], parentheses \( \), and comma \,
-		var result = (await Parser.FunctionParse(MModule.single(@"lsearch(all,eval=\[eq\(##\,1\)\])")))?.Message!;
+		// Correct syntax uses commas, not equals: lsearch(all,eval,\[...\])
+		// Using strmatch to match dbref format with timestamp: #1:*
+		var result = (await Parser.FunctionParse(MModule.single(@"lsearch(all,eval,\[strmatch\(##\,#1:*\)\])")))?.Message!;
 		var resultText = result.ToPlainText();
 		
-		// Should return object #1
+		// Should return object #1 with its full dbref (including timestamp)
 		await Assert.That(resultText).IsNotNull();
-		await Assert.That(resultText).Contains("#1");
+		await Assert.That(resultText).Contains("#1:");
 	}
 }
