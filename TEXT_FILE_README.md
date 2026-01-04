@@ -4,11 +4,20 @@
 
 This directory contains comprehensive planning documentation for implementing text file reading capabilities, markdown conversion, and web-based editing in SharpMUSH. The planning addresses the requirements for:
 
-1. `textentries()` function - List entries in text files
+1. `textentries()` function - List entries in text files (supports "file" or "category/file")
 2. `textfile()` function - Retrieve specific entries
-3. `help` command - Display help topics
+3. `help` command - Search help topics across all categories
 4. Markdown to ANSI/HTML conversion
 5. Web-based file browsing and editing
+6. **Dynamic category discovery** - Support any number of directories without configuration
+
+## Key Design: Dynamic Categories
+
+The system supports **unlimited categories** through automatic directory discovery:
+- Each subdirectory under `text_files/` becomes a category
+- Each category has a merged index from all its files
+- No hardcoded category names - add categories by creating directories
+- Functions support both "file" (searches all) and "category/file" (specific)
 
 ## Documents
 
@@ -51,8 +60,9 @@ The primary reference document with complete specifications:
 
 Analysis of different approaches for each architectural decision:
 
-1. **File Organization** (3 options analyzed)
-   - Single directory with subdirectories ✅ Recommended
+1. **File Organization** (4 options analyzed)
+   - Dynamic category discovery ✅ Recommended - **unlimited categories**
+   - Single directory with hardcoded categories (deprecated)
    - Multiple independent directories
    - Database-backed storage
 
@@ -185,11 +195,11 @@ Visual documentation with ASCII diagrams:
 Core service with functions and help command
 
 **Deliverables**:
-- ✅ `ITextFileService` interface
-- ✅ `TextFileService` implementation
-- ✅ `textentries()`, `textfile()` functions
-- ✅ `help` command
-- ✅ Configuration
+- ✅ `ITextFileService` interface with dynamic category support
+- ✅ `TextFileService` implementation with auto-discovery
+- ✅ `textentries()`, `textfile()` functions (support "file" or "category/file")
+- ✅ `help` command (searches all categories)
+- ✅ Configuration (no hardcoded categories)
 - ✅ Tests
 
 ### Phase 2: Rendering (1 day)
@@ -299,10 +309,21 @@ to anyone in particular.
 > think textentries(commands.txt)
 @EMIT @PEMIT @OEMIT @REMIT
 
+> think textentries(help/commands.txt)
+@EMIT @PEMIT @OEMIT @REMIT
+
 > think textfile(commands.txt,@EMIT)
 @emit <message>
 Emits a message to everyone in the room...
+
+> think textfile(help/commands.txt,@EMIT)
+@emit <message>
+Emits a message to everyone in the room...
 ```
+
+Note: Functions support both formats:
+- `textentries(commands.txt)` - searches all categories
+- `textentries(help/commands.txt)` - specific to "help" category
 
 ### Web Editing
 1. Navigate to `/admin/textfiles`

@@ -33,10 +33,11 @@
 │                                                                       │
 │  ┌───────────────────────────────────────────────────────────────┐  │
 │  │              Functions & Commands                              │  │
-│  │  textentries(file, sep)  - List entries in file               │  │
-│  │  textfile(file, entry)   - Get entry content                  │  │
-│  │  textsearch(file, pattern) - Search entries                   │  │
-│  │  help [topic]            - Display help for topic             │  │
+│  │  textentries(ref, sep)   - List entries (ref = "file" or    │  │
+│  │                            "category/file")                  │  │
+│  │  textfile(ref, entry)    - Get entry content                │  │
+│  │  textsearch(ref, pattern) - Search entries                  │  │
+│  │  help [topic]            - Search all categories for topic  │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────────┬───────────────────────────────────┘
                                     │
@@ -48,16 +49,18 @@
 │  ┌───────────────────────────────────────────────────────────────┐  │
 │  │                    ITextFileService                            │  │
 │  │                                                                │  │
-│  │  Core Operations:                                             │  │
-│  │    • ListEntriesAsync(file, sep)      - Get entry list        │  │
-│  │    • GetEntryAsync(file, entry)       - Get entry content     │  │
-│  │    • ListFilesAsync(dir)              - List all files        │  │
-│  │    • GetFileContentAsync(file)        - Get full content      │  │
+│  │  Category Management:                                         │  │
+│  │    • ListCategoriesAsync()            - List all categories   │  │
+│  │                                                                │  │
+│  │  Core Operations (supports "file" or "category/file"):       │  │
+│  │    • ListEntriesAsync(ref, sep)       - Get entry list        │  │
+│  │    • GetEntryAsync(ref, entry)        - Get entry content     │  │
+│  │    • ListFilesAsync(category)         - List files            │  │
+│  │    • GetFileContentAsync(ref)         - Get full content      │  │
 │  │                                                                │  │
 │  │  Search & Index:                                              │  │
-│  │    • SearchEntriesAsync(file, pattern) - Search entries       │  │
-│  │    • ReindexAsync()                    - Rebuild index        │  │
-│  │    • GetHelpIndex()                    - Get help lookup      │  │
+│  │    • SearchEntriesAsync(ref, pattern) - Search entries        │  │
+│  │    • ReindexAsync()                   - Rebuild all indexes   │  │
 │  │                                                                │  │
 │  │  Management:                                                  │  │
 │  │    • SaveFileAsync(file, content)     - Save with backup      │  │
@@ -75,12 +78,13 @@
 │  │                    TextFileService                             │  │
 │  │                                                                │  │
 │  │  Components:                                                  │  │
-│  │    • File Indexer    - Parses & caches file entries          │  │
-│  │    • Format Detector - Identifies .txt vs .md files           │  │
-│  │    • Cache Manager   - In-memory entry cache                  │  │
-│  │    • File Watcher    - Optional auto-reload (dev mode)        │  │
+│  │    • Category Scanner   - Auto-discovers subdirectories       │  │
+│  │    • File Indexer       - Parses & caches per-category        │  │
+│  │    • Format Detector    - Identifies .txt vs .md files        │  │
+│  │    • Cache Manager      - Per-category merged indexes         │  │
+│  │    • File Watcher       - Optional auto-reload (dev mode)     │  │
 │  │    • Security Validator - Path validation                     │  │
-│  │    • Backup Manager  - Timestamped backups                    │  │
+│  │    • Backup Manager     - Timestamped backups                 │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 └───────────────────────────────────┬───────────────────────────────────┘
                                     │
@@ -94,8 +98,8 @@
 │  │                  │  │   Renderer       │  │                  │  │
 │  │ • Index()        │  │                  │  │ TextFileOptions: │  │
 │  │ • Parse & INDEX  │  │ • RenderMarkdown()│  │ • BaseDirectory  │  │
-│  │   entries        │  │ • ANSI format    │  │ • HelpDir        │  │
-│  │ • .txt files     │  │ • Width control  │  │ • NewsDir        │  │
+│  │   entries        │  │ • ANSI format    │  │   (auto-discover │  │
+│  │ • .txt files     │  │ • Width control  │  │    categories)   │  │
 │  └──────────────────┘  └──────────────────┘  │ • EnableMD       │  │
 │                                               │ • CacheOnStartup │  │
 │  ┌──────────────────┐  ┌──────────────────┐  │ • WatchFiles     │  │
@@ -109,10 +113,10 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        Storage Layer                                 │
 ├──────────────────────────────────────────────────────────────────────┤
-│  File System Directory Structure:                                   │
+│  File System Directory Structure (Dynamic Category Discovery):      │
 │                                                                      │
 │  text_files/                         ← Base Directory               │
-│  ├── help/                           ← Help Files                   │
+│  ├── help/                           ← Category: "help" (auto)      │
 │  │   ├── commands.txt               ← PennMUSH format              │
 │  │   │   & @EMIT                    ← Index entry                  │
 │  │   │   @emit <message>            ← Entry content                │
@@ -122,15 +126,21 @@
 │  │   └── getting-started.md         ← Markdown help                │
 │  │       # Getting Started          ← Markdown format              │
 │  │       Welcome to SharpMUSH...                                   │
+│  │       → All merged into ONE "help" category index               │
 │  │                                                                  │
-│  ├── news/                           ← News Files                   │
+│  ├── news/                           ← Category: "news" (auto)      │
 │  │   └── announcements.txt                                         │
 │  │                                                                  │
-│  ├── events/                         ← Event Files                 │
+│  ├── events/                         ← Category: "events" (auto)   │
 │  │   └── calendar.md                                               │
 │  │                                                                  │
-│  └── backups/                        ← Automated Backups            │
+│  ├── policies/                       ← Category: "policies" (auto) │
+│  │   └── rules.md                   ← Any category name works!    │
+│  │                                                                  │
+│  └── backups/                        ← Automated Backups (ignored) │
 │      └── commands_20260104_120000.txt                              │
+│                                                                      │
+│  Note: Any subdirectory = category with merged index from all files│
 └──────────────────────────────────────────────────────────────────────┘
 
 
@@ -138,48 +148,62 @@
 │                        Data Flow Examples                            │
 └─────────────────────────────────────────────────────────────────────┘
 
-Example 1: help @emit
-─────────────────────
-User → "help @emit" → HelpCommand → TextFileService.GetHelpIndex()
-                                  → Find "@EMIT" in index
+Example 1: help @emit (searches all categories)
+────────────────────────────────────────────────
+User → "help @emit" → HelpCommand → TextFileService.GetEntryAsync("*", "@EMIT")
+                                  → Search all category indexes
+                                  → Find "@EMIT" in "help" category
                                   → Return content
                                   → (Optional) RenderToAnsi()
                                   → Display to user
 
-Example 2: textentries(commands.txt)
-────────────────────────────────────
+Example 2: textentries(commands.txt) (searches all categories)
+───────────────────────────────────────────────────────────────
 Parser → textentries() → TextFileService.ListEntriesAsync("commands.txt")
-                      → Load from cache or file
+                      → Search all categories for "commands.txt"
+                      → Find in "help" category
                       → Extract all & INDEX entries
                       → Return "@EMIT @PEMIT ..." (space-separated)
 
-Example 3: textfile(commands.txt, @EMIT)
-───────────────────────────────────────
+Example 3: textentries(help/commands.txt) (specific category)
+──────────────────────────────────────────────────────────────
+Parser → textentries() → TextFileService.ListEntriesAsync("help/commands.txt")
+                      → Parse "help/commands.txt" → category="help", file="commands.txt"
+                      → Look only in "help" category
+                      → Extract all & INDEX entries
+                      → Return "@EMIT @PEMIT ..." (space-separated)
+
+Example 4: textfile(commands.txt, @EMIT) (searches all categories)
+───────────────────────────────────────────────────────────────────
 Parser → textfile() → TextFileService.GetEntryAsync("commands.txt", "@EMIT")
-                   → Find "@EMIT" in indexed entries
+                   → Search all categories for file
+                   → Find in "help" category index
                    → Return entry content
 
-Example 4: Web Edit File
+Example 5: Web Edit File
 ────────────────────────
-User (Web) → Load TextFileEditor → GET /api/textfile/commands.txt
+User (Web) → Load TextFileEditor → GET /api/textfile/help/commands.txt
                                  → TextFileController → TextFileService
                                  → Return file content + ANSI/HTML preview
 
-Edit → Save → PUT /api/textfile/commands.txt → TextFileController
+Edit → Save → PUT /api/textfile/help/commands.txt → TextFileController
            → Validate WIZARD permission
            → TextFileService.CreateBackupAsync()
            → TextFileService.SaveFileAsync()
-           → TextFileService.ReindexAsync()
+           → TextFileService.ReindexAsync() (rebuild "help" category index)
 
-Example 5: Startup Indexing
-───────────────────────────
+Example 6: Startup Indexing (Dynamic Category Discovery)
+──────────────────────────────────────────────────────────
 Server Start → TextFileService Constructor
             → If CacheOnStartup = true
-            → Scan text_files/ directory
-            → For each .txt: Use Helpfiles.Index()
-            → For each .md: Index as single entry
-            → Store in _indexedFiles cache
-            → Ready for queries
+            → Scan text_files/ for subdirectories
+            → For each subdirectory (category):
+               → Scan all files in category
+               → For .txt: Use Helpfiles.Index() to get entries
+               → For .md: Index as single entry
+               → Merge all entries into ONE category index
+            → Store in _categoryIndexes[categoryName]
+            → Ready for queries (searches all categories or specific)
 
 
 ┌─────────────────────────────────────────────────────────────────────┐
