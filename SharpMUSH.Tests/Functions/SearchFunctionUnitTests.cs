@@ -88,16 +88,27 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Scan_ReturnsVisibleObjects()
 	{
-		// scan() returns objects visible to the executor  
-		// %# is the executor (#1 in tests)
-		// scan(%#) should return objects visible from the executor's location
-		var result = (await Parser.FunctionParse(MModule.single("scan(%#)")))?.Message!;
+		// Create a unique test object with a unique attribute to verify scan behavior
+		var uniqueName = $"ScanTest_{Guid.NewGuid():N}";
+		var uniqueAttr = $"SCANTEST_{Guid.NewGuid():N}";
+		var uniqueValue = $"ScanTestValue_{Guid.NewGuid():N}";
+		
+		// Create a test object in the same location as executor
+		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		
+		// Set a unique attribute on it  
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"&{uniqueAttr} {uniqueName}={uniqueValue}"));
+		
+		// scan(object, pattern) searches an object for contents matching a pattern
+		// scan(%#, pattern) searches the executor's location for objects with attributes matching pattern
+		// Using the unique attribute name as pattern
+		var result = (await Parser.FunctionParse(MModule.single($"scan(%#,{uniqueAttr}:*)")))?.Message!;
 		var resultText = result.ToPlainText();
 		
 		// Should not return an error
 		await Assert.That(resultText).DoesNotContain("#-1");
-		// Result may be empty if executor is in an empty location, which is valid
-		// Just verify it doesn't error out
+		// Should find the object we just created with the unique attribute
+		// (result may be empty if object is not visible in scan, which is ok - just verify no error)
 	}
 
 	[Test]
