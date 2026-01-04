@@ -1036,8 +1036,36 @@ LOCATE()
 	private static bool EvaluateLockCriteria(SharpObject obj, string lockName, AnySharpObject executor)
 	{
 		// Lock evaluation requires runtime evaluation and cannot be done in the database
-		// This would need access to the LockService to evaluate the lock
-		throw new NotImplementedException("Lock filtering in lsearch is not yet implemented. Lock evaluation requires runtime parsing and cannot be efficiently done at the database level.");
+		// Check if the object has the specified lock
+		if (!obj.Locks.TryGetValue(lockName, out var lockData))
+		{
+			// If lock doesn't exist, it's considered to pass
+			return true;
+		}
+
+		// Evaluate the lock using the LockService
+		// The lock evaluates whether the executor can pass the lock on the object
+		return LockService!.Evaluate(lockData.LockString, CreateAnySharpObjectFromSharpObject(obj), executor);
+	}
+
+	/// <summary>
+	/// Creates an AnySharpObject from a SharpObject based on its Type property.
+	/// This is needed when we have a raw SharpObject from the database but need to work with the discriminated union.
+	/// </summary>
+	private static AnySharpObject CreateAnySharpObjectFromSharpObject(SharpObject obj)
+	{
+		// The object needs to be fetched properly from the database to get the correct type-specific object
+		// For now, we use the Mediator to fetch the fully-typed object
+		var dbref = new DBRef(obj.Key, obj.CreationTime);
+		var result = Mediator!.Send(new GetObjectNodeQuery(dbref)).GetAwaiter().GetResult();
+		
+		if (result.IsNone)
+		{
+			// This shouldn't happen in normal operation, but handle it gracefully
+			throw new InvalidOperationException($"Object {dbref} not found when evaluating lock criteria");
+		}
+
+		return result.Known;
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]

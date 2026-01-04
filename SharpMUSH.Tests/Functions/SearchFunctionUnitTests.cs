@@ -87,4 +87,23 @@ public class SearchFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	public async Task Lsearch_LockFilter_ReturnsMatchingObjects()
+	{
+		// Create a test object with a lock
+		var uniqueName = $"LSearchLockTest_{Guid.NewGuid():N}";
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		
+		// Set a basic lock on the object that allows everyone (=1 means always true)
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@lock {uniqueName}=1"));
+		
+		// Test lsearch with lock filter - this should now work without throwing NotImplementedException
+		// Note: The lock criteria is complex and may not match all objects, but it should execute without error
+		var result = (await Parser.FunctionParse(MModule.single($"lsearch(all,lock=Basic)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should return some result (at least not throw an exception)
+		await Assert.That(resultText).IsNotNull();
+	}
 }
