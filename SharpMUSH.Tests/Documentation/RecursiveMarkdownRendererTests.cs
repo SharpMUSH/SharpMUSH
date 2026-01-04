@@ -252,7 +252,7 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderLink_ShouldExtractText()
+	public async Task RenderLink_ShouldShowTextAndUrl()
 	{
 		// Arrange
 		var markdown = "[Link Text](https://example.com)";
@@ -260,9 +260,9 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert
-		await Assert.That(result.ToPlainText()).IsEqualTo("Link Text");
-		await Assert.That(result.ToString()).IsEqualTo("Link Text");
+		// Assert - Links now show as "text (url)"
+		await Assert.That(result.ToPlainText()).IsEqualTo("Link Text (https://example.com)");
+		await Assert.That(result.ToString()).IsEqualTo("Link Text (https://example.com)");
 	}
 
 	[Test]

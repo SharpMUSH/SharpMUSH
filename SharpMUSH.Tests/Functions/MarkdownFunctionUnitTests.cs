@@ -125,12 +125,34 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_Link_ExactMatch()
 	{
-		// Test link - should extract just the link text
-		// Note: In MUSH, parentheses in the URL are included in output due to markdown parsing
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown([Click here](url))")))?.Message;
+		// Test link - should show text and URL
+		// Escape square brackets with backslash for MUSH parser
+		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(\\[Click here\\](https://example.com))")))?.Message;
 		await Assert.That(result).IsNotNull();
-		// The actual output includes "(url)" because that's how markdig parses it
-		await Assert.That(result!.ToPlainText()).IsEqualTo("Click here(url)");
+		// Links now show as "text (url)"
+		await Assert.That(result!.ToPlainText()).IsEqualTo("Click here (https://example.com)");
+	}
+
+	[Test]
+	public async Task RenderMarkdown_Link_WithUrlOnly_ExactMatch()
+	{
+		// Test link with URL but no text
+		// Escape square brackets with backslash for MUSH parser
+		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(\\[\\](https://example.com))")))?.Message;
+		await Assert.That(result).IsNotNull();
+		// When no text, just show URL  
+		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
+	}
+
+	[Test]
+	public async Task RenderMarkdown_Link_TextSameAsUrl_ExactMatch()
+	{
+		// Test link where text is same as URL
+		// Escape square brackets with backslash for MUSH parser
+		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(\\[https://example.com\\](https://example.com))")))?.Message;
+		await Assert.That(result).IsNotNull();
+		// When text equals URL, just show URL once
+		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
 	}
 
 	[Test]

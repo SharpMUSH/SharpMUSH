@@ -418,8 +418,25 @@ public class RecursiveMarkdownRenderer
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
-		// Use the provided content parameter (already rendered by caller)
-		return content;
+		// Format links to include URL: "text (url)"
+		// If text is empty or same as URL, just show URL
+		var url = link.Url ?? string.Empty;
+		var contentText = content.ToPlainText().Trim();
+		
+		if (string.IsNullOrWhiteSpace(url))
+		{
+			// No URL, just return the content
+			return content;
+		}
+		
+		if (string.IsNullOrWhiteSpace(contentText) || contentText == url)
+		{
+			// No text or text is same as URL, just show URL
+			return MModule.single(url);
+		}
+		
+		// Show both text and URL: "text (url)"
+		return MModule.single($"{contentText} ({url})");
 	}
 
 	private MString RenderAutolink(AutolinkInline autolink)
