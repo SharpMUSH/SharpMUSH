@@ -74,25 +74,29 @@ public partial class Functions
 		return RegLMatchInternal(parser, true, true);
 	}
 
-	[SharpFunction(Name = "reswitch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "reswitch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, 
+		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, false, false);
 	}
 
-	[SharpFunction(Name = "reswitchall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "reswitchall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
+		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, false, true);
 	}
 
-	[SharpFunction(Name = "reswitchalli", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "reswitchalli", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
+		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, true, true);
 	}
 
-	[SharpFunction(Name = "reswitchi", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "reswitchi", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
+		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, true, false);

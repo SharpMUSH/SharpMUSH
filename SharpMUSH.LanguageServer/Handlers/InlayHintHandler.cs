@@ -152,12 +152,62 @@ public class InlayHintHandler : InlayHintsHandlerBase
 	private static string GetParameterName(string functionName, int index, Library.Attributes.SharpFunctionAttribute attr)
 	{
 		// Use parameter names from the attribute if available
-		if (attr.ParameterNames != null && index < attr.ParameterNames.Length)
+		if (attr.ParameterNames != null && attr.ParameterNames.Length > 0)
 		{
-			return attr.ParameterNames[index];
+			return ExpandParameterName(attr.ParameterNames, index);
 		}
 		
 		// Fallback to generic parameter name
+		return $"arg{index + 1}";
+	}
+
+	/// <summary>
+	/// Expands parameter names with special patterns:
+	/// - "param..." generates "param1", "param2", etc.
+	/// - "case...|result..." generates alternating "case1", "result1", "case2", "result2"
+	/// - Mixed patterns like ["expression", "case...|result...", "default"] for complex functions
+	/// </summary>
+	private static string ExpandParameterName(string[] parameterNames, int index)
+	{
+		// Find which parameter pattern applies to this index
+		int currentIndex = 0;
+		
+		foreach (var paramName in parameterNames)
+		{
+			if (paramName.Contains("..."))
+			{
+				// This is a repeating parameter pattern
+				if (paramName.Contains("|"))
+				{
+					// Paired repeating pattern like "case...|result..."
+					var parts = paramName.Split('|');
+					var cleanParts = parts.Select(p => p.Replace("...", "").Trim()).ToArray();
+					
+					// Calculate which part of the pair this index represents
+					var pairIndex = (index - currentIndex) / cleanParts.Length;
+					var partIndex = (index - currentIndex) % cleanParts.Length;
+					
+					return $"{cleanParts[partIndex]}{pairIndex + 1}";
+				}
+				else
+				{
+					// Simple repeating pattern like "value..."
+					var cleanName = paramName.Replace("...", "").Trim();
+					return $"{cleanName}{index - currentIndex + 1}";
+				}
+			}
+			else
+			{
+				// Regular fixed parameter
+				if (index == currentIndex)
+				{
+					return paramName;
+				}
+				currentIndex++;
+			}
+		}
+		
+		// If we get here, we've gone past all defined parameters
 		return $"arg{index + 1}";
 	}
 

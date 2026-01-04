@@ -672,7 +672,8 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "case", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
+		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly, 
+		ParameterNames = ["expression", "case...|result...", "default"])]
 	public static async ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
