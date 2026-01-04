@@ -1,5 +1,6 @@
 ﻿using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -997,55 +998,115 @@ LOCATE()
 			Owner = classObj?.Object().DBRef
 		};
 
-		// Pre-compile lock strings for efficiency (compile once, evaluate many times)
-		// This avoids re-compiling the same lock string for every object in the result set
-		var compiledLocks = new List<(string key, Func<AnySharpObject, AnySharpObject, bool> compiledLock)>();
+		// Pre-compile lock strings and eval expressions for efficiency (compile once, evaluate many times)
+		// This avoids re-compiling the same lock string or expression for every object in the result set
+		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, bool>>();
+		var compiledEvals = new List<(string evalExpression, string? typeFilter)>();
+		
 		foreach (var (key, value) in appLevelCriteria)
 		{
-			if (key is "LOCK" or "ELOCK")
+			switch (key)
 			{
-				// Optimize #TRUE - no need to compile
-				if (value is "#TRUE" or "")
-				{
-					compiledLocks.Add((key, (_, _) => true));
-				}
-				else
-				{
-					compiledLocks.Add((key, BooleanExpressionParser!.Compile(value)));
-				}
+				case "LOCK" or "ELOCK":
+					// Optimize #TRUE - no need to compile
+					if (value is "#TRUE" or "")
+					{
+						compiledLocks.Add((_, _) => true);
+					}
+					else
+					{
+						compiledLocks.Add(BooleanExpressionParser!.Compile(value));
+					}
+					break;
+				
+				case "EVAL":
+					compiledEvals.Add((value, null));
+					break;
+				case "EPLAYER":
+					compiledEvals.Add((value, "PLAYER"));
+					break;
+				case "EROOM":
+					compiledEvals.Add((value, "ROOM"));
+					break;
+				case "EEXIT":
+					compiledEvals.Add((value, "EXIT"));
+					break;
+				case "ETHING" or "EOBJECT":
+					compiledEvals.Add((value, "THING"));
+					break;
 			}
 		}
 
 		// Query database with filters applied at database level
 		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
-		var results = new List<string>();
+		
+		// Check if we need to convert SharpObject to AnySharpObject for app-level criteria
+		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0;
+		
+		if (!hasAppLevelCriteria)
+		{
+			// No app-level criteria, just convert to dbrefs directly without fetching full objects
+			var results = new List<string>();
+			await foreach (var obj in filteredObjects)
+			{
+				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+			}
+			return new CallState(string.Join(" ", results));
+		}
 
-		// Apply application-level criteria (locks, etc.)
+		// Apply application-level criteria (locks, evals, etc.)
+		// Optimize: Convert to AnySharpObject once per object and evaluate all criteria
+		var finalResults = new List<string>();
 		await foreach (var obj in filteredObjects)
 		{
+			// Convert the raw SharpObject to a properly-typed AnySharpObject once for all evaluations
+			var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
 			bool matches = true;
 			
 			// Evaluate pre-compiled lock criteria
-			foreach (var (key, compiledLock) in compiledLocks)
+			foreach (var compiledLock in compiledLocks)
 			{
-				// Convert the raw SharpObject to a properly-typed AnySharpObject for lock evaluation
-				var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
-				
-				// Evaluate the compiled lock
 				if (!compiledLock(typedObj, executor))
 				{
 					matches = false;
 					break;
 				}
 			}
+			
+			// Evaluate eval expressions if locks passed
+			if (matches)
+			{
+				foreach (var (evalExpression, typeFilter) in compiledEvals)
+				{
+					// Check type filter if specified
+					if (typeFilter != null && !typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+					{
+						matches = false;
+						break;
+					}
+					
+					// Replace ## with the object's dbref number in the expression
+					// Use just the number (e.g., "1") for numeric comparisons
+					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
+					var expression = evalExpression.Replace("##", objectDbRefNum);
+					
+					// Evaluate the expression
+					var evalResult = await parser.FunctionParse(MModule.single(expression));
+					if (evalResult == null || !evalResult.Message.Truthy())
+					{
+						matches = false;
+						break;
+					}
+				}
+			}
 
 			if (matches)
 			{
-				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+				finalResults.Add(typedObj.Object().DBRef.ToString());
 			}
 		}
 
-		return new CallState(string.Join(" ", results));
+		return new CallState(string.Join(" ", finalResults));
 	}
 
 	/// <summary>

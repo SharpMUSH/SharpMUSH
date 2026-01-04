@@ -103,4 +103,64 @@ public class SearchFunctionUnitTests
 		// The result should include wizard objects (player #1 is wizard by default)
 		await Assert.That(resultText).IsNotNull();
 	}
+
+	[Test]
+	public async Task Lsearch_EvalFilter_ReturnsMatchingObjects()
+	{
+		// Test lsearch with eval filter
+		// EVAL evaluates a function/expression for each object, replacing ## with the object's dbref number
+		// Using simple constant true expression to verify the mechanism works
+		
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,eval=1,maxdbref=2)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should return objects 0, 1, 2 since eval=1 always returns true
+		await Assert.That(resultText).IsNotNull();
+		await Assert.That(resultText).IsNotEmpty();
+	}
+
+	[Test]
+	public async Task Lsearch_EplayerFilter_ReturnsMatchingPlayers()
+	{
+		// Test lsearch with eplayer filter
+		// EPLAYER is like EVAL but restricted to players only
+		// Using constant true to verify type filtering works
+		
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,eplayer=1)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should return at least player #1 (God)
+		await Assert.That(resultText).IsNotNull();
+		await Assert.That(resultText).Contains("#1");
+	}
+
+	[Test]
+	public async Task Lsearch_EroomFilter_ReturnsMatchingRooms()
+	{
+		// Test lsearch with eroom filter
+		// EROOM is like EVAL but restricted to rooms only
+		// Using constant true expression
+		
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,eroom=1)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should return at least room #0
+		await Assert.That(resultText).IsNotNull();
+		await Assert.That(resultText).Contains("#0");
+	}
+
+	[Test]
+	public async Task Lsearch_CombinedEvalAndTypeFilters_ReturnsMatchingObjects()
+	{
+		// Test combining eval with other filters
+		// Should apply both database-level type filter and application-level eval filter
+		// Using constant true to verify both filters work together
+		
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,type=PLAYER,eval=1)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should return player #1
+		await Assert.That(resultText).IsNotNull();
+		await Assert.That(resultText).Contains("#1");
+	}
 }
