@@ -997,6 +997,25 @@ LOCATE()
 			Owner = classObj?.Object().DBRef
 		};
 
+		// Pre-compile lock strings for efficiency (compile once, evaluate many times)
+		// This avoids re-compiling the same lock string for every object in the result set
+		var compiledLocks = new List<(string key, Func<AnySharpObject, AnySharpObject, bool> compiledLock)>();
+		foreach (var (key, value) in appLevelCriteria)
+		{
+			if (key is "LOCK" or "ELOCK")
+			{
+				// Optimize #TRUE - no need to compile
+				if (value is "#TRUE" or "")
+				{
+					compiledLocks.Add((key, (_, _) => true));
+				}
+				else
+				{
+					compiledLocks.Add((key, BooleanExpressionParser!.Compile(value)));
+				}
+			}
+		}
+
 		// Query database with filters applied at database level
 		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
 		var results = new List<string>();
@@ -1006,19 +1025,18 @@ LOCATE()
 		{
 			bool matches = true;
 			
-			// Process application-level criteria
-			foreach (var (key, value) in appLevelCriteria)
+			// Evaluate pre-compiled lock criteria
+			foreach (var (key, compiledLock) in compiledLocks)
 			{
-				// Handle lock evaluation and other complex criteria here
-				// For now, we support the basics handled at the database level
-				// Lock evaluation would require checking lock strings which can't be done in the database
-				matches = key switch
+				// Convert the raw SharpObject to a properly-typed AnySharpObject for lock evaluation
+				var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
+				
+				// Evaluate the compiled lock
+				if (!compiledLock(typedObj, executor))
 				{
-					"LOCK" or "ELOCK" => await EvaluateLockCriteria(obj, value, executor),
-					_ => true // Unknown criteria, skip
-				};
-
-				if (!matches) break;
+					matches = false;
+					break;
+				}
 			}
 
 			if (matches)
@@ -1028,25 +1046,6 @@ LOCATE()
 		}
 
 		return new CallState(string.Join(" ", results));
-	}
-
-	/// <summary>
-	/// Evaluates lock criteria for lsearch. This must happen in application code, not in the database.
-	/// For elock searches, the lockString is evaluated to see if the object passes it when tested by the executor.
-	/// </summary>
-	/// <param name="obj">The object being tested (from database query results)</param>
-	/// <param name="lockString">The lock string to evaluate (e.g., "FLAG^WIZARD", "sex:m*")</param>
-	/// <param name="executor">The player running the lsearch</param>
-	/// <returns>True if the object passes the lock evaluation</returns>
-	private static async Task<bool> EvaluateLockCriteria(SharpObject obj, string lockString, AnySharpObject executor)
-	{
-		// Lock evaluation requires runtime evaluation and cannot be done in the database
-		// Convert the raw SharpObject to a properly-typed AnySharpObject
-		var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
-		
-		// Evaluate the lock: does this object pass the given lock string when tested by the executor?
-		// In elock searches, we're checking if the object passes a lock (not if executor passes object's lock)
-		return LockService!.Evaluate(lockString, typedObj, executor);
 	}
 
 	/// <summary>
