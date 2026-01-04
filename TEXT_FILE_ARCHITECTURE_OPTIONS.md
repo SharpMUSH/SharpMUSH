@@ -201,10 +201,50 @@ Allow markdown inside .txt files:
 
 ## 3. Caching and Indexing Strategies
 
-### Option A: Startup Indexing Only
-Index all files when server starts, reload only on command:
+### Option A: Metadata Indexing with FileStream Reads (RECOMMENDED ✅)
+Index file metadata (path + byte positions) on startup, use FileStream + Span for reads:
 
 ```csharp
+// Index entry with file position
+public record IndexEntry(
+    string FilePath,
+    long StartPosition,
+    long EndPosition,
+    string EntryName
+);
+
+// On startup - build metadata index
+await textFileService.IndexAllFilesAsync();
+
+// On read - efficient FileStream + Span access
+var content = await textFileService.GetEntryAsync("help/commands.txt", "@EMIT");
+
+// Manual reload with @readcache command
+@readcache
+```
+
+**Pros**:
+- **Memory efficient**: Stores only metadata, not full content
+- **Fast reads**: Direct seek to byte position with FileStream
+- **Zero allocation**: Uses Span<byte> and ArrayPool
+- **Predictable behavior**: Index built once at startup
+- **Best performance**: O(1) lookup + direct file access
+- **Simple implementation**: Clear separation of concerns
+
+**Cons**:
+- Changes not picked up automatically (need @readcache)
+- Requires restart or manual reload
+- Not ideal for development without file watching
+
+**Recommendation**: ✅ **Best for production - combines speed with memory efficiency**
+
+### Option B: Full Content Indexing
+Store complete file content in memory:
+
+```csharp
+// Index entry with full content
+private Dictionary<string, Dictionary<string, string>> _contentCache;
+
 // On startup
 await textFileService.IndexAllFilesAsync();
 
@@ -213,19 +253,19 @@ await textFileService.IndexAllFilesAsync();
 ```
 
 **Pros**:
-- Predictable behavior
-- Best performance (all in memory)
-- No file system monitoring overhead
-- Simplest implementation
+- Fastest possible reads (already in memory)
+- Simple retrieval logic
+- No file I/O on reads
 
 **Cons**:
+- **High memory usage**: Stores all content in RAM
+- Scales poorly with large file sets
+- Wasteful for infrequently accessed content
 - Changes not picked up automatically
-- Requires restart or manual reload
-- Not ideal for development
 
-**Recommendation**: ✅ **Best for production**
+**Recommendation**: Only for very small deployments (<1MB total text)
 
-### Option B: File System Watching with Auto-Reload
+### Option C: File System Watching with Auto-Reload
 Watch files and automatically reload when changed:
 
 ```csharp

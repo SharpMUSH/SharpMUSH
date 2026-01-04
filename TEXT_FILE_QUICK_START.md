@@ -60,16 +60,26 @@ public record SharpMUSHOptions
 }
 ```
 
-### Step 3: Implement Service
+### Step 3: Implement Service with Efficient Indexing
 **File**: `SharpMUSH.Implementation/Services/TextFileService.cs`
 
+**Key Optimization**: Store file metadata (path + byte range) instead of full content for memory efficiency and fast reads using FileStream + Span.
+
 ```csharp
+// Index entry with file position metadata
+public record IndexEntry(
+    string FilePath,
+    long StartPosition,
+    long EndPosition,
+    string EntryName
+);
+
 public class TextFileService : ITextFileService
 {
     private readonly IOptions<SharpMUSHOptions> _options;
     private readonly ILogger<TextFileService> _logger;
-    // Category -> (EntryName -> Content)
-    private readonly Dictionary<string, Dictionary<string, string>> _categoryIndexes = new();
+    // Category -> (EntryName -> IndexEntry with file position)
+    private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new();
     
     public TextFileService(
         IOptions<SharpMUSHOptions> options,
@@ -93,30 +103,59 @@ public class TextFileService : ITextFileService
     
     public async Task<string> ListEntriesAsync(string fileReference, string separator = " ")
     {
-        var entries = GetFileIndex(fileName);
+        var (category, fileName) = ParseFileReference(fileReference);
+        var entries = GetCategoryIndex(category, fileName);
         return string.Join(separator, entries.Keys);
     }
     
-    public async Task<string?> GetEntryAsync(string fileName, string entryName)
+    public async Task<string?> GetEntryAsync(string fileReference, string entryName)
     {
-        var entries = GetFileIndex(fileName);
-        return entries.TryGetValue(entryName.ToUpper(), out var content) 
-            ? content 
-            : null;
+        var indexEntry = FindIndexEntry(fileReference, entryName);
+        if (indexEntry == null) return null;
+        
+        // Efficient read using FileStream and Span
+        return await ReadEntryFromFileAsync(indexEntry);
     }
     
-    public async Task<IEnumerable<string>> ListFilesAsync(string? directory = null)
+    private async Task<string> ReadEntryFromFileAsync(IndexEntry entry)
     {
-        var basePath = GetBasePath(directory);
+        var length = (int)(entry.EndPosition - entry.StartPosition);
+        var buffer = ArrayPool<byte>.Shared.Rent(length);
+        
+        try
+        {
+            using var fileStream = new FileStream(
+                entry.FilePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 4096,
+                useAsync: true);
+            
+            fileStream.Seek(entry.StartPosition, SeekOrigin.Begin);
+            var bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, length));
+            
+            return Encoding.UTF8.GetString(buffer.AsSpan(0, bytesRead));
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+    
+    public async Task<IEnumerable<string>> ListFilesAsync(string? category = null)
+    {
+        var basePath = category == null 
+            ? _options.Value.TextFile.TextFilesDirectory
+            : Path.Combine(_options.Value.TextFile.TextFilesDirectory, category);
         var files = Directory.GetFiles(basePath, "*.*", SearchOption.AllDirectories);
         return files.Select(Path.GetFileName);
     }
     
-    public async Task<string?> GetFileContentAsync(string fileName)
+    public async Task ReindexAsync()
     {
-        var fullPath = GetFullPath(fileName);
-        if (!File.Exists(fullPath)) return null;
-        return await File.ReadAllTextAsync(fullPath);
+        _categoryIndexes.Clear();
+        await IndexAllCategoriesAsync();
     }
     
     public async Task ReindexAsync()
@@ -298,6 +337,36 @@ public static async ValueTask<Option<CallState>> Help(
     }
     
     await NotifyService!.Notify(executor, helpText);
+    return CallState.Empty;
+}
+```
+
+### @readcache command
+**File**: `SharpMUSH.Implementation/Commands/AdminCommands.cs`
+
+```csharp
+[SharpCommand(Name = "@READCACHE", Switches = [], 
+    Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+public static async ValueTask<Option<CallState>> ReadCache(
+    IMUSHCodeParser parser, SharpCommandAttribute _2)
+{
+    var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+    
+    if (!await PermissionService!.HasFlagAsync(executor, "WIZARD"))
+    {
+        await NotifyService!.Notify(executor, "Permission denied.");
+        return CallState.Empty;
+    }
+    
+    await NotifyService!.Notify(executor, "Reindexing text files...");
+    
+    var startTime = DateTime.UtcNow;
+    await TextFileService!.ReindexAsync();
+    var elapsed = DateTime.UtcNow - startTime;
+    
+    await NotifyService!.Notify(executor, 
+        $"Text file cache rebuilt in {elapsed.TotalMilliseconds:F0}ms.");
+    
     return CallState.Empty;
 }
 ```

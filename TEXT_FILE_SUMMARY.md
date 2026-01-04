@@ -216,23 +216,27 @@ SharpMUSH/
 
 ### ITextFileService
 The main service interface providing:
-- `ListEntriesAsync()` - Get all entries in a file
-- `GetEntryAsync()` - Get specific entry content
+- `ListCategoriesAsync()` - List all auto-discovered categories
+- `ListEntriesAsync()` - Get all entries in a file (searches all or specific category)
+- `GetEntryAsync()` - Get specific entry content (efficient FileStream + Span read)
 - `ListFilesAsync()` - List all text files
 - `GetFileContentAsync()` - Get full file content
 - `SearchEntriesAsync()` - Search entries by pattern
 - `SaveFileAsync()` - Save file (with backup)
-- `ReindexAsync()` - Rebuild index
+- `ReindexAsync()` - Rebuild index (stores file path + byte positions)
 - `RenderToAnsiAsync()` - Render markdown to ANSI
 - `RenderToHtmlAsync()` - Render markdown to HTML
 
+**Performance Optimization**: Index stores file metadata (path + byte range) instead of full content. Reads use FileStream with Span for zero-allocation, efficient access.
+
 ### Functions
-- `textentries(file, [separator])` - List entries in file
-- `textfile(file, entry)` - Get entry content
+- `textentries(file, [separator])` - List entries in file (supports "file" or "category/file")
+- `textfile(file, entry)` - Get entry content (efficient read from byte position)
 - `textsearch(file, pattern, [separator])` - Search entries
 
 ### Commands
-- `help [topic]` - Display help for topic
+- `help [topic]` - Display help for topic (searches all categories)
+- `@readcache` - Rebuild text file indexes (WIZARD only)
 
 ## Compatibility Notes
 

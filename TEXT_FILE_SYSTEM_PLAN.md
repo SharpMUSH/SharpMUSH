@@ -125,8 +125,10 @@ public interface ITextFileService
 	Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern);
 	
 	/// <summary>
-	/// Saves content to a text file (creates backup first)
+	/// Re-indexes all text files (rebuilds all category indexes with byte positions)
+	/// Called by @readcache command or on startup
 	/// </summary>
+	Task ReindexAsync();
 	/// <param name="fileName">Name of the text file</param>
 	/// <param name="content">New file content</param>
 	/// <param name="editor">DBRef of the editing player</param>
@@ -245,13 +247,108 @@ Key implementation details:
    - No hardcoded category names
    - Categories can be added/removed by creating/deleting directories
 
-2. **Per-Category Indexing**
+2. **Per-Category Indexing with File Metadata**
    - Each category has ONE merged index
    - Index contains all entries from all files in that category's directory
+   - **Index stores metadata**: File path + byte range (start/end positions) for each entry
    - Example: `help/` category index includes entries from `commands.txt`, `functions.txt`, and `tutorial.md`
    - Fast lookup: O(1) for entry retrieval within a category
+   - Memory efficient: Stores only metadata, not full content
+   
+   ```csharp
+   // Index entry metadata
+   public record IndexEntry(
+       string FilePath,           // Full path to file
+       long StartPosition,        // Byte position where entry starts
+       long EndPosition,          // Byte position where entry ends
+       string EntryName           // Name of the entry (e.g., "@EMIT")
+   );
+   
+   // Per-category index
+   private Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes;
+   // Structure: Category -> (EntryName -> IndexEntry)
+   ```
 
-3. **File Reference Resolution**
+3. **Efficient Read Operations with FileStream and Span**
+   - Use FileStream for reading instead of loading entire files
+   - Use Span<byte> for zero-allocation reads
+   - Read only the required byte range for each entry
+   
+   ```csharp
+   public async Task<string?> GetEntryAsync(string fileReference, string entryName)
+   {
+       var indexEntry = FindIndexEntry(fileReference, entryName);
+       if (indexEntry == null) return null;
+       
+       // Calculate buffer size needed
+       var length = (int)(indexEntry.EndPosition - indexEntry.StartPosition);
+       
+       // Rent buffer from pool to avoid allocations
+       var buffer = ArrayPool<byte>.Shared.Rent(length);
+       try
+       {
+           using var fileStream = new FileStream(
+               indexEntry.FilePath, 
+               FileMode.Open, 
+               FileAccess.Read, 
+               FileShare.Read,
+               bufferSize: 4096,
+               useAsync: true);
+           
+           // Seek to entry position
+           fileStream.Seek(indexEntry.StartPosition, SeekOrigin.Begin);
+           
+           // Read exact bytes needed into span
+           var bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, length));
+           
+           // Convert to string
+           return Encoding.UTF8.GetString(buffer.AsSpan(0, bytesRead));
+       }
+       finally
+       {
+           ArrayPool<byte>.Shared.Return(buffer);
+       }
+   }
+   ```
+
+4. **@readcache Command and Startup Indexing**
+   - `@readcache` command triggers full re-index of all categories
+   - Startup indexing (if `CacheOnStartup = true`) builds all indexes
+   - Index building process:
+     1. Scan each category directory
+     2. For each file, parse and extract entries
+     3. Record file path and byte positions for each entry
+     4. Store in category index dictionary
+   
+   ```csharp
+   [SharpCommand(Name = "@READCACHE", Switches = [], 
+       Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+   public static async ValueTask<Option<CallState>> ReadCache(
+       IMUSHCodeParser parser, SharpCommandAttribute _2)
+   {
+       var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+       
+       // Check for WIZARD permission
+       if (!await PermissionService!.HasFlagAsync(executor, "WIZARD"))
+       {
+           await NotifyService!.Notify(executor, "Permission denied.");
+           return CallState.Empty;
+       }
+       
+       await NotifyService!.Notify(executor, "Reindexing text files...");
+       
+       var startTime = DateTime.UtcNow;
+       await TextFileService!.ReindexAsync();
+       var elapsed = DateTime.UtcNow - startTime;
+       
+       await NotifyService!.Notify(executor, 
+           $"Text file cache rebuilt in {elapsed.TotalMilliseconds:F0}ms.");
+       
+       return CallState.Empty;
+   }
+   ```
+
+5. **File Reference Resolution**
    - Support two formats:
      - Simple filename: `"commands.txt"` - searches all categories
      - Category path: `"help/commands.txt"` - specific category only
@@ -266,7 +363,7 @@ Key implementation details:
    }
    ```
 
-4. **File Format Detection**
+6. **File Format Detection**
    ```csharp
    private bool IsMarkdownFile(string fileName) => 
        fileName.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
@@ -275,15 +372,73 @@ Key implementation details:
        fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
    ```
 
-5. **Entry Parsing**
-   - For `.txt` files: Use `Helpfiles.Index()` to extract `& INDEX` entries
+7. **Entry Parsing and Index Building**
+   - For `.txt` files: Use `Helpfiles.Index()` to extract `& INDEX` entries with byte positions
    - For `.md` files: Treat entire file as single entry with filename as index
+   - Record file path and byte range (start/end) for each entry
    - Merge all entries from all files in category into single index
+   
+   ```csharp
+   private async Task<Dictionary<string, IndexEntry>> IndexFileWithPositions(string filePath)
+   {
+       var entries = new Dictionary<string, IndexEntry>(StringComparer.OrdinalIgnoreCase);
+       
+       using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+       using var reader = new StreamReader(fileStream, Encoding.UTF8);
+       
+       long currentPosition = 0;
+       long entryStart = 0;
+       string? currentEntry = null;
+       var entryContent = new StringBuilder();
+       
+       string? line;
+       while ((line = await reader.ReadLineAsync()) != null)
+       {
+           var lineBytes = Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
+           
+           // Check for entry marker (& ENTRYNAME)
+           if (line.TrimStart().StartsWith("& "))
+           {
+               // Save previous entry if exists
+               if (currentEntry != null)
+               {
+                   entries[currentEntry] = new IndexEntry(
+                       filePath,
+                       entryStart,
+                       currentPosition,
+                       currentEntry
+                   );
+               }
+               
+               // Start new entry
+               currentEntry = line.TrimStart()[2..].Trim().ToUpper();
+               entryStart = currentPosition;
+               entryContent.Clear();
+           }
+           
+           currentPosition += lineBytes;
+       }
+       
+       // Save last entry
+       if (currentEntry != null)
+       {
+           entries[currentEntry] = new IndexEntry(
+               filePath,
+               entryStart,
+               currentPosition,
+               currentEntry
+           );
+       }
+       
+       return entries;
+   }
+   ```
 
-6. **Rendering**
+8. **Rendering**
    - For ANSI: Use existing `MarkdownToAsciiRenderer`
    - For HTML: Use Markdig with HTML renderer
    - Cache rendered output for performance
+   - Rendering happens after content is read from FileStream
    ```csharp
    private FileSystemWatcher? _fileWatcher;
    
@@ -492,7 +647,58 @@ public static async ValueTask<Option<CallState>> Help(IMUSHCodeParser parser, Sh
 }
 ```
 
-### 6. Web API Endpoints
+### 6. @readcache Command
+
+**Location**: `SharpMUSH.Implementation/Commands/AdminCommands.cs`
+
+The `@readcache` command allows administrators to trigger a full re-index of all text files. This rebuilds the index metadata (file paths and byte positions) for all categories.
+
+```csharp
+[SharpCommand(Name = "@READCACHE", Switches = [], 
+    Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+public static async ValueTask<Option<CallState>> ReadCache(
+    IMUSHCodeParser parser, SharpCommandAttribute _2)
+{
+	var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+	
+	// Check for WIZARD permission
+	if (!await PermissionService!.HasFlagAsync(executor, "WIZARD"))
+	{
+		await NotifyService!.Notify(executor, "Permission denied.");
+		return CallState.Empty;
+	}
+	
+	await NotifyService!.Notify(executor, "Reindexing text files...");
+	
+	var startTime = DateTime.UtcNow;
+	await TextFileService!.ReindexAsync();
+	var elapsed = DateTime.UtcNow - startTime;
+	
+	var stats = await TextFileService!.GetIndexStatsAsync();
+	await NotifyService!.Notify(executor, 
+		$"Text file cache rebuilt in {elapsed.TotalMilliseconds:F0}ms.");
+	await NotifyService!.Notify(executor,
+		$"Indexed {stats.TotalCategories} categories, {stats.TotalFiles} files, {stats.TotalEntries} entries.");
+	
+	return CallState.Empty;
+}
+```
+
+**Usage**:
+```
+> @readcache
+Reindexing text files...
+Text file cache rebuilt in 45ms.
+Indexed 5 categories, 23 files, 487 entries.
+```
+
+**When to use**:
+- After adding new text files manually
+- After editing text files outside the web interface
+- If file watching is disabled and files have changed
+- To verify index integrity
+
+### 7. Web API Endpoints
 
 **Location**: `SharpMUSH.Server/Controllers/TextFileController.cs`
 
