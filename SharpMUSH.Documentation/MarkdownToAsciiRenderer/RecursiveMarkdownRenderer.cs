@@ -391,8 +391,7 @@ public class RecursiveMarkdownRenderer
 	{
 		// Default uses same style as bold (ANSI italic support varies)
 		// Apply italic (displayed as bold) to the content's plain text
-		var italicStyle = Ansi.Create(bold: true, foreground: StringExtensions.rgb(Color.White));
-		return MModule.markupSingle(italicStyle, content.ToPlainText());
+		return MModule.markupSingle(_boldStyle, content.ToPlainText());
 	}
 
 	/// <summary>
@@ -430,9 +429,10 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderHtmlInline(HtmlInline html)
 	{
-		// HTML inline tags are not supported in the recursive renderer yet.
+		// HTML inline tags are not fully supported in the recursive renderer.
 		// They would require matching opening/closing tags to properly wrap content with markup.
-		// For now, just skip them.
+		// For now, just skip the tags themselves. The content between tags is rendered separately
+		// by Markdig as literal inlines, so it will still appear in the output.
 		return MModule.empty();
 	}
 
