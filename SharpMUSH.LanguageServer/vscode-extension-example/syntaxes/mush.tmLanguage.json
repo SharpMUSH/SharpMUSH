@@ -1,0 +1,104 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "MUSH",
+  "scopeName": "source.mush",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#commands"
+    },
+    {
+      "include": "#substitutions"
+    },
+    {
+      "include": "#objects"
+    },
+    {
+      "include": "#brackets"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.mush",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.mush",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.mush",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.mush",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.mush",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*(?=\\()"
+        }
+      ]
+    },
+    "commands": {
+      "patterns": [
+        {
+          "name": "keyword.control.mush",
+          "match": "^\\s*@[a-zA-Z][a-zA-Z0-9_-]*"
+        }
+      ]
+    },
+    "substitutions": {
+      "patterns": [
+        {
+          "name": "variable.other.mush",
+          "match": "%[0-9#@!nNlLvVqQrR]|%q[a-zA-Z]|%v[a-zA-Z]"
+        }
+      ]
+    },
+    "objects": {
+      "patterns": [
+        {
+          "name": "constant.other.object.mush",
+          "match": "#-?\\d+"
+        }
+      ]
+    },
+    "brackets": {
+      "patterns": [
+        {
+          "name": "meta.bracket.mush",
+          "match": "[\\[\\]\\{\\}\\(\\)]"
+        }
+      ]
+    }
+  }
+}
