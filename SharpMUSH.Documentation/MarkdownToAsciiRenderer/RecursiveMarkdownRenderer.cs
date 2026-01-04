@@ -114,7 +114,7 @@ public class RecursiveMarkdownRenderer
 	{
 		var lines = code.Lines.Lines?
 			.Where(line => line.Slice.Text != null)
-			.Select(line => MModule.single(line.Slice.ToString()))
+			.Select(line => MModule.single("  " + line.Slice.ToString()))
 			.ToList() ?? new List<MString>();
 		
 		return MModule.multipleWithDelimiter(MModule.single("\n"), lines);

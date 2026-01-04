@@ -218,9 +218,9 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 		
-		// Assert
-		await Assert.That(result.ToPlainText()).IsEqualTo("code line 1\ncode line 2");
-		await Assert.That(result.ToString()).IsEqualTo("code line 1\ncode line 2");
+		// Assert - code blocks should be indented by 2 spaces
+		await Assert.That(result.ToPlainText()).IsEqualTo("  code line 1\n  code line 2");
+		await Assert.That(result.ToString()).IsEqualTo("  code line 1\n  code line 2");
 	}
 
 	[Test]
