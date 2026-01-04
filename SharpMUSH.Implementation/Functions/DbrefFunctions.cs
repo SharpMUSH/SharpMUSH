@@ -1025,22 +1025,6 @@ LOCATE()
 			}
 		}
 
-		// Build filter object
-		filter = new ObjectSearchFilter
-		{
-			Types = types.Count > 0 ? [.. types] : null,
-			NamePattern = namePattern,
-			MinDbRef = minDbRef,
-			MaxDbRef = maxDbRef,
-			Zone = zone,
-			Parent = parent,
-			HasFlag = hasFlag,
-			HasPower = hasPower,
-			Owner = classObj?.Object().DBRef,
-			Skip = start,
-			Limit = count
-		};
-
 		// Pre-compile lock strings and eval expressions for efficiency (compile once, evaluate many times)
 		// This avoids re-compiling the same lock string or expression for every object in the result set
 		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, bool>>();
@@ -1091,16 +1075,35 @@ LOCATE()
 		var commandPattern = appLevelCriteria.FirstOrDefault(x => x.key == "COMMAND").value;
 		var hasListenCriteria = !string.IsNullOrEmpty(listenPattern);
 		var hasCommandCriteria = !string.IsNullOrEmpty(commandPattern);
-
-		// Query database with filters applied at database level
-		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
 		
 		// Check if we need to convert SharpObject to AnySharpObject for app-level criteria
 		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria;
 		
+		// Build filter object
+		// IMPORTANT: Only apply START/COUNT at database level if there are NO app-level criteria
+		// If there are app-level criteria, we must apply START/COUNT after filtering in application code
+		filter = new ObjectSearchFilter
+		{
+			Types = types.Count > 0 ? [.. types] : null,
+			NamePattern = namePattern,
+			MinDbRef = minDbRef,
+			MaxDbRef = maxDbRef,
+			Zone = zone,
+			Parent = parent,
+			HasFlag = hasFlag,
+			HasPower = hasPower,
+			Owner = classObj?.Object().DBRef,
+			Skip = hasAppLevelCriteria ? null : start,  // Only skip at DB level if no app-level filtering
+			Limit = hasAppLevelCriteria ? null : count  // Only limit at DB level if no app-level filtering
+		};
+
+		// Query database with filters applied at database level
+		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
+		
 		if (!hasAppLevelCriteria)
 		{
 			// No app-level criteria, just convert to dbrefs directly without fetching full objects
+			// START/COUNT already applied at database level
 			var results = new List<string>();
 			await foreach (var obj in filteredObjects)
 			{
@@ -1236,6 +1239,15 @@ LOCATE()
 			{
 				finalResults.Add(typedObj.Object().DBRef.ToString());
 			}
+		}
+		
+		// Apply START/COUNT at application level if we had app-level filtering
+		// This ensures pagination happens AFTER all runtime filters are applied
+		if (start.HasValue || count.HasValue)
+		{
+			var skipCount = start ?? 0;
+			var takeCount = count ?? int.MaxValue;
+			finalResults = finalResults.Skip(skipCount).Take(takeCount).ToList();
 		}
 
 		return new CallState(string.Join(" ", finalResults));
