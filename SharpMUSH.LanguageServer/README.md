@@ -10,6 +10,18 @@ The SharpMUSH Language Server provides syntax validation, error diagnostics, and
 
 - **Real-time Syntax Validation**: Immediate feedback on syntax errors as you type
 - **Error Diagnostics**: Detailed error messages with precise locations
+- **Code Completion**: Auto-complete for functions, commands, and MUSH patterns
+  - Function names with parameter signatures
+  - Command names with available switches
+  - Special variables (%#, %!, %@, %N, etc.)
+  - Q-registers and V-registers
+- **Hover Information**: Show documentation and signatures
+  - Function signatures with min/max arguments
+  - Command details with switches and locks
+  - Explanations for MUSH special patterns
+- **Go to Definition**: Navigate to attribute definitions
+  - Jump to &attribute definitions
+  - Jump to @set attribute declarations
 - **Semantic Highlighting**: Context-aware syntax highlighting that understands MUSH semantics
   - Built-in functions vs user-defined functions
   - Object references (#123, %#, etc.)
@@ -228,11 +240,13 @@ The SharpMUSH Language Server currently implements:
 - ✅ `textDocument/didSave`
 - ✅ `textDocument/publishDiagnostics`
 - ✅ `textDocument/semanticTokens/full`
+- ✅ `textDocument/completion` - Function, command, and pattern completion
+- ✅ `textDocument/hover` - Show signatures and documentation
+- ✅ `textDocument/definition` - Navigate to attribute definitions
 - ❌ `textDocument/semanticTokens/range` (planned)
-- ❌ `textDocument/completion` (planned)
-- ❌ `textDocument/hover` (planned)
-- ❌ `textDocument/definition` (planned)
 - ❌ `textDocument/references` (planned)
+- ❌ `textDocument/codeAction` (planned)
+- ❌ `textDocument/signatureHelp` (planned)
 
 ## Development
 
@@ -240,11 +254,12 @@ The SharpMUSH Language Server currently implements:
 
 ```
 SharpMUSH.LanguageServer/
-├── Extensions/
-│   └── MUSHCodeParserExtensions.cs  # Parser factory for LSP
 ├── Handlers/
 │   ├── TextDocumentSyncHandler.cs   # Document sync and diagnostics
-│   └── SemanticTokensHandler.cs     # Semantic highlighting
+│   ├── SemanticTokensHandler.cs     # Semantic highlighting
+│   ├── CompletionHandler.cs         # Code completion
+│   ├── HoverHandler.cs              # Hover information
+│   └── DefinitionHandler.cs         # Go to definition
 ├── Services/
 │   ├── DocumentManager.cs           # Document state management
 │   └── LSPMUSHCodeParser.cs         # Stateless parser wrapper

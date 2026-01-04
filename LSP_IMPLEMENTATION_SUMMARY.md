@@ -68,11 +68,12 @@ Successfully implemented a complete Language Server Protocol (LSP) server for Sh
 
 ```
 SharpMUSH.LanguageServer/
-├── Extensions/
-│   └── MUSHCodeParserExtensions.cs    # Parser factory
 ├── Handlers/
 │   ├── TextDocumentSyncHandler.cs     # Document lifecycle & diagnostics
-│   └── SemanticTokensHandler.cs       # Semantic highlighting
+│   ├── SemanticTokensHandler.cs       # Semantic highlighting
+│   ├── CompletionHandler.cs           # Code completion
+│   ├── HoverHandler.cs                # Hover information
+│   └── DefinitionHandler.cs           # Go to definition
 ├── Services/
 │   ├── DocumentManager.cs             # Document state management
 │   └── LSPMUSHCodeParser.cs           # Stateless parser wrapper
@@ -109,15 +110,18 @@ SharpMUSH.LanguageServer/
 - `textDocument/didSave` - Document saved
 - `textDocument/publishDiagnostics` - Error reporting
 - `textDocument/semanticTokens/full` - Semantic highlighting
+- `textDocument/completion` - Code completion for functions, commands, and patterns
+- `textDocument/hover` - Show function/command documentation and signatures
+- `textDocument/definition` - Navigate to attribute definitions
 
 ### Planned for Future 📋
 - `textDocument/semanticTokens/range` - Partial highlighting
-- `textDocument/completion` - Auto-completion
-- `textDocument/hover` - Hover information
-- `textDocument/definition` - Go to definition
 - `textDocument/references` - Find all references
 - `textDocument/codeAction` - Quick fixes
+- `textDocument/signatureHelp` - Parameter hints while typing
 - `textDocument/rename` - Symbol renaming
+- `textDocument/documentSymbol` - Document outline
+- `workspace/symbol` - Workspace-wide symbol search
 
 ## Semantic Token Types
 
