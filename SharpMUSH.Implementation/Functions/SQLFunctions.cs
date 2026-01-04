@@ -89,7 +89,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(escaped));
 	}
 
-	[SharpFunction(Name = "mapsql", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "mapsql", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["query", "attribute", "delimiter"])]
 	public static async ValueTask<CallState> MapSql(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);

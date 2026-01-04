@@ -20,7 +20,7 @@ public partial class Functions
 		return RegMatchInternal(parser, false);
 	}
 
-	[SharpFunction(Name = "regmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public static ValueTask<CallState> regmatchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegMatchInternal(parser, true);
@@ -50,25 +50,25 @@ public partial class Functions
 		return RegGrabInternal(parser, true, false);
 	}
 
-	[SharpFunction(Name = "reglmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "reglmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> reglmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, false, false);
 	}
 
-	[SharpFunction(Name = "reglmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "reglmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> reglmatchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, true, false);
 	}
 
-	[SharpFunction(Name = "reglmatchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "reglmatchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> reglmatchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, false, true);
 	}
 
-	[SharpFunction(Name = "regmatchalli", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regmatchalli", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public static ValueTask<CallState> regmatchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, true, true);

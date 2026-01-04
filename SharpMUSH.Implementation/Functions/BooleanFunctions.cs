@@ -69,7 +69,7 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
+	[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
 	public static async ValueTask<CallState> CancellingNegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		foreach (var m in parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message!))
@@ -100,7 +100,7 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "ncor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse)]
+	[SharpFunction(Name = "ncor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
 	public static async ValueTask<CallState> NCor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)

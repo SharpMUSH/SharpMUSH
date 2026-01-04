@@ -748,7 +748,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", resultId));
 	}
 
-	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
@@ -1307,7 +1307,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", playersInZone));
 	}
 
-	[SharpFunction(Name = "zfind", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "zfind", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["zone", "flags"])]
 	public static async ValueTask<CallState> ZoneFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -1367,7 +1367,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", objectList));
 	}
 
-	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> Poll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Get the current @poll value from expanded server data
