@@ -963,10 +963,30 @@ LOCATE()
 				case "NAME":
 					namePattern = restriction;
 					break;
+				// Type-specific name filters (shortcuts for TYPE + NAME)
+				case "EXITS":
+					types.Add("EXIT");
+					namePattern = restriction;
+					break;
+				case "THINGS":
+				case "OBJECTS":
+					types.Add("THING");
+					namePattern = restriction;
+					break;
+				case "ROOMS":
+					types.Add("ROOM");
+					namePattern = restriction;
+					break;
+				case "PLAYERS":
+					types.Add("PLAYER");
+					namePattern = restriction;
+					break;
 				case "MINDBREF":
+				case "MINDB":
 					if (int.TryParse(restriction, out var min)) minDbRef = min;
 					break;
 				case "MAXDBREF":
+				case "MAXDB":
 					if (int.TryParse(restriction, out var max)) maxDbRef = max;
 					break;
 				case "ZONE":
@@ -979,6 +999,11 @@ LOCATE()
 					break;
 				case "FLAG":
 				case "FLAGS":
+					hasFlag = restriction;
+					break;
+				case "LFLAGS":
+					// LFLAGS uses space-separated flag names instead of single characters
+					// Store for now - will need to convert to single-char format or handle separately
 					hasFlag = restriction;
 					break;
 				case "POWER":

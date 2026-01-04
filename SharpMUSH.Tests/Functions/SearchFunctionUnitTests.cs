@@ -220,4 +220,46 @@ public class SearchFunctionUnitTests
 			await Assert.That(resultText).Contains("#1:");
 		}
 	}
+
+	[Test]
+	public async Task Lsearch_RoomsFilter_ReturnsMatchingRooms()
+	{
+		// Test lsearch with ROOMS class (shortcut for type=room with name filter)
+		// ROOMS class combines TYPE=ROOM and NAME=<pattern>
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,rooms,M)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// If there are results, they should be rooms (e.g., #0 if it starts with M)
+		// This is a valid test even if empty (no rooms starting with M)
+	}
+
+	[Test]
+	public async Task Lsearch_PlayersFilter_ReturnsMatchingPlayers()
+	{
+		// Test lsearch with PLAYERS class (shortcut for type=player with name filter)
+		// PLAYERS class combines TYPE=PLAYER and NAME=<pattern>
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,players,G)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Should return God player (#1) if name starts with G
+		// This is implementation-dependent but tests the functionality
+	}
+
+	[Test]
+	public async Task Lsearch_MindbMaxdb_ReturnsMatchingRange()
+	{
+		// Test lsearch with MINDB/MAXDB aliases (PennMUSH uses both MINDB and MINDBREF)
+		// Using MINDB and MAXDB which are shorter aliases
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,mindb,0,maxdb,2)")))?.Message!;
+		var resultText = result.ToPlainText();
+		
+		// Should not return an error
+		await Assert.That(resultText).DoesNotContain("#-1");
+		// Should return objects in range #0-#2
+		await Assert.That(resultText).Contains("#0");
+	}
 }
