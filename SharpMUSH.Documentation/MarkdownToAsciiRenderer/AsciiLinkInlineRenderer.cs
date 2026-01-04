@@ -7,12 +7,9 @@ public class AsciiLinkInlineRenderer : AsciiObjectRenderer<LinkInline>
 {
 	protected override void Write(MarkdownToAsciiRenderer renderer, LinkInline obj)
 	{
-		var link = obj.Url;
-		var label = obj.Label ?? obj.Url;
-		var linkOption = new FSharpOption<string>(link ?? "");
-		var labelOption = new FSharpOption<string>(label ?? "");
-		var ascii = MModule.markupSingle(Ansi.Create(linkUrl: linkOption, linkText: labelOption), label);
-		
-		renderer.Write(ascii.ToString());
+		// For links, we render the children which provides the visible link text
+		// The URL is stored in obj.Url but without container access we can't wrap it in link markup
+		// The markup system can handle link metadata through Ansi.Create linkUrl parameter in future enhancements
+		renderer.WriteChildren(obj);
 	}
 }
