@@ -120,7 +120,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "default", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "default", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["object/attribute", "default"])]
 	public static async ValueTask<CallState> Default(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -174,7 +174,7 @@ public partial class Functions
 	/// Returns the first non-empty evaluated attribute value, or evaluates and returns the default value.
 	/// Similar to default() but evaluates all arguments. Checks attributes in order until one has content.
 	/// </summary>
-	[SharpFunction(Name = "edefault", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "edefault", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["object/attribute", "default"])]
 	public static async ValueTask<CallState> EvaluateDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -233,7 +233,7 @@ public partial class Functions
 		return await defaultArg.ParsedMessage();
 	}
 
-	[SharpFunction(Name = "eval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "eval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "attribute"])]
 	public static async ValueTask<CallState> Eval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbref = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -329,7 +329,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "get_eval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "get_eval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object/attribute"])]
 	public static async ValueTask<CallState> GetEval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -361,7 +361,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "grep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "grep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public static ValueTask<CallState> Grep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return GrepInternal(parser, false, false);
@@ -373,7 +373,7 @@ public partial class Functions
 		return GrepInternal(parser, false, true);
 	}
 
-	[SharpFunction(Name = "grepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "grepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public static ValueTask<CallState> GrepCaseInsensitive(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return GrepInternal(parser, true, false);
@@ -422,7 +422,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "hasattr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "hasattr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
 	public static async ValueTask<CallState> HasAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -447,7 +447,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "hasattrp", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "hasattrp", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
 	public static async ValueTask<CallState> HasAttributeParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -505,7 +505,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "hasattrval", MinArgs = 2, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
 	public static async ValueTask<CallState> HasAttributeValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -536,7 +536,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "hasflag", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "hasflag", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flag"])]
 	public static async ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -585,7 +585,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -691,7 +691,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "nattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -753,7 +753,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "obj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "obj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object/attribute"])]
 	public static async ValueTask<CallState> ObjectivePronoun(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -772,7 +772,7 @@ public partial class Functions
 				}));
 	}
 
-	[SharpFunction(Name = "objeval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "objeval", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse, ParameterNames = ["object", "expression"])]
 	public static async ValueTask<CallState> ObjectEvaluation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var sideFxEnabled = Configuration!.CurrentValue.Function.FunctionSideEffects;
@@ -803,7 +803,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "objid", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "objid", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -907,13 +907,13 @@ public partial class Functions
 		return await RegEditInternal(parser, true, false);
 	}
 
-	[SharpFunction(Name = "regrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "attribute", "pattern"])]
 	public static ValueTask<CallState> RegularExpressionGrep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrepInternal(parser, false);
 	}
 
-	[SharpFunction(Name = "regrepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regrepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "attribute", "pattern"])]
 	public static ValueTask<CallState> RegularExpressionGrepCaseInsensitive(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1080,7 +1080,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "reglattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "reglattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> RegularExpressionListAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -1418,7 +1418,7 @@ public partial class Functions
 				}));
 	}
 
-	[SharpFunction(Name = "udefault", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "udefault", MinArgs = 2, MaxArgs = 34, Flags = FunctionFlags.NoParse, ParameterNames = ["object/attribute", "default..."])]
 	public static async ValueTask<CallState> UserAttributeDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -1524,7 +1524,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["object/attribute", "arguments..."])]
 	public static async ValueTask<CallState> UserAttributeFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1569,7 +1569,7 @@ public partial class Functions
 		return new CallState(result);
 	}
 
-	[SharpFunction(Name = "ulambda", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "ulambda", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["parameters", "expression", "arguments..."])]
 	public static async ValueTask<CallState> UserFunctionLambda(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1585,7 +1585,7 @@ public partial class Functions
 		return new CallState(result);
 	}
 
-	[SharpFunction(Name = "ulocal", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.Localize)]
+	[SharpFunction(Name = "ulocal", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.Localize, ParameterNames = ["object/attribute", "arguments..."])]
 	public static async ValueTask<CallState> UserAttributeLocalized(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1602,7 +1602,7 @@ public partial class Functions
 		);
 	}
 
-	[SharpFunction(Name = "v", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "v", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["attribute"])]
 	public static async ValueTask<CallState> Variable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
@@ -1623,7 +1623,7 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "valid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "valid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["type", "name"])]
 	public static async ValueTask<CallState> Valid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var category = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -1694,7 +1694,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "version", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "version", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? string.Empty);
 
@@ -1742,13 +1742,13 @@ public partial class Functions
 		);
 	}
 
-	[SharpFunction(Name = "wildgrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "wildgrep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "attribute", "pattern"])]
 	public static ValueTask<CallState> WildcardGrep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return WildGrepInternal(parser, false);
 	}
 
-	[SharpFunction(Name = "wildgrepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "wildgrepi", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "attribute", "pattern"])]
 	public static ValueTask<CallState> WildcardGrepCaseInsensitive(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return WildGrepInternal(parser, true);
@@ -1801,7 +1801,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "xattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> NumberRangeAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -1899,7 +1899,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "xget", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xget", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute", "default"])]
 	public static async ValueTask<CallState> AlternativeGet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbref = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
@@ -1921,7 +1921,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "zfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "zfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["zone", "attribute", "arguments..."])]
 	public static async ValueTask<CallState> ZoneFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);

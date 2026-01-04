@@ -332,7 +332,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(new string('\a', count)));
 	}
 
-	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse, ParameterNames = ["expression", "iterations", "sendto"])]
 	public static async ValueTask<CallState> Benchmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -395,7 +395,7 @@ public partial class Functions
 		return result ? new("1") : new("0");
 	}
 
-	[SharpFunction(Name = "clone", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "clone", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object", "newname", "cost"])]
 	public static async ValueTask<CallState> Clone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -494,7 +494,7 @@ public partial class Functions
 		);
 	}
 
-	[SharpFunction(Name = "create", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "create", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["name", "cost"])]
 	public static async ValueTask<CallState> Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -568,7 +568,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
 	}
 
-	[SharpFunction(Name = "dig", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "dig", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular, ParameterNames = ["name", "exitnames", "cost"])]
 	public static async ValueTask<CallState> Dig(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -646,7 +646,7 @@ public partial class Functions
 	}
 
 
-	[SharpFunction(Name = "isdbref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "isdbref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public static async ValueTask<CallState> IsDbRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var parsed = HelperFunctions.ParseDbRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
@@ -654,11 +654,11 @@ public partial class Functions
 		return new CallState(!(await Mediator!.Send(new GetObjectNodeQuery(parsed.AsValue()))).IsNone);
 	}
 
-	[SharpFunction(Name = "isint", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "isint", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public static ValueTask<CallState> IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(int.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
 
-	[SharpFunction(Name = "isnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "isnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public static ValueTask<CallState> IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(decimal.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
 
@@ -683,7 +683,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(new("1"));
 	}
 
-	[SharpFunction(Name = "isword", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "isword", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public static ValueTask<CallState> IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
@@ -729,7 +729,7 @@ public partial class Functions
 		return new CallState("#-1 REGISTER NAME INVALID");
 	}
 
-	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "destination"])]
 	public static async ValueTask<CallState> Link(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -1017,11 +1017,11 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
 	public static ValueTask<CallState> Null(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(CallState.Empty);
 
-	[SharpFunction(Name = "open", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "open", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["exitname", "destination", "cost"])]
 	public static async ValueTask<CallState> Open(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -1195,7 +1195,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "s", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "s", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["value"])]
 	public static async ValueTask<CallState> S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!))!;
 
@@ -1431,7 +1431,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(Errors.NotSupported));
 	}
 
-	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "destination"])]
 	public static async ValueTask<CallState> Tel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -1557,7 +1557,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(Errors.NotSupported));
 	}
 
-	[SharpFunction(Name = "textfile", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "textfile", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["filename", "start", "length"])]
 	public static ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// TODO: Implement textfile - requires text file system integration
@@ -1585,7 +1585,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(new(string.Empty));
 	}
 
-	[SharpFunction(Name = "wipe", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "wipe", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Wipe(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
