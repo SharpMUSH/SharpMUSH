@@ -1015,6 +1015,7 @@ LOCATE()
 				matches = key switch
 				{
 					"LOCK" => EvaluateLockCriteria(obj, value, executor),
+					"ELOCK" => EvaluateLockCriteria(obj, value, executor),
 					_ => true // Unknown criteria, skip
 				};
 
@@ -1032,20 +1033,21 @@ LOCATE()
 
 	/// <summary>
 	/// Evaluates lock criteria for lsearch. This must happen in application code, not in the database.
+	/// For elock searches, the lockString is evaluated to see if the object passes it when tested by the executor.
 	/// </summary>
-	private static bool EvaluateLockCriteria(SharpObject obj, string lockName, AnySharpObject executor)
+	/// <param name="obj">The object being tested (from database query results)</param>
+	/// <param name="lockString">The lock string to evaluate (e.g., "FLAG^WIZARD", "sex:m*")</param>
+	/// <param name="executor">The player running the lsearch</param>
+	/// <returns>True if the object passes the lock evaluation</returns>
+	private static bool EvaluateLockCriteria(SharpObject obj, string lockString, AnySharpObject executor)
 	{
 		// Lock evaluation requires runtime evaluation and cannot be done in the database
-		// Check if the object has the specified lock
-		if (!obj.Locks.TryGetValue(lockName, out var lockData))
-		{
-			// If lock doesn't exist, it's considered to pass
-			return true;
-		}
-
-		// Evaluate the lock using the LockService
-		// The lock evaluates whether the executor can pass the lock on the object
-		return LockService!.Evaluate(lockData.LockString, CreateAnySharpObjectFromSharpObject(obj), executor);
+		// Convert the raw SharpObject to a properly-typed AnySharpObject
+		var typedObj = CreateAnySharpObjectFromSharpObject(obj);
+		
+		// Evaluate the lock: does this object pass the given lock string when tested by the executor?
+		// In elock searches, we're checking if the object passes a lock (not if executor passes object's lock)
+		return LockService!.Evaluate(lockString, typedObj, executor);
 	}
 
 	/// <summary>

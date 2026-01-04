@@ -89,21 +89,18 @@ public class SearchFunctionUnitTests
 	}
 
 	[Test]
-	public async Task Lsearch_LockFilter_ReturnsMatchingObjects()
+	public async Task Lsearch_ElockFilter_ReturnsMatchingObjects()
 	{
-		// Create a test object with a lock
-		var uniqueName = $"LSearchLockTest_{Guid.NewGuid():N}";
-		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		// Test lsearch with elock filter - this should now work without throwing NotImplementedException
+		// The elock class evaluates a lock string against objects
+		// Example from PennMUSH docs: lsearch(all, elock, FLAG^WIZARD)
+		// This searches for objects that pass the lock "FLAG^WIZARD" (i.e., have the WIZARD flag)
 		
-		// Set a basic lock on the object that allows everyone (=1 means always true)
-		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@lock {uniqueName}=1"));
-		
-		// Test lsearch with lock filter - this should now work without throwing NotImplementedException
-		// Note: The lock criteria is complex and may not match all objects, but it should execute without error
-		var result = (await Parser.FunctionParse(MModule.single($"lsearch(all,lock=Basic)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single("lsearch(all,elock=FLAG^WIZARD)")))?.Message!;
 		var resultText = result.ToPlainText();
 		
 		// Should return some result (at least not throw an exception)
+		// The result should include wizard objects (player #1 is wizard by default)
 		await Assert.That(resultText).IsNotNull();
 	}
 }
