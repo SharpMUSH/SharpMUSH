@@ -126,8 +126,8 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_Link_ExactMatch()
 	{
 		// Test link - should use ANSI hyperlink with text as visible content
-		// Escape square brackets with backslash for MUSH parser
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(\\[Click here\\](https://example.com))")))?.Message;
+		// Escape square brackets and parentheses with percent for MUSH parser
+		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(%[Click here%]%(https://example.com%))")))?.Message;
 		await Assert.That(result).IsNotNull();
 		// With hyperlink markup, only the link text is visible in plain text
 		// The URL is embedded in ANSI escape codes
@@ -155,8 +155,8 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_Link_TextSameAsUrl_ExactMatch()
 	{
 		// Test link where text is same as URL
-		// Escape square brackets with backslash for MUSH parser
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(\\[https://example.com\\](https://example.com))")))?.Message;
+		// Escape square brackets and parentheses with percent for MUSH parser
+		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(%[https://example.com%]%(https://example.com%))")))?.Message;
 		await Assert.That(result).IsNotNull();
 		// Link text is shown, URL is in hyperlink metadata
 		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
