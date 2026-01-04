@@ -1,5 +1,6 @@
 ﻿using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -997,47 +998,135 @@ LOCATE()
 			Owner = classObj?.Object().DBRef
 		};
 
+		// Pre-compile lock strings and eval expressions for efficiency (compile once, evaluate many times)
+		// This avoids re-compiling the same lock string or expression for every object in the result set
+		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, bool>>();
+		var compiledEvals = new List<(string evalExpression, string? typeFilter)>();
+		
+		foreach (var (key, value) in appLevelCriteria)
+		{
+			switch (key)
+			{
+				case "LOCK" or "ELOCK":
+					// Optimize #TRUE - no need to compile
+					if (value is "#TRUE" or "")
+					{
+						compiledLocks.Add((_, _) => true);
+					}
+					else
+					{
+						compiledLocks.Add(BooleanExpressionParser!.Compile(value));
+					}
+					break;
+				
+				case "EVAL":
+					compiledEvals.Add((value, null));
+					break;
+				case "EPLAYER":
+					compiledEvals.Add((value, "PLAYER"));
+					break;
+				case "EROOM":
+					compiledEvals.Add((value, "ROOM"));
+					break;
+				case "EEXIT":
+					compiledEvals.Add((value, "EXIT"));
+					break;
+				case "ETHING" or "EOBJECT":
+					compiledEvals.Add((value, "THING"));
+					break;
+			}
+		}
+
 		// Query database with filters applied at database level
 		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
-		var results = new List<string>();
+		
+		// Check if we need to convert SharpObject to AnySharpObject for app-level criteria
+		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0;
+		
+		if (!hasAppLevelCriteria)
+		{
+			// No app-level criteria, just convert to dbrefs directly without fetching full objects
+			var results = new List<string>();
+			await foreach (var obj in filteredObjects)
+			{
+				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+			}
+			return new CallState(string.Join(" ", results));
+		}
 
-		// Apply application-level criteria (locks, etc.)
+		// Apply application-level criteria (locks, evals, etc.)
+		// Optimize: Convert to AnySharpObject once per object and evaluate all criteria
+		var finalResults = new List<string>();
 		await foreach (var obj in filteredObjects)
 		{
+			// Convert the raw SharpObject to a properly-typed AnySharpObject once for all evaluations
+			var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
 			bool matches = true;
 			
-			// Process application-level criteria
-			foreach (var (key, value) in appLevelCriteria)
+			// Evaluate pre-compiled lock criteria
+			foreach (var compiledLock in compiledLocks)
 			{
-				// Handle lock evaluation and other complex criteria here
-				// For now, we support the basics handled at the database level
-				// Lock evaluation would require checking lock strings which can't be done in the database
-				matches = key switch
+				if (!compiledLock(typedObj, executor))
 				{
-					"LOCK" => EvaluateLockCriteria(obj, value, executor),
-					_ => true // Unknown criteria, skip
-				};
-
-				if (!matches) break;
+					matches = false;
+					break;
+				}
+			}
+			
+			// Evaluate eval expressions if locks passed
+			if (matches)
+			{
+				foreach (var (evalExpression, typeFilter) in compiledEvals)
+				{
+					// Check type filter if specified
+					if (typeFilter != null && !typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+					{
+						matches = false;
+						break;
+					}
+					
+					// Replace ## with the object's dbref number in the expression
+					// Use just the number (e.g., "1") for numeric comparisons
+					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
+					var expression = evalExpression.Replace("##", objectDbRefNum);
+					
+					// Evaluate the expression
+					var evalResult = await parser.FunctionParse(MModule.single(expression));
+					if (evalResult == null || !evalResult.Message.Truthy())
+					{
+						matches = false;
+						break;
+					}
+				}
 			}
 
 			if (matches)
 			{
-				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+				finalResults.Add(typedObj.Object().DBRef.ToString());
 			}
 		}
 
-		return new CallState(string.Join(" ", results));
+		return new CallState(string.Join(" ", finalResults));
 	}
 
 	/// <summary>
-	/// Evaluates lock criteria for lsearch. This must happen in application code, not in the database.
+	/// Creates an AnySharpObject from a SharpObject based on its Type property.
+	/// This is needed when we have a raw SharpObject from the database but need to work with the discriminated union.
 	/// </summary>
-	private static bool EvaluateLockCriteria(SharpObject obj, string lockName, AnySharpObject executor)
+	private static async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(SharpObject obj)
 	{
-		// Lock evaluation requires runtime evaluation and cannot be done in the database
-		// This would need access to the LockService to evaluate the lock
-		throw new NotImplementedException("Lock filtering in lsearch is not yet implemented. Lock evaluation requires runtime parsing and cannot be efficiently done at the database level.");
+		// The object needs to be fetched properly from the database to get the correct type-specific object
+		// We use the Mediator to fetch the fully-typed object asynchronously
+		var dbref = new DBRef(obj.Key, obj.CreationTime);
+		var result = await Mediator!.Send(new GetObjectNodeQuery(dbref));
+		
+		if (result.IsNone)
+		{
+			// This shouldn't happen in normal operation, but handle it gracefully
+			throw new InvalidOperationException($"Object {dbref} not found when evaluating lock criteria");
+		}
+
+		return result.Known;
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
