@@ -53,6 +53,16 @@ public record ObjectSearchFilter
 	public string? HasPower { get; init; }
 
 	/// <summary>
+	/// Number of results to skip (for pagination with START). Null means no skip.
+	/// </summary>
+	public int? Skip { get; init; }
+
+	/// <summary>
+	/// Maximum number of results to return (for pagination with COUNT). Null means no limit.
+	/// </summary>
+	public int? Limit { get; init; }
+
+	/// <summary>
 	/// Empty filter that matches all objects
 	/// </summary>
 	public static ObjectSearchFilter Empty => new();
@@ -62,5 +72,6 @@ public record ObjectSearchFilter
 	/// </summary>
 	public bool HasFilters => Types != null || Owner != null || NamePattern != null || 
 	                          MinDbRef != null || MaxDbRef != null || Zone != null || 
-	                          Parent != null || HasFlag != null || HasPower != null;
+	                          Parent != null || HasFlag != null || HasPower != null ||
+	                          Skip != null || Limit != null;
 }
