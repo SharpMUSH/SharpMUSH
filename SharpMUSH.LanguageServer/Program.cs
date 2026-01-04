@@ -2,10 +2,13 @@
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Serilog;
-using SharpMUSH.LanguageServer.Extensions;
+using SharpMUSH.Implementation;
 using SharpMUSH.LanguageServer.Handlers;
 using SharpMUSH.LanguageServer.Services;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 
 // Configure Serilog for logging
 var logPath = Path.Combine(
@@ -43,8 +46,17 @@ try
 				// Register the underlying MUSH code parser with minimal dependencies
 				services.AddSingleton<IMUSHCodeParser>(sp =>
 				{
-					var logger = sp.GetRequiredService<ILogger<SharpMUSH.Implementation.MUSHCodeParser>>();
-					return MUSHCodeParserExtensions.CreateForLSP(logger, sp);
+					var logger = sp.GetRequiredService<ILogger<MUSHCodeParser>>();
+					
+					// Create minimal libraries - LSP doesn't need full runtime
+					var functionLibrary = new LibraryService<string, FunctionDefinition>();
+					var commandLibrary = new LibraryService<string, CommandDefinition>();
+					
+					// Create a minimal options wrapper
+					var options = new MinimalOptionsWrapper();
+					
+					// Create the parser with minimal dependencies
+					return new MUSHCodeParser(logger, functionLibrary, commandLibrary, options, sp);
 				});
 
 				// Register the stateless LSP-specific parser wrapper
@@ -77,4 +89,14 @@ catch (Exception ex)
 finally
 {
 	Log.CloseAndFlush();
+}
+
+/// <summary>
+/// Minimal implementation of IOptionsWrapper for LSP usage.
+/// The LSP server doesn't need full runtime configuration.
+/// </summary>
+file class MinimalOptionsWrapper : IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>
+{
+	public SharpMUSH.Configuration.Options.SharpMUSHOptions CurrentValue => 
+		throw new NotSupportedException("LSP parser does not support runtime options");
 }
