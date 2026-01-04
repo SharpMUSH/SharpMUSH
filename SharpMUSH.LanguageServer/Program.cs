@@ -68,6 +68,9 @@ try
 			})
 			.WithHandler<TextDocumentSyncHandler>()
 			.WithHandler<SemanticTokensHandler>()
+			.WithHandler<CompletionHandler>()
+			.WithHandler<HoverHandler>()
+			.WithHandler<DefinitionHandler>()
 			.OnInitialize(async (server, request, cancellationToken) =>
 			{
 				Log.Information("Language server initialized");
