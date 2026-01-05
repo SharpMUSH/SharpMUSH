@@ -11,7 +11,7 @@ This document tracks the implementation status of PennMUSH commands and function
 | Category | PennMUSH | SharpMUSH | Missing | Coverage |
 |----------|----------|-----------|---------|----------|
 | **Commands** | 170 | 171 | 4 | 97% |
-| **Functions** | 407 | 526 | 22 | 94% |
+| **Functions** | 407 | 526 | 21 | 94% |
 
 ## Missing Commands
 
@@ -43,7 +43,6 @@ The following PennMUSH functions are not yet implemented in SharpMUSH:
 - [ ] `SETMANIP()`
 - [ ] `SHA0()`
 - [ ] `SOUNDLIKE()`
-- [ ] `SQL_ESCAPE()`
 - [ ] `STR_REP_OR_INS()`
 - [ ] `UCSTR2()`
 - [ ] `WEBSOCKET_HTML()`
@@ -222,6 +221,7 @@ These functions are implemented in SharpMUSH but not found in PennMUSH source:
 - **Mail Functions**: Both implementations include mail functions (MAIL, MAILFROM, MAILSTATS, etc.)
 - **Player Commands**: Commands like SCORE exist in both systems
 - **Connection Commands**: QUIT and CONNECT may be handled at different levels in each system
+- **Naming Variations**: Some functions have different names (e.g., PennMUSH's SQL_ESCAPE is implemented as SQLESCAPE in SharpMUSH)
 
 ## Priority Recommendations
 
