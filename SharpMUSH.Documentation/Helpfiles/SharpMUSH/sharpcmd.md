@@ -1,246 +1,97 @@
 # COMMANDS
 Help is available for the following MUSH commands:
 
-- ahelp
-- anews
-- brief
-- DOING
-- drop
-- examine
-- enter
-- events
-- follow
-- get
-- give
-- go
-- index
-- leave
-- LOGOUT
-- look
-- move
-- news
-- page
-- pose
-- QUIT
-- read
-- rules
-- say
-- score
-- teach
-- think
-- unfollow
-- use
-- whisper
-- WHO
-- with
-- "
-- :
-- ;
-- +
-- ]
+|              |              |              |              |              |
+|--------------|--------------|--------------|--------------|--------------|  
+| [+]          | [:]          | ["]          | [;]          | [\]]         |
+| [ahelp]      | [anews]      | [brief]      | [DOING]      | [drop]       |
+| [enter]      | [events]     | [examine]    | [follow]     | [get]        |
+| [give]       | [go]         | [index]      | [leave]      | [look]       |
+| [LOGOUT]     | [move]       | [news]       | [page]       | [pose]       |
+| [QUIT]       | [read]       | [rules]      | [say]        | [score]      |
+| [teach]      | [think]      | [unfollow]   | [use]        | [whisper]    |
+| [WHO]        | [with]       |              |              |              |
 
 In addition to these, there are several types of '@' commands. @-commands are usually commands which have permanent effects on the MUSH (such as creating a new object). Here are the help topics on @-commands:
 
-- @-ATTRIBUTES
-- @-BUILDING
-- @-GENERAL
-- @-WIZARD
+- [@-ATTRIBUTES]
+- [@-BUILDING]
+- [@-GENERAL]
+- [@-WIZARD]
 
 Commands that can only be used by connected players are listed in HELP SOCKET COMMANDS.
 # @-ATTRIBUTES
 These '@' commands set standard message/action sets on objects. Each comes in 3 versions: `@<whatever>`, `@o<whatever>`, and `@a<whatever>`. Only the `@<whatever>` version is listed below, but help is available for each:
 
-- @describe
-- @drop
-- @efail
-- @enter
-- @failure
-- @follow
-- @give
-- @idescribe
-- @leave
-- @lfail
-- @move
-- @payment
-- @receive
-- @success
-- @tport
-- @ufail
-- @unfollow
-- @use
-- @zenter
-- @zleave
+|              |              |              |              |              |
+|--------------|--------------|--------------|--------------|--------------|  
+| [@describe]  | [@drop]      | [@efail]     | [@enter]     | [@failure]   |
+| [@follow]    | [@give]      | [@idescribe] | [@leave]     | [@lfail]     |
+| [@move]      | [@payment]   | [@receive]   | [@success]   | [@tport]     |
+| [@ufail]     | [@unfollow]  | [@use]       | [@zenter]    | [@zleave]    |
 
 These '@' command set other standard attributes on objects that don't follow the pattern above:
 
-- @aahear
-- @aclone
-- @aconnect
-- @adisconnect
-- @amail
-- @amhear
-- @away
-- @charges
-- @conformat
-- @cost
-- @descformat
-- @ealias
-- @exitformat
-- @filter
-- @forwardlist
-- @haven
-- @idescformat
-- @idle
-- @infilter
-- @inprefix
-- @lalias
-- @listen
-- @nameformat
-- @oxenter
-- @oxleave
-- @oxmove
-- @oxtport
-- @prefix
-- @runout
-- @sex
-- @startup
+|                  |                  |                  |                  |
+|------------------|------------------|------------------|------------------|
+| [@aahear]        | [@aclone]        | [@aconnect]      | [@adisconnect]   |
+| [@amail]         | [@amhear]        | [@away]          | [@charges]       |
+| [@conformat]     | [@cost]          | [@descformat]    | [@ealias]        |
+| [@exitformat]    | [@filter]        | [@forwardlist]   | [@haven]         |
+| [@idescformat]   | [@idle]          | [@infilter]      | [@inprefix]      |
+| [@lalias]        | [@listen]        | [@nameformat]    | [@oxenter]       |
+| [@oxleave]       | [@oxmove]        | [@oxtport]       | [@prefix]        |
+| [@runout]        | [@sex]           | [@startup]       |                  |
 
 
-## See Also
+**See Also:**
 - [ATTRIBUTES]
 - [NON-STANDARD ATTRIBUTES]
 
 # @-BUILDING
 These '@' commands are building-related (they create or modify objects):
 
-- @atrlock
-- @atrchown
-- @chown
-- @chzone
-- @clone
-- @cpattr
-- @create
-- @destroy
-- @dig
-- @elock
-- @eunlock
-- @firstexit
-- @link
-- @lock
-- @moniker
-- @mvattr
-- @name
-- @nuke
-- @open
-- @parent
-- @recycle
-- @set
-- @undestroy
-- @ulock
-- @unlink
-- @unlock
-- @uunlock
-- @wipe
+|              |              |              |              |              |
+|--------------|--------------|--------------|--------------|--------------|  
+| [@atrchown]  | [@atrlock]   | [@chown]     | [@chzone]    | [@clone]     |
+| [@cpattr]    | [@create]    | [@destroy]   | [@dig]       | [@elock]     |
+| [@eunlock]   | [@firstexit] | [@link]      | [@lock]      | [@moniker]   |
+| [@mvattr]    | [@name]      | [@nuke]      | [@open]      | [@parent]    |
+| [@recycle]   | [@set]       | [@undestroy] | [@ulock]     | [@unlink]    |
+| [@unlock]    | [@uunlock]   | [@wipe]      |              |              |
 
 # @-GENERAL
 These '@' commands are general utility and programming commands:
 
-- @@
-- @alias
-- @break
-- @channel
-- @chat
-- @cemit
-- @command
-- @config
-- @decompile
-- @doing
-- @dolist
-- @drain
-- @edit
-- @emit
-- @entrances
-- @find
-- @force
-- @function
-- @gedit
-- @grep
-- @halt
-- @if
-- @lemit
-- @listmotd
-- @mail
-- @notify
-- @nsemit
-- @nslemit
-- @nsoemit
-- @nspemit
-- @nsprompt
-- @nsremit
-- @nszemit
-- @oemit
-- @password
-- @pemit
-- @prompt
-- @ps
-- @remit
-- @restart
-- @scan
-- @search
-- @select
-- @stats
-- @sweep
-- @switch
-- @teleport
-- @trigger
-- @verb
-- @version
-- @wait
-- @whereis
-- @zemit
+|              |              |              |              |              |
+|--------------|--------------|--------------|--------------|--------------|  
+| [@@]         | [@alias]     | [@break]     | [@cemit]     | [@channel]   |
+| [@chat]      | [@command]   | [@config]    | [@decompile] | [@doing]     |
+| [@dolist]    | [@drain]     | [@edit]      | [@emit]      | [@entrances] |
+| [@find]      | [@force]     | [@function]  | [@gedit]     | [@grep]      |
+| [@halt]      | [@if]        | [@lemit]     | [@listmotd]  | [@mail]      |
+| [@notify]    | [@nsemit]    | [@nslemit]   | [@nsoemit]   | [@nspemit]   |
+| [@nsprompt]  | [@nsremit]   | [@nszemit]   | [@oemit]     | [@password]  |
+| [@pemit]     | [@prompt]    | [@ps]        | [@remit]     | [@restart]   |
+| [@scan]      | [@search]    | [@select]    | [@stats]     | [@sweep]     |
+| [@switch]    | [@teleport]  | [@trigger]   | [@verb]      | [@version]   |
+| [@wait]      | [@whereis]   | [@zemit]     |              |              |
 
 # @-WIZARD
 These '@' commands are only usable by wizards or privileged players:
 
-- @allhalt
-- @allquota
-- @boot
-- @chownall
-- @chzoneall
-- @comment
-- @dbck
-- @disable
-- @dump
-- @enable
-- @flag
-- @hide
-- @hook
-- @http
-- @kick
-- @log
-- @motd
-- @newpassword
-- @pcreate
-- @poll
-- @poor
-- @power
-- @purge
-- @quota
-- @readcache
-- @respond
-- @rejectmotd
-- @shutdown
-- @sitelock
-- @sql
-- @squota
-- @suggest
-- @uptime
-- @wall
-- @wizmotd
-- @wizwall
-- cd
-- ch
-- cv
+|                  |                  |                  |                  |
+|------------------|------------------|------------------|------------------|
+| [@allhalt]       | [@allquota]      | [@boot]          | [@chownall]      |
+| [@chzoneall]     | [@comment]       | [@dbck]          | [@disable]       |
+| [@dump]          | [@enable]        | [@flag]          | [@hide]          |
+| [@hook]          | [@http]          | [@kick]          | [@log]           |
+| [@motd]          | [@newpassword]   | [@pcreate]       | [@poll]          |
+| [@poor]          | [@power]         | [@purge]         | [@quota]         |
+| [@readcache]     | [@rejectmotd]    | [@respond]       | [@shutdown]      |
+| [@sitelock]      | [@sql]           | [@squota]        | [@suggest]       |
+| [@uptime]        | [@wall]          | [@wizmotd]       | [@wizwall]       |
+| [cd]             | [ch]             | [cv]             |                  |
 
 # ]
 "]" is a special prefix which can be used before any command. It instructs the MUSH that it shouldn't evaluate the arguments to the command (similar to the "/noeval" switch available on some commands). For example:
@@ -270,7 +121,7 @@ This can be used to pass unevaluated MUSHcode to softcoded commands without havi
 See []2] for more examples.
 
 
-## See Also
+**See Also:**
 - [lit()]
 - [decompose()]
 - [escape()]
@@ -309,7 +160,7 @@ In the last example, '%0' would evaluate to 'My name is Wiggles.' (because the s
 In order for debug to be shown for triggered $-commands, you must either control the object(s) the matching $-commands are on, or be in the object's DEBUGFORWARDLIST attribute.
 
 
-## See Also
+**See Also:**
 - [DEBUG]
 - []
 # @@
@@ -323,7 +174,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [@@()]
 - [null()]
 # @aclone
@@ -334,7 +185,7 @@ Sets the actions to be taken by `<object>` whenever it's @cloned. This command c
 Please note that there are no @clone or @oclone attributes.
 
 
-## See Also
+**See Also:**
 - [@clone]
 - [@create]
 - [ACTION LISTS]
@@ -354,7 +205,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [@adisconnect]
 - [ACTION LISTS]
 - [EVENTS]
@@ -364,7 +215,7 @@ Example:
 Sets the actions to be taken by `<object>` whenever it receives @mail. Admin-only, and is only triggered if enabled via the amail configuration option.
 
 
-## See Also
+**See Also:**
 - [@mail]
 # @adescribe
 # @odescribe
@@ -380,7 +231,7 @@ Examples:
 ```
 
 
-## See Also
+**See Also:**
 - [look]
 - [@describe]
 - [@idescribe]
@@ -393,7 +244,7 @@ The adestroy attribute is triggered when `<object>` is @destroyed. It can only b
 Please note that there are no destroy or odestroy attributes.
 
 
-## See Also
+**See Also:**
 - [@destroy]
 - [@undestroy]
 - [EVENTS]
@@ -415,7 +266,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [@aconnect]
 - [ACTION LISTS]
 - [recv()]
@@ -444,7 +295,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [drop]
 - [empty]
 - [ACTION LISTS]
@@ -460,7 +311,7 @@ Example:
 These attributes contain the message shown to someone who fails to enter `<object>`, the message shown to others when someone fails to enter `<object>`, and the actions to be taken when someone fails to enter it, respectively.
 
 
-## See Also
+**See Also:**
 - [enter]
 - [@enter]
 - [FAILURE]
@@ -480,7 +331,7 @@ Note that these attributes are @ufail, NOT @ufailure, for TinyMUSH compatibility
 Although the Use @lock also restricts who can trigger $-commands or ^-listens on an object, these attributes will not be triggered for those failures. Instead, the COMMAND_LOCK`* and LISTEN_LOCK`* attributes are triggered. See [failure] for more information.
 
 
-## See Also
+**See Also:**
 - [use]
 - [@use]
 - [FAILURE]
@@ -498,7 +349,7 @@ Although the Use @lock also restricts who can trigger $-commands or ^-listens on
 For players and things, this means failure to get/take. For exits, it means failure to go through the exit. For rooms the lock is checked when objects "look" inside the room, though failure to pass the lock does not prevent the object from looking.
 
 
-## See Also
+**See Also:**
 - [get]
 - [move]
 - [@lock]
@@ -515,7 +366,7 @@ For players and things, this means failure to get/take. For exits, it means fail
 Sets the message shown to someone who begins following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone begins following it, respectively. The name of the person following `<object>` is automatically prepended to the @ofollow message.
 
 
-## See Also
+**See Also:**
 - [follow]
 - [unfollow]
 - [@unfollow]
@@ -532,7 +383,7 @@ Sets the message shown to someone who begins following `<object>`, the message s
 Sets the message shown to someone who stops following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone stops following it, respectively. The name of the person stopping following `<object>` is automatically prepended to the @ounfollow message.
 
 
-## See Also
+**See Also:**
 - [follow]
 - [unfollow]
 - [@follow]
@@ -549,7 +400,7 @@ Sets the message shown to someone who stops following `<object>`, the message sh
 Sets the actions to be taken after the object's @listen is matched. @ahear will only be triggered by sound made by other objects, and @amhear is only triggered by sound made by `<object>` itself. @aahear will be triggered by all matching sound, regardless of the source.
 
 
-## See Also
+**See Also:**
 - [@listen]
 - [LISTENING]
 - [ACTION LISTS]
@@ -567,7 +418,7 @@ These attributes contain the message shown to anyone leaving `<object>`, the mes
 The leaver's new location is passed in %0, if `<object>` has permission to see it there.
 
 
-## See Also
+**See Also:**
 - [leave]
 - [@oxleave]
 - [@lfail]
@@ -585,7 +436,7 @@ These attributes contain the message shown to objects who try to leave `<object>
 Such a failure usually occurs because `<object>` is set NO_LEAVE, or because the person trying to leave does not pass `<object>`'s @lock/leave.
 
 
-## See Also
+**See Also:**
 - [leave]
 - [@leave]
 - [NO_LEAVE]
@@ -607,7 +458,7 @@ Exit aliases used to be a part of their name, though all newly created exits use
 For other types of object, @alias has no special meaning.
 
 
-## See Also
+**See Also:**
 - [@name]
 - [alias()]
 - [fullalias()]
@@ -632,7 +483,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [goto]
 - [@oxmove]
 - [ACTION LISTS]
@@ -659,7 +510,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [enter]
 - [@ealias]
 - [leave]
@@ -682,7 +533,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [give]
 - [@cost]
 - [buy]
@@ -710,7 +561,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [@teleport]
 - [ACTION LISTS]
 - [VERBS]
@@ -721,7 +572,7 @@ Example:
 This command changes the ownership of the attribute `<attribute>` on `<object>` to `<new owner>`. You can only @atrchown attributes which you can set. Wizards can @atrchown to any player, while mortals can only @atrchown attributes to themselves. Only players can own attributes; if `<new owner>` is not a player, `<new owner>`'s owner is used instead.
 
 
-## See Also
+**See Also:**
 - [@atrlock]
 - [@chown]
 - [owner()]
@@ -739,7 +590,7 @@ The second form attempts to lock (for 'on') or unlock (for 'off') the given attr
 If you wish to lock an attribute without gaining ownership, you can set it "locked" with `@set <obj>/<attr>=locked` - be aware that you'll be unable to make any changes to the attribute after this, including unlocking it!
 
 
-## See Also
+**See Also:**
 - [atrlock()]
 - [@atrchown]
 - [ATTRIBUTES]
@@ -769,7 +620,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [get]
 - [goto]
 - [@lock]
@@ -822,7 +673,7 @@ Examples:
 ```
 
 
-## See Also
+**See Also:**
 - [ATTRIBUTES]
 - [attribute flags]
 - [@set]
@@ -849,7 +700,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [use]
 - [@charges]
 - [@runout]
@@ -866,7 +717,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [@idle]
 - [@haven]
 # @boot
@@ -885,7 +736,7 @@ The `/me` switch boots all descriptors for the player using the command which ha
 Only admin and those with the "boot" power can @boot other players.
 
 
-## See Also
+**See Also:**
 - [QUIT]
 - [LOGOUT]
 # @break
@@ -895,13 +746,13 @@ Only admin and those with the "boot" power can @boot other players.
 
 `@break` stops the execution of further commands in the current action list if `<boolean>` is a true value. It doesn't affect new queue entries made by previous commands in the action list. It can be useful for doing error checking without having to nest @switches.
 
-If `<action list>` is given, it is executed instead of the rest of the commands in the current action list. By default, `<action list>` is run immediately, replacing the rest of the action list @break was called in. If the `/queued` switch is given, `<action list>` will instead be queued to be run later. @break also accepts an /inline switch, for Rhost compatability; this switch does nothing on PennMUSH.
+If `<action list>` is given, it is executed instead of the rest of the commands in the current action list. By default, `<action list>` is run immediately, replacing the rest of the action list @break was called in. If the `/queued` switch is given, `<action list>` will instead be queued to be run later. @break also accepts an /inline switch, for Rhost compatability; this switch does nothing on SharpMUSH.
 
 `@assert` does the inverse: it stops execution if `<boolean>` evaluates to false.
 
 See [@break2] for examples.
 
-## See Also
+**See Also:**
 - [ACTION LISTS]
 - [QUEUE]
 - [BOOLEAN VALUES]
@@ -927,7 +778,7 @@ And you succeed!
 > @force me={@switch 1=1, think Third; think First; @break 1; think Second}
 First
 Third
-(The @switch is run, which queues 'think Third', think First is run, displaying 'First', command execution is broken (so we never think Second), and then the queued 'think Third' is run, displaying Third. If you figured that out, you have a very good understanding of the PennMUSH queue. :)
+(The @switch is run, which queues 'think Third', think First is run, displaying 'First', command execution is broken (so we never think Second), and then the queued 'think Third' is run, displaying Third. If you figured that out, you have a very good understanding of the SharpMUSH queue. :)
 ```
 # @charges
 # @runout
@@ -941,7 +792,7 @@ When the CHARGES attribute is present and AUSE is triggered, the value of the CH
 See [charges2] for an example.
 
 
-## See Also
+**See Also:**
 - [use]
 - [@ause]
 - [ACTION LISTS]
@@ -993,7 +844,7 @@ Examples:
 ```
 
 
-## See Also
+**See Also:**
 - [CHOWN_OK]
 - [Zone Masters]
 - [@chownall]
@@ -1009,7 +860,7 @@ If one or more of `/things`, `/rooms` or `/exits` are provided, only objects of 
 This command can only be used by Wizards.
 
 
-## See Also
+**See Also:**
 - [@chown]
 # @chzone
 `@chzone[/preserve] <object>=<zone>`
@@ -1032,7 +883,7 @@ If `<zone>` does not have a Zone @lock when something is @chzoned to it, the loc
 Whenever an object besides a player is @chzoned to a zone object, the WIZARD, ROYALTY, and TRUST flags will be reset, as will all @power's (for security purposes). For similar reasons, it is strongly recommended that you do not @chzone admin- or wizard-owned objects to any zone that less privileged players have access to. Wizards can use the `/preserve` switch to prevent this reset.
 
 
-## See Also
+**See Also:**
 - [ZONES]
 - [@chzoneall]
 - [zone()]
@@ -1042,7 +893,7 @@ Whenever an object besides a player is @chzoned to a zone object, the WIZARD, RO
 Changes the zone of all objects owned by `<player>` to `<zone object>`. If `<zone object>` is "none", the zone is reset to NOTHING. Only wizards may use this command.
 
 
-## See Also
+**See Also:**
 - [@chzone]
 - [ZONES]
 # @clone
@@ -1068,7 +919,7 @@ To clone a room and all its exits, use code like:
 Note: If @create is restricted or disabled, it will also restrict or disable this command.
 
 
-## See Also
+**See Also:**
 - [@create]
 - [clone()]
 - [create()]
@@ -1114,7 +965,7 @@ Commands added with `@command/add`, like other standard commands, are always cas
 
 See [@command3] for examples.
 
-## See Also
+**See Also:**
 - [@hook]
 - [RESTRICT]
 - [EVALUATION ORDER]
@@ -1147,7 +998,7 @@ Walker drinks reverse(tea).
 This is a wizard-only command which sets a COMMENT attribute on `<object>`. The attribute can only be seen by those with the See_All power.
 
 
-## See Also
+**See Also:**
 - [@@]
 - [@@()]
 # @config
@@ -1182,7 +1033,7 @@ Show just the object names (with no ansi) in a table:
 ```
 
 
-## See Also
+**See Also:**
 - [look]
 - [@exitformat]
 - [@nameformat]
@@ -1216,7 +1067,7 @@ See [@include2].
 - /clearregs: Clears all q-registers before including the attribute.
 
 
-## See Also
+**See Also:**
 - [@trigger]
 - [ufun()]
 - [@break]
@@ -1233,7 +1084,7 @@ You're holding: Red Ball, Pickle, and Piano
 ```
 
 
-## See Also
+**See Also:**
 - [inventory]
 - [@conformat]
 - [@exitformat]
@@ -1255,7 +1106,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [look]
 - [@exitformat]
 - [@nameformat]
@@ -1279,7 +1130,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [look]
 - [@exitformat]
 - [@nameformat]
@@ -1296,7 +1147,7 @@ The `<accent template>` is explained in [accents].
 If a container has both a @nameaccent and a @nameformat, the @nameformat is used.
 
 
-## See Also
+**See Also:**
 - [accent()]
 - [@nameformat]
 - [accname()]
@@ -1318,7 +1169,7 @@ Show the room's zone after its name.
 ```
 
 
-## See Also
+**See Also:**
 - [look]
 - [@exitformat]
 - [@conformat]
@@ -1353,7 +1204,7 @@ Your exit has been created.
 ```
 
 
-## See Also
+**See Also:**
 - [give]
 - [MONEY]
 - [@pay]
@@ -1381,7 +1232,7 @@ would check the object "box" for an attribute named TEST and then copy it to the
 would copy the TEST attribute from "box" to TEST on "cube".
 
 
-## See Also
+**See Also:**
 - [ATTRIBUTES]
 - [NON-STANDARD ATTRIBUTES]
 - [@set]
@@ -1395,7 +1246,7 @@ Some MUSHes choose to limit the number of objects you can create by setting a qu
 Wizards and objects with the pick_dbref power can also specify the `<dbref>` of a garbage object to use when creating the object. Otherwise, the object is given the next available dbref.
 
 
-## See Also
+**See Also:**
 - [give]
 - [@quota]
 - [MONEY]
@@ -1470,7 +1321,7 @@ Set your Options -> Grab Password
 ```
 
 
-## See Also
+**See Also:**
 - [CLIENTS]
 - [ATTRIBUTES]
 - [WILDCARDS]
@@ -1488,7 +1339,7 @@ When inside a thing or player, you will see its @idescribe instead, if one is se
 @describe can be abbreviated as @desc.
 
 
-## See Also
+**See Also:**
 - [look]
 - [@adescribe]
 - [@idescribe]
@@ -1507,7 +1358,7 @@ To destroy objects set SAFE, you must use `@destroy/override` or @nuke. If the r
 
 See [@destroy2] for a description of the destruction process.
 
-## See Also
+**See Also:**
 - [@undestroy]
 - [@create]
 - [@dig]
@@ -1525,7 +1376,7 @@ When an object is destroyed, any commands, @waits and semaphores it has queued a
 Players can only be @destroyed when they are not connected, and even then can only be destroyed by a Wizard player. If the destroy_possessions @config option is on, anything the player owns is @destroyed. If the really_safe option is also on, his SAFE possessions are spared. Any objects he owns which aren't destroyed are @chown'd to the Probate player (as per '@config probate_judge'), as are any @channels the player owned.
 
 
-## See Also
+**See Also:**
 - [SAFE]
 - [EVENTS]
 # @undestroy
@@ -1541,7 +1392,7 @@ If `<object>` is a player and the 'destroy_possessions' @config option is on, al
 @unrecycle is an alias for @undestroy.
 
 
-## See Also
+**See Also:**
 - [@destroy]
 - [GOING]
 - [@startup]
@@ -1562,16 +1413,16 @@ Examples:
 ```
 This command will create a new room named 'Kitchen'. You will be informed what the dbref of this room is.
 ```
-> @dig Kitchen=Kitchen <N>;n;north;kitchen;k
+> @dig Kitchen=Kitchen \<N\>;n;north;kitchen;k
 ```
-This will create the room as above, and also open an exit leading to it named "Kitchen <N>" with the aliases n, north, kitchen and k. It will NOT create an exit coming back from the Kitchen room.
+This will create the room as above, and also open an exit leading to it named `Kitchen \<N\>` with the aliases n, north, kitchen and k. It will NOT create an exit coming back from the Kitchen room.
 ```
-> @dig Kitchen=Kitchen <N>;n;north;kitchen;k, Out <S>;s;south;out;o
+> @dig Kitchen=Kitchen \<N\>;n;north;kitchen;k, Out \<S\>;s;south;out;o
 ```
-This will do just the same as the above, except it will also create an exit named `Out <S>` with the aliases s, south, out and o coming back from the kitchen to whatever room you are currently in.
+This will do just the same as the above, except it will also create an exit named `Out \<S\>` with the aliases s, south, out and o coming back from the kitchen to whatever room you are currently in.
 
 
-## See Also
+**See Also:**
 - [@open]
 - [@link]
 - [EXITS]
@@ -1588,7 +1439,7 @@ With no `<message>` the attribute is cleared.
 To change the message shown above player @doings in WHO, use @poll.
 
 
-## See Also
+**See Also:**
 - [@poll]
 - [WHO]
 - [doing()]
@@ -1616,7 +1467,7 @@ When using `@dolist/inline`, an @break in an `<action list>` will stop the calli
 
 See [@dolist3] for examples.
 
-## See Also
+**See Also:**
 - [iter()]
 - [itext()]
 - [map()]
@@ -1668,7 +1519,7 @@ If the `/all` switch is given, then all queue entries associated with the select
 You may not specify both the `/any` switch and a specific attribute. Similarly, you may not specify both the `/all` switch and a number.
 
 
-## See Also
+**See Also:**
 - [SEMAPHORES]
 - [@wait]
 - [@notify]
@@ -1688,7 +1539,7 @@ If the `/paranoid` switch is given, the game performs additional consistency che
 These switches should ONLY be used if a normal @dump is not being done correctly. They should generally only be done by wizards with access to the account on which the MUSH is running, since others will not have access to the checkpoint log file.
 
 
-## See Also
+**See Also:**
 - [@shutdown]
 # @ealias
 # @lalias
@@ -1706,7 +1557,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [enter]
 - [leave]
 - [goto]
@@ -1753,7 +1604,7 @@ Replace a literal '^' with 'v'
 ```
 
 
-## See Also
+**See Also:**
 - [edit()]
 - [regedit()]
 - [ATTRIBUTES]
@@ -1771,7 +1622,7 @@ and
 `@lock/enter <object>`
 
 
-## See Also
+**See Also:**
 - [@lock]
 - [locktypes]
 - [enter]
@@ -1788,7 +1639,7 @@ The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof`
 @emit can be abbreviated as `\`
 
 
-## See Also
+**See Also:**
 - [@nsemit]
 - [emit()]
 - [@pemit]
@@ -1811,7 +1662,7 @@ These wizard-only commands allow for any boolean @config options to be changed (
 `@disable <option>` is the same thing as `@config/set <option>=no`
 
 
-## See Also
+**See Also:**
 - [@config]
 # @zenter
 # @ozenter
@@ -1827,7 +1678,7 @@ Entry into a new zone is said to occur when a player goes from a room not in the
 Zone entry is assumed to occur before room entry, so these are triggered before the room's @[oa]enter.
 
 
-## See Also
+**See Also:**
 - [@zleave]
 - [ZONES]
 - [@zemit]
@@ -1847,7 +1698,7 @@ Leaving a zone is said to occur when a player goes from a room in the zone to a 
 Zone leaving is assumed to occur after room leaving, so these are triggered after the room's @[oa]leave.
 
 
-## See Also
+**See Also:**
 - [@zenter]
 - [ZONES]
 - [@zemit]
@@ -1867,7 +1718,7 @@ You can use any combination of switches to limit the types of objects:
 If you control `<object>`, or have the Search or See_All powers, all objects linked to `<object>` are listed. Otherwise, only objects which you can examine will be shown.
 
 
-## See Also
+**See Also:**
 - [@link]
 - [@search]
 - [entrances()]
@@ -1884,7 +1735,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [TRANSPARENT]
 - [@conformat]
 - [@nameformat]
@@ -1906,7 +1757,7 @@ Restricted to objects set Wizard or with the Can_HTTP @Power.
 Note: The response body has the same 8k limit as other MUSH strings. Anything longer is truncated; this command is best used with APIs that provide short responses.
 
 
-## See Also
+**See Also:**
 - [urlencode()]
 - [urldecode()]
 # @firstexit
@@ -1930,7 +1781,7 @@ One, Two, and Three
 ```
 
 
-## See Also
+**See Also:**
 - [EXITS]
 - [@open]
 - [@link]
@@ -1950,7 +1801,7 @@ Sounds are only forwarded if the speaker also passes `<object>`'s @lock/filter, 
 See [@filter2] for an example.
 
 
-## See Also
+**See Also:**
 - [AUDIBLE]
 - [@infilter]
 - [attribute flags]
@@ -1989,7 +1840,7 @@ Displays the name and dbref of every room, thing, or player you control whose na
 You may wish to use the @search command instead, which can filter the results more complexly.
 
 
-## See Also
+**See Also:**
 - [@search]
 - [lsearch()]
 - [@entrances]
@@ -2002,7 +1853,7 @@ If `<object>` is set AUDIBLE, any sound it hears which passes its @filter and @l
 In order to forward to an object, you must either control it, have the pemit_all power, or pass its @lock/forward. (If you want to allow all objects you own to forward to you, regardless of whether or not they control you, use `@lock/forward me=$me`)
 
 
-## See Also
+**See Also:**
 - [@filter]
 - [@prefix]
 - [AUDIBLE]
@@ -2018,7 +1869,7 @@ When `<object>` has an @debugforwardlist attribute set, any debug output it prod
 The @debugforwardlist must be a space-seperated list of dbrefs. In order to forward to an object, you must either control it, have the pemit_all power, or pass its @lock/forward.
 
 
-## See Also
+**See Also:**
 - [DEBUG]
 - [@forwardlist]
 - [@lock]
@@ -2078,7 +1929,7 @@ You say, "Done?"
 ```
 
 
-## See Also
+**See Also:**
 - [PUPPET]
 - [DBREF]
 - [objeval()]
@@ -2110,7 +1961,7 @@ All other switches to this command are restricted to God:
 See [@flag2] for information on `@flag/add`.
 
 
-## See Also
+**See Also:**
 - [FLAGS]
 - [@set]
 - [@power]
@@ -2217,7 +2068,7 @@ Example:
 This creates a new version of ansi() that doesn't do any colorization, and that needs two arguments, like the built-in version. It will be restricted to non-guest players.
 
 
-## See Also
+**See Also:**
 - [RESTRICT]
 - [FUNCTIONS]
 - [@startup]
@@ -2239,7 +2090,7 @@ If the `/parent` switch is given, attributes `<object>` inherits from its parent
 For backwards compatability, the `/list` switch provides the default behaviour of listing attributes without printing the values, and `/ilist` and `/iprint` are aliases for `/list/nocase` and `/print/nocase`.
 
 
-## See Also
+**See Also:**
 - [grep()]
 - [wildgrep()]
 - [regrep()]
@@ -2262,7 +2113,7 @@ Only wizards and objects with the halt @power can @halt other player's objects. 
 `@halt/all` is a synonym for @allhalt, and is a wizard-only command which halts all objects in the game in an effort to free up the queue.
 
 
-## See Also
+**See Also:**
 - [@wait]
 - [@ps]
 - [SEMAPHORES]
@@ -2280,7 +2131,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [HAVEN]
 - [page]
 - [@lock]
@@ -2297,7 +2148,7 @@ The first form of this command affects the single connection specified by `<desc
 The `/on` and `/yes` switches hide connections, while `/off` and `/no` unhide connections. If no switch is given, the command acts as a toggle: for a single descriptor, the hide status is reversed. For a player, if all his connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
 
 
-## See Also
+**See Also:**
 - [hidden()]
 - [WHO]
 - [lwho()]
@@ -2317,7 +2168,7 @@ The @oidescribe attribute is shown to others inside `<object>` when someone look
 If there is no IDESCRIBE set for an object, those who enter or look inside it will see its @describe. In this case, others in the object will see nothing, and the @aidescribe will not be triggered. If you want to use @aidescribe without @idescribe, set @idescribe to a blank string, or to u(describe) to show the description.
 
 
-## See Also
+**See Also:**
 - [enter]
 - [@enter]
 - [ENTER_OK]
@@ -2469,7 +2320,7 @@ Announcement: Room Zero shouts, "Dunce wins his first typo trophy!"
 ```
 
 
-## See Also
+**See Also:**
 - [@hook]
 - [EVALUATION ORDER]
 - [warn_on_missing]
@@ -2487,7 +2338,7 @@ Example:
 Players paging me will only see the "I'm idle" message if I've been idle for over 2 minutes (120 seconds).
 
 
-## See Also
+**See Also:**
 - [@away]
 - [@haven]
 # @if
@@ -2504,7 +2355,7 @@ For RhostMUSH compatability, @skip runs the action list `<false>` when `<boolean
 
 See [@if2] for examples.
 
-## See Also
+**See Also:**
 - [@break]
 - [@switch]
 - [if()]
@@ -2547,7 +2398,7 @@ Sounds are only forwarded if the speaker also passes `<object>`'s @lock/infilter
 For an explanation of infilter patterns, see the help for "@filter".
 
 
-## See Also
+**See Also:**
 - [@filter]
 - [@listen]
 - [@inprefix]
@@ -2572,7 +2423,7 @@ From outside, Test bounces.
 ```
 
 
-## See Also
+**See Also:**
 - [@prefix]
 - [@listen]
 - [@infilter]
@@ -2582,7 +2433,7 @@ From outside, Test bounces.
 This wizard-only command forces the immediate execution of `<number>` items from the queue. Rarely useful. If your MUSH is lagging badly, chances are high that it stems from network problems. Check the queue before using this command.
 
 
-## See Also
+**See Also:**
 - [@ps]
 - [QUEUE]
 # @lemit
@@ -2595,7 +2446,7 @@ The `/noeval` switch prevents `<message>` from being evaluated.
 The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
 
 
-## See Also
+**See Also:**
 - [@remit]
 - [@nslemit]
 # @list
@@ -2619,7 +2470,7 @@ By default, information is shown in upper-case. Add the `/lowercase` switch to s
 "commands" and "functions" show built-in and local commands/functions by default. The `/builtin` or `/local` switches can be given to limit this.
 
 
-## See Also
+**See Also:**
 - [list()]
 - [@config]
 - [config()]
@@ -2647,7 +2498,7 @@ If the destination is "home", those who travel through the exit will be sent to 
 LINK_OK objects can also be used as semaphores, and any object can be @parented to them.
 
 
-## See Also
+**See Also:**
 - [EXITS]
 - [@open]
 - [@dig]
@@ -2676,7 +2527,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [EXITS]
 - [@link]
 - [@open]
@@ -2724,7 +2575,7 @@ Recorder records: Whee!
 ```
 
 
-## See Also
+**See Also:**
 - [LISTENING]
 - [@ahear]
 - [@amhear]
@@ -2744,7 +2595,7 @@ Just like attributes, locks can be inherited from parents. By default, locks are
 A listing of lock types, such as pagelocks, look at [locktypes]. For the available key types, such as how to check an attribute on an object trying to pass a lock, see [lockkeys].
 
 
-## See Also
+**See Also:**
 - [@lock-simple]
 - [locktypes]
 - [lockkeys]
@@ -2774,7 +2625,7 @@ Valid flags include:
 - locked (+) This lock can only be set by the owner of the lock.
 
 
-## See Also
+**See Also:**
 - [@lock]
 - [lockflags()]
 - [llockflags()]
@@ -2788,7 +2639,7 @@ This wizard-only command puts `<message>` in a log file, tagged with the time an
 Adding the `/recall` switch will display the last `<number>` lines written to that log file, or the entire log buffer (Which is the last 1 kilobyte or so of data written to the log) if omitted.
 
 
-## See Also
+**See Also:**
 - [@logwipe]
 # @logwipe
 `@logwipe/<log>[/<switch>] <password>`
@@ -2807,7 +2658,7 @@ The default policy of erasing a log can be changed by giving one of the followin
 God must give the log wipe password from the MUSH's configuration file to use this command.
 
 
-## See Also
+**See Also:**
 - [@log]
 # @message
 `@message[/<switches>] <recipients>=<defmsg>,[<obj>/]<attr>[,<arg0>[, ... , <arg29>]]]`
@@ -2831,7 +2682,7 @@ Switches:
 
 See [@message2] for examples.
 
-## See Also
+**See Also:**
 - [message()]
 - [@chatformat]
 - [@pageformat]
@@ -2909,7 +2760,7 @@ Show the first letter in orange, and the rest with no color
 ```
 
 
-## See Also
+**See Also:**
 - [MONIKERS]
 - [moniker()]
 - [ansi()]
@@ -2963,7 +2814,7 @@ Name set.
 ```
 
 
-## See Also
+**See Also:**
 - [@alias]
 - [@oname]
 - [name()]
@@ -2983,7 +2834,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [@name]
 - [name()]
 - [VERBS]
@@ -2999,7 +2850,7 @@ If the `/generate` switch is given, a new, random password is generated automati
 The `<password>` must not contain whitespace, unprintable characters, or '='.
 
 
-## See Also
+**See Also:**
 - [@password]
 - [checkpass()]
 # @notify
@@ -3030,7 +2881,7 @@ Hello, Walker!
 ```
 
 
-## See Also
+**See Also:**
 - [SEMAPHORES]
 - [@drain]
 - [@wait]
@@ -3053,7 +2904,7 @@ Hello, Walker!
 These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @zemit, respectively, but will not include nospoof information if used by Wizards or someone with the Can_spoof @power. They are meant to be used by commands in the master room where the nospoof information is just useless noise. They take the same switches as their respective commands, with a few exceptions (`/spoof`, and for @nspemit, `/contents` and the admin-only `/port`).
 
 
-## See Also
+**See Also:**
 - [@emit]
 - [@lemit]
 - [@pemit]
@@ -3081,7 +2932,7 @@ The `/spoof` switch causes nospoof notifications to show the enactor's dbref ins
 
 See [@oemit2] for examples.
 
-## See Also
+**See Also:**
 - [@emit]
 - [@pemit]
 - [@nsoemit]
@@ -3120,11 +2971,11 @@ To open an exit in a room, you must control the room, have the Open_Anywhere @po
 
 Example:
 ```
-> @open Up <U>;up;u;climb=#255, Down <D>;down;d;fall
+> @open Up \<U\>;up;u;climb=#255, Down \<D\>;down;d;fall
 ```
 
 
-## See Also
+**See Also:**
 - [EXITS]
 - [@link]
 - [@dig]
@@ -3135,7 +2986,7 @@ Example:
 This command sets the parent of `<object>` to `<parent>`. If no `<parent>` is given, or `<parent>` is "none", `<object>`'s parent is cleared. You must control `<object>`, and must either control `<parent>` or it must be set LINK_OK and you must pass its @lock/parent.
 
 
-## See Also
+**See Also:**
 - [PARENTS]
 - [parent()]
 - [lparent()]
@@ -3147,7 +2998,7 @@ This changes your password. Please note that passwords ARE case-sensitive. The a
 The `<new password>` must not contain whitespace, unprintable characters, or '='.
 
 
-## See Also
+**See Also:**
 - [@newpassword]
 - [checkpass()]
 # @pageformat
@@ -3167,7 +3018,7 @@ The `<new password>` must not contain whitespace, unprintable characters, or '='
 See [@pageformat2] for examples.
 
 
-## See Also
+**See Also:**
 - [page]
 - [speak()]
 - [@chatformat]
@@ -3202,7 +3053,7 @@ These attributes contain the message shown `<recipient>` when he receives an obj
 In all cases, %0 is the dbref of the object received. If the object was 'give'n, %1 will be the dbref of the giver.
 
 
-## See Also
+**See Also:**
 - [give]
 - [get]
 - [@give]
@@ -3221,7 +3072,7 @@ These attributes contain the message shown to `<giver>` when he gives an object,
 In all cases, %0 is the dbref of the object being given, and %1 is the dbref of the recipient.
 
 
-## See Also
+**See Also:**
 - [give]
 - [@receive]
 - [ACTION LISTS]
@@ -3232,7 +3083,7 @@ In all cases, %0 is the dbref of the object being given, and %1 is the dbref of 
 This wizard-only command creates a player with the given name and password. If specified, `<dbref>` is the dbref of a garbage object to be used for the new player.
 
 
-## See Also
+**See Also:**
 - [pcreate()]
 # @prompt
 `@prompt[/<switch>] <dbref list>[=<message>]`
@@ -3244,7 +3095,7 @@ If `<message>` is omitted, an empty prompt is sent.
 @prompt supports the following @pemit switches: `/silent`, `/noisy`, `/spoof`, `/noeval`
 
 
-## See Also
+**See Also:**
 - [@pemit]
 - [@nsprompt]
 - [prompt()]
@@ -3258,7 +3109,7 @@ This socket-level command is used to indicate whether a newline should be sent a
 Some clients, like TinyFugue, are smart enough to interpret GOAHEAD and treat prompts specially by putting them into their input window. These clients do not require the newline, and sending the newline results in a blank line in their output window. The 'PROMPT_NEWLINES 0' command can be used to disable the newline and is recommended for users with these clients.
 
 
-## See Also
+**See Also:**
 - [@prompt]
 - [prompt()]
 - [terminfo()]
@@ -3286,7 +3137,7 @@ The @pemit command can take the following additional switches:
 You cannot @pemit to objects set HAVEN, or objects whose @lock/page you do not pass, unless you are set WIZARD or have the pemit_all @power.
 
 
-## See Also
+**See Also:**
 - [@emit]
 - [@nspemit]
 - [@oemit]
@@ -3302,7 +3153,7 @@ You cannot @pemit to objects set HAVEN, or objects whose @lock/page you do not p
 This command manipulate the message at the top of WHO/DOING. By itself, it displays the current poll. Wizards and those with the poll @power can set or clear the message.
 
 
-## See Also
+**See Also:**
 - [@doing]
 - [WHO]
 - [DOING]
@@ -3312,7 +3163,7 @@ This command manipulate the message at the top of WHO/DOING. By itself, it displ
 This command sets the pennies of every player on the MUSH to `<value>`. It can only be used by God.
 
 
-## See Also
+**See Also:**
 - [MONEY]
 - [give]
 # @power
@@ -3328,7 +3179,7 @@ The third form manipulates powers on objects, and is limited to Wizards. `@power
 God can add, delete, and otherwise manipulate power definitions. See help @power2 for these commands.
 
 
-## See Also
+**See Also:**
 - [powers()]
 - [@flag]
 # @power2
@@ -3368,7 +3219,7 @@ This attribute is meant to be used in conjunction with the AUDIBLE flag. The @pr
 For example, if you have an audible exit "Outside" leading from a room Garden to a room Street, with @prefix "From the garden nearby," if Joe does a ":waves to everyone." from the Garden, the people at Street will see the message, "From the garden nearby, Joe waves to everyone."
 
 
-## See Also
+**See Also:**
 - [@inprefix]
 - [AUDIBLE]
 - [@listen]
@@ -3392,7 +3243,7 @@ With a `<pid>` argument, @ps shows information on a single queue entry. The `/de
 Each line includes the process id of the queue entry, the object and attribute being used as a semaphore (if any), the number of seconds left before it executes (for waits and semaphores), the object that is going to execute the entry, and the command. To halt a specific queue entry, use `@halt/pid`.
 
 
-## See Also
+**See Also:**
 - [@wait]
 - [@halt]
 - [@notify]
@@ -3404,7 +3255,7 @@ Each line includes the process id of the queue entry, the object and attribute b
 The @purge command should almost never need to be performed manually. If you do use it manually, you may want to use it twice in a row to make sure that everything marked GOING is actually destroyed.
 
 
-## See Also
+**See Also:**
 - [@dbck]
 # @quota
 `@quota [<player>]`
@@ -3429,7 +3280,7 @@ Players always have enough quota for the objects they currently own; if you atte
 `@quota/set` and `@quota/all` are equivilent to @squota and @allquota, respectively.
 
 
-## See Also
+**See Also:**
 - [QUOTAS]
 - [Quotas Power]
 - [No_Quota Power]
@@ -3445,7 +3296,7 @@ A site admin can achieve the same effect by sending the MUSH process a kill -1 o
 @readcache does not load updates to the configuration files (mush.cnf, restrict.cnf, etc) - the game must be restarted with `@shutdown/reboot` to reload these.
 
 
-## See Also
+**See Also:**
 - [@shutdown]
 # @remit
 `@remit[/switches] <object>=<message>`
@@ -3460,7 +3311,7 @@ The `/spoof` switch causes nospoof notifications to show the enactor's dbref ins
 The `/noeval` switch causes `<message>` to not be evaluated.
 
 
-## See Also
+**See Also:**
 - [@emit]
 - [@pemit]
 - [@oemit]
@@ -3480,7 +3331,7 @@ Watch out for infinite loops! @retry does respect all the limits (cpu_limit, fun
 See [@retry2] for examples.
 
 
-## See Also
+**See Also:**
 - [ACTION LISTS]
 - [BOOLEAN VALUES]
 - [@break]
@@ -3511,7 +3362,7 @@ Implementing a folding algorithm:
 This command halts `<object>` (as described in @halt), and then triggers the STARTUP attribute on the object, if set. If `<object>` is a player, it affects the player and all of their objects. Players can use `@restart me` to restart their own objects. The `/all` switch halts all objects (see @allhalt) and restarts them, and can only be used by a wizard.
 
 
-## See Also
+**See Also:**
 - [@halt]
 - [@startup]
 - [@shutdown]
@@ -3529,7 +3380,7 @@ This command any combination of these four switches:
 If no switch is given, all locations are checked. `<command>` must be entered exactly as you would type it (so, to match the $-command `$foo *:` you must type '`@scan foo <something>`', not just '`@scan foo`').
 
 
-## See Also
+**See Also:**
 - [$-commands]
 - [EVALUATION ORDER]
 # @search
@@ -3581,7 +3432,7 @@ If multiple `<class>` and `<restrictions>` are given, objects must meet all crit
 
 See [@search5] for some examples.
 
-## See Also
+**See Also:**
 - [lsearch()]
 - [@find]
 # @search5
@@ -3617,7 +3468,7 @@ An important difference between these two forms is that @set will always evaluat
 The fourth form sets (or unsets) an attribute flag on the specified attribute. See [attribute flags].
 
 
-## See Also
+**See Also:**
 - [ATTRIB_SET]
 - [attrib_set()]
 - [set()]
@@ -3632,7 +3483,7 @@ The `&<attr>` and `@_<attr>` commands can be used to set or clear an attribute f
 ATTRIB_SET is the internal command which powers &attr and @_attr setting; it cannot be used directly, but can be restricted or @hook'd to change the behaviour of &attr/@_attr-setting.
 
 
-## See Also
+**See Also:**
 - [@set]
 - [attrib_set()]
 # @sex
@@ -3651,7 +3502,7 @@ Examples:
 ```
 
 
-## See Also
+**See Also:**
 - [GENDER]
 - [subj()]
 - [poss()]
@@ -3689,7 +3540,7 @@ If the `/player` switch is given, `<host-pattern>` is treated as a player name, 
 
 See [@sitelock2].
 
-## See Also
+**See Also:**
 - [WILDCARDS]
 - [REGEXPS]
 - [ipaddr()]
@@ -3764,7 +3615,7 @@ Options:
 Note that changing 'telnet' or 'pueblo' may stop your client from parsing or displaying output correctly; only use if you know what you're doing!
 
 
-## See Also
+**See Also:**
 - [SOCKET COMMANDS]
 - [terminfo()]
 - [Pueblo]
@@ -3774,7 +3625,7 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 `SOCKSET colorstyle=<value>`
 `@SOCKSET [me|<descriptor>]=colorstyle,<value>`
 
-You can override the color format you receive from PennMUSH. Normally, PennMUSH tries to guess what your client is capable of through telnet negotiation and your player flags. @sockset lets you inform PennMUSH that your client can support more colors than expected.
+You can override the color format you receive from SharpMUSH. Normally, SharpMUSH tries to guess what your client is capable of through telnet negotiation and your player flags. @sockset lets you inform SharpMUSH that your client can support more colors than expected.
 
 Colorstyle options are:
 
@@ -3782,12 +3633,12 @@ Colorstyle options are:
 - hilite: You only receive hilite text. No colors, just ansi-hilite.
 - 16color: You receive hilite text and the ANSI 16 colors.
 - xterm256: You receive xterm-style 256 colors for text and background.
-- auto: go back to what PennMUSH determined was your client's capabilities.
+- auto: go back to what SharpMUSH determined was your client's capabilities.
 
-In the event that your client receives a color that it is unable to display, PennMUSH will attempt to find a close match that can fit your client's capabilities.
+In the event that your client receives a color that it is unable to display, SharpMUSH will attempt to find a close match that can fit your client's capabilities.
 
 
-## See Also
+**See Also:**
 - [ANSI]
 - [COLOR]
 - [XTERM256]
@@ -3819,7 +3670,7 @@ Test
 ```
 
 
-## See Also
+**See Also:**
 - [say]
 - [pose]
 - [@emit]
@@ -3850,7 +3701,7 @@ Examples:
 ```
 
 
-## See Also
+**See Also:**
 - [@sql]
 - [sql()]
 - [sqlescape()]
@@ -3868,7 +3719,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [sql()]
 - [sqlescape()]
 - [mapsql()]
@@ -3883,7 +3734,7 @@ Sets the list of actions on `<object>` that will happen whenever the MUSH is res
 Note that @startups are NEVER inherited from parent objects.
 
 
-## See Also
+**See Also:**
 - [@restart]
 - [@undestroy]
 - [ACTION LISTS]
@@ -3913,7 +3764,7 @@ In the remaining forms, display statistics or histograms about the chunk (attrib
 The four command options can also be used as switches (i.e., you can use "`@sweep/connected`" instead of "`@sweep connected`"). If the connected flag is given, only connected players and puppets owned by connected players will be shown in the @sweep. The "here" and "inventory" flags check only your location or inventory, respectively. "exits" only checks for AUDIBLE exits.
 
 
-## See Also
+**See Also:**
 - [@scan]
 # @switch
 # @select
@@ -3943,7 +3794,7 @@ When using `@switch/inline`, an @break in an `<action>` will stop the calling ac
 
 See [@switch3] for examples.
 
-## See Also
+**See Also:**
 - [SWITCH WILDCARDS]
 - [switch()]
 - [@if]
@@ -4020,7 +3871,7 @@ Teleportation triggers the @oxtport/@tport/@otport/@atport attributes, unless `<
 As a special case, using "home" as the `<room>` has the same effect as the home command, and does not act like a normal teleport.
 
 
-## See Also
+**See Also:**
 - [JUMP_OK]
 - [NO_TEL]
 - [Z_TEL]
@@ -4072,7 +3923,7 @@ Walker slaps himself around with a trout
 
 See [@trigger3] for examples.
 
-## See Also
+**See Also:**
 - [@include]
 - [ufun()]
 - [VERBS]
@@ -4121,7 +3972,7 @@ To only lock who can use $-commands, use `@lock/command`. To only lock who can t
 Example: if I want everyone but Bob to be able to use my toy, I would "`@lock/use toy=!*Bob`". If I want only Bob to be able to use it, I would "`@lock/use toy==*Bob`".
 
 
-## See Also
+**See Also:**
 - [@lock]
 - [use]
 - [locktypes]
@@ -4137,7 +3988,7 @@ While the exact statistics displayed depends on the operating system of the game
 Under Linux, memory usage is split into a number of different categories including shared libraries, resident set size, stack size, and some other figures. Also under linux, more information on signals is printed.
 
 
-## See Also
+**See Also:**
 - [@stats]
 - [@list]
 # @unlink
@@ -4149,7 +4000,7 @@ The first form of this command unlinks an exit from its destination room. Unlink
 The second form removes the DROP-TO on the room.
 
 
-## See Also
+**See Also:**
 - [@link]
 - [DROP-TO]
 # @unlock
@@ -4158,7 +4009,7 @@ The second form removes the DROP-TO on the room.
 Removes the lock on `<object>`. It can take as many switches as @lock can.
 
 
-## See Also
+**See Also:**
 - [@lock]
 - [locktypes]
 # @version
@@ -4167,7 +4018,7 @@ Removes the lock on `<object>`. It can take as many switches as @lock can.
 Tells the player the name of the MUSH, which version of the code is currently running on the system, when it was compiled, and when the last restart was. It may also include some other information, including the MUSH's website address and the GIT revision, if available.
 
 
-## See Also
+**See Also:**
 - [version()]
 - [numversion()]
 # @verb
@@ -4190,7 +4041,7 @@ In order to use this command, at least one of the following criterion must apply
 
 See [@verb3] for examples.
 
-## See Also
+**See Also:**
 - [USER-DEFINED COMMANDS]
 - [STACK]
 - [VERBS]
@@ -4243,7 +4094,7 @@ The third form combines the first two: the enactor will execute `<command_list>`
 More forms that support semaphores on arbitrary attributes are described in [@wait2].
 
 
-## See Also
+**See Also:**
 - [SEMAPHORES]
 - [@drain]
 - [@notify]
@@ -4280,7 +4131,7 @@ You must control the object doing the wait, or have the halt @power.
 The message is prefixed with the value of the wall_prefix, rwall_prefix or wizwall_prefix options, depending on the command used.
 
 
-## See Also
+**See Also:**
 - [@wizwall]
 - [@rwall]
 # @warnings
@@ -4294,7 +4145,7 @@ For a list of warnings, see [warnings list].
 For examples, see [@warnings2].
 
 
-## See Also
+**See Also:**
 - [@wcheck]
 - [NO_WARN]
 # @warnings2
@@ -4323,7 +4174,7 @@ The second form of the command runs @wcheck on every object in the database and 
 The third runs it on all objects the player owns that aren't set NO_WARN.
 
 
-## See Also
+**See Also:**
 - [@warnings]
 - [WARNINGS]
 - [NO_WARN]
@@ -4340,7 +4191,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [UNFINDABLE]
 - [loc()]
 # @wipe
@@ -4359,7 +4210,7 @@ Emits a message to all rooms in `<zone>`. You must have control `<zone>` in orde
 The `/silent` switch suppresses the confirmation message, and `/noisy` causes it to be shown. With neither switch, the silent_pemit @config option determines whether or not the message is shown. The confirmation message is only shown if you are not in a room which would receive `<message>`.
 
 
-## See Also
+**See Also:**
 - [@nszemit]
 - [zemit()]
 - [zone()]
@@ -4379,7 +4230,7 @@ This command works like an abbreviated version of "examine", showing information
 `<object>` defaults to "here".
 
 
-## See Also
+**See Also:**
 - [examine]
 # cd
 # ch
@@ -4397,7 +4248,7 @@ Connecting using 'cv' causes the Dark flag to be cleared prior to connection mes
 None of those commands affect the hidden status of other connections, if you're reconnecting.
 
 
-## See Also
+**See Also:**
 - [DARK]
 - [@hide]
 # OUTPUTPREFIX
@@ -4414,7 +4265,7 @@ This command does nothing. It does not reset a connection's idle time. It is use
 Some routers will only consider a connection alive if text is received, as well as sent. If you give a `<string>` with the IDLE command, that same `<string>` will be sent back to you for this purpose.
 
 
-## See Also
+**See Also:**
 - [KEEPALIVE]
 - [@idle]
 # teach
@@ -4444,7 +4295,7 @@ You say, "Third"
 ```
 
 
-## See Also
+**See Also:**
 - [@trigger]
 - [@include]
 # drop
@@ -4455,7 +4306,7 @@ Drops `<object>`, if you are presently carrying it. If the room the object is dr
 In order to drop an object, you must pass it's Drop lock and your location's DropIn lock.
 
 
-## See Also
+**See Also:**
 - [empty]
 - [get]
 - [STICKY]
@@ -4485,7 +4336,7 @@ The `/all` switch shows the values of VEILED attributes.
 The `/opaque` switch omits contents listings.
 
 
-## See Also
+**See Also:**
 - [ATTRIBUTE TREES]
 - [brief]
 - [lattr()]
@@ -4496,7 +4347,7 @@ The `/opaque` switch omits contents listings.
 If you pass the object's follow lock, you begin following it. As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
 
 
-## See Also
+**See Also:**
 - [unfollow]
 - [dismiss]
 - [desert]
@@ -4512,7 +4363,7 @@ If you pass the object's follow lock, you begin following it. As the object move
 The dismiss command stops `<object>` from following you. If no object is given, it stops everyone from following you.
 
 
-## See Also
+**See Also:**
 - [follow]
 - [unfollow]
 - [desert]
@@ -4524,7 +4375,7 @@ The dismiss command stops `<object>` from following you. If no object is given, 
 The desert command stops `<object>` from following you and stops you from following `<object>`. That is, it's shorthand for 'unfollow `<object>`' and 'dismiss `<object>`'. If no object is given, it stops everyone from following or leading you.
 
 
-## See Also
+**See Also:**
 - [follow]
 - [unfollow]
 - [dismiss]
@@ -4538,7 +4389,7 @@ The empty command attempts to move all the contents of `<object>` to `<object>`'
 The empty command assumes that all `<object>`'s items pass through the hands of the player running the command. Therefore, the same kinds of locks and messages that are applied in a possessive get (and, possibly, a drop) are applied to each item in `<object>`. It is therefore possible to fail to empty an object for many reasons, even when you could do so using "extraphysical" methods (teleporting items, forcing the object to drop them, or forcing the items to leave the object.)
 
 
-## See Also
+**See Also:**
 - [get]
 - [drop]
 # get
@@ -4555,7 +4406,7 @@ To get an object from someone else's inventory, the possessive_get @config optio
 'take' is usually an alias for the 'get' command.
 
 
-## See Also
+**See Also:**
 - [@lock]
 - [ENTER_OK]
 - [give]
@@ -4579,7 +4430,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [buy]
 - [@pricelist]
 - [MONEY]
@@ -4604,7 +4455,7 @@ Example::
 ```
 
 
-## See Also
+**See Also:**
 - [buy]
 - [@buy]
 - [MONEY]
@@ -4629,7 +4480,7 @@ You enjoy a delicious coke.
 ```
 
 
-## See Also
+**See Also:**
 - [@BUY]
 - [@PRICELIST]
 - [give]
@@ -4645,7 +4496,7 @@ The first two forms of this command give `<number>` pennies to `<recipient>`. If
 The last two forms of this command give an `<object>` from your inventory to `<recipient>`. The recipient must be set ENTER_OK, and you must pass his @lock/from. You must also pass `<object>`'s @lock/give, and `<object>` must pass `<recipient>`'s @lock/receive. When you give an object successfully, your GIVE/OGIVE/AGIVE attributes, `<recipient>`'s RECEIVE/ORECEIVE/ARECEIVE attributes, and `<object>`'s SUCCESS/ASUCCESS/OSUCCESS attributes are all triggered.
 
 
-## See Also
+**See Also:**
 - [@pay]
 - [@cost]
 - [@lock]
@@ -4667,7 +4518,7 @@ Goes in the specified direction. `<Direction>` can be the name or alias of an ex
 'go home' is a special command that returns you to your home room/object.
 
 
-## See Also
+**See Also:**
 - [HOME]
 - [@link]
 - [@ealias]
@@ -4679,7 +4530,7 @@ Goes in the specified direction. `<Direction>` can be the name or alias of an ex
 This command returns some information about the MUSH you are on, such as its version number, time of last restart, number of players currently connected, and size of database. It can be issued from the connect screen.
 
 
-## See Also
+**See Also:**
 - [MSSP-REQUEST]
 # inventory
 `inventory`
@@ -4689,7 +4540,7 @@ Lists what you are carrying. Can be abbreviated by just 'i', or 'inv'. It also t
 Note that on some MUSHes it is possible to take things that are in someone else's inventory. To be safe, @lock any objects that you do not want to lose.
 
 
-## See Also
+**See Also:**
 - [score]
 - [take]
 - [drop]
@@ -4704,7 +4555,7 @@ The command leave allows you to exit an object you have enter'ed into. When you 
 The NO_LEAVE flag may be enabled on some MUSHes. Objects set with this flag cannot be left. @lock/leave may also be enabled on some MUSHes, which allows you to set who can leave the object. If you fail to leave, the object's @lfail/@olfail/@alfail messages/actions will be triggered.
 
 
-## See Also
+**See Also:**
 - [enter]
 - [@leave]
 - [@lfail]
@@ -4737,7 +4588,7 @@ If a room is set DARK, when you look you will not see any of the exits or conten
 'look' may be abbreviated 'l', and is sometimes aliased as 'read'.
 
 
-## See Also
+**See Also:**
 - [OPAQUE]
 - [FLAGS]
 - [@describe]
@@ -4784,7 +4635,7 @@ The `/override` switch is admin-only, and overrides pagelocks and HAVEN.
 The `/port` switch is admin-only, and will page a single port descriptor directly, including connections that have not yet logged into a player.
 
 
-## See Also
+**See Also:**
 - [@lock]
 - [@alias]
 - [@pageformat]
@@ -4811,7 +4662,7 @@ If you have a SPEECHMOD attribute set, it will be evaluated with `<action>` as %
 
 See [pose2] for examples.
 
-## See Also
+**See Also:**
 - [say]
 - [@emit]
 - [@speechmod]
@@ -4840,7 +4691,7 @@ If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` pas
 If `<message>` begins with a double-quote and the chat_strip_quote @config option is on, the leading " will be stripped.
 
 
-## See Also
+**See Also:**
 - [pose]
 - [whisper]
 - [@speechmod]
@@ -4852,7 +4703,7 @@ If `<message>` begins with a double-quote and the chat_strip_quote @config optio
 Displays how many pennies you have. Helpful to see if any machines are looping. If they are, your pennies will be being rapidly drained. MUSH money may also be used for other purposes in the game.
 
 
-## See Also
+**See Also:**
 - [LOOPING]
 - [@ps]
 - [QUEUE]
@@ -4866,7 +4717,7 @@ You can use this command to send a private message to yourself. Pronoun substitu
 One possible use: `@adesc me=think %n just looked at you.`
 
 
-## See Also
+**See Also:**
 - [@pemit]
 - [@@]
 # QUIT
@@ -4880,7 +4731,7 @@ Log out and leave the game. Must be in all capitals.
 This command stops you from following an object that you were formerly following. If no object is given, you stop following everyone you were following.
 
 
-## See Also
+**See Also:**
 - [follow]
 - [dismiss]
 - [desert]
@@ -4896,7 +4747,7 @@ This command attempts to "use" `<object>`. If you do not pass `<object>`'s @lock
 If you pass the lock, you will see `<object>`'s USE attribute, and others in your location will see `<object>`'s OUSE. Depending on `<object>`'s CHARGES attribute, one of `<object>`'s AUSE or RUNOUT attributes will be triggered - see [@charges] for more information.
 
 
-## See Also
+**See Also:**
 - [@use]
 - [@charges]
 - [@lock]
@@ -4919,7 +4770,7 @@ Example:
 ```
 
 
-## See Also
+**See Also:**
 - [huh_command]
 - [unimplemented_command]
 # UNIMPLEMENTED_COMMAND
@@ -4928,7 +4779,7 @@ This internal command is run when someone attempts to use an unimplemented comma
 By default, the command just shows the message "This command has not been implemented.", but you can @hook it to perform other actions.
 
 
-## See Also
+**See Also:**
 - [huh_command]
 - [warn_on_missing]
 - [@command]
@@ -4949,7 +4800,7 @@ With the `/noisy` switch, other players in the room may be informed who you whis
 The `/list` switch lets you whisper to multiple people at once. In this case, `<players>` is a space-separated list of names, and names with spaces should be enclosed in double-quotes, as per page/list.
 
 
-## See Also
+**See Also:**
 - [page]
 - [pose]
 - [@pemit]
@@ -4968,10 +4819,10 @@ If a `<pattern>` is given for either command, only connected players whose names
 
 See [who2].
 # WHO2
-In earlier versions of PennMUSH, WHO was a socket command (meaning only players could use it, and that while it could not be overwritten, you could use softcoded 'who' commands along side it which worked as long as they weren't typed in all upper-case). Existing games which have softcoded 'who' commands can maintain this feature by using an @hook/ignore on the WHO command, such as:
+Existing games which have softcoded 'who' commands can maintain separation from 'WHO' by using an @hook/ignore on the WHO command, such as:
 ```
-> &HOOK.WHO <object>=not(comp(left(%c,3),WHO))
-> @hook/ignore WHO=<object>,HOOK.WHO
+> &HOOK`WHO <object>=not(comp(left(%c,3),WHO))
+> @hook/ignore WHO=<object>,HOOK`WHO
 ```
 
 @hooks are not maintained across reboots, and should be placed into an @startup on a low-dbref object.
@@ -4979,7 +4830,7 @@ In earlier versions of PennMUSH, WHO was a socket command (meaning only players 
 Note: The WHO command available at the login screen is totally separate from the in-game WHO command, and is not affected by any changes to the in-game WHO. To alter that, use the WHO_FILE @config option.
 
 
-## See Also
+**See Also:**
 - [@doing]
 - [@poll]
 - [SESSION]
@@ -4989,7 +4840,7 @@ Note: The WHO command available at the login screen is totally separate from the
 The SESSION command is the same as the admin WHO, but instead of showing the hostname, it shows the number of bytes sent to, received from, and pending for each connection. `<pattern>` limits the output, only showing players whose name begins with `<pattern>`, or whose names or aliases match `<pattern>` if it's a wildcard pattern.
 
 
-## See Also
+**See Also:**
 - [WHO]
 # with
 `with[/room] <obj>=<command>`
@@ -4999,7 +4850,7 @@ Attempts to run a user-defined command on a specific object. If the `/room` swit
 `<obj>` must be an object near you, an object you control, your ZMO or (if the `/room` switch is given) the Master Room.
 
 
-## See Also
+**See Also:**
 - [USER-DEFINED COMMANDS]
 - [EVALUATION ORDER]
 # socket commands
@@ -5033,7 +4884,7 @@ The WHO command can also be used at the login screen. Please note that this is d
 This socket command shows some basic information about the MUSH, along with any admin-defined information specified in mush.cnf with the 'mssp' option. The info is also shown via the MSSP telnet option. Useful for MUD crawlers and bots. For more information about the MUD Server Status Protocol (MSSP), see http://tintin.sourceforge.net/mssp/
 
 
-## See Also
+**See Also:**
 - [INFO]
 # @SUGGEST
 `@suggest[/list]`
@@ -5056,6 +4907,6 @@ BIRD
 ```
 
 
-## See Also
+**See Also:**
 - [suggest()]
 

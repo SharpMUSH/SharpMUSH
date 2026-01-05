@@ -2,13 +2,13 @@
 This is the index to the MUSH online help files.
 
   For an explanation of the help system, type:    help newbie
-  For a walkthrough of PennMUSH systems, type:    help getting started
+  For a walkthrough of SharpMUSH systems, type:   help getting started
   For help finding the helpfile you want:         help helpfile
 
   For the list of MUSH commands, type:            help commands
   For the list of MUSH topics, type:              help topics
   For an alphabetical list of all help entries:   help entries
-  For information about PennMUSH:                 help code
+  For information about SharpMUSH:                help code
 
   For a list of flags:                            help flag list
   For a list of functions:                        help function list
@@ -17,7 +17,7 @@ This is the index to the MUSH online help files.
 
   On many MUSHes, list local commands with:       `+help`
 
-  If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/pennmush/pennmush/issues, which is the bug-tracking site for PennMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
+  If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
 
 # help search
 
@@ -54,7 +54,7 @@ This is the index to the MUSH online help files.
   To add more categories and commands (like 'news'), read "game/txt/README"
 
 
-## See Also
+**See Also:**
 - [textfile()]
 - [textentries()]
 - [textsearch()]
@@ -104,10 +104,7 @@ This is the index to the MUSH online help files.
 
   Please note that just because there is help available on a command does not necessarily mean that the command can be used on this MUSH. The siteadmin of the MUSH can choose to turn off some commands. If there's something that you would like available, and it isn't, please ask a wizard why not.
 
-  It is also highly recommended that any new player read the MUSH manual, written by Amberyl. It is available from http://download.pennmush.org/Manuals/
-
-
-## See Also
+**See Also:**
 - [Getting Started]
 
 # Getting Started
@@ -115,15 +112,15 @@ This is the index to the MUSH online help files.
 # GS
 
 # Walkthrough
-  This helpfile is a quick walkthrough of some of PennMUSH's standard systems. It uses the same syntax as the other helpfiles; if you're not familiar with the syntax of the PennMUSH helpfiles, please read [newbie] first, as it's explained there.
+  This helpfile is a quick walkthrough of some of SharpMUSH's standard systems. It uses the same syntax as the other helpfiles; if you're not familiar with the syntax of the SharpMUSH helpfiles, please read [newbie] first, as it's explained there.
 
   For help with getting around, please see [gs moving].
 
   To talk to people in the room with you, see [gs talking].
 
-  For a brief guide to the PennMUSH chat system, see [gs chat].
+  For a brief guide to the SharpMUSH chat system, see [gs chat].
 
-  For information on how to send and read mail using PennMUSH's built-in mail system, `@mail`, please type 'help gs mail'.
+  For information on how to send and read mail using SharpMUSH's built-in mail system, `@mail`, please type 'help gs mail'.
 
 # GS MOVING
   To see the room you're in, type 'look'. You'll probably see something similar to this (though some MUSHes customize the appearance of rooms):
@@ -150,7 +147,7 @@ This is the index to the MUSH online help files.
   It's also sometimes possible to teleport from one room to another, using the '`@teleport`' command. However, most new players on a game probably won't be able to do that - it's mentioned here only for completeness.
 
 
-## See Also
+**See Also:**
 - [goto]
 - [home]
 - [enter]
@@ -194,7 +191,7 @@ This is the index to the MUSH online help files.
   However, make sure you include your name somewhere, so people know who's talking.
 
 
-## See Also
+**See Also:**
 - [GS CHAT]
 - [say]
 - [pose]
@@ -204,7 +201,7 @@ This is the index to the MUSH online help files.
 # GS CHAT
 
 # GS CHANNELS
-  PennMUSH has a built-in channel system, which allows you to talk with players who are on the same channels as you, even if you're in different rooms.
+  SharpMUSH has a built-in channel system, which allows you to talk with players who are on the same channels as you, even if you're in different rooms.
 
   Most games have a number of different channels, either for discussing different subjects, or for different groups/factions of players to chat on.
 
@@ -232,20 +229,20 @@ This is the index to the MUSH online help files.
 
   There's much more you can do with the channel system - see [`@channel`] for the other commands.
 
-## See Also
+**See Also:**
 - [GS TALKING]
 - [@channel]
 - [@chat]
 
 # GS MAIL
-  PennMUSH has a built-in mail system that lets you send messages to players, even if they aren't online. You can keep mail you receive for as long as you like, and re-read it any time.
+  SharpMUSH has a built-in mail system that lets you send messages to players, even if they aren't online. You can keep mail you receive for as long as you like, and re-read it any time.
 
   To list all the messages you've received, type '`@mail`'. You'll see something like:
 ```
-   -------------------------  MAIL (folder  0)  ----------------------------
-   [-----]  0:1    One           Welcome!                   Wed Dec 08 09:57
-   [-----]  0:2   *Mike          Example Mail               Sat Dec 11 07:55
-   -------------------------------------------------------------------------
+-------------------------  MAIL (folder  0)  ----------------------------
+[-----]  0:1    One           Welcome!                   Wed Dec 08 09:57
+[-----]  0:2   *Mike          Example Mail               Sat Dec 11 07:55
+-------------------------------------------------------------------------
 ```
   The number after the ':' is the message number; to read that message, type '`@mail` `<number>`'.
 
@@ -262,7 +259,7 @@ This is the index to the MUSH online help files.
   You can do other, slightly more complex things with the mail system, too, like filing your messages into different folders. See [`@mail`] for more information.
 
 
-## See Also
+**See Also:**
 - [@mail]
 
 # topics
@@ -305,7 +302,7 @@ For a list of all topics, see [entries].
 
   See [action2]
 
-## See Also
+**See Also:**
 - [@-ATTRIBUTES]
 - [VERBS]
 - [$-COMMANDS]
@@ -332,7 +329,7 @@ For a list of all topics, see [entries].
 ```
 
 
-## See Also
+**See Also:**
 - [ATTRIBUTES]
 - [SUBSTITUTION]
 - [@asuccess]
@@ -350,7 +347,7 @@ For a list of all topics, see [entries].
   Note that the choice of which ancestor to look up is based on the type of the *child* object, as is the check of the ORPHAN flag. Also note that ancestors are *not* checked for `$-commands` or ^-commands; you should use the master room for global commands, instead.
 
 
-## See Also
+**See Also:**
 - [PARENTS]
 - [ORPHAN]
 
@@ -363,13 +360,13 @@ For a list of all topics, see [entries].
 # #APPLY
   In many cases where a function expects a object/attribute pair that refers to an attribute to evaluate, you can use the form
 
-  #lambda/<code>
+  `#lambda/\<code\>`
 
   instead, and the code will be treated as an attribute's body. The code will normally be parsed twice, so special characters should be escaped where needed.
 
   If the #lambda just calls one other function, the form
 
-  #apply[<number of arguments>]/<function name>
+  `#apply[\<number of arguments\>]/<function name>`
 
   can be used instead. If the argument count is left out, it defaults to 1.
 
@@ -389,7 +386,7 @@ For a list of all topics, see [entries].
   You say, "Joe Robert Sally"
 ```
 
-  The following version uses #apply instead:
+  The following version uses `#apply` instead:
 
 ```
   > say map(#apply/name, #3 #12 #23)
@@ -447,7 +444,7 @@ For a list of all topics, see [entries].
   You must control an object in order to set attributes on it.
 
 
-## See Also
+**See Also:**
 - [@atrlock]
 - [@atrchown]
 - [owner()]
@@ -477,7 +474,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   See [attributes2]
 
 # ATTRIBUTES2
-  An attribute is part of the code on an object that makes it unique. An attribute can contain any sort of text -- from a single word, to a long paragraph, to a piece of MUSHcode. Some attributes are standard in PennMUSH. That means that their effects are pre-set.
+  An attribute is part of the code on an object that makes it unique. An attribute can contain any sort of text -- from a single word, to a long paragraph, to a piece of MUSHcode. Some attributes are standard in SharpMUSH. That means that their effects are pre-set.
 
   Standard attributes can be set using one of the following commands:
     @`<attribute name>` `<object>`=`<content>`
@@ -507,7 +504,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   In addition to the standard attributes with pre-set effects, there are some special attributes that date from the days before you could set non-standard attributes with any name you wanted. These are the attributes VA-VZ, WA-WZ, XA-XZ. These attributes have no pre-set effects, and were just to allow players to store any text or MUSHcode that they wished in those attributes. Now that non-standard attributes are available, it is highly recommended that you instead use them, since you can use longer and descriptive names for attributes, which makes it much easier to examine and work on objects.
 
 
-## See Also
+**See Also:**
 - [ATTRIB-OWNERSHIP]
 - [@set]
 - [examine]
@@ -561,7 +558,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   (note: These rules only apply when a function expects a Boolean value, not for strings that expect other values.)
 
 
-## See Also
+**See Also:**
 - [BOOLEAN FUNCTIONS]
 - [not()]
 - [t()]
@@ -569,7 +566,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # CLIENTS
   Clients are special software programs that you can use to connect to MUSHes. They are usually much nicer to use than raw telnet and give you many additional features, such as larger text buffers (so you can type more), backscroll, history of previous commands, macros, and so on.
 
-  Here is a list of common clients and the web sites where they can be found.  Please note that the below sites are subject to change. The below are listed solely for your information and possible benefit. The developers of PennMUSH have nothing to do with the clients. Except for Potato, which is made by Mike. Not that this is a shameless plug. Noooo. Carry on.
+  Here is a list of common clients and the web sites where they can be found.  Please note that the below sites are subject to change. The below are listed solely for your information and possible benefit. The developers of SharpMUSH have nothing to do with the clients. Except for Potato, which is made by Mike. Not that this is a shameless plug. Noooo. Carry on.
 
   OPERATING
   SYSTEM          CLIENT      WEB SITE
@@ -607,7 +604,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   13. O does not control V
 
 
-## See Also
+**See Also:**
 - [controls()]
 - [TRUST]
 - [MISTRUST]
@@ -626,7 +623,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Type '`@config`/list costs' to get the costs for the MUSH you are on.
 
 
-## See Also
+**See Also:**
 - [MONEY]
 - [money()]
 - [score]
@@ -637,12 +634,12 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Past Porters: Nick Gammon [NJG] (win32), Dan Williams [DW] (MacOS), Sylvia (OS/2)
   Former developers: Rhyanna [RLM], Trivian [TN], Halatir [LdW], Talek [TAP], Javelin, Ervin Hearn III [EEH]
 
-  The original TinyMUSH 1.0 code was written by Lawrence Foard, and was based upon James Aspnes' TinyMUD server. Since then, the code has been modified by the programmers of MicroMUSE (then MicroMUSH), and Joseph Traub (Moonchilde of PernMUSH). From January 1992 to January 1995, Lydia Leong (Amberyl of PernMUSH / Polgara of Belgariad) maintained the code currently known as PennMUSH 1.50. From January 1995 until July 2006, Alan Schwartz (Paul of DuneMUSH / Javelin elsewhere) maintained this code, along with a development team. From July 2006 on, Raevnos has been the maintainer.
+  The original TinyMUSH 1.0 code was written by Lawrence Foard, and was based upon James Aspnes' TinyMUD server. Since then, the code has been modified by the programmers of MicroMUSE (then MicroMUSH), and Joseph Traub (Moonchilde of PernMUSH). From January 1992 to January 1995, Lydia Leong (Amberyl of PernMUSH / Polgara of Belgariad) maintained the code currently known as SharpMUSH 1.50. From January 1995 until July 2006, Alan Schwartz (Paul of DuneMUSH / Javelin elsewhere) maintained this code, along with a development team. From July 2006 on, Raevnos has been the maintainer.
 
   Big thanks to the developers of TinyMUSH 2.0, 2.2 [2.2], 3.0 [3], MUX2, and Rhost [Rhost] servers, as well as to the players of Belgariad MUSH, DuneMUSH, and M*U*S*H, and everyone else using this server!
 
 
-## See Also
+**See Also:**
 - [code]
 - [license]
 
@@ -676,7 +673,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The dbref number is indicated by the number/pound sign (#). Cyclonus's dbref is #3. The letters following the dbref are the abbreviations of the flags set on the object. NOTE: the abbreviation of the OPAQUE flag is 'O' (o), which looks like '0' (zero) on some clients. Make sure you have the right number before using it in your code!
 ```
 
-## See Also
+**See Also:**
 - [MYOPIC]
 - [OPAQUE]
 - [MUSHCODE]
@@ -694,7 +691,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The `objid()` function returns the object id of an object, and the %: substitution evaluates to the objid of the enactor.
 
 
-## See Also
+**See Also:**
 - [objid()]
 - [@lock-objid]
 - [DBREFS]
@@ -712,7 +709,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   If the room has a `@lock`/dropto set on it, only objects that pass the lock will be transported (either immediately or when the last player leaves if the room is STICKY). This can be used to prevent the dropto from acting on, say, objects containing connected players.
 
 
-## See Also
+**See Also:**
 - [@link]
 - [STICKY]
 - [LINK_OK]
@@ -742,7 +739,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   If, for example, you have an `@osuccess` on an object that includes the %n subtitution, whenever someone picks up the object, that %n will evaluate to the name of the enactor (the person who typed 'get `<object>`' in this case).
 
 
-## See Also
+**See Also:**
 - [EXECUTOR]
 - [CALLER]
 - [SUBSTITUTIONS]
@@ -767,7 +764,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   In the first case, Cyclonus directly entered the command and was therefore both the enactor and the executor. In the second, Cyclonus set off the command on the box, so Cyclonus was still the enactor, but the box was the object that was actually doing the `@emit`, and was thus the executor.
 
 
-## See Also
+**See Also:**
 - [ENACTOR]
 - [CALLER]
 - [SUBSTITUTIONS]
@@ -789,7 +786,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     > &wizfun Foo=if(hasflag(%@, Wizard), ufun(wizfun2), #-1 Sorry)
 ```
 
-## See Also
+**See Also:**
 - [ENACTOR]
 - [EXECUTOR]
 
@@ -828,7 +825,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Because local `$-commands` overrule global `$-commands`, you can easily prevent a global `$-command` from working in a specific room by setting a copy of the global `$-command` in that room. Alternatively, if a global `$-command` is oddly not working in a room, you should check for copies of the command word in the room (using `@scan`). Wizards who want to ensure a global `$-command` always takes precedence over a local one should use `@command`/add and `@hook`/override, to make the command run as a regular game command instead of a softcoded global.
 
 
-## See Also
+**See Also:**
 - [@command]
 - [@hook]
 - [$-commands]
@@ -844,7 +841,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   See [@lock]
 
 
-## See Also
+**See Also:**
 - [verbs]
 - [@lock]
 - [@failure]
@@ -852,7 +849,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [@lfail]
 
 # failure2
-  The following failures are defined in PennMUSH:
+  The following failures are defined in SharpMUSH:
 
   Failure to...                                 Lock     Attribute
   --------------------------------------------- -------- --------------------
@@ -884,7 +881,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The `obj()`, `subj()`, `poss()` and `aposs()` functions return different pronouns for an object based on its `@sex`, and the %o, %s, %p and %a substitutions return the same pronouns for the enactor.
 
 
-## See Also
+**See Also:**
 - [@sex]
 - [SUBSTITUTION]
 
@@ -894,7 +891,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   A command is "global" if it can be used anywhere in the world of the MUSH. The standard/built-in MUSH commands are all global, so this term is usually used to refer to user-defined commands on objects in the Master Room of the MUSH. Global commands very greatly from MUSH to MUSH, but you can usually find MUSH-specific help on them by typing "`+help`".
 
 
-## See Also
+**See Also:**
 - [MASTER ROOM]
 - [USER-DEFINED COMMANDS]
 - [EVALUATION ORDER]
@@ -907,7 +904,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 ```
 
 
-## See Also
+**See Also:**
 - [MATCHING]
 
 # HOMES
@@ -929,7 +926,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The home of a room is its drop-to.
 
 
-## See Also
+**See Also:**
 - [DROP-TOS]
 - [@link]
 - [STICKY]
@@ -968,7 +965,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   (The filters will keep people on the outside from seeing the 'o' messages and people on the inside from seeing the 'ox' messages which is a good thing.)
 
 
-## See Also
+**See Also:**
 - [enter]
 - [leave]
 - [@prefix]
@@ -987,7 +984,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   These attributes show the last times you connected and disconnected from the MUSH.
 
 
-## See Also
+**See Also:**
 - [LASTSITE]
 
 # LASTSITE
@@ -998,7 +995,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The LASTSITE attribute gives the name of the site you last connected from. The LASTIP attribute gives the IP address you last connected from. Mortals cannot set them.
 
 
-## See Also
+**See Also:**
 - [LAST]
 
 # LINKING
@@ -1006,7 +1003,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   You can link to a room if you control it, or if it is set LINK_OK or ABODE. Being able to link means you can set the homes of objects or yourself to that room if it is set ABODE, and can set the destination of exits to that room if it is LINK_OK.
 
 
-## See Also
+**See Also:**
 - [LINK_OK]
 - [ABODE]
 - [@link]
@@ -1063,7 +1060,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Listen patterns are checked after the object's normal `@listen` attribute.
 
 
-## See Also
+**See Also:**
 - [@listen]
 - [@ahear]
 - [@amhear]
@@ -1086,7 +1083,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   is NOT a typical one).
 
 
-## See Also
+**See Also:**
 - [STRINGS]
 - [List Functions]
 - [ACTION LISTS]
@@ -1102,7 +1099,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The `@retry` and `@include` commands, and %= substitution, can also be useful for building code which needs to loop.
 
 
-## See Also
+**See Also:**
 - [@ps]
 - [HALT]
 - [COSTS]
@@ -1115,7 +1112,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The Master Room enables global commands and exits. Exits in the Master Room may be used from any location on the MUSH. All objects left in the Master Room are checked for user-defined `$-commands`. Those `$-commands` are considered global, meaning that they can be used anywhere on the MUSH. Normally, only wizards will have access to the Master Room; if you have a global command that you would like to see enabled for the MUSH, speak to a wizard.
 
 
-## See Also
+**See Also:**
 - [EVALUATION]
 - [GLOBAL COMMANDS]
 
@@ -1127,7 +1124,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   4) set your gender:                   `@sex` me=`<male|female|neuter|plural>`
 
 
-## See Also
+**See Also:**
 - [NEWBIE]
 - [@lock]
 - [@describe]
@@ -1142,7 +1139,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The "score" command tells you how many pennies you have.
 
 
-## See Also
+**See Also:**
 - [COSTS]
 - [give]
 - [@cost]
@@ -1184,7 +1181,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   You can use !`<value>` to remove something, so 'everywhere !who' shows monikers everywhere except in WHO, '!everywhere !alltypes' will disable them entirely, etc.
 
 
-## See Also
+**See Also:**
 - [@moniker]
 - [moniker()]
 - [MONIKER]
@@ -1201,8 +1198,8 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 # MUSHCODE2
 
-  If you would like to learn more about MUSHcoding and how to create `$-commands` for yourself, the following help files may be useful. You may also find it useful to download a copy of Amberyl's MUSH manual and follow the examples described there. However, the manual is quite old now, and some parts may no longer be relevant or entirely accurate. The manual is available for download at http://download.pennmush.org/Manuals/
-
+  If you would like to learn more about MUSHcoding and how to create `$-commands` for yourself, the following help files may be useful. You may also find it useful to download a copy of Amberyl's MUSH manual and follow the examples described there. However, the manual is quite old now, and some parts may no longer be relevant or entirely accurate. 
+  
   Related Help Topics (in no particular order)
   -------------------
   - [ATTRIBUTES]
@@ -1230,7 +1227,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   You can get the value of attributes using the functions `v()`, `get()`, and `xget()`. You can evaluate attributes using `u()`, `eval()`, and `get_eval()`. All attributes can be used in attribute locks and can be 'owned' independent of object ownership.
 
 
-## See Also
+**See Also:**
 - [ATTRIBUTES]
 - [ATTRIB-OWNERSHIP]
 - [Attribute Functions]
@@ -1304,7 +1301,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Locks can also be inherited, but are flagged no-inherit by default. Use `@lset` to change that on a per-lock basis.
 
 
-## See Also
+**See Also:**
 - [@parent]
 - [$-COMMANDS]
 - [ATTRIBUTES]
@@ -1337,7 +1334,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Punch> The Finishing Place
   Punch>
   Punch> Obvious exits:
-  Punch> Door <S>
+  Punch> Door \<S\>
   > @force #18=:waves hello
   Punch> Punch waves hello
   > #18 say Hello.
@@ -1347,7 +1344,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   To have an object relay things it hears to players other than its owner, use `@forwardlist`.
 
 
-## See Also
+**See Also:**
 - [PUPPET]
 - [@force]
 - [DBREF]
@@ -1374,12 +1371,12 @@ See [queue2]
 
   Normally each object has its own queue count, but if the 'owner_queues' option is enabled, objects share a queue count with their owner.
 
-  'queue_chunk' controls how many commands PennMUSH runs before checking again for incoming socket commands or connections.
+  'queue_chunk' controls how many commands SharpMUSH runs before checking again for incoming socket commands or connections.
 
   It costs a certain number of pennies to queue an action list; the exact amount is set in the 'queue_cost' `@config` option. These pennies are returned after the action list is run. Sometimes, you'll lose a penny when queueing a command; the chance of this happening is controlled by the 'queue_loss' option.
 
 
-## See Also
+**See Also:**
 - [@ps]
 - [LOOPING]
 - [ACTION LISTS]
@@ -1394,7 +1391,7 @@ See [queue2]
   You can view your current quota with the `@quota` command. Wizards can adjust a specific player's quota qith the `@squota` command, and God can see or alter all players' quotas with `@allquota`.
 
 
-## See Also
+**See Also:**
 - [@quota]
 - [quota()]
 - [Quotas Power]
@@ -1430,11 +1427,11 @@ See [queue2]
   Regular expression syntax is explained in [regexp syntax].
 
 # REGEXP SYNTAX
-  PennMUSH uses PCRE for its regular expression engine. PCRE is an open source library of functions to support regular expressions whose syntax and semantics are as close as possible to those of the Perl 5 language. The text below is excerpted from its man page. PCRE was written by Philip Hazel <ph10@cam.ac.uk>, and is Copyright (c) 1997-1999 University of Cambridge, England. You can find it at ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/
+  SharpMUSH uses PCRE for its regular expression engine. PCRE is an open source library of functions to support regular expressions whose syntax and semantics are as close as possible to those of the Perl 5 language. The text below is excerpted from its man page. PCRE was written by Philip Hazel <ph10@cam.ac.uk>, and is Copyright (c) 1997-1999 University of Cambridge, England. You can find it at ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/
 
-  (Note that in PennMUSH, if the regular expression is in an eval'd context (like an argument to regmatch), you'll have to do a lot of escaping to make things work right. One way to escape an argument like %0 is: regeditall(%0,\\W,\\$0) or similar).
+  (Note that in SharpMUSH, if the regular expression is in an eval'd context (like an argument to regmatch), you'll have to do a lot of escaping to make things work right. One way to escape an argument like %0 is: regeditall(%0,\\W,\\$0) or similar).
 
-  Regular expression matching in PennMUSH can be used on user-defined command or listen patterns. In this usage, regular expressions are matched case-insensitively unless the attribute has the CASE flag set. Regular expressions can also be matched in MUSHcode using `regmatch()`, `regrab()`, regedit, etc. function families, which usually come in case-sensitive and case-insensitive versions.
+  Regular expression matching in SharpMUSH can be used on user-defined command or listen patterns. In this usage, regular expressions are matched case-insensitively unless the attribute has the CASE flag set. Regular expressions can also be matched in MUSHcode using `regmatch()`, `regrab()`, regedit, etc. function families, which usually come in case-sensitive and case-insensitive versions.
 
   See [regexp syntax2]
 
@@ -1596,7 +1593,7 @@ See [queue2]
   Please see [`setq()`] for more information about the setq registers.
 
 
-## See Also
+**See Also:**
 - [SUBSTITUTIONS]
 - [@trigger]
 - [USER-DEFINED COMMANDS]
@@ -1616,7 +1613,7 @@ See [queue2]
   This attribute tracks remaining building quota if it is implemented. It is settable in-game only by a wizard, and is only visible to wizards.
 
 
-## See Also
+**See Also:**
 - [@quota]
 - [@squota]
 
@@ -1690,7 +1687,7 @@ See [queue2]
   See [semaphores6]
 
 
-## See Also
+**See Also:**
 - [@wait]
 - [@drain]
 - [@notify]
@@ -1730,7 +1727,7 @@ See [queue2]
   Empty attributes retain their flags and atrlock status. Wiped attributes are gone forever.
 
 
-## See Also
+**See Also:**
 - [ATTRIBUTES]
 - [NON-STANDARD ATTRIBUTES]
 - [@set]
@@ -1748,7 +1745,7 @@ See [queue2]
   Some @*emit commands also take a /spoof switch, which causes nospoof information to show that sound originated from the enactor (%#) instead of the executor (%!). This switch allows staff to write global `$-commands` for speech which show more helpful nospoof tags.
 
 
-## See Also
+**See Also:**
 - [@emit]
 - [@pemit]
 - [@remit]
@@ -1762,7 +1759,7 @@ See [queue2]
   When using regexp `$-commands` with named subpatterns, the named arguments can be accessed via r(`<name>`, args).
 
 
-## See Also
+**See Also:**
 - [REGISTERS]
 - [r()]
 - [v()]
@@ -1773,7 +1770,7 @@ See [queue2]
         Foozle 09blert bar baz foo.
 
 
-## See Also
+**See Also:**
 - [string functions]
 
 # %
@@ -1853,13 +1850,13 @@ See [queue2]
     %= = The dbref/attribute currently being evaluated
     %+ = The number of arguments passed to the current ufun.
     %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function
-    %q`<N>` = the equivalent of r(N) for a named register set by the `setq()` function
+    %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function
     %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.
     %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 
   See [substitutions4]
 
-## See Also
+**See Also:**
 - [EVALUATION]
 - [ENACTOR]
 - [EXECUTOR]
@@ -1895,7 +1892,7 @@ See [queue2]
   Many other actions can also be locked - see `@lock` and locktypes for more information. Many of these actions have standard attributes that you can set messages in for when someone succeeds.
 
 
-## See Also
+**See Also:**
 - [FAILURE]
 - [@lock]
 - [VERBS]
@@ -1935,7 +1932,7 @@ See [queue2]
   The `@stats` command lists how many objects of each type currently exits in the database.
 
 
-## See Also
+**See Also:**
 - [type()]
 - [hastype()]
 
@@ -1945,7 +1942,7 @@ See [queue2]
   `@linking` a player sets their home.
 
 
-## See Also
+**See Also:**
 - [TYPES OF OBJECTS]
 - [type()]
 - [hastype()]
@@ -1957,7 +1954,7 @@ See [queue2]
   `@linking` a room creates a drop-to. Rooms have no location; `loc()` on a room returns its drop-to (as does `home()`).
 
 
-## See Also
+**See Also:**
 - [TYPES OF OBJECTS]
 - [type()]
 - [hastype()]
@@ -1970,7 +1967,7 @@ See [queue2]
   `@linking` a thing sets its home.
 
 
-## See Also
+**See Also:**
 - [TYPES OF OBJECTS]
 - [type()]
 - [hastype()]
@@ -1986,7 +1983,7 @@ See [queue2]
   Sound is propagated through exits which are set AUDIBLE, as long as their source room (home) is also set AUDIBLE.
 
 
-## See Also
+**See Also:**
 - [TYPES OF OBJECTS]
 - [type()]
 - [hastype()]
@@ -2001,7 +1998,7 @@ See [queue2]
   The total number of garbage objects, and the next garbage object to be recycled, is shown in `@stats`. You can use lsearch(all,type,garbage) to get a list of all garbage dbrefs.
 
 
-## See Also
+**See Also:**
 - [@destroy]
 - [@stats]
 
@@ -2023,7 +2020,7 @@ See [queue2]
 
   Such attributes can also be `@triggered` as if the $`<command name>`: did not exist.
 
-  It is recommended that `<command pattern>` not begin with "@", as many of PennMUSH's built-in commands start with "@". Conventionally, global `$-commands` are often named with the "+" prefix, and local `$-commands` commonly have a "+" or "." prefix.
+  It is recommended that `<command pattern>` not begin with "@", as many of SharpMUSH's built-in commands start with "@". Conventionally, global `$-commands` are often named with the "+" prefix, and local `$-commands` commonly have a "+" or "." prefix.
 
   See [user-defined2]
 
@@ -2047,7 +2044,7 @@ See [queue2]
   *BE SURE TO `@LOCK`/USE ME==ME IF YOU SET `$-COMMANDS` ON YOURSELF!*
 
 
-## See Also
+**See Also:**
 - [GLOBAL COMMANDS]
 - [EVALUATION ORDER]
 - [STACK]
@@ -2091,7 +2088,7 @@ See [queue2]
     Foo has been used by Sketch!
 ```
 
-## See Also
+**See Also:**
 - [@verb]
 - [attribute flags]
 
@@ -2136,7 +2133,7 @@ See [queue2]
 # ?
 
 # **
-  PennMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
+  SharpMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
 
 ```
     > &cmd.wave me=$wave *: pose waves.
@@ -2166,7 +2163,7 @@ See [queue2]
   It's also possible to use regular expressions, rather than wildcards, for matching strings. Regexps allow a lot more control over what is matched, but are therefore somewhat more complex. See [regexp] for details.
 
 
-## See Also
+**See Also:**
 - [USER-DEFINED COMMANDS]
 - [REGEXP]
 - [STACK]
@@ -2181,7 +2178,7 @@ See [queue2]
   Zone Master Rooms are useful either if you need global exits for the zone, or if the zone has a lot of `$-commands` which need to be restricted to different groups, as they can go on separate use-locked objects.
 
 
-## See Also
+**See Also:**
 - [ZONES]
 - [MASTER ROOM]
 - [EVALUATION]
@@ -2209,7 +2206,7 @@ See [queue2]
   2. If local wizards are desired, a shared player may be created and zone locked to the local wizards. Players building within that zone should be `@chowning` to the shared player, or logged in as it while creating objects. The local wizard will then be able to control anything within that domain as long as the object in question is owned by the shared player.
 
 
-## See Also
+**See Also:**
 - [SHARED]
 - [@lock]
 - [ZMO]
@@ -2239,7 +2236,7 @@ See [queue2]
   If you want restricted global commands defined over only a small area, you can define that area to be part of a zone, and place the desired `$-commands` upon the ZMO. If you want players to be able to use special commands for a culture they belong to, the `$-commands` should go on the ZMO, and the players `@chzoned` to it so they can use the commands anywhere.
 
 
-## See Also
+**See Also:**
 - [@chzone]
 - [SHARED PLAYERS]
 
@@ -2328,7 +2325,7 @@ This is the AHELP index.
     > @command/restrict @emit=!flag^suspect&!flag^gagged
 ```
 
-## See Also
+**See Also:**
 - [@command]
 - [@function]
 - [@attribute]
@@ -2342,7 +2339,7 @@ This is the AHELP index.
   Several commands and functions take a descriptor as an argument, or return the descriptor(s) associated with a player's connection.
 
 
-## See Also
+**See Also:**
 - [WHO]
 - [ports()]
 - [lports()]
@@ -2352,7 +2349,7 @@ This is the AHELP index.
 
 # UNICODE
 
-At the moment, PennMUSH has very minimal support for Unicode. Almost all text is treated internally as being in the Latin-1 character set. Clients that support telnet character set negotiation can send and receive UTF-8, but only characters in the Basic Latin and Latin-1 Supplement blocks are accepted (Others are replaced with question marks).
+At the moment, SharpMUSH has very minimal support for Unicode. Almost all text is treated internally as being in the Latin-1 character set. Clients that support telnet character set negotiation can send and receive UTF-8, but only characters in the Basic Latin and Latin-1 Supplement blocks are accepted (Others are replaced with question marks).
 
 A few functions support Unicode-aware text transformations:
 

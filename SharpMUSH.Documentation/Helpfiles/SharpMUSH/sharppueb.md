@@ -5,7 +5,7 @@ Pueblo is a client made by Chaco (a now defunct company). It attempts to mix HTM
 SharpMUSH will automatically detect a Pueblo client (rather, the client will announce itself and SharpMUSH will detect that), and set up that connection for Pueblo use. 
 
 
-## See Also
+**See Also:**
 - [pueblo2]
 
 # PUEBLO2
@@ -13,7 +13,6 @@ SharpMUSH will automatically detect a Pueblo client (rather, the client will ann
 SharpMUSH makes the following enhancements visible to Pueblo users when Pueblo support is enabled:
 
 * Object/Room names are highlighted
-* Support for VRML graphics
 * Unordered list for contents and transparent exits
 * Contents and exits lists have links (Click an exit to walk through it)
 * Object lists (like the ones found in 'examine'/'inventory') have links
@@ -26,7 +25,7 @@ While Pueblo brings a number of new features and markups to MUSHes, in many ways
 ```
 
 
-## See Also
+**See Also:**
 - [- [pueblo()]
 - [HTML Functions]
 
@@ -39,7 +38,7 @@ The only HTML implementation supported by the MUSH is the one supported by Puebl
 HTML tags are stripped when sent to non-HTML capable players.
 
 
-## See Also
+**See Also:**
 - [- [HTML Functions]
 - [PUEBLO]
 - [html()]
@@ -55,28 +54,12 @@ If used on a player/descriptor which is not connected, pueblo() returns #-1 NOT 
 When used with a *<player>* argument, the most recently active connection is used if the *<player>* is logged in more than once.
 
 
-## See Also
+**See Also:**
 - [- [terminfo()]
 - [html()]
 - [PUEBLO]
 
-# @VRML_URL
-# VRML_URL
-# VRML
-
-`@vrml_url <object>[=<url>]`
-
-The VRML_URL attribute provides an object (usually a room) with a VRML world. When someone using a Pueblo-enabled client looks at the object, the VRML World listed in @VRML_URL will be loaded.
-
-Example:
-```
-> @vrml_url here=http://www.pennmush.org/pennmush.vrml
-```
-
-To learn about the VRML Format, have a look at the Pueblo Help, which mentions several good sites for learning.
-
-
-## See Also
+**See Also:**
 - [- [HTML]
 - [PUEBLO]
 
@@ -93,15 +76,15 @@ Available functions:
 
 Examples:
 ```
-> say html(a href="http://www.pennmush.org")SharpMUSH[html(/a)]
-> say tag(a,href="http://www.pennmush.org")SharpMUSH[endtag(a)]
-> say tagwrap(a,href="http://www.pennmush.org",SharpMUSH)
-> say wshtml(<a href="http://www.pennmush.org">SharpMUSH</a>)
+> say html(a href="https://sharpmush.com")SharpMUSH[html(/a)]
+> say tag(a,href="https://sharpmush.com")SharpMUSH[endtag(a)]
+> say tagwrap(a,href="https://sharpmush.com",SharpMUSH)
+> say wshtml(<a href="https://sharpmush.com">SharpMUSH</a>)
 ```
 
 Each of these produces the HTML output:
 ```
-<a href="http://www.pennmush.org">SharpMUSH</a>
+<a href="https://sharpmush.com">SharpMUSH</a>
 ```
 
 Mortals are restricted in the tags they may use. Most standard HTML tags are ok; protocol-specific tags like SEND and XCH_CMD can only be sent by Wizards or those with the Send_OOB @power.
@@ -119,13 +102,13 @@ Example:
 
 Will output (in HTML):
 ```
-<b>Foo</b>
+\<b\>Foo</b>
 ```
 
 Non-wizards should see the tag(), endtag(), and tagwrap() functions, which are similar but can be used by mortals.
 
 
-## See Also
+**See Also:**
 - [- [PUEBLO]
 - [HTML]
 - [HTML Functions]
@@ -140,16 +123,16 @@ This function outputs the named HTML/Pueblo tag with the given paramaters.
 
 Example:
 ```
-tag(img,src="http://www.pennmush.org/image.jpg",align="left",width="300")
+tag(img,src="https://sharpmush.com/image.jpg",align="left",width="300")
 ```
 
 Will output (in HTML):
 ```
-<img src="http://www.pennmush.org/image.jpg" align="left" width="300">
+<img src="https://sharpmush.com/image.jpg" align="left" width="300">
 ```
 
 
-## See Also
+**See Also:**
 - [- [endtag()]
 - [tagwrap()]
 - [html()]
@@ -171,7 +154,7 @@ Will output (in HTML):
 ```
 
 
-## See Also
+**See Also:**
 - [- [tag()]
 - [tagwrap()]
 - [html()]
@@ -184,18 +167,18 @@ This function outputs *<string>*, wrapped in the *<name>* HTML/Pueblo tag with t
 
 Example:
 ```
-tagwrap(a,href="http://download.pennmush.org",SharpMUSH Downloads)]
+tagwrap(a,href="https://sharpmush.com",SharpMUSH Downloads)]
 ```
 
 Will output (in HTML):
 ```
-<a href="http://download.pennmush.org">SharpMUSH Downloads</a>
+<a href="http://sharpmush.com">SharpMUSH Downloads</a>
 ```
 
 A particularly important use of this function is `tagwrap(pre, <string>)`. Because Pueblo works like an html browser, spaces and tabs are compressed to a single space. If you have code (a +who function, for example) that relies on exact spacing, surround its output with a tagwrap(pre,...) so that Pueblo will render it as "preformatted" text.
 
 
-## See Also
+**See Also:**
 - [- [tag()]
 - [endtag()]
 - [html()]
@@ -228,7 +211,7 @@ See [wsjson()] for help sending formatted JSON object strings to WebSocket clien
 See [@prompt] for information about sending telnet GOAHEAD prompts. Support for prompts depends on the WebSocket client. The example client above shows prompts on their own line, separating the input and output windows, but requires PROMPT_NEWLINES to be turned off.
 
 
-## See Also
+**See Also:**
 - [- [HTML Functions]
 - [json()]
 - [pueblo]
@@ -252,23 +235,23 @@ In both cases, the *<default string>* is shown as plain text if the recipient is
 For example, if one uses:
 
 ```
-@emit [wshtml(<a href="http://pennmush.org">SharpMUSH</a>,Go to http://pennmush.org)]
+@emit [wshtml(<a href="https://sharpmush.com">SharpMUSH</a>,Go to https://sharpmush.com)]
 ```
 
 then any players in the room with a WebSocket connection would see (rendered as HTML)
 
 ```
-<a href="http://pennmush.org">SharpMUSH</a>
+<a href="https://sharpmush.com">SharpMUSH</a>
 ```
 
 while non-WebSocket connections and listening objects would see
 
 ```
-Go to http://pennmush.org
+Go to https://sharpmush.com
 ```
 
 
-## See Also
+**See Also:**
 - [- [WebSockets]
 - [Pueblo]
 - [HTML Functions]

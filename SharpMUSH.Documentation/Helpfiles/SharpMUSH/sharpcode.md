@@ -1,3 +1,52 @@
+# code
+# contact
+SharpMUSH is developed by a team of developers whose names are listed in [changes]. Suggestions, comments, and bug reports are welcome.
+
+The main SharpMUSH web page is at http://sharpmush.com
+
+Report bugs and make suggestions at https://github.com/SharpMUSH/SharpMUSH/issues
+
+The SharpMUSH Discord is at https://discord.com/invite/jYErRbqaC9
+
+For information about downloading SharpMUSH, see [download].
+For information about changes in versions of the code, see [changes].
+
+# download
+The latest version of this MUSH code is available from https://github.com/SharpMUSH/SharpMUSH/releases. 
+
+# i18n
+# internationalization
+# locale
+# translation
+Internationalization support in SharpMUSH includes:
+* Support for (8-bit) locale-based character sets, including translation of iso-8859-1 accented characters to html entities for Pueblo, the `accent()` and `stripaccents()` functions, and the NOACCENTS flag.
+* Support for UTF-8 and UTF-16
+* Support for locale-based date/time formats
+* Support for locale-based message sets for translations of server messages. There are active translation teams (and you can join!) and several languages have practically complete translation files available.
+* Some support for locale-based string collation
+* The ability to alias command and function names, so you can generate a set of translated commands/functions.
+
+Most of these features get enabled by setting an appropriate environment variable in the SharpMUSH config.
+
+Unicode is not currently supported.
+
+# copyright
+# copyrite
+# license
+Copyright, License, and Credits for SharpMUSH 1.x.
+
+I. Copyrights
+
+SharpMUSH 1.x, Copyright (c) 2024, Harry Cordewener
+
+Some code used in this server may have been derived from the PennMUSH source code. PennMUSH is Copyright (c) 1995-2006, T. Alexander Popiel <talek@pennmush.org> and Shawn Wagner <raevnos@pennmush.org>.
+
+For more details, due to the derived copyrite of PennMUSH, see https://github.com/pennmush/pennmush/blob/master/COPYRITE.
+
+ *------------------------------------------------------------------------*
+
+II. License
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/

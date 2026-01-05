@@ -141,7 +141,7 @@ Output:
 - All structural elements (borders, bullets) use ANSI faint/dim styling for visual distinction
 - Output is proper MarkupString with embedded ANSI codes
 
-## See Also
+**See Also:**
 - [rendermarkdowncustom()]
 - [MARKUP]
 - [ANSI]
@@ -164,24 +164,24 @@ The function looks for attributes on `<object>` with specific names that define 
 
 **Supported Template Attributes:**
 
-- `RENDERMARKUP`H1` - Heading level 1 rendering
+- ``RENDERMARKUP`H1`` - Heading level 1 rendering
   - `%0` - The heading content (already formatted with base styles)
   
-- `RENDERMARKUP`H2` - Heading level 2 rendering
+- ``RENDERMARKUP`H2`` - Heading level 2 rendering
   - `%0` - The heading content (already formatted with base styles)
   
-- `RENDERMARKUP`H3` - Heading level 3 rendering
+- ``RENDERMARKUP`H3`` - Heading level 3 rendering
   - `%0` - The heading content (already formatted with base styles)
   
-- `RENDERMARKUP`CODEBLOCK` - Code block rendering
+- ``RENDERMARKUP`CODEBLOCK`` - Code block rendering
   - `%0` - The code content (plain text, newlines separated)
   
-- `RENDERMARKUP`LISTITEM` - List item rendering
+- ``RENDERMARKUP`LISTITEM`` - List item rendering
   - `%0` - Is ordered list? (1 for ordered, 0 for unordered)
   - `%1` - Item index (0-based)
   - `%2` - The list item content
   
-- `RENDERMARKUP`QUOTE` - Block quote rendering
+- ``RENDERMARKUP`QUOTE`` - Block quote rendering
   - `%0` - The quote content (already rendered)
 
 **Example Usage:**
@@ -270,7 +270,7 @@ Tasks
 - Returns `#-1 ERROR RENDERING MARKDOWN: <error>` if markdown parsing fails
 - Falls back to default rendering if template attribute evaluation fails
 
-## See Also
+**See Also:**
 - [rendermarkdown()]
 - [get()]
 - [u()]
