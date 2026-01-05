@@ -20,8 +20,19 @@ using LspRange = SharpMUSH.Library.Models.Range;
 namespace SharpMUSH.Implementation;
 
 /// <summary>
-/// Provides the parser.
+/// Provides the parser for MUSH commands and functions.
 /// Each call is Synchronous and Stateful at this time.
+/// 
+/// <para><b>Performance Optimizations:</b></para>
+/// <list type="bullet">
+/// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
+/// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string</description></item>
+/// <item><description>ParseInternal() consolidates parser/lexer creation to reduce code duplication</description></item>
+/// <item><description>Custom span-based streams (BufferedTokenSpanStream, AntlrInputStreamSpan) minimize allocations</description></item>
+/// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
+/// </list>
+/// 
+/// <para>For detailed optimization analysis, see PARSER_OPTIMIZATION_ANALYSIS.md</para>
 /// </summary>
 public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	LibraryService<string, FunctionDefinition> FunctionLibrary,

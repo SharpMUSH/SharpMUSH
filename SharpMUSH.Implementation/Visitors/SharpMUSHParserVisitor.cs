@@ -26,6 +26,22 @@ namespace SharpMUSH.Implementation.Visitors;
 /// This class implements the SharpMUSHParserBaseVisitor from the Generated code.
 /// If additional pieces of the parse-tree are added, the Generated project must be re-generated 
 /// and new Visitors may need to be added.
+/// 
+/// <para><b>Performance Optimizations:</b></para>
+/// <list type="bullet">
+/// <item><description>Services are injected via constructor and cached (not resolved per-visit)</description></item>
+/// <item><description>Helper methods reduce code duplication and improve performance:
+///   <list type="bullet">
+///     <item><description><c>GetContextText()</c> - Centralized context text extraction</description></item>
+///     <item><description><c>CreateDeferredEvaluation()</c> - Efficient lazy evaluation for NoParse functions</description></item>
+///     <item><description><c>AggregateResult()</c> - Optimized result aggregation with aggressive inlining</description></item>
+///   </list>
+/// </description></item>
+/// <item><description>ANTLR4 ParserRuleContext objects are reused when possible to reduce allocations</description></item>
+/// <item><description>String operations use MString/Span-based methods to avoid allocations</description></item>
+/// </list>
+/// 
+/// <para>For details on optimization patterns, see PARSER_OPTIMIZATION_ANALYSIS.md</para>
 /// </summary>
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
