@@ -20,7 +20,6 @@ public class MoveServiceTests
 	[Test]
 	public async ValueTask MoveServiceIsRegistered()
 	{
-		// Verify the service is properly registered in DI container
 		var service = WebAppFactoryArg.Services.GetRequiredService<IMoveService>();
 		await Assert.That(service).IsNotNull();
 	}

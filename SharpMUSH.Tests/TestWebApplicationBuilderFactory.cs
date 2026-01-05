@@ -39,14 +39,11 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		// Set Prometheus URL as environment variable so the PrometheusStrategyProvider will use ExternalStrategy
 		Environment.SetEnvironmentVariable("PROMETHEUS_URL", prometheusUrl);
 
-		// Ensure colors.json exists for the startup
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 		if (!File.Exists(colorFile))
 		{
-			// Create a minimal colors.json for testing if it doesn't exist
 			var tempColorFile = Path.Combine(Path.GetTempPath(), "colors.json");
 			File.WriteAllText(tempColorFile, "{}");
-			// Create symlink or copy to expected location
 			try
 			{
 				Directory.CreateDirectory(AppContext.BaseDirectory);
@@ -73,7 +70,6 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 				sc.RemoveAll<ISqlService>();
 				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString));
 				
-				// If a custom database name is provided, override the ArangoHandle
 				if (!string.IsNullOrEmpty(databaseName))
 				{
 					sc.RemoveAll<ArangoHandle>();
