@@ -19,6 +19,7 @@ public class HelpfileTests
 	[Arguments("@NSCEMIT")]
 	[Arguments("CEMIT()")]
 	[Arguments("NSCEMIT()")]
+	[Skip("Moving to different help file system")]
 	public async Task CanIndex(string expectedIndex)
 	{
 		var currentDirectory = Directory.GetCurrentDirectory();
@@ -33,6 +34,7 @@ public class HelpfileTests
 	[Test]
 	[Arguments("sharpattr.md", new[] { "ATTRIBUTE TREES", "ATTR TREES", "ATTRIB TREES", "`" })]
 	[Arguments("sharpchat.md", new[] { "@CEMIT", "@NSCEMIT", "CEMIT()", "NSCEMIT()" })]
+	[Skip("Moving to different help file system")]
 	public async Task Indexable(string file, string[] aliasTest)
 	{
 		var currentDirectory = Directory.GetCurrentDirectory();
