@@ -2017,6 +2017,55 @@ public partial class Functions
 		return MModule.remove(str, index, length);
 	}
 
+	[SharpFunction(Name = "ANSIGEN", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["foreground", "background", "style"])]
+	public static ValueTask<CallState> AnsiGen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "DELETE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["string", "position", "count", "delimiter"])]
+	public static ValueTask<CallState> Delete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["string", "position", "new-string", "delimiter"])]
+	public static ValueTask<CallState> Insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "LCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["string"])]
+	public static ValueTask<CallState> LCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "UCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["string"])]
+	public static ValueTask<CallState> UCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "STR_REP_OR_INS", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["string", "position", "new-string", "delimiter"])]
+	public static ValueTask<CallState> StrRepOrIns(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "SHA0", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["text"])]
+	public static ValueTask<CallState> SHA0(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
 	[GeneratedRegex(@"\w+")]
 	private static partial Regex GetWord();
 

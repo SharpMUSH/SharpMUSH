@@ -726,4 +726,18 @@ public partial class Functions
 		// Trim leading spaces from space-padded values
 		return ValueTask.FromResult<CallState>(result.TrimStart(' '));
 	}
+
+	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["seconds", "format"])]
+	public static ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["time-string"])]
+	public static ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

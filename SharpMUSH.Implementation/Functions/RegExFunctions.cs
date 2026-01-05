@@ -381,4 +381,11 @@ public partial class Functions
 		
 		return new CallState(MModule.empty());
 	}
+
+	[SharpFunction(Name = "REGREPLACE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["string", "pattern", "replacement", "flags"])]
+	public static ValueTask<CallState> RegReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

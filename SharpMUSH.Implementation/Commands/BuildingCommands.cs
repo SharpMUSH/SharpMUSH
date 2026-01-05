@@ -839,6 +839,34 @@ public partial class Commands
 		);
 	}
 
+	[SharpCommand(Name = "@ELOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public static async ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@EUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	public static async ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@ULOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public static async ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
+	[SharpCommand(Name = "@UUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	public static async ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
+
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 5, ParameterNames = ["exit", "destination"])]
 	public static async ValueTask<Option<CallState>> Open(IMUSHCodeParser parser, SharpCommandAttribute _2)

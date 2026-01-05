@@ -647,4 +647,11 @@ public partial class Functions
 
 		return new CallState(memberCount.ToString());
 	}
+
+	[SharpFunction(Name = "CINFO", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["channel", "info-type"])]
+	public static ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

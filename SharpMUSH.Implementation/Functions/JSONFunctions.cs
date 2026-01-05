@@ -419,4 +419,11 @@ public partial class Functions
 
 		return new CallState(sentCount.ToString());
 	}
+
+	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["json", "player"])]
+	public static ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

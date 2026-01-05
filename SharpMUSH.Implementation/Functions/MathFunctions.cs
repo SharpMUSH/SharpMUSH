@@ -1035,4 +1035,11 @@ public partial class Functions
 		
 		return new CallState(formatted);
 	}
+
+	[SharpFunction(Name = "RNUM", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["lower", "upper"])]
+	public static ValueTask<CallState> RNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

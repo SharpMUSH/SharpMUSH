@@ -1795,4 +1795,11 @@ public partial class Functions
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
 	}
+
+	[SharpFunction(Name = "SETMANIP", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["list1", "list2", "operation", "delimiter", "output-separator"])]
+	public static ValueTask<CallState> SetManip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

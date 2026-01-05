@@ -1569,4 +1569,11 @@ public partial class Functions
 
 		return string.Join(" ", terminfo);
 	}
+
+	[SharpFunction(Name = "IDLESECS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["player"])]
+	public static ValueTask<CallState> IdleSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

@@ -1244,4 +1244,11 @@ public partial class Functions
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		return new CallState(motdData?.FullMotd ?? string.Empty);
 	}
+
+	[SharpFunction(Name = "CONFIG", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["option"])]
+	public static ValueTask<CallState> Config(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }

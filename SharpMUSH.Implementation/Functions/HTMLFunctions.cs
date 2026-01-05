@@ -158,4 +158,11 @@ public partial class Functions
 		// Return empty string - OOB data doesn't produce visible output
 		return CallState.Empty;
 	}
+
+	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["html", "player"])]
+	public static ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		throw new NotImplementedException();
+	}
 }
