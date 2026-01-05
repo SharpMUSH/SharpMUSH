@@ -44,7 +44,7 @@ See [attribute flags3]
 These attribute flags are only used internally. They cannot be set, but seen on 'examine' and flags()/lflags(), tested for with hasflag(), etc:
 - `branch (\`)`        This attribute is a branch. See: [ATTRIBUTE TREES]
 
-## See Also
+**See Also:**
 - [@set]
 - [@attribute]
 - [ATTRIBUTE TREES]
@@ -90,7 +90,7 @@ Branch attributes will be displayed with a \` in the attribute flags on examine.
 
 See [attribute trees3] for more information and examples.
 
-## See Also
+**See Also:**
 - [WILDCARDS]
 
 # ATTRIBUTE TREES3

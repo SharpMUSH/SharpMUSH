@@ -5,7 +5,7 @@ Pueblo is a client made by Chaco (a now defunct company). It attempts to mix HTM
 SharpMUSH will automatically detect a Pueblo client (rather, the client will announce itself and SharpMUSH will detect that), and set up that connection for Pueblo use. 
 
 
-## See Also
+**See Also:**
 - [pueblo2]
 
 # PUEBLO2
@@ -26,7 +26,7 @@ While Pueblo brings a number of new features and markups to MUSHes, in many ways
 ```
 
 
-## See Also
+**See Also:**
 - [- [pueblo()]
 - [HTML Functions]
 
@@ -39,7 +39,7 @@ The only HTML implementation supported by the MUSH is the one supported by Puebl
 HTML tags are stripped when sent to non-HTML capable players.
 
 
-## See Also
+**See Also:**
 - [- [HTML Functions]
 - [PUEBLO]
 - [html()]
@@ -55,7 +55,7 @@ If used on a player/descriptor which is not connected, pueblo() returns #-1 NOT 
 When used with a *<player>* argument, the most recently active connection is used if the *<player>* is logged in more than once.
 
 
-## See Also
+**See Also:**
 - [- [terminfo()]
 - [html()]
 - [PUEBLO]
@@ -76,7 +76,7 @@ Example:
 To learn about the VRML Format, have a look at the Pueblo Help, which mentions several good sites for learning.
 
 
-## See Also
+**See Also:**
 - [- [HTML]
 - [PUEBLO]
 
@@ -125,7 +125,7 @@ Will output (in HTML):
 Non-wizards should see the tag(), endtag(), and tagwrap() functions, which are similar but can be used by mortals.
 
 
-## See Also
+**See Also:**
 - [- [PUEBLO]
 - [HTML]
 - [HTML Functions]
@@ -149,7 +149,7 @@ Will output (in HTML):
 ```
 
 
-## See Also
+**See Also:**
 - [- [endtag()]
 - [tagwrap()]
 - [html()]
@@ -171,7 +171,7 @@ Will output (in HTML):
 ```
 
 
-## See Also
+**See Also:**
 - [- [tag()]
 - [tagwrap()]
 - [html()]
@@ -195,7 +195,7 @@ Will output (in HTML):
 A particularly important use of this function is `tagwrap(pre, <string>)`. Because Pueblo works like an html browser, spaces and tabs are compressed to a single space. If you have code (a +who function, for example) that relies on exact spacing, surround its output with a tagwrap(pre,...) so that Pueblo will render it as "preformatted" text.
 
 
-## See Also
+**See Also:**
 - [- [tag()]
 - [endtag()]
 - [html()]
@@ -228,7 +228,7 @@ See [wsjson()] for help sending formatted JSON object strings to WebSocket clien
 See [@prompt] for information about sending telnet GOAHEAD prompts. Support for prompts depends on the WebSocket client. The example client above shows prompts on their own line, separating the input and output windows, but requires PROMPT_NEWLINES to be turned off.
 
 
-## See Also
+**See Also:**
 - [- [HTML Functions]
 - [json()]
 - [pueblo]
@@ -268,7 +268,7 @@ Go to http://pennmush.org
 ```
 
 
-## See Also
+**See Also:**
 - [- [WebSockets]
 - [Pueblo]
 - [HTML Functions]

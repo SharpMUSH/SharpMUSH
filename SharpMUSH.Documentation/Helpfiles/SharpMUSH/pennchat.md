@@ -13,7 +13,7 @@ To speak on channels, use the `@chat` command.
 
 There are some aliases in place for players more familiar with the MUX comsys - see [muxcomsys] for more details.
 
-## See Also
+**See Also:**
 - [@channel]
 - [@chat]
 - [@cemit]
@@ -40,7 +40,7 @@ The `@chat` command is used to speak on channels. Everyone on the channel will s
 <Public> Mike waves
 ```
 
-## See Also
+**See Also:**
 - [@channel]
 - [@cemit]
 
@@ -65,7 +65,7 @@ The chatformat attribute is evaluated when an object receives a channel message.
 
 If the channel is NO_NAME, and the speaker either has no title or the channel is also set NO_TITLE, then %3 will be "Someone".
 
-## See Also
+**See Also:**
 - [@chat]
 - [@pageformat]
 - [@message]
@@ -123,7 +123,7 @@ or
 
 Normally, when an object attempts to speak on the channel system with @chat, using an ambiguous channel name produces an error message. With this flag set, it will instead speak on the first channel whose name is a match. Other commands in the chat system are not affected by the flag.
 
-## See Also
+**See Also:**
 - [CHAT]
 - [@chat]
 - [@cemit]
@@ -148,7 +148,7 @@ cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respec
 
 @cemit is intended for use in writing extended chat systems. 
 
-## See Also
+**See Also:**
 - [@chat]
 
 # @channel
@@ -161,7 +161,7 @@ Help for `@channel` is split into a number of topics. Please see [@channel <topi
 - **Other** - Setting channel titles, recalling previous chat messages
 - **Admin** - Adding, deleting and modifying channels
 
-## See Also
+**See Also:**
 - [CHAT]
 - [@chat]
 - [@cemit]
@@ -214,7 +214,7 @@ Connect and disconnect messages across all channels you have marked with `@chann
 
 For all four of these commands, you can specify a single channel to affect, or omit *<channel>* to affect all channels you're on. To undo the gag/mute/hide, either use `@channel/<switch> [<channel>]=no` or `@channel/un<switch> [<channel>]`.
 
-## See Also
+**See Also:**
 - [@channel/who]
 - [cstatus()]
 - [cowner()]
@@ -237,7 +237,7 @@ For all four of these commands, you can specify a single channel to affect, or o
 
 `@channel/buffer` sets the recall buffer size for *<channel>* to *<size>*. Only channel admins can do this. A size of 0 disables the recall buffer.
 
-## See Also
+**See Also:**
 - [@channel/who]
 - [@channel/privs]
 
@@ -280,7 +280,7 @@ For all four of these commands, you can specify a single channel to affect, or o
 
 `@channel/clock` manages channel locks. Only channel admins can do this. See [@channel clock] for details.
 
-## See Also
+**See Also:**
 - [@channel/who]
 - [@channel/privs]
 - [@clock]
@@ -307,7 +307,7 @@ The Lock column shows:
 - `H=<lock>` if there's a lock on hiding
 - `(DISABLED)` if the channel is disabled
 
-## See Also
+**See Also:**
 - [@channel/who]
 - [@channel/privs]
 - [@clock]
@@ -332,7 +332,7 @@ Available privileges:
 @channel/privs Admin=join speak no_hide_ok
 ```
 
-## See Also
+**See Also:**
 - [@channel/who]
 - [@channel clock]
 - [@clock]
@@ -364,7 +364,7 @@ Only channel admins can set locks. Players must pass:
 @channel/clock/hide Secret=WIZARD
 ```
 
-## See Also
+**See Also:**
 - [@lock]
 - [locks]
 - [@channel privs]
@@ -421,7 +421,7 @@ COMBINE
 ON COMBINE
 ```
 
-## See Also
+**See Also:**
 - [@channel]
 - [@chat]
 - [@cemit]
@@ -440,7 +440,7 @@ SharpMUSH provides some aliases for players more familiar with the MUX comsys:
 
 Note that SharpMUSH does not actually support channel aliases - the above commands work by looking up the real channel name. You must use enough of the channel name to uniquely identify it.
 
-## See Also
+**See Also:**
 - [@channel]
 - [@chat]
 - [CHAN_USEFIRSTMATCH]

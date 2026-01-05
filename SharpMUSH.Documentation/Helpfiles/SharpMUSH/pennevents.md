@@ -18,7 +18,7 @@ The enactor of an event is either:
 2. #-1 for system events without an executor.
 
 
-## See Also
+**See Also:**
 - [- [event list]
 - [event examples]
 
@@ -44,7 +44,7 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 ```
 
 
-## See Also
+**See Also:**
 - [event examples2]
 
 # EVENT EXAMPLES2

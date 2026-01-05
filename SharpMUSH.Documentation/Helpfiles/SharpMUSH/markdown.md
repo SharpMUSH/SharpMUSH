@@ -141,7 +141,7 @@ Output:
 - All structural elements (borders, bullets) use ANSI faint/dim styling for visual distinction
 - Output is proper MarkupString with embedded ANSI codes
 
-## See Also
+**See Also:**
 - [rendermarkdowncustom()]
 - [MARKUP]
 - [ANSI]
@@ -270,7 +270,7 @@ Tasks
 - Returns `#-1 ERROR RENDERING MARKDOWN: <error>` if markdown parsing fails
 - Falls back to default rendering if template attribute evaluation fails
 
-## See Also
+**See Also:**
 - [rendermarkdown()]
 - [get()]
 - [u()]
