@@ -386,6 +386,31 @@ public partial class Functions
 		ParameterNames = ["string", "pattern", "replacement", "flags"])]
 	public static ValueTask<CallState> RegReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var pattern = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var replacement = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var flags = parser.CurrentState.Arguments.TryGetValue("3", out var flagsArg)
+			? flagsArg.Message!.ToPlainText().ToLowerInvariant()
+			: "";
+
+		try
+		{
+			var regexOptions = RegexOptions.None;
+			
+			if (flags.Contains('i'))
+			{
+				regexOptions |= RegexOptions.IgnoreCase;
+			}
+			
+			// 'g' flag for global replace is default behavior of Regex.Replace
+			// So we don't need special handling for it
+			
+			var result = Regex.Replace(str, pattern, replacement, regexOptions);
+			return ValueTask.FromResult<CallState>(result);
+		}
+		catch (Exception)
+		{
+			return ValueTask.FromResult<CallState>("#-1 INVALID REGEX");
+		}
 	}
 }

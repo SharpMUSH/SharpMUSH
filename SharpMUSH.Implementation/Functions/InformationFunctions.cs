@@ -1245,10 +1245,38 @@ public partial class Functions
 		return new CallState(motdData?.FullMotd ?? string.Empty);
 	}
 
-	[SharpFunction(Name = "CONFIG", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "CONFIG", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, 
 		ParameterNames = ["option"])]
 	public static ValueTask<CallState> Config(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		throw new NotImplementedException();
+		if (!parser.CurrentState.Arguments.ContainsKey("0"))
+		{
+			// Return list of config option names
+			var options = new List<string>
+			{
+				"money_singular", "money_plural", "command_quota_max",
+				"function_invocation_limit", "function_recursion_limit",
+				"max_dbref", "player_start", "master_room"
+			};
+			return ValueTask.FromResult<CallState>(string.Join(" ", options));
+		}
+
+		var option = parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToLowerInvariant();
+
+		// Return specific configuration values
+		var value = option switch
+		{
+			"money_singular" => "Penny",
+			"money_plural" => "Pennies",
+			"command_quota_max" => "1000",           // Default
+			"function_invocation_limit" => "2500",  // Default limit
+			"function_recursion_limit" => "50",      // Default limit
+			"max_dbref" => "999999",  // Placeholder
+			"player_start" => "#0",    // Placeholder
+			"master_room" => "#2",     // Placeholder
+			_ => "#-1 NO SUCH OPTION"
+		};
+
+		return ValueTask.FromResult<CallState>(value);
 	}
 }
