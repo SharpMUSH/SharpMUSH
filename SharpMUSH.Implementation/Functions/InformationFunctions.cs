@@ -1249,7 +1249,9 @@ public partial class Functions
 		ParameterNames = ["option"])]
 	public static ValueTask<CallState> Config(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!parser.CurrentState.Arguments.ContainsKey("0"))
+		var args = parser.CurrentState.Arguments;
+		
+		if (!args.TryGetValue("0", out var optionArg) || string.IsNullOrWhiteSpace(optionArg.Message?.ToPlainText()))
 		{
 			// Return list of config option names
 			var options = new List<string>
@@ -1261,7 +1263,7 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(string.Join(" ", options));
 		}
 
-		var option = parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToLowerInvariant();
+		var option = optionArg.Message!.ToPlainText().ToLowerInvariant();
 
 		// Return specific configuration values
 		var value = option switch
