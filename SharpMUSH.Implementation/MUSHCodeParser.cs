@@ -135,7 +135,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <param name="text">The text to parse</param>
 	/// <param name="entryPoint">Function to get the parser context from the parser</param>
 	/// <param name="methodName">Name of the calling method for debugging</param>
-	/// <param name="parser">Optional parser instance to use (defaults to this)</param>
+	/// <param name="parser">Optional parser instance to use. When null, defaults to 'this'.
+	/// Pass a different parser when you need custom parser state (e.g., CommandParse with handle info).</param>
 	/// <returns>The result of visiting the parse tree</returns>
 	private ValueTask<CallState?> ParseInternal<TContext>(
 		MString text,
@@ -144,6 +145,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		IMUSHCodeParser? parser = null)
 		where TContext : ParserRuleContext
 	{
+		// Use provided parser or default to this instance
 		parser ??= this;
 		
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), methodName);
