@@ -38,7 +38,7 @@ public partial class Functions
 				}));
 	}
 
-	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
 	public static async ValueTask<CallState> AttributeSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
@@ -79,7 +79,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "attrib_set#", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
+	[SharpFunction(Name = "attrib_set#", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
 	public static async ValueTask<CallState> AttributeSetSharp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
@@ -254,7 +254,7 @@ public partial class Functions
 						parser.CurrentState.EnvironmentRegisters)));
 	}
 
-	[SharpFunction(Name = "flags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "flags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Flags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (parser.CurrentState.Arguments.Count == 0)
@@ -473,7 +473,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "hasattrpval", MinArgs = 2, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> HasAttributeParentValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -616,7 +616,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -722,7 +722,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "nattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
@@ -893,14 +893,14 @@ public partial class Functions
 		return await RegEditInternal(parser, false, true);
 	}
 
-	[SharpFunction(Name = "regeditalli", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "regeditalli", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["object", "pattern", "string", "replacement"])]
 	public static async ValueTask<CallState> RegularExpressionAllCaseInsensitive(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
 		return await RegEditInternal(parser, true, true);
 	}
 
-	[SharpFunction(Name = "regediti", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "regediti", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["object", "pattern", "string", "replacement"])]
 	public static async ValueTask<CallState> RegularExpressionEditCaseInsensitive(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1115,7 +1115,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "reglattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "reglattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> RegularExpressionListAttributeParent(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1151,7 +1151,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regnattr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> RegularExpressionNumberAttributes(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1183,7 +1183,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "regnattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regnattrp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> RegularExpressionNumberAttributesParent(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1265,7 +1265,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "regxattrp", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regxattrp", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> RegularExpressionNumberRangeParent(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)
 	{
@@ -1850,7 +1850,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "xattrp", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xattrp", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
 	public static async ValueTask<CallState> NumberRangeAttributeParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
