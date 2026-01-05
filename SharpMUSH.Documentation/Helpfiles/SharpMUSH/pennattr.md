@@ -69,9 +69,9 @@ All attributes are either branch attributes or leaf attributes. A branch attribu
 See [attribute trees2] for more information and examples.
 
 # ATTRIBUTE TREES2
+# \`2
 # ATTR TREES2
 # ATTRIB TREES2
-# \`2
 
 Attribute trees provide two immediate benefits. First, they reduce spam when examining objects. The usual * and ? wildcards for attributes do not match the \` character; the new ** wildcard does. Some examples of using examine:
 
@@ -94,9 +94,9 @@ See [attribute trees3] for more information and examples.
 - [WILDCARDS]
 
 # ATTRIBUTE TREES3
+# \`3
 # ATTR TREES3
 # ATTRIB TREES3
-# \`3
 
 The second benefit of attributes trees is convenient access control. Attribute flags that restrict attribute access or execution (no_inherit, no_command, mortal_dark, wizard) propagate down attribute trees, so if a branch is set mortal_dark, mortals can not read any of its leaves or subbranches either.
 
@@ -121,9 +121,9 @@ etc.
 See [attribute trees4] for information about `@parent` and attribute trees.
 
 # ATTRIBUTE TREES4
+# \`4
 # ATTR TREES4
 # ATTRIB TREES4
-# \`4
 
 Attribute trees interact with `@parent` in several ways.
 

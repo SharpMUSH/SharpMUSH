@@ -242,10 +242,10 @@ This is the index to the MUSH online help files.
 
   To list all the messages you've received, type '`@mail`'. You'll see something like:
 ```
-   -------------------------  MAIL (folder  0)  ----------------------------
-   [-----]  0:1    One           Welcome!                   Wed Dec 08 09:57
-   [-----]  0:2   *Mike          Example Mail               Sat Dec 11 07:55
-   -------------------------------------------------------------------------
+-------------------------  MAIL (folder  0)  ----------------------------
+[-----]  0:1    One           Welcome!                   Wed Dec 08 09:57
+[-----]  0:2   *Mike          Example Mail               Sat Dec 11 07:55
+-------------------------------------------------------------------------
 ```
   The number after the ':' is the message number; to read that message, type '`@mail` `<number>`'.
 
@@ -1337,7 +1337,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Punch> The Finishing Place
   Punch>
   Punch> Obvious exits:
-  Punch> Door <S>
+  Punch> Door \<S\>
   > @force #18=:waves hello
   Punch> Punch waves hello
   > #18 say Hello.

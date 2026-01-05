@@ -32,7 +32,7 @@ The `@chat` command is used to speak on channels. Everyone on the channel will s
 
 `+<channel> <message>` is short-hand for the `@chat` command.
 
-## Example
+**Example**
 ```
 > @chat pub=Hello
 <Public> Mike says, "Hello"
@@ -74,7 +74,7 @@ If the channel is NO_NAME, and the speaker either has no title or the channel is
 
 # @CHATFORMAT2
 
-## Examples
+**Examples**
 
 Walker's preferred @chatformat, which strips all ansi out, wraps every line to your width and prefixes them with <ChannelName>:
 
@@ -326,7 +326,7 @@ Available privileges:
 - **loud**: Show channel prefix even on @cemit/silent
 - **disabled**: Channel cannot be used
 
-## Examples
+**Examples**
 ```
 @channel/privs Public=no_join no_speak
 @channel/privs Admin=join speak no_hide_ok
@@ -357,7 +357,7 @@ Only channel admins can set locks. Players must pass:
 - The speak lock to speak on the channel (if the channel has the 'speak' priv)
 - The hide lock to hide on the channel (if the channel has the 'hide_ok' priv)
 
-## Examples
+**Examples**
 ```
 @channel/clock/on Public=WIZARD
 @channel/clock/add Admin=WIZARD
@@ -407,7 +407,7 @@ These functions provide information about channels:
 
 - **cemit()** and **nscemit()**: Emit *<message>* on *<channel>*. See [@cemit].
 
-## Examples
+**Examples**
 ```
 > think channels(#123,on)
 Public Admin
