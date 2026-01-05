@@ -895,7 +895,7 @@ Only admin and those with the "boot" power can @boot other players.
 
 `@break` stops the execution of further commands in the current action list if `<boolean>` is a true value. It doesn't affect new queue entries made by previous commands in the action list. It can be useful for doing error checking without having to nest @switches.
 
-If `<action list>` is given, it is executed instead of the rest of the commands in the current action list. By default, `<action list>` is run immediately, replacing the rest of the action list @break was called in. If the `/queued` switch is given, `<action list>` will instead be queued to be run later. @break also accepts an /inline switch, for Rhost compatability; this switch does nothing on PennMUSH.
+If `<action list>` is given, it is executed instead of the rest of the commands in the current action list. By default, `<action list>` is run immediately, replacing the rest of the action list @break was called in. If the `/queued` switch is given, `<action list>` will instead be queued to be run later. @break also accepts an /inline switch, for Rhost compatability; this switch does nothing on SharpMUSH.
 
 `@assert` does the inverse: it stops execution if `<boolean>` evaluates to false.
 
@@ -927,7 +927,7 @@ And you succeed!
 > @force me={@switch 1=1, think Third; think First; @break 1; think Second}
 First
 Third
-(The @switch is run, which queues 'think Third', think First is run, displaying 'First', command execution is broken (so we never think Second), and then the queued 'think Third' is run, displaying Third. If you figured that out, you have a very good understanding of the PennMUSH queue. :)
+(The @switch is run, which queues 'think Third', think First is run, displaying 'First', command execution is broken (so we never think Second), and then the queued 'think Third' is run, displaying Third. If you figured that out, you have a very good understanding of the SharpMUSH queue. :)
 ```
 # @charges
 # @runout
@@ -3774,7 +3774,7 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 `SOCKSET colorstyle=<value>`
 `@SOCKSET [me|<descriptor>]=colorstyle,<value>`
 
-You can override the color format you receive from PennMUSH. Normally, PennMUSH tries to guess what your client is capable of through telnet negotiation and your player flags. @sockset lets you inform PennMUSH that your client can support more colors than expected.
+You can override the color format you receive from SharpMUSH. Normally, SharpMUSH tries to guess what your client is capable of through telnet negotiation and your player flags. @sockset lets you inform SharpMUSH that your client can support more colors than expected.
 
 Colorstyle options are:
 
@@ -3782,9 +3782,9 @@ Colorstyle options are:
 - hilite: You only receive hilite text. No colors, just ansi-hilite.
 - 16color: You receive hilite text and the ANSI 16 colors.
 - xterm256: You receive xterm-style 256 colors for text and background.
-- auto: go back to what PennMUSH determined was your client's capabilities.
+- auto: go back to what SharpMUSH determined was your client's capabilities.
 
-In the event that your client receives a color that it is unable to display, PennMUSH will attempt to find a close match that can fit your client's capabilities.
+In the event that your client receives a color that it is unable to display, SharpMUSH will attempt to find a close match that can fit your client's capabilities.
 
 
 **See Also:**
@@ -4968,10 +4968,10 @@ If a `<pattern>` is given for either command, only connected players whose names
 
 See [who2].
 # WHO2
-In earlier versions of PennMUSH, WHO was a socket command (meaning only players could use it, and that while it could not be overwritten, you could use softcoded 'who' commands along side it which worked as long as they weren't typed in all upper-case). Existing games which have softcoded 'who' commands can maintain this feature by using an @hook/ignore on the WHO command, such as:
+Existing games which have softcoded 'who' commands can maintain separation from 'WHO' by using an @hook/ignore on the WHO command, such as:
 ```
-> &HOOK.WHO <object>=not(comp(left(%c,3),WHO))
-> @hook/ignore WHO=<object>,HOOK.WHO
+> &HOOK`WHO <object>=not(comp(left(%c,3),WHO))
+> @hook/ignore WHO=<object>,HOOK`WHO
 ```
 
 @hooks are not maintained across reboots, and should be placed into an @startup on a low-dbref object.

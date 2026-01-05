@@ -593,4 +593,4 @@ With great power comes great responsibility!
 - [wizhelp]
 - [@admin]
 
-This concludes the comprehensive list of PennMUSH flags and their descriptions.
+This concludes the comprehensive list of SharpMUSH flags and their descriptions.

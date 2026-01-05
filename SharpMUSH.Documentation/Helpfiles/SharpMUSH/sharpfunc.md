@@ -78,7 +78,7 @@ bxor()        shl()         shr()
 # Boolean functions
   Boolean functions all return 0 or 1 as an answer.
 
-  Your MUSH may be configured to use traditional PennMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
+  Your MUSH may be configured to use traditional SharpMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
 
 and()         cand()        cor()         eq()          gt()
 gte()         lt()          lte()         nand()        neq()
@@ -618,7 +618,7 @@ You say, "r baz"
     * a list of red, green and blue values from 0-255, in angle brackets (`<0 0 0>`, `<255 0 85>`, etc)
     * a number from 0-255; this is the same as using "+xterm`<number>`", for Rhost compatability.
 
-  For example, "ansi(+orange/#0000ff,Test)" would color "Test" in orange, on a blue background. In the event that your client does not support those colors, PennMUSH will downgrade the color to the closest fit that your client can understand.
+  For example, "ansi(+orange/#0000ff,Test)" would color "Test" in orange, on a blue background. In the event that your client does not support those colors, SharpMUSH will downgrade the color to the closest fit that your client can understand.
 
   Codes are parsed from left to right so, with later codes overriding earlier ones. So, for example:
 ```
@@ -995,7 +995,7 @@ You say, "A"
 `colors(<wildcard>)`
 `colors(<colors>, <format>)`
 
-  With no arguments, colors() returns an unsorted, space-separated list of colors that PennMUSH knows the name of. You can use these colors in ansi(+`<colorname>`,text). The colors "xterm0" to "xterm255" are not included in the list, but can also be used in ansi().
+  With no arguments, colors() returns an unsorted, space-separated list of colors that SharpMUSH knows the name of. You can use these colors in ansi(+`<colorname>`,text). The colors "xterm0" to "xterm255" are not included in the list, but can also be used in ansi().
 
   With one argument, returns an unsorted, space-separated list of colors that match the wildcard pattern `<wildcard>`.
 
@@ -7436,13 +7436,13 @@ think unique(1|2|3|3, n, |, _)
   Example:
 ```
 say version()
-You say "PennMUSH version 1.8.1 patchlevel 4 [12/06/2005]"
+You say "SharpMUSH version 1.8.1 patchlevel 4 [12/06/2005]"
 say numversion()
 You say "1008001004"
 ```
 
     > say version()
-    You say, "PennMUSH version 1.8.5 patchlevel 7 [03/16/2015] (rev ebdea0a)"
+    You say, "SharpMUSH version 1.8.5 patchlevel 7 [03/16/2015] (rev ebdea0a)"
     > say numversion()
     You say, "1008005007"
 

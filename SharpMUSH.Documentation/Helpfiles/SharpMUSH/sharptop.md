@@ -2,13 +2,13 @@
 This is the index to the MUSH online help files.
 
   For an explanation of the help system, type:    help newbie
-  For a walkthrough of PennMUSH systems, type:    help getting started
+  For a walkthrough of SharpMUSH systems, type:   help getting started
   For help finding the helpfile you want:         help helpfile
 
   For the list of MUSH commands, type:            help commands
   For the list of MUSH topics, type:              help topics
   For an alphabetical list of all help entries:   help entries
-  For information about PennMUSH:                 help code
+  For information about SharpMUSH:                help code
 
   For a list of flags:                            help flag list
   For a list of functions:                        help function list
@@ -17,7 +17,7 @@ This is the index to the MUSH online help files.
 
   On many MUSHes, list local commands with:       `+help`
 
-  If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/pennmush/pennmush/issues, which is the bug-tracking site for PennMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
+  If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
 
 # help search
 
@@ -104,9 +104,6 @@ This is the index to the MUSH online help files.
 
   Please note that just because there is help available on a command does not necessarily mean that the command can be used on this MUSH. The siteadmin of the MUSH can choose to turn off some commands. If there's something that you would like available, and it isn't, please ask a wizard why not.
 
-  It is also highly recommended that any new player read the MUSH manual, written by Amberyl. It is available from http://download.pennmush.org/Manuals/
-
-
 **See Also:**
 - [Getting Started]
 
@@ -115,15 +112,15 @@ This is the index to the MUSH online help files.
 # GS
 
 # Walkthrough
-  This helpfile is a quick walkthrough of some of PennMUSH's standard systems. It uses the same syntax as the other helpfiles; if you're not familiar with the syntax of the PennMUSH helpfiles, please read [newbie] first, as it's explained there.
+  This helpfile is a quick walkthrough of some of SharpMUSH's standard systems. It uses the same syntax as the other helpfiles; if you're not familiar with the syntax of the SharpMUSH helpfiles, please read [newbie] first, as it's explained there.
 
   For help with getting around, please see [gs moving].
 
   To talk to people in the room with you, see [gs talking].
 
-  For a brief guide to the PennMUSH chat system, see [gs chat].
+  For a brief guide to the SharpMUSH chat system, see [gs chat].
 
-  For information on how to send and read mail using PennMUSH's built-in mail system, `@mail`, please type 'help gs mail'.
+  For information on how to send and read mail using SharpMUSH's built-in mail system, `@mail`, please type 'help gs mail'.
 
 # GS MOVING
   To see the room you're in, type 'look'. You'll probably see something similar to this (though some MUSHes customize the appearance of rooms):
@@ -204,7 +201,7 @@ This is the index to the MUSH online help files.
 # GS CHAT
 
 # GS CHANNELS
-  PennMUSH has a built-in channel system, which allows you to talk with players who are on the same channels as you, even if you're in different rooms.
+  SharpMUSH has a built-in channel system, which allows you to talk with players who are on the same channels as you, even if you're in different rooms.
 
   Most games have a number of different channels, either for discussing different subjects, or for different groups/factions of players to chat on.
 
@@ -238,7 +235,7 @@ This is the index to the MUSH online help files.
 - [@chat]
 
 # GS MAIL
-  PennMUSH has a built-in mail system that lets you send messages to players, even if they aren't online. You can keep mail you receive for as long as you like, and re-read it any time.
+  SharpMUSH has a built-in mail system that lets you send messages to players, even if they aren't online. You can keep mail you receive for as long as you like, and re-read it any time.
 
   To list all the messages you've received, type '`@mail`'. You'll see something like:
 ```
@@ -477,7 +474,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   See [attributes2]
 
 # ATTRIBUTES2
-  An attribute is part of the code on an object that makes it unique. An attribute can contain any sort of text -- from a single word, to a long paragraph, to a piece of MUSHcode. Some attributes are standard in PennMUSH. That means that their effects are pre-set.
+  An attribute is part of the code on an object that makes it unique. An attribute can contain any sort of text -- from a single word, to a long paragraph, to a piece of MUSHcode. Some attributes are standard in SharpMUSH. That means that their effects are pre-set.
 
   Standard attributes can be set using one of the following commands:
     @`<attribute name>` `<object>`=`<content>`
@@ -569,7 +566,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # CLIENTS
   Clients are special software programs that you can use to connect to MUSHes. They are usually much nicer to use than raw telnet and give you many additional features, such as larger text buffers (so you can type more), backscroll, history of previous commands, macros, and so on.
 
-  Here is a list of common clients and the web sites where they can be found.  Please note that the below sites are subject to change. The below are listed solely for your information and possible benefit. The developers of PennMUSH have nothing to do with the clients. Except for Potato, which is made by Mike. Not that this is a shameless plug. Noooo. Carry on.
+  Here is a list of common clients and the web sites where they can be found.  Please note that the below sites are subject to change. The below are listed solely for your information and possible benefit. The developers of SharpMUSH have nothing to do with the clients. Except for Potato, which is made by Mike. Not that this is a shameless plug. Noooo. Carry on.
 
   OPERATING
   SYSTEM          CLIENT      WEB SITE
@@ -637,7 +634,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Past Porters: Nick Gammon [NJG] (win32), Dan Williams [DW] (MacOS), Sylvia (OS/2)
   Former developers: Rhyanna [RLM], Trivian [TN], Halatir [LdW], Talek [TAP], Javelin, Ervin Hearn III [EEH]
 
-  The original TinyMUSH 1.0 code was written by Lawrence Foard, and was based upon James Aspnes' TinyMUD server. Since then, the code has been modified by the programmers of MicroMUSE (then MicroMUSH), and Joseph Traub (Moonchilde of PernMUSH). From January 1992 to January 1995, Lydia Leong (Amberyl of PernMUSH / Polgara of Belgariad) maintained the code currently known as PennMUSH 1.50. From January 1995 until July 2006, Alan Schwartz (Paul of DuneMUSH / Javelin elsewhere) maintained this code, along with a development team. From July 2006 on, Raevnos has been the maintainer.
+  The original TinyMUSH 1.0 code was written by Lawrence Foard, and was based upon James Aspnes' TinyMUD server. Since then, the code has been modified by the programmers of MicroMUSE (then MicroMUSH), and Joseph Traub (Moonchilde of PernMUSH). From January 1992 to January 1995, Lydia Leong (Amberyl of PernMUSH / Polgara of Belgariad) maintained the code currently known as SharpMUSH 1.50. From January 1995 until July 2006, Alan Schwartz (Paul of DuneMUSH / Javelin elsewhere) maintained this code, along with a development team. From July 2006 on, Raevnos has been the maintainer.
 
   Big thanks to the developers of TinyMUSH 2.0, 2.2 [2.2], 3.0 [3], MUX2, and Rhost [Rhost] servers, as well as to the players of Belgariad MUSH, DuneMUSH, and M*U*S*H, and everyone else using this server!
 
@@ -852,7 +849,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [@lfail]
 
 # failure2
-  The following failures are defined in PennMUSH:
+  The following failures are defined in SharpMUSH:
 
   Failure to...                                 Lock     Attribute
   --------------------------------------------- -------- --------------------
@@ -1201,8 +1198,8 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 # MUSHCODE2
 
-  If you would like to learn more about MUSHcoding and how to create `$-commands` for yourself, the following help files may be useful. You may also find it useful to download a copy of Amberyl's MUSH manual and follow the examples described there. However, the manual is quite old now, and some parts may no longer be relevant or entirely accurate. The manual is available for download at http://download.pennmush.org/Manuals/
-
+  If you would like to learn more about MUSHcoding and how to create `$-commands` for yourself, the following help files may be useful. You may also find it useful to download a copy of Amberyl's MUSH manual and follow the examples described there. However, the manual is quite old now, and some parts may no longer be relevant or entirely accurate. 
+  
   Related Help Topics (in no particular order)
   -------------------
   - [ATTRIBUTES]
@@ -1374,7 +1371,7 @@ See [queue2]
 
   Normally each object has its own queue count, but if the 'owner_queues' option is enabled, objects share a queue count with their owner.
 
-  'queue_chunk' controls how many commands PennMUSH runs before checking again for incoming socket commands or connections.
+  'queue_chunk' controls how many commands SharpMUSH runs before checking again for incoming socket commands or connections.
 
   It costs a certain number of pennies to queue an action list; the exact amount is set in the 'queue_cost' `@config` option. These pennies are returned after the action list is run. Sometimes, you'll lose a penny when queueing a command; the chance of this happening is controlled by the 'queue_loss' option.
 
@@ -1430,11 +1427,11 @@ See [queue2]
   Regular expression syntax is explained in [regexp syntax].
 
 # REGEXP SYNTAX
-  PennMUSH uses PCRE for its regular expression engine. PCRE is an open source library of functions to support regular expressions whose syntax and semantics are as close as possible to those of the Perl 5 language. The text below is excerpted from its man page. PCRE was written by Philip Hazel <ph10@cam.ac.uk>, and is Copyright (c) 1997-1999 University of Cambridge, England. You can find it at ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/
+  SharpMUSH uses PCRE for its regular expression engine. PCRE is an open source library of functions to support regular expressions whose syntax and semantics are as close as possible to those of the Perl 5 language. The text below is excerpted from its man page. PCRE was written by Philip Hazel <ph10@cam.ac.uk>, and is Copyright (c) 1997-1999 University of Cambridge, England. You can find it at ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/
 
-  (Note that in PennMUSH, if the regular expression is in an eval'd context (like an argument to regmatch), you'll have to do a lot of escaping to make things work right. One way to escape an argument like %0 is: regeditall(%0,\\W,\\$0) or similar).
+  (Note that in SharpMUSH, if the regular expression is in an eval'd context (like an argument to regmatch), you'll have to do a lot of escaping to make things work right. One way to escape an argument like %0 is: regeditall(%0,\\W,\\$0) or similar).
 
-  Regular expression matching in PennMUSH can be used on user-defined command or listen patterns. In this usage, regular expressions are matched case-insensitively unless the attribute has the CASE flag set. Regular expressions can also be matched in MUSHcode using `regmatch()`, `regrab()`, regedit, etc. function families, which usually come in case-sensitive and case-insensitive versions.
+  Regular expression matching in SharpMUSH can be used on user-defined command or listen patterns. In this usage, regular expressions are matched case-insensitively unless the attribute has the CASE flag set. Regular expressions can also be matched in MUSHcode using `regmatch()`, `regrab()`, regedit, etc. function families, which usually come in case-sensitive and case-insensitive versions.
 
   See [regexp syntax2]
 
@@ -2023,7 +2020,7 @@ See [queue2]
 
   Such attributes can also be `@triggered` as if the $`<command name>`: did not exist.
 
-  It is recommended that `<command pattern>` not begin with "@", as many of PennMUSH's built-in commands start with "@". Conventionally, global `$-commands` are often named with the "+" prefix, and local `$-commands` commonly have a "+" or "." prefix.
+  It is recommended that `<command pattern>` not begin with "@", as many of SharpMUSH's built-in commands start with "@". Conventionally, global `$-commands` are often named with the "+" prefix, and local `$-commands` commonly have a "+" or "." prefix.
 
   See [user-defined2]
 
@@ -2136,7 +2133,7 @@ See [queue2]
 # ?
 
 # **
-  PennMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
+  SharpMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
 
 ```
     > &cmd.wave me=$wave *: pose waves.
@@ -2352,7 +2349,7 @@ This is the AHELP index.
 
 # UNICODE
 
-At the moment, PennMUSH has very minimal support for Unicode. Almost all text is treated internally as being in the Latin-1 character set. Clients that support telnet character set negotiation can send and receive UTF-8, but only characters in the Basic Latin and Latin-1 Supplement blocks are accepted (Others are replaced with question marks).
+At the moment, SharpMUSH has very minimal support for Unicode. Almost all text is treated internally as being in the Latin-1 character set. Clients that support telnet character set negotiation can send and receive UTF-8, but only characters in the Basic Latin and Latin-1 Supplement blocks are accepted (Others are replaced with question marks).
 
 A few functions support Unicode-aware text transformations:
 
