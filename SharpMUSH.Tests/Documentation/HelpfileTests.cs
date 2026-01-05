@@ -31,8 +31,8 @@ public class HelpfileTests
 	}
 
 	[Test]
-	[Arguments("pennattr.txt", new[] { "ATTRIBUTE TREES", "ATTR TREES", "ATTRIB TREES", "`" })]
-	[Arguments("pennchat.txt", new[] { "@CEMIT", "@NSCEMIT", "CEMIT()", "NSCEMIT()" })]
+	[Arguments("sharpattr.md", new[] { "ATTRIBUTE TREES", "ATTR TREES", "ATTRIB TREES", "`" })]
+	[Arguments("sharpchat.md", new[] { "@CEMIT", "@NSCEMIT", "CEMIT()", "NSCEMIT()" })]
 	public async Task Indexable(string file, string[] aliasTest)
 	{
 		var currentDirectory = Directory.GetCurrentDirectory();
