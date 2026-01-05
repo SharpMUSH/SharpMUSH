@@ -26,7 +26,8 @@ public partial class Commands
 		Switches = ["SLOWEST", "POPULAR", "QUERY", "HEALTH", "CONNECTIONS", "FUNCTIONS", "COMMANDS"],
 		Behavior = CB.Default,
 		MinArgs = 0,
-		MaxArgs = 2)]
+		MaxArgs = 2,
+		ParameterNames = ["time-range", "limit"])]
 	public static async ValueTask<Option<CallState>> Metrics(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (PrometheusQueryService == null)
