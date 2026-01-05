@@ -39,17 +39,14 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			var parser = GetParser();
 			var converter = GetConverter();
 
-			// Parse the database file
 			var parseStopwatch = Stopwatch.StartNew();
 			var database = await parser.ParseFileAsync(databaseFilePath);
 			parseStopwatch.Stop();
 
-			// Convert the database
 			var convertStopwatch = Stopwatch.StartNew();
 			var result = await converter.ConvertDatabaseAsync(database);
 			convertStopwatch.Stop();
 
-			// Verify the conversion succeeded
 			await Assert.That(result.IsSuccessful).IsTrue();
 			await Assert.That(result.TotalObjects).IsGreaterThan(0);
 
@@ -106,13 +103,11 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			var parser = GetParser();
 			var converter = GetConverter();
 
-			// Parse and convert
 			var stopwatch = Stopwatch.StartNew();
 			var database = await parser.ParseFileAsync(databaseFilePath);
 			var result = await converter.ConvertDatabaseAsync(database);
 			stopwatch.Stop();
 
-			// Verify
 			await Assert.That(result.IsSuccessful).IsTrue();
 			await Assert.That(result.TotalObjects).IsEqualTo(1000);
 

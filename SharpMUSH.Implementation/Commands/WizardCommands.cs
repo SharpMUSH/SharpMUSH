@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Reflection;
 using System.Linq;
 using Humanizer;
@@ -27,10 +27,9 @@ public partial class Commands
 		MinArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @allhalt - Halt all objects in the game to free up the queue (wizard-only)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		// Get all objects and halt them
+
 		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
 		var haltedCount = 0;
 		
@@ -51,11 +50,9 @@ public partial class Commands
 		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "flag"])]
 	public static async ValueTask<Option<CallState>> Flag(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @FLAG command - manage object flags
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		
-		// @flag/list - list all flags
 		if (switches.Contains("LIST"))
 		{
 			var output = new System.Text.StringBuilder();

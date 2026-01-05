@@ -14,7 +14,6 @@ public class CommandDiscoveryServiceTests
 	[Test]
 	public async ValueTask CommandDiscoveryServiceIsRegistered()
 	{
-		// Verify the service is properly registered in DI container
 		var service = WebAppFactoryArg.Services.GetRequiredService<ICommandDiscoveryService>();
 		await Assert.That(service).IsNotNull();
 	}

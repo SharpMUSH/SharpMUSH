@@ -23,7 +23,6 @@ public class LockObjIdTests
 	[Test]
 	public async Task ExactObjectLock_BareDbRef_MatchesAnyObjectWithSameNumber()
 	{
-		// Create a test object using the create() function
 		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();

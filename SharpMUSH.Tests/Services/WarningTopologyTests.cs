@@ -12,7 +12,6 @@ public class WarningTopologyTests
 	[Test]
 	public async Task WarningType_ExitUnlinked_IsDefined()
 	{
-		// Verify the exit-unlinked flag exists and has correct value (0x10)
 		var value = (uint)WarningType.ExitUnlinked;
 		await Assert.That(value).IsEqualTo(0x10u);
 	}
@@ -20,7 +19,6 @@ public class WarningTopologyTests
 	[Test]
 	public async Task WarningType_ExitOneway_IsDefined()
 	{
-		// Verify the exit-oneway flag exists and has correct value (0x1)
 		var value = (uint)WarningType.ExitOneway;
 		await Assert.That(value).IsEqualTo(0x1u);
 	}
@@ -28,7 +26,6 @@ public class WarningTopologyTests
 	[Test]
 	public async Task WarningType_ExitMultiple_IsDefined()
 	{
-		// Verify the exit-multiple flag exists and has correct value (0x2)
 		var value = (uint)WarningType.ExitMultiple;
 		await Assert.That(value).IsEqualTo(0x2u);
 	}

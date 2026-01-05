@@ -303,13 +303,10 @@ public class RedisConnectionStateTests
 		// Act - Process 1 writes
 		await storeProcess1.SetConnectionAsync(handle, connectionData);
 		
-		// Process 2 reads
 		var retrieved = await storeProcess2.GetConnectionAsync(handle);
 
-		// Process 2 updates player binding
 		await storeProcess2.SetPlayerBindingAsync(handle, new DBRef(500));
 		
-		// Process 1 reads the update
 		var updated = await storeProcess1.GetConnectionAsync(handle);
 
 		// Assert
