@@ -37,7 +37,7 @@ Help is available for the following MUSH commands:
 - [:]
 - [;]
 - [+]
-- []]
+- [\]]
 
 In addition to these, there are several types of '@' commands. @-commands are usually commands which have permanent effects on the MUSH (such as creating a new object). Here are the help topics on @-commands:
 
