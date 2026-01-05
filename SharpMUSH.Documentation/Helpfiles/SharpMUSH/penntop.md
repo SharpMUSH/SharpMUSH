@@ -363,13 +363,13 @@ For a list of all topics, see [entries].
 # #APPLY
   In many cases where a function expects a object/attribute pair that refers to an attribute to evaluate, you can use the form
 
-  #lambda/<code>
+  `#lambda/\<code\>`
 
   instead, and the code will be treated as an attribute's body. The code will normally be parsed twice, so special characters should be escaped where needed.
 
   If the #lambda just calls one other function, the form
 
-  #apply[<number of arguments>]/<function name>
+  `#apply[\<number of arguments\>]/<function name>`
 
   can be used instead. If the argument count is left out, it defaults to 1.
 
@@ -389,7 +389,7 @@ For a list of all topics, see [entries].
   You say, "Joe Robert Sally"
 ```
 
-  The following version uses #apply instead:
+  The following version uses `#apply` instead:
 
 ```
   > say map(#apply/name, #3 #12 #23)

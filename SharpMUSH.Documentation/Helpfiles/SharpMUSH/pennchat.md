@@ -5,7 +5,7 @@
 
 SharpMUSH has a built-in chat system which allows you to speak to other players who are on the same channel without needing to be in the same room as them. It supports a large number of channels which can be customized and restricted in various ways.
 
-Many of the chat system commands take a *<channel>* argument; you don't need to enter the entire channel name, only as many letters as needed to make it distinct from other channels.
+Many of the chat system commands take a *\<channel\>* argument; you don't need to enter the entire channel name, only as many letters as needed to make it distinct from other channels.
 
 You can list, join, and configure channels using the `@channel` command.
 
@@ -28,7 +28,7 @@ There are some aliases in place for players more familiar with the MUX comsys - 
 - `@chat <channel>=<message>`
 - `+<channel> <message>`
 
-The `@chat` command is used to speak on channels. Everyone on the channel will see your message, and it will be added to the channel's recall buffer, if it has one. If *<message>* begins with a ':' or ';' it will be posed (or semiposed) instead of spoken. You will usually need to join a channel before you can speak on it.
+The `@chat` command is used to speak on channels. Everyone on the channel will see your message, and it will be added to the channel's recall buffer, if it has one. If *\<message\>* begins with a ':' or ';' it will be posed (or semiposed) instead of spoken. You will usually need to join a channel before you can speak on it.
 
 `+<channel> <message>` is short-hand for the `@chat` command.
 
@@ -76,7 +76,7 @@ If the channel is NO_NAME, and the speaker either has no title or the channel is
 
 **Examples**
 
-Walker's preferred @chatformat, which strips all ansi out, wraps every line to your width and prefixes them with <ChannelName>:
+Walker's preferred @chatformat, which strips all ansi out, wraps every line to your width and prefixes them with \<ChannelName\>:
 
 ```
 @chatformat me=<%1> [switch(%0,@,%2,edit(wrap(speak(&[if(%4,%4%b)]%3,%0[stripansi(%2)],%6\\,),sub(width(%!),add(4,strlen(%1)))),%r,%r<%1>%b))]
@@ -138,13 +138,13 @@ Normally, when an object attempts to speak on the channel system with @chat, usi
 - `cemit(<channel>, <message>[, <noisy>])`
 - `nscemit(<channel>, <message>[, <noisy>])`
 
-@cemit emits *<message>* on *<channel>*. It does not include your name. The channel prefix is included if the /noisy switch is given, and omitted if /silent is given - if neither is given, the default behaviour is controlled by the noisy_cemit @config option. The /noeval switch prevents *<message>* from being evaluated.
+@cemit emits *\<message\>* on *\<channel\>*. It does not include your name. The channel prefix is included if the /noisy switch is given, and omitted if /silent is given - if neither is given, the default behaviour is controlled by the noisy_cemit @config option. The /noeval switch prevents *\<message\>* from being evaluated.
 
 You must be able to speak on the channel, or have the See_All and Pemit_All @powers, to @cemit on the channel.
 
 @nscemit is exactly the same, but does not produce nospoof information when used by players with the Can_spoof @power.
 
-cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respectively. If *<noisy>* is given as a true value, they work like @cemit/noisy and @nscemit/noisy, respectively, instead.
+cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respectively. If *\<noisy\>* is given as a true value, they work like @cemit/noisy and @nscemit/noisy, respectively, instead.
 
 @cemit is intended for use in writing extended chat systems. 
 
@@ -155,7 +155,7 @@ cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respec
 
 The `@channel` command is used to add, join, list and modify channels in the chat system. It takes many different switches.
 
-Help for `@channel` is split into a number of topics. Please see [@channel <topic>] for more, where *<topic>* is one of the words below. For help on a specific switch to `@channel`, use [@channel/<switch>].
+Help for `@channel` is split into a number of topics. Please see [@channel \<topic\>] for more, where *\<topic\>* is one of the words below. For help on a specific switch to `@channel`, use [@channel/<switch>].
 
 - **Joining** - How to find, join, and leave channels
 - **Other** - Setting channel titles, recalling previous chat messages
@@ -182,13 +182,13 @@ Help for `@channel` is split into a number of topics. Please see [@channel <topi
 - `@channel/on <channel>[=<player>]`
 - `@channel/off <channel>[=<player>]`
 
-`@channel/list` shows a list of all the channels you can see, along with some basic information such as whether you are on the channel, how it's locked, etc. [@channel list] explains the output in detail. If a *<prefix>* is given, only channels whose names begin with *<prefix>* are shown. If the /on switch is given, only channels you've joined are shown. If /off is given, channels you are on will not be shown. The /quiet switch shows just a list of channel names, without any extra information.
+`@channel/list` shows a list of all the channels you can see, along with some basic information such as whether you are on the channel, how it's locked, etc. [@channel list] explains the output in detail. If a *\<prefix\>* is given, only channels whose names begin with *\<prefix\>* are shown. If the /on switch is given, only channels you've joined are shown. If /off is given, channels you are on will not be shown. The /quiet switch shows just a list of channel names, without any extra information.
 
-`@channel/what` shows the name, description, owner, priv flags, mogrifier and buffer size for all channels, or all channels whose names begin with *<prefix>* if one is given.
+`@channel/what` shows the name, description, owner, priv flags, mogrifier and buffer size for all channels, or all channels whose names begin with *\<prefix\>* if one is given.
 
 `@channel/who` lists all the players on the given channel.
 
-`@channel/on` and `@channel/off` add or remove you from the given *<channel>*. You only hear messages for channels you're on, and most channels require you to join them before you can speak on them. /join and /leave are aliases for /on and /off.
+`@channel/on` and `@channel/off` add or remove you from the given *\<channel\>*. You only hear messages for channels you're on, and most channels require you to join them before you can speak on them. /join and /leave are aliases for /on and /off.
 
 # @CHANNEL JOINING2
 # @channel/gag
@@ -212,7 +212,7 @@ On channels with the 'hide_ok' priv, `@channel/hide` lets you hide from the @cha
 
 Connect and disconnect messages across all channels you have marked with `@channel/combine` will be combined into a single message with a |-separated list of all channel names. Only players can use this.
 
-For all four of these commands, you can specify a single channel to affect, or omit *<channel>* to affect all channels you're on. To undo the gag/mute/hide, either use `@channel/<switch> [<channel>]=no` or `@channel/un<switch> [<channel>]`.
+For all four of these commands, you can specify a single channel to affect, or omit *\<channel\>* to affect all channels you're on. To undo the gag/mute/hide, either use `@channel/<switch> [<channel>]=no` or `@channel/un<switch> [<channel>]`.
 
 **See Also:**
 - [@channel/who]
@@ -231,11 +231,11 @@ For all four of these commands, you can specify a single channel to affect, or o
 - `@channel/title <channel>=<title>`
 - `@channel/buffer <channel>=<size>`
 
-`@channel/recall` displays the last *<count>* messages sent on *<channel>*. If *<count>* is not given, it shows the last 10. The /last switch shows messages starting from the *<count>*th most recent message.
+`@channel/recall` displays the last *\<count\>* messages sent on *\<channel\>*. If *\<count\>* is not given, it shows the last 10. The /last switch shows messages starting from the *<count>*th most recent message.
 
-`@channel/title` sets your title on *<channel>*. Your title appears in front of your name when you speak on the channel, if the channel is set to show titles. If *<title>* is not given, your title is cleared.
+`@channel/title` sets your title on *\<channel\>*. Your title appears in front of your name when you speak on the channel, if the channel is set to show titles. If *\<title\>* is not given, your title is cleared.
 
-`@channel/buffer` sets the recall buffer size for *<channel>* to *<size>*. Only channel admins can do this. A size of 0 disables the recall buffer.
+`@channel/buffer` sets the recall buffer size for *\<channel\>* to *\<size\>*. Only channel admins can do this. A size of 0 disables the recall buffer.
 
 **See Also:**
 - [@channel/who]
@@ -386,26 +386,26 @@ Only channel admins can set locks. Players must pass:
 
 These functions provide information about channels:
 
-- **channels()**: Lists channels visible to *<player>* (or me). If *<type>* is given, only shows channels of that type:
+- **channels()**: Lists channels visible to *\<player\>* (or me). If *\<type\>* is given, only shows channels of that type:
   - **all**: All visible channels (default)
-  - **on**: Channels *<player>* is on
-  - **off**: Channels *<player>* is not on
+  - **on**: Channels *\<player\>* is on
+  - **off**: Channels *\<player\>* is not on
   - **quiet**: Just channel names, no extra info
 
-- **cowner()**: Returns the dbref of *<channel>*'s owner
+- **cowner()**: Returns the dbref of *\<channel\>*'s owner
 
-- **cflags()**: Returns channel flags for *<channel>*, or status flags for *<player>* on *<channel>*:
+- **cflags()**: Returns channel flags for *\<channel\>*, or status flags for *\<player\>* on *\<channel\>*:
   - Channel flags: DISABLED LOUD OPEN QUIET
   - Status flags: COMBINE GAG HIDE MUTE
 
-- **cstatus()**: Returns information about *<player>*'s channel status:
+- **cstatus()**: Returns information about *\<player\>*'s channel status:
   - With no args: List of channels I'm on
-  - With *<player>*: List of channels they're on
-  - With *<channel>*: My status on that channel
+  - With *\<player\>*: List of channels they're on
+  - With *\<channel\>*: My status on that channel
   - With both: Their status on that channel
   Status is one of: OFF ON GAG HIDE MUTE COMBINE
 
-- **cemit()** and **nscemit()**: Emit *<message>* on *<channel>*. See [@cemit].
+- **cemit()** and **nscemit()**: Emit *\<message\>* on *\<channel\>*. See [@cemit].
 
 **Examples**
 ```

@@ -198,7 +198,7 @@ Example: Filter urgent messages into folder 1
 
 - `@mailsignature <object>[=<signature>]`
 
-When set, this attribute is evaluated and appended to any @mail messages sent by *<object>*, unless the @mail/nosig command is used.
+When set, this attribute is evaluated and appended to any @mail messages sent by *\<object\>*, unless the @mail/nosig command is used.
 
 Example:
 ```
