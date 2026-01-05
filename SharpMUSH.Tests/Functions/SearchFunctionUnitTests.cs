@@ -89,10 +89,11 @@ public class SearchFunctionUnitTests
 	[Test]
 	public async Task Scan_ReturnsVisibleObjects()
 	{
-		// Create a unique test object with a unique name to verify scan behavior
-		// Note: Current implementation searches for objects by name pattern, not by attributes
-		// TODO: This should be updated to match PennMUSH scan() which searches for $-commands
+		// Create a unique test object with a $-command to verify scan behavior
+		// scan() searches for $-commands that match a given command string
 		var uniqueName = $"ScanTest_{Guid.NewGuid():N}";
+		var commandWord = $"testcmd{Guid.NewGuid():N}";
+		var attrName = $"CMD_{commandWord.ToUpperInvariant()}";
 		
 		// Create a test object in the same location as executor (room #0)
 		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
@@ -103,14 +104,20 @@ public class SearchFunctionUnitTests
 		await Assert.That(dbrefMatch.Success).IsTrue().Because($"Create command output should contain a dbref. Output was: {createOutput}");
 		var createdDbref = dbrefMatch.Value; // This will be something like "#5"
 		
-		// scan(object, pattern) currently searches an object's contents for objects with names matching pattern
-		// Using a wildcard pattern that matches the unique name we created
-		var result = (await Parser.FunctionParse(MModule.single($"scan(#0,{uniqueName})")))?.Message!;
+		// Set a $-command attribute on the created object
+		// Format: $pattern:code
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, 
+			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:@emit Test command triggered!"));
+		
+		// scan() searches for $-commands that would match the given command
+		// This should find the $-command we just created
+		var result = (await Parser.FunctionParse(MModule.single($"scan({commandWord} test argument)")))?.Message!;
 		var resultText = result.ToPlainText();
 		
-		// Should return a space-separated list containing the dbref of the object we just created
-		// The result should be the exact dbref (e.g., "#5" or "#5 #6" if multiple matches)
-		await Assert.That(resultText).Contains(createdDbref).Because($"scan(#0,{uniqueName}) should return {createdDbref}. Actual result: {resultText}");
+		// Should return a space-separated list of "dbref/attribute" pairs
+		// The result should contain something like "#5/CMD_TESTCMD..."
+		await Assert.That(resultText).Contains(createdDbref).Because($"scan({commandWord} test argument) should return {createdDbref}/... Actual result: {resultText}");
+		await Assert.That(resultText).Contains(attrName).Because($"scan({commandWord} test argument) should return .../{attrName}. Actual result: {resultText}");
 	}
 
 	[Test]
