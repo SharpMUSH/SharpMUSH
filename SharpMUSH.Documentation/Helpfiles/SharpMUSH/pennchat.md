@@ -50,7 +50,7 @@ The `@chat` command is used to speak on channels. Everyone on the channel will s
 
 The chatformat attribute is evaluated when an object receives a channel message. If the attribute exists, its evaluated result is shown to the object instead of the default message. If the attribute exists but returns nothing, the object will not see anything.
 
-## Registers
+**Registers**
 - **%0**: The 'type' of the message. It is a single character that will always be set:
   - `"`, `;` or `:` for say, semipose and pose, respectively
   - `|` for an @cemit

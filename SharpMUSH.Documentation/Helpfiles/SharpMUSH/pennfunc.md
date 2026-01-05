@@ -308,40 +308,31 @@ You say, "2"
 # ACCENTS
   Below is the table of possible accents which can be used with accent() and @nameformat.
 
-  Accent                         Template   String
-  Name       Description         Character  Character
-  --------------------------------------------------------------
-  grave      Backward slant      `          A,E,I,O,U,a,e,i,o,u
-             above letter (À)
-  acute      Forward slant       '          A,E,I,O,U,Y,a,e,i,o,u,y
-             above letter (Á)
-  tilde      Wavy line above     ~          A,N,O,a,n,o
-             letter (Ñ)
-  circumflex carat above         ^          A,E,I,O,U,a,e,i,o,u
-             letter (Â)
-  umlaut     Two dots above      :          A,E,I,O,U,,a,e,i,o,u,y
-  diaeresis  letter (Ä)
-  ring       Small circle above  o          A,a
-             letter (Å)
-  cedilla    Small tail below    ,          C,c
-             letter (Ç)
+  | Accent Name   | Description            | Template Character | String Character(s)               |
+  |---------------|------------------------|--------------------|-----------------------------------|
+  | grave         | Backward slant above  | `                  | A, E, I, O, U, a, e, i, o, u       |
+  | acute         | Forward slant above   | '                  | A, E, I, O, U, Y, a, e, i, o, u, y |
+  | tilde         | Wavy line above       | ~                  | A, N, O, a, n, o                   |
+  | circumflex    | Carat above letter    | ^                  | A, E, I, O, U, a, e, i, o, u       |
+  | umlaut        | Two dots above letter | :                  | A, E, I, O, U, a, e, i, o, u, y    |
+  | ring          | Small circle above    | o                  | A, a                               |
+  | cedilla       | Small tail below      | ,                  | C, c                               |
 
   Continued in 'HELP ACCENTS2'
 # ACCENTS2
   These are non-accent special characters, mostly punctuation and non-roman letters.
 
-                      Template   String
-  Description         Character  Character
-  --------------------------------------------------------------
-  Upside-down ? (¿)       u          ?
-  Upside-down ! (¡)       u          !
-  << quote mark («)       "          <
-  >> quote mark (»)       "          >
-  German sharp s (ß)      B          s
-  Capital thorn (Þ)       |          P
-  Lower-case thorn (Þ)    |          p
-  Capital eth (Ð)         -          D
-  Lower-case eth (ð)      &          o
+  | Description         | Template Character | String Character(s)  |
+  |---------------------|--------------------|----------------------|
+  | Upside-down ? (¿)   | u                  | ?                    |
+  | Upside-down ! (¡)   | u                  | !                    |
+  | << quote mark («)   | "                  | <                    |
+  | >> quote mark (»)   | "                  | >                    |
+  | German sharp s (ß)  | B                  | s                    |
+  | Capital thorn (Þ)   | |                  | P                    |
+  | Lower-case thorn (Þ)| |                  | p                    |
+  | Capital eth (Ð)     | -                  | D                    |
+  | Lower-case eth (ð)  | &                  | o                    |
 
   See 'HELP ACCENTS3' for examples
 # ACCENT2
@@ -524,13 +515,17 @@ You say, "r baz"
     > say allof(grab(v(s),rats),grab(v(s),mats),grab(v(s),bats),)
     You say, "Rats Bats"
 ```
+
 ```
     > say allof(#-1,#101,#2970,,#-3,0,#319,null(This Doesn't Count),|)
     You say, "#101|#2970|#319"
 ```
+
+```
     > say allof(foo, 0, #-1, bar, baz,)
     You say, "foobarbaz"
 ```
+
 ```
     > say allof(foo, 0, #-1, bar, baz,%b)
     You say, "foo bar baz"
@@ -546,8 +541,7 @@ You say, "r baz"
 
   Takes any number of `<word>` arguments, and returns the one which is lexicographically biggest. That is, the `<word>` would be last in alphabetical order.
 
-  This is equivilent to last(sort(`<word>` ... `<wordN>`,a)).
-
+  This is equivilent to ```last(sort(`<word>` ... `<wordN>`,a))```.
 
 **See Also:**
 - [alphamin()]
