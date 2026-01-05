@@ -20,7 +20,7 @@ public partial class Functions
 	/// <param name="parser">The MUSH code parser</param>
 	/// <param name="_2">Function attribute metadata</param>
 	/// <returns>Rendered markdown as MarkupString</returns>
-	[SharpFunction(Name = "rendermarkdown", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "rendermarkdown", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["text"])]
 	public static ValueTask<CallState> RenderMarkdown(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -61,7 +61,7 @@ public partial class Functions
 	/// <param name="parser">The MUSH code parser</param>
 	/// <param name="_2">Function attribute metadata</param>
 	/// <returns>Rendered markdown as MarkupString with custom templates applied</returns>
-	[SharpFunction(Name = "rendermarkdowncustom", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "rendermarkdowncustom", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["text"])]
 	public static async ValueTask<CallState> RenderMarkdownCustom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
