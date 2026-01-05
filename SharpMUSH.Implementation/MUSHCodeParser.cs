@@ -20,8 +20,19 @@ using LspRange = SharpMUSH.Library.Models.Range;
 namespace SharpMUSH.Implementation;
 
 /// <summary>
-/// Provides the parser.
+/// Provides the parser for MUSH commands and functions.
 /// Each call is Synchronous and Stateful at this time.
+/// 
+/// <para><b>Performance Optimizations:</b></para>
+/// <list type="bullet">
+/// <item><description>Services are resolved once at construction and cached to avoid repeated DI lookups</description></item>
+/// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string</description></item>
+/// <item><description>ParseInternal() consolidates parser/lexer creation to reduce code duplication</description></item>
+/// <item><description>Custom span-based streams (BufferedTokenSpanStream, AntlrInputStreamSpan) minimize allocations</description></item>
+/// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
+/// </list>
+/// 
+/// <para>For detailed optimization analysis, see PARSER_OPTIMIZATION_ANALYSIS.md</para>
 /// </summary>
 public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	LibraryService<string, FunctionDefinition> FunctionLibrary,
@@ -116,27 +127,46 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		};
 	}
 
-	public ValueTask<CallState?> FunctionParse(MString text)
+	/// <summary>
+	/// Common internal parsing method that handles lexer, parser, and visitor creation.
+	/// This reduces code duplication across the various Parse methods.
+	/// </summary>
+	/// <typeparam name="TContext">The parser rule context type</typeparam>
+	/// <param name="text">The text to parse</param>
+	/// <param name="entryPoint">Function to get the parser context from the parser</param>
+	/// <param name="methodName">Name of the calling method for debugging</param>
+	/// <param name="parser">Optional parser instance to use. When null, defaults to 'this'.
+	/// Pass a different parser when you need custom parser state (e.g., CommandParse with handle info).</param>
+	/// <returns>The result of visiting the parse tree</returns>
+	private ValueTask<CallState?> ParseInternal<TContext>(
+		MString text,
+		Func<SharpMUSHParser, TContext> entryPoint,
+		string methodName,
+		IMUSHCodeParser? parser = null)
+		where TContext : ParserRuleContext
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(FunctionParse));
+		// Use provided parser or default to this instance
+		parser ??= this;
+		
+		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), methodName);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
+		
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
+			Interpreter = { PredictionMode = GetPredictionMode() },
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
-		if(Configuration.CurrentValue.Debug.DebugSharpParser)
+		
+		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		}
 
-		var chatContext = sharpParser.startPlainString();
-		SharpMUSHParserVisitor visitor = new(Logger, this, 
+		var context = entryPoint(sharpParser);
+		
+		SharpMUSHParserVisitor visitor = new(Logger, parser,
 			Configuration,
 			_mediator,
 			_notifyService,
@@ -146,43 +176,15 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_attributeService,
 			_hookService,
 			text);
-
-		return visitor.Visit(chatContext);
+		
+		return visitor.Visit(context);
 	}
+
+	public ValueTask<CallState?> FunctionParse(MString text)
+		=> ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse));
 
 	public ValueTask<CallState?> CommandListParse(MString text)
-	{
-		var plaintext = MModule.plainText(text);
-		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(CommandListParse));
-		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		var chatContext = sharpParser.startCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, this,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, text);
-
-		return visitor.Visit(chatContext);
-	}
+		=> ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse));
 
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{
@@ -246,35 +248,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Caller: handleId?.Ref,
 			Handle: handle));
 
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandParse));
-		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, newParser,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, text);
-
-		var result = await visitor.Visit(chatContext);
+		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 
 		return result ?? CallState.Empty;
 	}
@@ -286,170 +260,22 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <returns>A completed task.</returns>
 	public async ValueTask<CallState> CommandParse(MString text)
 	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandParse));
-		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		var chatContext = sharpParser.startSingleCommandString();
-		SharpMUSHParserVisitor visitor = new(Logger, this,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, text);
-
-		var result = await visitor.Visit(chatContext);
+		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse));
 
 		return result ?? CallState.Empty;
 	}
 
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
-	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandCommaArgsParse));
-		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		var chatContext = sharpParser.commaCommandArgs();
-		SharpMUSHParserVisitor visitor = new(Logger, this,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, text);
-
-		return visitor.Visit(chatContext);
-	}
+		=> ParseInternal(text, p => p.commaCommandArgs(), nameof(CommandCommaArgsParse));
 
 	public ValueTask<CallState?> CommandSingleArgParse(MString text)
-	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandSingleArgParse));
-		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		var chatContext = sharpParser.startPlainSingleCommandArg();
-		SharpMUSHParserVisitor visitor = new(Logger, this,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, text);
-
-		return visitor.Visit(chatContext);
-	}
+		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse));
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
-	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandEqSplitArgsParse));
-		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		var chatContext = sharpParser.startEqSplitCommandArgs();
-		SharpMUSHParserVisitor visitor = new(Logger, this,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, text);
-
-		return visitor.Visit(chatContext);
-	}
+		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse));
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
-	{
-		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), nameof(CommandEqSplitParse));
-		SharpMUSHLexer sharpLexer = new(inputStream);
-		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
-		bufferedTokenSpanStream.Fill();
-		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
-		{
-			Interpreter =
-			{
-				PredictionMode = GetPredictionMode()
-			},
-			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
-		};
-		if (Configuration.CurrentValue.Debug.DebugSharpParser)
-		{
-			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
-		}
-
-		var chatContext = sharpParser.startEqSplitCommand();
-		SharpMUSHParserVisitor visitor = new(Logger, this,
-			Configuration,
-			_mediator,
-			_notifyService,
-			_connectionService,
-			_locateService,
-			_commandDiscoveryService,
-			_attributeService,
-			_hookService, text);
-
-		return visitor.Visit(chatContext);
-	}
+		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse));
 
 	/// <summary>
 	/// Tokenizes the input text and returns token information for syntax highlighting.
