@@ -1,5 +1,6 @@
 ﻿using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -20,7 +21,7 @@ public partial class Functions
 	private const string LinkTypeVariable = "variable";
 	private const string LinkTypeHome = "home";
 
-	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
@@ -896,7 +897,8 @@ LOCATE()
 	public static async ValueTask<CallState> ListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lsearch() searches the database for objects matching criteria
-		// Format: lsearch(<class>, <criteria>=<value>, ...)
+		// Format: lsearch(<player>, <class1>, <restriction1>, <class2>, <restriction2>, ...)
+		// Per PennMUSH documentation: comma-separated positional arguments, NOT equals syntax
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
@@ -905,7 +907,7 @@ LOCATE()
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
-		// First argument is the class (who owns the objects to search)
+		// First argument is the player (who owns the objects to search)
 		var classArg = args["0"].Message!.ToPlainText();
 		AnySharpObject? classObj = null;
 
@@ -929,61 +931,157 @@ LOCATE()
 		DBRef? parent = null;
 		string? hasFlag = null;
 		string? hasPower = null;
+		int? start = null;
+		int? count = null;
 
-		// Process criteria to build database filter
+		// Process criteria as positional class/restriction pairs
 		var appLevelCriteria = new List<(string key, string value)>();
 		
-		for (int i = 1; i < args.Count; i++)
+		// Arguments come in pairs: class, restriction, class, restriction, ...
+		for (int i = 1; i < args.Count; i += 2)
 		{
-			var criterion = args[i.ToString()].Message!.ToPlainText();
-			var parts = criterion.Split('=', 2);
-			if (parts.Length != 2)
+			// Need both class and restriction
+			if (i + 1 >= args.Count)
+			{
+				// Odd number of arguments after player - invalid
+				break;
+			}
+
+			var classType = args[i.ToString()].Message!.ToPlainText().Trim().ToUpperInvariant();
+			var restriction = args[(i + 1).ToString()].Message!.ToPlainText().Trim();
+
+			// Skip if class is "none"
+			if (classType.Equals("NONE", StringComparison.OrdinalIgnoreCase))
 			{
 				continue;
 			}
 
-			var key = parts[0].Trim().ToUpperInvariant();
-			var value = parts[1].Trim();
-
 			// Categorize criteria: database-level vs application-level
-			switch (key)
+			switch (classType)
 			{
 				case "TYPE":
-					types.Add(value.ToUpperInvariant());
+					types.Add(restriction.ToUpperInvariant());
 					break;
 				case "NAME":
-					namePattern = value;
+					namePattern = restriction;
+					break;
+				// Type-specific name filters (shortcuts for TYPE + NAME)
+				case "EXITS":
+					types.Add("EXIT");
+					namePattern = restriction;
+					break;
+				case "THINGS":
+				case "OBJECTS":
+					types.Add("THING");
+					namePattern = restriction;
+					break;
+				case "ROOMS":
+					types.Add("ROOM");
+					namePattern = restriction;
+					break;
+				case "PLAYERS":
+					types.Add("PLAYER");
+					namePattern = restriction;
 					break;
 				case "MINDBREF":
-					if (int.TryParse(value, out var min)) minDbRef = min;
+				case "MINDB":
+					if (int.TryParse(restriction, out var min)) minDbRef = min;
 					break;
 				case "MAXDBREF":
-					if (int.TryParse(value, out var max)) maxDbRef = max;
+				case "MAXDB":
+					if (int.TryParse(restriction, out var max)) maxDbRef = max;
+					break;
+				case "START":
+					if (int.TryParse(restriction, out var startVal)) start = startVal;
+					break;
+				case "COUNT":
+					if (int.TryParse(restriction, out var countVal)) count = countVal;
 					break;
 				case "ZONE":
-					var maybeZone = await LocateService!.Locate(parser, executor, executor, value, LocateFlags.All);
+					var maybeZone = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object().DBRef;
 					break;
 				case "PARENT":
-					var maybeParent = await LocateService!.Locate(parser, executor, executor, value, LocateFlags.All);
+					var maybeParent = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeParent.IsValid()) parent = maybeParent.AsAnyObject.Object().DBRef;
 					break;
 				case "FLAG":
 				case "FLAGS":
-					hasFlag = value;
+					hasFlag = restriction;
+					break;
+				case "LFLAGS":
+					// LFLAGS uses space-separated flag names instead of single characters
+					// Store for now - will need to convert to single-char format or handle separately
+					hasFlag = restriction;
 					break;
 				case "POWER":
 				case "POWERS":
-					hasPower = value;
+					hasPower = restriction;
 					break;
 				default:
-					// Lock evaluation and other criteria must happen in application code
-					appLevelCriteria.Add((key, value));
+					// Lock evaluation, COMMAND, LISTEN, and other criteria must happen in application code
+					appLevelCriteria.Add((classType, restriction));
 					break;
 			}
 		}
 
+		// Pre-compile lock strings and eval expressions for efficiency (compile once, evaluate many times)
+		// This avoids re-compiling the same lock string or expression for every object in the result set
+		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, bool>>();
+		var compiledEvals = new List<(string evalExpression, string? typeFilter)>();
+		
+		foreach (var (key, value) in appLevelCriteria)
+		{
+			switch (key)
+			{
+				case "LOCK" or "ELOCK":
+					// Optimize #TRUE - no need to compile
+					if (value is "#TRUE" or "")
+					{
+						compiledLocks.Add((_, _) => true);
+					}
+					else
+					{
+						compiledLocks.Add(BooleanExpressionParser!.Compile(value));
+					}
+					break;
+				
+				case "EVAL":
+					compiledEvals.Add((value, null));
+					break;
+				case "EPLAYER":
+					compiledEvals.Add((value, "PLAYER"));
+					break;
+				case "EROOM":
+					compiledEvals.Add((value, "ROOM"));
+					break;
+				case "EEXIT":
+					compiledEvals.Add((value, "EXIT"));
+					break;
+				case "ETHING" or "EOBJECT":
+					compiledEvals.Add((value, "THING"));
+					break;
+				
+				case "LISTEN":
+				case "COMMAND":
+					// These require attribute pattern matching - store for app-level evaluation
+					// Will be handled in the filtering loop below
+					break;
+			}
+		}
+		
+		// Extract LISTEN and COMMAND criteria for app-level evaluation
+		var listenPattern = appLevelCriteria.FirstOrDefault(x => x.key == "LISTEN").value;
+		var commandPattern = appLevelCriteria.FirstOrDefault(x => x.key == "COMMAND").value;
+		var hasListenCriteria = !string.IsNullOrEmpty(listenPattern);
+		var hasCommandCriteria = !string.IsNullOrEmpty(commandPattern);
+		
+		// Check if we need to convert SharpObject to AnySharpObject for app-level criteria
+		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria;
+		
 		// Build filter object
+		// IMPORTANT: Only apply START/COUNT at database level if there are NO app-level criteria
+		// If there are app-level criteria, we must apply START/COUNT after filtering in application code
 		filter = new ObjectSearchFilter
 		{
 			Types = types.Count > 0 ? [.. types] : null,
@@ -994,50 +1092,197 @@ LOCATE()
 			Parent = parent,
 			HasFlag = hasFlag,
 			HasPower = hasPower,
-			Owner = classObj?.Object().DBRef
+			Owner = classObj?.Object().DBRef,
+			Skip = hasAppLevelCriteria ? null : start,  // Only skip at DB level if no app-level filtering
+			Limit = hasAppLevelCriteria ? null : count  // Only limit at DB level if no app-level filtering
 		};
 
 		// Query database with filters applied at database level
 		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
-		var results = new List<string>();
+		
+		if (!hasAppLevelCriteria)
+		{
+			// No app-level criteria, just convert to dbrefs directly without fetching full objects
+			// START/COUNT already applied at database level
+			var results = new List<string>();
+			await foreach (var obj in filteredObjects)
+			{
+				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+			}
+			return new CallState(string.Join(" ", results));
+		}
 
-		// Apply application-level criteria (locks, etc.)
+		// Apply application-level criteria (locks, evals, etc.)
+		// Optimize: Convert to AnySharpObject once per object and evaluate all criteria
+		var finalResults = new List<string>();
 		await foreach (var obj in filteredObjects)
 		{
+			// Convert the raw SharpObject to a properly-typed AnySharpObject once for all evaluations
+			var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
 			bool matches = true;
 			
-			// Process application-level criteria
-			foreach (var (key, value) in appLevelCriteria)
+			// Evaluate pre-compiled lock criteria
+			foreach (var compiledLock in compiledLocks)
 			{
-				// Handle lock evaluation and other complex criteria here
-				// For now, we support the basics handled at the database level
-				// Lock evaluation would require checking lock strings which can't be done in the database
-				matches = key switch
+				if (!compiledLock(typedObj, executor))
 				{
-					"LOCK" => EvaluateLockCriteria(obj, value, executor),
-					_ => true // Unknown criteria, skip
-				};
-
-				if (!matches) break;
+					matches = false;
+					break;
+				}
+			}
+			
+			// Evaluate eval expressions if locks passed
+			if (matches)
+			{
+				foreach (var (evalExpression, typeFilter) in compiledEvals)
+				{
+					// Check type filter if specified
+					if (typeFilter != null && !typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+					{
+						matches = false;
+						break;
+					}
+					
+					// Replace ## with the object's dbref number in the expression
+					// Use just the number (e.g., "1") for numeric comparisons
+					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
+					var expression = evalExpression.Replace("##", objectDbRefNum);
+					
+					// Evaluate the expression
+					var evalResult = await parser.FunctionParse(MModule.single(expression));
+					if (evalResult == null || !evalResult.Message.Truthy())
+					{
+						matches = false;
+						break;
+					}
+				}
+			}
+			
+			// Evaluate LISTEN pattern if specified
+			if (matches && hasListenCriteria)
+			{
+				// Check if the object has any @listen attributes matching the pattern
+				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
+				if (!attributesResult.IsError)
+				{
+					var hasMatchingListen = false;
+					
+					foreach (var attr in attributesResult.AsAttributes.Where(a => a.Name.Equals("LISTEN", StringComparison.OrdinalIgnoreCase) || 
+					                                           a.Name.StartsWith("LISTEN`", StringComparison.OrdinalIgnoreCase)))
+					{
+						var attrValue = attr.Value?.ToPlainText() ?? "";
+						// Check if the listen pattern matches our search pattern
+						// This is a wildcard match where * matches any characters
+						if (IsWildcardMatch(attrValue, listenPattern!))
+						{
+							hasMatchingListen = true;
+							break;
+						}
+					}
+					
+					if (!hasMatchingListen)
+					{
+						matches = false;
+					}
+				}
+				else
+				{
+					// If we can't get attributes, object doesn't match
+					matches = false;
+				}
+			}
+			
+			// Evaluate COMMAND pattern if specified
+			if (matches && hasCommandCriteria)
+			{
+				// Check if the object has any $-commands matching the pattern
+				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
+				if (!attributesResult.IsError)
+				{
+					var hasMatchingCommand = false;
+					
+					foreach (var attr in attributesResult.AsAttributes)
+					{
+						var attrValue = attr.Value?.ToPlainText() ?? "";
+						// $-commands are in format: $command-pattern:action
+						// We need to extract the command pattern (between $ and :) and match it
+						var dollarIndex = attrValue.IndexOf('$');
+						if (dollarIndex >= 0)
+						{
+							var colonIndex = attrValue.IndexOf(':', dollarIndex);
+							if (colonIndex > dollarIndex)
+							{
+								// Extract just the command pattern part (after $ and before :)
+								var commandPart = attrValue.Substring(dollarIndex + 1, colonIndex - dollarIndex - 1);
+								if (IsWildcardMatch(commandPart, commandPattern))
+								{
+									hasMatchingCommand = true;
+									break;
+								}
+							}
+						}
+					}
+					
+					if (!hasMatchingCommand)
+					{
+						matches = false;
+					}
+				}
+				else
+				{
+					// If we can't get attributes, object doesn't match
+					matches = false;
+				}
 			}
 
 			if (matches)
 			{
-				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+				finalResults.Add(typedObj.Object().DBRef.ToString());
 			}
 		}
+		
+		// Apply START/COUNT at application level if we had app-level filtering
+		// This ensures pagination happens AFTER all runtime filters are applied
+		if (start.HasValue || count.HasValue)
+		{
+			var skipCount = start ?? 0;
+			var takeCount = count ?? int.MaxValue;
+			finalResults = finalResults.Skip(skipCount).Take(takeCount).ToList();
+		}
 
-		return new CallState(string.Join(" ", results));
+		return new CallState(string.Join(" ", finalResults));
+	}
+	
+	/// <summary>
+	/// Simple wildcard pattern matching for LISTEN and COMMAND searches.
+	/// Supports * as a wildcard that matches any sequence of characters.
+	/// </summary>
+	private static bool IsWildcardMatch(string value, string pattern)
+	{
+		// Convert pattern to regex: escape special chars except *, then replace * with .*
+		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+		return System.Text.RegularExpressions.Regex.IsMatch(value, regexPattern, 
+			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
 
 	/// <summary>
-	/// Evaluates lock criteria for lsearch. This must happen in application code, not in the database.
+	/// Creates an AnySharpObject from a SharpObject based on its Type property.
+	/// This is needed when we have a raw SharpObject from the database but need to work with the discriminated union.
 	/// </summary>
-	private static bool EvaluateLockCriteria(SharpObject obj, string lockName, AnySharpObject executor)
+	private static async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(SharpObject obj)
 	{
-		// Lock evaluation requires runtime evaluation and cannot be done in the database
-		// This would need access to the LockService to evaluate the lock
-		throw new NotImplementedException("Lock filtering in lsearch is not yet implemented. Lock evaluation requires runtime parsing and cannot be efficiently done at the database level.");
+		// The object needs to be fetched properly from the database to get the correct type-specific object
+		// We use the Mediator to fetch the fully-typed object asynchronously
+		var dbref = new DBRef(obj.Key, obj.CreationTime);
+		var result = await Mediator!.Send(new GetObjectNodeQuery(dbref));
+		
+		if (result.IsNone)
+		{
+			// This shouldn't happen in normal operation, but handle it gracefully
+			throw new InvalidOperationException($"Object {dbref} not found when evaluating lock criteria");
+		}
+
+		return result.Known;
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
