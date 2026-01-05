@@ -25,9 +25,20 @@ public class NewPennMUSHFunctionTests
 	}
 
 	[Test]
-	[Arguments("insert(a b c,2,test)", "a b test c")]
-	[Arguments("insert(one|three,1,two,|)", "one|two|three")]
+	[Arguments("insert(This is a string,4,test)", "This is a test string")]
+	[Arguments("insert(one|three|four,2,two,|)", "one|two|three|four")]
+	[Arguments("insert(meep bleep gleep,-3,GOOP)", "meep GOOP bleep gleep")]
 	public async Task INSERT_AddsItemToList(string input, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("linsert(This is a string,4,test)", "This is a test string")]
+	[Arguments("linsert(one|three|four,2,two,|)", "one|two|three|four")]
+	[Arguments("linsert(meep bleep gleep,-3,GOOP)", "meep GOOP bleep gleep")]
+	public async Task LINSERT_InsertsItemAtPosition(string input, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

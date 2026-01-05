@@ -1697,9 +1697,60 @@ public partial class Functions
 			return new CallState(Errors.ErrorUInteger);
 		}
 
-		var list = MModule.split2(delimiter, listArg);
-		var result = InsertExtension.Insert(list, [newItemArg], position);
-		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
+		var listItems = MModule.split2(delimiter, listArg).ToList();
+		var count = listItems.Count;
+
+		// Handle empty list edge case
+		if (count == 0)
+		{
+			return new CallState(MModule.multipleWithDelimiter(delimiter, [newItemArg]));
+		}
+
+		int insertIndex;
+
+		if (position > 0)
+		{
+			// Positive position: insert BEFORE the item at position (1-indexed)
+			// Convert to 0-indexed: position - 1
+			insertIndex = position - 1;
+			
+			// Clamp to valid range [0, count]
+			if (insertIndex > count)
+			{
+				insertIndex = count;
+			}
+			else if (insertIndex < 0)
+			{
+				insertIndex = 0;
+			}
+		}
+		else if (position < 0)
+		{
+			// Negative position: insert AFTER the item at abs(position) from the RIGHT
+			// Position from right: count - abs(position) + 1
+			// Then insert AFTER means add 1 to that index
+			var posFromRight = Math.Abs(position);
+			var targetIndex = count - posFromRight;
+			insertIndex = targetIndex + 1;
+			
+			// Clamp to valid range [0, count]
+			if (insertIndex > count)
+			{
+				insertIndex = count;
+			}
+			else if (insertIndex < 0)
+			{
+				insertIndex = 0;
+			}
+		}
+		else
+		{
+			// Position 0 is invalid in PennMUSH
+			return new CallState(Errors.ErrorUInteger);
+		}
+
+		listItems.Insert(insertIndex, newItemArg);
+		return new CallState(MModule.multipleWithDelimiter(delimiter, listItems));
 	}
 
 	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
