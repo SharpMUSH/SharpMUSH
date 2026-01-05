@@ -455,7 +455,31 @@ Example:
   @pemit Bob=You hear a whisper in the darkness.
 
 See also: @emit, page
+
+& UFUN
+# U
+# FUN
+ufun(<object>/<attribute>[, <arg1>, <arg2>, ...])
+
+Evaluates the named attribute on the object and returns its result.
+This is the most commonly used function for calling user-defined functions.
+
+Aliases: u(), fun()
+
+Example:
+  > think ufun(#123/myfunction, arg1, arg2)
+  > think u(#123/myfunction, arg1, arg2)
+  
+Both commands work identically. The 'u' alias is most commonly used.
+
+See also: ulambda, ulocal
 ```
+
+**Note**: The entry "UFUN" has two aliases:
+- `# U` - Makes it accessible as `help u` or `textfile(commands.txt, u)`
+- `# FUN` - Makes it accessible as `help fun` or `textfile(commands.txt, fun)`
+
+All three names (UFUN, U, FUN) return the same content.
 
 ## Example Markdown Help File
 

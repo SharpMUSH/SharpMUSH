@@ -372,11 +372,20 @@ Key implementation details:
        fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
    ```
 
-7. **Entry Parsing and Index Building**
+7. **Entry Parsing and Index Building with Alias Support**
    - For `.txt` files: Use `Helpfiles.Index()` to extract `& INDEX` entries with byte positions
    - For `.md` files: Treat entire file as single entry with filename as index
+   - **Support aliases**: Lines starting with `# ` define aliases for the current entry
    - Record file path and byte range (start/end) for each entry
    - Merge all entries from all files in category into single index
+   
+   **Alias Format**:
+   ```
+   & UFUN
+   # u
+   # fun
+   This is the content for UFUN (also accessible as 'u' or 'fun')
+   ```
    
    ```csharp
    private async Task<Dictionary<string, IndexEntry>> IndexFileWithPositions(string filePath)
@@ -389,6 +398,7 @@ Key implementation details:
        long currentPosition = 0;
        long entryStart = 0;
        string? currentEntry = null;
+       var aliases = new List<string>();
        var entryContent = new StringBuilder();
        
        string? line;
@@ -399,40 +409,74 @@ Key implementation details:
            // Check for entry marker (& ENTRYNAME)
            if (line.TrimStart().StartsWith("& "))
            {
-               // Save previous entry if exists
+               // Save previous entry if exists (including all aliases)
                if (currentEntry != null)
                {
-                   entries[currentEntry] = new IndexEntry(
+                   var indexEntry = new IndexEntry(
                        filePath,
                        entryStart,
                        currentPosition,
                        currentEntry
                    );
+                   
+                   // Index primary entry name
+                   entries[currentEntry] = indexEntry;
+                   
+                   // Index all aliases to point to same entry
+                   foreach (var alias in aliases)
+                   {
+                       entries[alias] = indexEntry;
+                   }
                }
                
                // Start new entry
                currentEntry = line.TrimStart()[2..].Trim().ToUpper();
                entryStart = currentPosition;
+               aliases.Clear();
                entryContent.Clear();
+           }
+           // Check for alias marker (# ALIASNAME)
+           else if (line.TrimStart().StartsWith("# ") && currentEntry != null)
+           {
+               var alias = line.TrimStart()[2..].Trim().ToUpper();
+               if (!string.IsNullOrEmpty(alias))
+               {
+                   aliases.Add(alias);
+               }
            }
            
            currentPosition += lineBytes;
        }
        
-       // Save last entry
+       // Save last entry with aliases
        if (currentEntry != null)
        {
-           entries[currentEntry] = new IndexEntry(
+           var indexEntry = new IndexEntry(
                filePath,
                entryStart,
                currentPosition,
                currentEntry
            );
+           
+           entries[currentEntry] = indexEntry;
+           
+           // Index all aliases
+           foreach (var alias in aliases)
+           {
+               entries[alias] = indexEntry;
+           }
        }
        
        return entries;
    }
    ```
+   
+   **Alias Behavior**:
+   - Multiple aliases can point to the same entry
+   - Aliases are case-insensitive (like primary entry names)
+   - Both `textfile(file, ufun)` and `textfile(file, u)` return the same content
+   - `help ufun` and `help u` both work
+   - All aliases share the same IndexEntry (same file position)
 
 8. **Rendering**
    - For ANSI: Use existing `MarkdownToAsciiRenderer`

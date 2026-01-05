@@ -120,6 +120,10 @@
 │  │   ├── commands.txt               ← PennMUSH format              │
 │  │   │   & @EMIT                    ← Index entry                  │
 │  │   │   @emit <message>            ← Entry content                │
+│  │   │   & UFUN                     ← Another entry                │
+│  │   │   # U                        ← Alias for UFUN               │
+│  │   │   # FUN                      ← Another alias                │
+│  │   │   ufun() function...         ← Entry content                │
 │  │   │   & @PEMIT                   ← Another entry                │
 │  │   │   ...                                                        │
 │  │   ├── functions.txt              ← More help                    │
@@ -127,6 +131,7 @@
 │  │       # Getting Started          ← Markdown format              │
 │  │       Welcome to SharpMUSH...                                   │
 │  │       → All merged into ONE "help" category index               │
+│  │       → Index includes: @EMIT, UFUN, U, FUN, @PEMIT, etc.      │
 │  │                                                                  │
 │  ├── news/                           ← Category: "news" (auto)      │
 │  │   └── announcements.txt                                         │
@@ -192,14 +197,34 @@ Edit → Save → PUT /api/textfile/help/commands.txt → TextFileController
            → TextFileService.SaveFileAsync()
            → TextFileService.ReindexAsync() (rebuild "help" category index)
 
-Example 6: Startup Indexing (Dynamic Category Discovery)
-──────────────────────────────────────────────────────────
+Example 6: Alias Resolution (help u)
+─────────────────────────────────────
+User → "help u" → HelpCommand → TextFileService.GetEntryAsync("*", "U")
+                              → Search all category indexes for "U"
+                              → Find "U" alias in "help" category
+                              → Alias points to UFUN entry (same IndexEntry)
+                              → Seek to UFUN byte position
+                              → Read content using FileStream + Span
+                              → Return UFUN content
+                              → Display to user
+
+Note: Aliases share the same IndexEntry as the primary name, so:
+- "help ufun", "help u", and "help fun" all return identical content
+- All resolve to the same file position
+- Zero duplication of content in memory
+
+Example 7: Startup Indexing (Dynamic Category Discovery with Aliases)
+──────────────────────────────────────────────────────────────────────
 Server Start → TextFileService Constructor
             → If CacheOnStartup = true
             → Scan text_files/ for subdirectories
             → For each subdirectory (category):
                → Scan all files in category
-               → For .txt: Use Helpfiles.Index() to get entries
+               → For .txt: Parse entries with IndexFileWithPositions()
+                  → Find & ENTRYNAME markers
+                  → Find # ALIAS markers  
+                  → Create IndexEntry with byte positions
+                  → Index primary name and all aliases
                → For .md: Index as single entry
                → Merge all entries into ONE category index
             → Store in _categoryIndexes[categoryName]

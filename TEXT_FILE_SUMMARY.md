@@ -248,15 +248,23 @@ SharpMUSH maintains full compatibility with PennMUSH text file format:
 Content for the topic...
 
 & ANOTHER TOPIC
-& ALIAS
-Content with an alias...
+# ALIAS1
+# ALIAS2
+Content with aliases...
 ```
+
+**Alias Support**:
+- Lines starting with `# ` define aliases for the current entry
+- Multiple aliases can point to the same entry
+- Both primary name and aliases are indexed
+- Example: `& UFUN` with `# U` makes it accessible as both "UFUN" and "U"
 
 **Migration Steps**:
 1. Copy PennMUSH help files to `text_files/help/`
 2. Keep `.txt` extension
-3. No code changes needed
-4. Restart server or use `@readcache` to index
+3. Aliases are automatically detected and indexed
+4. No code changes needed
+5. Restart server or use `@readcache` to index
 
 ### Enhancements Over PennMUSH
 1. **Markdown files** - Create `.md` files for better formatting
@@ -264,12 +272,15 @@ Content with an alias...
 3. **Live preview** - See rendered output while editing
 4. **Versioning** - Track file changes over time
 5. **Advanced search** - Search across all text files
+6. **Efficient indexing** - Metadata-based with FileStream reads
 
 ## Testing Checklist
 
 ### Service Tests
 - [ ] Can index .txt files with PennMUSH format
 - [ ] Can index .md files as single entries
+- [ ] **Can index aliases (# prefix) in .txt files**
+- [ ] **Aliases resolve to same content as primary entry**
 - [ ] Can list all entries in a file
 - [ ] Can retrieve specific entry
 - [ ] Can list all files in directory

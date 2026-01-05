@@ -307,10 +307,10 @@ to anyone in particular.
 ### Using Functions
 ```
 > think textentries(commands.txt)
-@EMIT @PEMIT @OEMIT @REMIT
+@EMIT @PEMIT @OEMIT @REMIT UFUN U FUN
 
 > think textentries(help/commands.txt)
-@EMIT @PEMIT @OEMIT @REMIT
+@EMIT @PEMIT @OEMIT @REMIT UFUN U FUN
 
 > think textfile(commands.txt,@EMIT)
 @emit <message>
@@ -319,11 +319,25 @@ Emits a message to everyone in the room...
 > think textfile(help/commands.txt,@EMIT)
 @emit <message>
 Emits a message to everyone in the room...
+
+> think textfile(commands.txt,UFUN)
+ufun(<object>/<attribute>...)
+
+> think textfile(commands.txt,U)
+ufun(<object>/<attribute>...)
+
+> think textfile(commands.txt,FUN)
+ufun(<object>/<attribute>...)
 ```
 
 Note: Functions support both formats:
 - `textentries(commands.txt)` - searches all categories
 - `textentries(help/commands.txt)` - specific to "help" category
+
+**Alias Support**: 
+- Entries can have multiple aliases (e.g., UFUN has aliases U and FUN)
+- All aliases return the same content
+- Aliases defined with `# ALIASNAME` in text files
 
 ### Web Editing
 1. Navigate to `/admin/textfiles`
