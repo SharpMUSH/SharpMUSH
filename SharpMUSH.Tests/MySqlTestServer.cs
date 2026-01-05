@@ -5,8 +5,7 @@ namespace SharpMUSH.Tests;
 
 public class MySqlTestServer : IAsyncInitializer, IAsyncDisposable
 {
-	public MySqlContainer Instance { get; } = new MySqlBuilder()
-		.WithImage("mysql:8.0")
+	public MySqlContainer Instance { get; } = new MySqlBuilder("mysql:latest")
 		.WithDatabase("sharpmush_test")
 		.WithUsername("testuser")
 		.WithPassword("testpass")

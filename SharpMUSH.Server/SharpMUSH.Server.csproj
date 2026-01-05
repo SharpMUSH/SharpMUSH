@@ -23,7 +23,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.1" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.14.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.14.0" />
@@ -35,10 +35,10 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
 		<PackageReference Include="TelnetNegotiationCore " Version="1.1.0" />
-		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.0" />
-		<PackageReference Include="Testcontainers" Version="4.9.0" />
-		<PackageReference Include="Testcontainers.ArangoDb" Version="4.9.0" />
-		<PackageReference Include="Testcontainers.Redpanda" Version="4.9.0" />
+		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.1" />
+		<PackageReference Include="Testcontainers" Version="4.10.0" />
+		<PackageReference Include="Testcontainers.ArangoDb" Version="4.10.0" />
+		<PackageReference Include="Testcontainers.Redpanda" Version="4.10.0" />
 
 	</ItemGroup>
 	
@@ -50,6 +50,10 @@
     <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
     <ProjectReference Include="..\SharpMUSH.Messages\SharpMUSH.Messages.csproj" />
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Update="TelnetNegotiationCore" Version="1.1.1" />
   </ItemGroup>
 
 </Project>

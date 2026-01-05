@@ -26,8 +26,7 @@ public class RedisTestContainerStrategy : RedisStrategy
 
 	public override async ValueTask InitializeAsync()
 	{
-		_container = new ContainerBuilder()
-			.WithImage("redis:7-alpine")
+		_container = new ContainerBuilder("redis:7-alpine")
 			.WithPortBinding(RedisPort, true) // Random host port
 			.WithCommand("redis-server", "--appendonly", "yes")
 			.WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("redis-cli", "ping"))

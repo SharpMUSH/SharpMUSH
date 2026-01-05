@@ -9,10 +9,9 @@ public class ArangoTestContainerStartupStrategy : ArangoStartupStrategy
 	public override async ValueTask<ArangoConfiguration> ConfigureArango()
 	{
 
-		var container = new ArangoDbBuilder()
+		var container = new ArangoDbBuilder("arangodb:latest")
 			.WithReuse(false)
 			.WithLabel("reuse-id", "SharpMUSH")
-			.WithImage("arangodb:latest")
 			.WithPassword("password")
 			.Build();
 

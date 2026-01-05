@@ -34,7 +34,7 @@ RedpandaContainer? container = null;
 
 if (kafkaHost == null)
 {
-	container = new RedpandaBuilder()
+	container = new RedpandaBuilder("docker.redpanda.com/redpandadata/redpanda:latest")
 		.WithPortBinding(9092, 9092)
 		.Build();
 	await container.StartAsync();
