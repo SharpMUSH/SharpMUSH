@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using Mediator;
@@ -108,6 +109,44 @@ public class SharpMUSHParserVisitor(
 			var (agg, next)
 				=> agg ?? next
 		};
+
+	/// <summary>
+	/// Extracts text from a parser context using the source string.
+	/// This helper reduces code duplication and centralizes the substring extraction logic.
+	/// </summary>
+	/// <param name="context">The parser rule context to extract text from</param>
+	/// <returns>The text content as an MString</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private MString GetContextText(ParserRuleContext context)
+	{
+		var length = context.Stop?.StopIndex is null
+			? 0
+			: (context.Stop.StopIndex - context.Start.StartIndex + 1);
+		return MModule.substring(context.Start.StartIndex, length, source);
+	}
+
+	/// <summary>
+	/// Creates a deferred evaluation function for a parser context.
+	/// This is used for lazy evaluation in functions with NoParse flags.
+	/// Instead of creating inline lambdas, this centralizes the pattern and reduces allocations.
+	/// </summary>
+	/// <param name="context">The evaluation string context to evaluate later</param>
+	/// <param name="visitor">The visitor to use for evaluation</param>
+	/// <param name="stripAnsi">Whether to strip ANSI codes from the result</param>
+	/// <returns>A function that evaluates the context when called</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static Func<ValueTask<MString?>> CreateDeferredEvaluation(
+		EvaluationStringContext context,
+		SharpMUSHParserVisitor visitor,
+		bool stripAnsi)
+	{
+		return async () =>
+		{
+			var result = await visitor.VisitChildren(context);
+			var message = result?.Message ?? MModule.empty();
+			return stripAnsi ? MModule.plainText2(message) : message;
+		};
+	}
 
 	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
 	{
@@ -241,17 +280,15 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				refinedArguments = args.Select(x => new CallState(stripAnsi
-							? MModule.plainText2(MModule.substring(x.Start.StartIndex,
-								context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), src))
-							: MModule.substring(x.Start.StartIndex,
-								context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), src),
-						x.Depth(), null,
-						async () => stripAnsi
-							? MModule.plainText2((await visitor.VisitChildren(x))!.Message)
-							: (await visitor.VisitChildren(x))!.Message))
-					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
-					.ToList();
+				// For NoParse functions with multiple arguments, store unevaluated text with deferred evaluation
+				refinedArguments = args.Select(x =>
+				{
+					var text = GetContextText(x);
+					var evalText = stripAnsi ? MModule.plainText2(text) : text;
+					return new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi));
+				})
+				.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
+				.ToList();
 			}
 
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
@@ -1119,8 +1156,7 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> VisitEvaluationString(
 		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
-		MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+		GetContextText(context),
 		context.Depth());
 
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
@@ -1135,11 +1171,7 @@ public class SharpMUSHParserVisitor(
 		} */
 
 		return await VisitChildren(context)
-		       ?? new CallState(
-			       MModule.substring(context.Start.StartIndex,
-				       context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1),
-				       source),
-			       context.Depth());
+		       ?? new CallState(GetContextText(context), context.Depth());
 
 		/* if (!isGenericText)
 		{
@@ -1158,12 +1190,7 @@ public class SharpMUSHParserVisitor(
 
 		if (_braceDepthCounter <= 1)
 		{
-			result = vc ?? new CallState(
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null
-						? 0
-						: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
-				context.Depth());
+			result = vc ?? new CallState(GetContextText(context), context.Depth());
 		}
 		else
 		{
@@ -1176,12 +1203,7 @@ public class SharpMUSHParserVisitor(
 						MModule.single("}")
 					])
 				}
-				: new CallState(
-					MModule.substring(context.Start.StartIndex,
-						context.Stop?.StopIndex is null
-							? 0
-							: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
-					context.Depth());
+				: new CallState(GetContextText(context), context.Depth());
 		}
 
 		_braceDepthCounter--;
@@ -1199,11 +1221,7 @@ public class SharpMUSHParserVisitor(
 			*/
 
 			var resultQ = await VisitChildren(context)
-			              ?? new CallState(
-				              MModule.substring(context.Start.StartIndex,
-					              context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1),
-					              source),
-				              context.Depth());
+			              ?? new CallState(GetContextText(context), context.Depth());
 
 
 			return resultQ;
@@ -1212,12 +1230,7 @@ public class SharpMUSHParserVisitor(
 		var result = await VisitChildren(context);
 		if (result is null)
 		{
-			return new CallState(
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null
-						? 0
-						: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
-				context.Depth());
+			return new CallState(GetContextText(context), context.Depth());
 		}
 
 		return result with
@@ -1232,24 +1245,12 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> VisitGenericText([NotNull] GenericTextContext context)
 		=> await VisitChildren(context)
-		   ?? new CallState(
-			   MModule.substring(context.Start.StartIndex,
-				   context.Stop?.StopIndex is null
-					   ? 0
-					   : context.Stop.StopIndex - context.Start.StartIndex + 1,
-				   source),
-			   context.Depth());
+		   ?? new CallState(GetContextText(context), context.Depth());
 
 	public override async ValueTask<CallState?> VisitBeginGenericText(
 		[NotNull] BeginGenericTextContext context)
 		=> await VisitChildren(context)
-		   ?? new CallState(
-			   MModule.substring(context.Start.StartIndex,
-				   context.Stop?.StopIndex is null
-					   ? 0
-					   : context.Stop.StopIndex - context.Start.StartIndex + 1,
-				   source),
-			   context.Depth());
+		   ?? new CallState(GetContextText(context), context.Depth());
 
 	public override async ValueTask<CallState?> VisitValidSubstitution(
 		[NotNull] ValidSubstitutionContext context)
@@ -1353,12 +1354,7 @@ public class SharpMUSHParserVisitor(
 			return result;
 		}
 
-		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex is null
-				? 0
-				: context.Stop.StopIndex - context.Start.StartIndex + 1,
-			source);
-		return new CallState(text, context.Depth());
+		return new CallState(GetContextText(context), context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitEscapedText([NotNull] EscapedTextContext context)
