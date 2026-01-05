@@ -4,12 +4,14 @@
 
 This document tracks the implementation status of PennMUSH commands and functions in SharpMUSH.
 
+**Analysis Method:** Extracted directly from PennMUSH source code using regex parsing of FUNCTION() and COMLIST declarations. Command switches and metadata flags have been filtered out.
+
 ## Summary
 
 | Category | PennMUSH | SharpMUSH | Missing | Coverage |
 |----------|----------|-----------|---------|----------|
-| **Commands** | 159 | 171 | 4 | 97% |
-| **Functions** | 513 | 526 | 35 | 93% |
+| **Commands** | 170 | 171 | 4 | 97% |
+| **Functions** | 407 | 526 | 22 | 94% |
 
 ## Missing Commands
 
@@ -24,154 +26,233 @@ The following PennMUSH commands are not yet implemented in SharpMUSH:
 
 The following PennMUSH functions are not yet implemented in SharpMUSH:
 
-- [ ] `ATTRCNT()`
-- [ ] `ATTRPCNT()`
-- [ ] `AVG()`
-- [ ] `CNAME()`
+- [ ] `ANSIGEN()`
+- [ ] `CINFO()`
 - [ ] `CONFIG()`
 - [ ] `CONVSECS()`
 - [ ] `CONVTIME()`
-- [ ] `CONVUTCSECS()`
-- [ ] `CONVUTCTIME()`
+- [ ] `DBWALKER()`
 - [ ] `DELETE()`
-- [ ] `DYNHELP()`
-- [ ] `ELEMENT()`
-- [ ] `EXP()`
 - [ ] `HOSTNAME()`
 - [ ] `IDLESECS()`
 - [ ] `INSERT()`
 - [ ] `LCSTR2()`
-- [ ] `MOD()`
-- [ ] `MODULUS()`
-- [ ] `NCAND()`
-- [ ] `PARSE()`
-- [ ] `PICKRAND()`
-- [ ] `REGLMATCHALLI()`
-- [ ] `REPLACE()`
-- [ ] `REVERSE()`
+- [ ] `PE_REGS_DUMP()`
+- [ ] `REGREPLACE()`
 - [ ] `RNUM()`
-- [ ] `SEARCH()`
+- [ ] `SETMANIP()`
 - [ ] `SHA0()`
 - [ ] `SOUNDLIKE()`
-- [ ] `SPEAKPENN()`
-- [ ] `STATS()`
-- [ ] `U()`
+- [ ] `SQL_ESCAPE()`
+- [ ] `STR_REP_OR_INS()`
 - [ ] `UCSTR2()`
-- [ ] `VAL()`
-- [ ] `XMWHO()`
+- [ ] `WEBSOCKET_HTML()`
+- [ ] `WEBSOCKET_JSON()`
 
-## SharpMUSH-Specific Commands
+## SharpMUSH Extensions - Commands
 
-These commands are implemented in SharpMUSH but not found in PennMUSH source:
+These commands are implemented in SharpMUSH but not found in PennMUSH:
 
-- `&` - SharpMUSH extension
-- `@MAP` - SharpMUSH extension
-- `CONNECT` - SharpMUSH extension
-- `DESERT` - SharpMUSH extension
-- `DISMISS` - SharpMUSH extension
-- `EMPTY` - SharpMUSH extension
-- `GOTO` - SharpMUSH extension
-- `HUH_COMMAND` - SharpMUSH extension
-- `QUIT` - SharpMUSH extension
-- `SCORE` - SharpMUSH extension
-- `SEMIPOSE` - SharpMUSH extension
-- `SESSION` - SharpMUSH extension
-- `UNIMPLEMENTED_COMMAND` - SharpMUSH extension
-- `WARN_ON_MISSING` - SharpMUSH extension
-- `WITH` - SharpMUSH extension
-- `]` - SharpMUSH extension
+*Note: Some of these may be SharpMUSH-specific implementations or connection-level commands.*
 
-## SharpMUSH-Specific Functions
+- `&`
+- `@MAP`
+- `CONNECT`
+- `QUIT`
+- `]`
 
-These functions are implemented in SharpMUSH but not found in PennMUSH:
+## SharpMUSH Extensions - Functions
 
-### Channel Functions
+These functions are implemented in SharpMUSH but not found in PennMUSH source:
 
-- `CBUFFER()` - SharpMUSH extension
-- `CBUFFERADD()` - SharpMUSH extension
-- `CDESC()` - SharpMUSH extension
-- `CEMIT()` - SharpMUSH extension
-- `CFLAGS()` - SharpMUSH extension
-- `CHANNELS()` - SharpMUSH extension
-- `CLFLAGS()` - SharpMUSH extension
-- `CLOCK()` - SharpMUSH extension
-- `CMOGRIFIER()` - SharpMUSH extension
-- `CMSGS()` - SharpMUSH extension
-- `COWNER()` - SharpMUSH extension
-- `CRECALL()` - SharpMUSH extension
-- `CSTATUS()` - SharpMUSH extension
-- `CTITLE()` - SharpMUSH extension
-- `CUSERS()` - SharpMUSH extension
-- `CWHO()` - SharpMUSH extension
+*Note: Some may be SharpMUSH-specific enhancements or equivalent functions with different names.*
 
-### Mail Functions
-
-- `MAIL()` - SharpMUSH extension
-- `MAILDSTATS()` - SharpMUSH extension
-- `MAILFROM()` - SharpMUSH extension
-- `MAILFSTATS()` - SharpMUSH extension
-- `MAILLIST()` - SharpMUSH extension
-- `MAILSEND()` - SharpMUSH extension
-- `MAILSTATS()` - SharpMUSH extension
-- `MAILSTATUS()` - SharpMUSH extension
-- `MAILSUBJECT()` - SharpMUSH extension
-- `MAILTIME()` - SharpMUSH extension
-
-### Web/HTML Functions
-
-- `DECOMPOSEWEB()` - SharpMUSH extension
-- `ENDTAG()` - SharpMUSH extension
-- `FORMDECODE()` - SharpMUSH extension
-- `HTML()` - SharpMUSH extension
-- `PUEBLO()` - SharpMUSH extension
-- `RENDERMARKDOWN()` - SharpMUSH extension
-- `RENDERMARKDOWNCUSTOM()` - SharpMUSH extension
-- `TAG()` - SharpMUSH extension
-- `TAGWRAP()` - SharpMUSH extension
-- `WSHTML()` - SharpMUSH extension
-- `WSJSON()` - SharpMUSH extension
-
-### Other Functions
-
-- `ATTRIB_SET#()` - SharpMUSH extension
-- `CNAND()` - SharpMUSH extension
-- `DOWNMOTD()` - SharpMUSH extension
-- `FOLDERSTATS()` - SharpMUSH extension
-- `FULLMOTD()` - SharpMUSH extension
-- `MALIAS()` - SharpMUSH extension
-- `MOTD()` - SharpMUSH extension
-- `NSCEMIT()` - SharpMUSH extension
-- `REGMATCHALLI()` - SharpMUSH extension
-- `WIZMOTD()` - SharpMUSH extension
-- `ZFIND()` - SharpMUSH extension
+- `@@()`
+- `ANDLPOWERS()`
+- `ATTRIB_SET#()`
+- `CASE()`
+- `CASEALL()`
+- `CBUFFER()`
+- `CDESC()`
+- `CHILDREN()`
+- `CLFLAGS()`
+- `CMSGS()`
+- `CNAND()`
+- `COND()`
+- `CONDALL()`
+- `CUSERS()`
+- `DECOMPOSEWEB()`
+- `DOWNMOTD()`
+- `ELIST()`
+- `FILTERBOOL()`
+- `FULLMOTD()`
+- `GETPIDS()`
+- `GREPI()`
+- `HASATTRP()`
+- `HASATTRPVAL()`
+- `HASATTRVAL()`
+- `HOST()`
+- `IDLE()`
+- `IFELSE()`
+- `LALIGN()`
+- `LATTRP()`
+- `LCON()`
+- `LEXITS()`
+- `LINSERT()`
+- `LLOCKFLAGS()`
+- `LLOCKS()`
+- `LPLAYERS()`
+- `LREPLACE()`
+- `LSEARCHR()`
+- `LTHINGS()`
+- `LVCON()`
+- `LVEXITS()`
+- `LVPLAYERS()`
+- `LVTHINGS()`
+- `LWHOID()`
+- `MAILDSTATS()`
+- `MAILFSTATS()`
+- `MOTD()`
+- `MWHO()`
+- `MWHOID()`
+- `NATTRP()`
+- `NCHILDREN()`
+- `NCON()`
+- `NCOND()`
+- `NCONDALL()`
+- `NCOR()`
+- `NEXITS()`
+- `NLSEARCH()`
+- `NMWHO()`
+- `NPLAYERS()`
+- `NSCEMIT()`
+- `NSEARCH()`
+- `NSEMIT()`
+- `NSLEMIT()`
+- `NSOEMIT()`
+- `NSPEMIT()`
+- `NSPROMPT()`
+- `NSREMIT()`
+- `NSZEMIT()`
+- `NTHINGS()`
+- `NVCON()`
+- `NVEXITS()`
+- `NVPLAYERS()`
+- `NVTHINGS()`
+- `ORDINAL()`
+- `ORLPOWERS()`
+- `PGREP()`
+- `RANDEXTRACT()`
+- `REGEDIT()`
+- `REGEDITALL()`
+- `REGEDITALLI()`
+- `REGEDITI()`
+- `REGISTERS()`
+- `REGLATTR()`
+- `REGLATTRP()`
+- `REGLMATCH()`
+- `REGLMATCHALL()`
+- `REGLMATCHI()`
+- `REGMATCHALLI()`
+- `REGMATCHI()`
+- `REGNATTR()`
+- `REGNATTRP()`
+- `REGRABALL()`
+- `REGRABALLI()`
+- `REGRABI()`
+- `REGREP()`
+- `REGREPI()`
+- `REGXATTR()`
+- `REGXATTRP()`
+- `RENDERMARKDOWN()`
+- `RENDERMARKDOWNCUSTOM()`
+- `RESWITCHALL()`
+- `RESWITCHALLI()`
+- `RESWITCHI()`
+- `SETDIFF()`
+- `SETINTER()`
+- `SETR()`
+- `SETSYMDIFF()`
+- `SETUNION()`
+- `SOUNDSLIKE()`
+- `SQLESCAPE()`
+- `STRALLOF()`
+- `STRDELETE()`
+- `STRFIRSTOF()`
+- `STRINSERT()`
+- `STRREPLACE()`
+- `SWITCHALL()`
+- `TRIMPENN()`
+- `TRIMTINY()`
+- `ULAMBDA()`
+- `ULDEFAULT()`
+- `ULOCAL()`
+- `UTCTIME()`
+- `VDIM()`
+- `WILDGREP()`
+- `WILDGREPI()`
+- `WIZMOTD()`
+- `WSHTML()`
+- `WSJSON()`
+- `XATTR()`
+- `XATTRP()`
+- `XCON()`
+- `XEXITS()`
+- `XMWHOID()`
+- `XPLAYERS()`
+- `XTHINGS()`
+- `XVCON()`
+- `XVEXITS()`
+- `XVPLAYERS()`
+- `XVTHINGS()`
+- `XWHOID()`
+- `ZFIND()`
+- `ZMWHO()`
 
 ## Notes
 
-- **Missing Items**: Functions/commands present in PennMUSH but not in SharpMUSH
-- **SharpMUSH Extensions**: Additional functionality specific to SharpMUSH, including:
-  - Enhanced channel system with additional query functions
-  - Integrated mail system (PennMUSH uses @mail command only)
-  - Web/HTML utilities for rendering and markup
-  - Markdown rendering support
-- **Comparison Source**: Based on PennMUSH source code and SharpMUSH implementation
-- **Last Updated**: This comparison should be run periodically as both codebases evolve
+### Methodology
+- **Source**: Direct extraction from PennMUSH C source files (all .c files in src/)
+- **Commands**: Parsed from COMLIST commands[] in command.c
+- **Functions**: Extracted FUNCTION() declarations from all source files
+- **Filtering**: Removed command switches/flags (EQSPLIT, RS_ARGS, etc.) and object types (ROOM, THING, etc.)
 
-## Recommendations
+### Key Findings
+- **Channel Functions**: Both implementations include channel functions (CWHO, CSTATUS, CEMIT, etc.)
+- **Mail Functions**: Both implementations include mail functions (MAIL, MAILFROM, MAILSTATS, etc.)
+- **Player Commands**: Commands like SCORE exist in both systems
+- **Connection Commands**: QUIT and CONNECT may be handled at different levels in each system
 
-1. **High Priority**: Implement missing core functions used frequently in MUSH code:
-   - `U()` - Call user-defined function (critical)
-   - `ELEMENT()` - Extract element from list
-   - `INSERT()` / `DELETE()` / `REPLACE()` - List manipulation
-   - `PARSE()` - Parse and evaluate code
-   - `SEARCH()` - Search for objects
+## Priority Recommendations
 
-2. **Medium Priority**: Lock and utility functions:
-   - `@ELOCK` / `@EUNLOCK` / `@ULOCK` / `@UUNLOCK` - Special lock types
-   - `STATS()` - Game statistics
-   - Time conversion functions (`CONVSECS()`, `CONVTIME()`, etc.)
+Based on missing items that affect MUSH code compatibility:
 
-3. **Lower Priority**: Specialized or deprecated functions:
-   - `SHA0()` - Older hash function (SHA1 is more common)
-   - `SOUNDLIKE()` / `SPEAKPENN()` - Speech/phonetic functions
-   - `XMWHO()` - XML WHO output (legacy)
+### High Priority Functions
+Essential for running existing MUSH softcode:
 
+- `CONFIG()`
+- `DELETE()`
+- `HOSTNAME()`
+- `IDLESECS()`
+- `INSERT()`
+
+### Medium Priority
+Useful utility functions:
+
+- `CONVSECS()`
+- `CONVTIME()`
+- `LCSTR2()`
+- `RNUM()`
+- `SHA0()`
+- `UCSTR2()`
+
+### Lock Commands
+- `@ELOCK`
+- `@EUNLOCK`
+- `@ULOCK`
+- `@UUNLOCK`
+
+### Implementation Notes
+- Some "missing" items may already be implemented with different names
+- SharpMUSH's additional functions extend functionality beyond PennMUSH
+- Regular updates recommended as both codebases evolve
