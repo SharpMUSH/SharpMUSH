@@ -1706,11 +1706,4 @@ public partial class Functions
 				return $"Wiped {attributesToClear.Count}";
 			});
 	}
-
-	[SharpFunction(Name = "PE_REGS_DUMP", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, 
-		ParameterNames = [])]
-	public static ValueTask<CallState> PERegsDump(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
 }

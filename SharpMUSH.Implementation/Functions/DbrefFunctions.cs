@@ -2560,11 +2560,4 @@ LOCATE()
 					.CountAsync();
 			});
 	}
-
-	[SharpFunction(Name = "DBWALKER", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, 
-		ParameterNames = ["attribute", "start-dbref", "limit"])]
-	public static ValueTask<CallState> DBWalker(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		throw new NotImplementedException();
-	}
 }
