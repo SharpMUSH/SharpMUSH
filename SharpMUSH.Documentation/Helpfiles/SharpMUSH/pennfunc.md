@@ -2630,11 +2630,11 @@ You say, "Test 1! Test 2! Test 3!"
 # %i
 # %i0
 `ilev()`
-`itext(<n>)`
-  %i`<n>`
-`inum(<n>)`
+`itext(\<n\>)`
+  %i`\<n\>`
+`inum(\<n\>)`
 
-  These functions return the equivilent of ## (itext) or #@ (inum) for iter() and @dolist, where an `<n>`=0 returns to the current iter or @dolist, `<n>`=1 refers to the iter()/@dolist which the current iter() or @dolist is nested in, etc. An `<n>` of "L" can be used to refer to the outermost iter()/@dolist. %i`<n>` is an alias for itext(`<n>`), where `<n>` can be from 0 to 9 (or "L").
+  These functions return the equivilent of ## (itext) or #@ (inum) for iter() and @dolist, where an `\<n\>`=0 returns to the current iter or @dolist, `\<n\>`=1 refers to the iter()/@dolist which the current iter() or @dolist is nested in, etc. An `\<n\>` of "L" can be used to refer to the outermost iter()/@dolist. %i`\<n\>` is an alias for itext(`\<n\>`), where `\<n\>` can be from 0 to 9 (or "L").
 
   ilev() returns the current nesting depth, or -1 when used outside an iter() or @dolist. Thus, itext(ilev()) will return the outermost ##, equivilent to %iL.
 
@@ -4452,7 +4452,7 @@ You say, "#1 #7 #56 #-1"
     switch     - stext() context from switch() or @switch. Must be an int, or "L" for the outermost stext()
     regexp     - regexp capture names from re*() regexp functions
 
-  qregisters can also be accessed via the %qX (for one-char register names) or %q`<X>` (for registers with longer names) substitutions.
+  qregisters can also be accessed via the %qX (for one-char register names) or %q`\<X\>` (for registers with longer names) substitutions.
 
 
 **See Also:**
@@ -4621,7 +4621,7 @@ You say "this Trash is the Brash string"
   Examples:
 ```
 say render(<Test 1> & [tagwrap(u,Test 2)], html)
-You say, "&lt;Test 1&gt; &amp; <u>Test 2</u>"
+You say, "&lt;Test 1&gt; &amp; \<u\>Test 2</u>"
 ```
 
 
@@ -4782,7 +4782,7 @@ You say, "-   foo-"
 - [rnum()]
 - [where()]
 # ROOT()
-`root(<number>, <n>)`
+`root(<number>, \<n\>)`
 
   Returns the n-th root of `<number>`. The 2nd root is the square root, the 3rd the cube root, and so on.
 
@@ -5954,7 +5954,7 @@ You say, "abcdefgh"
 
   switch() and switchall() use wildcard and lt/gt `<expr>`s, as described in [switch wildcards]. case() and caseall() do a case-sensitive exact match, like member() or comp(). In this case, $0-$9 will be set to the text that the nth wildcard character met.
 
-  If the string "#$" appears in the `<list>` to be evaluated, it will be replaced with the evaluated value of `<str>` /before/ evaluation of `<list>`. This is not done in case() and caseall(), for TinyMUSH 3 compatibility. Note that this replacement happens before evaluation, which makes it unsafe when `<str>` contains user input, and makes it unsuitable for use in nested switch()es. It is strongly recommended you use the %$`<n>` substitution or stext() function instead, which solves these problems.
+  If the string "#$" appears in the `<list>` to be evaluated, it will be replaced with the evaluated value of `<str>` /before/ evaluation of `<list>`. This is not done in case() and caseall(), for TinyMUSH 3 compatibility. Note that this replacement happens before evaluation, which makes it unsafe when `<str>` contains user input, and makes it unsuitable for use in nested switch()es. It is strongly recommended you use the %$`\<n\>` substitution or stext() function instead, which solves these problems.
 
   See [switch2] for examples.
 
@@ -6010,12 +6010,12 @@ You say, "neat"
 # %$
 # %$0
 `slev()`
-`stext([<n>])`
-  %$`<n>`
+`stext([\<n\>])`
+  %$`\<n\>`
 
-  slev() returns the current nesting depth of switch*(), reswitch*() and @switch/@selects. stext() returns the `<string>` being matched for the current switch, or the `<n>`th switch where n=0 is the current switch, n=1 is the switch the current switch is nested in, and so on. It is a safer replacement for the "#$" token, which (because it is replaced before evaluation) is unsafe with user input, and unsuitable for use in nested switches.
+  slev() returns the current nesting depth of switch*(), reswitch*() and @switch/@selects. stext() returns the `<string>` being matched for the current switch, or the `\<n\>`th switch where n=0 is the current switch, n=1 is the switch the current switch is nested in, and so on. It is a safer replacement for the "#$" token, which (because it is replaced before evaluation) is unsafe with user input, and unsuitable for use in nested switches.
 
-  stext(L) returns the `<string>` for the outermost switch, and is equivilent to stext(slev()). %$`<n>` is equivilent to stext(`<n>`), for `<n>`s of 0-9 or L.
+  stext(L) returns the `<string>` for the outermost switch, and is equivilent to stext(slev()). %$`\<n\>` is equivilent to stext(`\<n\>`), for `\<n\>`s of 0-9 or L.
 
   Examples:
 ```

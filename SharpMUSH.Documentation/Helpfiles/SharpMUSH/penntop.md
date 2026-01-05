@@ -1853,7 +1853,7 @@ See [queue2]
     %= = The dbref/attribute currently being evaluated
     %+ = The number of arguments passed to the current ufun.
     %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function
-    %q`<N>` = the equivalent of r(N) for a named register set by the `setq()` function
+    %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function
     %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.
     %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 
