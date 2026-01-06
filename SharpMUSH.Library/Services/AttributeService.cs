@@ -263,8 +263,10 @@ public class AttributeService(
 					Arguments = args,
 					EnvironmentRegisters = args,
 					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.Last().LongName!),
-					// Preserve the InvocationTracker to maintain recursion and invocation tracking
-					InvocationTracker = s.InvocationTracker
+					// Preserve the invocation tracking fields to maintain recursion and invocation tracking
+					FunctionCallStack = s.FunctionCallStack,
+					FunctionRecursionDepths = s.FunctionRecursionDepths,
+					TotalInvocations = s.TotalInvocations
 				},
 			async newParser =>
 				await newParser.FunctionParse(attr.AsAttribute.Last().Value));
@@ -382,8 +384,10 @@ public class AttributeService(
 					s => s with { 
 						Arguments = slimArgs, 
 						EnvironmentRegisters = slimArgs,
-						// Preserve the InvocationTracker to maintain recursion and invocation tracking
-						InvocationTracker = s.InvocationTracker
+						// Preserve the invocation tracking fields to maintain recursion and invocation tracking
+						FunctionCallStack = s.FunctionCallStack,
+						FunctionRecursionDepths = s.FunctionRecursionDepths,
+						TotalInvocations = s.TotalInvocations
 					},
 					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
 				);
@@ -404,8 +408,10 @@ public class AttributeService(
 		{
 			var result = await parser.With(s => s with { 
 				Arguments = args,
-				// Preserve the InvocationTracker to maintain recursion and invocation tracking
-				InvocationTracker = s.InvocationTracker
+				// Preserve the invocation tracking fields to maintain recursion and invocation tracking
+				FunctionCallStack = s.FunctionCallStack,
+				FunctionRecursionDepths = s.FunctionRecursionDepths,
+				TotalInvocations = s.TotalInvocations
 			},
 				async np => await np.FunctionParse(attribute));
 			return result!.Message!;

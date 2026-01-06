@@ -36,77 +36,19 @@ public enum ParseMode
 public record Execution(bool CommandListBreak = false);
 
 /// <summary>
-/// Tracks invocation metrics across a command evaluation.
-/// This is a mutable class shared across all parser states in a single evaluation to properly track total invocations.
+/// Shared counter for function invocations. Mutable reference type to share across parser states.
 /// </summary>
-public class InvocationTracker
+public class InvocationCounter
 {
 	/// <summary>
 	/// Total number of function calls made during this evaluation.
 	/// </summary>
-	public int TotalInvocations { get; private set; }
+	public int Count { get; private set; }
 	
 	/// <summary>
-	/// Tracks recursion depth per function name.
-	/// Key is function name, value is the current depth.
+	/// Increment the counter and return the new value.
 	/// </summary>
-	private readonly Dictionary<string, int> _recursionDepths = new(StringComparer.OrdinalIgnoreCase);
-	
-	/// <summary>
-	/// Stack of function names in the current call chain for accurate recursion tracking.
-	/// </summary>
-	private readonly Stack<string> _callStack = new();
-	
-	/// <summary>
-	/// Increment the invocation counter and return the new value.
-	/// </summary>
-	public int IncrementInvocations() => ++TotalInvocations;
-	
-	/// <summary>
-	/// Push a function call onto the stack and return the recursion depth for this function.
-	/// </summary>
-	/// <param name="functionName">The name of the function being called</param>
-	/// <returns>The recursion depth for this specific function (how many times it appears in the stack)</returns>
-	public int PushFunction(string functionName)
-	{
-		_callStack.Push(functionName);
-		
-		if (!_recursionDepths.TryGetValue(functionName, out var depth))
-		{
-			depth = 0;
-		}
-		
-		_recursionDepths[functionName] = ++depth;
-		return depth;
-	}
-	
-	/// <summary>
-	/// Pop a function call from the stack.
-	/// </summary>
-	public void PopFunction()
-	{
-		if (_callStack.Count > 0)
-		{
-			var functionName = _callStack.Pop();
-			if (_recursionDepths.TryGetValue(functionName, out var depth) && depth > 0)
-			{
-				_recursionDepths[functionName] = depth - 1;
-			}
-		}
-	}
-	
-	/// <summary>
-	/// Get the current call stack depth (total nesting level).
-	/// </summary>
-	public int GetStackDepth() => _callStack.Count;
-	
-	/// <summary>
-	/// Get the recursion depth for a specific function.
-	/// </summary>
-	public int GetRecursionDepth(string functionName)
-	{
-		return _recursionDepths.TryGetValue(functionName, out var depth) ? depth : 0;
-	}
+	public int Increment() => ++Count;
 }
 
 /// <summary>
@@ -176,7 +118,9 @@ public class IterationWrapper<T>
 /// <param name="Handle">The telnet handle running the command.</param>
 /// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
 /// <param name="HttpResponse">HTTP response context for building HTTP responses</param>
-/// <param name="InvocationTracker">Shared tracker for function invocations and recursion depth across the entire evaluation</param>
+/// <param name="FunctionCallStack">Shared stack tracking function call chain for recursion detection. Mutable and shared across all states in an evaluation.</param>
+/// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
+/// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
 public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -196,7 +140,9 @@ public record ParserState(
 	long? Handle,
 	ParseMode ParseMode = ParseMode.Default,
 	HttpResponseContext? HttpResponse = null,
-	InvocationTracker? InvocationTracker = null)
+	Stack<string>? FunctionCallStack = null,
+	Dictionary<string, int>? FunctionRecursionDepths = null,
+	InvocationCounter? TotalInvocations = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
@@ -221,7 +167,9 @@ public record ParserState(
 		null,
 		ParseMode.Default,
 		null,
-		new InvocationTracker());
+		new Stack<string>(),
+		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+		new InvocationCounter());
 	
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!

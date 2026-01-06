@@ -182,9 +182,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	public ValueTask<CallState?> FunctionParse(MString text)
 	{
-		// Ensure we have an InvocationTracker for standalone function parsing
+		// Ensure we have invocation tracking for standalone function parsing
 		IMUSHCodeParser parser = this;
-		if (State.IsEmpty || CurrentState.InvocationTracker == null)
+		if (State.IsEmpty || CurrentState.TotalInvocations == null)
 		{
 			parser = Push(new ParserState(
 				Registers: new([[]]),
@@ -205,7 +205,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				Handle: null,
 				ParseMode: ParseMode.Default,
 				HttpResponse: null,
-				InvocationTracker: new InvocationTracker()));
+				FunctionCallStack: new Stack<string>(),
+				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations: new InvocationCounter()));
 		}
 		
 		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
@@ -277,7 +279,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Handle: handle,
 			ParseMode: ParseMode.Default,
 			HttpResponse: null,
-			InvocationTracker: new InvocationTracker()));  // Create new tracker for each command
+			FunctionCallStack: new Stack<string>(),  // Create new call stack for each command
+			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),  // Create new recursion tracker
+			TotalInvocations: new InvocationCounter()));  // Create new invocation counter
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 

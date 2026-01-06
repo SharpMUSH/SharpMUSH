@@ -1592,8 +1592,10 @@ public partial class Functions
 		return await parser.With(s => s with
 			{
 				Registers = [],
-				// Preserve the InvocationTracker to maintain recursion and invocation tracking
-				InvocationTracker = s.InvocationTracker
+				// Preserve the invocation tracking fields to maintain recursion and invocation tracking
+				FunctionCallStack = s.FunctionCallStack,
+				FunctionRecursionDepths = s.FunctionRecursionDepths,
+				TotalInvocations = s.TotalInvocations
 			},
 			async np => await AttributeService!.EvaluateAttributeFunctionAsync(
 				np,
