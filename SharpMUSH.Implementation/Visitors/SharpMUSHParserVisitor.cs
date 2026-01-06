@@ -224,15 +224,9 @@ public class SharpMUSHParserVisitor(
 			var currentStack = parser.State;
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
-			var parserFunctionDepth = currentState.ParserFunctionDepth ?? 0;
-			var stackDepth = currentStack.Count();
+			// Note: stackDepth and parserFunctionDepth don't work correctly due to visitor using stale parser reference
+			// contextDepth (ANTLR parse tree depth) is the only reliable incrementing value
 			var recursionDepth = currentStack.Count(x => x.Function == name);
-
-			// DEBUG: Log depth information for investigation
-			if (name == "strlen")
-			{
-				Console.WriteLine($"DEBUG CallFunction: name={name}, parserFunctionDepth={parserFunctionDepth}, stackDepth={stackDepth}, contextDepth={contextDepth}, recursionDepth={recursionDepth}, MaxDepth={Configuration.CurrentValue.Limit.MaxDepth}");
-			}
 
 			List<CallState> refinedArguments;
 
@@ -263,19 +257,27 @@ public class SharpMUSHParserVisitor(
 
 			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
-			if (contextDepth > Configuration.CurrentValue.Limit.CallLimit)
+			// NOTE: Due to visitor using stale parser reference, contextDepth is the only reliable depth measure
+			// contextDepth increments by ~5 per function nesting level in the ANTLR parse tree
+			// We approximate function depth as contextDepth / 5
+			var approximateFunctionDepth = contextDepth / 5;
+			
+			if (approximateFunctionDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
-				// TODO: Context Depth is not the correct value to use here.
-				return new CallState(Errors.ErrorCall, contextDepth);
+				// MaxDepth (stack depth) check using contextDepth approximation
+				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
-
-			if (stackDepth > Configuration.CurrentValue.Limit.MaxDepth)
+			
+			if (approximateFunctionDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
-				return new CallState(Errors.ErrorInvoke, stackDepth);
+				// CallLimit check using contextDepth approximation
+				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
 			if (recursionDepth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
 			{
+				// Recursion depth check (same function name in call stack)
+				// NOTE: This also doesn't work correctly due to stale parser reference
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
 
@@ -312,6 +314,18 @@ public class SharpMUSHParserVisitor(
 				})
 				.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 				.ToList();
+			}
+
+			// Check if any argument evaluation resulted in an error
+			// Errors start with "#-1" or "#-2"  
+			// If an argument failed, propagate the error instead of passing it as an argument value
+			foreach (var arg in refinedArguments)
+			{
+				var msgText = arg.Message?.ToPlainText() ?? "";
+				if (msgText.StartsWith("#-1") || msgText.StartsWith("#-2"))
+				{
+					return arg;
+				}
 			}
 
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.

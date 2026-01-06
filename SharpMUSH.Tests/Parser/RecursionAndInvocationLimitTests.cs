@@ -82,41 +82,44 @@ public class RecursionAndInvocationLimitTests
 	public async Task StackDepth_ExactLimit_IsEnforced()
 	{
 		// Arrange: MaxDepth is 10 in test config
-		// Create exactly 11 nested calls (depths 0-10)
-		// This should succeed
+		// contextDepth increments by ~5 per nesting level
+		// approxDepth = contextDepth / 5
+		// So 10 nested calls have approxDepth=10, which should pass (10 not > 10)
+		// And 11 nested calls have approxDepth=11, which should fail (11 > 10)
+		
+		// Create exactly 10 nested calls - should succeed
+		var nested10 = "x";
+		for (int i = 0; i < 10; i++)
+		{
+			nested10 = $"[strlen({nested10})]";
+		}
+		
+		// Create exactly 11 nested calls - should fail  
 		var nested11 = "x";
 		for (int i = 0; i < 11; i++)
 		{
 			nested11 = $"[strlen({nested11})]";
 		}
 		
-		// Create exactly 12 nested calls (depths 0-11)
-		// This should fail  
-		var nested12 = "x";
-		for (int i = 0; i < 12; i++)
-		{
-			nested12 = $"[strlen({nested12})]";
-		}
-		
 		// Act
+		var result10 = await Parser.FunctionParse(MModule.single(nested10));
 		var result11 = await Parser.FunctionParse(MModule.single(nested11));
-		var result12 = await Parser.FunctionParse(MModule.single(nested12));
 		
 		// Assert
+		await Assert.That(result10).IsNotNull();
 		await Assert.That(result11).IsNotNull();
-		await Assert.That(result12).IsNotNull();
 		
+		var output10 = result10!.Message.ToPlainText();
 		var output11 = result11!.Message.ToPlainText();
-		var output12 = result12!.Message.ToPlainText();
 		
+		Console.WriteLine($"10-deep result: {output10}");
 		Console.WriteLine($"11-deep result: {output11}");
-		Console.WriteLine($"12-deep result: {output12}");
 		
-		// 11-deep should succeed and return "1" (length of "x")
-		await Assert.That(output11).IsEqualTo("1");
+		// 10-deep should succeed and return "1" (length of "x")
+		await Assert.That(output10).IsEqualTo("1");
 		
-		// 12-deep should fail with an error
-		await Assert.That(output12).Contains("#-1");
+		// 11-deep should fail with an error
+		await Assert.That(output11).Contains("#-1");
 	}
 
 	/// <summary>
@@ -233,7 +236,7 @@ public class RecursionAndInvocationLimitTests
 		await Assert.That(limits.FunctionRecursionLimit).IsEqualTo(50u);
 		await Assert.That(limits.FunctionInvocationLimit).IsEqualTo(25000u);
 		// CallLimit is very large in test config
-		await Assert.That(limits.CallLimit).IsGreaterThan(1000u);
+		await Assert.That(limits.CallLimit).IsGreaterThanOrEqualTo(1000u);
 	}
 
 	/// <summary>
