@@ -409,3 +409,5 @@ gen
 # Rider
 .idea
 *.bak
+# Text files directory - managed separately
+TextFiles/

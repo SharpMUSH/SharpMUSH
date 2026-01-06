@@ -2572,15 +2572,31 @@ public partial class Commands
 	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> ReadCache(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @readcache - Reload cached text files and rebuild help indexes
-		// In SharpMUSH's web-based architecture, cached files are loaded at startup
-		// This command provides a notification but doesn't actually reload files
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		await NotifyService!.Notify(executor, "Cached files (help, news, etc.) are loaded at server startup in SharpMUSH.");
-		await NotifyService!.Notify(executor, "To reload configuration and cached files, use @shutdown/reboot or restart the server.");
-		await NotifyService!.Notify(executor, "In a cloud/web deployment, consider using container restarts or rolling deployments.");
-		
+
+		if (TextFileService == null)
+		{
+			await NotifyService!.Notify(executor, "Text file service not available.");
+			return CallState.Empty;
+		}
+
+		await NotifyService!.Notify(executor, "Reindexing text files...");
+
+		var startTime = DateTime.UtcNow;
+		try
+		{
+			await TextFileService.ReindexAsync();
+			var elapsed = DateTime.UtcNow - startTime;
+			await NotifyService!.Notify(executor, 
+				$"Text file cache rebuilt in {elapsed.TotalMilliseconds:F0}ms.");
+		}
+		catch (Exception ex)
+		{
+			var elapsed = DateTime.UtcNow - startTime;
+			await NotifyService!.Notify(executor, 
+				$"Error reindexing text files after {elapsed.TotalMilliseconds:F0}ms: {ex.Message}");
+		}
+
 		return CallState.Empty;
 	}
 

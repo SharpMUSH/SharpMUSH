@@ -53,6 +53,13 @@
   </ItemGroup>
 	
   <ItemGroup>
+    <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
+      <Link>TextFiles\help\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+	
+  <ItemGroup>
     <PackageReference Update="TelnetNegotiationCore" Version="1.1.1" />
   </ItemGroup>
 

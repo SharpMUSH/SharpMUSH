@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DotNext;
 using DotNext.Collections.Generic;
 using MarkupString;
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -1636,18 +1637,64 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "textentries", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> TextEntries(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "textentries", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> TextEntries(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement textentries - requires text file system integration
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var fileReference = args["0"].Message!.ToPlainText();
+		var separator = args.TryGetValue("1", out var sep) 
+			? sep.Message!.ToPlainText() 
+			: " ";
+
+		if (TextFileService == null)
+		{
+			return new CallState("#-1 TEXT FILE SERVICE NOT AVAILABLE");
+		}
+
+		try
+		{
+			var entries = await TextFileService.ListEntriesAsync(fileReference, separator);
+			return new CallState(entries);
+		}
+		catch (FileNotFoundException)
+		{
+			return new CallState("#-1 FILE NOT FOUND");
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogError(ex, "Error in textentries({File})", fileReference);
+			return new CallState("#-1 ERROR");
+		}
 	}
 
 	[SharpFunction(Name = "textfile", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement textfile - requires text file system integration
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var fileReference = args["0"].Message!.ToPlainText();
+		var entryName = args["1"].Message!.ToPlainText();
+
+		if (TextFileService == null)
+		{
+			return new CallState("#-1 TEXT FILE SERVICE NOT AVAILABLE");
+		}
+
+		try
+		{
+			var content = await TextFileService.GetEntryAsync(fileReference, entryName);
+			return content != null 
+				? new CallState(content)
+				: new CallState("#-1 ENTRY NOT FOUND");
+		}
+		catch (FileNotFoundException)
+		{
+			return new CallState("#-1 FILE NOT FOUND");
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogError(ex, "Error in textfile({File}, {Entry})", fileReference, entryName);
+			return new CallState("#-1 ERROR");
+		}
 	}
 
 	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]
