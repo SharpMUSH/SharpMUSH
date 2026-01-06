@@ -214,14 +214,8 @@ public class TextFileService : ITextFileService
 
 		var categoryIndex = new Dictionary<string, IndexEntry>(StringComparer.OrdinalIgnoreCase);
 		
-		// Index both .txt and .md files
-		var txtFiles = Directory.GetFiles(categoryPath, "*.txt");
+		// Index only .md files
 		var mdFiles = Directory.GetFiles(categoryPath, "*.md");
-		
-		foreach (var file in txtFiles)
-		{
-			await IndexTxtFileAsync(file, categoryIndex);
-		}
 
 		foreach (var file in mdFiles)
 		{
@@ -234,38 +228,6 @@ public class TextFileService : ITextFileService
 		}
 
 		_logger.LogDebug("Indexed category {Category}: {Count} entries", category, categoryIndex.Count);
-	}
-
-	private async Task IndexTxtFileAsync(string filePath, Dictionary<string, IndexEntry> index)
-	{
-		var fileInfo = new FileInfo(filePath);
-		var result = Helpfiles.Index(fileInfo);
-		
-		if (result.IsT1)
-		{
-			_logger.LogWarning("Failed to index {File}: {Error}", filePath, result.AsT1.Value);
-			return;
-		}
-
-		var entries = result.AsT0;
-		var content = await File.ReadAllTextAsync(filePath);
-		
-		foreach (var (entryName, entryContent) in entries)
-		{
-			// For .txt files, we store position based on content search
-			// This is less efficient but maintains compatibility with PennMUSH format
-			var startPos = content.IndexOf(entryContent, StringComparison.Ordinal);
-			if (startPos >= 0)
-			{
-				var entry = new IndexEntry(
-					filePath,
-					startPos,
-					startPos + entryContent.Length,
-					entryName
-				);
-				index[entryName] = entry;
-			}
-		}
 	}
 
 	private async Task IndexMarkdownFileAsync(string filePath, Dictionary<string, IndexEntry> index)
