@@ -139,53 +139,14 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
+		
+		// Initialize TextFileService
+		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
+		
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
-		
-		// Initialize Helpfiles service
-		services.AddSingleton<SharpMUSH.Documentation.Helpfiles>(sp =>
-		{
-			var logger = sp.GetRequiredService<ILogger<SharpMUSH.Documentation.Helpfiles>>();
-			
-			// Try multiple paths to find the helpfiles directory
-			var pathsToTry = new[]
-			{
-				// Production path
-				Path.Combine(AppContext.BaseDirectory, "SharpMUSH.Documentation", "Helpfiles"),
-				// Development path (from bin/Debug/net10.0)
-				Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "SharpMUSH.Documentation", "Helpfiles")),
-				// Test path
-				Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "SharpMUSH.Documentation", "Helpfiles")),
-				// Current directory
-				Path.Combine(Directory.GetCurrentDirectory(), "Helpfiles")
-			};
-			
-			string? helpfilesPath = null;
-			foreach (var path in pathsToTry)
-			{
-				if (Directory.Exists(path))
-				{
-					helpfilesPath = path;
-					logger.LogInformation("Found helpfiles directory at: {Path}", helpfilesPath);
-					break;
-				}
-			}
-			
-			if (helpfilesPath == null)
-			{
-				// Create an empty directory if none found
-				helpfilesPath = Path.Combine(Directory.GetCurrentDirectory(), "Helpfiles");
-				Directory.CreateDirectory(helpfilesPath);
-				logger.LogWarning("Could not find helpfiles directory, created empty directory at: {Path}", helpfilesPath);
-			}
-			
-			var helpfiles = new SharpMUSH.Documentation.Helpfiles(new DirectoryInfo(helpfilesPath), logger);
-			helpfiles.Index();
-			Commands.InitializeHelpfiles(helpfiles);
-			return helpfiles;
-		});
 		
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
