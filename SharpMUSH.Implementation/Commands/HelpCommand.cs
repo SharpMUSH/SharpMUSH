@@ -60,10 +60,10 @@ public partial class Commands
 			else if (matches.Count == 1)
 			{
 				// Only one match, show it
-				var content = _helpfiles.FindEntry(matches[0]);
-				if (content != null)
+				var searchContent = _helpfiles.FindEntry(matches[0]);
+				if (searchContent != null)
 				{
-					var rendered = RecursiveMarkdownHelper.RenderMarkdown(content);
+					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
 					await NotifyService!.Notify(executor, rendered);
 				}
 			}
@@ -87,10 +87,10 @@ public partial class Commands
 			else if (matches.Count == 1)
 			{
 				// Only one match, show it
-				var content = _helpfiles.FindEntry(matches[0]);
-				if (content != null)
+				var wildcardContent = _helpfiles.FindEntry(matches[0]);
+				if (wildcardContent != null)
 				{
-					var rendered = RecursiveMarkdownHelper.RenderMarkdown(content);
+					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
 					await NotifyService!.Notify(executor, rendered);
 				}
 			}
@@ -100,21 +100,20 @@ public partial class Commands
 				await NotifyService!.Notify(executor, $"Help topics matching '{topic}':");
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
+			return CallState.Empty;
+		}
+
+		// Try exact match
+		var exactContent = _helpfiles.FindEntry(topic);
+		if (exactContent != null)
+		{
+			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
+			await NotifyService!.Notify(executor, rendered);
 		}
 		else
 		{
-			// Try exact match
-			var content = _helpfiles.FindEntry(topic);
-			if (content != null)
-			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(content);
-				await NotifyService!.Notify(executor, rendered);
-			}
-			else
-			{
-				await NotifyService!.Notify(executor, $"No help available for '{topic}'.");
-				await NotifyService!.Notify(executor, "Try 'help <pattern>' with wildcards (*) or 'help/search <text>' to search help content.");
-			}
+			await NotifyService!.Notify(executor, $"No help available for '{topic}'.");
+			await NotifyService!.Notify(executor, "Try 'help <pattern>' with wildcards (*) or 'help/search <text>' to search help content.");
 		}
 
 		return CallState.Empty;

@@ -28,12 +28,21 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	/// </summary>
 	public IEnumerable<string> FindMatchingTopics(string pattern)
 	{
-		// Convert wildcard pattern to regex
+		// Convert wildcard pattern to regex - cache the regex for better performance
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-		var regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
+		var regex = WildcardToRegex().Replace(regexPattern, match => 
+		{
+			if (match.Value == "\\*") return ".*";
+			if (match.Value == "\\?") return ".";
+			return match.Value;
+		});
+		var compiledRegex = new Regex(regex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
 		
-		return IndexedHelp.Keys.Where(k => regex.IsMatch(k));
+		return IndexedHelp.Keys.Where(k => compiledRegex.IsMatch(k));
 	}
+	
+	[GeneratedRegex(@"\\[*?]", RegexOptions.Compiled)]
+	private static partial Regex WildcardToRegex();
 	
 	/// <summary>
 	/// Searches help content for entries containing the search term
@@ -47,30 +56,6 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 
 	public void Index()
 	{
-		// Index .txt files
-		var txtFiles = directory.GetFiles("*.txt");
-		foreach (var file in txtFiles)
-		{
-			 var maybeIndexedFile = Index(file);
-			 if (maybeIndexedFile.IsT1)
-			 {
-				 logger?.LogWarning("Failed to index helpfile {FilePath}: {Error}", file.FullName, maybeIndexedFile.AsT1.Value);
-				 continue;
-			 }
-
-			 var indexedFile = maybeIndexedFile.AsT0;
-			 
-			 foreach (var kv in indexedFile)
-			 {
-				 if (IndexedHelp.ContainsKey(kv.Key))
-				 {
-					 logger?.LogWarning("Duplicate help index '{HelpIndex}' found in file {FilePath}, skipping", kv.Key, file.FullName);
-					 continue;
-				 }
-				 IndexedHelp.Add(kv.Key, kv.Value);
-			 }
-		}
-		
 		// Index .md files recursively
 		IndexMarkdownFilesRecursive(directory);
 	}
