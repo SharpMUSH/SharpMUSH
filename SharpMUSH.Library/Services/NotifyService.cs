@@ -332,7 +332,18 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 			if (state.FlushTimer == null)
 			{
 				state.FlushTimer = new Timer(
-					_ => Task.Run(async () => await FlushHandle(handle)),
+					_ =>
+					{
+						try
+						{
+							Task.Run(async () => await FlushHandle(handle)).Wait();
+						}
+						catch
+						{
+							// Suppress exceptions to prevent timer crashes
+							// Logging could be added here if needed
+						}
+					},
 					null,
 					10,
 					Timeout.Infinite
@@ -356,22 +367,35 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 			return;
 		}
 
-		List<byte[]> messagesToFlush;
+		List<byte[]>? messagesToFlush = null;
+		bool shouldRemoveState = false;
 		lock (state.Lock)
 		{
 			if (state.AccumulatedMessages.Count == 0)
 			{
-				return;
+				// No messages to flush, but clean up if timer is null (manual flush)
+				shouldRemoveState = state.FlushTimer == null;
 			}
+			else
+			{
+				messagesToFlush = [.. state.AccumulatedMessages];
+				state.AccumulatedMessages.Clear();
+				state.FlushTimer?.Dispose();
+				state.FlushTimer = null;
+				
+				// After flushing, we can remove the state to prevent memory leak
+				// It will be recreated if more messages arrive
+				shouldRemoveState = true;
+			}
+		}
 
-			messagesToFlush = [.. state.AccumulatedMessages];
-			state.AccumulatedMessages.Clear();
-			state.FlushTimer?.Dispose();
-			state.FlushTimer = null;
+		if (shouldRemoveState)
+		{
+			_batchingStates.TryRemove(handle, out _);
 		}
 
 		// Combine all accumulated messages with newlines and publish as one message
-		if (messagesToFlush.Count > 0)
+		if (messagesToFlush?.Count > 0)
 		{
 			var totalSize = messagesToFlush.Sum(m => m.Length) + (messagesToFlush.Count - 1) * 2; // +2 for \r\n
 			var combined = new byte[totalSize];
