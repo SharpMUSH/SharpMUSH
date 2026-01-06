@@ -717,7 +717,7 @@ public partial class ArangoDatabase(
 		if (key is not null)
 		{
 			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphObjectData, DatabaseConstants.ObjectData,
-				key, new Dictionary<string, object> { { dataType, data } }, cancellationToken: ct, keepNull: false);
+				key, new Dictionary<string, object> { { dataType, data } }, waitForSync: true, cancellationToken: ct, keepNull: false);
 			return;
 		}
 
@@ -726,13 +726,13 @@ public partial class ArangoDatabase(
 		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, dynamic>(handle,
 			DatabaseConstants.GraphObjectData,
 			DatabaseConstants.ObjectData,
-			newJson, cancellationToken: ct);
+			newJson, waitForSync: true, cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(handle,
 			DatabaseConstants.GraphObjectData,
 			DatabaseConstants.HasObjectData, new SharpEdgeCreateRequest(
 				From: sharpObjectId,
-				To: newVertex.Vertex.GetProperty("_id").GetString()!), cancellationToken: ct);
+				To: newVertex.Vertex.GetProperty("_id").GetString()!), waitForSync: true, cancellationToken: ct);
 	}
 
 	public async ValueTask<T?> GetExpandedObjectData<T>(string sharpObjectId, string dataType,
@@ -759,7 +759,9 @@ public partial class ArangoDatabase(
 			newJson,
 			overwriteMode: ArangoOverwriteMode.Update,
 			mergeObjects: true,
-			keepNull: true, cancellationToken: ct);
+			keepNull: true,
+			waitForSync: true,
+			cancellationToken: ct);
 	}
 
 	public record ArangoDocumentWrapper<T>(T Data);
