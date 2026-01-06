@@ -28,21 +28,12 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	/// </summary>
 	public IEnumerable<string> FindMatchingTopics(string pattern)
 	{
-		// Convert wildcard pattern to regex - cache the regex for better performance
+		// Convert wildcard pattern to regex
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-		var regex = WildcardToRegex().Replace(regexPattern, match => 
-		{
-			if (match.Value == "\\*") return ".*";
-			if (match.Value == "\\?") return ".";
-			return match.Value;
-		});
-		var compiledRegex = new Regex(regex, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		var compiledRegex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
 		
 		return IndexedHelp.Keys.Where(k => compiledRegex.IsMatch(k));
 	}
-	
-	[GeneratedRegex(@"\\[*?]", RegexOptions.Compiled)]
-	private static partial Regex WildcardToRegex();
 	
 	/// <summary>
 	/// Searches help content for entries containing the search term
