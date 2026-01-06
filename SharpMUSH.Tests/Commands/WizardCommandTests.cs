@@ -383,7 +383,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("startup") || s.Value.ToString()!.Contains("SharpMUSH loads")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Reindexing text files") || s.Value.ToString()!.Contains("Text file cache rebuilt")));
 	}
 
 	[Test]
