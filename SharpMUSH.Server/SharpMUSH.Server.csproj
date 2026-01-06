@@ -57,6 +57,14 @@
       <Link>TextFiles\help\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\TextFiles\news\*.md">
+      <Link>TextFiles\news\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\TextFiles\ahelp\*.md">
+      <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 	
   <ItemGroup>
