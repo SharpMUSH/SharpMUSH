@@ -228,7 +228,7 @@ public class SharpMUSHParserVisitor(
 			
 			// Get or create the invocation tracking fields
 			var invocationCounter = currentState.TotalInvocations ?? new InvocationCounter();
-			var callStack = currentState.FunctionCallStack ?? new Stack<string>();
+			var callDepth = currentState.CallDepth ?? new InvocationCounter();
 			var recursionDepths = currentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 			
 			// Increment total invocation count and check limit
@@ -239,8 +239,8 @@ public class SharpMUSHParserVisitor(
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 			
-			// Push function onto call stack and track recursion depth
-			callStack.Push(name);
+			// Increment call depth and track recursion depth
+			var currentDepth = callDepth.Increment();
 			didPushFunction = true;
 			
 			if (!recursionDepths.TryGetValue(name, out var depth))
@@ -280,16 +280,15 @@ public class SharpMUSHParserVisitor(
 			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
 				
-			// Check stack depth limit using the call stack depth
-			var stackDepth = callStack.Count;
-			if (stackDepth > Configuration.CurrentValue.Limit.MaxDepth)
+			// Check stack depth limit using the call depth counter
+			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
 				// MaxDepth (stack depth) exceeded
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 			
-			// Check call limit (also using stack depth as a proxy)
-			if (stackDepth > Configuration.CurrentValue.Limit.CallLimit)
+			// Check call limit (also using call depth as a proxy)
+			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
 				// CallLimit exceeded  
 				return new CallState(Errors.ErrorCall, contextDepth);
@@ -371,7 +370,7 @@ public class SharpMUSHParserVisitor(
 				Handle: currentState.Handle,
 				ParseMode: currentState.ParseMode,
 				HttpResponse: currentState.HttpResponse,
-				FunctionCallStack: callStack,  // Pass the shared call stack to nested calls
+				CallDepth: callDepth,  // Pass the shared call depth counter to nested calls
 				FunctionRecursionDepths: recursionDepths,  // Pass the shared recursion tracking
 				TotalInvocations: invocationCounter  // Pass the shared invocation counter
 			));
@@ -396,19 +395,20 @@ public class SharpMUSHParserVisitor(
 		}
 		finally
 		{
-			// Always pop this function from the call stack and decrement recursion depth, even on error
+			// Always decrement call depth and recursion depth, even on error
 			if (didPushFunction)
 			{
-				var callStack = parser.CurrentState.FunctionCallStack;
+				var currentCallDepth = parser.CurrentState.CallDepth;
 				var recursionDepths = parser.CurrentState.FunctionRecursionDepths;
+				var functionName = parser.CurrentState.Function;
 				
-				if (callStack != null && callStack.Count > 0)
+				// Decrement the call depth counter
+				currentCallDepth?.Decrement();
+				
+				// Decrement the recursion depth for this specific function
+				if (recursionDepths != null && functionName != null && recursionDepths.TryGetValue(functionName, out var depth) && depth > 0)
 				{
-					var poppedName = callStack.Pop();
-					if (recursionDepths != null && recursionDepths.TryGetValue(poppedName, out var depth) && depth > 0)
-					{
-						recursionDepths[poppedName] = depth - 1;
-					}
+					recursionDepths[functionName] = depth - 1;
 				}
 			}
 			

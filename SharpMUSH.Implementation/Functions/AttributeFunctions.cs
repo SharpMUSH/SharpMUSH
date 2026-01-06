@@ -1593,7 +1593,7 @@ public partial class Functions
 			{
 				Registers = [],
 				// Preserve the invocation tracking fields to maintain recursion and invocation tracking
-				FunctionCallStack = s.FunctionCallStack,
+				CallDepth = s.CallDepth,
 				FunctionRecursionDepths = s.FunctionRecursionDepths,
 				TotalInvocations = s.TotalInvocations
 			},

@@ -49,6 +49,11 @@ public class InvocationCounter
 	/// Increment the counter and return the new value.
 	/// </summary>
 	public int Increment() => ++Count;
+	
+	/// <summary>
+	/// Decrement the counter and return the new value.
+	/// </summary>
+	public int Decrement() => --Count;
 }
 
 /// <summary>
@@ -118,7 +123,7 @@ public class IterationWrapper<T>
 /// <param name="Handle">The telnet handle running the command.</param>
 /// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
 /// <param name="HttpResponse">HTTP response context for building HTTP responses</param>
-/// <param name="FunctionCallStack">Shared stack tracking function call chain for recursion detection. Mutable and shared across all states in an evaluation.</param>
+/// <param name="CallDepth">Shared counter tracking overall function call nesting depth. Mutable and shared across all states in an evaluation.</param>
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
 public record ParserState(
@@ -140,7 +145,7 @@ public record ParserState(
 	long? Handle,
 	ParseMode ParseMode = ParseMode.Default,
 	HttpResponseContext? HttpResponse = null,
-	Stack<string>? FunctionCallStack = null,
+	InvocationCounter? CallDepth = null,
 	Dictionary<string, int>? FunctionRecursionDepths = null,
 	InvocationCounter? TotalInvocations = null)
 {
@@ -167,7 +172,7 @@ public record ParserState(
 		null,
 		ParseMode.Default,
 		null,
-		new Stack<string>(),
+		new InvocationCounter(),
 		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		new InvocationCounter());
 	

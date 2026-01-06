@@ -205,7 +205,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				Handle: null,
 				ParseMode: ParseMode.Default,
 				HttpResponse: null,
-				FunctionCallStack: new Stack<string>(),
+				CallDepth: new InvocationCounter(),
 				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: new InvocationCounter()));
 		}
@@ -279,7 +279,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Handle: handle,
 			ParseMode: ParseMode.Default,
 			HttpResponse: null,
-			FunctionCallStack: new Stack<string>(),  // Create new call stack for each command
+			CallDepth: new InvocationCounter(),  // Create new call depth counter for each command
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),  // Create new recursion tracker
 			TotalInvocations: new InvocationCounter()));  // Create new invocation counter
 

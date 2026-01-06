@@ -264,7 +264,7 @@ public class AttributeService(
 					EnvironmentRegisters = args,
 					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.Last().LongName!),
 					// Preserve the invocation tracking fields to maintain recursion and invocation tracking
-					FunctionCallStack = s.FunctionCallStack,
+					CallDepth = s.CallDepth,
 					FunctionRecursionDepths = s.FunctionRecursionDepths,
 					TotalInvocations = s.TotalInvocations
 				},
@@ -385,7 +385,7 @@ public class AttributeService(
 						Arguments = slimArgs, 
 						EnvironmentRegisters = slimArgs,
 						// Preserve the invocation tracking fields to maintain recursion and invocation tracking
-						FunctionCallStack = s.FunctionCallStack,
+						CallDepth = s.CallDepth,
 						FunctionRecursionDepths = s.FunctionRecursionDepths,
 						TotalInvocations = s.TotalInvocations
 					},
@@ -409,7 +409,7 @@ public class AttributeService(
 			var result = await parser.With(s => s with { 
 				Arguments = args,
 				// Preserve the invocation tracking fields to maintain recursion and invocation tracking
-				FunctionCallStack = s.FunctionCallStack,
+				CallDepth = s.CallDepth,
 				FunctionRecursionDepths = s.FunctionRecursionDepths,
 				TotalInvocations = s.TotalInvocations
 			},
