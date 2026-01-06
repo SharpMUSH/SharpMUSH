@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Text;
 using System.Text.RegularExpressions;
+using DotNext.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
@@ -27,7 +28,7 @@ public class TextFileService : ITextFileService
 	// Category -> (EntryName -> IndexEntry with file position)
 	private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _indexLock = new();
-	private readonly Lazy<Task> _initializationTask;
+	private readonly AsyncLazy<bool> _initializationTask;
 
 	public TextFileService(
 		IOptions<SharpMUSHOptions> options,
@@ -38,11 +39,15 @@ public class TextFileService : ITextFileService
 
 		if (_options.Value.TextFile.CacheOnStartup)
 		{
-			_initializationTask = new Lazy<Task>(() => ReindexAsync());
+			_initializationTask = new AsyncLazy<bool>(async cancellationToken =>
+			{
+				await ReindexAsync();
+				return true;
+			});
 		}
 		else
 		{
-			_initializationTask = new Lazy<Task>(() => Task.CompletedTask);
+			_initializationTask = new AsyncLazy<bool>(cancellationToken => Task.FromResult(true));
 		}
 	}
 
@@ -62,7 +67,7 @@ public class TextFileService : ITextFileService
 
 	public async Task<string> ListEntriesAsync(string fileReference, string separator = " ")
 	{
-		await _initializationTask.Value;
+		await _initializationTask.WithCancellation(CancellationToken.None);
 		
 		var (category, _) = ParseFileReference(fileReference);
 		
@@ -85,7 +90,7 @@ public class TextFileService : ITextFileService
 
 	public async Task<string?> GetEntryAsync(string fileReference, string entryName)
 	{
-		await _initializationTask.Value;
+		await _initializationTask.WithCancellation(CancellationToken.None);
 		
 		var (category, _) = ParseFileReference(fileReference);
 		
@@ -162,7 +167,7 @@ public class TextFileService : ITextFileService
 
 	public async Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern)
 	{
-		await _initializationTask.Value;
+		await _initializationTask.WithCancellation(CancellationToken.None);
 		
 		var (category, _) = ParseFileReference(fileReference);
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
