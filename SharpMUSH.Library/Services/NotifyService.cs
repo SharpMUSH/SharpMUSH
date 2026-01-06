@@ -228,19 +228,6 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 	public async ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
 
-	public void BeginBatchingScope(long handle)
-	{
-		// No-op: Batching is now always active with 10ms timeout
-		// This method is kept for backward compatibility
-	}
-
-	public async ValueTask EndBatchingScope(long handle)
-	{
-		// Flush immediately instead of waiting for timer
-		// This maintains backward compatibility for code that expects immediate flushing
-		await FlushHandle(handle);
-	}
-
 	/// <summary>
 	/// Begin a context-based batching scope that batches notifications to ANY target.
 	/// Returns an IDisposable that should be disposed to end the scope and flush messages.

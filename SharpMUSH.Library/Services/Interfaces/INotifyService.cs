@@ -39,19 +39,6 @@ public interface INotifyService
 	ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
 	/// <summary>
-	/// [DEPRECATED] Begin a batching scope for the specified connection handle.
-	/// This is now a no-op as batching is always active with automatic 10ms timeout.
-	/// Kept for backward compatibility.
-	/// </summary>
-	void BeginBatchingScope(long handle);
-
-	/// <summary>
-	/// End a batching scope for the specified connection handle.
-	/// Flushes any accumulated messages immediately instead of waiting for the 10ms timeout.
-	/// </summary>
-	ValueTask EndBatchingScope(long handle);
-
-	/// <summary>
 	/// Begin a context-based batching scope that batches notifications to ANY target.
 	/// Returns an IDisposable that should be disposed to end the scope and flush messages.
 	/// Supports ref-counting for nested scopes.
