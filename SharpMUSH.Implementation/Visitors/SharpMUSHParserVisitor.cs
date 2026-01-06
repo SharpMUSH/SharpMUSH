@@ -221,6 +221,7 @@ public class SharpMUSHParserVisitor(
 		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
 		// DEBUG flag: Check once and cache depth/indent for use in both outputs
+		// Priority: AttributeDebugOverride (NODEBUG > DEBUG) > Object DEBUG flag
 		var executor = await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
 		AnySharpObject? executorObj = null;
@@ -230,7 +231,19 @@ public class SharpMUSHParserVisitor(
 		if (!executor.IsNone)
 		{
 			executorObj = executor.Known();
-			shouldDebug = await executorObj.HasFlag("DEBUG");
+			
+			// Check attribute-level override first
+			if (parser.CurrentState.AttributeDebugOverride.HasValue)
+			{
+				// false (NODEBUG) takes precedence - always suppress
+				// true (DEBUG) forces debug output
+				shouldDebug = parser.CurrentState.AttributeDebugOverride.Value;
+			}
+			else
+			{
+				// No attribute override, use object-level DEBUG flag
+				shouldDebug = await executorObj.HasFlag("DEBUG");
+			}
 			
 			if (shouldDebug)
 			{

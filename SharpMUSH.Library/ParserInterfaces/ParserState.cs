@@ -102,6 +102,7 @@ public class IterationWrapper<T>
 /// <param name="Handle">The telnet handle running the command.</param>
 /// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
 /// <param name="HttpResponse">HTTP response context for building HTTP responses</param>
+/// <param name="AttributeDebugOverride">Attribute-level DEBUG/NODEBUG override: null=use object flag, true=force debug, false=suppress debug</param>
 public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -120,7 +121,8 @@ public record ParserState(
 	DBRef? Caller,
 	long? Handle,
 	ParseMode ParseMode = ParseMode.Default,
-	HttpResponseContext? HttpResponse = null)
+	HttpResponseContext? HttpResponse = null,
+	bool? AttributeDebugOverride = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
