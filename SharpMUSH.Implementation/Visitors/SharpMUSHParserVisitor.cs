@@ -220,33 +220,38 @@ public class SharpMUSHParserVisitor(
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
 		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
-		// DEBUG flag: Output function call before evaluation
+		// DEBUG flag: Check once and cache depth/indent for use in both outputs
 		var executor = await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
 		AnySharpObject? executorObj = null;
+		string? indent = null;
+		int dbrefNumber = 0;
 		
 		if (!executor.IsNone)
 		{
 			executorObj = executor.Known();
 			shouldDebug = await executorObj.HasFlag("DEBUG");
+			
+			if (shouldDebug)
+			{
+				var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
+				indent = new string(' ', depth);
+				dbrefNumber = executorObj.Object().DBRef.Number;
+			}
 		}
 		
-		if (shouldDebug && executorObj != null)
+		if (shouldDebug && executorObj != null && indent != null)
 		{
-			var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
-			var indent = new string(' ', depth);
-			var debugOutput = $"#{executorObj.Object().DBRef.Number}! {indent}{context.GetText()} :";
+			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} :";
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
 		}
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
 
 		// DEBUG flag: Output function result after evaluation
-		if (shouldDebug && executorObj != null)
+		if (shouldDebug && executorObj != null && indent != null)
 		{
-			var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
-			var indent = new string(' ', depth);
-			var debugOutput = $"#{executorObj.Object().DBRef.Number}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
+			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
 		}
 
