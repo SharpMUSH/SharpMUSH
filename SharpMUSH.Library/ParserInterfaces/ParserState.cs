@@ -61,58 +61,6 @@ public class HttpResponseContext
 	public StringBuilder Body { get; } = new();
 }
 
-/// <summary>
-/// Tracks debug information for an expression evaluation
-/// </summary>
-public class DebugInfo
-{
-	/// <summary>
-	/// The expression being evaluated
-	/// </summary>
-	public required string Expression { get; set; }
-	
-	/// <summary>
-	/// The nesting depth of this evaluation
-	/// </summary>
-	public required int Depth { get; set; }
-	
-	/// <summary>
-	/// The executor dbref for this evaluation
-	/// </summary>
-	public required DBRef Executor { get; set; }
-	
-	/// <summary>
-	/// Previous debug info in the linked list (for traversal)
-	/// </summary>
-	public DebugInfo? Previous { get; set; }
-	
-	/// <summary>
-	/// Next debug info in the linked list (for traversal)
-	/// </summary>
-	public DebugInfo? Next { get; set; }
-}
-
-/// <summary>
-/// Debug context for tracking debug output during parser evaluation
-/// </summary>
-public class DebugContext
-{
-	/// <summary>
-	/// Current nesting depth for indentation
-	/// </summary>
-	public int Depth { get; set; } = 0;
-	
-	/// <summary>
-	/// Debugging mode: 0=disabled, -1=explicitly disabled, 1=explicitly enabled
-	/// </summary>
-	public int DebuggingMode { get; set; } = 0;
-	
-	/// <summary>
-	/// Head of linked list of DebugInfo objects tracking evaluation hierarchy
-	/// </summary>
-	public DebugInfo? DebugStrings { get; set; }
-}
-
 public class IterationWrapper<T>
 {
 	/// <summary>
@@ -154,7 +102,6 @@ public class IterationWrapper<T>
 /// <param name="Handle">The telnet handle running the command.</param>
 /// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
 /// <param name="HttpResponse">HTTP response context for building HTTP responses</param>
-/// <param name="DebugContext">Debug context for tracking debug output</param>
 public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -173,8 +120,7 @@ public record ParserState(
 	DBRef? Caller,
 	long? Handle,
 	ParseMode ParseMode = ParseMode.Default,
-	HttpResponseContext? HttpResponse = null,
-	DebugContext? DebugContext = null)
+	HttpResponseContext? HttpResponse = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
