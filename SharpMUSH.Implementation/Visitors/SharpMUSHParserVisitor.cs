@@ -224,8 +224,15 @@ public class SharpMUSHParserVisitor(
 			var currentStack = parser.State;
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
+			var parserFunctionDepth = currentState.ParserFunctionDepth ?? 0;
 			var stackDepth = currentStack.Count();
 			var recursionDepth = currentStack.Count(x => x.Function == name);
+
+			// DEBUG: Log depth information for investigation
+			if (name == "strlen")
+			{
+				Console.WriteLine($"DEBUG CallFunction: name={name}, parserFunctionDepth={parserFunctionDepth}, stackDepth={stackDepth}, contextDepth={contextDepth}, recursionDepth={recursionDepth}, MaxDepth={Configuration.CurrentValue.Limit.MaxDepth}");
+			}
 
 			List<CallState> refinedArguments;
 
