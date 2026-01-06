@@ -58,6 +58,14 @@
 			<Link>TextFiles\help\%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
+		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\ahelp\*.md">
+			<Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\news\*.md">
+			<Link>TextFiles\news\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
   </ItemGroup>
 
   <ItemGroup>

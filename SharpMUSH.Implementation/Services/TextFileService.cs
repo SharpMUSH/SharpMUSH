@@ -27,6 +27,7 @@ public class TextFileService : ITextFileService
 	// Category -> (EntryName -> IndexEntry with file position)
 	private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _indexLock = new();
+	private readonly Task _initializationTask;
 
 	public TextFileService(
 		IOptions<SharpMUSHOptions> options,
@@ -37,7 +38,11 @@ public class TextFileService : ITextFileService
 
 		if (_options.Value.TextFile.CacheOnStartup)
 		{
-			_ = Task.Run(async () => await ReindexAsync());
+			_initializationTask = Task.Run(async () => await ReindexAsync());
+		}
+		else
+		{
+			_initializationTask = Task.CompletedTask;
 		}
 	}
 
@@ -55,15 +60,17 @@ public class TextFileService : ITextFileService
 		return Task.FromResult(categories);
 	}
 
-	public Task<string> ListEntriesAsync(string fileReference, string separator = " ")
+	public async Task<string> ListEntriesAsync(string fileReference, string separator = " ")
 	{
+		await _initializationTask;
+		
 		var (category, _) = ParseFileReference(fileReference);
 		
 		lock (_indexLock)
 		{
 			if (category != null && _categoryIndexes.TryGetValue(category, out var entries))
 			{
-				return Task.FromResult(string.Join(separator, entries.Keys.OrderBy(k => k)));
+				return string.Join(separator, entries.Keys.OrderBy(k => k));
 			}
 
 			// Search all categories
@@ -72,12 +79,14 @@ public class TextFileService : ITextFileService
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.OrderBy(k => k);
 			
-			return Task.FromResult(string.Join(separator, allEntries));
+			return string.Join(separator, allEntries);
 		}
 	}
 
 	public async Task<string?> GetEntryAsync(string fileReference, string entryName)
 	{
+		await _initializationTask;
+		
 		var (category, _) = ParseFileReference(fileReference);
 		
 		IndexEntry? indexEntry = null;
@@ -151,8 +160,10 @@ public class TextFileService : ITextFileService
 		return Task.FromResult<string?>(content);
 	}
 
-	public Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern)
+	public async Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern)
 	{
+		await _initializationTask;
+		
 		var (category, _) = ParseFileReference(fileReference);
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
 		var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -172,7 +183,7 @@ public class TextFileService : ITextFileService
 					.Distinct(StringComparer.OrdinalIgnoreCase);
 			}
 
-			return Task.FromResult(entries.Where(e => regex.IsMatch(e)));
+			return entries.Where(e => regex.IsMatch(e)).ToList();
 		}
 	}
 
