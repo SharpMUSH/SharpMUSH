@@ -73,6 +73,51 @@ public class SharpMUSHParserVisitor(
 			? mushParser.ServiceProvider.GetService<ITelemetryService>() 
 			: null;
 
+	/// <summary>
+	/// Sends debug or verbose output to owner and DEBUGFORWARDLIST recipients.
+	/// </summary>
+	/// <param name="executor">The executor object</param>
+	/// <param name="message">The message to send</param>
+	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
+	{
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		
+		// Send to owner if connected
+		var connections = await ConnectionService.Get(owner.Object.DBRef).AnyAsync();
+		if (connections)
+		{
+			await NotifyService.Notify(owner.Object.DBRef, MModule.single(message));
+		}
+		
+		// Send to DEBUGFORWARDLIST if it exists
+		var debugForwardAttr = await AttributeService.GetAttributeAsync(
+			executor, executor, "DEBUGFORWARDLIST", 
+			IAttributeService.AttributeMode.Read, parent: false);
+		
+		if (debugForwardAttr.IsAttribute)
+		{
+			var attr = debugForwardAttr.AsAttribute.Last();
+			var forwardListText = attr.Value.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(forwardListText))
+			{
+				// Parse space-separated list of dbrefs
+				var dbrefs = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				foreach (var dbrefStr in dbrefs)
+				{
+					if (DBRef.TryParse(dbrefStr, out var dbref) && dbref.HasValue)
+					{
+						// Check if this dbref is connected
+						var forwardConnections = await ConnectionService.Get(dbref.Value).AnyAsync();
+						if (forwardConnections)
+						{
+							await NotifyService.Notify(dbref.Value, MModule.single(message));
+						}
+					}
+				}
+			}
+		}
+	}
+
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
 		if (node is null) return null;
@@ -175,13 +220,35 @@ public class SharpMUSHParserVisitor(
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
 		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
-		/* await NotifyService!.Notify(parser.CurrentState.Executor!.Value, MModule.single(
-			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :")); */
+		// DEBUG flag: Output function call before evaluation
+		var executor = await parser.CurrentState.ExecutorObject(Mediator);
+		var shouldDebug = false;
+		AnySharpObject? executorObj = null;
+		
+		if (!executor.IsNone)
+		{
+			executorObj = executor.Known();
+			shouldDebug = await executorObj.HasFlag("DEBUG");
+		}
+		
+		if (shouldDebug && executorObj != null)
+		{
+			var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
+			var indent = new string(' ', depth);
+			var debugOutput = $"#{executorObj.Object().DBRef.Number}! {indent}{context.GetText()} :";
+			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+		}
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
 
-		/* await NotifyService!.Notify(parser.CurrentState.Caller!.Value, MModule.single(
-			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}")); */
+		// DEBUG flag: Output function result after evaluation
+		if (shouldDebug && executorObj != null)
+		{
+			var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
+			var indent = new string(' ', depth);
+			var debugOutput = $"#{executorObj.Object().DBRef.Number}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
+			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+		}
 
 		return result;
 	}
@@ -870,43 +937,8 @@ public class SharpMUSHParserVisitor(
 					var executorObj = executor.Known();
 					if (await executorObj.HasFlag("VERBOSE"))
 					{
-						var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
 						var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
-						
-						// Send to owner if connected
-						var connections = await ConnectionService.Get(owner.Object.DBRef).AnyAsync();
-						if (connections)
-						{
-							await NotifyService.Notify(owner.Object.DBRef, MModule.single(verboseOutput));
-						}
-						
-						// Send to DEBUGFORWARDLIST if it exists
-						var debugForwardAttr = await AttributeService.GetAttributeAsync(
-							executorObj, executorObj, "DEBUGFORWARDLIST", 
-							IAttributeService.AttributeMode.Read, parent: false);
-						
-						if (debugForwardAttr.IsAttribute)
-						{
-							var attr = debugForwardAttr.AsAttribute.Last();
-							var forwardListText = attr.Value.ToPlainText();
-							if (!string.IsNullOrWhiteSpace(forwardListText))
-							{
-								// Parse space-separated list of dbrefs
-								var dbrefs = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-								foreach (var dbrefStr in dbrefs)
-								{
-									if (DBRef.TryParse(dbrefStr, out var dbref) && dbref.HasValue)
-									{
-										// Check if this dbref is connected
-										var forwardConnections = await ConnectionService.Get(dbref.Value).AnyAsync();
-										if (forwardConnections)
-										{
-											await NotifyService.Notify(dbref.Value, MModule.single(verboseOutput));
-										}
-									}
-								}
-							}
-						}
+						await SendDebugOrVerboseOutput(executorObj, verboseOutput);
 					}
 				}
 				
