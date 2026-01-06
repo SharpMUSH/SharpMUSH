@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Linq;
 using OneOf;
 using OneOf.Types;
@@ -1696,7 +1695,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "version", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? string.Empty);
+		=> ValueTask.FromResult<CallState>(Implementation.Generated.VersionInfo.Version);
 
 	[SharpFunction(Name = "visible", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "looker"])]
 	public static async ValueTask<CallState> Visible(IMUSHCodeParser parser, SharpFunctionAttribute _2)

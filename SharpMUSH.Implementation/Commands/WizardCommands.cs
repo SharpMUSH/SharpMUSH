@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using System.Linq;
 using Humanizer;
 using Microsoft.Extensions.Logging;
@@ -18,6 +17,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using ConfigGenerated = SharpMUSH.Configuration.Generated;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -2650,62 +2650,39 @@ public partial class Commands
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
-		// Use reflection to find the configuration option (same as @config)
-		var optionsType = typeof(SharpMUSH.Configuration.Options.SharpMUSHOptions);
-		var categoryProperties = optionsType.GetProperties();
-		
-		// Search for the option across all categories
-		var allOptions = categoryProperties
-			.SelectMany(category =>
-			{
-				var categoryType = category.PropertyType;
-				var props = categoryType.GetProperties();
-				return props.Select(prop =>
-				{
-					var attr = prop.GetCustomAttribute<SharpMUSH.Configuration.SharpConfigAttribute>();
-					if (attr == null) return null;
-					var categoryValue = category.GetValue(Configuration!.CurrentValue);
-					var value = prop.GetValue(categoryValue);
-					return new
-					{
-						Category = category.Name,
-						CategoryInstance = categoryValue,
-						PropertyInfo = prop,
-						PropertyName = prop.Name,
-						ConfigAttr = attr,
-						Value = value
-					};
-				}).Where(x => x != null);
-			})
-			.Select(x => x!)
-			.ToList();
+		// Use generated ConfigMetadata to find the configuration option
+		// Find matching property by attribute name (case-insensitive)
+		var matchingProperty = ConfigGenerated.ConfigMetadata.PropertyToAttributeName
+			.FirstOrDefault(kvp => kvp.Value.Equals(optionName, StringComparison.OrdinalIgnoreCase));
 
-		// Find the matching option (case-insensitive)
-		var matchingOption = allOptions.FirstOrDefault(opt =>
-			opt.ConfigAttr.Name.Equals(optionName, StringComparison.OrdinalIgnoreCase));
-
-		if (matchingOption == null)
+		if (matchingProperty.Key == null)
 		{
 			await NotifyService!.Notify(executor, $"No configuration option named '{optionName}'.");
 			return new CallState("#-1 NOT FOUND");
 		}
 
 		// Check if the option is a boolean
-		if (matchingOption.PropertyInfo.PropertyType != typeof(bool))
+		var propertyType = ConfigGenerated.ConfigAccessor.GetPropertyType(matchingProperty.Key);
+		if (propertyType != typeof(bool))
 		{
+			var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
 			await NotifyService!.Notify(executor, 
-				$"Option '{matchingOption.ConfigAttr.Name}' is not a boolean option. Use @config/set instead.");
+				$"Option '{attr.Name}' is not a boolean option. Use @config/set instead.");
 			return new CallState("#-1 INVALID TYPE");
 		}
+
+		// Get current value
+		var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration!.CurrentValue, matchingProperty.Key);
+		var attr2 = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
 
 		// Note: Runtime configuration modification is not yet fully implemented
 		// This would require writing to a configuration file or database and reloading
 		await NotifyService!.Notify(executor, 
-			$"@{(isEnable ? "enable" : "disable")} is equivalent to @config/set {matchingOption.ConfigAttr.Name}={(isEnable ? "yes" : "no")}");
+			$"@{(isEnable ? "enable" : "disable")} is equivalent to @config/set {attr2.Name}={(isEnable ? "yes" : "no")}");
 		await NotifyService.Notify(executor, 
 			"Runtime configuration modification is not yet implemented. Changes require server restart.");
 		await NotifyService.Notify(executor, 
-			$"Current value: {matchingOption.ConfigAttr.Name}={(matchingOption.Value?.ToString() ?? "null")}");
+			$"Current value: {attr2.Name}={(value?.ToString() ?? "null")}");
 		
 		return new CallState("#-1 NOT IMPLEMENTED");
 	}

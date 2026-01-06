@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
