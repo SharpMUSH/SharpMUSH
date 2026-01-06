@@ -148,17 +148,37 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<SharpMUSH.Documentation.Helpfiles>(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<SharpMUSH.Documentation.Helpfiles>>();
-			// Resolve the path to the helpfiles directory
-			var helpfilesPath = Path.Combine(AppContext.BaseDirectory, "SharpMUSH.Documentation", "Helpfiles");
-			if (!Directory.Exists(helpfilesPath))
+			
+			// Try multiple paths to find the helpfiles directory
+			var pathsToTry = new[]
 			{
-				// Try alternate path for development
-				helpfilesPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "SharpMUSH.Documentation", "Helpfiles"));
-				if (!Directory.Exists(helpfilesPath))
+				// Production path
+				Path.Combine(AppContext.BaseDirectory, "SharpMUSH.Documentation", "Helpfiles"),
+				// Development path (from bin/Debug/net10.0)
+				Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "SharpMUSH.Documentation", "Helpfiles")),
+				// Test path
+				Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "SharpMUSH.Documentation", "Helpfiles")),
+				// Current directory
+				Path.Combine(Directory.GetCurrentDirectory(), "Helpfiles")
+			};
+			
+			string? helpfilesPath = null;
+			foreach (var path in pathsToTry)
+			{
+				if (Directory.Exists(path))
 				{
-					// Last resort - use current directory
-					helpfilesPath = Path.Combine(Directory.GetCurrentDirectory(), "Helpfiles");
+					helpfilesPath = path;
+					logger.LogInformation("Found helpfiles directory at: {Path}", helpfilesPath);
+					break;
 				}
+			}
+			
+			if (helpfilesPath == null)
+			{
+				// Create an empty directory if none found
+				helpfilesPath = Path.Combine(Directory.GetCurrentDirectory(), "Helpfiles");
+				Directory.CreateDirectory(helpfilesPath);
+				logger.LogWarning("Could not find helpfiles directory, created empty directory at: {Path}", helpfilesPath);
 			}
 			
 			var helpfiles = new SharpMUSH.Documentation.Helpfiles(new DirectoryInfo(helpfilesPath), logger);
