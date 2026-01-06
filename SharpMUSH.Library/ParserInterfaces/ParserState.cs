@@ -82,23 +82,23 @@ public class DebugInfo
 	public required DBRef Executor { get; set; }
 	
 	/// <summary>
-	/// Previous debug info in the linked list
+	/// Previous debug info in the linked list (for traversal)
 	/// </summary>
 	public DebugInfo? Previous { get; set; }
 	
 	/// <summary>
-	/// Next debug info in the linked list
+	/// Next debug info in the linked list (for traversal)
 	/// </summary>
 	public DebugInfo? Next { get; set; }
 }
 
 /// <summary>
-/// Debug context for tracking debug output
+/// Debug context for tracking debug output during parser evaluation
 /// </summary>
 public class DebugContext
 {
 	/// <summary>
-	/// Current nesting depth
+	/// Current nesting depth for indentation
 	/// </summary>
 	public int Depth { get; set; } = 0;
 	
@@ -108,7 +108,7 @@ public class DebugContext
 	public int DebuggingMode { get; set; } = 0;
 	
 	/// <summary>
-	/// Linked list of debug strings
+	/// Head of linked list of DebugInfo objects tracking evaluation hierarchy
 	/// </summary>
 	public DebugInfo? DebugStrings { get; set; }
 }
