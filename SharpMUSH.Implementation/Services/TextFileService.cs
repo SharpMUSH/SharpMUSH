@@ -27,7 +27,7 @@ public class TextFileService : ITextFileService
 	// Category -> (EntryName -> IndexEntry with file position)
 	private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _indexLock = new();
-	private readonly Task _initializationTask;
+	private readonly Lazy<Task> _initializationTask;
 
 	public TextFileService(
 		IOptions<SharpMUSHOptions> options,
@@ -38,11 +38,11 @@ public class TextFileService : ITextFileService
 
 		if (_options.Value.TextFile.CacheOnStartup)
 		{
-			_initializationTask = Task.Run(async () => await ReindexAsync());
+			_initializationTask = new Lazy<Task>(() => ReindexAsync());
 		}
 		else
 		{
-			_initializationTask = Task.CompletedTask;
+			_initializationTask = new Lazy<Task>(() => Task.CompletedTask);
 		}
 	}
 
@@ -62,7 +62,7 @@ public class TextFileService : ITextFileService
 
 	public async Task<string> ListEntriesAsync(string fileReference, string separator = " ")
 	{
-		await _initializationTask;
+		await _initializationTask.Value;
 		
 		var (category, _) = ParseFileReference(fileReference);
 		
@@ -85,7 +85,7 @@ public class TextFileService : ITextFileService
 
 	public async Task<string?> GetEntryAsync(string fileReference, string entryName)
 	{
-		await _initializationTask;
+		await _initializationTask.Value;
 		
 		var (category, _) = ParseFileReference(fileReference);
 		
@@ -162,7 +162,7 @@ public class TextFileService : ITextFileService
 
 	public async Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern)
 	{
-		await _initializationTask;
+		await _initializationTask.Value;
 		
 		var (category, _) = ParseFileReference(fileReference);
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
