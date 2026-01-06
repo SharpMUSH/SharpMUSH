@@ -14,7 +14,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Reflection;
+using ConfigGenerated = SharpMUSH.Configuration.Generated;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -1254,49 +1254,28 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		
-		// Get all configuration options using reflection (same as @config command)
-		var optionsType = typeof(SharpMUSHOptions);
-		var categoryProperties = optionsType.GetProperties();
-		
-		var getAllOptions = () => categoryProperties
-			.SelectMany(category =>
-			{
-				var categoryType = category.PropertyType;
-				var props = categoryType.GetProperties();
-				return props.Select(prop =>
-				{
-					var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
-					if (attr == null) return null;
-					var value = prop.GetValue(category.GetValue(Configuration!.CurrentValue));
-					return new
-					{
-						ConfigAttr = attr,
-						Value = value
-					};
-				}).Where(x => x != null);
-			})
-			.Select(x => x!)
-			.ToList();
+		// Use generated ConfigMetadata to get all option names
+		var allOptionNames = ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys;
 		
 		if (!args.TryGetValue("0", out var optionArg) || string.IsNullOrWhiteSpace(optionArg.Message?.ToPlainText()))
 		{
 			// Return list of config option names
-			var allOptions = getAllOptions();
-			var optionNames = allOptions.Select(opt => opt.ConfigAttr.Name.ToLowerInvariant()).OrderBy(n => n);
+			var optionNames = allOptionNames
+				.Select(prop => ConfigGenerated.ConfigMetadata.PropertyToAttributeName[prop].ToLowerInvariant())
+				.OrderBy(n => n);
 			return ValueTask.FromResult<CallState>(string.Join(" ", optionNames));
 		}
 
 		var searchTerm = optionArg.Message!.ToPlainText();
 		
-		// Find matching option (case-insensitive)
-		var allOpts = getAllOptions();
-		var matchingOption = allOpts.FirstOrDefault(opt =>
-			opt.ConfigAttr.Name.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
+		// Find matching property by attribute name (case-insensitive)
+		var matchingProperty = ConfigGenerated.ConfigMetadata.PropertyToAttributeName
+			.FirstOrDefault(kvp => kvp.Value.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
 		
-		if (matchingOption != null)
+		if (matchingProperty.Key != null)
 		{
-			var value = matchingOption.Value?.ToString() ?? "";
-			return ValueTask.FromResult<CallState>(value);
+			var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration!.CurrentValue, matchingProperty.Key);
+			return ValueTask.FromResult<CallState>(value?.ToString() ?? "");
 		}
 		
 		return ValueTask.FromResult<CallState>("#-1 NO SUCH OPTION");

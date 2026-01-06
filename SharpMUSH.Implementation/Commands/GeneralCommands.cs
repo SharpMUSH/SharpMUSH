@@ -25,13 +25,13 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Drawing;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using StringExtensions = ANSILibrary.StringExtensions;
+using ConfigGenerated = SharpMUSH.Configuration.Generated;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -2473,33 +2473,25 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var useLowercase = switches.Contains("LOWERCASE");
 
-		// Get all configuration categories using reflection
-		var optionsType = typeof(SharpMUSHOptions);
-		var categoryProperties = optionsType.GetProperties();
-		var allCategories = categoryProperties.Select(p => p.Name).OrderBy(n => n).ToList();
+		// Get all configuration categories using generated accessor
+		var allCategories = ConfigGenerated.ConfigAccessor.Categories.ToList();
 
-		// Helper to get all config options with metadata
-		var getAllOptions = () => categoryProperties
-			.SelectMany(category =>
+		// Helper to get all config options with metadata using generated accessors
+		var getAllOptions = () =>
+		{
+			var options = new List<(string Category, string PropertyName, SharpConfigAttribute ConfigAttr, object? Value)>();
+			
+			foreach (var propName in ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys)
 			{
-				var categoryType = category.PropertyType;
-				var props = categoryType.GetProperties();
-				return props.Select(prop =>
-				{
-					var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
-					if (attr == null) return null;
-					var value = prop.GetValue(category.GetValue(Configuration!.CurrentValue));
-					return new
-					{
-						Category = category.Name,
-						PropertyName = prop.Name,
-						ConfigAttr = attr,
-						Value = value
-					};
-				}).Where(x => x != null);
-			})
-			.Select(x => x!)
-			.ToList();
+				var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[propName];
+				var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration!.CurrentValue, propName);
+				var category = ConfigGenerated.ConfigAccessor.GetCategoryForProperty(propName) ?? "";
+				
+				options.Add((category, propName, attr, value));
+			}
+			
+			return options;
+		};
 
 		// @config/set or @config/save - requires wizard/god permissions
 		if (switches.Contains("SET") || switches.Contains("SAVE"))
@@ -2569,7 +2561,7 @@ public partial class Commands
 		var matchingOption = allOptions.FirstOrDefault(opt =>
 			opt.ConfigAttr.Name.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
 
-		if (matchingOption != null)
+		if (matchingOption.PropertyName != null)
 		{
 			var name = useLowercase ? matchingOption.ConfigAttr.Name.ToLower() : matchingOption.ConfigAttr.Name;
 			var value = matchingOption.Value?.ToString() ?? "null";
