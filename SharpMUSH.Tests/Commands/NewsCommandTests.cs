@@ -119,12 +119,12 @@ public class EventsCommandTests
 		// Test events with "list" topic to show event types
 		await Parser.CommandParse(1, ConnectionService, MModule.single("events list"));
 
-		// Verify that NotifyService was called with event list content
+		// Verify that NotifyService was called with event list content containing event types
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && (msg.AsT0.ToString().Contains("dump") || msg.AsT0.ToString().Contains("player"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("dump") || msg.AsT1.Contains("player")))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT0 && (msg.AsT0.ToString().Contains("Event Types") || msg.AsT0.ToString().Contains("event list"))) ||
+				(msg.IsT1 && (msg.AsT1.Contains("Event Types") || msg.AsT1.Contains("event list")))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]

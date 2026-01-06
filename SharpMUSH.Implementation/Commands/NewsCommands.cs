@@ -1,7 +1,9 @@
 using OneOf.Types;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
