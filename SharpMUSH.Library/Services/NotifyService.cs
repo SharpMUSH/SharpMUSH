@@ -13,19 +13,20 @@ using SharpMUSH.Messages;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Notifies objects and sends telnet data with optional batching support.
-/// Batching accumulates messages before publishing to reduce Kafka overhead for iteration commands.
+/// Notifies objects and sends telnet data with automatic batching support.
+/// All notifications are automatically batched with a 10ms timeout to reduce Kafka overhead.
+/// Messages are accumulated and flushed after 10ms of inactivity, or immediately when explicitly flushed.
 /// </summary>
-public class NotifyService(IBus publishEndpoint, IConnectionService connections, ITelemetryService? telemetryService = null) : INotifyService
+public class NotifyService(IBus publishEndpoint, IConnectionService connections) : INotifyService
 {
 	private readonly ConcurrentDictionary<long, BatchingState> _batchingStates = new();
 	private static readonly AsyncLocal<BatchingContext?> _batchingContext = new();
 
 	private class BatchingState
 	{
-		public int RefCount { get; set; }
 		public List<byte[]> AccumulatedMessages { get; } = [];
 		public object Lock { get; } = new();
+		public Timer? FlushTimer { get; set; }
 	}
 
 	private class BatchingContext
@@ -81,40 +82,10 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 			return;
 		}
 
-		// Fall back to handle-based batching or immediate publish
-		var nonBatchedCount = 0;
-		long startTime = 0;
-		
+		// Always use automatic batching with 10ms timeout
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
-			// Check if this handle has an active batching scope
-			if (_batchingStates.TryGetValue(handle, out var state))
-			{
-				// Batching is active, accumulate the message
-				lock (state.Lock)
-				{
-					state.AccumulatedMessages.Add(bytes);
-				}
-			}
-			else
-			{
-				// Start timing on first non-batched message
-				if (nonBatchedCount == 0)
-				{
-					startTime = System.Diagnostics.Stopwatch.GetTimestamp();
-				}
-				
-				// No batching scope active, publish immediately
-				await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
-				nonBatchedCount++;
-			}
-		}
-		
-		// Track telemetry only for non-batched messages
-		if (nonBatchedCount > 0)
-		{
-			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-			telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, nonBatchedCount);
+			AddToBatch(handle, bytes);
 		}
 	}
 
@@ -138,24 +109,8 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use batching - if no scope is active, messages are auto-flushed
-		if (_batchingStates.TryGetValue(handle, out var state))
-		{
-			// For batched messages, we don't track individual notification times
-			// as they are accumulated and sent in batch
-			lock (state.Lock)
-			{
-				state.AccumulatedMessages.Add(bytes);
-			}
-		}
-		else
-		{
-			// No batching scope active, publish immediately and track time
-			var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
-			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
-			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-			telemetryService?.RecordNotificationSpeed(type.ToString(), elapsedMs, 1);
-		}
+		// Always use automatic batching with 10ms timeout
+		AddToBatch(handle, bytes);
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -175,21 +130,10 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use batching - if no scope is active, messages are auto-flushed
+		// Always use automatic batching with 10ms timeout
 		foreach (var handle in handles)
 		{
-			if (_batchingStates.TryGetValue(handle, out var state))
-			{
-				lock (state.Lock)
-				{
-					state.AccumulatedMessages.Add(bytes);
-				}
-			}
-			else
-			{
-				// No batching scope active, publish immediately
-				await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
-			}
+			AddToBatch(handle, bytes);
 		}
 	}
 
@@ -286,58 +230,15 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 
 	public void BeginBatchingScope(long handle)
 	{
-		var state = _batchingStates.GetOrAdd(handle, _ => new BatchingState());
-		lock (state.Lock)
-		{
-			state.RefCount++;
-		}
+		// No-op: Batching is now always active with 10ms timeout
+		// This method is kept for backward compatibility
 	}
 
 	public async ValueTask EndBatchingScope(long handle)
 	{
-		if (!_batchingStates.TryGetValue(handle, out var state))
-		{
-			return;
-		}
-
-		List<byte[]> messagesToFlush;
-		bool shouldRemove;
-
-		lock (state.Lock)
-		{
-			state.RefCount--;
-			shouldRemove = state.RefCount <= 0;
-			messagesToFlush = shouldRemove ? [.. state.AccumulatedMessages] : [];
-		}
-
-		if (shouldRemove)
-		{
-			_batchingStates.TryRemove(handle, out _);
-
-			// Combine all accumulated messages with newlines and publish as one message
-			if (messagesToFlush.Count > 0)
-			{
-				var totalSize = messagesToFlush.Sum(m => m.Length) + (messagesToFlush.Count - 1) * 2; // +2 for \r\n
-				var combined = new byte[totalSize];
-				var offset = 0;
-
-				for (var i = 0; i < messagesToFlush.Count; i++)
-				{
-					var message = messagesToFlush[i];
-					Array.Copy(message, 0, combined, offset, message.Length);
-					offset += message.Length;
-
-					// Add \r\n between messages (not after the last one)
-					if (i < messagesToFlush.Count - 1)
-					{
-						combined[offset++] = (byte)'\r';
-						combined[offset++] = (byte)'\n';
-					}
-				}
-
-				await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
-			}
-		}
+		// Flush immediately instead of waiting for timer
+		// This maintains backward compatibility for code that expects immediate flushing
+		await FlushHandle(handle);
 	}
 
 	/// <summary>
@@ -414,6 +315,83 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections,
 					await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
 				}
 			}
+		}
+	}
+
+	/// <summary>
+	/// Adds a message to the batch for the specified handle and starts/resets the 10ms flush timer.
+	/// </summary>
+	private void AddToBatch(long handle, byte[] bytes)
+	{
+		var state = _batchingStates.GetOrAdd(handle, _ => new BatchingState());
+		lock (state.Lock)
+		{
+			state.AccumulatedMessages.Add(bytes);
+
+			// Start or reset the timer to 10ms
+			if (state.FlushTimer == null)
+			{
+				state.FlushTimer = new Timer(
+					_ => Task.Run(async () => await FlushHandle(handle)),
+					null,
+					10,
+					Timeout.Infinite
+				);
+			}
+			else
+			{
+				state.FlushTimer.Change(10, Timeout.Infinite);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Flushes accumulated messages for a specific handle.
+	/// Called automatically by the 10ms timer or manually by EndBatchingScope.
+	/// </summary>
+	private async Task FlushHandle(long handle)
+	{
+		if (!_batchingStates.TryGetValue(handle, out var state))
+		{
+			return;
+		}
+
+		List<byte[]> messagesToFlush;
+		lock (state.Lock)
+		{
+			if (state.AccumulatedMessages.Count == 0)
+			{
+				return;
+			}
+
+			messagesToFlush = [.. state.AccumulatedMessages];
+			state.AccumulatedMessages.Clear();
+			state.FlushTimer?.Dispose();
+			state.FlushTimer = null;
+		}
+
+		// Combine all accumulated messages with newlines and publish as one message
+		if (messagesToFlush.Count > 0)
+		{
+			var totalSize = messagesToFlush.Sum(m => m.Length) + (messagesToFlush.Count - 1) * 2; // +2 for \r\n
+			var combined = new byte[totalSize];
+			var offset = 0;
+
+			for (var i = 0; i < messagesToFlush.Count; i++)
+			{
+				var message = messagesToFlush[i];
+				Array.Copy(message, 0, combined, offset, message.Length);
+				offset += message.Length;
+
+				// Add \r\n between messages (not after the last one)
+				if (i < messagesToFlush.Count - 1)
+				{
+					combined[offset++] = (byte)'\r';
+					combined[offset++] = (byte)'\n';
+				}
+			}
+
+			await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
 		}
 	}
 
