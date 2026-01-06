@@ -1569,4 +1569,26 @@ public partial class Functions
 
 		return string.Join(" ", terminfo);
 	}
+
+	[SharpFunction(Name = "IDLESECS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
+		ParameterNames = ["player"])]
+	public static async ValueTask<CallState> IdleSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// IDLESECS() is an alias for idle()
+		// If no argument, return idle time for executor
+		if (!parser.CurrentState.Arguments.ContainsKey("0"))
+		{
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+			
+			// Find executor's connection
+			var data = ConnectionService!.Get(executor.Object().DBRef);
+			var idleSeconds = await data
+				.Select(x => x.Idle?.TotalSeconds ?? -1)
+				.MinAsync();
+			return new CallState(((int)idleSeconds).ToString());
+		}
+		
+		// With argument, delegate to idle()
+		return await IdleSeconds(parser, _2);
+	}
 }

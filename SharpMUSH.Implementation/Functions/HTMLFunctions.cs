@@ -158,4 +158,40 @@ public partial class Functions
 		// Return empty string - OOB data doesn't produce visible output
 		return CallState.Empty;
 	}
+
+	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["html", "player"])]
+	public static async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Send HTML data via websocket - similar to wshtml()
+		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		AnySharpObject target;
+		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
+		{
+			var targetRef = targetArg.Message!.ToPlainText();
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				executor,
+				executor,
+				targetRef,
+				PlayersPreference | AbsoluteMatch);
+
+			if (locateResult.IsError)
+			{
+				return new CallState(locateResult.AsError);
+			}
+
+			target = locateResult.AsAnyObject;
+		}
+		else
+		{
+			target = executor;
+		}
+
+		// TODO: Implement actual websocket/out-of-band HTML communication
+		// Placeholder - returns empty string as OOB data doesn't display in-band
+		return CallState.Empty;
+	}
 }

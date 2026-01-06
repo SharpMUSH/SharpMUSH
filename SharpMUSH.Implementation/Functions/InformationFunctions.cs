@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -12,6 +14,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Reflection;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -1243,5 +1246,59 @@ public partial class Functions
 		// Returns the current @motd/full
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		return new CallState(motdData?.FullMotd ?? string.Empty);
+	}
+
+	[SharpFunction(Name = "CONFIG", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["option"])]
+	public static ValueTask<CallState> Config(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		
+		// Get all configuration options using reflection (same as @config command)
+		var optionsType = typeof(SharpMUSHOptions);
+		var categoryProperties = optionsType.GetProperties();
+		
+		var getAllOptions = () => categoryProperties
+			.SelectMany(category =>
+			{
+				var categoryType = category.PropertyType;
+				var props = categoryType.GetProperties();
+				return props.Select(prop =>
+				{
+					var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
+					if (attr == null) return null;
+					var value = prop.GetValue(category.GetValue(Configuration!.CurrentValue));
+					return new
+					{
+						ConfigAttr = attr,
+						Value = value
+					};
+				}).Where(x => x != null);
+			})
+			.Select(x => x!)
+			.ToList();
+		
+		if (!args.TryGetValue("0", out var optionArg) || string.IsNullOrWhiteSpace(optionArg.Message?.ToPlainText()))
+		{
+			// Return list of config option names
+			var allOptions = getAllOptions();
+			var optionNames = allOptions.Select(opt => opt.ConfigAttr.Name.ToLowerInvariant()).OrderBy(n => n);
+			return ValueTask.FromResult<CallState>(string.Join(" ", optionNames));
+		}
+
+		var searchTerm = optionArg.Message!.ToPlainText();
+		
+		// Find matching option (case-insensitive)
+		var allOpts = getAllOptions();
+		var matchingOption = allOpts.FirstOrDefault(opt =>
+			opt.ConfigAttr.Name.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
+		
+		if (matchingOption != null)
+		{
+			var value = matchingOption.Value?.ToString() ?? "";
+			return ValueTask.FromResult<CallState>(value);
+		}
+		
+		return ValueTask.FromResult<CallState>("#-1 NO SUCH OPTION");
 	}
 }

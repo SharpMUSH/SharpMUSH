@@ -2017,6 +2017,49 @@ public partial class Functions
 		return MModule.remove(str, index, length);
 	}
 
+	[SharpFunction(Name = "DELETE", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["list", "position", "delimiter", "output-separator"])]
+	public static ValueTask<CallState> Delete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// DELETE() is an alias for ldelete()
+		return ListDelete(parser, _2);
+	}
+
+	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["list", "position", "new-item", "delim"])]
+	public static ValueTask<CallState> Insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// INSERT() is an alias for linsert()
+		return ListInsert(parser, _2);
+	}
+
+	[SharpFunction(Name = "LCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
+		ParameterNames = ["string"])]
+	public static ValueTask<CallState> LCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// LCSTR2 strips ANSI and converts to lowercase with Unicode support
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		return new ValueTask<CallState>(new CallState(str.ToLowerInvariant()));
+	}
+
+	[SharpFunction(Name = "UCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
+		ParameterNames = ["string"])]
+	public static ValueTask<CallState> UCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// UCSTR2 strips ANSI and converts to uppercase with Unicode support
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		return new ValueTask<CallState>(new CallState(str.ToUpperInvariant()));
+	}
+
+	[SharpFunction(Name = "SHA0", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["text"])]
+	public static ValueTask<CallState> SHA0(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// SHA-0 is deprecated and not supported in modern .NET/OpenSSL
+		// Return error message per PennMUSH documentation
+		return new ValueTask<CallState>(new CallState("#-1 NOT SUPPORTED"));
+	}
+
 	[GeneratedRegex(@"\w+")]
 	private static partial Regex GetWord();
 

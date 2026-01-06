@@ -839,6 +839,124 @@ public partial class Commands
 		);
 	}
 
+	[SharpCommand(Name = "@ELOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public static async ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// @ELOCK is an alias for @lock/enter
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message!.ToPlainText();
+		var lockKey = args["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, target, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
+				}
+
+				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey));
+				await NotifyService!.Notify(executor, "Enter lock set.");
+				return CallState.Empty;
+			}
+		);
+	}
+
+	[SharpCommand(Name = "@EUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	public static async ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// @EUNLOCK is an alias for @unlock/enter
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, target, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
+				}
+
+				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Enter"));
+				await NotifyService!.Notify(executor, "Enter lock removed.");
+				return CallState.Empty;
+			}
+		);
+	}
+
+	[SharpCommand(Name = "@ULOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public static async ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// @ULOCK is an alias for @lock/use
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message!.ToPlainText();
+		var lockKey = args["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, target, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
+				}
+
+				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey));
+				await NotifyService!.Notify(executor, "Use lock set.");
+				return CallState.Empty;
+			}
+		);
+	}
+
+	[SharpCommand(Name = "@UUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	public static async ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// @UUNLOCK is an alias for @unlock/use
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, target, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
+				}
+
+				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Use"));
+				await NotifyService!.Notify(executor, "Use lock removed.");
+				return CallState.Empty;
+			}
+		);
+	}
+
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 5, ParameterNames = ["exit", "destination"])]
 	public static async ValueTask<Option<CallState>> Open(IMUSHCodeParser parser, SharpCommandAttribute _2)

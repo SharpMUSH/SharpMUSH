@@ -4,7 +4,10 @@ using MoreLinq;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -1034,5 +1037,57 @@ public partial class Functions
 		}
 		
 		return new CallState(formatted);
+	}
+
+	[SharpFunction(Name = "RNUM", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["container", "object"])]
+	public static async ValueTask<CallState> RNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// RNUM is deprecated - use locate() instead
+		// This implements basic functionality for backwards compatibility
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var containerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var objectArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, containerArg, All,
+			async container =>
+			{
+				// Check if executor can examine the container
+				if (!await PermissionService!.CanExamine(executor, container))
+				{
+					return new CallState("#-1");
+				}
+
+				// Search for the object inside the container
+				if (!container.IsContainer)
+				{
+					return new CallState("#-1");
+				}
+
+				var matches = new List<AnySharpContent>();
+				await foreach (var item in container.AsContainer.Content(Mediator!))
+				{
+					var name = item.Object().Name;
+					if (name.Equals(objectArg, StringComparison.OrdinalIgnoreCase) ||
+						name.StartsWith(objectArg, StringComparison.OrdinalIgnoreCase))
+					{
+						matches.Add(item);
+					}
+				}
+
+				if (matches.Count == 0)
+				{
+					return new CallState("#-1");
+				}
+				else if (matches.Count == 1)
+				{
+					return new CallState($"#{matches[0].Object().DBRef.Number}");
+				}
+				else
+				{
+					return new CallState("#-2"); // Multiple matches
+				}
+			});
 	}
 }

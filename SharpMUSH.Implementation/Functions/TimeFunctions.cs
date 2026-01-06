@@ -726,4 +726,73 @@ public partial class Functions
 		// Trim leading spaces from space-padded values
 		return ValueTask.FromResult<CallState>(result.TrimStart(' '));
 	}
+
+	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["seconds", "timezone"])]
+	public static ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Convert seconds since epoch to time string
+		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
+			? tzArg.Message!.ToPlainText()
+			: null;
+
+		if (!long.TryParse(secsStr, out var seconds))
+		{
+			return ValueTask.FromResult<CallState>("#-1 INVALID SECONDS");
+		}
+
+		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);
+
+		if (timezone != null)
+		{
+			if (timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
+			{
+				return ValueTask.FromResult<CallState>(dateTime.UtcDateTime.ToString("ddd MMM dd HH:mm:ss yyyy"));
+			}
+			else if (TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
+			{
+				var converted = TimeZoneInfo.ConvertTime(dateTime, tz);
+				return ValueTask.FromResult<CallState>(converted.ToString("ddd MMM dd HH:mm:ss yyyy"));
+			}
+			else
+			{
+				return ValueTask.FromResult<CallState>("#-1 INVALID TIMEZONE");
+			}
+		}
+
+		// Local time by default
+		return ValueTask.FromResult<CallState>(dateTime.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy"));
+	}
+
+	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["time-string", "timezone"])]
+	public static ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Convert time string to seconds since epoch
+		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
+			? tzArg.Message!.ToPlainText()
+			: null;
+
+		// Try to parse the time string
+		// Format: Ddd MMM DD HH:MM:SS YYYY
+		if (!DateTimeOffset.TryParse(timeStr, out var dateTime))
+		{
+			// Try different formats for extended convtime support
+			if (!DateTime.TryParse(timeStr, out var dt))
+			{
+				return ValueTask.FromResult<CallState>("#-1");
+			}
+			dateTime = new DateTimeOffset(dt, TimeSpan.Zero);
+		}
+
+		if (timezone != null && timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
+		{
+			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
+		}
+
+		// Assume local time if no timezone specified
+		return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
+	}
 }

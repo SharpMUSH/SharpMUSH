@@ -647,4 +647,37 @@ public partial class Functions
 
 		return new CallState(memberCount.ToString());
 	}
+
+	[SharpFunction(Name = "CINFO", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
+		ParameterNames = ["channel", "info-type"])]
+	public static async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Get channel information
+		var channelName = parser.CurrentState.Arguments["0"].Message!;
+		var infoType = parser.CurrentState.Arguments.TryGetValue("1", out var typeArg)
+			? typeArg.Message!.ToPlainText().ToLowerInvariant()
+			: "name";
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
+
+		if (maybeChannel.IsError)
+		{
+			return maybeChannel.AsError.Value;
+		}
+
+		var channel = maybeChannel.AsChannel;
+
+		// Return information based on type
+		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
+		return infoType switch
+		{
+			"name" => new CallState(channel.Name),
+			"owner" => new CallState($"#{owner.Object.DBRef.Number}"),
+			"members" => new CallState((await channel.Members.Value.CountAsync()).ToString()),
+			"buffer" => new CallState("50"), // Default buffer size
+			_ => new CallState("#-1 INVALID INFO TYPE")
+		};
+	}
 }

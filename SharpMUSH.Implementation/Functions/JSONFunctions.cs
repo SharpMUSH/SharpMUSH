@@ -11,10 +11,12 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -418,5 +420,41 @@ public partial class Functions
 		}
 
 		return new CallState(sentCount.ToString());
+	}
+
+	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["json", "player"])]
+	public static async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Send JSON data via websocket - similar to wsjson()
+		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		AnySharpObject target;
+		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
+		{
+			var targetRef = targetArg.Message!.ToPlainText();
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				executor,
+				executor,
+				targetRef,
+				PlayersPreference | AbsoluteMatch);
+
+			if (locateResult.IsError)
+			{
+				return new CallState(locateResult.AsError);
+			}
+
+			target = locateResult.AsAnyObject;
+		}
+		else
+		{
+			target = executor;
+		}
+
+		// TODO: Implement actual websocket/out-of-band JSON communication
+		// Placeholder - returns empty string as OOB data doesn't display in-band
+		return CallState.Empty;
 	}
 }

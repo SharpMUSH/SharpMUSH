@@ -43,12 +43,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\SharpMUSH.Documentation\Helpfiles\PennMUSH\pennattr.txt">
-      <Link>Documentation\Testfile\pennattr.txt</Link>
+    <Content Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\sharpattr.md">
+      <Link>Documentation\Testfile\sharpattr.md</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-		<Content Include="..\SharpMUSH.Documentation\Helpfiles\PennMUSH\pennchat.txt">
-			<Link>Documentation\Testfile\pennchat.txt</Link>
+		<Content Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\sharpchat.md">
+			<Link>Documentation\Testfile\sharpchat.md</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<Content Include="Configuration\Testfile\mushcnf.dst">
