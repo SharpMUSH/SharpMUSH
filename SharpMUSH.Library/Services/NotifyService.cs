@@ -336,12 +336,13 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 					{
 						try
 						{
-							Task.Run(async () => await FlushHandle(handle)).Wait();
+							// Fire-and-forget pattern - don't block the timer thread
+							_ = Task.Run(async () => await FlushHandle(handle));
 						}
-						catch
+						catch (Exception)
 						{
 							// Suppress exceptions to prevent timer crashes
-							// Logging could be added here if needed
+							// In production, this should log the exception
 						}
 					},
 					null,
@@ -373,7 +374,8 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 		{
 			if (state.AccumulatedMessages.Count == 0)
 			{
-				// No messages to flush, but clean up if timer is null (manual flush)
+				// No messages to flush. Clean up the state if this was a manual flush (EndBatchingScope)
+				// indicated by a null timer. For timer-based flushes, keep the state for potential reuse.
 				shouldRemoveState = state.FlushTimer == null;
 			}
 			else
@@ -383,8 +385,8 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 				state.FlushTimer?.Dispose();
 				state.FlushTimer = null;
 				
-				// After flushing, we can remove the state to prevent memory leak
-				// It will be recreated if more messages arrive
+				// Always remove state after flushing to prevent memory leak.
+				// A new state will be created automatically when the next message arrives.
 				shouldRemoveState = true;
 			}
 		}
