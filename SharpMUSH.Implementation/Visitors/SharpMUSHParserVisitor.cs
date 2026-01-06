@@ -201,6 +201,7 @@ public class SharpMUSHParserVisitor(
 	{
 		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var success = true;
+		InvocationTracker? tracker = null;
 		
 		try
 		{
@@ -224,10 +225,21 @@ public class SharpMUSHParserVisitor(
 			var currentStack = parser.State;
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
-			// Note: stackDepth and parserFunctionDepth don't work correctly due to visitor using stale parser reference
-			// contextDepth (ANTLR parse tree depth) is the only reliable incrementing value
-			var recursionDepth = currentStack.Count(x => x.Function == name);
-
+			
+			// Get or create the invocation tracker
+			tracker = currentState.InvocationTracker ?? new InvocationTracker();
+			
+			// Increment total invocation count and check limit
+			var totalInvocations = tracker.IncrementInvocations();
+			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
+			{
+				// FunctionInvocationLimit exceeded (total function calls)
+				return new CallState(Errors.ErrorInvoke, contextDepth);
+			}
+			
+			// Track this function call for recursion detection
+			var recursionDepth = tracker.PushFunction(name);
+			
 			List<CallState> refinedArguments;
 
 			// TODO: Check Permissions here.
@@ -257,27 +269,26 @@ public class SharpMUSHParserVisitor(
 
 			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
-			// NOTE: Due to visitor using stale parser reference, contextDepth is the only reliable depth measure
-			// contextDepth increments by ~5 per function nesting level in the ANTLR parse tree
-			// We approximate function depth as contextDepth / 5
-			var approximateFunctionDepth = contextDepth / 5;
-			
-			if (approximateFunctionDepth > Configuration.CurrentValue.Limit.MaxDepth)
+				
+			// Check stack depth limit using the tracker's actual call stack depth
+			var stackDepth = tracker.GetStackDepth();
+			if (stackDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
-				// MaxDepth (stack depth) check using contextDepth approximation
+				// MaxDepth (stack depth) exceeded
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 			
-			if (approximateFunctionDepth > Configuration.CurrentValue.Limit.CallLimit)
+			// Check call limit (also using stack depth as a proxy)
+			if (stackDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
-				// CallLimit check using contextDepth approximation
+				// CallLimit exceeded  
 				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
+			// Check recursion limit for this specific function
 			if (recursionDepth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
 			{
-				// Recursion depth check (same function name in call stack)
-				// NOTE: This also doesn't work correctly due to stale parser reference
+				// Recursion depth exceeded for this function
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
 
@@ -347,7 +358,10 @@ public class SharpMUSHParserVisitor(
 				Executor: currentState.Executor,
 				Enactor: currentState.Enactor,
 				Caller: currentState.Caller,
-				Handle: currentState.Handle
+				Handle: currentState.Handle,
+				ParseMode: currentState.ParseMode,
+				HttpResponse: currentState.HttpResponse,
+				InvocationTracker: tracker  // Pass the shared tracker to nested calls
 			));
 
 			var result = await function(newParser);
@@ -370,6 +384,9 @@ public class SharpMUSHParserVisitor(
 		}
 		finally
 		{
+			// Always pop this function from the tracker, even on error
+			tracker?.PopFunction();
+			
 			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
 			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success);
 		}
