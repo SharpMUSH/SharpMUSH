@@ -263,6 +263,8 @@ public class AttributeService(
 					Arguments = args,
 					EnvironmentRegisters = args,
 					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.Last().LongName!),
+					// Preserve the InvocationTracker to maintain recursion and invocation tracking
+					InvocationTracker = s.InvocationTracker
 				},
 			async newParser =>
 				await newParser.FunctionParse(attr.AsAttribute.Last().Value));
@@ -377,7 +379,12 @@ public class AttributeService(
 				}
 				
 				var result = await parser.With(
-					s => s with { Arguments = slimArgs, EnvironmentRegisters = slimArgs },
+					s => s with { 
+						Arguments = slimArgs, 
+						EnvironmentRegisters = slimArgs,
+						// Preserve the InvocationTracker to maintain recursion and invocation tracking
+						InvocationTracker = s.InvocationTracker
+					},
 					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
 				);
 
@@ -395,7 +402,11 @@ public class AttributeService(
 		// LAMBDA.
 		if (lambdaPredicate && !ignoreLambda)
 		{
-			var result = await parser.With(s => s with { Arguments = args },
+			var result = await parser.With(s => s with { 
+				Arguments = args,
+				// Preserve the InvocationTracker to maintain recursion and invocation tracking
+				InvocationTracker = s.InvocationTracker
+			},
 				async np => await np.FunctionParse(attribute));
 			return result!.Message!;
 		}
