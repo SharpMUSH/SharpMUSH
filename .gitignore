@@ -410,3 +410,4 @@ gen
 .idea
 *.bak
 # Text files directory - managed separately
+TextFiles/

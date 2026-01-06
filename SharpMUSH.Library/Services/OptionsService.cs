@@ -291,7 +291,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				WarnInterval: "1h"
 			),
 			TextFile = new TextFileOptions(
-				TextFilesDirectory: "text_files",
+				TextFilesDirectory: "TextFiles",
 				EnableMarkdownRendering: true,
 				CacheOnStartup: true
 			)

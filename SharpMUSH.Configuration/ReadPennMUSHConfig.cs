@@ -299,7 +299,7 @@ public static partial class ReadPennMushConfig
 				WarnInterval: RequiredString(Get(nameof(WarningOptions.WarnInterval)), "1h")
 			),
 			TextFile = new TextFileOptions(
-				TextFilesDirectory: RequiredString(Get(nameof(TextFileOptions.TextFilesDirectory)), "text_files"),
+				TextFilesDirectory: RequiredString(Get(nameof(TextFileOptions.TextFilesDirectory)), "TextFiles"),
 				EnableMarkdownRendering: Boolean(Get(nameof(TextFileOptions.EnableMarkdownRendering)), true),
 				CacheOnStartup: Boolean(Get(nameof(TextFileOptions.CacheOnStartup)), true)
 			)

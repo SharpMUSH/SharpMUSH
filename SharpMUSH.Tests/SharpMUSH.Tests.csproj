@@ -54,10 +54,10 @@
 		<Content Include="Configuration\Testfile\mushcnf.dst">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
-		<Content Include="..\text_files\**\*.md">
-			<Link>text_files\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
+			<Link>TextFiles\help\%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
+		</None>
   </ItemGroup>
 
   <ItemGroup>
