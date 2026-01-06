@@ -3418,8 +3418,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		var attributeContent = attributeResult.AsAttribute.Last().Value;
-		var attributeText = attributeContent.ToPlainText();
+		var attribute = attributeResult.AsAttribute.Last();
+		var attributeText = attribute.Value.ToPlainText();
 		
 		if (string.IsNullOrWhiteSpace(attributeText))
 		{
@@ -3441,7 +3441,8 @@ public partial class Commands
 		await parser.With(state => state with { 
 			Executor = targetObject.Object().DBRef,
 			Enactor = executionEnactor 
-		}, async newParser => await newParser.CommandListParseVisitor(MModule.single(attributeText))());
+		}, newParser => newParser.WithAttributeDebug(attribute,
+			async p => await p.CommandListParseVisitor(attribute.Value)()));
 		
 		return CallState.Empty;
 	}
@@ -4229,6 +4230,7 @@ public partial class Commands
 
 			if (!maybeAwhatAttr.IsError)
 			{
+				var attribute = maybeAwhatAttr.AsAttribute.Last();
 				await parser.With(
 					state => state with
 					{
@@ -4236,7 +4238,8 @@ public partial class Commands
 						Enactor = actor.Object().DBRef,
 						Arguments = stackArgs
 					},
-					newParser => newParser.CommandListParse(maybeAwhatAttr.AsAttribute.Last().Value));
+					newParser => newParser.WithAttributeDebug(attribute, 
+						p => p.CommandListParse(attribute.Value)));
 			}
 		}
 
@@ -4622,8 +4625,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		var attributeContent = attributeResult.AsAttribute.Last().Value;
-		var attributeText = attributeContent.ToPlainText();
+		var attribute = attributeResult.AsAttribute.Last();
+		var attributeText = attribute.Value.ToPlainText();
 		
 		// Strip ^...: or $...: prefixes for listen/command patterns
 		if (attributeText.StartsWith("^") || attributeText.StartsWith("$"))
@@ -4645,7 +4648,8 @@ public partial class Commands
 		// This evaluates the command list without creating a queue entry
 		try
 		{
-			var result = await parser.CommandListParse(MModule.single(attributeText));
+			var result = await parser.WithAttributeDebug(attribute,
+				p => p.CommandListParse(MModule.single(attributeText)));
 			
 			// TODO: Handle NOBREAK switch
 			// When set, @break/@assert from included code shouldn't propagate to calling list
