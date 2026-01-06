@@ -1,0 +1,122 @@
+using OneOf;
+using OneOf.Types;
+using SharpMUSH.Documentation;
+using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
+using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+
+namespace SharpMUSH.Implementation.Commands;
+
+public partial class Commands
+{
+	private static Helpfiles? _helpfiles;
+
+	public static void InitializeHelpfiles(Helpfiles helpfiles)
+	{
+		_helpfiles = helpfiles;
+	}
+
+	[SharpCommand(Name = "HELP", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
+	public static async ValueTask<Option<CallState>> Help(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches;
+
+		if (_helpfiles == null)
+		{
+			await NotifyService!.Notify(executor, "Help system not initialized.");
+			return new CallState("#-1 HELP SYSTEM NOT INITIALIZED");
+		}
+
+		// No arguments - show main help
+		if (args.Count == 0)
+		{
+			var mainHelp = _helpfiles.FindEntry("help");
+			if (mainHelp != null)
+			{
+				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainHelp);
+				await NotifyService!.Notify(executor, rendered);
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, "No help available. Type 'help <topic>' for help on a specific topic.");
+			}
+			return CallState.Empty;
+		}
+
+		var topic = args["0"].Message!.ToPlainText();
+
+		// /search switch - search content
+		if (switches.Contains("SEARCH"))
+		{
+			var matches = _helpfiles.SearchContent(topic).ToList();
+			if (matches.Count == 0)
+			{
+				await NotifyService!.Notify(executor, $"No help entries found containing '{topic}'.");
+			}
+			else if (matches.Count == 1)
+			{
+				// Only one match, show it
+				var content = _helpfiles.FindEntry(matches[0]);
+				if (content != null)
+				{
+					var rendered = RecursiveMarkdownHelper.RenderMarkdown(content);
+					await NotifyService!.Notify(executor, rendered);
+				}
+			}
+			else
+			{
+				// Multiple matches, list them
+				await NotifyService!.Notify(executor, $"Help entries containing '{topic}':");
+				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+			}
+			return CallState.Empty;
+		}
+
+		// Check for wildcard pattern
+		if (topic.Contains('*') || topic.Contains('?'))
+		{
+			var matches = _helpfiles.FindMatchingTopics(topic).ToList();
+			if (matches.Count == 0)
+			{
+				await NotifyService!.Notify(executor, $"No help available for '{topic}'.");
+			}
+			else if (matches.Count == 1)
+			{
+				// Only one match, show it
+				var content = _helpfiles.FindEntry(matches[0]);
+				if (content != null)
+				{
+					var rendered = RecursiveMarkdownHelper.RenderMarkdown(content);
+					await NotifyService!.Notify(executor, rendered);
+				}
+			}
+			else
+			{
+				// Multiple matches, list them
+				await NotifyService!.Notify(executor, $"Help topics matching '{topic}':");
+				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+			}
+		}
+		else
+		{
+			// Try exact match
+			var content = _helpfiles.FindEntry(topic);
+			if (content != null)
+			{
+				var rendered = RecursiveMarkdownHelper.RenderMarkdown(content);
+				await NotifyService!.Notify(executor, rendered);
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"No help available for '{topic}'.");
+				await NotifyService!.Notify(executor, "Try 'help <pattern>' with wildcards (*) or 'help/search <text>' to search help content.");
+			}
+		}
+
+		return CallState.Empty;
+	}
+}

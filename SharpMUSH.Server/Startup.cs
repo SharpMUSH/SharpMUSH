@@ -143,6 +143,30 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
+		
+		// Initialize Helpfiles service
+		services.AddSingleton<SharpMUSH.Documentation.Helpfiles>(sp =>
+		{
+			var logger = sp.GetRequiredService<ILogger<SharpMUSH.Documentation.Helpfiles>>();
+			// Resolve the path to the helpfiles directory
+			var helpfilesPath = Path.Combine(AppContext.BaseDirectory, "SharpMUSH.Documentation", "Helpfiles");
+			if (!Directory.Exists(helpfilesPath))
+			{
+				// Try alternate path for development
+				helpfilesPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "SharpMUSH.Documentation", "Helpfiles"));
+				if (!Directory.Exists(helpfilesPath))
+				{
+					// Last resort - use current directory
+					helpfilesPath = Path.Combine(Directory.GetCurrentDirectory(), "Helpfiles");
+				}
+			}
+			
+			var helpfiles = new SharpMUSH.Documentation.Helpfiles(new DirectoryInfo(helpfilesPath), logger);
+			helpfiles.Index();
+			Commands.InitializeHelpfiles(helpfiles);
+			return helpfiles;
+		});
+		
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
 		services.AddSingleton<ConfigurationReloadService>();
