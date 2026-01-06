@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using DotNext.Collections.Generic;
+﻿using DotNext.Collections.Generic;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
