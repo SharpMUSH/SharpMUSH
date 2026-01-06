@@ -864,6 +864,24 @@ public class SharpMUSHParserVisitor(
 				var commandSuccess = true;
 				Option<CallState> commandResult;
 				
+				// VERBOSE flag: Output command to owner before execution
+				if (!executor.IsNone)
+				{
+					var executorObj = executor.Known();
+					if (await executorObj.HasFlag("VERBOSE"))
+					{
+						var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
+						// Check if owner is connected
+						var connections = await ConnectionService.Get(owner.Object.DBRef).AnyAsync();
+						if (connections)
+						{
+							// Send verbose output in format: "#dbref] command"
+							var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
+							await NotifyService.Notify(owner.Object.DBRef, MModule.single(verboseOutput));
+						}
+					}
+				}
+				
 				try
 				{
 					commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
