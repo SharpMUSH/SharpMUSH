@@ -864,20 +864,48 @@ public class SharpMUSHParserVisitor(
 				var commandSuccess = true;
 				Option<CallState> commandResult;
 				
-				// VERBOSE flag: Output command to owner before execution
+				// VERBOSE flag: Output command to owner and DEBUGFORWARDLIST before execution
 				if (!executor.IsNone)
 				{
 					var executorObj = executor.Known();
 					if (await executorObj.HasFlag("VERBOSE"))
 					{
 						var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
-						// Check if owner is connected
+						var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
+						
+						// Send to owner if connected
 						var connections = await ConnectionService.Get(owner.Object.DBRef).AnyAsync();
 						if (connections)
 						{
-							// Send verbose output in format: "#dbref] command"
-							var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
 							await NotifyService.Notify(owner.Object.DBRef, MModule.single(verboseOutput));
+						}
+						
+						// Send to DEBUGFORWARDLIST if it exists
+						var debugForwardAttr = await AttributeService.GetAttributeAsync(
+							executorObj, executorObj, "DEBUGFORWARDLIST", 
+							IAttributeService.AttributeMode.Read, parent: false);
+						
+						if (debugForwardAttr.IsAttribute)
+						{
+							var attr = debugForwardAttr.AsAttribute.Last();
+							var forwardListText = attr.Value.ToPlainText();
+							if (!string.IsNullOrWhiteSpace(forwardListText))
+							{
+								// Parse space-separated list of dbrefs
+								var dbrefs = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+								foreach (var dbrefStr in dbrefs)
+								{
+									if (DBRef.TryParse(dbrefStr, out var dbref) && dbref.HasValue)
+									{
+										// Check if this dbref is connected
+										var forwardConnections = await ConnectionService.Get(dbref.Value).AnyAsync();
+										if (forwardConnections)
+										{
+											await NotifyService.Notify(dbref.Value, MModule.single(verboseOutput));
+										}
+									}
+								}
+							}
 						}
 					}
 				}
