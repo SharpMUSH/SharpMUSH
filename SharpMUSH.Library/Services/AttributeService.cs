@@ -21,7 +21,8 @@ public class AttributeService(
 	IPermissionService ps,
 	ILocateService locateService,
 	IValidateService validateService, 
-	INotifyService notifyService)
+	INotifyService notifyService,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IAttributeService
 {
 	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
@@ -257,21 +258,52 @@ public class AttributeService(
 			return MModule.single(Errors.ErrorNoSuchAttribute);
 		}
 
-		var result = await parser.With(s =>
-				s with
-				{
-					Arguments = args,
-					EnvironmentRegisters = args,
-					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.Last().LongName!),
-					// Preserve the invocation tracking fields to maintain recursion and invocation tracking
-					CallDepth = s.CallDepth,
-					FunctionRecursionDepths = s.FunctionRecursionDepths,
-					TotalInvocations = s.TotalInvocations
-				},
-			async newParser =>
-				await newParser.FunctionParse(attr.AsAttribute.Last().Value));
+		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
+		
+		// Track recursion for user-defined attributes like built-in functions
+		var callDepth = parser.CurrentState.CallDepth ?? new InvocationCounter();
+		var recursionDepths = parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+		
+		callDepth.Increment();
+		if (!recursionDepths.TryGetValue(attributeName, out var depth))
+		{
+			depth = 0;
+		}
+		recursionDepths[attributeName] = ++depth;
+		
+		// Check recursion limit for attributes (same as built-in functions)
+		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
+		{
+			return MModule.single(Errors.ErrorRecursion);
+		}
+		
+		try
+		{
+			var result = await parser.With(s =>
+					s with
+					{
+						Arguments = args,
+						EnvironmentRegisters = args,
+						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
+						Function = attributeName,
+						CallDepth = callDepth,
+						FunctionRecursionDepths = recursionDepths,
+						TotalInvocations = s.TotalInvocations
+					},
+				async newParser =>
+					await newParser.FunctionParse(attr.AsAttribute.Last().Value));
 
-		return result!.Message!;
+			return result!.Message!;
+		}
+		finally
+		{
+			// Decrement tracking when done
+			callDepth.Decrement();
+			if (recursionDepths.TryGetValue(attributeName, out var currentDepth) && currentDepth > 0)
+			{
+				recursionDepths[attributeName] = currentDepth - 1;
+			}
+		}
 	}
 
 	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
