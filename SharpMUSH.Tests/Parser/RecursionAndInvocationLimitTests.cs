@@ -16,7 +16,8 @@ public class RecursionAndInvocationLimitTests
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
+	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	/// <summary>
@@ -32,10 +33,10 @@ public class RecursionAndInvocationLimitTests
 		var command = "&RECURSE #1=[setq(c,add(r(c),1))][if(lte(r(c),105),[u(#1/RECURSE)],DONE)]";
 		
 		// Create the attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single(command));
 		
 		// Act: Try to evaluate it - should hit recursion limit before reaching DONE
-		var result = await Parser.FunctionParse(MModule.single("[u(#1/RECURSE)]"));
+		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/RECURSE)]"));
 		
 		// Assert: Should get recursion limit error, not DONE
 		await Assert.That(result).IsNotNull();
@@ -63,7 +64,7 @@ public class RecursionAndInvocationLimitTests
 		}
 		
 		// Act: Parse the deeply nested structure
-		var result = await Parser.FunctionParse(MModule.single(nestedCalls));
+		var result = await FunctionParser.FunctionParse(MModule.single(nestedCalls));
 		
 		// Assert: Should hit the stack depth limit
 		await Assert.That(result).IsNotNull();
@@ -102,8 +103,8 @@ public class RecursionAndInvocationLimitTests
 		}
 		
 		// Act
-		var result10 = await Parser.FunctionParse(MModule.single(nested10));
-		var result11 = await Parser.FunctionParse(MModule.single(nested11));
+		var result10 = await FunctionParser.FunctionParse(MModule.single(nested10));
+		var result11 = await FunctionParser.FunctionParse(MModule.single(nested11));
 		
 		// Assert
 		await Assert.That(result10).IsNotNull();
@@ -129,11 +130,11 @@ public class RecursionAndInvocationLimitTests
 	public async Task RecursionLimit_MutualRecursion_IsDetected()
 	{
 		// Arrange: Create two functions that call each other with a counter
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&FUNC_A #1=[setq(a,add(r(a),1))][if(lte(r(a),15),[u(#1/FUNC_B)],DONE_A)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&FUNC_B #1=[setq(b,add(r(b),1))][if(lte(r(b),15),[u(#1/FUNC_A)],DONE_B)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&FUNC_A #1=[setq(a,add(r(a),1))][if(lte(r(a),15),[u(#1/FUNC_B)],DONE_A)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&FUNC_B #1=[setq(b,add(r(b),1))][if(lte(r(b),15),[u(#1/FUNC_A)],DONE_B)]"));
 		
 		// Act: Try to evaluate - should eventually hit stack depth limit
-		var result = await Parser.FunctionParse(MModule.single("[u(#1/FUNC_A)]"));
+		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/FUNC_A)]"));
 		
 		// Assert: Should get some limit error (invocation or recursion)
 		await Assert.That(result).IsNotNull();
@@ -159,7 +160,7 @@ public class RecursionAndInvocationLimitTests
 		}
 		
 		// Act
-		var result = await Parser.FunctionParse(MModule.single(nested));
+		var result = await FunctionParser.FunctionParse(MModule.single(nested));
 		
 		// Assert: Should hit some limit
 		await Assert.That(result).IsNotNull();
@@ -194,7 +195,7 @@ public class RecursionAndInvocationLimitTests
 		var input = MModule.single("[strlen(hello world)]");
 		
 		// Act
-		var result = await Parser.FunctionParse(input);
+		var result = await FunctionParser.FunctionParse(input);
 		
 		// Assert: Should succeed
 		await Assert.That(result).IsNotNull();
@@ -210,11 +211,11 @@ public class RecursionAndInvocationLimitTests
 	{
 		// Arrange: Create a function that calls itself through another function
 		// This tests that recursionDepth correctly counts occurrences of the same function name
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&WRAP #1=[setq(w,add(r(w),1))][if(lte(r(w),15),[u(#1/INNER)],DONE_W)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&INNER #1=[setq(i,add(r(i),1))][if(lte(r(i),15),[u(#1/WRAP)],DONE_I)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&WRAP #1=[setq(w,add(r(w),1))][if(lte(r(w),15),[u(#1/INNER)],DONE_W)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&INNER #1=[setq(i,add(r(i),1))][if(lte(r(i),15),[u(#1/WRAP)],DONE_I)]"));
 		
 		// Act: Execute - creates pattern WRAP->INNER->WRAP->INNER->...
-		var result = await Parser.FunctionParse(MModule.single("[u(#1/WRAP)]"));
+		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/WRAP)]"));
 		
 		// Assert: Should eventually hit a limit
 		await Assert.That(result).IsNotNull();
@@ -250,8 +251,8 @@ public class RecursionAndInvocationLimitTests
 		
 		// Test 1: Recursion limit - same function many times
 		var recursiveAttr = "[setq(c,add(r(c),1))][if(lte(r(c),105),[u(#1/REC)],DONE)]";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&REC #1={recursiveAttr}"));
-		var recursionResult = await Parser.FunctionParse(MModule.single("[u(#1/REC)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&REC #1={recursiveAttr}"));
+		var recursionResult = await FunctionParser.FunctionParse(MModule.single("[u(#1/REC)]"));
 		
 		// Test 2: Stack depth - deep nesting of different functions
 		var deepNest = "x";
@@ -259,7 +260,7 @@ public class RecursionAndInvocationLimitTests
 		{
 			deepNest = $"[strlen({deepNest})]";
 		}
-		var stackResult = await Parser.FunctionParse(MModule.single(deepNest));
+		var stackResult = await FunctionParser.FunctionParse(MModule.single(deepNest));
 		
 		// Assert: The errors should be different
 		await Assert.That(recursionResult).IsNotNull();
