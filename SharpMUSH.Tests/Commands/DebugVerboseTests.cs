@@ -145,8 +145,8 @@ public class DebugVerboseTests
 		
 		NotifyService.ClearReceivedCalls();
 		
-		// Act - Call attribute via u() as the test object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force AttrDebugTest1=think [u(me/testfunc)]"));
+		// Act - Trigger the attribute (which uses WithAttributeDebug)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrDebugTest1/testfunc"));
 		
 		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
@@ -174,8 +174,8 @@ public class DebugVerboseTests
 		
 		NotifyService.ClearReceivedCalls();
 		
-		// Act - Call attribute via u() as the test object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force AttrNoDebugTest1=think [u(me/testfunc2)]"));
+		// Act - Trigger the attribute (which uses WithAttributeDebug)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrNoDebugTest1/testfunc2"));
 		
 		// Assert - Should NOT see debug output (NODEBUG takes precedence)
 		await NotifyService
