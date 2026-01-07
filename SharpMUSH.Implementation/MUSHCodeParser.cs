@@ -183,7 +183,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public ValueTask<CallState?> FunctionParse(MString text)
 	{
 		// Ensure we have invocation tracking for standalone function parsing
-		var parser = (State.IsEmpty || CurrentState.TotalInvocations == null)
+		// Check if tracking is already initialized - if not, create a new parser with tracking
+		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
+		var parser = needsTracking
 			? Push(new ParserState(
 				Registers: new([[]]),
 				IterationRegisters: [],
