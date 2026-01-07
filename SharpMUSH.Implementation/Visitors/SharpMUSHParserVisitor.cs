@@ -87,6 +87,12 @@ public class SharpMUSHParserVisitor(
 			result = child is null 
 				? AggregateResult(result, null) 
 				: AggregateResult(result, await child.Accept(this));
+			
+			// Halt evaluation if a limit has been exceeded
+			if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
+			{
+				break;
+			}
 		}
 
 		return result;

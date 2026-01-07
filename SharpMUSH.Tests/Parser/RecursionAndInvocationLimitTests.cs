@@ -35,16 +35,14 @@ public class RecursionAndInvocationLimitTests
 		// Create the attribute
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single(command));
 		
-		// Act: Try to evaluate it with a marker to see error via concatenation
-		// Errors don't propagate but appear in concatenated results
-		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/RECURSE)][lit(MARKER)]"));
+		// Act: Evaluate the recursive function - should halt at limit
+		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/RECURSE)]"));
 		
-		// Assert: Should get recursion limit error visible in concatenated output
+		// Assert: Should get recursion limit error - evaluation halts immediately
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
-		// The MARKER shows that evaluation continued after the error
-		await Assert.That(output).Contains("MARKER");
+		await Assert.That(output).Contains("RECURSION");
 		// Should hit recursion limit, not complete successfully
 		await Assert.That(output).DoesNotContain("DONE");
 	}
@@ -58,28 +56,24 @@ public class RecursionAndInvocationLimitTests
 	{
 		// Arrange: Create nested function calls with different function names
 		// Test MaxDepth = 10
-		// Create a chain like [cat([strlen([strlen(...)])],MARKER)]
-		// With 12 levels, should exceed the limit
-		// Use cat() to concatenate error with marker
+		// Create a chain like [strlen([strlen(...)])]
+		// With 12 levels, should exceed the limit and halt
 		var nestedCalls = "x";
 		for (int i = 0; i < 12; i++)
 		{
 			nestedCalls = $"[strlen({nestedCalls})]";
 		}
-		var testExpr = $"[cat({nestedCalls},[lit(MARKER)])]";
 		
 		// Act: Parse the deeply nested structure
-		var result = await FunctionParser.FunctionParse(MModule.single(testExpr));
+		var result = await FunctionParser.FunctionParse(MModule.single(nestedCalls));
 		
-		// Assert: Should hit the stack depth limit
+		// Assert: Should hit the stack depth limit and halt evaluation
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		Console.WriteLine($"Stack depth test result: {output}");
 		
-		// Error appears in concatenated result
+		// Should get error about depth/call limit
 		await Assert.That(output).Contains("#-1");
-		// Marker appears showing concatenation happened
-		await Assert.That(output).Contains("MARKER");
 	}
 
 	/// <summary>
@@ -99,17 +93,16 @@ public class RecursionAndInvocationLimitTests
 			nested10 = $"[strlen({nested10})]";
 		}
 		
-		// Create exactly 11 nested calls wrapped in cat to see error - should fail  
+		// Create exactly 11 nested calls - should fail  
 		var nested11 = "x";
 		for (int i = 0; i < 11; i++)
 		{
 			nested11 = $"[strlen({nested11})]";
 		}
-		var test11 = $"[cat({nested11},[lit(MARKER)])]";
 		
 		// Act
 		var result10 = await FunctionParser.FunctionParse(MModule.single(nested10));
-		var result11 = await FunctionParser.FunctionParse(MModule.single(test11));
+		var result11 = await FunctionParser.FunctionParse(MModule.single(nested11));
 		
 		// Assert
 		await Assert.That(result10).IsNotNull();
@@ -124,9 +117,8 @@ public class RecursionAndInvocationLimitTests
 		// 10-deep should succeed and return "1" (length of "x")
 		await Assert.That(output10).IsEqualTo("1");
 		
-		// 11-deep should fail with an error visible in concatenated result
+		// 11-deep should fail with an error - evaluation halts
 		await Assert.That(output11).Contains("#-1");
-		await Assert.That(output11).Contains("MARKER");
 	}
 
 	/// <summary>
@@ -139,14 +131,13 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&FUNC_A #1=[setq(a,add(r(a),1))][if(lte(r(a),15),[u(#1/FUNC_B)],DONE_A)]"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&FUNC_B #1=[setq(b,add(r(b),1))][if(lte(r(b),15),[u(#1/FUNC_A)],DONE_B)]"));
 		
-		// Act: Try to evaluate with marker to see error via concatenation
-		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/FUNC_A)][lit(MARKER)]"));
+		// Act: Evaluate - should halt at limit
+		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/FUNC_A)]"));
 		
-		// Assert: Should get some limit error visible in concatenated result
+		// Assert: Should get some limit error - evaluation halts immediately
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
-		await Assert.That(output).Contains("MARKER");
 	}
 
 	/// <summary>
@@ -156,22 +147,20 @@ public class RecursionAndInvocationLimitTests
 	public async Task CallLimit_IsEnforced()
 	{
 		// Arrange: The default CallLimit is 1000
-		// Create a very deeply nested parse structure wrapped in cat to see error
+		// Create a very deeply nested parse structure
 		var nested = "test";
 		for (int i = 0; i < 1100; i++)
 		{
 			nested = $"[strlen({nested})]";
 		}
-		var testExpr = $"[cat({nested},[lit(MARKER)])]";
 		
 		// Act
-		var result = await FunctionParser.FunctionParse(MModule.single(testExpr));
+		var result = await FunctionParser.FunctionParse(MModule.single(nested));
 		
-		// Assert: Should hit some limit, error visible in concatenated result
+		// Assert: Should hit some limit - evaluation halts
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
-		await Assert.That(output).Contains("MARKER");
 	}
 
 	/// <summary>
@@ -220,14 +209,13 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&WRAP #1=[setq(w,add(r(w),1))][if(lte(r(w),15),[u(#1/INNER)],DONE_W)]"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&INNER #1=[setq(i,add(r(i),1))][if(lte(r(i),15),[u(#1/WRAP)],DONE_I)]"));
 		
-		// Act: Execute with marker to see error via concatenation - creates pattern WRAP->INNER->WRAP->INNER->...
-		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/WRAP)][lit(MARKER)]"));
+		// Act: Execute - creates pattern WRAP->INNER->WRAP->INNER->...
+		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/WRAP)]"));
 		
-		// Assert: Should eventually hit a limit, error visible in concatenated result
+		// Assert: Should eventually hit a limit - evaluation halts
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
-		await Assert.That(output).Contains("MARKER");
 	}
 
 	/// <summary>
@@ -255,12 +243,12 @@ public class RecursionAndInvocationLimitTests
 	public async Task DifferentLimits_ReturnDifferentErrors()
 	{
 		// This test documents what errors are returned for what limits
-		// Errors appear in concatenated results
+		// Evaluation halts immediately when limit is hit
 		
 		// Test 1: Recursion limit - same function many times
 		var recursiveAttr = "[setq(c,add(r(c),1))][if(lte(r(c),105),[u(#1/REC)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&REC #1={recursiveAttr}"));
-		var recursionResult = await FunctionParser.FunctionParse(MModule.single("[u(#1/REC)][lit(MARKER1)]"));
+		var recursionResult = await FunctionParser.FunctionParse(MModule.single("[u(#1/REC)]"));
 		
 		// Test 2: Stack depth - deep nesting of different functions
 		var deepNest = "x";
@@ -268,21 +256,18 @@ public class RecursionAndInvocationLimitTests
 		{
 			deepNest = $"[strlen({deepNest})]";
 		}
-		var stackTest = $"[cat({deepNest},[lit(MARKER2)])]";
-		var stackResult = await FunctionParser.FunctionParse(MModule.single(stackTest));
+		var stackResult = await FunctionParser.FunctionParse(MModule.single(deepNest));
 		
-		// Assert: The errors should be visible in concatenated results
+		// Assert: Both should return errors - evaluation halts
 		await Assert.That(recursionResult).IsNotNull();
 		await Assert.That(stackResult).IsNotNull();
 		
 		var recursionError = recursionResult!.Message.ToPlainText();
 		var stackError = stackResult!.Message.ToPlainText();
 		
-		// Both should contain errors visible via concatenation
+		// Both should contain errors
 		await Assert.That(recursionError).Contains("#-1");
-		await Assert.That(recursionError).Contains("MARKER1");
 		await Assert.That(stackError).Contains("#-1");
-		await Assert.That(stackError).Contains("MARKER2");
 		
 		// Log the actual errors to document behavior
 		Console.WriteLine($"Recursion error: {recursionError}");
