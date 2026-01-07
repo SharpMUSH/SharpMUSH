@@ -24,12 +24,11 @@ public class DebugVerboseTests
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
 	{
-		// Arrange - Create test object and set DEBUG flag on it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugEvalTest"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalTest=DEBUG"));
+		// Arrange - Set DEBUG flag on player #1 (executor of the command)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=DEBUG"));
 		
-		// Act - Execute a function with unique values as the debug object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugEvalTest=@pemit me=[add(123,456)]"));
+		// Act - Execute a function with unique values
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=[add(123,456)]"));
 		
 		// Assert - Verify debug output contains the specific function call
 		await NotifyService
@@ -54,18 +53,17 @@ public class DebugVerboseTests
 				Arg.Any<INotifyService.NotificationType>());
 		
 		// Cleanup
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugEvalTest"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
 	}
 
 	[Test]
 	public async Task DebugFlag_ShowsNesting_WithIndentation()
 	{
-		// Arrange - Create test object and set DEBUG flag
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugNestingTest"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestingTest=DEBUG"));
+		// Arrange - Set DEBUG flag on player #1
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=DEBUG"));
 		
-		// Act - Execute nested function with unique values as the debug object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestingTest=@pemit me=[mul(add(11,22),3)]"));
+		// Act - Execute nested function with unique values
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=[mul(add(11,22),3)]"));
 		
 		// Assert - Outer function
 		await NotifyService
@@ -101,18 +99,17 @@ public class DebugVerboseTests
 				Arg.Any<INotifyService.NotificationType>());
 		
 		// Cleanup
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugNestingTest"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
 	}
 
 	[Test]
 	public async Task VerboseFlag_OutputsCommandExecution()
 	{
-		// Arrange - Create test object and set VERBOSE flag
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseCmdTest"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseCmdTest=VERBOSE"));
+		// Arrange - Set VERBOSE flag on player #1
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=VERBOSE"));
 		
-		// Act - Execute a command with unique message as the verbose object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force VerboseCmdTest=@pemit me=UniqueTestMessage789"));
+		// Act - Execute a command with unique message
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=UniqueTestMessage789"));
 		
 		// Assert - Verify VERBOSE output (format: "#dbref] command")
 		await NotifyService
@@ -126,7 +123,7 @@ public class DebugVerboseTests
 				Arg.Any<INotifyService.NotificationType>());
 		
 		// Cleanup
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseCmdTest"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
 	}
 
 	[Test]
@@ -137,8 +134,8 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc AttrDebugForceTest=[add(88,77)]"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrDebugForceTest/testfunc=DEBUG"));
 		
-		// Act - Trigger the attribute via @force (which uses WithAttributeDebug internally)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force AttrDebugForceTest=@trigger #self/testfunc"));
+		// Act - Trigger the attribute (which uses WithAttributeDebug internally)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrDebugForceTest/testfunc"));
 		
 		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
@@ -164,8 +161,8 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc2 AttrNoDebugSuppressTest=[add(55,44)]"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest/testfunc2=NODEBUG"));
 		
-		// Act - Trigger the attribute via @force (which uses WithAttributeDebug internally)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force AttrNoDebugSuppressTest=@trigger #self/testfunc2"));
+		// Act - Trigger the attribute (which uses WithAttributeDebug internally)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrNoDebugSuppressTest/testfunc2"));
 		
 		// Assert - Should NOT see debug output (NODEBUG takes precedence)
 		await NotifyService
