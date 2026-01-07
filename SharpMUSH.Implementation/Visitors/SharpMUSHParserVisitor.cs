@@ -226,20 +226,16 @@ public class SharpMUSHParserVisitor(
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
 			
-			// Get or create the invocation tracking fields
 			var invocationCounter = currentState.TotalInvocations ?? new InvocationCounter();
 			var callDepth = currentState.CallDepth ?? new InvocationCounter();
 			var recursionDepths = currentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 			
-			// Increment total invocation count and check limit
 			var totalInvocations = invocationCounter.Increment();
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
 			{
-				// FunctionInvocationLimit exceeded (total function calls)
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 			
-			// Increment call depth and track recursion depth
 			var currentDepth = callDepth.Increment();
 			didPushFunction = true;
 			
@@ -257,7 +253,6 @@ public class SharpMUSHParserVisitor(
 			/* Validation, this should probably go into its own function! */
 			if (args.Length > attribute.MaxArgs)
 			{
-				// Better Error Needed.
 				return new CallState(Errors.ErrorArgRange, context.Depth());
 			}
 
@@ -280,24 +275,18 @@ public class SharpMUSHParserVisitor(
 			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
 				
-			// Check stack depth limit using the call depth counter
 			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
-				// MaxDepth (stack depth) exceeded
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 			
-			// Check call limit (also using call depth as a proxy)
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
-				// CallLimit exceeded  
 				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
-			// Check recursion limit for this specific function
 			if (recursionDepth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
 			{
-				// Recursion depth exceeded for this function
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
 
@@ -336,9 +325,7 @@ public class SharpMUSHParserVisitor(
 				.ToList();
 			}
 
-			// Check if any argument evaluation resulted in an error
-			// Errors start with "#-1" or "#-2"  
-			// If an argument failed, propagate the error instead of passing it as an argument value
+			// Propagate errors from argument evaluation instead of passing them as argument values
 			foreach (var arg in refinedArguments)
 			{
 				var msgText = arg.Message?.ToPlainText() ?? "";
@@ -370,9 +357,9 @@ public class SharpMUSHParserVisitor(
 				Handle: currentState.Handle,
 				ParseMode: currentState.ParseMode,
 				HttpResponse: currentState.HttpResponse,
-				CallDepth: callDepth,  // Pass the shared call depth counter to nested calls
-				FunctionRecursionDepths: recursionDepths,  // Pass the shared recursion tracking
-				TotalInvocations: invocationCounter  // Pass the shared invocation counter
+				CallDepth: callDepth,
+				FunctionRecursionDepths: recursionDepths,
+				TotalInvocations: invocationCounter
 			));
 
 			var result = await function(newParser);
@@ -384,28 +371,29 @@ public class SharpMUSHParserVisitor(
 			logger.LogError(ex, nameof(CallFunction));
 			success = false;
 
-			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			var executor = await parser.CurrentState.ExecutorObject(Mediator);
 
-			if (executor.IsGod())
+			if (!executor.IsT4)
 			{
-				await NotifyService.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
+				var executorObj = executor.Known();
+				if (executorObj.IsGod())
+				{
+					await NotifyService.Notify(executorObj, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
+				}
 			}
 
 			return CallState.Empty;
 		}
 		finally
 		{
-			// Always decrement call depth and recursion depth, even on error
 			if (didPushFunction)
 			{
 				var currentCallDepth = parser.CurrentState.CallDepth;
 				var recursionDepths = parser.CurrentState.FunctionRecursionDepths;
 				var functionName = parser.CurrentState.Function;
 				
-				// Decrement the call depth counter
 				currentCallDepth?.Decrement();
 				
-				// Decrement the recursion depth for this specific function
 				if (recursionDepths != null && functionName != null && recursionDepths.TryGetValue(functionName, out var depth) && depth > 0)
 				{
 					recursionDepths[functionName] = depth - 1;
