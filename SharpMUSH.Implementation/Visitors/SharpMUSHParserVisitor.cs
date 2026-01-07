@@ -100,22 +100,26 @@ public class SharpMUSHParserVisitor(
 			var forwardListText = attr.Value.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(forwardListText))
 			{
-				// Parse space-separated list of dbrefs
-				var dbrefs = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				foreach (var dbrefStr in dbrefs)
+				// Parse space-separated list of dbrefs/names
+				var targets = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				foreach (var targetStr in targets)
 				{
-					if (DBRef.TryParse(dbrefStr, out var dbref) && dbref.HasValue)
+					// Use LocateService to find each target
+					var locateResult = await LocateService.Locate(
+						parser,
+						executor,
+						executor,
+						targetStr,
+						LocateFlags.AbsoluteMatch);
+					
+					if (locateResult.IsValid())
 					{
-						// Check if this dbref is connected
-						var forwardConnections = await ConnectionService.Get(dbref.Value).AnyAsync();
+						var forwardTarget = locateResult.WithoutError().WithoutNone();
+						// Check if this target is connected
+						var forwardConnections = await ConnectionService.Get(forwardTarget.Object().DBRef).AnyAsync();
 						if (forwardConnections)
 						{
-							// Get the object for this dbref
-							var forwardTarget = await Mediator.Send(new GetObjectNodeQuery(dbref.Value));
-							if (!forwardTarget.IsNone)
-							{
-								await NotifyService.Notify(forwardTarget.Known(), MModule.single(message));
-							}
+							await NotifyService.Notify(forwardTarget, MModule.single(message));
 						}
 					}
 				}
