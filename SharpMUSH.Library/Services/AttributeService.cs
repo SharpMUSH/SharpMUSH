@@ -260,7 +260,11 @@ public class AttributeService(
 
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
 		
-		// Use shared tracking collections from parser state - these must exist!
+		// Use shared tracking collections from parser state.
+		// These are guaranteed to be non-null because:
+		// - CommandParse creates them for each command evaluation
+		// - FunctionParse creates them for standalone parsing
+		// - All nested calls propagate them through parser state
 		var callDepth = parser.CurrentState.CallDepth!;
 		var recursionDepths = parser.CurrentState.FunctionRecursionDepths!;
 		var limitExceeded = parser.CurrentState.LimitExceeded!;
