@@ -114,7 +114,27 @@ public class SharpMUSHParserVisitor(
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private static CallState? AggregateResult(CallState? aggregate,
 		CallState? nextResult)
-		=> (aggregate, nextResult) switch
+	{
+		// Check for errors before aggregating - errors should stop evaluation
+		if (aggregate?.Message != null)
+		{
+			var aggText = aggregate.Message.ToPlainText();
+			if (aggText.StartsWith("#-1") || aggText.StartsWith("#-2"))
+			{
+				return aggregate;  // Return error immediately, don't concatenate
+			}
+		}
+		
+		if (nextResult?.Message != null)
+		{
+			var nextText = nextResult.Message.ToPlainText();
+			if (nextText.StartsWith("#-1") || nextText.StartsWith("#-2"))
+			{
+				return nextResult;  // Return error immediately, don't concatenate
+			}
+		}
+		
+		return (aggregate, nextResult) switch
 		{
 			(null, null)
 				=> null,
@@ -125,6 +145,7 @@ public class SharpMUSHParserVisitor(
 			var (agg, next)
 				=> agg ?? next
 		};
+	}
 
 	/// <summary>
 	/// Extracts text from a parser context using the source string.
