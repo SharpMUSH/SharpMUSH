@@ -119,7 +119,7 @@ public class SharpMUSHParserVisitor(
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-	private CallState? AggregateResult(CallState? aggregate,
+	private static CallState? AggregateResult(CallState? aggregate,
 		CallState? nextResult)
 		=> (aggregate, nextResult) switch
 		{
@@ -337,16 +337,6 @@ public class SharpMUSHParserVisitor(
 				.ToList();
 			}
 
-			// Propagate errors from argument evaluation instead of passing them as argument values
-			foreach (var arg in refinedArguments)
-			{
-				var msgText = arg.Message?.ToPlainText() ?? "";
-				if (msgText.StartsWith("#-1") || msgText.StartsWith("#-2"))
-				{
-					return arg;
-				}
-			}
-
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
 			var newParser = parser.Push(new ParserState(
 				Registers: currentState.Registers,
@@ -384,15 +374,11 @@ public class SharpMUSHParserVisitor(
 			logger.LogError(ex, nameof(CallFunction));
 			success = false;
 
-			var executor = await parser.CurrentState.ExecutorObject(Mediator);
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-			if (!executor.IsT4)
+			if (executor.IsGod())
 			{
-				var executorObj = executor.Known();
-				if (executorObj.IsGod())
-				{
-					await NotifyService.Notify(executorObj, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
-				}
+				await NotifyService.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
 			}
 
 			return CallState.Empty;
