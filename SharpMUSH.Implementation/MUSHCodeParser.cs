@@ -183,10 +183,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public ValueTask<CallState?> FunctionParse(MString text)
 	{
 		// Ensure we have invocation tracking for standalone function parsing
-		IMUSHCodeParser parser = this;
 		if (State.IsEmpty || CurrentState.TotalInvocations == null)
 		{
-			parser = Push(new ParserState(
+			var newState = new ParserState(
 				Registers: new([[]]),
 				IterationRegisters: [],
 				RegexRegisters: [],
@@ -208,10 +207,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				CallDepth: new InvocationCounter(),
 				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitFlag()));
+				LimitExceeded: new LimitExceededFlag());
+			
+			return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), Push(newState));
 		}
 		
-		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse));
 	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)
@@ -283,7 +284,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CallDepth: new InvocationCounter(),
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitFlag()));
+			LimitExceeded: new LimitExceededFlag()));
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 

@@ -246,7 +246,7 @@ public class SharpMUSHParserVisitor(
 			var invocationCounter = currentState.TotalInvocations ?? new InvocationCounter();
 			var callDepth = currentState.CallDepth ?? new InvocationCounter();
 			var recursionDepths = currentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-			var limitExceeded = currentState.LimitExceeded ?? new LimitFlag();
+			var limitExceeded = currentState.LimitExceeded ?? new LimitExceededFlag();
 			
 			var totalInvocations = invocationCounter.Increment();
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)

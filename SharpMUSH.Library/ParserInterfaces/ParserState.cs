@@ -57,10 +57,10 @@ public class InvocationCounter
 }
 
 /// <summary>
-/// Flag indicating that a limit (invocation, recursion, depth, call) has been exceeded.
-/// Mutable reference type to share across parser states. When set, evaluation should stop.
+/// Shared flag for tracking when a limit (invocation, recursion, depth, call) has been exceeded.
+/// Must be a reference type (class) to enable sharing the same flag across all immutable ParserState records.
 /// </summary>
-public class LimitFlag
+public class LimitExceededFlag
 {
 	/// <summary>
 	/// Indicates whether a limit has been exceeded during this evaluation.
@@ -138,7 +138,7 @@ public class IterationWrapper<T>
 /// <param name="CallDepth">Shared counter tracking overall function call nesting depth. Mutable and shared across all states in an evaluation.</param>
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
-/// <param name="LimitExceeded">Flag indicating a limit (invocation, recursion, depth, call) has been exceeded. When true, evaluation should stop. Mutable and shared across all states.</param>
+/// <param name="LimitExceeded">Shared flag indicating a limit has been exceeded. Mutable and shared across all states in an evaluation.</param>
 public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -161,7 +161,7 @@ public record ParserState(
 	InvocationCounter? CallDepth = null,
 	Dictionary<string, int>? FunctionRecursionDepths = null,
 	InvocationCounter? TotalInvocations = null,
-	LimitFlag? LimitExceeded = null)
+	LimitExceededFlag? LimitExceeded = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
@@ -189,7 +189,7 @@ public record ParserState(
 		new InvocationCounter(),
 		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		new InvocationCounter(),
-		new LimitFlag());
+		new LimitExceededFlag());
 	
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!
