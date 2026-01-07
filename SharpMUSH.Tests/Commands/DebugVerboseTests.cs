@@ -21,6 +21,13 @@ public class DebugVerboseTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	[Before(Test)]
+	public async Task Setup()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
+	}
+
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
 	{
