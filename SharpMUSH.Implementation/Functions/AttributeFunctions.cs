@@ -1526,19 +1526,7 @@ public partial class Functions
 	[SharpFunction(Name = "ufun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["object/attribute", "arguments..."])]
 	public static async ValueTask<CallState> UserAttributeFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executorMaybe = await parser.CurrentState.ExecutorObject(Mediator!);
-		AnySharpObject executor;
-		
-		if (executorMaybe.IsT4)
-		{
-			// No executor in context (e.g., direct FunctionParse call), use #1 (God) as default
-			var god = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
-			executor = god.Known();
-		}
-		else
-		{
-			executor = executorMaybe.Known();
-		}
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
 			parser,
