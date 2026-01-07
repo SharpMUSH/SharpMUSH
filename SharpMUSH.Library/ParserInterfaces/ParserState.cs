@@ -57,6 +57,18 @@ public class InvocationCounter
 }
 
 /// <summary>
+/// Flag indicating that a limit (invocation, recursion, depth, call) has been exceeded.
+/// Mutable reference type to share across parser states. When set, evaluation should stop.
+/// </summary>
+public class LimitFlag
+{
+	/// <summary>
+	/// Indicates whether a limit has been exceeded during this evaluation.
+	/// </summary>
+	public bool IsExceeded { get; set; }
+}
+
+/// <summary>
 /// HTTP response context for building HTTP responses
 /// </summary>
 public class HttpResponseContext
@@ -126,6 +138,7 @@ public class IterationWrapper<T>
 /// <param name="CallDepth">Shared counter tracking overall function call nesting depth. Mutable and shared across all states in an evaluation.</param>
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
+/// <param name="LimitExceeded">Flag indicating a limit (invocation, recursion, depth, call) has been exceeded. When true, evaluation should stop. Mutable and shared across all states.</param>
 public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -147,7 +160,8 @@ public record ParserState(
 	HttpResponseContext? HttpResponse = null,
 	InvocationCounter? CallDepth = null,
 	Dictionary<string, int>? FunctionRecursionDepths = null,
-	InvocationCounter? TotalInvocations = null)
+	InvocationCounter? TotalInvocations = null,
+	LimitFlag? LimitExceeded = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
@@ -174,7 +188,8 @@ public record ParserState(
 		null,
 		new InvocationCounter(),
 		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-		new InvocationCounter());
+		new InvocationCounter(),
+		new LimitFlag());
 	
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!

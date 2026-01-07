@@ -112,26 +112,15 @@ public class SharpMUSHParserVisitor(
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-	private static CallState? AggregateResult(CallState? aggregate,
+	private CallState? AggregateResult(CallState? aggregate,
 		CallState? nextResult)
 	{
-		// Check for errors before aggregating - errors should stop evaluation
-		if (aggregate?.Message != null)
+		// Check if a limit has been exceeded - if so, stop evaluation
+		if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
 		{
-			var aggText = aggregate.Message.ToPlainText();
-			if (aggText.StartsWith("#-1") || aggText.StartsWith("#-2"))
-			{
-				return aggregate;  // Return error immediately, don't concatenate
-			}
-		}
-		
-		if (nextResult?.Message != null)
-		{
-			var nextText = nextResult.Message.ToPlainText();
-			if (nextText.StartsWith("#-1") || nextText.StartsWith("#-2"))
-			{
-				return nextResult;  // Return error immediately, don't concatenate
-			}
+			// Return the aggregate if it exists (it should contain the limit error message),
+			// otherwise return nextResult
+			return aggregate ?? nextResult;
 		}
 		
 		return (aggregate, nextResult) switch
@@ -250,10 +239,12 @@ public class SharpMUSHParserVisitor(
 			var invocationCounter = currentState.TotalInvocations ?? new InvocationCounter();
 			var callDepth = currentState.CallDepth ?? new InvocationCounter();
 			var recursionDepths = currentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+			var limitExceeded = currentState.LimitExceeded ?? new LimitFlag();
 			
 			var totalInvocations = invocationCounter.Increment();
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
 			{
+				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 			
@@ -298,16 +289,19 @@ public class SharpMUSHParserVisitor(
 				
 			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
+				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 			
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
+				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
 			if (recursionDepth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
 			{
+				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorRecursion, recursionDepth);
 			}
 

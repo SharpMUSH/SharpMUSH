@@ -207,7 +207,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				HttpResponse: null,
 				CallDepth: new InvocationCounter(),
 				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-				TotalInvocations: new InvocationCounter()));
+				TotalInvocations: new InvocationCounter(),
+				LimitExceeded: new LimitFlag()));
 		}
 		
 		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
@@ -279,9 +280,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Handle: handle,
 			ParseMode: ParseMode.Default,
 			HttpResponse: null,
-			CallDepth: new InvocationCounter(),  // Create new call depth counter for each command
-			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),  // Create new recursion tracker
-			TotalInvocations: new InvocationCounter()));  // Create new invocation counter
+			CallDepth: new InvocationCounter(),
+			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+			TotalInvocations: new InvocationCounter(),
+			LimitExceeded: new LimitFlag()));
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 

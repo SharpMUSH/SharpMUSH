@@ -263,6 +263,7 @@ public class AttributeService(
 		// Track recursion for user-defined attributes like built-in functions
 		var callDepth = parser.CurrentState.CallDepth ?? new InvocationCounter();
 		var recursionDepths = parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+		var limitExceeded = parser.CurrentState.LimitExceeded ?? new LimitFlag();
 		
 		callDepth.Increment();
 		if (!recursionDepths.TryGetValue(attributeName, out var depth))
@@ -274,6 +275,7 @@ public class AttributeService(
 		// Check recursion limit for attributes (same as built-in functions)
 		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
 		{
+			limitExceeded.IsExceeded = true;
 			return MModule.single(Errors.ErrorRecursion);
 		}
 		
@@ -288,7 +290,8 @@ public class AttributeService(
 						Function = attributeName,
 						CallDepth = callDepth,
 						FunctionRecursionDepths = recursionDepths,
-						TotalInvocations = s.TotalInvocations
+						TotalInvocations = s.TotalInvocations,
+						LimitExceeded = s.LimitExceeded
 					},
 				async newParser =>
 					await newParser.FunctionParse(attr.AsAttribute.Last().Value));
@@ -416,10 +419,10 @@ public class AttributeService(
 					s => s with { 
 						Arguments = slimArgs, 
 						EnvironmentRegisters = slimArgs,
-						// Preserve the invocation tracking fields to maintain recursion and invocation tracking
 						CallDepth = s.CallDepth,
 						FunctionRecursionDepths = s.FunctionRecursionDepths,
-						TotalInvocations = s.TotalInvocations
+						TotalInvocations = s.TotalInvocations,
+						LimitExceeded = s.LimitExceeded
 					},
 					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
 				);
@@ -440,10 +443,10 @@ public class AttributeService(
 		{
 			var result = await parser.With(s => s with { 
 				Arguments = args,
-				// Preserve the invocation tracking fields to maintain recursion and invocation tracking
 				CallDepth = s.CallDepth,
 				FunctionRecursionDepths = s.FunctionRecursionDepths,
-				TotalInvocations = s.TotalInvocations
+				TotalInvocations = s.TotalInvocations,
+				LimitExceeded = s.LimitExceeded
 			},
 				async np => await np.FunctionParse(attribute));
 			return result!.Message!;
