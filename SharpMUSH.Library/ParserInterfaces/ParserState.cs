@@ -128,6 +128,24 @@ public record ParserState(
 	private AnyOptionalSharpObject? _enactorObject;
 	private AnyOptionalSharpObject? _callerObject;
 
+	/// <summary>
+	/// Validates that a cached object matches the expected DBRef and clears it if not.
+	/// This handles the case where ParserState is copied with a new DBRef but the cached object is stale.
+	/// </summary>
+	private static void ValidateAndClearCacheIfNeeded(
+		ref AnyOptionalSharpObject? cachedObject,
+		DBRef? expectedDBRef)
+	{
+		if (cachedObject is not null && !cachedObject.IsNone && expectedDBRef is not null)
+		{
+			var cachedDBRef = cachedObject.Known().Object().DBRef;
+			if (!cachedDBRef.Equals(expectedDBRef.Value))
+			{
+				cachedObject = null;
+			}
+		}
+	}
+
 	public static ParserState Empty => new(
 		new ConcurrentStack<Dictionary<string, MString>>(),
 		new ConcurrentStack<IterationWrapper<MString>>(),
@@ -155,17 +173,7 @@ public record ParserState(
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
 	{
-		// If we have a cached executor object, verify it matches the current Executor DBRef
-		// If not, clear the cache (this happens when state is copied with a new Executor)
-		if (_executorObject is not null && !_executorObject.IsNone && Executor is not null)
-		{
-			var cachedDBRef = _executorObject.Known().Object().DBRef;
-			if (!cachedDBRef.Equals(Executor.Value))
-			{
-				_executorObject = null;
-			}
-		}
-		
+		ValidateAndClearCacheIfNeeded(ref _executorObject, Executor);
 		return _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
 	}
 
@@ -176,17 +184,7 @@ public record ParserState(
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
 	{
-		// If we have a cached enactor object, verify it matches the current Enactor DBRef
-		// If not, clear the cache (this happens when state is copied with a new Enactor)
-		if (_enactorObject is not null && !_enactorObject.IsNone && Enactor is not null)
-		{
-			var cachedDBRef = _enactorObject.Known().Object().DBRef;
-			if (!cachedDBRef.Equals(Enactor.Value))
-			{
-				_enactorObject = null;
-			}
-		}
-		
+		ValidateAndClearCacheIfNeeded(ref _enactorObject, Enactor);
 		return _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
 	}
 
@@ -197,17 +195,7 @@ public record ParserState(
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
 	{
-		// If we have a cached caller object, verify it matches the current Caller DBRef
-		// If not, clear the cache (this happens when state is copied with a new Caller)
-		if (_callerObject is not null && !_callerObject.IsNone && Caller is not null)
-		{
-			var cachedDBRef = _callerObject.Known().Object().DBRef;
-			if (!cachedDBRef.Equals(Caller.Value))
-			{
-				_callerObject = null;
-			}
-		}
-		
+		ValidateAndClearCacheIfNeeded(ref _callerObject, Caller);
 		return _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
 	}
 	
