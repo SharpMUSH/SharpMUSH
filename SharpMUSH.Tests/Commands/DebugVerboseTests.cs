@@ -26,10 +26,10 @@ public class DebugVerboseTests
 		// Arrange - Create test object and set DEBUG flag on it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugEvalObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalObj=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalObj=!no_command"));
 		
-		// Create a custom command on the object with no_command flag
+		// Create a custom command on the object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_cmd_eval DebugEvalObj=$test1command:@pemit me=[add(123,456)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalObj/test_cmd_eval=no_command"));
 		
 		// Act - Execute the custom command as the test object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugEvalObj=test1command"));
@@ -66,10 +66,10 @@ public class DebugVerboseTests
 		// Arrange - Create test object and set DEBUG flag on it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugNestObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestObj=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestObj=!no_command"));
 		
-		// Create a custom command on the object with no_command flag
+		// Create a custom command on the object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_cmd_nest DebugNestObj=$test2command:@pemit me=[mul(add(11,22),3)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestObj/test_cmd_nest=no_command"));
 		
 		// Act - Execute the custom command as the test object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestObj=test2command"));
