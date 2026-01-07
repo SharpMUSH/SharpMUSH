@@ -86,7 +86,7 @@ public class SharpMUSHParserVisitor(
 		var connections = await ConnectionService.Get(owner.Object.DBRef).AnyAsync();
 		if (connections)
 		{
-			await NotifyService.Notify(owner.Object.DBRef, MModule.single(message));
+			await NotifyService.Notify(owner, MModule.single(message));
 		}
 		
 		// Send to DEBUGFORWARDLIST if it exists
@@ -110,7 +110,12 @@ public class SharpMUSHParserVisitor(
 						var forwardConnections = await ConnectionService.Get(dbref.Value).AnyAsync();
 						if (forwardConnections)
 						{
-							await NotifyService.Notify(dbref.Value, MModule.single(message));
+							// Get the object for this dbref
+							var forwardTarget = await Mediator.Send(new GetObjectNodeQuery(dbref.Value));
+							if (!forwardTarget.IsNone)
+							{
+								await NotifyService.Notify(forwardTarget.Known(), MModule.single(message));
+							}
 						}
 					}
 				}

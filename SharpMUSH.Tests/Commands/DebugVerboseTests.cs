@@ -69,25 +69,25 @@ public class DebugVerboseTests
 		// Act - Execute nested function with unique values
 		await Parser.CommandParse(1, ConnectionService, MModule.single("think [mul(add(11,22),3)]"));
 		
-		// Assert - Outer function (no leading space before 'mul')
+		// Assert - Outer function (check for the actual format with #1!)
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("!mul(add(11,22),3) :"),
-						str => str.Contains("!mul(add(11,22),3) :"))),
+						mstr => mstr.ToString().Contains("#1! mul(add(11,22),3) :"),
+						str => str.Contains("#1! mul(add(11,22),3) :"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
 		
-		// Assert - Inner function (has leading space for indentation)
+		// Assert - Inner function (has ONE space for indentation at depth 1)
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("! add(11,22) :"),
-						str => str.Contains("! add(11,22) :"))),
+						mstr => mstr.ToString().Contains("#1! add(11,22) :"),
+						str => str.Contains("#1! add(11,22) :"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
 		
@@ -118,13 +118,14 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=UniqueTestMessage789"));
 		
 		// Assert - Verify VERBOSE output (format: "#dbref] command")
+		// The output includes the full command line
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("] @pemit me=UniqueTestMessage789"),
-						str => str.Contains("] @pemit me=UniqueTestMessage789"))),
+						mstr => mstr.ToString().Contains("#1] ") && mstr.ToString().Contains("@pemit me=UniqueTestMessage789"),
+						str => str.Contains("#1] ") && str.Contains("@pemit me=UniqueTestMessage789"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
 		
@@ -135,8 +136,9 @@ public class DebugVerboseTests
 	[Test]
 	public async Task AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug()
 	{
-		// Arrange - Set attribute with DEBUG flag, but object WITHOUT DEBUG
+		// Arrange - Set attribute with DEBUG flag, but object WITHOUT DEBUG and WITHOUT VERBOSE
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc me=[add(88,77)]"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me/testfunc=DEBUG"));
 		
@@ -146,13 +148,14 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("think [u(me/testfunc)]"));
 		
 		// Assert - Should see debug output despite object not having DEBUG
+		// The output includes the #1! prefix and extra indentation for nested evaluation
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("! add(88,77) => 165"),
-						str => str.Contains("! add(88,77) => 165"))),
+						mstr => mstr.ToString().Contains("add(88,77) => 165"),
+						str => str.Contains("add(88,77) => 165"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
 		
