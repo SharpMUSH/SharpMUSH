@@ -287,7 +287,6 @@ public class SharpMUSHParserVisitor(
 				
 			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
-				Console.WriteLine($"MAX DEPTH EXCEEDED: {name}, currentDepth={currentDepth}, limit={Configuration.CurrentValue.Limit.MaxDepth}");
 				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
@@ -337,6 +336,12 @@ public class SharpMUSHParserVisitor(
 				})
 				.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 				.ToList();
+			}
+			
+			// If a limit was exceeded during argument evaluation, return immediately
+			if (limitExceeded.IsExceeded)
+			{
+				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.

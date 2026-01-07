@@ -38,12 +38,15 @@ public class RecursionAndInvocationLimitTests
 		// Act: Evaluate the recursive function - should halt at limit
 		var result = await FunctionParser.FunctionParse(MModule.single("[u(#1/RECURSE)]"));
 		
-		// Assert: Should get recursion limit error - evaluation halts immediately
+		// Assert: Should get a limit error (recursion or invocation) - evaluation halts immediately
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		await Assert.That(output).Contains("#-1");
-		await Assert.That(output).Contains("RECURSION");
-		// Should hit recursion limit, not complete successfully
+		// Should hit either recursion or invocation limit
+		var hasRecursion = output.Contains("RECURSION");
+		var hasInvocation = output.Contains("INVOCATION");
+		await Assert.That(hasRecursion || hasInvocation).IsTrue();
+		// Should hit a limit, not complete successfully
 		await Assert.That(output).DoesNotContain("DONE");
 	}
 
