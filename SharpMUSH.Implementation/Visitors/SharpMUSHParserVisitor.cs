@@ -233,22 +233,11 @@ public class SharpMUSHParserVisitor(
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
 			
-			// These fields should already be initialized by FunctionParse or CommandParse
-			// They are shared mutable references that must be passed through all nested calls
-			if (currentState.TotalInvocations == null || currentState.CallDepth == null || 
-			    currentState.FunctionRecursionDepths == null || currentState.LimitExceeded == null)
-			{
-				throw new InvalidOperationException($"Tracking fields not initialized in CallFunction for {name}! " +
-					$"TotalInvocations is null: {currentState.TotalInvocations == null}, " +
-					$"CallDepth is null: {currentState.CallDepth == null}, " +
-					$"FunctionRecursionDepths is null: {currentState.FunctionRecursionDepths == null}, " +
-					$"LimitExceeded is null: {currentState.LimitExceeded == null}");
-			}
-			
 			var invocationCounter = currentState.TotalInvocations!;
 			var callDepth = currentState.CallDepth!;
 			var recursionDepths = currentState.FunctionRecursionDepths!;
 			limitExceeded = currentState.LimitExceeded!;
+			
 			
 			var totalInvocations = invocationCounter.Increment();
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
@@ -298,6 +287,7 @@ public class SharpMUSHParserVisitor(
 				
 			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
+				Console.WriteLine($"MAX DEPTH EXCEEDED: {name}, currentDepth={currentDepth}, limit={Configuration.CurrentValue.Limit.MaxDepth}");
 				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
