@@ -291,11 +291,7 @@ public class AttributeService(
 						Arguments = args,
 						EnvironmentRegisters = args,
 						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
-						Function = attributeName,
-						CallDepth = callDepth,
-						FunctionRecursionDepths = recursionDepths,
-						TotalInvocations = s.TotalInvocations,
-						LimitExceeded = s.LimitExceeded
+						Function = attributeName
 					},
 				async newParser =>
 					await newParser.FunctionParse(attr.AsAttribute.Last().Value));
