@@ -121,16 +121,7 @@ public class SharpMUSHParserVisitor(
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private CallState? AggregateResult(CallState? aggregate,
 		CallState? nextResult)
-	{
-		// Check if a limit has been exceeded - if so, stop evaluation
-		if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
-		{
-			// Return the most recent result (nextResult) if available, as it typically contains
-			// the limit error message. Fall back to aggregate if nextResult is null.
-			return nextResult ?? aggregate;
-		}
-		
-		return (aggregate, nextResult) switch
+		=> (aggregate, nextResult) switch
 		{
 			(null, null)
 				=> null,
@@ -141,7 +132,6 @@ public class SharpMUSHParserVisitor(
 			var (agg, next)
 				=> agg ?? next
 		};
-	}
 
 	/// <summary>
 	/// Extracts text from a parser context using the source string.
