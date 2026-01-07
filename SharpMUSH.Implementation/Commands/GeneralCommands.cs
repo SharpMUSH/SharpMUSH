@@ -2104,7 +2104,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@FORCE", Switches = ["NOEVAL", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSNoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "command"])]
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "command"])]
 	public static async ValueTask<Option<CallState>> Force(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
