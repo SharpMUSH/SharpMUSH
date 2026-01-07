@@ -138,9 +138,17 @@ public record ParserState(
 	{
 		if (cachedObject is not null && !cachedObject.IsNone && expectedDBRef is not null)
 		{
-			var cachedDBRef = cachedObject.Known().Object().DBRef;
-			if (!cachedDBRef.Equals(expectedDBRef.Value))
+			try
 			{
+				var cachedDBRef = cachedObject.Known().Object().DBRef;
+				if (!cachedDBRef.Equals(expectedDBRef.Value))
+				{
+					cachedObject = null;
+				}
+			}
+			catch
+			{
+				// If we can't extract the DBRef (shouldn't happen), clear the cache
 				cachedObject = null;
 			}
 		}
