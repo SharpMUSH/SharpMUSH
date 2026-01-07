@@ -21,6 +21,14 @@ public class DebugVerboseTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	[After(Test)]
+	public async Task Cleanup()
+	{
+		// Always clear DEBUG and VERBOSE flags after each test to prevent pollution
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
+	}
+
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
 	{
@@ -51,9 +59,6 @@ public class DebugVerboseTests
 						str => str.Contains("! add(123,456) => 579"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
-		
-		// Cleanup
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
 	}
 
 	[Test]
@@ -97,9 +102,6 @@ public class DebugVerboseTests
 						str => str.Contains("=> 99"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
-		
-		// Cleanup
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
 	}
 
 	[Test]
@@ -121,9 +123,6 @@ public class DebugVerboseTests
 						str => str.Contains("] ") && str.Contains("@pemit me=UniqueTestMessage789"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
-		
-		// Cleanup
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
 	}
 
 	[Test]
