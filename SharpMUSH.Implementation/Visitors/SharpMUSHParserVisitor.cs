@@ -104,7 +104,8 @@ public class SharpMUSHParserVisitor(
 				var targets = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 				foreach (var targetStr in targets)
 				{
-					// Use LocateService to find each target
+					// Use LocateService to find each target in DEBUGFORWARDLIST
+					// Both looker and executor are the same since we're locating from executor's perspective
 					var locateResult = await LocateService.Locate(
 						parser,
 						executor,
@@ -112,6 +113,7 @@ public class SharpMUSHParserVisitor(
 						targetStr,
 						LocateFlags.AbsoluteMatch);
 					
+					// IsValid() ensures locateResult is not None and not Error, so WithoutError().WithoutNone() is safe
 					if (locateResult.IsValid())
 					{
 						var forwardTarget = locateResult.WithoutError().WithoutNone();
