@@ -29,7 +29,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalTest=DEBUG"));
 		
 		// Act - Execute a function with unique values as the debug object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugEvalTest=think [add(123,456)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugEvalTest=@pemit me=[add(123,456)]"));
 		
 		// Assert - Verify debug output contains the specific function call
 		await NotifyService
@@ -65,7 +65,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestingTest=DEBUG"));
 		
 		// Act - Execute nested function with unique values as the debug object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestingTest=think [mul(add(11,22),3)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestingTest=@pemit me=[mul(add(11,22),3)]"));
 		
 		// Assert - Outer function
 		await NotifyService
@@ -137,8 +137,8 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc AttrDebugForceTest=[add(88,77)]"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrDebugForceTest/testfunc=DEBUG"));
 		
-		// Act - Trigger the attribute (which uses WithAttributeDebug)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrDebugForceTest/testfunc"));
+		// Act - Trigger the attribute via @force (which uses WithAttributeDebug internally)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force AttrDebugForceTest=@trigger #self/testfunc"));
 		
 		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
@@ -164,8 +164,8 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc2 AttrNoDebugSuppressTest=[add(55,44)]"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest/testfunc2=NODEBUG"));
 		
-		// Act - Trigger the attribute (which uses WithAttributeDebug)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrNoDebugSuppressTest/testfunc2"));
+		// Act - Trigger the attribute via @force (which uses WithAttributeDebug internally)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force AttrNoDebugSuppressTest=@trigger #self/testfunc2"));
 		
 		// Assert - Should NOT see debug output (NODEBUG takes precedence)
 		await NotifyService
