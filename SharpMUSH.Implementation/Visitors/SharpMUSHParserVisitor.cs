@@ -234,12 +234,15 @@ public class SharpMUSHParserVisitor(
 			
 			// These fields should already be initialized by FunctionParse or CommandParse
 			// They are shared mutable references that must be passed through all nested calls
+			logger.LogError($"[LIMIT DEBUG] CallFunction {name}: TotalInvocations is null? {currentState.TotalInvocations == null}, CallDepth is null? {currentState.CallDepth == null}");
+			
 			var invocationCounter = currentState.TotalInvocations!;
 			var callDepth = currentState.CallDepth!;
 			var recursionDepths = currentState.FunctionRecursionDepths!;
 			var limitExceeded = currentState.LimitExceeded!;
 			
 			var totalInvocations = invocationCounter.Increment();
+			logger.LogError($"[LIMIT DEBUG] CallFunction {name}: totalInvocations={totalInvocations}, limit={Configuration.CurrentValue.Limit.FunctionInvocationLimit}");
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
 			{
 				logger.LogError($"Hit invocation limit: {totalInvocations} > {Configuration.CurrentValue.Limit.FunctionInvocationLimit} in function {name}");

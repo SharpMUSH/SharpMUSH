@@ -185,6 +185,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Ensure we have invocation tracking for standalone function parsing
 		// Check if tracking is already initialized - if not, create a new parser with tracking
 		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
+		Console.WriteLine($"[LIMIT DEBUG] FunctionParse: State.IsEmpty={State.IsEmpty}, needsTracking={needsTracking}");
+		if (!State.IsEmpty)
+		{
+			Console.WriteLine($"[LIMIT DEBUG] FunctionParse: CurrentState.TotalInvocations is null? {CurrentState.TotalInvocations == null}");
+		}
+		
 		var parser = needsTracking
 			? Push(new ParserState(
 				Registers: new([[]]),
@@ -210,6 +216,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				TotalInvocations: new InvocationCounter(),
 				LimitExceeded: new LimitExceededFlag()))
 			: this;
+		
+		Console.WriteLine($"[LIMIT DEBUG] FunctionParse: Using {(needsTracking ? "new parser with tracking" : "existing parser")}");
 		
 		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 	}
