@@ -239,9 +239,9 @@ public class SharpMUSHParserVisitor(
 				// true (DEBUG) forces debug output
 				shouldDebug = parser.CurrentState.AttributeDebugOverride.Value;
 			}
-			else
+			// No attribute override, use object-level DEBUG flag
+			else if (!parser.CurrentState.AttributeDebugOverride.HasValue)
 			{
-				// No attribute override, use object-level DEBUG flag
 				shouldDebug = await executorObj.HasFlag("DEBUG");
 			}
 			
