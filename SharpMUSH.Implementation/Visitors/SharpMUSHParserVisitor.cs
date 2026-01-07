@@ -82,14 +82,12 @@ public class SharpMUSHParserVisitor(
 	{
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 		
-		// Send to owner if connected
 		var connections = await ConnectionService.Get(owner.Object.DBRef).AnyAsync();
 		if (connections)
 		{
 			await NotifyService.Notify(owner, MModule.single(message));
 		}
 		
-		// Send to DEBUGFORWARDLIST if it exists
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(
 			executor, executor, "DEBUGFORWARDLIST", 
 			IAttributeService.AttributeMode.Read, parent: false);
@@ -100,12 +98,9 @@ public class SharpMUSHParserVisitor(
 			var forwardListText = attr.Value.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(forwardListText))
 			{
-				// Parse space-separated list of dbrefs/names
 				var targets = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 				foreach (var targetStr in targets)
 				{
-					// Use LocateService to find each target in DEBUGFORWARDLIST
-					// Both looker and executor are the same since we're locating from executor's perspective
 					var locateResult = await LocateService.Locate(
 						parser,
 						executor,
@@ -113,11 +108,9 @@ public class SharpMUSHParserVisitor(
 						targetStr,
 						LocateFlags.AbsoluteMatch);
 					
-					// IsValid() ensures locateResult is not None and not Error, so WithoutError().WithoutNone() is safe
 					if (locateResult.IsValid())
 					{
 						var forwardTarget = locateResult.WithoutError().WithoutNone();
-						// Check if this target is connected
 						var forwardConnections = await ConnectionService.Get(forwardTarget.Object().DBRef).AnyAsync();
 						if (forwardConnections)
 						{
@@ -231,8 +224,6 @@ public class SharpMUSHParserVisitor(
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
 		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
-		// DEBUG flag: Check once and cache depth/indent for use in both outputs
-		// Priority: AttributeDebugOverride (NODEBUG > DEBUG) > Object DEBUG flag
 		var executor = await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
 		AnySharpObject? executorObj = null;
@@ -243,16 +234,12 @@ public class SharpMUSHParserVisitor(
 		{
 			executorObj = executor.Known();
 			
-			// Check attribute-level override first
 			if (parser.CurrentState.AttributeDebugOverride.HasValue)
 			{
-				// false (NODEBUG) takes precedence - always suppress
-				// true (DEBUG) forces debug output
 				shouldDebug = parser.CurrentState.AttributeDebugOverride.Value;
 			}
 			else
 			{
-				// No attribute override, use object-level DEBUG flag
 				shouldDebug = await executorObj.HasFlag("DEBUG");
 			}
 			
@@ -272,7 +259,6 @@ public class SharpMUSHParserVisitor(
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
 
-		// DEBUG flag: Output function result after evaluation
 		if (shouldDebug && executorObj != null && indent != null)
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
@@ -960,7 +946,6 @@ public class SharpMUSHParserVisitor(
 				var commandSuccess = true;
 				Option<CallState> commandResult;
 				
-				// VERBOSE flag: Output command to owner and DEBUGFORWARDLIST before execution
 				if (!executor.IsNone)
 				{
 					var executorObj = executor.Known();
