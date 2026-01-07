@@ -81,12 +81,7 @@ public class SharpMUSHParserVisitor(
 	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
 	{
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-		
-		var connections = await ConnectionService.Get(owner.Object.DBRef).AnyAsync();
-		if (connections)
-		{
-			await NotifyService.Notify(owner, MModule.single(message));
-		}
+		await NotifyService.Notify(owner, MModule.single(message));
 		
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(
 			executor, executor, "DEBUGFORWARDLIST", 
@@ -111,11 +106,7 @@ public class SharpMUSHParserVisitor(
 					if (locateResult.IsValid())
 					{
 						var forwardTarget = locateResult.WithoutError().WithoutNone();
-						var forwardConnections = await ConnectionService.Get(forwardTarget.Object().DBRef).AnyAsync();
-						if (forwardConnections)
-						{
-							await NotifyService.Notify(forwardTarget, MModule.single(message));
-						}
+						await NotifyService.Notify(forwardTarget, MModule.single(message));
 					}
 				}
 			}
