@@ -232,14 +232,17 @@ public class SharpMUSHParserVisitor(
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
 			
-			var invocationCounter = currentState.TotalInvocations ?? new InvocationCounter();
-			var callDepth = currentState.CallDepth ?? new InvocationCounter();
-			var recursionDepths = currentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-			var limitExceeded = currentState.LimitExceeded ?? new LimitExceededFlag();
+			// These fields should already be initialized by FunctionParse or CommandParse
+			// They are shared mutable references that must be passed through all nested calls
+			var invocationCounter = currentState.TotalInvocations!;
+			var callDepth = currentState.CallDepth!;
+			var recursionDepths = currentState.FunctionRecursionDepths!;
+			var limitExceeded = currentState.LimitExceeded!;
 			
 			var totalInvocations = invocationCounter.Increment();
 			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
 			{
+				logger.LogError($"Hit invocation limit: {totalInvocations} > {Configuration.CurrentValue.Limit.FunctionInvocationLimit} in function {name}");
 				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
