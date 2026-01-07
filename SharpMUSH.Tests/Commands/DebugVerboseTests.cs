@@ -27,8 +27,12 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugEvalObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalObj=DEBUG"));
 		
-		// Act - Execute a function as the test object with unique values
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugEvalObj=@pemit me=[add(123,456)]"));
+		// Create a custom command on the object with no_command flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_cmd_eval DebugEvalObj=$test1command:@pemit me=[add(123,456)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalObj/test_cmd_eval=no_command"));
+		
+		// Act - Execute the custom command as the test object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugEvalObj=test1command"));
 		
 		// Assert - Verify debug output contains the specific function call
 		await NotifyService
@@ -63,8 +67,12 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugNestObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestObj=DEBUG"));
 		
-		// Act - Execute nested function as the test object with unique values
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestObj=@pemit me=[mul(add(11,22),3)]"));
+		// Create a custom command on the object with no_command flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_cmd_nest DebugNestObj=$test2command:@pemit me=[mul(add(11,22),3)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestObj/test_cmd_nest=no_command"));
+		
+		// Act - Execute the custom command as the test object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestObj=test2command"));
 		
 		// Assert - Outer function
 		await NotifyService
