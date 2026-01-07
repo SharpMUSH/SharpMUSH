@@ -390,7 +390,10 @@ public class SharpMUSHParserVisitor(
 		}
 		finally
 		{
-			if (didPushFunction)
+			// Only decrement counters if we successfully executed the function
+			// If a limit was exceeded, we returned early and should NOT decrement
+			// (otherwise the counter resets and the limit never works)
+			if (didPushFunction && (limitExceeded == null || !limitExceeded.IsExceeded))
 			{
 				var currentCallDepth = parser.CurrentState.CallDepth;
 				var recursionDepths = parser.CurrentState.FunctionRecursionDepths;
