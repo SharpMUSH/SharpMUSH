@@ -87,13 +87,6 @@ public class SharpMUSHParserVisitor(
 			result = child is null 
 				? AggregateResult(result, null) 
 				: AggregateResult(result, await child.Accept(this));
-			
-			// Stop evaluation if a limit has been exceeded (check after processing each child).
-			// This ensures the error result is aggregated before breaking the loop.
-			if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
-			{
-				break;
-			}
 		}
 
 		return result;
