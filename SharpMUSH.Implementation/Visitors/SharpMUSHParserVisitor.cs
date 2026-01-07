@@ -87,6 +87,12 @@ public class SharpMUSHParserVisitor(
 			result = child is null 
 				? AggregateResult(result, null) 
 				: AggregateResult(result, await child.Accept(this));
+			
+			// Stop evaluation if a limit has been exceeded (check after aggregating the result)
+			if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
+			{
+				break;
+			}
 		}
 
 		return result;
@@ -118,9 +124,9 @@ public class SharpMUSHParserVisitor(
 		// Check if a limit has been exceeded - if so, stop evaluation
 		if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
 		{
-			// Return the aggregate if it exists (it should contain the limit error message),
-			// otherwise return nextResult
-			return aggregate ?? nextResult;
+			// Return the nextResult if it exists (it should contain the limit error message),
+			// otherwise return aggregate (which may also contain the error)
+			return nextResult ?? aggregate;
 		}
 		
 		return (aggregate, nextResult) switch
@@ -374,7 +380,8 @@ public class SharpMUSHParserVisitor(
 				HttpResponse: currentState.HttpResponse,
 				CallDepth: callDepth,
 				FunctionRecursionDepths: recursionDepths,
-				TotalInvocations: invocationCounter
+				TotalInvocations: invocationCounter,
+				LimitExceeded: limitExceeded
 			));
 
 			var result = await function(newParser);
