@@ -113,6 +113,61 @@ public class SharpMUSHParserVisitor(
 		}
 	}
 
+	/// <summary>
+	/// Formats register output for DEBUG mode, showing q-registers and stack registers separately.
+	/// </summary>
+	/// <param name="state">Parser state containing registers</param>
+	/// <param name="dbrefNumber">DBRef number for output prefix</param>
+	/// <param name="indent">Indentation string</param>
+	/// <returns>Formatted register output string, or empty if no registers</returns>
+	private string FormatRegisterOutput(ParserState state, int dbrefNumber, string indent)
+	{
+		if (!state.Registers.TryPeek(out var registers) || registers.Count == 0)
+		{
+			return string.Empty;
+		}
+
+		var output = new System.Text.StringBuilder();
+		var qRegisters = new List<string>();
+		var stackRegisters = new List<string>();
+
+		// Separate q-registers (%qa-%qz) from stack registers (%0-%9)
+		foreach (var reg in registers.OrderBy(r => r.Key))
+		{
+			var key = reg.Key;
+			var value = reg.Value.ToString();
+			
+			// Check if it's a q-register (single letter A-Z)
+			if (key.Length == 1 && char.IsLetter(key[0]))
+			{
+				qRegisters.Add($"%q{key.ToLower()}:{value}");
+			}
+			// Check if it's a stack register (0-9)
+			else if (key.Length == 1 && char.IsDigit(key[0]))
+			{
+				stackRegisters.Add($"%{key}:{value}");
+			}
+		}
+
+		// Output q-registers if any exist
+		if (qRegisters.Count > 0)
+		{
+			output.Append($"#{dbrefNumber}! {indent}[Q-Registers: {string.Join(", ", qRegisters)}]");
+		}
+
+		// Output stack registers if any exist
+		if (stackRegisters.Count > 0)
+		{
+			if (output.Length > 0)
+			{
+				output.AppendLine();
+			}
+			output.Append($"#{dbrefNumber}! {indent}[Registers: {string.Join(", ", stackRegisters)}]");
+		}
+
+		return output.ToString();
+	}
+
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
 		if (node is null) return null;
@@ -246,6 +301,13 @@ public class SharpMUSHParserVisitor(
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} :";
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			
+			// Output register contents before evaluation
+			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
+			if (!string.IsNullOrEmpty(registerOutput))
+			{
+				await SendDebugOrVerboseOutput(executorObj, registerOutput);
+			}
 		}
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
@@ -254,6 +316,13 @@ public class SharpMUSHParserVisitor(
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			
+			// Output register contents after evaluation
+			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
+			if (!string.IsNullOrEmpty(registerOutput))
+			{
+				await SendDebugOrVerboseOutput(executorObj, registerOutput);
+			}
 		}
 
 		return result;

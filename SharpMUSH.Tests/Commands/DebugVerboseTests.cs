@@ -190,4 +190,102 @@ public class DebugVerboseTests
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy AttrNoDebugSuppressTest"));
 	}
+
+	[Test]
+	public async Task DebugFlag_OutputsQRegisters_WhenSet()
+	{
+		// Arrange - Create test object and set DEBUG flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugQRegObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugQRegObj=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugQRegObj=!no_command"));
+		
+		// Create command that sets q-registers and uses them
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_cmd_qreg DebugQRegObj=$test3command:@pemit me=[setq(a,Hello)][setq(b,World)][get(%qa %qb)]"));
+		
+		// Act
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugQRegObj=test3command"));
+		
+		// Assert - Verify q-register output appears
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("Q-Registers") && mstr.ToString().Contains("%qa"),
+						str => str.Contains("Q-Registers") && str.Contains("%qa"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugQRegObj"));
+	}
+
+	[Test]
+	public async Task DebugFlag_OutputsStackRegisters_WhenSet()
+	{
+		// Arrange - Create test object and set DEBUG flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugStackRegObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugStackRegObj=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugStackRegObj=!no_command"));
+		
+		// Create command with $-command pattern that captures arguments in %0
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_cmd_stack DebugStackRegObj=$test4command *:@pemit me=[strlen(%0)]"));
+		
+		// Act - Execute with an argument that will populate %0
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugStackRegObj=test4command TestArg123"));
+		
+		// Assert - Verify stack register output appears
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("Registers") && mstr.ToString().Contains("%0"),
+						str => str.Contains("Registers") && str.Contains("%0"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugStackRegObj"));
+	}
+
+	[Test]
+	public async Task DebugFlag_OutputsBothQAndStackRegisters_Separately()
+	{
+		// Arrange - Create test object and set DEBUG flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugBothRegObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugBothRegObj=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugBothRegObj=!no_command"));
+		
+		// Create command with both q-registers and stack registers
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_cmd_both DebugBothRegObj=$test5command *:@pemit me=[setq(x,Value)][strlen(%0 %qx)]"));
+		
+		// Act
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugBothRegObj=test5command Arg789"));
+		
+		// Assert - Verify Q-Registers section appears
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("Q-Registers") && mstr.ToString().Contains("%qx"),
+						str => str.Contains("Q-Registers") && str.Contains("%qx"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
+		
+		// Assert - Verify Registers section appears separately
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("Registers:") && mstr.ToString().Contains("%0"),
+						str => str.Contains("Registers:") && str.Contains("%0"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugBothRegObj"));
+	}
 }
