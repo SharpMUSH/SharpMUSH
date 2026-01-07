@@ -21,22 +21,15 @@ public class DebugVerboseTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	[After(Test)]
-	public async Task Cleanup()
-	{
-		// Always clear DEBUG and VERBOSE flags after each test to prevent pollution
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
-	}
-
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
 	{
-		// Arrange - Set DEBUG flag on player #1 (executor of the command)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=DEBUG"));
+		// Arrange - Create test object and set DEBUG flag on it
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugEvalObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalObj=DEBUG"));
 		
-		// Act - Execute a function with unique values
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=[add(123,456)]"));
+		// Act - Execute a function as the test object with unique values
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugEvalObj=@pemit me=[add(123,456)]"));
 		
 		// Assert - Verify debug output contains the specific function call
 		await NotifyService
@@ -59,16 +52,20 @@ public class DebugVerboseTests
 						str => str.Contains("! add(123,456) => 579"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugEvalObj"));
 	}
 
 	[Test]
 	public async Task DebugFlag_ShowsNesting_WithIndentation()
 	{
-		// Arrange - Set DEBUG flag on player #1
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=DEBUG"));
+		// Arrange - Create test object and set DEBUG flag on it
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugNestObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestObj=DEBUG"));
 		
-		// Act - Execute nested function with unique values
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=[mul(add(11,22),3)]"));
+		// Act - Execute nested function as the test object with unique values
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestObj=@pemit me=[mul(add(11,22),3)]"));
 		
 		// Assert - Outer function
 		await NotifyService
@@ -102,16 +99,20 @@ public class DebugVerboseTests
 						str => str.Contains("=> 99"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugNestObj"));
 	}
 
 	[Test]
 	public async Task VerboseFlag_OutputsCommandExecution()
 	{
-		// Arrange - Set VERBOSE flag on player #1
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=VERBOSE"));
+		// Arrange - Create test object and set VERBOSE flag on it
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseObj=VERBOSE"));
 		
-		// Act - Execute a command with unique message
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=UniqueTestMessage789"));
+		// Act - Execute a command as the test object with unique message
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force VerboseObj=@pemit me=UniqueTestMessage789"));
 		
 		// Assert - Verify VERBOSE output (format: "#dbref] command")
 		await NotifyService
@@ -123,6 +124,9 @@ public class DebugVerboseTests
 						str => str.Contains("] ") && str.Contains("@pemit me=UniqueTestMessage789"))),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseObj"));
 	}
 
 	[Test]
