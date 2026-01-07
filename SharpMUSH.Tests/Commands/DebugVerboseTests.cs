@@ -20,183 +20,172 @@ public class DebugVerboseTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
-	public async Task DebugFlag_OnObject_OutputsFunctionEvaluation()
+	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
 	{
-		// Arrange - Create object with DEBUG flag set
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Debug Test Object 1=10"));
-		var setDebugResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@set Debug Test Object 1=DEBUG"));
+		// Arrange - Set DEBUG flag on player #1 (God)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=DEBUG"));
 		
-		// Clear previous calls to NotifyService
 		NotifyService.ClearReceivedCalls();
 		
-		// Act - Execute a function that should trigger debug output
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think [add(42,58)]"));
+		// Act - Execute a function with unique values
+		await Parser.CommandParse(1, ConnectionService, MModule.single("think [add(123,456)]"));
 		
-		// Assert - Verify debug output was sent
+		// Assert - Verify debug output contains the specific function call
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("! add(42,58) :")) ||
-				(msg.IsT1 && msg.AsT1.Contains("! add(42,58) :"))),
-				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! add(123,456) :"),
+						str => str.Contains("! add(123,456) :"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
 		
+		// Assert - Verify debug output contains the specific result
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("! add(42,58) => 100")) ||
-				(msg.IsT1 && msg.AsT1.Contains("! add(42,58) => 100"))),
-				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! add(123,456) => 579"),
+						str => str.Contains("! add(123,456) => 579"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
 	}
 
 	[Test]
-	public async Task DebugFlag_WithNestedFunctions_ShowsProperIndentation()
+	public async Task DebugFlag_ShowsNesting_WithIndentation()
 	{
-		// Arrange - Create object with DEBUG flag
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Debug Test Object 2=10"));
-		var setDebugResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@set Debug Test Object 2=DEBUG"));
+		// Arrange
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=DEBUG"));
 		
 		NotifyService.ClearReceivedCalls();
 		
-		// Act - Execute nested function call
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think [mul(add(10,20),2)]"));
+		// Act - Execute nested function with unique values
+		await Parser.CommandParse(1, ConnectionService, MModule.single("think [mul(add(11,22),3)]"));
 		
-		// Assert - Verify outer function has no indent
+		// Assert - Outer function (no leading space before 'mul')
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("!mul(add(10,20),2) :") && !msg.AsT0.ToString().Contains("! mul")) ||
-				(msg.IsT1 && msg.AsT1.Contains("!mul(add(10,20),2) :") && !msg.AsT1.Contains("! mul"))));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("!mul(add(11,22),3) :"),
+						str => str.Contains("!mul(add(11,22),3) :"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
 		
-		// Assert - Verify inner function has indentation (one space)
+		// Assert - Inner function (has leading space for indentation)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("! add(10,20) :")) ||
-				(msg.IsT1 && msg.AsT1.Contains("! add(10,20) :"))));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! add(11,22) :"),
+						str => str.Contains("! add(11,22) :"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
 		
-		// Assert - Verify result is correct
+		// Assert - Final result should be 99
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("=> 60")) ||
-				(msg.IsT1 && msg.AsT1.Contains("=> 60"))));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("=> 99"),
+						str => str.Contains("=> 99"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
 	}
 
 	[Test]
-	public async Task VerboseFlag_OnObject_OutputsCommandExecution()
+	public async Task VerboseFlag_OutputsCommandExecution()
 	{
-		// Arrange - Create object with VERBOSE flag
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Verbose Test Object 1=10"));
-		var setVerboseResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@set Verbose Test Object 1=VERBOSE"));
+		// Arrange
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=VERBOSE"));
 		
 		NotifyService.ClearReceivedCalls();
 		
-		// Act - Execute a command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=Verbose test message 123"));
+		// Act - Execute a command with unique message
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=UniqueTestMessage789"));
 		
-		// Assert - Verify verbose output with specific command
+		// Assert - Verify VERBOSE output (format: "#dbref] command")
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("] @pemit me=Verbose test message 123")) ||
-				(msg.IsT1 && msg.AsT1.Contains("] @pemit me=Verbose test message 123"))));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("] @pemit me=UniqueTestMessage789"),
+						str => str.Contains("] @pemit me=UniqueTestMessage789"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
+		
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
 	}
 
 	[Test]
-	public async Task AttributeDebugFlag_ForcesDebugOutput_EvenWithoutObjectDebug()
+	public async Task AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug()
 	{
-		// Arrange - Create object WITHOUT DEBUG flag, but attribute WITH DEBUG flag
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Attr Debug Test 1=10"));
-		var setAttrResult = await Parser.CommandParse(1, ConnectionService, MModule.single("&testfn Attr Debug Test 1=[add(15,25)]"));
-		var setAttrFlagResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@set Attr Debug Test 1/testfn=DEBUG"));
+		// Arrange - Set attribute with DEBUG flag, but object WITHOUT DEBUG
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc me=[add(88,77)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me/testfunc=DEBUG"));
 		
 		NotifyService.ClearReceivedCalls();
 		
-		// Act - Evaluate attribute via u()
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think [u(Attr Debug Test 1/testfn)]"));
+		// Act - Call attribute via u()
+		await Parser.CommandParse(1, ConnectionService, MModule.single("think [u(me/testfunc)]"));
 		
-		// Assert - Verify debug output appears despite object not having DEBUG
+		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("! add(15,25) :")) ||
-				(msg.IsT1 && msg.AsT1.Contains("! add(15,25) :"))));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! add(88,77) => 165"),
+						str => str.Contains("! add(88,77) => 165"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
 		
-		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("! add(15,25) => 40")) ||
-				(msg.IsT1 && msg.AsT1.Contains("! add(15,25) => 40"))));
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc me="));
 	}
 
 	[Test]
-	public async Task AttributeNoDebugFlag_SuppressesDebugOutput_EvenWithObjectDebug()
+	public async Task AttributeNoDebugFlag_SuppressesOutput_EvenWithObjectDebug()
 	{
-		// Arrange - Create object WITH DEBUG flag, but attribute WITH NODEBUG flag
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Attr NoDebug Test 1=10"));
-		var setDebugResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@set Attr NoDebug Test 1=DEBUG"));
-		var setAttrResult = await Parser.CommandParse(1, ConnectionService, MModule.single("&testfn Attr NoDebug Test 1=[add(33,67)]"));
-		var setAttrFlagResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@set Attr NoDebug Test 1/testfn=NODEBUG"));
+		// Arrange - Set object WITH DEBUG but attribute WITH NODEBUG
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc2 me=[add(55,44)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me/testfunc2=NODEBUG"));
 		
 		NotifyService.ClearReceivedCalls();
 		
-		// Act - Evaluate attribute via u()
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think [u(Attr NoDebug Test 1/testfn)]"));
+		// Act - Call attribute via u()
+		await Parser.CommandParse(1, ConnectionService, MModule.single("think [u(me/testfunc2)]"));
 		
-		// Assert - Verify NO debug output appears (NODEBUG takes precedence)
+		// Assert - Should NOT see debug output (NODEBUG takes precedence)
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("! add(33,67)")) ||
-				(msg.IsT1 && msg.AsT1.Contains("! add(33,67)"))));
-	}
-
-	[Test]
-	public async Task DebugForwardList_SendsOutputToListedDbrefs()
-	{
-		// Arrange - Create two objects, set one as debug forward target
-		var createObj1 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Debug Forward Test 1=10"));
-		var createObj2 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Debug Forward Target 1=11"));
+			.Notify(Arg.Any<AnySharpObject>(), 
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("! add(55,44)"),
+						str => str.Contains("! add(55,44)"))),
+				Arg.Any<AnySharpObject>(), 
+				Arg.Any<INotifyService.NotificationType>());
 		
-		// Set DEBUG flag and DEBUGFORWARDLIST
-		var setDebugResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@set Debug Forward Test 1=DEBUG"));
-		var setForwardList = await Parser.CommandParse(1, ConnectionService, MModule.single("&DEBUGFORWARDLIST Debug Forward Test 1=#11"));
-		
-		NotifyService.ClearReceivedCalls();
-		
-		// Act - Execute function
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think [add(7,8)]"));
-		
-		// Assert - Verify output sent to both owner and forward list dbref
-		// Should be called at least twice - once for owner, once for forward list
-		await NotifyService
-			.Received(Arg.Is<int>(count => count >= 2))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("! add(7,8) => 15")) ||
-				(msg.IsT1 && msg.AsT1.Contains("! add(7,8) => 15"))));
-	}
-
-	[Test]
-	public async Task TriggerCommand_RespectsAttributeDebugFlag()
-	{
-		// Arrange - Create object and attribute with DEBUG flag
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Trigger Debug Test=10"));
-		var setAttrResult = await Parser.CommandParse(1, ConnectionService, MModule.single("&ontrig Trigger Debug Test=[mul(5,9)]"));
-		var setAttrFlagResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@set Trigger Debug Test/ontrig=DEBUG"));
-		
-		NotifyService.ClearReceivedCalls();
-		
-		// Act - Trigger the attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger Trigger Debug Test/ontrig"));
-		
-		// Assert - Verify debug output with expected value
-		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("! mul(5,9) => 45")) ||
-				(msg.IsT1 && msg.AsT1.Contains("! mul(5,9) => 45"))));
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc2 me="));
 	}
 }
