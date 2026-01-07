@@ -260,10 +260,10 @@ public class AttributeService(
 
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
 		
-		// Track recursion for user-defined attributes like built-in functions
-		var callDepth = parser.CurrentState.CallDepth ?? new InvocationCounter();
-		var recursionDepths = parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-		var limitExceeded = parser.CurrentState.LimitExceeded ?? new LimitFlag();
+		// Use shared tracking collections from parser state - these must exist!
+		var callDepth = parser.CurrentState.CallDepth!;
+		var recursionDepths = parser.CurrentState.FunctionRecursionDepths!;
+		var limitExceeded = parser.CurrentState.LimitExceeded!;
 		
 		callDepth.Increment();
 		if (!recursionDepths.TryGetValue(attributeName, out var depth))
