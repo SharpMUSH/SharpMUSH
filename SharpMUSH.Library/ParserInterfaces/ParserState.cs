@@ -154,7 +154,20 @@ public record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
-		=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+	{
+		// If we have a cached executor object, verify it matches the current Executor DBRef
+		// If not, clear the cache (this happens when state is copied with a new Executor)
+		if (_executorObject is not null && !_executorObject.IsNone && Executor is not null)
+		{
+			var cachedDBRef = _executorObject.Known().Object().DBRef;
+			if (!cachedDBRef.Equals(Executor.Value))
+			{
+				_executorObject = null;
+			}
+		}
+		
+		return _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+	}
 
 	/// <summary>
 	/// The enactor is the object which causes something to happen: %# or %:
@@ -162,7 +175,20 @@ public record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
-		=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+	{
+		// If we have a cached enactor object, verify it matches the current Enactor DBRef
+		// If not, clear the cache (this happens when state is copied with a new Enactor)
+		if (_enactorObject is not null && !_enactorObject.IsNone && Enactor is not null)
+		{
+			var cachedDBRef = _enactorObject.Known().Object().DBRef;
+			if (!cachedDBRef.Equals(Enactor.Value))
+			{
+				_enactorObject = null;
+			}
+		}
+		
+		return _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+	}
 
 	/// <summary>
 	/// The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@
@@ -170,7 +196,20 @@ public record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
-		=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
+	{
+		// If we have a cached caller object, verify it matches the current Caller DBRef
+		// If not, clear the cache (this happens when state is copied with a new Caller)
+		if (_callerObject is not null && !_callerObject.IsNone && Caller is not null)
+		{
+			var cachedDBRef = _callerObject.Known().Object().DBRef;
+			if (!cachedDBRef.Equals(Caller.Value))
+			{
+				_callerObject = null;
+			}
+		}
+		
+		return _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
+	}
 	
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!
