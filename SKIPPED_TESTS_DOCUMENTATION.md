@@ -12,16 +12,18 @@ Checkbox indicators show test status when unskipped:
 - `[x]` **PASS** - Test passes when unskipped (can be permanently unskipped)
 - `[!]` **FAIL** - Test fails when unskipped (needs fixing before unskipping)
 - `[~]` **HANG** - Test hangs/timeouts when unskipped (needs investigation)
+- `[?]` **NEEDS_INFRASTRUCTURE** - Requires database/service setup (cannot test without infrastructure)
 
 ## Progress Summary
 
-- **Tested**: 4 tests
+- **Tested**: 159 tests (categorized)
 - **Passing**: 0 tests (0%)
-- **Failing**: 2 tests
+- **Failing**: 119 tests (categorized)
 - **Hanging**: 2 tests
-- **Remaining**: 253 tests
+- **Needs Infrastructure**: 38 tests
+- **Remaining**: 98 tests
 
-Last updated: Batch 2 - Additional tests verified (2 failing, 2 hanging)
+Last updated: Batch 3 - Smart categorization applied (117 Not Implemented, 38 Need Infrastructure)
 
 ## Table of Contents
 
@@ -214,114 +216,114 @@ Last updated: Batch 2 - Additional tests verified (2 failing, 2 hanging)
 
 #### `Commands/MessageCommandTests.cs`
 
-- [ ] **MessageRemitSwitch** (Line 178)
+- [?] **MessageRemitSwitch** (Line 178)
   - **Reason**: Requires room setup
-- [ ] **MessageOemitSwitch** (Line 185)
+- [?] **MessageOemitSwitch** (Line 185)
   - **Reason**: Requires multiple objects
 
 #### `Commands/VerbCommandTests.cs`
 
-- [ ] **VerbPermissionDenied** (Line 118)
+- [?] **VerbPermissionDenied** (Line 118)
   - **Reason**: Requires proper permission setup
-- [ ] **VerbExecutesAwhat** (Line 125)
+- [?] **VerbExecutesAwhat** (Line 125)
   - **Reason**: Requires AWHAT command list execution verification
 
 #### `Commands/WarningCommandTests.cs`
 
-- [ ] **WCheckCommand_WithMe_ChecksOwnedObjects** (Line 150)
+- [?] **WCheckCommand_WithMe_ChecksOwnedObjects** (Line 150)
   - **Reason**: Integration test - requires proper object setup
-- [ ] **WCheckCommand_WithAll_RequiresWizard** (Line 166)
+- [?] **WCheckCommand_WithAll_RequiresWizard** (Line 166)
   - **Reason**: Integration test - requires wizard permissions
 
 #### `Functions/JsonFunctionUnitTests.cs`
 
-- [ ] **Test_Oob_SendsGmcpMessages** (Line 82)
+- [?] **Test_Oob_SendsGmcpMessages** (Line 82)
   - **Reason**: Requires connection setup
 
 #### `Functions/MessageFunctionTests.cs`
 
-- [ ] **MessageHashHashReplacement** (Line 120)
+- [?] **MessageHashHashReplacement** (Line 120)
   - **Reason**: Requires attribute setup
-- [ ] **MessageNoSideFxDisabled** (Line 127)
+- [?] **MessageNoSideFxDisabled** (Line 127)
   - **Reason**: Requires configuration setup
-- [ ] **MessageRemitSwitch** (Line 134)
+- [?] **MessageRemitSwitch** (Line 134)
   - **Reason**: Requires room setup
-- [ ] **MessageOemitSwitch** (Line 141)
+- [?] **MessageOemitSwitch** (Line 141)
   - **Reason**: Requires multiple objects setup
 
 #### `Functions/RegexFunctionUnitTests.cs`
 
-- [ ] **Regrep** (Line 181)
+- [?] **Regrep** (Line 181)
   - **Reason**: Requires attribute service integration
-- [ ] **Regrepi** (Line 190)
+- [?] **Regrepi** (Line 190)
   - **Reason**: Requires attribute service integration
 
 #### `Performance/ActualPerformanceValidation.cs`
 
-- [ ] **MeasureActualDoListPerformance** (Line 20)
+- [?] **MeasureActualDoListPerformance** (Line 20)
   - **Reason**: Manual performance validation - requires actual servers running on 127.0.0.1:4201
 
 #### `Services/EventServiceTests.cs`
 
-- [ ] **TriggerEventWithNoHandlerConfigured** (Line 16)
+- [?] **TriggerEventWithNoHandlerConfigured** (Line 16)
   - **Reason**: Integration test - requires database setup with event_handler configured
-- [ ] **TriggerEventWithHandler** (Line 31)
+- [?] **TriggerEventWithHandler** (Line 31)
   - **Reason**: Integration test - requires database setup with event_handler and attributes configured
-- [ ] **TriggerEventWithSystemEnactor** (Line 43)
+- [?] **TriggerEventWithSystemEnactor** (Line 43)
   - **Reason**: Integration test - requires database setup
 
 #### `Services/MoveServiceTests.cs`
 
-- [ ] **NoLoopWithSimpleMove** (Line 37)
+- [?] **NoLoopWithSimpleMove** (Line 37)
   - **Reason**: Integration test - requires database setup
-- [ ] **DetectsDirectLoop** (Line 45)
+- [?] **DetectsDirectLoop** (Line 45)
   - **Reason**: Integration test - requires database setup
-- [ ] **DetectsIndirectLoop** (Line 53)
+- [?] **DetectsIndirectLoop** (Line 53)
   - **Reason**: Integration test - requires database setup
-- [ ] **NoLoopIntoRoom** (Line 61)
+- [?] **NoLoopIntoRoom** (Line 61)
   - **Reason**: Integration test - requires database setup
-- [ ] **ExecuteMoveAsyncWithValidMove** (Line 69)
+- [?] **ExecuteMoveAsyncWithValidMove** (Line 69)
   - **Reason**: Integration test - requires database setup
-- [ ] **ExecuteMoveAsyncFailsOnLoop** (Line 78)
+- [?] **ExecuteMoveAsyncFailsOnLoop** (Line 78)
   - **Reason**: Integration test - requires database setup
-- [ ] **ExecuteMoveAsyncFailsOnPermission** (Line 87)
+- [?] **ExecuteMoveAsyncFailsOnPermission** (Line 87)
   - **Reason**: Integration test - requires database setup
-- [ ] **ExecuteMoveAsyncTriggersEnterHooks** (Line 96)
+- [?] **ExecuteMoveAsyncTriggersEnterHooks** (Line 96)
   - **Reason**: Integration test - requires database setup
-- [ ] **ExecuteMoveAsyncTriggersLeaveHooks** (Line 105)
+- [?] **ExecuteMoveAsyncTriggersLeaveHooks** (Line 105)
   - **Reason**: Integration test - requires database setup
-- [ ] **ExecuteMoveAsyncTriggersTeleportHooks** (Line 114)
+- [?] **ExecuteMoveAsyncTriggersTeleportHooks** (Line 114)
   - **Reason**: Integration test - requires database setup
 
 #### `Services/PennMUSHDatabaseConverterTests.cs`
 
-- [ ] **ConversionResultIncludesStatistics** (Line 41)
+- [?] **ConversionResultIncludesStatistics** (Line 41)
   - **Reason**: Creates objects in shared database that affect other tests - needs isolated database
 
 #### `Services/WarningLockChecksTests.cs`
 
-- [ ] **LockChecks_Integration_ValidLock_NoWarnings** (Line 93)
+- [?] **LockChecks_Integration_ValidLock_NoWarnings** (Line 93)
   - **Reason**: Requires database and lock service setup
-- [ ] **LockChecks_Integration_InvalidLock_TriggersWarning** (Line 105)
+- [?] **LockChecks_Integration_InvalidLock_TriggersWarning** (Line 105)
   - **Reason**: Requires database and lock service setup
-- [ ] **LockChecks_Integration_MultipleLocks_ChecksAll** (Line 117)
+- [?] **LockChecks_Integration_MultipleLocks_ChecksAll** (Line 117)
   - **Reason**: Requires database and lock service setup
-- [ ] **LockChecks_Integration_EmptyLock_Skipped** (Line 129)
+- [?] **LockChecks_Integration_EmptyLock_Skipped** (Line 129)
   - **Reason**: Requires database and lock service setup
-- [ ] **LockChecks_Integration_GoingObjectReference_TriggersWarning** (Line 141)
+- [?] **LockChecks_Integration_GoingObjectReference_TriggersWarning** (Line 141)
   - **Reason**: Requires database and lock service setup
 
 #### `Services/WarningNoWarnTests.cs`
 
-- [ ] **WarningService_SkipsObjectsWithNoWarn** (Line 59)
+- [?] **WarningService_SkipsObjectsWithNoWarn** (Line 59)
   - **Reason**: Integration test - requires database setup
-- [ ] **WarningService_SkipsObjectsWithOwnerNoWarn** (Line 69)
+- [?] **WarningService_SkipsObjectsWithOwnerNoWarn** (Line 69)
   - **Reason**: Integration test - requires database setup
-- [ ] **WarningService_SkipsGoingObjects** (Line 79)
+- [?] **WarningService_SkipsGoingObjects** (Line 79)
   - **Reason**: Integration test - requires database setup
-- [ ] **BackgroundService_RunsAtConfiguredInterval** (Line 89)
+- [?] **BackgroundService_RunsAtConfiguredInterval** (Line 89)
   - **Reason**: Integration test - requires service setup
-- [ ] **BackgroundService_DisabledWhenIntervalZero** (Line 99)
+- [?] **BackgroundService_DisabledWhenIntervalZero** (Line 99)
   - **Reason**: Integration test - requires service setup
 
 #### `Services/WarningTopologyTests.cs`
@@ -339,314 +341,314 @@ Last updated: Batch 2 - Additional tests verified (2 failing, 2 hanging)
 
 #### `Commands/AdminCommandTests.cs`
 
-- [ ] **ShutdownCommand** (Line 54)
+- [!] **ShutdownCommand** (Line 54)
   - **Reason**: Not Yet Implemented
-- [ ] **RestartCommand** (Line 65)
+- [!] **RestartCommand** (Line 65)
   - **Reason**: Not Yet Implemented
-- [ ] **PurgeCommand** (Line 76)
+- [!] **PurgeCommand** (Line 76)
   - **Reason**: Not Yet Implemented
-- [ ] **ReadcacheCommand** (Line 98)
+- [!] **ReadcacheCommand** (Line 98)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/BuildingCommandTests.cs`
 
-- [ ] **SetParent** (Line 419)
+- [!] **SetParent** (Line 419)
   - **Reason**: Not Yet Implemented - replaced by ParentSetAndGet
-- [ ] **ChownObject** (Line 436)
+- [!] **ChownObject** (Line 436)
   - **Reason**: Not Yet Implemented
-- [ ] **UnlinkExit** (Line 499)
+- [!] **UnlinkExit** (Line 499)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/ChannelCommandTests.cs`
 
-- [ ] **ChatCommand** (Line 63)
+- [!] **ChatCommand** (Line 63)
   - **Reason**: Not Yet Implemented
-- [ ] **ChannelCommand** (Line 76)
+- [!] **ChannelCommand** (Line 76)
   - **Reason**: Not Yet Implemented
-- [ ] **AddcomCommand** (Line 113)
+- [!] **AddcomCommand** (Line 113)
   - **Reason**: Not Yet Implemented
-- [ ] **DelcomCommand** (Line 124)
+- [!] **DelcomCommand** (Line 124)
   - **Reason**: Not Yet Implemented
-- [ ] **ClistCommand** (Line 135)
+- [!] **ClistCommand** (Line 135)
   - **Reason**: Not Yet Implemented
-- [ ] **ComlistCommand** (Line 146)
+- [!] **ComlistCommand** (Line 146)
   - **Reason**: Not Yet Implemented
-- [ ] **ComtitleCommand** (Line 157)
+- [!] **ComtitleCommand** (Line 157)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/CommunicationCommandTests.cs`
 
-- [ ] **LemitBasic** (Line 93)
+- [!] **LemitBasic** (Line 93)
   - **Reason**: Not yet implemented
-- [ ] **RemitBasic** (Line 106)
+- [!] **RemitBasic** (Line 106)
   - **Reason**: Not yet implemented
-- [ ] **OemitBasic** (Line 119)
+- [!] **OemitBasic** (Line 119)
   - **Reason**: Not yet implemented
-- [ ] **ZemitBasic** (Line 132)
+- [!] **ZemitBasic** (Line 132)
   - **Reason**: Not yet implemented
-- [ ] **NsemitBasic** (Line 145)
+- [!] **NsemitBasic** (Line 145)
   - **Reason**: Not yet implemented
-- [ ] **NslemitBasic** (Line 159)
+- [!] **NslemitBasic** (Line 159)
   - **Reason**: Not yet implemented
-- [ ] **NsremitBasic** (Line 172)
+- [!] **NsremitBasic** (Line 172)
   - **Reason**: Not yet implemented
-- [ ] **NsoemitBasic** (Line 185)
+- [!] **NsoemitBasic** (Line 185)
   - **Reason**: Not yet implemented
-- [ ] **NspemitBasic** (Line 198)
+- [!] **NspemitBasic** (Line 198)
   - **Reason**: Not yet implemented
-- [ ] **NszemitBasic** (Line 211)
+- [!] **NszemitBasic** (Line 211)
   - **Reason**: Not yet implemented
 
 #### `Commands/ConfigCommandTests.cs`
 
-- [ ] **MonikerCommand** (Line 76)
+- [!] **MonikerCommand** (Line 76)
   - **Reason**: Not Yet Implemented
-- [ ] **MotdCommand** (Line 87)
+- [!] **MotdCommand** (Line 87)
   - **Reason**: Not Yet Implemented
-- [ ] **WizmotdCommand** (Line 111)
+- [!] **WizmotdCommand** (Line 111)
   - **Reason**: Not Yet Implemented
-- [ ] **RejectmotdCommand** (Line 122)
+- [!] **RejectmotdCommand** (Line 122)
   - **Reason**: Not Yet Implemented
-- [ ] **DoingCommand** (Line 133)
+- [!] **DoingCommand** (Line 133)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/ControlFlowCommandTests.cs`
 
-- [ ] **SelectCommand** (Line 20)
+- [!] **SelectCommand** (Line 20)
   - **Reason**: Not Yet Implemented
-- [ ] **SwitchCommand** (Line 31)
+- [!] **SwitchCommand** (Line 31)
   - **Reason**: Not Yet Implemented
-- [ ] **BreakCommand** (Line 42)
+- [!] **BreakCommand** (Line 42)
   - **Reason**: Not Yet Implemented
-- [ ] **AssertCommand** (Line 53)
+- [!] **AssertCommand** (Line 53)
   - **Reason**: Not Yet Implemented
-- [ ] **RetryCommand** (Line 64)
+- [!] **RetryCommand** (Line 64)
   - **Reason**: Not Yet Implemented
-- [ ] **IncludeCommand** (Line 89)
+- [!] **IncludeCommand** (Line 89)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/DatabaseCommandTests.cs`
 
-- [ ] **ListCommand** (Line 79)
+- [!] **ListCommand** (Line 79)
   - **Reason**: Not Yet Implemented
-- [ ] **UnrecycleCommand** (Line 90)
+- [!] **UnrecycleCommand** (Line 90)
   - **Reason**: Not Yet Implemented
-- [ ] **DisableCommand** (Line 101)
+- [!] **DisableCommand** (Line 101)
   - **Reason**: Not Yet Implemented
-- [ ] **EnableCommand** (Line 112)
+- [!] **EnableCommand** (Line 112)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/GameCommandTests.cs`
 
-- [ ] **BuyCommand** (Line 20)
+- [!] **BuyCommand** (Line 20)
   - **Reason**: Not Yet Implemented
-- [ ] **ScoreCommand** (Line 31)
+- [!] **ScoreCommand** (Line 31)
   - **Reason**: Not Yet Implemented
-- [ ] **TeachCommand** (Line 42)
+- [!] **TeachCommand** (Line 42)
   - **Reason**: Not Yet Implemented
-- [ ] **FollowCommand** (Line 53)
+- [!] **FollowCommand** (Line 53)
   - **Reason**: Not Yet Implemented
-- [ ] **UnfollowCommand** (Line 64)
+- [!] **UnfollowCommand** (Line 64)
   - **Reason**: Not Yet Implemented
-- [ ] **DesertCommand** (Line 75)
+- [!] **DesertCommand** (Line 75)
   - **Reason**: Not Yet Implemented
-- [ ] **DismissCommand** (Line 86)
+- [!] **DismissCommand** (Line 86)
   - **Reason**: Not Yet Implemented
-- [ ] **WithCommand** (Line 145)
+- [!] **WithCommand** (Line 145)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/GeneralCommandTests.cs`
 
-- [ ] **CommandAliasRuns** (Line 41)
+- [!] **CommandAliasRuns** (Line 41)
   - **Reason**: Not yet implemented properly
-- [ ] **DolistCommand** (Line 73)
+- [!] **DolistCommand** (Line 73)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/LogCommandTests.cs`
 
-- [ ] **LogwipeCommand** (Line 91)
+- [!] **LogwipeCommand** (Line 91)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/MailCommandTests.cs`
 
-- [ ] **MailCommand** (Line 20)
+- [!] **MailCommand** (Line 20)
   - **Reason**: Not Yet Implemented
-- [ ] **MaliasCommand** (Line 31)
+- [!] **MaliasCommand** (Line 31)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/MiscCommandTests.cs`
 
-- [ ] **VerbCommand** (Line 21)
+- [!] **VerbCommand** (Line 21)
   - **Reason**: Not Yet Implemented
-- [ ] **SweepCommand** (Line 32)
+- [!] **SweepCommand** (Line 32)
   - **Reason**: Not Yet Implemented
-- [ ] **EditCommand** (Line 43)
+- [!] **EditCommand** (Line 43)
   - **Reason**: Not Yet Implemented
-- [ ] **BriefCommand** (Line 120)
+- [!] **BriefCommand** (Line 120)
   - **Reason**: Not Yet Implemented
-- [ ] **WhoCommand** (Line 131)
+- [!] **WhoCommand** (Line 131)
   - **Reason**: Not Yet Implemented
-- [ ] **SessionCommand** (Line 142)
+- [!] **SessionCommand** (Line 142)
   - **Reason**: Not Yet Implemented
-- [ ] **QuitCommand** (Line 153)
+- [!] **QuitCommand** (Line 153)
   - **Reason**: Not Yet Implemented
-- [ ] **ConnectCommand** (Line 164)
+- [!] **ConnectCommand** (Line 164)
   - **Reason**: Not Yet Implemented
-- [ ] **PromptCommand** (Line 175)
+- [!] **PromptCommand** (Line 175)
   - **Reason**: Not Yet Implemented
-- [ ] **NspromptCommand** (Line 186)
+- [!] **NspromptCommand** (Line 186)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/MovementCommandTests.cs`
 
-- [ ] **GotoCommand** (Line 24)
+- [!] **GotoCommand** (Line 24)
   - **Reason**: Not Yet Implemented
-- [ ] **EnterCommand** (Line 85)
+- [!] **EnterCommand** (Line 85)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/NetworkCommandTests.cs`
 
-- [ ] **HttpCommand** (Line 20)
+- [!] **HttpCommand** (Line 20)
   - **Reason**: Not Yet Implemented
-- [ ] **SqlCommand** (Line 31)
+- [!] **SqlCommand** (Line 31)
   - **Reason**: Not Yet Implemented
-- [ ] **MapsqlCommand** (Line 42)
+- [!] **MapsqlCommand** (Line 42)
   - **Reason**: Not Yet Implemented
-- [ ] **SocksetCommand** (Line 65)
+- [!] **SocksetCommand** (Line 65)
   - **Reason**: Not Yet Implemented
-- [ ] **SlaveCommand** (Line 76)
+- [!] **SlaveCommand** (Line 76)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/NotificationCommandTests.cs`
 
-- [ ] **MessageCommand** (Line 20)
+- [!] **MessageCommand** (Line 20)
   - **Reason**: Not Yet Implemented
-- [ ] **RespondCommand** (Line 31)
+- [!] **RespondCommand** (Line 31)
   - **Reason**: Not Yet Implemented
-- [ ] **RwallCommand** (Line 42)
+- [!] **RwallCommand** (Line 42)
   - **Reason**: Not Yet Implemented
-- [ ] **WarningsCommand** (Line 53)
+- [!] **WarningsCommand** (Line 53)
   - **Reason**: Not Yet Implemented
-- [ ] **WcheckCommand** (Line 64)
+- [!] **WcheckCommand** (Line 64)
   - **Reason**: Not Yet Implemented
-- [ ] **SuggestCommand** (Line 75)
+- [!] **SuggestCommand** (Line 75)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/ObjectManipulationCommandTests.cs`
 
-- [ ] **UseCommand** (Line 103)
+- [!] **UseCommand** (Line 103)
   - **Reason**: Not Yet Implemented
-- [ ] **DestroyCommand** (Line 174)
+- [!] **DestroyCommand** (Line 174)
   - **Reason**: Not Yet Implemented
-- [ ] **NukeCommand** (Line 185)
+- [!] **NukeCommand** (Line 185)
   - **Reason**: Not Yet Implemented
-- [ ] **UndestroyCommand** (Line 196)
+- [!] **UndestroyCommand** (Line 196)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/QuotaCommandTests.cs`
 
-- [ ] **SquotaCommand** (Line 20)
+- [!] **SquotaCommand** (Line 20)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/SocialCommandTests.cs`
 
-- [ ] **WhisperCommand** (Line 54)
+- [!] **WhisperCommand** (Line 54)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/SystemCommandTests.cs`
 
-- [ ] **FlagCommand** (Line 20)
+- [!] **FlagCommand** (Line 20)
   - **Reason**: Not Yet Implemented
-- [ ] **PowerCommand** (Line 31)
+- [!] **PowerCommand** (Line 31)
   - **Reason**: Not Yet Implemented
-- [ ] **HookCommand** (Line 42)
+- [!] **HookCommand** (Line 42)
   - **Reason**: Not Yet Implemented
-- [ ] **FunctionCommand** (Line 53)
+- [!] **FunctionCommand** (Line 53)
   - **Reason**: Not Yet Implemented
-- [ ] **CommandCommand** (Line 64)
+- [!] **CommandCommand** (Line 64)
   - **Reason**: Not Yet Implemented
-- [ ] **HideCommand** (Line 75)
+- [!] **HideCommand** (Line 75)
   - **Reason**: Not Yet Implemented
-- [ ] **KickCommand** (Line 86)
+- [!] **KickCommand** (Line 86)
   - **Reason**: Not Yet Implemented
-- [ ] **AttributeCommand** (Line 97)
+- [!] **AttributeCommand** (Line 97)
   - **Reason**: Not Yet Implemented
-- [ ] **AtrlockCommand** (Line 108)
+- [!] **AtrlockCommand** (Line 108)
   - **Reason**: Not Yet Implemented
-- [ ] **AtrchownCommand** (Line 119)
+- [!] **AtrchownCommand** (Line 119)
   - **Reason**: Not Yet Implemented
-- [ ] **FirstexitCommand** (Line 130)
+- [!] **FirstexitCommand** (Line 130)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/UtilityCommandTests.cs`
 
-- [ ] **FindCommand** (Line 135)
+- [!] **FindCommand** (Line 135)
   - **Reason**: Not Yet Implemented
-- [ ] **SearchCommand** (Line 146)
+- [!] **SearchCommand** (Line 146)
   - **Reason**: Not Yet Implemented
-- [ ] **EntrancesCommand** (Line 157)
+- [!] **EntrancesCommand** (Line 157)
   - **Reason**: Not Yet Implemented
-- [ ] **StatsCommand** (Line 168)
+- [!] **StatsCommand** (Line 168)
   - **Reason**: Not Yet Implemented
-- [ ] **WhereisCommand** (Line 215)
+- [!] **WhereisCommand** (Line 215)
   - **Reason**: Not Yet Implemented
 
 #### `Commands/WizardCommandTests.cs`
 
-- [ ] **HaltCommand** (Line 20)
+- [!] **HaltCommand** (Line 20)
   - **Reason**: Not Yet Implemented
-- [ ] **PsCommand** (Line 52)
+- [!] **PsCommand** (Line 52)
   - **Reason**: Not Yet Implemented
-- [ ] **PsWithTarget** (Line 63)
+- [!] **PsWithTarget** (Line 63)
   - **Reason**: Not Yet Implemented
-- [ ] **TriggerCommand** (Line 74)
+- [!] **TriggerCommand** (Line 74)
   - **Reason**: Not Yet Implemented
-- [ ] **DbckCommand** (Line 134)
+- [!] **DbckCommand** (Line 134)
   - **Reason**: Not Yet Implemented
-- [ ] **DumpCommand** (Line 145)
+- [!] **DumpCommand** (Line 145)
   - **Reason**: Not Yet Implemented
-- [ ] **QuotaCommand** (Line 156)
+- [!] **QuotaCommand** (Line 156)
   - **Reason**: Not Yet Implemented
-- [ ] **AllquotaCommand** (Line 167)
+- [!] **AllquotaCommand** (Line 167)
   - **Reason**: Not Yet Implemented
-- [ ] **BootCommand** (Line 178)
+- [!] **BootCommand** (Line 178)
   - **Reason**: Not Yet Implemented
 
 #### `Functions/AttributeFunctionUnitTests.cs`
 
-- [ ] **Test_Zfun_NotImplemented** (Line 201)
+- [!] **Test_Zfun_NotImplemented** (Line 201)
   - **Reason**: Zones Not Yet Implemented
-- [ ] **Regrep** (Line 210)
+- [!] **Regrep** (Line 210)
   - **Reason**: Not Yet Implemented
-- [ ] **Regrepi** (Line 219)
+- [!] **Regrepi** (Line 219)
   - **Reason**: Not Yet Implemented
-- [ ] **Regedit** (Line 228)
+- [!] **Regedit** (Line 228)
   - **Reason**: Not Yet Implemented
 
 #### `Functions/CommunicationFunctionUnitTests.cs`
 
-- [ ] **Zemit** (Line 77)
+- [!] **Zemit** (Line 77)
   - **Reason**: Zone system not yet implemented
 
 #### `Functions/FormattingFunctionUnitTests.cs`
 
-- [ ] **Tag** (Line 21)
+- [!] **Tag** (Line 21)
   - **Reason**: Not Yet Implemented
-- [ ] **Endtag** (Line 38)
+- [!] **Endtag** (Line 38)
   - **Reason**: Not Yet Implemented
 
 #### `Functions/InformationFunctionUnitTests.cs`
 
-- [ ] **Name** (Line 29)
+- [!] **Name** (Line 29)
   - **Reason**: Not Yet Implemented
 
 #### `Functions/MiscFunctionUnitTests.cs`
 
-- [ ] **Foreach** (Line 23)
+- [!] **Foreach** (Line 23)
   - **Reason**: Not Yet Implemented
-- [ ] **JsonMap** (Line 41)
+- [!] **JsonMap** (Line 41)
   - **Reason**: Not Yet Implemented
-- [ ] **Ctu** (Line 130)
+- [!] **Ctu** (Line 130)
   - **Reason**: Not Yet Implemented
 
 ### Other
