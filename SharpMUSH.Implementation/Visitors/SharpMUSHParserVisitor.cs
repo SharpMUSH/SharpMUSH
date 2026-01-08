@@ -249,12 +249,8 @@ public class SharpMUSHParserVisitor(
 			var currentDepth = callDepth.Increment();
 			didPushFunction = true;
 			
-			if (!recursionDepths.TryGetValue(name, out var depth))
-			{
-				depth = 0;
-			}
-			recursionDepths[name] = ++depth;
-			var recursionDepth = depth;
+			// Built-in functions do NOT track recursion - only nesting depth
+			// Recursion tracking only applies to user-defined attributes (u(), ufun(), etc.)
 			
 			List<CallState> refinedArguments;
 
@@ -297,11 +293,8 @@ public class SharpMUSHParserVisitor(
 				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
-			if (recursionDepth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
-			{
-				limitExceeded.IsExceeded = true;
-				return new CallState(Errors.ErrorRecursion, recursionDepth);
-			}
+			// Built-in functions do NOT check recursion limit
+			// Only user-defined attributes check recursion (see AttributeService.EvaluateAttributeFunctionAsync)
 
 			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
 
@@ -398,15 +391,11 @@ public class SharpMUSHParserVisitor(
 			if (didPushFunction && (limitExceeded == null || !limitExceeded.IsExceeded))
 			{
 				var currentCallDepth = parser.CurrentState.CallDepth;
-				var recursionDepths = parser.CurrentState.FunctionRecursionDepths;
-				var functionName = parser.CurrentState.Function;
 				
 				currentCallDepth?.Decrement();
 				
-				if (recursionDepths != null && functionName != null && recursionDepths.TryGetValue(functionName, out var depth) && depth > 0)
-				{
-					recursionDepths[functionName] = depth - 1;
-				}
+				// NOTE: Built-in functions do NOT track recursion
+				// Only user-defined attributes track recursion (see AttributeService.EvaluateAttributeFunctionAsync)
 			}
 			
 			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
