@@ -334,7 +334,7 @@ public class RecursionAndInvocationLimitTests
 	/// values directly but are sent to NotifyService.
 	/// </summary>
 	[Test]
-	[Skip("TODO: Commands send notifications via NotifyService, not return values. Need to redesign test to check NotifyService calls for recursion errors.")]
+	
 	public async Task RecursionLimit_IncludeCommand_TracksRecursion()
 	{
 		// @INCLUDE now uses ExecuteAttributeWithTracking helper to track recursion
@@ -360,7 +360,7 @@ public class RecursionAndInvocationLimitTests
 	/// values directly but are sent to NotifyService.
 	/// </summary>
 	[Test]
-	[Skip("TODO: Commands send notifications via NotifyService, not return values. Need to redesign test to check NotifyService calls for recursion errors.")]
+	
 	public async Task RecursionLimit_TriggerCommand_TracksRecursion()
 	{
 		// Arrange: Create a recursive attribute
@@ -380,7 +380,7 @@ public class RecursionAndInvocationLimitTests
 	/// NOTE: This test uses a simpler approach since commands send notifications via NotifyService.
 	/// </summary>
 	[Test]
-	[Skip("TODO: Commands send notifications via NotifyService, not return values. Need to redesign test to check NotifyService calls.")]
+	
 	public async Task RecursionLimit_CommandsTrackAttributeRecursion()
 	{
 		// Arrange: Create an attribute that calls u() which then uses @include

@@ -52,7 +52,7 @@ public class AtListCommandTests
 	}
 
 	[Test]
-	[Skip("Switch parsing issue with multiple switches - needs investigation")]
+	
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{
 		// Execute @list/lowercase/flags (note: switch order matters)

@@ -178,7 +178,7 @@ public class RegexFunctionUnitTests
 
 	// regrep tests - skipped as they require attribute service
 	[Test]
-	[Skip("Requires attribute service integration")]
+	
 	[Arguments("regrep(#0,*,pattern)", "")]
 	public async Task Regrep(string str, string expected)
 	{
@@ -187,7 +187,7 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Requires attribute service integration")]
+	
 	[Arguments("regrepi(#0,*,pattern)", "")]
 	public async Task Regrepi(string str, string expected)
 	{

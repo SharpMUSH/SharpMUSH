@@ -54,7 +54,7 @@ public class FilteredObjectQueryTests
 	}
 
 	[Test]
-	[Skip("Owner filtering via graph traversal needs debugging")]
+	
 	public async ValueTask FilterByOwner_ReturnsOnlyOwnedObjects()
 	{
 		// Skip this test for now - owner filtering via graph traversal needs debugging

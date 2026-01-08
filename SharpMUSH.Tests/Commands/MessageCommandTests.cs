@@ -175,14 +175,14 @@ public class MessageCommandTests
 	}
 
 	[Test]
-	[Skip("Requires room setup")]
+	
 	public async ValueTask MessageRemitSwitch()
 	{
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
-	[Skip("Requires multiple objects")]
+	
 	public async ValueTask MessageOemitSwitch()
 	{
 		await ValueTask.CompletedTask;

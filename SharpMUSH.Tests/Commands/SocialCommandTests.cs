@@ -17,7 +17,7 @@ public class SocialCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Issue with NotifyService mock, needs investigation")]
+	
 
 public async ValueTask SayCommand()
 	{
@@ -29,7 +29,7 @@ public async ValueTask SayCommand()
 	}
 
 	[Test]
-	[Skip("Issue with NotifyService mock, needs investigation")]
+	
 	public async ValueTask PoseCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
@@ -40,7 +40,7 @@ public async ValueTask SayCommand()
 	}
 
 	[Test]
-	[Skip("Issue with NotifyService mock, needs investigation")]
+	
 	public async ValueTask SemiposeCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
@@ -51,7 +51,7 @@ public async ValueTask SayCommand()
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask WhisperCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
@@ -62,7 +62,7 @@ public async ValueTask SayCommand()
 	}
 
 	[Test]
-	[Skip("Issue with NotifyService mock, needs investigation")]
+	
 	public async ValueTask PageCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));

@@ -17,7 +17,7 @@ public class GameCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask BuyCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("buy sword"));
@@ -28,7 +28,7 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask ScoreCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("score"));
@@ -39,7 +39,7 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask TeachCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("teach #1=skill"));
@@ -50,7 +50,7 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask FollowCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("follow #1"));
@@ -61,7 +61,7 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask UnfollowCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("unfollow"));
@@ -72,7 +72,7 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask DesertCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("desert"));
@@ -83,7 +83,7 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask DismissCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("dismiss #1"));
@@ -142,7 +142,7 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask WithCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("with #1"));

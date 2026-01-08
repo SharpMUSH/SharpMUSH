@@ -13,7 +13,7 @@ public class EventServiceTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
-	[Skip("Integration test - requires database setup with event_handler configured")]
+	
 	public async ValueTask TriggerEventWithNoHandlerConfigured()
 	{
 		// When no event_handler is configured, TriggerEventAsync should return without error
@@ -28,7 +28,7 @@ public class EventServiceTests
 	}
 
 	[Test]
-	[Skip("Integration test - requires database setup with event_handler and attributes configured")]
+	
 	public async ValueTask TriggerEventWithHandler()
 	{
 		// This test would require:
@@ -40,7 +40,7 @@ public class EventServiceTests
 	}
 
 	[Test]
-	[Skip("Integration test - requires database setup")]
+	
 	public async ValueTask TriggerEventWithSystemEnactor()
 	{
 		// Test that events with null enactor (system events) use #-1 as the enactor

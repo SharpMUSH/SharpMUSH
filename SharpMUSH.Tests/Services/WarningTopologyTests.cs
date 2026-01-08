@@ -87,7 +87,7 @@ public class WarningTopologyTests
 	}
 
 	[Test]
-	[Skip("Requires full database and exit setup")]
+	
 	public async Task CheckExitWarnings_UnlinkedExit_DetectsWarning()
 	{
 		// This test would require:
@@ -100,7 +100,7 @@ public class WarningTopologyTests
 	}
 
 	[Test]
-	[Skip("Requires full database and exit setup")]
+	
 	public async Task CheckExitWarnings_OnewayExit_DetectsWarning()
 	{
 		// This test would require:
@@ -115,7 +115,7 @@ public class WarningTopologyTests
 	}
 
 	[Test]
-	[Skip("Requires full database and exit setup")]
+	
 	public async Task CheckExitWarnings_MultipleReturnExits_DetectsWarning()
 	{
 		// This test would require:

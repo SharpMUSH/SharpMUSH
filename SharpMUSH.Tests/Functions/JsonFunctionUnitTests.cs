@@ -79,7 +79,7 @@ public class JsonFunctionUnitTests
 	}
 	
 	[Test]
-	[Skip("Requires connection setup")]
+	
 	[Arguments("oob(me,Package.Name,{\"key\":\"test_oob_case1\"})", "1")]
 	[Arguments("oob(me,Package.Name)", "1")]
 	public async Task Test_Oob_SendsGmcpMessages(string function, string expected)

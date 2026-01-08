@@ -90,7 +90,7 @@ public class WarningLockChecksTests
 	// Integration tests (skipped - require full DB and lock service setup)
 
 	[Test]
-	[Skip("Requires database and lock service setup")]
+	
 	public async Task LockChecks_Integration_ValidLock_NoWarnings()
 	{
 		// Test that a valid lock doesn't trigger warnings
@@ -102,7 +102,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
-	[Skip("Requires database and lock service setup")]
+	
 	public async Task LockChecks_Integration_InvalidLock_TriggersWarning()
 	{
 		// Test that an invalid lock (e.g., reference to non-existent object) triggers warning
@@ -114,7 +114,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
-	[Skip("Requires database and lock service setup")]
+	
 	public async Task LockChecks_Integration_MultipleLocks_ChecksAll()
 	{
 		// Test that all locks on an object are checked
@@ -126,7 +126,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
-	[Skip("Requires database and lock service setup")]
+	
 	public async Task LockChecks_Integration_EmptyLock_Skipped()
 	{
 		// Test that empty/whitespace locks are skipped
@@ -138,7 +138,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
-	[Skip("Requires database and lock service setup")]
+	
 	public async Task LockChecks_Integration_GoingObjectReference_TriggersWarning()
 	{
 		// Test that lock referencing GOING object triggers warning

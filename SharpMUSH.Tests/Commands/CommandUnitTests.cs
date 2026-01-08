@@ -40,7 +40,7 @@ public class CommandUnitTests
 	}
 
 	[Test]
-	[Skip("Known to be working, but for some reason tests are failing now?")]
+	
 	[Arguments("think add(1,2)4;think add(2,3)5",
 		"34",
 		"55")]

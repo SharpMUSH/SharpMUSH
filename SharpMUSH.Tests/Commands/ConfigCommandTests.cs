@@ -31,7 +31,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
+	
 	public async ValueTask ConfigCommand_CategoryArg_ShowsCategoryOptions()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));
@@ -73,7 +73,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask MonikerCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@moniker #1=Test"));
@@ -84,7 +84,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask MotdCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@motd"));
@@ -108,7 +108,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask WizmotdCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wizmotd"));
@@ -119,7 +119,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask RejectmotdCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@rejectmotd"));
@@ -130,7 +130,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask DoingCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@doing #1=Test activity"));

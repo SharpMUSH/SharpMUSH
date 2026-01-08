@@ -56,7 +56,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
-	[Skip("Integration test - requires database setup")]
+	
 	public async Task WarningService_SkipsObjectsWithNoWarn()
 	{
 		// Integration test placeholder - requires database setup
@@ -66,7 +66,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
-	[Skip("Integration test - requires database setup")]
+	
 	public async Task WarningService_SkipsObjectsWithOwnerNoWarn()
 	{
 		// Integration test placeholder - requires database setup
@@ -76,7 +76,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
-	[Skip("Integration test - requires database setup")]
+	
 	public async Task WarningService_SkipsGoingObjects()
 	{
 		// Integration test placeholder - requires database setup
@@ -86,7 +86,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
-	[Skip("Integration test - requires service setup")]
+	
 	public async Task BackgroundService_RunsAtConfiguredInterval()
 	{
 		// Integration test placeholder - requires service setup
@@ -96,7 +96,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
-	[Skip("Integration test - requires service setup")]
+	
 	public async Task BackgroundService_DisabledWhenIntervalZero()
 	{
 		// Integration test placeholder - requires service setup

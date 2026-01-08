@@ -76,7 +76,7 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask ListCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list commands"));
@@ -87,7 +87,7 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask UnrecycleCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@unrecycle #100"));
@@ -98,7 +98,7 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask DisableCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable TestCommand"));
@@ -109,7 +109,7 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
+	
 	public async ValueTask EnableCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable TestCommand"));

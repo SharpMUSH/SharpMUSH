@@ -44,7 +44,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	[Skip("Skip for now")]
+	
 	public async Task LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits()
 	{
 		// Arrange
@@ -288,7 +288,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	[Skip("Skip for now")]
+	
 	public async Task LocateMatch_TypePreference_ShouldRespectPlayerPreference()
 	{
 		// Test PlayersPreference flag prioritizes players over other objects
@@ -332,7 +332,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	[Skip("Skip for now")]
+	
 	public async Task LocateMatch_PartialMatching_ShouldFindObjectByPartialName()
 	{
 		// Test partial name matching (non-exit objects)
@@ -410,7 +410,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	[Skip("Skip for now")]
+	
 	public async Task LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom()
 	{
 		// Test MatchObjectsInLookerLocation flag finds objects in the same room
@@ -450,7 +450,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	[Skip("Skip for now")]
+	
 	public async Task LocateMatch_MultipleObjects_ShouldHandleAmbiguousMatches()
 	{
 		// Test that when multiple objects have the same name, Locate handles ambiguity properly

@@ -137,7 +137,7 @@ public class DebugVerboseTests
 	}
 
 	[Test]
-	[Skip("@trigger command syntax needs investigation - implementation is complete")]
+	
 	public async Task AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug()
 	{
 		// Arrange - Create test object WITHOUT DEBUG, set attribute with DEBUG flag
@@ -164,7 +164,7 @@ public class DebugVerboseTests
 	}
 
 	[Test]
-	[Skip("@trigger command syntax needs investigation - implementation is complete")]
+	
 	public async Task AttributeNoDebugFlag_SuppressesOutput_EvenWithObjectDebug()
 	{
 		// Arrange - Create test object WITH DEBUG but set attribute WITH NODEBUG

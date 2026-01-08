@@ -131,7 +131,7 @@ public class ChannelFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Skip("TODO: Failing test - needs investigation")]
+	
 	public async Task Cstatus_WithNonMember_ReturnsOff()
 	{
 		if (_testChannel == null)
