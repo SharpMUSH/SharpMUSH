@@ -16,14 +16,14 @@ Checkbox indicators show test status when unskipped:
 
 ## Progress Summary
 
-- **Tested**: 159 tests (categorized)
+- **Tested**: 165 tests (categorized)
 - **Passing**: 0 tests (0%)
-- **Failing**: 119 tests (categorized)
+- **Failing**: 125 tests (categorized)
 - **Hanging**: 2 tests
 - **Needs Infrastructure**: 38 tests
-- **Remaining**: 98 tests
+- **Remaining**: 92 tests
 
-Last updated: Batch 3 - Smart categorization applied (117 Not Implemented, 38 Need Infrastructure)
+Last updated: Batch 4 - AttributeCommandTests verified (6 failing)
 
 ## Table of Contents
 
@@ -78,17 +78,17 @@ Last updated: Batch 3 - Smart categorization applied (117 Not Implemented, 38 Ne
 
 #### `Commands/AttributeCommandTests.cs`
 
-- [ ] **Test_CopyAttribute_Direct** (Line 69)
+- [!] **Test_CopyAttribute_Direct** (Line 69)
   - **Reason**: Failing Test - Needs Investigation
-- [ ] **Test_CopyAttribute_Basic** (Line 104)
+- [!] **Test_CopyAttribute_Basic** (Line 104)
   - **Reason**: Failing Test - Needs Investigation
-- [ ] **Test_CopyAttribute_MultipleDestinations** (Line 136)
+- [!] **Test_CopyAttribute_MultipleDestinations** (Line 136)
   - **Reason**: Failing Test - Needs Investigation
-- [ ] **Test_MoveAttribute_Basic** (Line 168)
+- [!] **Test_MoveAttribute_Basic** (Line 168)
   - **Reason**: Failing Test - Needs Investigation
-- [ ] **Test_WipeAttributes_AllAttributes** (Line 200)
+- [!] **Test_WipeAttributes_AllAttributes** (Line 200)
   - **Reason**: Failing Test - Needs Investigation
-- [ ] **Test_AtrLock_LockAndUnlock** (Line 235)
+- [!] **Test_AtrLock_LockAndUnlock** (Line 235)
   - **Reason**: Failing Test - Needs Investigation
 
 #### `Commands/BuildingCommandTests.cs`

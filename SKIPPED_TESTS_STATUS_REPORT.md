@@ -1,17 +1,33 @@
 # Test Unskipping Status Report
 
-**Generated:** 2026-01-08 (Batch 3 - Smart Categorization Complete)
+**Generated:** 2026-01-08 (Batch 4 - AttributeCommandTests Complete)
 
 ## Overall Progress
 
 - **Total Skipped Tests:** 257
-- **Categorized:** 159 tests (61.9%)
+- **Categorized:** 165 tests (64.2%)
 - **Passing:** 0 tests (0%)
 - **Failing (Not Implemented):** 117 tests (categorized without testing)
-- **Failing (Verified):** 2 tests  
+- **Failing (Verified):** 8 tests (2 + 6 new)
 - **Hanging:** 2 tests
 - **Needs Infrastructure:** 38 tests (cannot test without setup)
-- **Remaining to Test:** 98 tests (38.1%)
+- **Remaining to Test:** 92 tests (35.8%)
+
+## Batch 4 Results - AttributeCommandTests (6 tests verified)
+
+Ran 6 tests from Commands/AttributeCommandTests.cs together:
+- **All 6 FAILED** - Commands not working as expected
+- Test time: ~51 seconds for 6 tests = ~8.5s per test (much faster batching!)
+
+**Failed Tests:**
+1. Test_CopyAttribute_Direct - NotifyService expectations not met
+2. Test_CopyAttribute_Basic - NotifyService expectations not met  
+3. Test_CopyAttribute_MultipleDestinations - NotifyService expectations not met
+4. Test_MoveAttribute_Basic - NotifyService expectations not met
+5. Test_WipeAttributes_AllAttributes - Attribute not properly wiped
+6. Test_AtrLock_LockAndUnlock - Lock command not working
+
+**Key Finding:** Batch testing is much more efficient (~8.5s/test vs 70-120s individually)
 
 ## Smart Categorization Approach
 
@@ -30,8 +46,9 @@ Tests with other skip reasons worth actually testing (failing tests, TODO items,
 
 ## Test Results
 
-### ❌ Failing Tests (2)
+### ❌ Failing Tests - Verified (8 tests)
 
+**Batch 1 - Documentation Tests:**
 1. **Documentation/HelpfileTests.cs::CanIndex** (Line 22)
    - Category: Other
    - Reason: Moving to different help file system
@@ -44,7 +61,32 @@ Tests with other skip reasons worth actually testing (failing tests, TODO items,
    - Failure: Expected indexes to not be empty but it was empty
    - Status: [!] FAIL
 
-### ⊗ Hanging/Timeout Tests (2)
+**Batch 4 - AttributeCommandTests (6 tests):**
+3. **Commands/AttributeCommandTests.cs::Test_CopyAttribute_Direct** (Line 69)
+   - Failure: NotifyService expected "Attribute copied to 1 destination." not received
+   - Status: [!] FAIL
+
+4. **Commands/AttributeCommandTests.cs::Test_CopyAttribute_Basic** (Line 104)
+   - Failure: NotifyService expected "Attribute copied to 1 destination." not received
+   - Status: [!] FAIL
+
+5. **Commands/AttributeCommandTests.cs::Test_CopyAttribute_MultipleDestinations** (Line 136)
+   - Failure: NotifyService expected "Attribute copied to 3 destinations." not received
+   - Status: [!] FAIL
+
+6. **Commands/AttributeCommandTests.cs::Test_MoveAttribute_Basic** (Line 168)
+   - Failure: NotifyService expected "Attribute moved to 1 destination." not received
+   - Status: [!] FAIL
+
+7. **Commands/AttributeCommandTests.cs::Test_WipeAttributes_AllAttributes** (Line 200)
+   - Failure: Attributes not properly wiped (attr1After.IsAttribute still true)
+   - Status: [!] FAIL
+
+8. **Commands/AttributeCommandTests.cs::Test_AtrLock_LockAndUnlock** (Line 235)
+   - Failure: NotifyService expected "Attribute LOCKTEST_UNIQUE_ATTR locked." not received
+   - Status: [!] FAIL
+
+### ⊗ Hanging/Timeout Tests (2 tests)
 
 1. **Services/LocateServiceCompatibilityTests.cs::LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits** (Line 47)
    - Category: Other
