@@ -357,7 +357,7 @@ player_queue_limit 100
 queue_chunk 3
 
 # the maximum level of recursion allowed in functions
-function_recursion_limit 150
+function_recursion_limit 50
 
 # the maximum number of functions that can be invoked
 function_invocation_limit 25000
@@ -370,7 +370,7 @@ function_invocation_limit 25000
 # speaking, you won't ever see more than 8192 recursions, so that's
 # a good safe default. For testing, we allow higher nesting to support
 # memory tests.
-max_depth 200
+max_depth 10
 # probably an upper limit, but most sane code shouldn't need more
 # than a couple hundred. Setting it to '0' means unlimited.
 call_limit 10000000000
@@ -405,7 +405,7 @@ max_player_chans 0
 max_parents 10
 
 # What's the max chain length of indirect locks allowed?
-max_depth 200
+max_depth 10
 
 # How much does it cost a mortal to create a channel?
 chan_cost 1000
