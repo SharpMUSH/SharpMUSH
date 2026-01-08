@@ -122,30 +122,39 @@ public class SharpMUSHParserVisitor(
 	/// <returns>Formatted register output string, or empty if no registers</returns>
 	private string FormatRegisterOutput(ParserState state, int dbrefNumber, string indent)
 	{
-		if (!state.Registers.TryPeek(out var registers) || registers.Count == 0)
-		{
-			return string.Empty;
-		}
-
 		var output = new System.Text.StringBuilder();
 		var qRegisters = new List<string>();
 		var stackRegisters = new List<string>();
 
-		// Separate q-registers (%qa-%qz) from stack registers (%0-%9)
-		foreach (var reg in registers.OrderBy(r => r.Key))
+		// Get q-registers from Registers stack (set via setq())
+		if (state.Registers.TryPeek(out var registers) && registers.Count > 0)
 		{
-			var key = reg.Key;
-			var value = reg.Value.ToString();
-			
-			// Check if it's a q-register (single letter A-Z)
-			if (key.Length == 1 && char.IsLetter(key[0]))
+			foreach (var reg in registers.OrderBy(r => r.Key))
 			{
-				qRegisters.Add($"%q{key.ToLower()}:{value}");
+				var key = reg.Key;
+				var value = reg.Value.ToString();
+				
+				// Check if it's a q-register (single letter A-Z)
+				if (key.Length == 1 && char.IsLetter(key[0]))
+				{
+					qRegisters.Add($"%q{key.ToLower()}:{value}");
+				}
 			}
-			// Check if it's a stack register (0-9)
-			else if (key.Length == 1 && char.IsDigit(key[0]))
+		}
+
+		// Get stack registers from EnvironmentRegisters (set via command arguments like $-commands)
+		if (state.EnvironmentRegisters.Count > 0)
+		{
+			foreach (var reg in state.EnvironmentRegisters.OrderBy(r => r.Key))
 			{
-				stackRegisters.Add($"%{key}:{value}");
+				var key = reg.Key;
+				var value = reg.Value.Message?.ToString() ?? string.Empty;
+				
+				// Check if it's a stack register (0-9)
+				if (key.Length == 1 && char.IsDigit(key[0]))
+				{
+					stackRegisters.Add($"%{key}:{value}");
+				}
 			}
 		}
 
