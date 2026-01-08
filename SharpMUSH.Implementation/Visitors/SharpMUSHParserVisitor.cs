@@ -288,7 +288,7 @@ public class SharpMUSHParserVisitor(
 			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
 				limitExceeded.IsExceeded = true;
-				return new CallState(Errors.ErrorInvoke, contextDepth);
+				return new CallState(Errors.ErrorDepth, contextDepth);
 			}
 			
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)

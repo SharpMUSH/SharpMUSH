@@ -368,6 +368,9 @@ function_invocation_limit 25000
 # a crash). The higher your allowed stack size limit, the larger the
 # mush process can grow, and the higher this can be set. Generally
 # speaking, you won't ever see more than 8192 recursions, so that's
+# a good safe default. For testing, we allow higher nesting to support
+# memory tests.
+max_depth 200
 # probably an upper limit, but most sane code shouldn't need more
 # than a couple hundred. Setting it to '0' means unlimited.
 call_limit 10000000000
@@ -402,7 +405,7 @@ max_player_chans 0
 max_parents 10
 
 # What's the max chain length of indirect locks allowed?
-max_depth 10
+max_depth 200
 
 # How much does it cost a mortal to create a channel?
 chan_cost 1000
