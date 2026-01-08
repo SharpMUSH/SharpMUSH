@@ -38,10 +38,10 @@ public class MemoryTest
 		// div(1,1) = 1, mul(1,1) = 1, sub(1,1) = 0, add(1,0) = 1
 		// div(1,1) = 1, mul(1,1) = 1, sub(1,1) = 0, add(1,0) = 1
 		// Pattern repeats (10 calls / 4 functions = 2.5 cycles)
-		// Final result: 0
+		// Final result: 1
 		await Assert
 			.That(result)
-			.IsEqualTo("0");
+			.IsEqualTo("1");
 	}
 	
 	[Test]
