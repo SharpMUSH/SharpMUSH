@@ -276,4 +276,85 @@ public class RecursionAndInvocationLimitTests
 		Console.WriteLine($"Recursion error: {recursionError}");
 		Console.WriteLine($"Stack depth error: {stackError}");
 	}
+
+	/// <summary>
+	/// Test that different attribute evaluation methods (u, ufun, ulocal) all enforce recursion limits.
+	/// This proves they all use the centralized attribute evaluation path with recursion tracking.
+	/// </summary>
+	[Test]
+	public async Task RecursionLimit_AllAttributeMethods_AreEnforced()
+	{
+		// Arrange: Create recursive attributes using different methods
+		// Each method should hit the same recursion tracking
+		
+		// Test u() - standard user-defined function call
+		var uRecursive = "[setq(c,add(r(c),1))][if(lte(r(c),105),[u(#1/U_REC)],DONE)]";
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&U_REC #1={uRecursive}"));
+		
+		// Test ufun() - user-defined function with default
+		var ufunRecursive = "[setq(c,add(r(c),1))][if(lte(r(c),105),[ufun(#1/UFUN_REC,default)],DONE)]";
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&UFUN_REC #1={ufunRecursive}"));
+		
+		// Test ulocal() - local user-defined function
+		var ulocalRecursive = "[setq(c,add(r(c),1))][if(lte(r(c),105),[ulocal(#1/ULOCAL_REC)],DONE)]";
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ULOCAL_REC #1={ulocalRecursive}"));
+		
+		// Act: Test all three methods
+		var uResult = await FunctionParser.FunctionParse(MModule.single("[u(#1/U_REC)]"));
+		var ufunResult = await FunctionParser.FunctionParse(MModule.single("[ufun(#1/UFUN_REC)]"));
+		var ulocalResult = await FunctionParser.FunctionParse(MModule.single("[ulocal(#1/ULOCAL_REC)]"));
+		
+		// Assert: All should hit recursion limits
+		await Assert.That(uResult).IsNotNull();
+		await Assert.That(ufunResult).IsNotNull();
+		await Assert.That(ulocalResult).IsNotNull();
+		
+		var uOutput = uResult!.Message.ToPlainText();
+		var ufunOutput = ufunResult!.Message.ToPlainText();
+		var ulocalOutput = ulocalResult!.Message.ToPlainText();
+		
+		Console.WriteLine($"u() recursion test: {uOutput}");
+		Console.WriteLine($"ufun() recursion test: {ufunOutput}");
+		Console.WriteLine($"ulocal() recursion test: {ulocalOutput}");
+		
+		// All should hit limits
+		await Assert.That(uOutput).Contains("#-1");
+		await Assert.That(ufunOutput).Contains("#-1");
+		await Assert.That(ulocalOutput).Contains("#-1");
+		
+		// None should complete
+		await Assert.That(uOutput).DoesNotContain("DONE");
+		await Assert.That(ufunOutput).DoesNotContain("DONE");
+		await Assert.That(ulocalOutput).DoesNotContain("DONE");
+	}
+
+	/// <summary>
+	/// Test that @include and u() share the same recursion counter.
+	/// This proves they use the same centralized attribute evaluation path.
+	/// </summary>
+	[Test]
+	public async Task RecursionLimit_IncludeAndU_ShareCounter()
+	{
+		// Arrange: Create two attributes that call each other
+		// INCL uses @include to call UFUN
+		// UFUN uses u() to call INCL
+		// This creates mutual recursion that should be tracked across both methods
+		var inclAttr = "[setq(c,add(r(c),1))][if(lte(r(c),105),[@include #1/UFUN],DONE)]";
+		var ufunAttr = "[setq(c,add(r(c),1))][if(lte(r(c),105),[u(#1/INCL)],DONE)]";
+		
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&INCL #1={inclAttr}"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&UFUN #1={ufunAttr}"));
+		
+		// Act: Start with @include which will alternate with u()
+		var result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@include #1/INCL"));
+		
+		// Assert: Should hit recursion limit
+		await Assert.That(result).IsNotNull();
+		var output = result!.Message.ToPlainText();
+		Console.WriteLine($"@include and u() sharing counter test result: {output}");
+		
+		// Should get a limit error, proving both methods increment the same counter
+		await Assert.That(output).Contains("#-1");
+		await Assert.That(output).DoesNotContain("DONE");
+	}
 }
