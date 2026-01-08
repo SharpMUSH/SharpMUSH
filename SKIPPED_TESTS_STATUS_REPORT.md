@@ -1,17 +1,42 @@
 # Test Unskipping Status Report
 
-**Generated:** 2026-01-08 (Batch 4 - AttributeCommandTests Complete)
+**Generated:** 2026-01-08 (Batch 5 - FlagAndPowerCommandTests Complete - FIRST PASSING TESTS!)
 
 ## Overall Progress
 
 - **Total Skipped Tests:** 257
-- **Categorized:** 165 tests (64.2%)
-- **Passing:** 0 tests (0%)
+- **Categorized:** 177 tests (68.9%)
+- **Passing:** 8 tests (3.1%) ✅ NEW!
 - **Failing (Not Implemented):** 117 tests (categorized without testing)
-- **Failing (Verified):** 8 tests (2 + 6 new)
+- **Failing (Verified):** 12 tests (8 attribute + 4 flag/power)
 - **Hanging:** 2 tests
 - **Needs Infrastructure:** 38 tests (cannot test without setup)
-- **Remaining to Test:** 92 tests (35.8%)
+- **Remaining to Test:** 80 tests (31.1%)
+
+## Batch 5 Results - FlagAndPowerCommandTests (12 tests verified) ✅ BREAKTHROUGH!
+
+Ran 12 tests from Commands/FlagAndPowerCommandTests.cs together:
+- **8 PASSED** ✅ - First passing tests in the entire effort!
+- **4 FAILED** ❌
+- Test time: ~53 seconds for 12 tests = ~4.4s per test
+
+**Passing Tests (8):** ✅
+1. Flag_Add_CreatesNewFlag - Flag creation works!
+2. Flag_Add_PreventsSystemFlagCreation - System flag protection works!
+3. Flag_Add_PreventsDuplicateFlags - Duplicate prevention works!
+4. Flag_Delete_RemovesNonSystemFlag - Flag deletion works!
+5. Power_Delete_RemovesNonSystemPower - Power deletion works!
+6. Flag_Disable_DisablesNonSystemFlag - Flag disable works!
+7. Flag_Enable_EnablesDisabledFlag - Flag enable works!
+8. Power_Add_CreatesNewPower - Power creation works!
+
+**Failed Tests (4):**
+1. Flag_Delete_HandlesNonExistentFlag - Error handling issue
+2. Power_Delete_HandlesNonExistentPower - Error handling issue
+3. Flag_Disable_PreventsSystemFlagDisable - System protection issue  
+4. Power_Disable_PreventsSystemPowerDisable - System protection issue
+
+**Pattern:** Basic CRUD operations work, but error handling for edge cases needs fixes.
 
 ## Batch 4 Results - AttributeCommandTests (6 tests verified)
 
@@ -86,6 +111,23 @@ Tests with other skip reasons worth actually testing (failing tests, TODO items,
    - Failure: NotifyService expected "Attribute LOCKTEST_UNIQUE_ATTR locked." not received
    - Status: [!] FAIL
 
+**Batch 5 - FlagAndPowerCommandTests (4 tests):**
+9. **Commands/FlagAndPowerCommandTests.cs::Flag_Delete_HandlesNonExistentFlag** (Line 166)
+   - Failure: Error handling for non-existent flag deletion not working
+   - Status: [!] FAIL
+
+10. **Commands/FlagAndPowerCommandTests.cs::Power_Delete_HandlesNonExistentPower** (Line 296)
+    - Failure: Error handling for non-existent power deletion not working
+    - Status: [!] FAIL
+
+11. **Commands/FlagAndPowerCommandTests.cs::Flag_Disable_PreventsSystemFlagDisable** (Line 406)
+    - Failure: System flag protection on disable not working
+    - Status: [!] FAIL
+
+12. **Commands/FlagAndPowerCommandTests.cs::Power_Disable_PreventsSystemPowerDisable** (Line 523)
+    - Failure: System power protection on disable not working
+    - Status: [!] FAIL
+
 ### ⊗ Hanging/Timeout Tests (2 tests)
 
 1. **Services/LocateServiceCompatibilityTests.cs::LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits** (Line 47)
@@ -100,9 +142,40 @@ Tests with other skip reasons worth actually testing (failing tests, TODO items,
    - Issue: Test times out after 60+ seconds
    - Status: [~] HANG
 
-### ✅ Passing Tests (0)
+### ✅ Passing Tests (8 tests) - NEW!
 
-None yet.
+**Batch 5 - FlagAndPowerCommandTests (8 tests):**
+1. **Commands/FlagAndPowerCommandTests.cs::Flag_Add_CreatesNewFlag** (Line 42)
+   - Test: Creating new flags works correctly
+   - Status: [x] PASS
+
+2. **Commands/FlagAndPowerCommandTests.cs::Flag_Add_PreventsSystemFlagCreation** (Line 72)
+   - Test: System flag protection works correctly
+   - Status: [x] PASS
+
+3. **Commands/FlagAndPowerCommandTests.cs::Flag_Add_PreventsDuplicateFlags** (Line 92)
+   - Test: Duplicate flag prevention works correctly
+   - Status: [x] PASS
+
+4. **Commands/FlagAndPowerCommandTests.cs::Flag_Delete_RemovesNonSystemFlag** (Line 121)
+   - Test: Non-system flag deletion works correctly
+   - Status: [x] PASS
+
+5. **Commands/FlagAndPowerCommandTests.cs::Power_Add_CreatesNewPower** (Line 193)
+   - Test: Power creation works correctly
+   - Status: [x] PASS
+
+6. **Commands/FlagAndPowerCommandTests.cs::Power_Delete_RemovesNonSystemPower** (Line 246)
+   - Test: Non-system power deletion works correctly
+   - Status: [x] PASS
+
+7. **Commands/FlagAndPowerCommandTests.cs::Flag_Disable_DisablesNonSystemFlag** (Line 343)
+   - Test: Non-system flag disable works correctly
+   - Status: [x] PASS
+
+8. **Commands/FlagAndPowerCommandTests.cs::Flag_Enable_EnablesDisabledFlag** (Line 374)
+   - Test: Flag re-enable works correctly
+   - Status: [x] PASS
 
 ## Testing Framework
 

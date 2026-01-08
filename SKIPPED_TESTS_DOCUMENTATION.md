@@ -16,14 +16,14 @@ Checkbox indicators show test status when unskipped:
 
 ## Progress Summary
 
-- **Tested**: 165 tests (categorized)
-- **Passing**: 0 tests (0%)
-- **Failing**: 125 tests (categorized)
+- **Tested**: 177 tests (categorized)
+- **Passing**: 8 tests (3.1%)
+- **Failing**: 129 tests (categorized)
 - **Hanging**: 2 tests
 - **Needs Infrastructure**: 38 tests
-- **Remaining**: 92 tests
+- **Remaining**: 80 tests
 
-Last updated: Batch 4 - AttributeCommandTests verified (6 failing)
+Last updated: Batch 5 - FlagAndPowerCommandTests verified (8 passing, 4 failing)
 
 ## Table of Contents
 
@@ -108,25 +108,25 @@ Last updated: Batch 4 - AttributeCommandTests verified (6 failing)
 
 #### `Commands/FlagAndPowerCommandTests.cs`
 
-- [ ] **Flag_Add_CreatesNewFlag** (Line 42)
+- [x] **Flag_Add_CreatesNewFlag** (Line 42)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Flag_Add_PreventsSystemFlagCreation** (Line 72)
+- [x] **Flag_Add_PreventsSystemFlagCreation** (Line 72)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Flag_Add_PreventsDuplicateFlags** (Line 92)
+- [x] **Flag_Add_PreventsDuplicateFlags** (Line 92)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Flag_Delete_RemovesNonSystemFlag** (Line 121)
+- [x] **Flag_Delete_RemovesNonSystemFlag** (Line 121)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Flag_Delete_HandlesNonExistentFlag** (Line 166)
+- [!] **Flag_Delete_HandlesNonExistentFlag** (Line 166)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Power_Delete_RemovesNonSystemPower** (Line 246)
+- [x] **Power_Delete_RemovesNonSystemPower** (Line 246)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Power_Delete_HandlesNonExistentPower** (Line 296)
+- [!] **Power_Delete_HandlesNonExistentPower** (Line 296)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Flag_Disable_DisablesNonSystemFlag** (Line 343)
+- [x] **Flag_Disable_DisablesNonSystemFlag** (Line 343)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Flag_Enable_EnablesDisabledFlag** (Line 374)
+- [x] **Flag_Enable_EnablesDisabledFlag** (Line 374)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Flag_Disable_PreventsSystemFlagDisable** (Line 406)
+- [!] **Flag_Disable_PreventsSystemFlagDisable** (Line 406)
   - **Reason**: Failing. Needs Investigation
 - [ ] **Power_Enable_EnablesDisabledPower** (Line 452)
   - **Reason**: Failing. Needs Investigation
