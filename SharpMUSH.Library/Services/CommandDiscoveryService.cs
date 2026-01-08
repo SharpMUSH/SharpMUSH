@@ -51,11 +51,12 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 			 match.Attr,
 			 Arguments: match.Regex
 				.Matches(plainCommandString)
-				.SelectMany(x => x.Groups.Values)
-				.Skip(!match.IsRegex ? 1 : 0) // Skip the first Group for Wildcard matches, which is the entire Match
-				.SelectMany<Group, KeyValuePair<string, MString>>(x => [
-					new KeyValuePair<string, MString>(x.Index.ToString(), MModule.substring(x.Index, x.Length, commandString)),
-					new KeyValuePair<string, MString>(x.Name, MModule.substring(x.Index, x.Length, commandString))
+				.SelectMany(matchResult => matchResult.Groups.Cast<Group>()
+					.Select((group, groupIndex) => (group, groupIndex))
+					.Skip(!match.IsRegex ? 1 : 0)) // Skip the first Group for Wildcard matches, which is the entire Match
+				.SelectMany<(Group group, int groupIndex), KeyValuePair<string, MString>>(x => [
+					new KeyValuePair<string, MString>((x.groupIndex - (!match.IsRegex ? 1 : 0)).ToString(), MModule.substring(x.group.Index, x.group.Length, commandString)),
+					new KeyValuePair<string, MString>(x.group.Name, MModule.substring(x.group.Index, x.group.Length, commandString))
 					])
 				.GroupBy(kv => kv.Key)
 				.ToDictionary(kv => kv.Key, kv => new CallState(kv.First().Value, 0))

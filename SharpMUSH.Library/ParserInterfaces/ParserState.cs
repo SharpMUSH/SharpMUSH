@@ -135,6 +135,7 @@ public class IterationWrapper<T>
 /// <param name="Handle">The telnet handle running the command.</param>
 /// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
 /// <param name="HttpResponse">HTTP response context for building HTTP responses</param>
+/// <param name="AttributeDebugOverride">Attribute-level DEBUG/NODEBUG override: null=use object flag, true=force debug, false=suppress debug</param>
 /// <param name="CallDepth">Shared counter tracking overall function call nesting depth. Mutable and shared across all states in an evaluation.</param>
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
@@ -158,6 +159,7 @@ public record ParserState(
 	long? Handle,
 	ParseMode ParseMode = ParseMode.Default,
 	HttpResponseContext? HttpResponse = null,
+	bool? AttributeDebugOverride = null,
 	InvocationCounter? CallDepth = null,
 	Dictionary<string, int>? FunctionRecursionDepths = null,
 	InvocationCounter? TotalInvocations = null,
@@ -166,6 +168,32 @@ public record ParserState(
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
 	private AnyOptionalSharpObject? _callerObject;
+
+	/// <summary>
+	/// Validates that a cached object matches the expected DBRef and clears it if not.
+	/// This handles the case where ParserState is copied with a new DBRef but the cached object is stale.
+	/// </summary>
+	private static void ValidateAndClearCacheIfNeeded(
+		ref AnyOptionalSharpObject? cachedObject,
+		DBRef? expectedDBRef)
+	{
+		if (cachedObject is not null && !cachedObject.IsNone && expectedDBRef is not null)
+		{
+			try
+			{
+				var cachedDBRef = cachedObject.Known().Object().DBRef;
+				if (!cachedDBRef.Equals(expectedDBRef.Value))
+				{
+					cachedObject = null;
+				}
+			}
+			catch
+			{
+				// If we can't extract the DBRef (shouldn't happen), clear the cache
+				cachedObject = null;
+			}
+		}
+	}
 
 	public static ParserState Empty => new(
 		new ConcurrentStack<Dictionary<string, MString>>(),
@@ -186,6 +214,7 @@ public record ParserState(
 		null,
 		ParseMode.Default,
 		null,
+		null,
 		new InvocationCounter(),
 		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		new InvocationCounter(),
@@ -197,7 +226,10 @@ public record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
-		=> _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+	{
+		ValidateAndClearCacheIfNeeded(ref _executorObject, Executor);
+		return _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+	}
 
 	/// <summary>
 	/// The enactor is the object which causes something to happen: %# or %:
@@ -205,7 +237,10 @@ public record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
-		=> _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+	{
+		ValidateAndClearCacheIfNeeded(ref _enactorObject, Enactor);
+		return _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+	}
 
 	/// <summary>
 	/// The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@
@@ -213,7 +248,10 @@ public record ParserState(
 	/// <param name="mediator">Mediator to get the object node with.</param>
 	/// <returns>A ValueTask containing either a SharpObject, or None.</returns>
 	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
-		=> _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
+	{
+		ValidateAndClearCacheIfNeeded(ref _callerObject, Caller);
+		return _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
+	}
 	
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!
