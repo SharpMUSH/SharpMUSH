@@ -1589,10 +1589,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		return await parser.With(s => s with
-			{
-				Registers = []
-			},
+		return await parser.With(s => s with { Registers = [] },
 			async np => await AttributeService!.EvaluateAttributeFunctionAsync(
 				np,
 				executor,

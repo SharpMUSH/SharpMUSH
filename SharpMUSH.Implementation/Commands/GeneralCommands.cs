@@ -40,6 +40,58 @@ public partial class Commands
 	private const string DefaultSemaphoreAttribute = "SEMAPHORE";
 	private static readonly string[] DefaultSemaphoreAttributeArray = [DefaultSemaphoreAttribute];
 
+	/// <summary>
+	/// Helper method to execute attribute content with recursion tracking.
+	/// This ensures commands like @INCLUDE, @TRIGGER, etc. track recursion the same way u/ufun/ulocal do.
+	/// </summary>
+	private static async ValueTask<CallState> ExecuteAttributeWithTracking(
+		IMUSHCodeParser parser,
+		string attributeLongName,
+		Func<Task<CallState>> executeFunc)
+	{
+		// Get shared tracking collections from parser state
+		var callDepth = parser.CurrentState.CallDepth;
+		var recursionDepths = parser.CurrentState.FunctionRecursionDepths;
+		var limitExceeded = parser.CurrentState.LimitExceeded;
+		
+		// If tracking isn't initialized (shouldn't happen in normal flow), just execute without tracking
+		if (callDepth == null || recursionDepths == null || limitExceeded == null)
+		{
+			return await executeFunc();
+		}
+		
+		// Increment tracking
+		callDepth.Increment();
+		if (!recursionDepths.TryGetValue(attributeLongName, out var depth))
+		{
+			depth = 0;
+		}
+		recursionDepths[attributeLongName] = ++depth;
+		
+		// Check recursion limit
+		if (depth > Configuration!.CurrentValue.Limit.FunctionRecursionLimit)
+		{
+			limitExceeded.IsExceeded = true;
+			callDepth.Decrement();
+			recursionDepths[attributeLongName] = depth - 1;
+			return new CallState(Errors.ErrorRecursion);
+		}
+		
+		try
+		{
+			return await executeFunc();
+		}
+		finally
+		{
+			// Decrement tracking when done
+			callDepth.Decrement();
+			if (recursionDepths.TryGetValue(attributeLongName, out var currentDepth) && currentDepth > 0)
+			{
+				recursionDepths[attributeLongName] = currentDepth - 1;
+			}
+		}
+	}
+
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
 	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
@@ -3420,6 +3472,7 @@ public partial class Commands
 		
 		var attribute = attributeResult.AsAttribute.Last();
 		var attributeText = attribute.Value.ToPlainText();
+		var attributeLongName = attribute.LongName!.ToUpper();
 		
 		if (string.IsNullOrWhiteSpace(attributeText))
 		{
@@ -3437,14 +3490,17 @@ public partial class Commands
 		// Note: INLINE switch executes immediately (current default behavior)
 		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements
 		
-		// Execute inline using CommandListParse (functionally correct for /inline mode)
-		await parser.With(state => state with { 
-			Executor = targetObject.Object().DBRef,
-			Enactor = executionEnactor 
-		}, newParser => newParser.WithAttributeDebug(attribute,
-			async p => await p.CommandListParseVisitor(attribute.Value)()));
-		
-		return CallState.Empty;
+		// Execute with recursion tracking and DEBUG/VERBOSE support
+		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
+		{
+			await parser.With(state => state with { 
+				Executor = targetObject.Object().DBRef,
+				Enactor = executionEnactor 
+			}, newParser => newParser.WithAttributeDebug(attribute,
+				async p => await p.CommandListParseVisitor(attribute.Value)()));
+			
+			return CallState.Empty;
+		});
 	}
 
 	[SharpCommand(Name = "@ZEMIT", Switches = ["NOISY", "SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
@@ -4627,6 +4683,7 @@ public partial class Commands
 		
 		var attribute = attributeResult.AsAttribute.Last();
 		var attributeText = attribute.Value.ToPlainText();
+		var attributeLongName = attribute.LongName!.ToUpper();
 		
 		// Strip ^...: or $...: prefixes for listen/command patterns
 		if (attributeText.StartsWith("^") || attributeText.StartsWith("$"))
@@ -4644,18 +4701,23 @@ public partial class Commands
 		// Environment argument substitution is handled by the hook system
 		// Arguments %0-%9 are properly managed during command execution
 		
-		// Execute the attribute content in-place using CommandListParse
+		// Execute the attribute content in-place with recursion tracking and DEBUG/VERBOSE support
 		// This evaluates the command list without creating a queue entry
 		try
 		{
-			var result = await parser.WithAttributeDebug(attribute,
-				p => p.CommandListParse(MModule.single(attributeText)));
+			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
+			{
+				var execResult = await parser.WithAttributeDebug(attribute,
+					p => p.CommandListParse(MModule.single(attributeText)));
+				
+				// TODO: Handle NOBREAK switch
+				// When set, @break/@assert from included code shouldn't propagate to calling list
+				// This requires break/assert propagation system
+				
+				return execResult ?? CallState.Empty;
+			});
 			
-			// TODO: Handle NOBREAK switch
-			// When set, @break/@assert from included code shouldn't propagate to calling list
-			// This requires break/assert propagation system
-			
-			return result ?? CallState.Empty;
+			return result;
 		}
 		catch (Exception ex)
 		{

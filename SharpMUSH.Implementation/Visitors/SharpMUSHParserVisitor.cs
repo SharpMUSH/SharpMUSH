@@ -191,6 +191,12 @@ public class SharpMUSHParserVisitor(
 			result = child is null 
 				? AggregateResult(result, null) 
 				: AggregateResult(result, await child.Accept(this));
+			
+			// Halt evaluation if a limit has been exceeded
+			if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
+			{
+				break;
+			}
 		}
 
 		return result;
@@ -352,6 +358,8 @@ public class SharpMUSHParserVisitor(
 	{
 		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var success = true;
+		var didPushFunction = false;
+		LimitExceededFlag? limitExceeded = null;
 		
 		try
 		{
@@ -375,9 +383,26 @@ public class SharpMUSHParserVisitor(
 			var currentStack = parser.State;
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
-			var stackDepth = currentStack.Count();
-			var recursionDepth = currentStack.Count(x => x.Function == name);
-
+			
+			var invocationCounter = currentState.TotalInvocations!;
+			var callDepth = currentState.CallDepth!;
+			var recursionDepths = currentState.FunctionRecursionDepths!;
+			limitExceeded = currentState.LimitExceeded!;
+			
+			
+			var totalInvocations = invocationCounter.Increment();
+			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
+			{
+				limitExceeded.IsExceeded = true;
+				return new CallState(Errors.ErrorInvoke, contextDepth);
+			}
+			
+			var currentDepth = callDepth.Increment();
+			didPushFunction = true;
+			
+			// Built-in functions do NOT track recursion - only nesting depth
+			// Recursion tracking only applies to user-defined attributes (u(), ufun(), etc.)
+			
 			List<CallState> refinedArguments;
 
 			// TODO: Check Permissions here.
@@ -385,7 +410,6 @@ public class SharpMUSHParserVisitor(
 			/* Validation, this should probably go into its own function! */
 			if (args.Length > attribute.MaxArgs)
 			{
-				// Better Error Needed.
 				return new CallState(Errors.ErrorArgRange, context.Depth());
 			}
 
@@ -407,21 +431,21 @@ public class SharpMUSHParserVisitor(
 
 			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
-			if (contextDepth > Configuration.CurrentValue.Limit.CallLimit)
+				
+			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
-				// TODO: Context Depth is not the correct value to use here.
+				limitExceeded.IsExceeded = true;
+				return new CallState(Errors.ErrorDepth, contextDepth);
+			}
+			
+			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
+			{
+				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
-			if (stackDepth > Configuration.CurrentValue.Limit.MaxDepth)
-			{
-				return new CallState(Errors.ErrorInvoke, stackDepth);
-			}
-
-			if (recursionDepth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
-			{
-				return new CallState(Errors.ErrorRecursion, recursionDepth);
-			}
+			// Built-in functions do NOT check recursion limit
+			// Only user-defined attributes check recursion (see AttributeService.EvaluateAttributeFunctionAsync)
 
 			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
 
@@ -457,6 +481,12 @@ public class SharpMUSHParserVisitor(
 				.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 				.ToList();
 			}
+			
+			// If a limit was exceeded during argument evaluation, return immediately
+			if (limitExceeded.IsExceeded)
+			{
+				return new CallState(Errors.ErrorInvoke, contextDepth);
+			}
 
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
 			var newParser = parser.Push(new ParserState(
@@ -477,7 +507,13 @@ public class SharpMUSHParserVisitor(
 				Executor: currentState.Executor,
 				Enactor: currentState.Enactor,
 				Caller: currentState.Caller,
-				Handle: currentState.Handle
+				Handle: currentState.Handle,
+				ParseMode: currentState.ParseMode,
+				HttpResponse: currentState.HttpResponse,
+				CallDepth: callDepth,
+				FunctionRecursionDepths: recursionDepths,
+				TotalInvocations: invocationCounter,
+				LimitExceeded: limitExceeded
 			));
 
 			var result = await function(newParser);
@@ -500,6 +536,19 @@ public class SharpMUSHParserVisitor(
 		}
 		finally
 		{
+			// Only decrement counters if we successfully executed the function
+			// If a limit was exceeded, we returned early and should NOT decrement
+			// (otherwise the counter resets and the limit never works)
+			if (didPushFunction && (limitExceeded == null || !limitExceeded.IsExceeded))
+			{
+				var currentCallDepth = parser.CurrentState.CallDepth;
+				
+				currentCallDepth?.Decrement();
+				
+				// NOTE: Built-in functions do NOT track recursion
+				// Only user-defined attributes track recursion (see AttributeService.EvaluateAttributeFunctionAsync)
+			}
+			
 			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
 			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success);
 		}

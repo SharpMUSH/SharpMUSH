@@ -74,7 +74,11 @@ public class WebAppFactory : IAsyncInitializer
 					Executor: _one,
 					Enactor: _one,
 					Caller: _one,
-					Handle: 1
+					Handle: 1,
+					CallDepth: new InvocationCounter(),
+					FunctionRecursionDepths: new Dictionary<string, int>(),
+					TotalInvocations: new InvocationCounter(),
+					LimitExceeded: new LimitExceededFlag()
 				));
 		}
 	}
@@ -106,7 +110,11 @@ public class WebAppFactory : IAsyncInitializer
 					Executor: _one,
 					Enactor: _one,
 					Caller: _one,
-					Handle: 1
+					Handle: 1,
+					CallDepth: new InvocationCounter(),
+					FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+					TotalInvocations: new InvocationCounter(),
+					LimitExceeded: new LimitExceededFlag()
 				));
 		}
 	}

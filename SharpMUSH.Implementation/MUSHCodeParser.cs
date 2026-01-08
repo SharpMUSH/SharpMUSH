@@ -181,7 +181,39 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	public ValueTask<CallState?> FunctionParse(MString text)
-		=> ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse));
+	{
+		// Ensure we have invocation tracking for standalone function parsing
+		// Check if tracking is already initialized - if not, create a new parser with tracking
+		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
+		
+		var parser = needsTracking
+			? Push(new ParserState(
+				Registers: new([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				EnvironmentRegisters: [],
+				CurrentEvaluation: null,
+				ExecutionStack: [],
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: null,
+				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+				Switches: [],
+				Arguments: [],
+				Executor: null,
+				Enactor: null,
+				Caller: null,
+				Handle: null,
+				ParseMode: ParseMode.Default,
+				HttpResponse: null,
+				CallDepth: new InvocationCounter(),
+				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations: new InvocationCounter(),
+				LimitExceeded: new LimitExceededFlag()))
+			: this;
+		
+		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)
 		=> ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse));
@@ -246,7 +278,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Executor: handleId?.Ref,
 			Enactor: handleId?.Ref,
 			Caller: handleId?.Ref,
-			Handle: handle));
+			Handle: handle,
+			ParseMode: ParseMode.Default,
+			HttpResponse: null,
+			CallDepth: new InvocationCounter(),
+			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+			TotalInvocations: new InvocationCounter(),
+			LimitExceeded: new LimitExceededFlag()));
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 

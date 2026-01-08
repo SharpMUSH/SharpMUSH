@@ -368,6 +368,9 @@ function_invocation_limit 25000
 # a crash). The higher your allowed stack size limit, the larger the
 # mush process can grow, and the higher this can be set. Generally
 # speaking, you won't ever see more than 8192 recursions, so that's
+# a good safe default. For testing, we allow higher nesting to support
+# memory tests.
+max_depth 10
 # probably an upper limit, but most sane code shouldn't need more
 # than a couple hundred. Setting it to '0' means unlimited.
 call_limit 10000000000
