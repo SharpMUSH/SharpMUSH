@@ -1,15 +1,15 @@
 # Test Unskipping Status Report
 
-**Generated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+**Generated:** 2026-01-08 (Batch 2 Complete)
 
 ## Overall Progress
 
 - **Total Skipped Tests:** 257
-- **Tests Verified:** 2 (0.8%)
+- **Tests Verified:** 4 (1.6%)
 - **Passing:** 0 tests (0%)
 - **Failing:** 2 tests  
-- **Hanging:** 0 tests
-- **Remaining:** 255 tests (99.2%)
+- **Hanging:** 2 tests
+- **Remaining:** 253 tests (98.4%)
 
 ## Test Results
 
@@ -27,13 +27,23 @@
    - Failure: Expected indexes to not be empty but it was empty
    - Status: [!] FAIL
 
+### ⊗ Hanging/Timeout Tests (2)
+
+1. **Services/LocateServiceCompatibilityTests.cs::LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits** (Line 47)
+   - Category: Other
+   - Reason: Skip for now
+   - Issue: Test times out after 60+ seconds
+   - Status: [~] HANG
+
+2. **Commands/ConfigCommandTests.cs::ConfigCommand_NoArgs_ListsCategories** (Line 19)
+   - Category: Other
+   - Reason: TODO
+   - Issue: Test times out after 60+ seconds
+   - Status: [~] HANG
+
 ### ✅ Passing Tests (0)
 
 None yet.
-
-### ⊗ Hanging Tests (0)
-
-None identified yet (CommandUnitTests.TestSingle was tested but not in documentation).
 
 ## Testing Framework
 

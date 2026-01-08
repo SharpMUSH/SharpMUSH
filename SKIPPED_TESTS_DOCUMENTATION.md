@@ -15,13 +15,13 @@ Checkbox indicators show test status when unskipped:
 
 ## Progress Summary
 
-- **Tested**: 2 tests
+- **Tested**: 4 tests
 - **Passing**: 0 tests (0%)
 - **Failing**: 2 tests
-- **Hanging**: 0 tests
-- **Remaining**: 255 tests
+- **Hanging**: 2 tests
+- **Remaining**: 253 tests
 
-Last updated: Tests from Documentation/HelpfileTests.cs category verified
+Last updated: Batch 2 - Additional tests verified (2 failing, 2 hanging)
 
 ## Table of Contents
 
@@ -676,7 +676,7 @@ Last updated: Tests from Documentation/HelpfileTests.cs category verified
 
 #### `Commands/ConfigCommandTests.cs`
 
-- [ ] **ConfigCommand_NoArgs_ListsCategories** (Line 19)
+- [~] **ConfigCommand_NoArgs_ListsCategories** (Line 19)
   - **Reason**: TODO
 
 #### `Commands/GeneralCommandTests.cs`
@@ -754,7 +754,7 @@ Last updated: Tests from Documentation/HelpfileTests.cs category verified
 
 #### `Services/LocateServiceCompatibilityTests.cs`
 
-- [ ] **LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits** (Line 47)
+- [~] **LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits** (Line 47)
   - **Reason**: Skip for now
 - [ ] **LocateMatch_TypePreference_ShouldRespectPlayerPreference** (Line 291)
   - **Reason**: Skip for now
