@@ -16,14 +16,14 @@ Checkbox indicators show test status when unskipped:
 
 ## Progress Summary
 
-- **Tested**: 177 tests (categorized)
-- **Passing**: 8 tests (3.1%)
-- **Failing**: 129 tests (categorized)
+- **Tested**: 182 tests (categorized)
+- **Passing**: 12 tests (4.7%)
+- **Failing**: 130 tests (categorized)
 - **Hanging**: 2 tests
 - **Needs Infrastructure**: 38 tests
-- **Remaining**: 80 tests
+- **Remaining**: 75 tests
 
-Last updated: Batch 5 - FlagAndPowerCommandTests verified (8 passing, 4 failing)
+Last updated: Batch 6 - WizardCommandTests verified (4 passing, 1 failing)
 
 ## Table of Contents
 
@@ -142,11 +142,11 @@ Last updated: Batch 5 - FlagAndPowerCommandTests verified (8 passing, 4 failing)
 
 #### `Commands/WizardCommandTests.cs`
 
-- [ ] **Hide_NoSwitch_TogglesHidden** (Line 222)
+- [!] **Hide_NoSwitch_TogglesHidden** (Line 222)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Hide_OnSwitch_SetsHidden** (Line 271)
+- [x] **Hide_OnSwitch_SetsHidden** (Line 271)
   - **Reason**: Failing. Needs Investigation
-- [ ] **Hide_NoSwitch_UnsetsHidden** (Line 291)
+- [x] **Hide_NoSwitch_UnsetsHidden** (Line 291)
   - **Reason**: Failing. Needs Investigation
 - [ ] **Hide_OffSwitch_UnsetsHidden** (Line 311)
   - **Reason**: Failing. Needs Investigation

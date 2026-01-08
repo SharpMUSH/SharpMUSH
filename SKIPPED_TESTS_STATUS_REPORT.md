@@ -1,17 +1,35 @@
 # Test Unskipping Status Report
 
-**Generated:** 2026-01-08 (Batch 5 - FlagAndPowerCommandTests Complete - FIRST PASSING TESTS!)
+**Generated:** 2026-01-08 (Batch 6 - WizardCommandTests Complete)
 
 ## Overall Progress
 
 - **Total Skipped Tests:** 257
-- **Categorized:** 177 tests (68.9%)
-- **Passing:** 8 tests (3.1%) ✅ NEW!
+- **Categorized:** 182 tests (70.8%)
+- **Passing:** 12 tests (4.7%) ✅
 - **Failing (Not Implemented):** 117 tests (categorized without testing)
-- **Failing (Verified):** 12 tests (8 attribute + 4 flag/power)
+- **Failing (Verified):** 13 tests (8 attribute + 4 flag/power + 1 wizard)
 - **Hanging:** 2 tests
 - **Needs Infrastructure:** 38 tests (cannot test without setup)
-- **Remaining to Test:** 80 tests (31.1%)
+- **Remaining to Test:** 75 tests (29.2%)
+
+## Batch 6 Results - WizardCommandTests (5 tests verified) ✅
+
+Ran 5 tests from Commands/WizardCommandTests.cs together:
+- **4 PASSED** ✅ 
+- **1 FAILED** ❌
+- Test time: ~49 seconds for 5 tests = ~9.8s per test
+
+**Passing Tests (4):** ✅
+1. Hide_OnSwitch_SetsHidden - Hide with /on switch works!
+2. Hide_NoSwitch_UnsetsHidden - Hide toggle to unhide works!
+3. Unhide_NoSwitch_UnsetsHidden - Unhide command works!
+4. Unhide_OnSwitch_UnsetsHidden - Unhide with /on switch works!
+
+**Failed Test (1):**
+1. Hide_NoSwitch_TogglesHidden - Toggle behavior not working correctly
+
+**Pattern:** Hide/unhide commands work correctly when explicit. Toggle behavior needs investigation.
 
 ## Batch 5 Results - FlagAndPowerCommandTests (12 tests verified) ✅ BREAKTHROUGH!
 
@@ -128,6 +146,11 @@ Tests with other skip reasons worth actually testing (failing tests, TODO items,
     - Failure: System power protection on disable not working
     - Status: [!] FAIL
 
+**Batch 6 - WizardCommandTests (1 test):**
+13. **Commands/WizardCommandTests.cs::Hide_NoSwitch_TogglesHidden** (Line 222)
+    - Failure: Toggle behavior for hide command not working correctly
+    - Status: [!] FAIL
+
 ### ⊗ Hanging/Timeout Tests (2 tests)
 
 1. **Services/LocateServiceCompatibilityTests.cs::LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits** (Line 47)
@@ -176,6 +199,23 @@ Tests with other skip reasons worth actually testing (failing tests, TODO items,
 8. **Commands/FlagAndPowerCommandTests.cs::Flag_Enable_EnablesDisabledFlag** (Line 374)
    - Test: Flag re-enable works correctly
    - Status: [x] PASS
+
+**Batch 6 - WizardCommandTests (4 tests):**
+9. **Commands/WizardCommandTests.cs::Hide_OnSwitch_SetsHidden** (Line 271)
+   - Test: Hide command with /on switch works correctly
+   - Status: [x] PASS
+
+10. **Commands/WizardCommandTests.cs::Hide_NoSwitch_UnsetsHidden** (Line 291)
+    - Test: Hide toggle to unhide works correctly  
+    - Status: [x] PASS
+
+11. **Commands/WizardCommandTests.cs::Unhide_NoSwitch_UnsetsHidden** (Line 311)
+    - Test: Unhide command works correctly
+    - Status: [x] PASS
+
+12. **Commands/WizardCommandTests.cs::Unhide_OnSwitch_UnsetsHidden** (Line 350)
+    - Test: Unhide with /on switch works correctly
+    - Status: [x] PASS
 
 ## Testing Framework
 
