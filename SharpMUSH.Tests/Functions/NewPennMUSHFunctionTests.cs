@@ -91,7 +91,7 @@ public class NewPennMUSHFunctionTests
 		// The exact output depends on the local timezone
 		// Just verify it contains a year
 		var resultText = result.ToPlainText();
-		await Assert.That(resultText).Contains("1970");
+		await Assert.That(resultText).Contains("1969").Or.Contains("1970");
 	}
 
 	[Test]

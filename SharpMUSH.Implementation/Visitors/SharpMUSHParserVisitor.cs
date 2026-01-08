@@ -73,6 +73,110 @@ public class SharpMUSHParserVisitor(
 			? mushParser.ServiceProvider.GetService<ITelemetryService>() 
 			: null;
 
+	/// <summary>
+	/// Sends debug or verbose output to owner and DEBUGFORWARDLIST recipients.
+	/// </summary>
+	/// <param name="executor">The executor object</param>
+	/// <param name="message">The message to send</param>
+	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
+	{
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		await NotifyService.Notify(owner, MModule.single(message));
+		
+		var debugForwardAttr = await AttributeService.GetAttributeAsync(
+			executor, executor, "DEBUGFORWARDLIST", 
+			IAttributeService.AttributeMode.Read, parent: false);
+		
+		if (debugForwardAttr.IsAttribute)
+		{
+			var attr = debugForwardAttr.AsAttribute.Last();
+			var forwardListText = attr.Value.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(forwardListText))
+			{
+				var targets = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				foreach (var targetStr in targets)
+				{
+					var locateResult = await LocateService.Locate(
+						parser,
+						executor,
+						executor,
+						targetStr,
+						LocateFlags.AbsoluteMatch);
+					
+					if (locateResult.IsValid())
+					{
+						var forwardTarget = locateResult.WithoutError().WithoutNone();
+						await NotifyService.Notify(forwardTarget, MModule.single(message));
+					}
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// Formats register output for DEBUG mode, showing q-registers and stack registers separately.
+	/// </summary>
+	/// <param name="state">Parser state containing registers</param>
+	/// <param name="dbrefNumber">DBRef number for output prefix</param>
+	/// <param name="indent">Indentation string</param>
+	/// <returns>Formatted register output string, or empty if no registers</returns>
+	private string FormatRegisterOutput(ParserState state, int dbrefNumber, string indent)
+	{
+		var output = new System.Text.StringBuilder();
+		var qRegisters = new List<string>();
+		var stackRegisters = new List<string>();
+
+		// Get q-registers from Registers stack (set via setq())
+		if (state.Registers.TryPeek(out var registers) && registers.Count > 0)
+		{
+			foreach (var reg in registers.OrderBy(r => r.Key))
+			{
+				var key = reg.Key;
+				var value = reg.Value.ToString();
+				
+				// Check if it's a q-register (single letter A-Z)
+				if (key.Length == 1 && char.IsLetter(key[0]))
+				{
+					qRegisters.Add($"%q{key.ToLower()}:{value}");
+				}
+			}
+		}
+
+		// Get stack registers from EnvironmentRegisters (set via command arguments like $-commands)
+		if (state.EnvironmentRegisters.Count > 0)
+		{
+			foreach (var reg in state.EnvironmentRegisters.OrderBy(r => r.Key))
+			{
+				var key = reg.Key;
+				var value = reg.Value.Message?.ToString() ?? string.Empty;
+				
+				// Check if it's a stack register (0-9)
+				if (key.Length == 1 && char.IsDigit(key[0]))
+				{
+					stackRegisters.Add($"%{key}:{value}");
+				}
+			}
+		}
+
+		// Output q-registers if any exist
+		if (qRegisters.Count > 0)
+		{
+			output.Append($"#{dbrefNumber}! {indent}[Q-Registers: {string.Join(", ", qRegisters)}]");
+		}
+
+		// Output stack registers if any exist
+		if (stackRegisters.Count > 0)
+		{
+			if (output.Length > 0)
+			{
+				output.AppendLine();
+			}
+			output.Append($"#{dbrefNumber}! {indent}[Registers: {string.Join(", ", stackRegisters)}]");
+		}
+
+		return output.ToString();
+	}
+
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
 		if (node is null) return null;
@@ -175,13 +279,60 @@ public class SharpMUSHParserVisitor(
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
 		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
-		/* await NotifyService!.Notify(parser.CurrentState.Executor!.Value, MModule.single(
-			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :")); */
+		var executor = await parser.CurrentState.ExecutorObject(Mediator);
+		var shouldDebug = false;
+		AnySharpObject? executorObj = null;
+		string? indent = null;
+		int dbrefNumber = 0;
+		
+		if (!executor.IsNone)
+		{
+			executorObj = executor.Known();
+			
+			if (parser.CurrentState.AttributeDebugOverride.HasValue)
+			{
+				shouldDebug = parser.CurrentState.AttributeDebugOverride.Value;
+			}
+			else
+			{
+				shouldDebug = await executorObj.HasFlag("DEBUG");
+			}
+			
+			if (shouldDebug)
+			{
+				var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
+				indent = new string(' ', depth);
+				dbrefNumber = executorObj.Object().DBRef.Number;
+			}
+		}
+		
+		if (shouldDebug && executorObj != null && indent != null)
+		{
+			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} :";
+			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			
+			// Output register contents before evaluation
+			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
+			if (!string.IsNullOrEmpty(registerOutput))
+			{
+				await SendDebugOrVerboseOutput(executorObj, registerOutput);
+			}
+		}
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
 
-		/* await NotifyService!.Notify(parser.CurrentState.Caller!.Value, MModule.single(
-			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}")); */
+		if (shouldDebug && executorObj != null && indent != null)
+		{
+			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
+			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			
+			// Output register contents after evaluation
+			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
+			if (!string.IsNullOrEmpty(registerOutput))
+			{
+				await SendDebugOrVerboseOutput(executorObj, registerOutput);
+			}
+		}
 
 		return result;
 	}
@@ -863,6 +1014,16 @@ public class SharpMUSHParserVisitor(
 				var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 				var commandSuccess = true;
 				Option<CallState> commandResult;
+				
+				if (!executor.IsNone)
+				{
+					var executorObj = executor.Known();
+					if (await executorObj.HasFlag("VERBOSE"))
+					{
+						var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
+						await SendDebugOrVerboseOutput(executorObj, verboseOutput);
+					}
+				}
 				
 				try
 				{
