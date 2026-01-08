@@ -29,8 +29,8 @@ public class RecursionAndInvocationLimitTests
 	{
 		// Arrange: Create a recursive function with a counter
 		// Use add() to increment and check if we've exceeded limit
-		// This will recurse until it hits the limit
-		var command = "&RECURSE #1=[setq(c,add(r(c),1))][if(lte(r(c),105),[u(#1/RECURSE)],DONE)]";
+		// This will recurse until it hits the limit (limit is 150 in test config)
+		var command = "&RECURSE #1=[setq(c,add(r(c),1))][if(lte(r(c),200),[u(#1/RECURSE)],DONE)]";
 		
 		// Create the attribute
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single(command));
@@ -232,8 +232,9 @@ public class RecursionAndInvocationLimitTests
 		var limits = config.CurrentValue.Limit;
 		
 		// Assert: Document the test configuration values
-		await Assert.That(limits.MaxDepth).IsEqualTo(10u);
-		await Assert.That(limits.FunctionRecursionLimit).IsEqualTo(50u);
+		// NOTE: Increased from default PennMUSH values to support memory tests
+		await Assert.That(limits.MaxDepth).IsEqualTo(200u);
+		await Assert.That(limits.FunctionRecursionLimit).IsEqualTo(150u);
 		await Assert.That(limits.FunctionInvocationLimit).IsEqualTo(25000u);
 		// CallLimit is very large in test config
 		await Assert.That(limits.CallLimit).IsGreaterThanOrEqualTo(1000u);
@@ -248,14 +249,14 @@ public class RecursionAndInvocationLimitTests
 		// This test documents what errors are returned for what limits
 		// Evaluation halts immediately when limit is hit
 		
-		// Test 1: Recursion limit - same function many times
-		var recursiveAttr = "[setq(c,add(r(c),1))][if(lte(r(c),105),[u(#1/REC)],DONE)]";
+		// Test 1: Recursion limit - same function many times (limit is 150)
+		var recursiveAttr = "[setq(c,add(r(c),1))][if(lte(r(c),200),[u(#1/REC)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&REC #1={recursiveAttr}"));
 		var recursionResult = await FunctionParser.FunctionParse(MModule.single("[u(#1/REC)]"));
 		
-		// Test 2: Stack depth - deep nesting of different functions
+		// Test 2: Stack depth - deep nesting of different functions (limit is 200)
 		var deepNest = "x";
-		for (int i = 0; i < 15; i++)
+		for (int i = 0; i < 210; i++)
 		{
 			deepNest = $"[strlen({deepNest})]";
 		}

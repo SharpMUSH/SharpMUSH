@@ -357,7 +357,7 @@ player_queue_limit 100
 queue_chunk 3
 
 # the maximum level of recursion allowed in functions
-function_recursion_limit 50
+function_recursion_limit 150
 
 # the maximum number of functions that can be invoked
 function_invocation_limit 25000
