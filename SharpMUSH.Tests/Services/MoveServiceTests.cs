@@ -34,7 +34,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask NoLoopWithSimpleMove()
 	{
 		// This test would require proper database setup with objects created
@@ -42,7 +42,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask DetectsDirectLoop()
 	{
 		// This test would require proper database setup with objects created
@@ -50,7 +50,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask DetectsIndirectLoop()
 	{
 		// This test would require proper database setup with objects created
@@ -58,7 +58,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask NoLoopIntoRoom()
 	{
 		// This test would require proper database setup with objects created
@@ -66,7 +66,7 @@ public class MoveServiceTests
 	}
 	
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncWithValidMove()
 	{
 		// Test that ExecuteMoveAsync can be called and performs move
@@ -75,7 +75,7 @@ public class MoveServiceTests
 	}
 	
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncFailsOnLoop()
 	{
 		// Test that ExecuteMoveAsync rejects moves that would create loops
@@ -84,7 +84,7 @@ public class MoveServiceTests
 	}
 	
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncFailsOnPermission()
 	{
 		// Test that ExecuteMoveAsync rejects moves without proper permissions
@@ -93,7 +93,7 @@ public class MoveServiceTests
 	}
 	
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersEnterHooks()
 	{
 		// Test that ExecuteMoveAsync triggers ENTER/OENTER/OXENTER hooks
@@ -102,7 +102,7 @@ public class MoveServiceTests
 	}
 	
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersLeaveHooks()
 	{
 		// Test that ExecuteMoveAsync triggers LEAVE/OLEAVE/OXLEAVE hooks
@@ -111,7 +111,7 @@ public class MoveServiceTests
 	}
 	
 	[Test]
-	
+	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersTeleportHooks()
 	{
 		// Test that ExecuteMoveAsync triggers OTELEPORT/OXTELEPORT hooks when cause is "teleport"

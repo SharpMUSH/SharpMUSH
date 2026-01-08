@@ -117,28 +117,28 @@ public class MessageFunctionTests
 	}
 
 	[Test]
-	
+	[Skip("Requires attribute setup")]
 	public async Task MessageHashHashReplacement()
 	{
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
-	
+	[Skip("Requires configuration setup")]
 	public async Task MessageNoSideFxDisabled()
 	{
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
-	
+	[Skip("Requires room setup")]
 	public async Task MessageRemitSwitch()
 	{
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
-	
+	[Skip("Requires multiple objects setup")]
 	public async Task MessageOemitSwitch()
 	{
 		await ValueTask.CompletedTask;

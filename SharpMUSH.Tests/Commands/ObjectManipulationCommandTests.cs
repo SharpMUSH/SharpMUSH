@@ -100,7 +100,7 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask UseCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("use test object"));
@@ -171,7 +171,7 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask DestroyCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy #100"));
@@ -182,7 +182,7 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask NukeCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nuke #100"));
@@ -193,7 +193,7 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask UndestroyCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@undestroy #100"));

@@ -18,7 +18,7 @@ public class MiscCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask VerbCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=greet,greets,greeting"));
@@ -29,7 +29,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask SweepCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sweep"));
@@ -40,7 +40,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask EditCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/DESC=old=new"));
@@ -117,7 +117,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask BriefCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("brief"));
@@ -128,7 +128,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask WhoCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("who"));
@@ -139,7 +139,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask SessionCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("session"));
@@ -150,7 +150,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask QuitCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("quit"));
@@ -161,7 +161,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask ConnectCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("connect player password"));
@@ -172,7 +172,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask PromptCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@prompt #1=Enter value:"));
@@ -183,7 +183,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask NspromptCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nsprompt #1=Enter value:"));

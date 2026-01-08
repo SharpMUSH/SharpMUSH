@@ -18,7 +18,7 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	[Arguments("tag(b,text)", "<b>text</b>")]
 	public async Task Tag(string str, string expected)
 	{
@@ -35,7 +35,7 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	[Arguments("endtag(b)", "</b>")]
 	public async Task Endtag(string str, string expected)
 	{

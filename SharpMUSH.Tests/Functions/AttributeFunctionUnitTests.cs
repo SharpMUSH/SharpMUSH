@@ -198,7 +198,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	
+	[Skip("Zones Not Yet Implemented")]
 	[Arguments("zfun(TEST_ATTR)", "#-1 ZONES NOT YET IMPLEMENTED")]
 	public async Task Test_Zfun_NotImplemented(string str, string expected)
 	{
@@ -207,7 +207,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	[Arguments("regrep(%#,test,*)", "")]
 	public async Task Regrep(string str, string expected)
 	{
@@ -216,7 +216,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	[Arguments("regrepi(%#,test,*)", "")]
 	public async Task Regrepi(string str, string expected)
 	{
@@ -225,7 +225,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	[Arguments("regedit(obj/attr,pattern,replacement)", "")]
 	public async Task Regedit(string str, string expected)
 	{

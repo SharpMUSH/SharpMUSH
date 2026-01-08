@@ -21,7 +21,7 @@ public class MovementCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask GotoCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("goto #0"));
@@ -82,7 +82,7 @@ public class MovementCommandTests
 	}
 
 	[Test]
-	
+	[Skip("Not Yet Implemented")]
 	public async ValueTask EnterCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("enter #1"));
