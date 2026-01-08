@@ -5,6 +5,24 @@
 This document catalogs ALL skipped tests in the SharpMUSH test suite, organized by category and reason.
 Each test is documented with its location, reason for being skipped, and line number.
 
+## Test Status Legend
+
+Checkbox indicators show test status when unskipped:
+- `[ ]` **UNTESTED** - Not yet attempted to unskip
+- `[x]` **PASS** - Test passes when unskipped (can be permanently unskipped)
+- `[!]` **FAIL** - Test fails when unskipped (needs fixing before unskipping)
+- `[~]` **HANG** - Test hangs/timeouts when unskipped (needs investigation)
+
+## Progress Summary
+
+- **Tested**: 2 tests
+- **Passing**: 0 tests (0%)
+- **Failing**: 2 tests
+- **Hanging**: 0 tests
+- **Remaining**: 255 tests
+
+Last updated: Tests from Documentation/HelpfileTests.cs category verified
+
 ## Table of Contents
 
 - [Summary by Category](#summary-by-category)
@@ -686,9 +704,9 @@ Each test is documented with its location, reason for being skipped, and line nu
 
 #### `Documentation/HelpfileTests.cs`
 
-- [ ] **CanIndex** (Line 22)
+- [!] **CanIndex** (Line 22)
   - **Reason**: Moving to different help file system
-- [ ] **Indexable** (Line 37)
+- [!] **Indexable** (Line 37)
   - **Reason**: Moving to different help file system
 
 #### `Functions/ConnectionFunctionUnitTests.cs`
