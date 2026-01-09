@@ -18,9 +18,7 @@ public class VerbCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private static bool MessageEquals(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText() == expected,
-			s => s == expected);
+		TestHelpers.MessageEquals(msg, expected);
 
 	private static bool MessageContains(OneOf<MString, string> msg, string expected) =>
 		TestHelpers.MessageContains(msg, expected);
