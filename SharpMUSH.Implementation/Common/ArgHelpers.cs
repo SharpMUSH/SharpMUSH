@@ -271,6 +271,35 @@ public static partial class ArgHelpers
 	}
 
 	/// <summary>
+	/// Parses a room/object format string like "room/obj1 obj2" into a room name and list of object names.
+	/// PennMUSH compatibility: Supports "room/obj1 obj2" format where message is sent to room excluding listed objects.
+	/// </summary>
+	/// <param name="input">The input string to parse</param>
+	/// <returns>Tuple of (roomName, objectNames list) or null if no room/obj format detected</returns>
+	public static (string roomName, List<string> objectNames)? ParseRoomObjectFormat(string input)
+	{
+		if (string.IsNullOrWhiteSpace(input))
+		{
+			return null;
+		}
+
+		// Check if input contains '/' character which indicates room/obj format
+		var slashIndex = input.IndexOf('/');
+		if (slashIndex <= 0)
+		{
+			return null; // No room/obj format
+		}
+
+		var roomName = input.Substring(0, slashIndex).Trim();
+		var objectsPart = input.Substring(slashIndex + 1).Trim();
+
+		// Parse the objects part as a name list
+		var objectNames = NameListString(objectsPart).ToList();
+
+		return (roomName, objectNames);
+	}
+
+	/// <summary>
 	/// A regular expression that matches one or more names in a list format.
 	/// </summary>
 	/// <returns>A regex that has a named group for the match.</returns>

@@ -150,26 +150,69 @@ public partial class Functions
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
-		// TODO: Support room/obj format like PennMUSH
-		var targetRoom = await executor.Where();
-		var objectList = ArgHelpers.NameList(objects);
+		// Support room/obj format like PennMUSH: "room/obj1 obj2" emits to room excluding listed objects
+		AnySharpContainer targetRoom;
 		var excludeObjects = new HashSet<AnySharpObject>();
 
-		foreach (var obj in objectList)
+		var roomObjFormat = ArgHelpers.ParseRoomObjectFormat(objects);
+		if (roomObjFormat.HasValue)
 		{
-			var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
+			// Parse room/obj format
+			var (roomName, objectNames) = roomObjFormat.Value;
 
-			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			// Locate the target room
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
-				objName,
-				LocateFlags.All,
-				target =>
-				{
-					excludeObjects.Add(target);
-					return CallState.Empty;
-				});
+				roomName,
+				LocateFlags.All);
+
+			if (!locateResult.IsValid() || !locateResult.WithoutError().WithoutNone().IsContainer)
+			{
+				return CallState.Empty;
+			}
+
+			targetRoom = locateResult.WithoutError().WithoutNone().AsContainer;
+
+			// Resolve objects to exclude
+			foreach (var objName in objectNames)
+			{
+				await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+					parser,
+					executor,
+					executor,
+					objName,
+					LocateFlags.All,
+					target =>
+					{
+						excludeObjects.Add(target);
+						return CallState.Empty;
+					});
+			}
+		}
+		else
+		{
+			// Traditional format: emit to executor's location, excluding listed objects
+			targetRoom = await executor.Where();
+			var objectList = ArgHelpers.NameList(objects);
+
+			foreach (var obj in objectList)
+			{
+				var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
+
+				await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+					parser,
+					executor,
+					executor,
+					objName,
+					LocateFlags.All,
+					target =>
+					{
+						excludeObjects.Add(target);
+						return CallState.Empty;
+					});
+			}
 		}
 
 		await CommunicationService!.SendToRoomAsync(
@@ -385,28 +428,70 @@ public partial class Functions
 		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		// For simplicity: emit to executor's location, excluding the specified objects
-		// TODO: Support room/obj format like PennMUSH
-		var targetRoom = await executor.Where();
-		var objectList = ArgHelpers.NameList(objects);
+		// Support room/obj format like PennMUSH: "room/obj1 obj2" emits to room excluding listed objects
+		AnySharpContainer targetRoom;
 		var excludeObjects = new List<AnySharpObject>();
 
-		// Resolve all objects to exclude
-		foreach (var obj in objectList)
+		var roomObjFormat = ArgHelpers.ParseRoomObjectFormat(objects);
+		if (roomObjFormat.HasValue)
 		{
-			var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
+			// Parse room/obj format
+			var (roomName, objectNames) = roomObjFormat.Value;
 
-			await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			// Locate the target room
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
-				objName,
-				LocateFlags.All,
-				target =>
-				{
-					excludeObjects.Add(target);
-					return CallState.Empty;
-				});
+				roomName,
+				LocateFlags.All);
+
+			if (!locateResult.IsValid() || !locateResult.WithoutError().WithoutNone().IsContainer)
+			{
+				return CallState.Empty;
+			}
+
+			targetRoom = locateResult.WithoutError().WithoutNone().AsContainer;
+
+			// Resolve objects to exclude
+			foreach (var objName in objectNames)
+			{
+				await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+					parser,
+					executor,
+					executor,
+					objName,
+					LocateFlags.All,
+					target =>
+					{
+						excludeObjects.Add(target);
+						return CallState.Empty;
+					});
+			}
+		}
+		else
+		{
+			// Traditional format: emit to executor's location, excluding listed objects
+			targetRoom = await executor.Where();
+			var objectList = ArgHelpers.NameList(objects);
+
+			// Resolve all objects to exclude
+			foreach (var obj in objectList)
+			{
+				var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
+
+				await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+					parser,
+					executor,
+					executor,
+					objName,
+					LocateFlags.All,
+					target =>
+					{
+						excludeObjects.Add(target);
+						return CallState.Empty;
+					});
+			}
 		}
 
 		await CommunicationService!.SendToRoomAsync(
