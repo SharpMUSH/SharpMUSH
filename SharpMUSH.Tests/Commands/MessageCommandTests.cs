@@ -17,16 +17,6 @@ public class MessageCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	private static bool MessageContains(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText().Contains(expected),
-			s => s.Contains(expected));
-
-	private static bool MessageEquals(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText() == expected,
-			s => s == expected);
-
 	[Test]
 	public async ValueTask MessageBasic()
 	{
@@ -119,9 +109,7 @@ public class MessageCommandTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
-			return msg.Match(
-				ms => ms.ToPlainText().Contains("MessageSilent_Value_61829"),
-				s => s.Contains("MessageSilent_Value_61829"));
+			return TestHelpers.MessageContains(msg, "MessageSilent_Value_61829");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
