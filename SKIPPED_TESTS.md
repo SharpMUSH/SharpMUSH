@@ -11,9 +11,9 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 ## Summary
 
 - **Total Skipped Tests**: 204
-- **TODO**: 177
-- **SUCCESS**: 11
-- **FAIL**: 16
+- **TODO**: 163
+- **SUCCESS**: 15
+- **FAIL**: 26
 
 ## Tests by Category
 
@@ -62,25 +62,27 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 
 #### `Commands/BuildingCommandTests.cs`
 
-- **TODO**: ChownObject
-- **TODO**: CloneObject
-- **TODO**: DoDigForCommandListCheck
-- **TODO**: DoDigForCommandListCheck2
-- **TODO**: LinkExit
-- **TODO**: LockObject
-- **TODO**: SetParent
-- **TODO**: UnlinkExit
-- **TODO**: UnlockObject
+- **SUCCESS**: ChownObject
+- **SUCCESS**: CloneObject
+- **SUCCESS**: DoDigForCommandListCheck
+- **SUCCESS**: DoDigForCommandListCheck2
+- **FAIL**: LinkExit (IndexOutOfRangeException - array bounds error)
+- **FAIL**: LockObject (ReceivedCallsException - test interference, 43 notify calls)
+- **TODO**: NameObject (listed elsewhere, marked as FAIL)
+- **FAIL**: SetParent (RedundantArgumentMatcherException - mock specification issue)
+- **FAIL**: UnlinkExit (ReceivedCallsException - test interference, 41 notify calls)
+- **FAIL**: UnlockObject (ReceivedCallsException - test interference, 44 notify calls)
 
 #### `Commands/ChannelCommandTests.cs`
 
-- **TODO**: AddcomCommand
-- **TODO**: ChannelCommand
-- **TODO**: ChatCommand
-- **TODO**: ClistCommand
-- **TODO**: ComlistCommand
-- **TODO**: ComtitleCommand
-- **TODO**: DelcomCommand
+- **FAIL**: AddcomCommand (details TBD)
+- **FAIL**: ChannelCommand (details TBD)
+- **FAIL**: ChatCommand (details TBD)
+- **FAIL**: ClistCommand (details TBD)
+- **FAIL**: ComlistCommand (details TBD)
+- **FAIL**: ComtitleCommand (details TBD)
+- **FAIL**: DelcomCommand (details TBD)
+Note: 2 of these 7 tests actually passed - need to identify which ones from detailed test output
 
 #### `Commands/CommunicationCommandTests.cs`
 
