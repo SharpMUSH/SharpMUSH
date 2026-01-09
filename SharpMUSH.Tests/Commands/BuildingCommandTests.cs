@@ -51,6 +51,10 @@ public class BuildingCommandTests
 	[DependsOn(nameof(CreateObjectWithCost))]
 	public async ValueTask DoDigForCommandListCheck()
 	{
+		// Get the executor's current location to use in the assertion
+		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
+		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
+		
 		var newRoom = await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dig DoDigTestRoom=DoDigTestExit;DoDigTestExitAlias,DoDigTestExitBack;DoDigTestExitAliasBack"));
 
@@ -75,8 +79,8 @@ public class BuildingCommandTests
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
-					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number+2}") && mstr.ToString().Contains("#0"),
-					str => str.Contains($"Linked exit #{newDb.Number+2}") && str.Contains("#0")
+					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number+2}") && mstr.ToString().Contains($"#{currentLocationDbRef.Number}"),
+					str => str.Contains($"Linked exit #{newDb.Number+2}") && str.Contains($"#{currentLocationDbRef.Number}")
 				)));
 	}
 
@@ -84,6 +88,10 @@ public class BuildingCommandTests
 	[Test, DependsOn(nameof(DoDigForCommandListCheck))]
 	public async ValueTask DoDigForCommandListCheck2()
 	{
+		// Get the executor's current location to use in the assertion
+		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
+		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
+		
 		var newRoom = await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
 		var newDb = DBRef.Parse(newRoom!.Message!.ToPlainText()!);
@@ -101,7 +109,7 @@ public class BuildingCommandTests
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number+2} to #0");
+			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number+2} to #{currentLocationDbRef.Number}");
 	}
 
 
