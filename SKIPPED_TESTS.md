@@ -11,9 +11,9 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 ## Summary
 
 - **Total Skipped Tests**: 204
-- **TODO**: 151
+- **TODO**: 141
 - **SUCCESS**: 15
-- **FAIL**: 38
+- **FAIL**: 48
 
 ## Tests by Category
 
@@ -97,17 +97,18 @@ Note: 2 of these 7 tests actually passed - need to identify which ones from deta
 - **FAIL**: OemitBasic (ReceivedCallsException - test interference, received 15 notify calls)
 - **FAIL**: RemitBasic (ReceivedCallsException - test interference, received 13 notify calls)
 - **FAIL**: ZemitBasic (ReceivedCallsException - wrong message, expected "Test zone emit" but received "Don't you have anything to say?")
-- **TODO**: ComListEmpty (skipped with "TODO")
-- **TODO**: AddComInvalidArgs (2 tests skipped with "TODO")
+- **FAIL**: ComListEmpty (TODO: Failing Test. Requires investigation)
+- **FAIL**: AddComInvalidArgs (2 parametrized tests - TODO)
 
 #### `Commands/ConfigCommandTests.cs`
 
-- **TODO**: ConfigCommand_CategoryArg_ShowsCategoryOptions
-- **TODO**: DoingCommand
-- **TODO**: MonikerCommand
-- **TODO**: MotdCommand
-- **TODO**: RejectmotdCommand
-- **TODO**: WizmotdCommand
+- **FAIL**: ConfigCommand_NoArgs_ListsCategories (TODO - hangs/needs investigation)
+- **FAIL**: ConfigCommand_CategoryArg_ShowsCategoryOptions (Failing. Needs Investigation)
+- **FAIL**: DoingCommand (Not Yet Implemented)
+- **FAIL**: MonikerCommand (Not Yet Implemented)
+- **FAIL**: MotdCommand (Not Yet Implemented)
+- **FAIL**: RejectmotdCommand (Not Yet Implemented)
+- **FAIL**: WizmotdCommand (Not Yet Implemented)
 
 #### `Commands/ControlFlowCommandTests.cs`
 
