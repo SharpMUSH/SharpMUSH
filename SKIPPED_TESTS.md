@@ -11,9 +11,9 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 ## Summary
 
 - **Total Skipped Tests**: 204
-- **TODO**: 194
-- **SUCCESS**: 0
-- **FAIL**: 10
+- **TODO**: 177
+- **SUCCESS**: 11
+- **FAIL**: 16
 
 ## Tests by Category
 
@@ -36,16 +36,29 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 
 #### `Commands/AtListCommandTests.cs`
 
-- **TODO**: List_Flags_Lowercase_DisplaysLowercaseFlagList
+- **FAIL**: List_Flags_Lowercase_DisplaysLowercaseFlagList (ReceivedCallsException - test interference, received 10 notify calls from other tests)
+- **SUCCESS**: Test_Atlist_Command
+- **SUCCESS**: Test_List_Commands_Help_DisplaysListCommands
+- **SUCCESS**: Test_List_Locks_Lowercase_DisplaysLowercaseLockList
+- **SUCCESS**: Test_List_Empty_Success
+- **SUCCESS**: Test_List_Functions_Lowercase_DisplaysLowercaseFunctionList
+- **SUCCESS**: Test_List_Allocations_Help_DisplaysListAllocations
+- **SUCCESS**: Test_List_Motd_Help_DisplaysListMotd
+- **SUCCESS**: Test_List_Attribs_Lowercase_DisplaysLowercaseAttribList
 
 #### `Commands/AttributeCommandTests.cs`
 
-- **TODO**: Test_AtrLock_LockAndUnlock
-- **TODO**: Test_CopyAttribute_Basic
-- **TODO**: Test_CopyAttribute_Direct
-- **TODO**: Test_CopyAttribute_MultipleDestinations
-- **TODO**: Test_MoveAttribute_Basic
-- **TODO**: Test_WipeAttributes_AllAttributes
+- **FAIL**: Test_AtrLock_LockAndUnlock (ReceivedCallsException - test interference, received 15 notify calls from other tests)
+- **FAIL**: Test_CopyAttribute_Basic (ReceivedCallsException - wrong notification message, expected "copied to 1 destination")
+- **FAIL**: Test_CopyAttribute_Direct (ReceivedCallsException - no notification received)
+- **FAIL**: Test_CopyAttribute_MultipleDestinations (ReceivedCallsException - wrong notification message, expected "copied to 2 destinations")
+- **FAIL**: Test_MoveAttribute_Basic (ReceivedCallsException - test interference, received 6 notify calls from other tests)
+- **FAIL**: Test_WipeAttributes_AllAttributes (AssertionException - attributes not properly wiped)
+- **SUCCESS**: Test_CopyAttribute_WithSlash
+- **SUCCESS**: Test_Edit_Check_NoChange
+- **SUCCESS**: Test_Edit_Caret_ReplaceCharacter
+- **SUCCESS**: Test_Edit_Dollar_ReplaceWithDollar
+- **SUCCESS**: Test_Edit_Dollar_ReplaceAtEnd
 
 #### `Commands/BuildingCommandTests.cs`
 
