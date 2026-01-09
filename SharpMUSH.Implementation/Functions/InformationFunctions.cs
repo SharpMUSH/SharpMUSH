@@ -169,7 +169,16 @@ public partial class Functions
 		}
 
 		// TODO: Implement actual PID tracking and information retrieval
-		// This requires integration with the queue/process management system
+		// This requires integration with the queue/process management system.
+		// 
+		// Implementation plan:
+		// 1. Add a PID tracking service that maintains a registry of running processes
+		// 2. Each queued command should be assigned a unique PID
+		// 3. Store process metadata: command text, executor, start time, CPU usage
+		// 4. Implement pidinfo() to query this registry
+		// 5. Support fields: "command", "executor", "start_time", "cpu_time", "status"
+		// 6. Return format: space-delimited values when delimiter not specified
+		//
 		// For now, return placeholder indicating not implemented
 		await ValueTask.CompletedTask;
 		return new CallState("#-1 NO SUCH PID");
@@ -624,10 +633,20 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				// TODO: Implement actual quota checking when database iteration is available
-				// For now, return unlimited quota
-				await ValueTask.CompletedTask;
-				return new CallState("0 999999");
+				// Get the player owner of the object
+				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
+				
+				// Object has no owner - return "0 0" (0 objects owned, 0 quota limit)
+				if (owner is null)
+				{
+					return new CallState("0 0");
+				}
+				
+				// Get the actual count of objects owned by the player
+				var ownedCount = await Mediator!.Send(new GetOwnedObjectCountQuery(owner));
+				
+				// Return "owned quota" format (e.g., "42 100" means 42 objects owned of 100 quota)
+				return new CallState($"{ownedCount} {owner.Quota}");
 			});
 	}
 
