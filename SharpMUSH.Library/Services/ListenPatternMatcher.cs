@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -9,6 +10,12 @@ namespace SharpMUSH.Library.Services;
 /// <summary>
 /// Service for matching listen patterns on objects.
 /// </summary>
+/// <remarks>
+/// TODO: Complete implementation with proper API usage
+/// - Fix DBRef comparison (need to use .Object() extension)
+/// - Use proper async enumeration for cached attributes
+/// - Handle parent checking with LISTEN_PARENT flag
+/// </remarks>
 public class ListenPatternMatcher(IMediator mediator) : IListenPatternMatcher
 {
 	public async ValueTask<ListenMatch[]> MatchListenPatternsAsync(
