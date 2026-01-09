@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Text;
 using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.Options;
@@ -141,16 +142,15 @@ public partial class ValidateService(
 	/// <returns>True or false</returns>
 	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
 	{
-		const int MaxAttributeValueLength = 8192; // Standard MUSH attribute value limit
+		const int MaxAttributeValueBytes = 8192; // Standard MUSH attribute value limit (bytes, not characters)
 		
-		// Check attribute value length first - avoid conversion if too long
-		// Use the string length as a proxy since MString wraps string content
-		if (value.Length > MaxAttributeValueLength)
+		// Check attribute value byte length - convert to plain text and measure UTF-8 bytes
+		// This is the correct way to enforce the 8KB limit for multi-byte characters
+		var plainValue = value.ToPlainText();
+		if (Encoding.UTF8.GetByteCount(plainValue) > MaxAttributeValueBytes)
 		{
 			return false;
 		}
-		
-		var plainValue = value.ToPlainText();
 		
 		return attribute switch
 		{
