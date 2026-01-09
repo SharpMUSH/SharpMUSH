@@ -39,7 +39,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Add_CreatesNewFlag()
 	{
 		// Create a unique flag name for this test
@@ -69,7 +68,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Add_PreventsSystemFlagCreation()
 	{
 		// Create a unique flag name
@@ -89,7 +87,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Add_PreventsDuplicateFlags()
 	{
 		// Create a unique flag name
@@ -118,7 +115,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Delete_RemovesNonSystemFlag()
 	{
 		// Create a test flag first
@@ -243,7 +239,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Power_Delete_RemovesNonSystemPower()
 	{
 		// Create a test power first
@@ -340,7 +335,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Disable_DisablesNonSystemFlag()
 	{
 		// Create a unique flag name for this test
@@ -371,7 +365,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Enable_EnablesDisabledFlag()
 	{
 		// Create a unique flag name for this test

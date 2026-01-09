@@ -49,7 +49,6 @@ public class BuildingCommandTests
 	
 	[Test]
 	[DependsOn(nameof(CreateObjectWithCost))]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask DoDigForCommandListCheck()
 	{
 		var newRoom = await Parser.CommandParse(1, ConnectionService,
@@ -86,7 +85,6 @@ public class BuildingCommandTests
 
 	// Something is getting created before this one can trigger...
 	[Test, DependsOn(nameof(DoDigForCommandListCheck))]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask DoDigForCommandListCheck2()
 	{
 		var newRoom = await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
@@ -197,7 +195,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(LinkExit))]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
+	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask CloneObject()
 	{
 		// Create an object with unique name
@@ -433,7 +431,6 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(SetParent))]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ChownObject()
 	{
 		// Create an object

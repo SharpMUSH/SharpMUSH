@@ -268,7 +268,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_OnSwitch_SetsHidden()
 	{
 		// Test that @hide/on sets the DARK flag
@@ -288,7 +287,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_NoSwitch_UnsetsHidden()
 	{
 		// Test that @hide/no unsets the DARK flag
