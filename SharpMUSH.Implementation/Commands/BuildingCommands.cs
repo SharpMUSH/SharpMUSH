@@ -408,11 +408,36 @@ public partial class Commands
 								}
 							}
 							
-							// TODO: When linking an unlinked exit owned by someone else:
-							// - Check @lock/link on the exit 
-							// - Transfer ownership to the linker via SetObjectOwnerCommand
-							// - Set HALT flag to prevent looping
-							// (Requires proper detection of unlinked state - exit destination comparison)
+							// Get exit owner and check if it's owned by someone else
+							var exitOwner = await exitObj.Object().Owner.WithCancellation(CancellationToken.None);
+							var executorObj = executor.Object();
+							var executorOwner = await executorObj.Owner.WithCancellation(CancellationToken.None);
+							var isOwnedByOther = exitOwner.Object.Id != executorOwner.Object.Id;
+							
+							// When linking an exit owned by someone else:
+							// Check @lock/link, transfer ownership, and set HALT flag
+							if (isOwnedByOther)
+							{
+								// Check @lock/link on the exit
+								var linkLockPasses = LockService!.Evaluate(LockType.Link, exitObj, executor);
+								if (!linkLockPasses)
+								{
+									return await NotifyService!.NotifyAndReturn(
+										executor.Object().DBRef,
+										errorReturn: ErrorMessages.Returns.PermissionDenied,
+										notifyMessage: "You don't pass the link lock.",
+										shouldNotify: true);
+								}
+								
+								// Transfer ownership to the linker
+								if (executor.IsPlayer)
+								{
+									await Mediator!.Send(new SetObjectOwnerCommand(exitObj, executor.AsPlayer));
+								}
+								
+								// Set HALT flag to prevent looping
+								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, exitObj, "HALT", true);
+							}
 
 			await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
 							

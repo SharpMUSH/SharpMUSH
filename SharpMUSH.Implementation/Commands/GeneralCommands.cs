@@ -139,18 +139,38 @@ public partial class Commands
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 		
-		string? listToMap = null;
-		if (args.Count >= 2)
+		// Parse object/attribute path
+		var pathSplit = HelperFunctions.SplitDbRefAndOptionalAttr(attributePath);
+		if (!pathSplit.TryPickT0(out var pathDetails, out _))
 		{
-			listToMap = args["1"].Message?.ToPlainText();
+			await NotifyService!.Notify(executor, "Invalid object/attribute path format.");
+			return new CallState("#-1 INVALID PATH");
 		}
 		
-		await NotifyService!.Notify(executor, $"@map: Would iterate over list and execute attribute '{attributePath}'");
-		
-		if (listToMap != null)
+		var (objSpec, attrName) = pathDetails;
+		if (string.IsNullOrEmpty(attrName))
 		{
-			await NotifyService.Notify(executor, $"  List: {listToMap}");
+			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
+		
+		// Handle /DELIMIT switch for list splitting
+		var listText = args.Count >= 2 ? args["1"].Message! : MModule.empty();
+		var delimiter = " "; // default space delimiter
+		
+		if (switches.Contains("DELIMIT"))
+		{
+			var plainListText = MModule.plainText(listText);
+			if (plainListText.Length > 0)
+			{
+				delimiter = plainListText.Substring(0, 1);
+				listText = MModule.single(plainListText.Substring(1)); // Remove delimiter from list
+			}
+		}
+		
+		var list = MModule.split(delimiter, listText);
+		
+		await NotifyService!.Notify(executor, $"@map: Would iterate over {list.Length} elements and execute {objSpec}/{attrName}");
 		
 		if (switches.Contains("INLINE"))
 		{
@@ -172,10 +192,9 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will localize Q-registers");
 		}
 		
-		// TODO: Full implementation requires parsing object/attribute path, splitting list into elements,
-		// executing the attribute for each element with element as %0, handling enactor preservation
-		// and Q-register management, and handling /inline vs queued execution and /notify switch.
-		await NotifyService.Notify(executor, "Note: @map command queueing and execution not yet implemented.");
+		// TODO: Full implementation requires executing the attribute for each element with element as %0,
+		// handling enactor preservation and Q-register management, and handling /inline vs queued execution.
+		await NotifyService.Notify(executor, "Note: @map command attribute execution not yet implemented.");
 		
 		return new CallState("#-1 NOT IMPLEMENTED");
 	}
@@ -193,7 +212,21 @@ public partial class Commands
 			return new None();
 		}
 
-		var list = MModule.split(" ", parser.CurrentState.Arguments["0"].Message!);
+		// Handle /DELIMIT switch: if present, use first character of list as delimiter
+		var listText = parser.CurrentState.Arguments["0"].Message!;
+		var delimiter = " "; // default space delimiter
+		
+		if (switches.Contains("DELIMIT"))
+		{
+			var plainListText = MModule.plainText(listText);
+			if (plainListText.Length > 0)
+			{
+				delimiter = plainListText.Substring(0, 1);
+				listText = MModule.single(plainListText.Substring(1)); // Remove delimiter from list
+			}
+		}
+		
+		var list = MModule.split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
 		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
@@ -214,7 +247,8 @@ public partial class Commands
 					wrappedIteration.Value = item!;
 					wrappedIteration.Iteration++;
 
-					// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
+					// Note: Command is parsed once (line above loop), then the visitor is called
+					// multiple times with different iteration register values. This is optimized.
 					lastCallState = await visitorFunc();
 				}
 
