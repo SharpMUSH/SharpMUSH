@@ -17,14 +17,6 @@ public class MessageCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	private static bool MessageContains(OneOf<MString, string> msg, string expected) =>
-		TestHelpers.MessageContains(msg, expected);
-
-	private static bool MessageEquals(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText() == expected,
-			s => s == expected);
-
 	[Test]
 	public async ValueTask MessageBasic()
 	{

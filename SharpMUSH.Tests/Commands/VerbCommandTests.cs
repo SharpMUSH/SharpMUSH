@@ -17,12 +17,6 @@ public class VerbCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	private static bool MessageEquals(OneOf<MString, string> msg, string expected) =>
-		TestHelpers.MessageEquals(msg, expected);
-
-	private static bool MessageContains(OneOf<MString, string> msg, string expected) =>
-		TestHelpers.MessageContains(msg, expected);
-
 	[Test]
 	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithDefaultMessages()

@@ -18,8 +18,6 @@ public class MessageFunctionTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-
-
 	[Test]
 	public async Task MessageBasicReturnsEmpty()
 	{
