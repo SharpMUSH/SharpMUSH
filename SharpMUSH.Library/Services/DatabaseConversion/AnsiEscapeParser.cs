@@ -349,12 +349,12 @@ public static class AnsiEscapeParser
 			return MarkupStringModule.single(text);
 		}
 
-		// Use AnsiMarkup.Create to build the markup with the proper structure
+		// Build the markup based on state
+		// Note: linkText and linkUrl are optional and have complex FSharpOption types
+		// For now, we'll create the markup without hyperlinks as they need special handling
 		var markup = AnsiMarkup.Create(
 			foreground: state.Foreground,
 			background: state.Background,
-			linkText: state.LinkUrl != null ? text : null,
-			linkUrl: state.LinkUrl,
 			blink: state.Blink,
 			bold: state.Bold,
 			clear: false,
