@@ -18,11 +18,6 @@ public class MessageFunctionTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	private static bool MessageContains(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText().Contains(expected),
-			s => s.Contains(expected));
-
 	[Test]
 	public async Task MessageBasicReturnsEmpty()
 	{
@@ -46,9 +41,7 @@ public class MessageFunctionTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
-			return msg.Match(
-				ms => ms.ToPlainText().Contains("MessageFuncSends_Value_37291"),
-				s => s.Contains("MessageFuncSends_Value_37291"));
+			return TestHelpers.MessageContains(msg, "MessageFuncSends_Value_37291");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -67,9 +60,7 @@ public class MessageFunctionTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
-			return msg.Match(
-				ms => ms.ToPlainText().Contains("MessageEval_Result_82044:21"),
-				s => s.Contains("MessageEval_Result_82044:21"));
+			return TestHelpers.MessageContains(msg, "MessageEval_Result_82044:21");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -85,11 +76,8 @@ public class MessageFunctionTests
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
-			var msg = args[1] as OneOf<MString, string>?;
-			if (msg == null) return false;
-			return msg.Value.Match(
-				ms => ms.ToPlainText().Contains("MessageDefault_Value_91847"),
-				s => s.Contains("MessageDefault_Value_91847"));
+			if (args[1] is not OneOf<MString, string> msg) return false;
+			return TestHelpers.MessageContains(msg, "MessageDefault_Value_91847");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -108,9 +96,7 @@ public class MessageFunctionTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
-			return msg.Match(
-				ms => ms.ToPlainText().Contains("MessageArgs_Value_63018"),
-				s => s.Contains("MessageArgs_Value_63018"));
+			return TestHelpers.MessageContains(msg, "MessageArgs_Value_63018");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();

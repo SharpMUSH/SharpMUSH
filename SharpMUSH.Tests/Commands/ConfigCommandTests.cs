@@ -25,7 +25,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Configuration Categories:")), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Configuration Categories:")), 
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -40,7 +40,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Options in Net:")), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Options in Net:")), 
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -54,7 +54,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("mud_name")), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "mud_name")), 
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -67,7 +67,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("No configuration category or option")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "No configuration category or option")),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -103,7 +103,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Message of the Day settings")), 
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Message of the Day settings")), 
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 

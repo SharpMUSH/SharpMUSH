@@ -68,8 +68,7 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == "<TestCommandChannel> ChatCommand: Test message") ||
-				(msg.IsT1 && msg.AsT1 == "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>());
+				TestHelpers.MessageEquals(msg, "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>());
 	}
 
 	[Test]
