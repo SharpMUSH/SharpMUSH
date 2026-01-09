@@ -21,6 +21,13 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
+	/// <summary>
+	/// Maximum byte length for attribute values in standard MUSH servers.
+	/// This is a widely-adopted limit across PennMUSH, TinyMUSH, and other MUSH derivatives.
+	/// Could be made configurable in future versions if needed.
+	/// </summary>
+	private const int MaxAttributeValueBytes = 8192;
+	
 	// Thread-safe cache for compiled regexes for attribute validation
 	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
 	// Thread-safe cache for compiled glob patterns
@@ -142,8 +149,6 @@ public partial class ValidateService(
 	/// <returns>True or false</returns>
 	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
 	{
-		const int MaxAttributeValueBytes = 8192; // Standard MUSH attribute value limit (bytes, not characters)
-		
 		// Check attribute value byte length - convert to plain text and measure UTF-8 bytes
 		// This is the correct way to enforce the 8KB limit for multi-byte characters
 		var plainValue = value.ToPlainText();

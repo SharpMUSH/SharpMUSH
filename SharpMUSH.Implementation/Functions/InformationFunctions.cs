@@ -636,7 +636,7 @@ public partial class Functions
 				// Get the player owner of the object
 				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
 				
-				// Object has no owner - return 0/0
+				// Object has no owner - return "0 0" (0 objects owned, 0 quota limit)
 				if (owner is null)
 				{
 					return new CallState("0 0");
@@ -645,7 +645,7 @@ public partial class Functions
 				// Get the actual count of objects owned by the player
 				var ownedCount = await Mediator!.Send(new GetOwnedObjectCountQuery(owner));
 				
-				// Return "owned quota" format
+				// Return "owned quota" format (e.g., "42 100" means 42 objects owned of 100 quota)
 				return new CallState($"{ownedCount} {owner.Quota}");
 			});
 	}
