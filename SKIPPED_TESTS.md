@@ -11,9 +11,9 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 ## Summary
 
 - **Total Skipped Tests**: 204
-- **TODO**: 204
+- **TODO**: 194
 - **SUCCESS**: 0
-- **FAIL**: 0
+- **FAIL**: 10
 
 ## Tests by Category
 
@@ -23,16 +23,16 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 
 #### `Commands/AdminCommandTests.cs`
 
-- **TODO**: ChownallCommand
-- **TODO**: ChzoneallCommand
-- **TODO**: NewpasswordCommand
-- **TODO**: PasswordCommand
-- **TODO**: PcreateCommand
-- **TODO**: PoorCommand
-- **TODO**: PurgeCommand
-- **TODO**: ReadcacheCommand
-- **TODO**: RestartCommand
-- **TODO**: ShutdownCommand
+- **FAIL**: ChownallCommand (ReceivedCallsException - test interference from other tests)
+- **FAIL**: ChzoneallCommand (ReceivedCallsException - test interference from other tests)
+- **FAIL**: NewpasswordCommand (ReceivedCallsException - test interference from other tests)
+- **FAIL**: PasswordCommand (ReceivedCallsException - test interference from other tests)
+- **FAIL**: PcreateCommand (ReceivedCallsException - test interference from other tests)
+- **FAIL**: PoorCommand (ReceivedCallsException - test interference from other tests)
+- **FAIL**: PurgeCommand (RedundantArgumentMatcherException - mock specification issue)
+- **FAIL**: ReadcacheCommand (RedundantArgumentMatcherException - mock specification issue)
+- **FAIL**: RestartCommand (RedundantArgumentMatcherException - mock specification issue)
+- **FAIL**: ShutdownCommand (RedundantArgumentMatcherException - mock specification issue)
 
 #### `Commands/AtListCommandTests.cs`
 
