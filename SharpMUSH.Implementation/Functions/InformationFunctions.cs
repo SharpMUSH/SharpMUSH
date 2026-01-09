@@ -501,12 +501,40 @@ public partial class Functions
 	public static async ValueTask<CallState> LStats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lstats() returns statistics about objects in the database
-		// For now, return placeholder values until database iteration is implemented
-		await ValueTask.CompletedTask;
-		
-		// TODO: Implement database-wide object counting
 		// Format: <players> <things> <exits> <rooms> <garbage>
-		return new CallState("0 0 0 0 0");
+		var args = parser.CurrentState.Arguments;
+		var typeFilter = args.TryGetValue("0", out var typeArg) 
+			? typeArg.Message!.ToPlainText().ToUpperInvariant() 
+			: null;
+
+		// Get all objects from the database
+		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery())
+			.ToListAsync();
+
+		// If a specific type is requested, filter and count only that type
+		if (!string.IsNullOrEmpty(typeFilter))
+		{
+			var count = typeFilter switch
+			{
+				"PLAYER" or "PLAYERS" => allObjects.Count(o => o.Type == "PLAYER"),
+				"THING" or "THINGS" => allObjects.Count(o => o.Type == "THING"),
+				"EXIT" or "EXITS" => allObjects.Count(o => o.Type == "EXIT"),
+				"ROOM" or "ROOMS" => allObjects.Count(o => o.Type == "ROOM"),
+				"GARBAGE" => 0, // SharpMUSH doesn't track garbage separately
+				_ => -1
+			};
+
+			return count >= 0 ? new CallState(count.ToString()) : new CallState("#-1 INVALID TYPE");
+		}
+
+		// Count each type
+		var players = allObjects.Count(o => o.Type == "PLAYER");
+		var things = allObjects.Count(o => o.Type == "THING");
+		var exits = allObjects.Count(o => o.Type == "EXIT");
+		var rooms = allObjects.Count(o => o.Type == "ROOM");
+		var garbage = 0; // SharpMUSH doesn't track garbage separately
+
+		return new CallState($"{players} {things} {exits} {rooms} {garbage}");
 	}
 
 	[SharpFunction(Name = "money", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

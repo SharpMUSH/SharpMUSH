@@ -1656,8 +1656,8 @@ public partial class Functions
 
 		return validationType switch
 		{
-			// TODO: TARGET ATTRIBUTE!
-			// TODO: Mediator & Service for getting the entry.
+			IValidateService.ValidationType.AttributeValue when target is not null
+				=> await ValidateService!.Valid(validationType, str, await GetAttributeEntry(target)),
 			IValidateService.ValidationType.AttributeValue => await ValidateService!.Valid(validationType, str, new None()),
 
 			IValidateService.ValidationType.PlayerName when target is null
@@ -1687,6 +1687,14 @@ public partial class Functions
 			return channel is null
 				? new None()
 				: channel;
+		}
+
+		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetAttributeEntry(string name)
+		{
+			var entry = await Mediator!.Send(new GetAttributeEntryQuery(name));
+			return entry is null
+				? new None()
+				: entry;
 		}
 	}
 

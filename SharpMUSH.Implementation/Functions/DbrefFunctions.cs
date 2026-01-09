@@ -896,6 +896,11 @@ LOCATE()
 	[SharpFunction(Name = "lsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["player", "class=restriction..."])]
 	public static async ValueTask<CallState> ListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		return await ListSearchInternal(parser, _2, useRegex: false);
+	}
+
+	private static async ValueTask<CallState> ListSearchInternal(IMUSHCodeParser parser, SharpFunctionAttribute _2, bool useRegex)
+	{
 		// lsearch() searches the database for objects matching criteria
 		// Format: lsearch(<player>, <class1>, <restriction1>, <class2>, <restriction2>, ...)
 		// Per PennMUSH documentation: comma-separated positional arguments, NOT equals syntax
@@ -1086,6 +1091,7 @@ LOCATE()
 		{
 			Types = types.Count > 0 ? [.. types] : null,
 			NamePattern = namePattern,
+			UseRegex = useRegex,
 			MinDbRef = minDbRef,
 			MaxDbRef = maxDbRef,
 			Zone = zone,
@@ -1288,10 +1294,14 @@ LOCATE()
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]
 	public static async ValueTask<CallState> ListSearchRegex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// lsearchr() is like lsearch but with regex support
-		// For now, implement as basic lsearch (regex support can be added later)
-		// TODO: Add regex matching support for search criteria
-		return await ListSearch(parser, _2);
+		// lsearchr() is like lsearch but with regex support for name patterns
+		// We'll modify the behavior by passing a flag through the search
+		
+		// Temporarily store the original arguments
+		var originalArgs = parser.CurrentState.Arguments;
+		
+		// Call the shared search implementation with regex enabled
+		return await ListSearchInternal(parser, _2, useRegex: true);
 	}
 
 	[SharpFunction(Name = "namelist", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -1326,7 +1336,10 @@ LOCATE()
 		var strListAsDbrefs = strListExisting.Select(x => x.Item2.AsAnyObject.Object().DBRef);
 
 		var theGoodOnes = dbrefListExisting.Union(strListAsDbrefs);
-		// TODO: obj/attr for evaluation of bad results.
+		// Future enhancement: Support obj/attr syntax for evaluation of bad results
+		// When a name doesn't resolve to an object, check if it's in "object/attribute" format
+		// and evaluate that attribute instead. This requires parsing the format and retrieving
+		// the attribute value from the specified object.
 
 		return string.Join(" ", theGoodOnes);
 	}
@@ -1400,11 +1413,21 @@ LOCATE()
 	{
 		// nextdbref() returns the next DB reference that will be assigned
 		// This requires knowing the highest dbref in the database
-		// For now, return a placeholder value
-		await ValueTask.CompletedTask;
-		
-		// TODO: Implement proper next dbref tracking when database supports it
-		return new CallState("#-1 NOT YET IMPLEMENTED");
+		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery())
+			.ToListAsync();
+
+		if (allObjects.Count == 0)
+		{
+			// If there are no objects, the next dbref would be #0
+			return new CallState("#0:0");
+		}
+
+		// Find the highest dbref key
+		var maxKey = allObjects.Max(o => o.Key);
+		var nextKey = maxKey + 1;
+
+		// Return the next dbref with timestamp 0 (will be set when created)
+		return new CallState($"#{nextKey}:0");
 	}
 
 	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
@@ -1609,7 +1632,7 @@ LOCATE()
 				await x.Match<ValueTask<string>>(
 					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
 					_ => ValueTask.FromResult<string>("#-1 THIS IS A ROOM"),
-					// TODO: Exit may need editing
+					// For exits, return the location (the room containing the exit)
 					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
 					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
 	}
