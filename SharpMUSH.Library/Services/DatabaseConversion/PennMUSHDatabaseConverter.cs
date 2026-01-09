@@ -634,19 +634,15 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					try
 					{
-						// Strip ANSI and Pueblo escape sequences from attribute value
-						// TODO: Convert these to proper MarkupStrings instead of stripping
-						var cleanedValue = StripEscapeSequences(pennAttr.Value);
+						// Convert ANSI escape sequences to MarkupString
+						var value = AnsiEscapeParser.ConvertAnsiToMarkupString(pennAttr.Value);
 						
-						// Log if escape sequences were removed
-						if (cleanedValue != pennAttr.Value)
+						// Log if escape sequences were converted
+						if (pennAttr.Value != null && pennAttr.Value.Contains('\x1b'))
 						{
-							_logger.LogTrace("Stripped escape sequences from attribute {AttrName} on object #{DBRef}", 
+							_logger.LogTrace("Converted ANSI escape sequences from attribute {AttrName} on object #{DBRef}", 
 								pennAttr.Name, pennObj.DBRef);
 						}
-						
-						// Convert PennMUSH attribute value to MString
-						var value = MModule.single(cleanedValue);
 
 						// Set the attribute using AttributeService
 						var result = await _attributeService.SetAttributeAsync(
@@ -790,25 +786,27 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Strips Pueblo ANSI escape sequences from text as stored in PennMUSH database files.
+	/// Converts Pueblo ANSI escape sequences from text as stored in PennMUSH database files to MarkupStrings.
 	/// PennMUSH stores ANSI escape codes as literal ESC sequences in attribute text.
 	/// Standard HTML tags are preserved as they may be intentional content.
 	/// 
 	/// Handles Pueblo-specific ANSI formats:
 	/// - CSI sequences: ESC[...m (colors, styles) - e.g., ESC[31m (red), ESC[1m (bold), ESC[38;5;n]m (256-color)
-	/// - OSC sequences: ESC]...ESC\ (operating system commands, used by Pueblo for special markup)
-	/// - Simple escapes: ESC followed by single character
+	/// - OSC sequences: ESC]...ESC\ (operating system commands, used by Pueblo for special markup and hyperlinks)
+	/// - Simple escapes: ESC followed by single character (stripped if not recognized)
 	/// 
-	/// TODO: Convert these escape sequences to proper MarkupStrings instead of stripping them.
-	/// This will require:
-	/// - Parsing ANSI SGR (Select Graphic Rendition) codes to MarkupString colors/styles
-	/// - Mapping ANSI 256-color codes (ESC[38;5;nm, ESC[48;5;nm) to MarkupString colors
-	/// - Mapping ANSI RGB codes (ESC[38;2;r;g;bm, ESC[48;2;r;g;bm) to MarkupString colors
-	/// - Converting bold (ESC[1m), underline (ESC[4m), etc. to MarkupString formatting
-	/// - Handling Pueblo OSC sequences and converting to MarkupString equivalents
+	/// Converted to MarkupStrings:
+	/// - ANSI SGR (Select Graphic Rendition) codes → MarkupString colors/styles
+	/// - ANSI 256-color codes (ESC[38;5;nm, ESC[48;5;nm) → MarkupString RGB colors
+	/// - ANSI RGB codes (ESC[38;2;r;g;bm, ESC[48;2;r;g;bm) → MarkupString RGB colors
+	/// - Bold (ESC[1m), underline (ESC[4m), etc. → MarkupString formatting
+	/// - Pueblo OSC 8 sequences (hyperlinks) → MarkupString hyperlinks
+	/// 
+	/// Unrecognized escape sequences are stripped from the output.
 	/// </summary>
 	/// <param name="text">Text potentially containing Pueblo ANSI escape sequences</param>
 	/// <returns>Text with escape sequences removed but standard HTML preserved, or empty string if input is null</returns>
+	[Obsolete("Use AnsiEscapeParser.ConvertAnsiToMarkupString instead")]
 	private static string StripEscapeSequences(string? text)
 	{
 		if (string.IsNullOrEmpty(text))
