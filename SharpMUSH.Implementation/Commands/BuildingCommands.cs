@@ -412,11 +412,14 @@ public partial class Commands
 							var exitOwner = await exitObj.Object().Owner.WithCancellation(CancellationToken.None);
 							var executorObj = executor.Object();
 							var executorOwner = await executorObj.Owner.WithCancellation(CancellationToken.None);
+							
+							// Check if exit is owned by someone else and executor doesn't control it
+							var exitNotControlled = !await PermissionService!.Controls(executor, exitObj);
 							var isOwnedByOther = exitOwner.Object.Id != executorOwner.Object.Id;
 							
-							// When linking an exit owned by someone else:
+							// When linking an exit owned by someone else that executor doesn't control:
 							// Check @lock/link, transfer ownership, and set HALT flag
-							if (isOwnedByOther)
+							if (isOwnedByOther && exitNotControlled)
 							{
 								// Check @lock/link on the exit
 								var linkLockPasses = LockService!.Evaluate(LockType.Link, exitObj, executor);
@@ -429,10 +432,21 @@ public partial class Commands
 										shouldNotify: true);
 								}
 								
-								// Transfer ownership to the linker
+								// Transfer ownership to the linker (with error handling)
 								if (executor.IsPlayer)
 								{
-									await Mediator!.Send(new SetObjectOwnerCommand(exitObj, executor.AsPlayer));
+									try
+									{
+										await Mediator!.Send(new SetObjectOwnerCommand(exitObj, executor.AsPlayer));
+									}
+									catch (Exception)
+									{
+										return await NotifyService!.NotifyAndReturn(
+											executor.Object().DBRef,
+											errorReturn: ErrorMessages.Returns.PermissionDenied,
+											notifyMessage: "Failed to transfer ownership.",
+											shouldNotify: true);
+									}
 								}
 								
 								// Set HALT flag to prevent looping

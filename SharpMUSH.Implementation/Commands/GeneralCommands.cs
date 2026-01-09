@@ -41,6 +41,32 @@ public partial class Commands
 	private static readonly string[] DefaultSemaphoreAttributeArray = [DefaultSemaphoreAttribute];
 
 	/// <summary>
+	/// Handles delimiter extraction for @dolist and @map commands when /DELIMIT is used.
+	/// Returns the delimiter and the remaining list text.
+	/// </summary>
+	private static (string delimiter, MString listText) ExtractDelimiter(MString originalListText, bool useDelimit)
+	{
+		if (!useDelimit)
+		{
+			return (" ", originalListText);
+		}
+
+		var plainListText = MModule.plainText(originalListText);
+		if (plainListText.Length == 0)
+		{
+			// Empty list - return default delimiter and empty list
+			return (" ", originalListText);
+		}
+
+		var delimiter = plainListText.Substring(0, 1);
+		var remainingText = plainListText.Length > 1 
+			? MModule.single(plainListText.Substring(1)) 
+			: MModule.empty();
+		
+		return (delimiter, remainingText);
+	}
+
+	/// <summary>
 	/// Helper method to execute attribute content with recursion tracking.
 	/// This ensures commands like @INCLUDE, @TRIGGER, etc. track recursion the same way u/ufun/ulocal do.
 	/// </summary>
@@ -154,20 +180,9 @@ public partial class Commands
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 		
-		// Handle /DELIMIT switch for list splitting
-		var listText = args.Count >= 2 ? args["1"].Message! : MModule.empty();
-		var delimiter = " "; // default space delimiter
-		
-		if (switches.Contains("DELIMIT"))
-		{
-			var plainListText = MModule.plainText(listText);
-			if (plainListText.Length > 0)
-			{
-				delimiter = plainListText.Substring(0, 1);
-				listText = MModule.single(plainListText.Substring(1)); // Remove delimiter from list
-			}
-		}
-		
+		// Handle /DELIMIT switch using helper method
+		var originalListText = args.Count >= 2 ? args["1"].Message! : MModule.empty();
+		var (delimiter, listText) = ExtractDelimiter(originalListText, switches.Contains("DELIMIT"));
 		var list = MModule.split(delimiter, listText);
 		
 		await NotifyService!.Notify(executor, $"@map: Would iterate over {list.Length} elements and execute {objSpec}/{attrName}");
@@ -212,19 +227,10 @@ public partial class Commands
 			return new None();
 		}
 
-		// Handle /DELIMIT switch: if present, use first character of list as delimiter
-		var listText = parser.CurrentState.Arguments["0"].Message!;
-		var delimiter = " "; // default space delimiter
-		
-		if (switches.Contains("DELIMIT"))
-		{
-			var plainListText = MModule.plainText(listText);
-			if (plainListText.Length > 0)
-			{
-				delimiter = plainListText.Substring(0, 1);
-				listText = MModule.single(plainListText.Substring(1)); // Remove delimiter from list
-			}
-		}
+		// Handle /DELIMIT switch using helper method
+		var (delimiter, listText) = ExtractDelimiter(
+			parser.CurrentState.Arguments["0"].Message!, 
+			switches.Contains("DELIMIT"));
 		
 		var list = MModule.split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message!;
