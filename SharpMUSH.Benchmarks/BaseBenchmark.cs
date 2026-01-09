@@ -36,8 +36,7 @@ public class BaseBenchmark
 	[GlobalSetup]
 	public async ValueTask Setup()
 	{
-		_container = new ArangoDbBuilder()
-			.WithImage("arangodb:latest")
+		_container = new ArangoDbBuilder("arangodb:latest")
 			.WithPassword("password")
 			.Build();
 

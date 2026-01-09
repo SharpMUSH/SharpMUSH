@@ -27,6 +27,7 @@ public static class Errors
 	public const string ErrorDivideByZero = "#-1 DIVIDE BY ZERO";
 	public const string ErrorInvoke = "#-1 FUNCTION INVOCATION LIMIT EXCEEDED";
 	public const string ErrorRecursion = "#-1 FUNCTION RECURSION LIMIT EXCEEDED";
+	public const string ErrorDepth = "#-1 MAX DEPTH EXCEEDED";
 	public const string ErrorCall = "#-1 CALL LIMIT EXCEEDED";
 	public const string ErrorPerm = "#-1 PERMISSION DENIED";
 	public const string ErrorAttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";

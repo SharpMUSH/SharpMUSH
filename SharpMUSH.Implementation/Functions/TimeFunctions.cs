@@ -26,7 +26,7 @@ public partial class Functions
 	[GeneratedRegex(@"\$(?<code>.)", RegexOptions.Compiled)]
 	private static partial Regex TimeFmtPattern();
 
-	[SharpFunction(Name = "ctime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "ctime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds"])]
 	public static async ValueTask<CallState> CreationTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -43,7 +43,7 @@ public partial class Functions
 					.ToString());
 	}
 
-	[SharpFunction(Name = "isdaylight", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "isdaylight", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["seconds"])]
 	public static ValueTask<CallState> IsDaylight(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -65,7 +65,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(tz.IsDaylightSavingTime(DateTimeOffset.FromUnixTimeMilliseconds(secsInt)));
 	}
 
-	[SharpFunction(Name = "mtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "mtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ModifiedTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -82,12 +82,12 @@ public partial class Functions
 					.ToString());
 	}
 
-	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static ValueTask<CallState> Secs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(DateTimeOffset.Now.ToLocalTime().ToUnixTimeSeconds().ToString());
 
 	[SharpFunction(Name = "secscalc", MinArgs = 1, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring"])]
 	public static ValueTask<CallState> SecsCalc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -227,7 +227,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(baseTime.ToUnixTimeSeconds().ToString());
 	}
 
-	[SharpFunction(Name = "starttime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "starttime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> StartTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var data = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
@@ -235,7 +235,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "stringsecs", MinArgs = 1, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds"])]
 	public static ValueTask<CallState> StringSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
@@ -275,7 +275,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(totalSeconds.ToString());
 	}
 
-	[SharpFunction(Name = "time", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "time", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> Time(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -313,7 +313,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "timecalc", MinArgs = 1, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring"])]
 	public static ValueTask<CallState> TimeCalc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -409,7 +409,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(dt.ToString());
 	}
 
-	[SharpFunction(Name = "timefmt", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "timefmt", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["format", "seconds"])]
 	public static ValueTask<CallState> TimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -503,7 +503,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "timestring", MinArgs = 1, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds"])]
 	public static ValueTask<CallState> TimeString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -544,7 +544,7 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "uptime", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "uptime", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> Uptime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0Value)
@@ -570,11 +570,11 @@ public partial class Functions
 		};
 	}
 
-	[SharpFunction(Name = "utctime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "utctime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static ValueTask<CallState> CurrentCoordinatedUniversalTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(DateTimeOffset.UtcNow.ToString());
 
-	[SharpFunction(Name = "csecs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "csecs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> CSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -592,7 +592,7 @@ public partial class Functions
 					.ToString());
 	}
 
-	[SharpFunction(Name = "msecs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "msecs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public static async ValueTask<CallState> ModifiedSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -610,7 +610,7 @@ public partial class Functions
 					.ToString());
 	}
 
-	[SharpFunction(Name = "etime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "etime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["seconds"])]
 	public static ValueTask<CallState> ETime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -662,7 +662,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result);
 	}
 
-	[SharpFunction(Name = "etimefmt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "etimefmt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["format", "seconds"])]
 	public static ValueTask<CallState> ETimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -725,5 +725,74 @@ public partial class Functions
 
 		// Trim leading spaces from space-padded values
 		return ValueTask.FromResult<CallState>(result.TrimStart(' '));
+	}
+
+	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["seconds", "timezone"])]
+	public static ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Convert seconds since epoch to time string
+		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
+			? tzArg.Message!.ToPlainText()
+			: null;
+
+		if (!long.TryParse(secsStr, out var seconds))
+		{
+			return ValueTask.FromResult<CallState>("#-1 INVALID SECONDS");
+		}
+
+		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);
+
+		if (timezone != null)
+		{
+			if (timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
+			{
+				return ValueTask.FromResult<CallState>(dateTime.UtcDateTime.ToString("ddd MMM dd HH:mm:ss yyyy"));
+			}
+			else if (TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
+			{
+				var converted = TimeZoneInfo.ConvertTime(dateTime, tz);
+				return ValueTask.FromResult<CallState>(converted.ToString("ddd MMM dd HH:mm:ss yyyy"));
+			}
+			else
+			{
+				return ValueTask.FromResult<CallState>("#-1 INVALID TIMEZONE");
+			}
+		}
+
+		// Local time by default
+		return ValueTask.FromResult<CallState>(dateTime.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy"));
+	}
+
+	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["time-string", "timezone"])]
+	public static ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Convert time string to seconds since epoch
+		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
+			? tzArg.Message!.ToPlainText()
+			: null;
+
+		// Try to parse the time string
+		// Format: Ddd MMM DD HH:MM:SS YYYY
+		if (!DateTimeOffset.TryParse(timeStr, out var dateTime))
+		{
+			// Try different formats for extended convtime support
+			if (!DateTime.TryParse(timeStr, out var dt))
+			{
+				return ValueTask.FromResult<CallState>("#-1");
+			}
+			dateTime = new DateTimeOffset(dt, TimeSpan.Zero);
+		}
+
+		if (timezone != null && timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
+		{
+			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
+		}
+
+		// Assume local time if no timezone specified
+		return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
 	}
 }

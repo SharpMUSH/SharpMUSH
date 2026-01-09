@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using DotNext;
 using DotNext.Collections.Generic;
 using MarkupString;
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -221,7 +222,7 @@ public partial class Functions
 	public static ValueTask<CallState> AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(string.Empty));
 
-	[SharpFunction(Name = "allof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "allof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["value..."])]
 	public static async ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1204,48 +1205,134 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var objectName = args["0"].Message!.ToPlainText();
-		var pattern = args.ContainsKey("1") ? args["1"].Message!.ToPlainText() : "*";
-
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
-			async obj =>
+		
+		// Parse arguments based on PennMUSH signature: scan(<looker>, <command>[, <switches>]) or scan(<command>)
+		AnySharpObject looker;
+		MString command;
+		string switches;
+		
+		if (args.Count == 1)
+		{
+			// scan(<command>) - looker defaults to executor
+			looker = executor;
+			command = args["0"].Message!;
+			switches = "all";
+		}
+		else
+		{
+			// scan(<looker>, <command>[, <switches>])
+			var lookerName = args["0"].Message!.ToPlainText();
+			command = args["1"].Message!;
+			switches = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : "all";
+			
+			// Locate the looker object
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, lookerName, LocateFlags.All);
+			if (locateResult.IsError || locateResult.IsNone)
 			{
-				// Check permissions
-				if (!await PermissionService!.Controls(executor, obj))
-				{
-					return Errors.ErrorPerm;
-				}
-
-				// For rooms and things, scan their contents
-				if (obj.IsRoom || obj.IsThing)
-				{
-					var matchingObjects = new List<string>();
-					var container = obj.AsContainer;
-
-					// Get contents using mediator query
-					var contents = await System.Linq.AsyncEnumerable.ToArrayAsync(
-						Mediator!.CreateStream(new GetContentsQuery(container)));
-
-					// Compile regex once outside the loop
-					var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-					var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-					foreach (var content in contents)
-					{
-						var contentName = content.Object().Name;
-						if (regex.IsMatch(contentName))
-						{
-							matchingObjects.Add(content.Object().DBRef.ToString());
-						}
-					}
-
-					return string.Join(" ", matchingObjects);
-				}
-
-				// For other object types, return empty
 				return CallState.Empty;
-			});
+			}
+			looker = locateResult.AsAnyObject;
+		}
+
+		// Check permissions - must control looker
+		if (!await PermissionService!.Controls(executor, looker))
+		{
+			return Errors.ErrorPerm;
+		}
+
+		// Collect objects to scan based on switches
+		var objectsToScan = new List<AnySharpObject>();
+		var switchList = switches.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		
+		// Determine which locations to check
+		bool checkMe = switchList.Contains("me") || switchList.Contains("all") || switchList.Contains("self");
+		bool checkInventory = switchList.Contains("inventory") || switchList.Contains("all") || switchList.Contains("self");
+		bool checkRoom = switchList.Contains("room") || switchList.Contains("all");
+		bool checkGlobals = switchList.Contains("globals") || switchList.Contains("all");
+
+		// Add looker itself
+		if (checkMe)
+		{
+			objectsToScan.Add(looker);
+		}
+
+		// Add looker's inventory
+		if (checkInventory && looker.IsContainer)
+		{
+			var inventory = await System.Linq.AsyncEnumerable.ToListAsync(
+				Mediator!.CreateStream(new GetContentsQuery(looker.AsContainer)));
+			foreach (var item in inventory)
+			{
+				objectsToScan.Add(item.WithRoomOption());
+			}
+		}
+
+		// Add looker's location and its contents
+		if (checkRoom)
+		{
+			var dbref = looker.Object().DBRef;
+			var locationQuery = new GetLocationQuery(dbref);
+			var locationOpt = await Mediator!.Send(locationQuery);
+			
+			if (!locationOpt.IsNone)
+			{
+				var location = locationOpt.WithoutNone();
+				objectsToScan.Add(location.WithExitOption());
+				
+				// Add contents of the location
+				var contents = await System.Linq.AsyncEnumerable.ToListAsync(
+					Mediator!.CreateStream(new GetContentsQuery(location)));
+				foreach (var item in contents)
+				{
+					objectsToScan.Add(item.WithRoomOption());
+				}
+			}
+		}
+
+		// Add Master Room objects
+		if (checkGlobals)
+		{
+			var masterRoomDbref = new DBRef(0);
+			var masterRoomResult = await Mediator!.Send(new GetObjectNodeQuery(masterRoomDbref));
+			if (!masterRoomResult.IsNone)
+			{
+				var masterRoom = masterRoomResult.Known;
+				objectsToScan.Add(masterRoom);
+				
+				if (masterRoom.IsContainer)
+				{
+					var masterContents = await System.Linq.AsyncEnumerable.ToListAsync(
+						Mediator!.CreateStream(new GetContentsQuery(masterRoom.AsContainer)));
+					foreach (var item in masterContents)
+					{
+						objectsToScan.Add(item.WithRoomOption());
+					}
+				}
+			}
+		}
+
+		// Remove duplicates
+		var uniqueObjects = objectsToScan
+			.Distinct()
+			.ToAsyncEnumerable();
+
+		// Use CommandDiscoveryService to find matching $-commands
+		var matchResult = await CommandDiscoveryService!.MatchUserDefinedCommand(
+			parser,
+			uniqueObjects,
+			command);
+
+		if (matchResult.IsNone())
+		{
+			return CallState.Empty;
+		}
+
+		// Format results as "dbref/attribute" pairs
+		var matches = matchResult.AsValue();
+		var results = matches.Select(match => 
+			$"{match.SObject.Object().DBRef}/{match.Attribute.Name}");
+
+		return string.Join(" ", results);
 	}
 
 	[SharpFunction(Name = "setq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
@@ -1550,18 +1637,64 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "textentries", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> TextEntries(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "textentries", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public static async ValueTask<CallState> TextEntries(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement textentries - requires text file system integration
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var fileReference = args["0"].Message!.ToPlainText();
+		var separator = args.TryGetValue("1", out var sep) 
+			? sep.Message!.ToPlainText() 
+			: " ";
+
+		if (TextFileService == null)
+		{
+			return new CallState("#-1 TEXT FILE SERVICE NOT AVAILABLE");
+		}
+
+		try
+		{
+			var entries = await TextFileService.ListEntriesAsync(fileReference, separator);
+			return new CallState(entries);
+		}
+		catch (FileNotFoundException)
+		{
+			return new CallState("#-1 FILE NOT FOUND");
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogError(ex, "Error in textentries({File})", fileReference);
+			return new CallState("#-1 ERROR");
+		}
 	}
 
 	[SharpFunction(Name = "textfile", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> TextFile(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: Implement textfile - requires text file system integration
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		var args = parser.CurrentState.Arguments;
+		var fileReference = args["0"].Message!.ToPlainText();
+		var entryName = args["1"].Message!.ToPlainText();
+
+		if (TextFileService == null)
+		{
+			return new CallState("#-1 TEXT FILE SERVICE NOT AVAILABLE");
+		}
+
+		try
+		{
+			var content = await TextFileService.GetEntryAsync(fileReference, entryName);
+			return content != null 
+				? new CallState(content)
+				: new CallState("#-1 ENTRY NOT FOUND");
+		}
+		catch (FileNotFoundException)
+		{
+			return new CallState("#-1 FILE NOT FOUND");
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogError(ex, "Error in textfile({File}, {Entry})", fileReference, entryName);
+			return new CallState("#-1 ERROR");
+		}
 	}
 
 	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]

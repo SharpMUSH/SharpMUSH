@@ -14,7 +14,7 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@CEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
 	public static async ValueTask<Option<CallState>> ChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
@@ -64,7 +64,7 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
 	public static async ValueTask<Option<CallState>> Chat(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
@@ -116,7 +116,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
 	public static async ValueTask<Option<CallState>> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
@@ -171,7 +171,7 @@ public partial class Commands
 	}
 	
 	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
-		MaxArgs = 0)]
+		MaxArgs = 0, ParameterNames = ["channel", "alias"])]
 	public static async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
@@ -223,7 +223,7 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "DELCOM", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "DELCOM", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["alias"])]
 	public static async ValueTask<Option<CallState>> DeleteCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
@@ -292,7 +292,7 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "@CLIST", Switches = ["FULL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@CLIST", Switches = ["FULL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel"])]
 	public static async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @clist is an alias for @channel/list, with /full switch being ignored
@@ -312,7 +312,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "COMTITLE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
-		MaxArgs = 0)]
+		MaxArgs = 0, ParameterNames = ["alias", "title"])]
 	public static async ValueTask<Option<CallState>> ComTitle(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
@@ -373,7 +373,7 @@ public partial class Commands
 		return result;
 	}
 
-	[SharpCommand(Name = "COMLIST", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "COMLIST", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> ComList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);

@@ -17,7 +17,7 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@RECYCLE", Switches = ["OVERRIDE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 1,
-		MaxArgs = 1)]
+		MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Recycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @recycle is an alias for @destroy
@@ -28,7 +28,7 @@ public partial class Commands
 	/// Creating on the DBRef is not implemented.
 	/// NOTE: Cost parameter requires economy/quota system implementation.
 	/// </remarks>
-	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3)]
+	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
 	public static async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -84,7 +84,7 @@ public partial class Commands
 		return new CallState(thing.ToString());
 	}
 
-	[SharpCommand(Name = "@FIRSTEXIT", Switches = [], Behavior = CB.Default | CB.Args, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@FIRSTEXIT", Switches = [], Behavior = CB.Default | CB.Args, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> FirstExit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -111,7 +111,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NAME", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.NoGuest,
-		MinArgs = 2, MaxArgs = 2)]
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "name"])]
 	public static async ValueTask<Option<CallState>> Rename(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -143,7 +143,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs | CB.EqSplit, MinArgs = 2, MaxArgs = 2)]
+	[SharpCommand(Name = "@SET", Behavior = CB.RSArgs | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
 	public static async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -223,7 +223,7 @@ public partial class Commands
 
 
 	[SharpCommand(Name = "@CHOWN", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
-		MaxArgs = 2)]
+		MaxArgs = 2, ParameterNames = ["object", "player"])]
 	public static async ValueTask<Option<CallState>> ChangeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -280,7 +280,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@DESTROY", Switches = ["OVERRIDE"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
+	[SharpCommand(Name = "@DESTROY", Switches = ["OVERRIDE"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Destroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -339,7 +339,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
-		MaxArgs = 2)]
+		MaxArgs = 2, ParameterNames = ["object", "destination"])]
 	public static async ValueTask<Option<CallState>> Link(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -479,7 +479,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@NUKE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1)]
+	[SharpCommand(Name = "@NUKE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Nuke(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @nuke is an alias for @destroy/override - manually check for SAFE flag
@@ -534,7 +534,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@UNDESTROY", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1)]
+	[SharpCommand(Name = "@UNDESTROY", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> UnDestroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -593,7 +593,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CHZONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
-		MinArgs = 2, MaxArgs = 2)]
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "zone"])]
 	public static async ValueTask<Option<CallState>> ChangeZone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -684,7 +684,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 6)]
+		MinArgs = 1, MaxArgs = 6, ParameterNames = ["name", "exits"])]
 	public static async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// NOTE: We discard arguments 4-6.
@@ -769,7 +769,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@LOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 2, MaxArgs = 2)]
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "locktype", "key"])]
 	public static async ValueTask<Option<CallState>> Lock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -805,7 +805,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@UNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 1)]
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "locktype"])]
 	public static async ValueTask<Option<CallState>> Unlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -839,8 +839,126 @@ public partial class Commands
 		);
 	}
 
+	[SharpCommand(Name = "@ELOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public static async ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// @ELOCK is an alias for @lock/enter
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message!.ToPlainText();
+		var lockKey = args["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, target, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
+				}
+
+				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey));
+				await NotifyService!.Notify(executor, "Enter lock set.");
+				return CallState.Empty;
+			}
+		);
+	}
+
+	[SharpCommand(Name = "@EUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	public static async ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// @EUNLOCK is an alias for @unlock/enter
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, target, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
+				}
+
+				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Enter"));
+				await NotifyService!.Notify(executor, "Enter lock removed.");
+				return CallState.Empty;
+			}
+		);
+	}
+
+	[SharpCommand(Name = "@ULOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public static async ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// @ULOCK is an alias for @lock/use
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message!.ToPlainText();
+		var lockKey = args["1"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, target, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
+				}
+
+				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey));
+				await NotifyService!.Notify(executor, "Use lock set.");
+				return CallState.Empty;
+			}
+		);
+	}
+
+	[SharpCommand(Name = "@UUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	public static async ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		// @UUNLOCK is an alias for @unlock/use
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message!.ToPlainText();
+
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, target, LocateFlags.All,
+			async obj =>
+			{
+				if (!await PermissionService!.Controls(executor, obj))
+				{
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.PermissionDenied,
+						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+						shouldNotify: true);
+				}
+
+				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Use"));
+				await NotifyService!.Notify(executor, "Use lock removed.");
+				return CallState.Empty;
+			}
+		);
+	}
+
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 5)]
+		MinArgs = 1, MaxArgs = 5, ParameterNames = ["exit", "destination"])]
 	public static async ValueTask<Option<CallState>> Open(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -918,7 +1036,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CLONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 2)]
+		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "name", "cost"])]
 	public static async ValueTask<Option<CallState>> Clone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1036,7 +1154,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@MONIKER", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2)]
+	[SharpCommand(Name = "@MONIKER", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "moniker"])]
 	public static async ValueTask<Option<CallState>> Moniker(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1072,7 +1190,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2)]
+	[SharpCommand(Name = "@PARENT", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "parent"])]
 	public static async ValueTask<Option<CallState>> Parent(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1111,7 +1229,7 @@ public partial class Commands
 	}
 
 
-	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1)]
+	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Unlink(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);

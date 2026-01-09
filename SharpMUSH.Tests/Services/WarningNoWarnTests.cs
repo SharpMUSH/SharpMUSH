@@ -1,3 +1,4 @@
+
 using SharpMUSH.Library.Definitions;
 using TUnit.Core;
 
@@ -24,7 +25,6 @@ public class WarningNoWarnTests
 	[Test]
 	public async Task NoWarnFlag_ParsesCorrectly()
 	{
-		// Verify NO_WARN is a valid flag name
 		var flagName = "NO_WARN";
 		await Assert.That(flagName).IsEqualTo("NO_WARN");
 	}
@@ -32,7 +32,6 @@ public class WarningNoWarnTests
 	[Test]
 	public async Task GoingFlag_ParsesCorrectly()
 	{
-		// Verify GOING is a valid flag name  
 		var flagName = "GOING";
 		await Assert.That(flagName).IsEqualTo("GOING");
 	}

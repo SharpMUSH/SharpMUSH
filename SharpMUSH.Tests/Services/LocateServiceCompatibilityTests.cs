@@ -48,7 +48,6 @@ public class LocateServiceCompatibilityTests
 	public async Task LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits()
 	{
 		// Arrange
-		// Create a shared room for player and thing to be in the same location
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -64,7 +63,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up comprehensive permission mocking
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -92,7 +90,6 @@ public class LocateServiceCompatibilityTests
 		// After fix: (!cur.IsExit && string.Equals(...)) only matches exact names
 
 		// Arrange
-		// Create a shared room for player and thing to be in the same location
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -108,7 +105,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up comprehensive permission mocking
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -140,7 +136,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up comprehensive permission mocking
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -184,7 +179,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up specific permission logic for this test
 		_permissionService.Controls(player, target)
 			.Returns(false);
 
@@ -236,7 +230,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up permissions
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -275,7 +268,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up permissions
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -318,7 +310,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => q.Name.Contains("Bob")), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(playerResults));
 
-		// Set up permissions
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -361,7 +352,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up permissions
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -401,7 +391,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up permissions
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -441,7 +430,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up permissions
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -484,7 +472,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up permissions
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -524,7 +511,6 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Set up permissions - player CAN'T examine the object
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 

@@ -139,10 +139,15 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<IChannelBufferService, InMemoryChannelBufferService>();
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
+		
+		// Initialize TextFileService
+		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
+		
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
+		
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
 		services.AddSingleton<ConfigurationReloadService>();

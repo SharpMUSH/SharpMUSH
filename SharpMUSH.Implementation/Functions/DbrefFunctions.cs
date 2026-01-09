@@ -1,5 +1,6 @@
 ﻿using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -20,7 +21,7 @@ public partial class Functions
 	private const string LinkTypeVariable = "variable";
 	private const string LinkTypeHome = "home";
 
-	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
@@ -81,7 +82,7 @@ public partial class Functions
 		);
 	}
 
-	[SharpFunction(Name = "children", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "children", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Children(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -98,7 +99,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "con", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "con", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Con(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -120,7 +121,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "controls", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "controls", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "victim"])]
 	public static async ValueTask<CallState> Controls(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -198,7 +199,7 @@ public partial class Functions
 		return controls;
 	}
 
-	[SharpFunction(Name = "entrances", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "entrances", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Entrances(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// entrances() finds all exits that lead to a location
@@ -282,7 +283,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", filtered));
 	}
 
-	[SharpFunction(Name = "exit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "exit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Exit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -317,7 +318,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "followers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "followers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Followers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// followers() returns list of objects following the target
@@ -356,7 +357,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "following", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "following", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Following(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// following() returns the object that the target is following
@@ -382,7 +383,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "home", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "home", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Home(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -419,7 +420,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "llockflags", MinArgs = 0, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "lock"])]
 	public static async ValueTask<CallState> LockFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// llockflags() lists all lock flags
@@ -460,7 +461,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "lockflags", MinArgs = 0, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "lock"])]
 	public static async ValueTask<CallState> LockFlagsObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lockflags() returns lock flags for a specific lock on an object
@@ -511,7 +512,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "elock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "elock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "locktype"])]
 	public static async ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// elock() evaluates a lock against an object
@@ -536,7 +537,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "llocks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "llocks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Locks(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// llocks() lists all locks on an object
@@ -561,7 +562,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", lockNames));
 	}
 
-	[SharpFunction(Name = "locks", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "locks", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> LocksRequired(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// locks() is like llocks() but requires an object argument
@@ -581,7 +582,7 @@ public partial class Functions
 		return new CallState(string.Join(" ", lockNames));
 	}
 
-	[SharpFunction(Name = "localize", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "localize", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.NoParse, ParameterNames = ["string"])]
 	public static async ValueTask<CallState> Localize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await parser
 			   .With(
@@ -589,7 +590,7 @@ public partial class Functions
 				   newParser => newParser.FunctionParse(parser.CurrentState.Arguments["0"].Message!))
 		   ?? CallState.Empty;
 
-	[SharpFunction(Name = "locate", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "locate", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "name", "type"])]
 	public static async ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		/*
@@ -760,7 +761,7 @@ LOCATE()
 		);
 	}
 
-	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "locktype"])]
 	public static async ValueTask<CallState> Lock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lock() gets a lock string from an object
@@ -786,7 +787,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lockfilter", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lockfilter", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "lock", "list", "delimiter"])]
 	public static async ValueTask<CallState> LockFilter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lockfilter() filters objects by lock evaluation
@@ -836,7 +837,7 @@ LOCATE()
 		return new CallState(string.Join(" ", results));
 	}
 
-	[SharpFunction(Name = "lockowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lockowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "lock"])]
 	public static async ValueTask<CallState> LockOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lockowner() returns the owner of an object (who controls its locks)
@@ -853,7 +854,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lparent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lparent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "generations"])]
 	public static async ValueTask<CallState> ListParents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -892,11 +893,12 @@ LOCATE()
 		return string.Join(" ", list);
 	}
 
-	[SharpFunction(Name = "lsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "lsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["player", "class=restriction..."])]
 	public static async ValueTask<CallState> ListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lsearch() searches the database for objects matching criteria
-		// Format: lsearch(<class>, <criteria>=<value>, ...)
+		// Format: lsearch(<player>, <class1>, <restriction1>, <class2>, <restriction2>, ...)
+		// Per PennMUSH documentation: comma-separated positional arguments, NOT equals syntax
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 
@@ -905,7 +907,7 @@ LOCATE()
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
-		// First argument is the class (who owns the objects to search)
+		// First argument is the player (who owns the objects to search)
 		var classArg = args["0"].Message!.ToPlainText();
 		AnySharpObject? classObj = null;
 
@@ -929,61 +931,157 @@ LOCATE()
 		DBRef? parent = null;
 		string? hasFlag = null;
 		string? hasPower = null;
+		int? start = null;
+		int? count = null;
 
-		// Process criteria to build database filter
+		// Process criteria as positional class/restriction pairs
 		var appLevelCriteria = new List<(string key, string value)>();
 		
-		for (int i = 1; i < args.Count; i++)
+		// Arguments come in pairs: class, restriction, class, restriction, ...
+		for (int i = 1; i < args.Count; i += 2)
 		{
-			var criterion = args[i.ToString()].Message!.ToPlainText();
-			var parts = criterion.Split('=', 2);
-			if (parts.Length != 2)
+			// Need both class and restriction
+			if (i + 1 >= args.Count)
+			{
+				// Odd number of arguments after player - invalid
+				break;
+			}
+
+			var classType = args[i.ToString()].Message!.ToPlainText().Trim().ToUpperInvariant();
+			var restriction = args[(i + 1).ToString()].Message!.ToPlainText().Trim();
+
+			// Skip if class is "none"
+			if (classType.Equals("NONE", StringComparison.OrdinalIgnoreCase))
 			{
 				continue;
 			}
 
-			var key = parts[0].Trim().ToUpperInvariant();
-			var value = parts[1].Trim();
-
 			// Categorize criteria: database-level vs application-level
-			switch (key)
+			switch (classType)
 			{
 				case "TYPE":
-					types.Add(value.ToUpperInvariant());
+					types.Add(restriction.ToUpperInvariant());
 					break;
 				case "NAME":
-					namePattern = value;
+					namePattern = restriction;
+					break;
+				// Type-specific name filters (shortcuts for TYPE + NAME)
+				case "EXITS":
+					types.Add("EXIT");
+					namePattern = restriction;
+					break;
+				case "THINGS":
+				case "OBJECTS":
+					types.Add("THING");
+					namePattern = restriction;
+					break;
+				case "ROOMS":
+					types.Add("ROOM");
+					namePattern = restriction;
+					break;
+				case "PLAYERS":
+					types.Add("PLAYER");
+					namePattern = restriction;
 					break;
 				case "MINDBREF":
-					if (int.TryParse(value, out var min)) minDbRef = min;
+				case "MINDB":
+					if (int.TryParse(restriction, out var min)) minDbRef = min;
 					break;
 				case "MAXDBREF":
-					if (int.TryParse(value, out var max)) maxDbRef = max;
+				case "MAXDB":
+					if (int.TryParse(restriction, out var max)) maxDbRef = max;
+					break;
+				case "START":
+					if (int.TryParse(restriction, out var startVal)) start = startVal;
+					break;
+				case "COUNT":
+					if (int.TryParse(restriction, out var countVal)) count = countVal;
 					break;
 				case "ZONE":
-					var maybeZone = await LocateService!.Locate(parser, executor, executor, value, LocateFlags.All);
+					var maybeZone = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object().DBRef;
 					break;
 				case "PARENT":
-					var maybeParent = await LocateService!.Locate(parser, executor, executor, value, LocateFlags.All);
+					var maybeParent = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeParent.IsValid()) parent = maybeParent.AsAnyObject.Object().DBRef;
 					break;
 				case "FLAG":
 				case "FLAGS":
-					hasFlag = value;
+					hasFlag = restriction;
+					break;
+				case "LFLAGS":
+					// LFLAGS uses space-separated flag names instead of single characters
+					// Store for now - will need to convert to single-char format or handle separately
+					hasFlag = restriction;
 					break;
 				case "POWER":
 				case "POWERS":
-					hasPower = value;
+					hasPower = restriction;
 					break;
 				default:
-					// Lock evaluation and other criteria must happen in application code
-					appLevelCriteria.Add((key, value));
+					// Lock evaluation, COMMAND, LISTEN, and other criteria must happen in application code
+					appLevelCriteria.Add((classType, restriction));
 					break;
 			}
 		}
 
+		// Pre-compile lock strings and eval expressions for efficiency (compile once, evaluate many times)
+		// This avoids re-compiling the same lock string or expression for every object in the result set
+		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, bool>>();
+		var compiledEvals = new List<(string evalExpression, string? typeFilter)>();
+		
+		foreach (var (key, value) in appLevelCriteria)
+		{
+			switch (key)
+			{
+				case "LOCK" or "ELOCK":
+					// Optimize #TRUE - no need to compile
+					if (value is "#TRUE" or "")
+					{
+						compiledLocks.Add((_, _) => true);
+					}
+					else
+					{
+						compiledLocks.Add(BooleanExpressionParser!.Compile(value));
+					}
+					break;
+				
+				case "EVAL":
+					compiledEvals.Add((value, null));
+					break;
+				case "EPLAYER":
+					compiledEvals.Add((value, "PLAYER"));
+					break;
+				case "EROOM":
+					compiledEvals.Add((value, "ROOM"));
+					break;
+				case "EEXIT":
+					compiledEvals.Add((value, "EXIT"));
+					break;
+				case "ETHING" or "EOBJECT":
+					compiledEvals.Add((value, "THING"));
+					break;
+				
+				case "LISTEN":
+				case "COMMAND":
+					// These require attribute pattern matching - store for app-level evaluation
+					// Will be handled in the filtering loop below
+					break;
+			}
+		}
+		
+		// Extract LISTEN and COMMAND criteria for app-level evaluation
+		var listenPattern = appLevelCriteria.FirstOrDefault(x => x.key == "LISTEN").value;
+		var commandPattern = appLevelCriteria.FirstOrDefault(x => x.key == "COMMAND").value;
+		var hasListenCriteria = !string.IsNullOrEmpty(listenPattern);
+		var hasCommandCriteria = !string.IsNullOrEmpty(commandPattern);
+		
+		// Check if we need to convert SharpObject to AnySharpObject for app-level criteria
+		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria;
+		
 		// Build filter object
+		// IMPORTANT: Only apply START/COUNT at database level if there are NO app-level criteria
+		// If there are app-level criteria, we must apply START/COUNT after filtering in application code
 		filter = new ObjectSearchFilter
 		{
 			Types = types.Count > 0 ? [.. types] : null,
@@ -994,53 +1092,200 @@ LOCATE()
 			Parent = parent,
 			HasFlag = hasFlag,
 			HasPower = hasPower,
-			Owner = classObj?.Object().DBRef
+			Owner = classObj?.Object().DBRef,
+			Skip = hasAppLevelCriteria ? null : start,  // Only skip at DB level if no app-level filtering
+			Limit = hasAppLevelCriteria ? null : count  // Only limit at DB level if no app-level filtering
 		};
 
 		// Query database with filters applied at database level
 		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
-		var results = new List<string>();
+		
+		if (!hasAppLevelCriteria)
+		{
+			// No app-level criteria, just convert to dbrefs directly without fetching full objects
+			// START/COUNT already applied at database level
+			var results = new List<string>();
+			await foreach (var obj in filteredObjects)
+			{
+				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+			}
+			return new CallState(string.Join(" ", results));
+		}
 
-		// Apply application-level criteria (locks, etc.)
+		// Apply application-level criteria (locks, evals, etc.)
+		// Optimize: Convert to AnySharpObject once per object and evaluate all criteria
+		var finalResults = new List<string>();
 		await foreach (var obj in filteredObjects)
 		{
+			// Convert the raw SharpObject to a properly-typed AnySharpObject once for all evaluations
+			var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
 			bool matches = true;
 			
-			// Process application-level criteria
-			foreach (var (key, value) in appLevelCriteria)
+			// Evaluate pre-compiled lock criteria
+			foreach (var compiledLock in compiledLocks)
 			{
-				// Handle lock evaluation and other complex criteria here
-				// For now, we support the basics handled at the database level
-				// Lock evaluation would require checking lock strings which can't be done in the database
-				matches = key switch
+				if (!compiledLock(typedObj, executor))
 				{
-					"LOCK" => EvaluateLockCriteria(obj, value, executor),
-					_ => true // Unknown criteria, skip
-				};
-
-				if (!matches) break;
+					matches = false;
+					break;
+				}
+			}
+			
+			// Evaluate eval expressions if locks passed
+			if (matches)
+			{
+				foreach (var (evalExpression, typeFilter) in compiledEvals)
+				{
+					// Check type filter if specified
+					if (typeFilter != null && !typedObj.Object().Type.Equals(typeFilter, StringComparison.OrdinalIgnoreCase))
+					{
+						matches = false;
+						break;
+					}
+					
+					// Replace ## with the object's dbref number in the expression
+					// Use just the number (e.g., "1") for numeric comparisons
+					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
+					var expression = evalExpression.Replace("##", objectDbRefNum);
+					
+					// Evaluate the expression
+					var evalResult = await parser.FunctionParse(MModule.single(expression));
+					if (evalResult == null || !evalResult.Message.Truthy())
+					{
+						matches = false;
+						break;
+					}
+				}
+			}
+			
+			// Evaluate LISTEN pattern if specified
+			if (matches && hasListenCriteria)
+			{
+				// Check if the object has any @listen attributes matching the pattern
+				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
+				if (!attributesResult.IsError)
+				{
+					var hasMatchingListen = false;
+					
+					foreach (var attr in attributesResult.AsAttributes.Where(a => a.Name.Equals("LISTEN", StringComparison.OrdinalIgnoreCase) || 
+					                                           a.Name.StartsWith("LISTEN`", StringComparison.OrdinalIgnoreCase)))
+					{
+						var attrValue = attr.Value?.ToPlainText() ?? "";
+						// Check if the listen pattern matches our search pattern
+						// This is a wildcard match where * matches any characters
+						if (IsWildcardMatch(attrValue, listenPattern!))
+						{
+							hasMatchingListen = true;
+							break;
+						}
+					}
+					
+					if (!hasMatchingListen)
+					{
+						matches = false;
+					}
+				}
+				else
+				{
+					// If we can't get attributes, object doesn't match
+					matches = false;
+				}
+			}
+			
+			// Evaluate COMMAND pattern if specified
+			if (matches && hasCommandCriteria)
+			{
+				// Check if the object has any $-commands matching the pattern
+				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
+				if (!attributesResult.IsError)
+				{
+					var hasMatchingCommand = false;
+					
+					foreach (var attr in attributesResult.AsAttributes)
+					{
+						var attrValue = attr.Value?.ToPlainText() ?? "";
+						// $-commands are in format: $command-pattern:action
+						// We need to extract the command pattern (between $ and :) and match it
+						var dollarIndex = attrValue.IndexOf('$');
+						if (dollarIndex >= 0)
+						{
+							var colonIndex = attrValue.IndexOf(':', dollarIndex);
+							if (colonIndex > dollarIndex)
+							{
+								// Extract just the command pattern part (after $ and before :)
+								var commandPart = attrValue.Substring(dollarIndex + 1, colonIndex - dollarIndex - 1);
+								if (IsWildcardMatch(commandPart, commandPattern))
+								{
+									hasMatchingCommand = true;
+									break;
+								}
+							}
+						}
+					}
+					
+					if (!hasMatchingCommand)
+					{
+						matches = false;
+					}
+				}
+				else
+				{
+					// If we can't get attributes, object doesn't match
+					matches = false;
+				}
 			}
 
 			if (matches)
 			{
-				results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
+				finalResults.Add(typedObj.Object().DBRef.ToString());
 			}
 		}
+		
+		// Apply START/COUNT at application level if we had app-level filtering
+		// This ensures pagination happens AFTER all runtime filters are applied
+		if (start.HasValue || count.HasValue)
+		{
+			var skipCount = start ?? 0;
+			var takeCount = count ?? int.MaxValue;
+			finalResults = finalResults.Skip(skipCount).Take(takeCount).ToList();
+		}
 
-		return new CallState(string.Join(" ", results));
+		return new CallState(string.Join(" ", finalResults));
+	}
+	
+	/// <summary>
+	/// Simple wildcard pattern matching for LISTEN and COMMAND searches.
+	/// Supports * as a wildcard that matches any sequence of characters.
+	/// </summary>
+	private static bool IsWildcardMatch(string value, string pattern)
+	{
+		// Convert pattern to regex: escape special chars except *, then replace * with .*
+		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+		return System.Text.RegularExpressions.Regex.IsMatch(value, regexPattern, 
+			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
 
 	/// <summary>
-	/// Evaluates lock criteria for lsearch. This must happen in application code, not in the database.
+	/// Creates an AnySharpObject from a SharpObject based on its Type property.
+	/// This is needed when we have a raw SharpObject from the database but need to work with the discriminated union.
 	/// </summary>
-	private static bool EvaluateLockCriteria(SharpObject obj, string lockName, AnySharpObject executor)
+	private static async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(SharpObject obj)
 	{
-		// Lock evaluation requires runtime evaluation and cannot be done in the database
-		// This would need access to the LockService to evaluate the lock
-		throw new NotImplementedException("Lock filtering in lsearch is not yet implemented. Lock evaluation requires runtime parsing and cannot be efficiently done at the database level.");
+		// The object needs to be fetched properly from the database to get the correct type-specific object
+		// We use the Mediator to fetch the fully-typed object asynchronously
+		var dbref = new DBRef(obj.Key, obj.CreationTime);
+		var result = await Mediator!.Send(new GetObjectNodeQuery(dbref));
+		
+		if (result.IsNone)
+		{
+			// This shouldn't happen in normal operation, but handle it gracefully
+			throw new InvalidOperationException($"Object {dbref} not found when evaluating lock criteria");
+		}
+
+		return result.Known;
 	}
 
-	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]
 	public static async ValueTask<CallState> ListSearchRegex(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lsearchr() is like lsearch but with regex support
@@ -1049,7 +1294,7 @@ LOCATE()
 		return await ListSearch(parser, _2);
 	}
 
-	[SharpFunction(Name = "namelist", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "namelist", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public static async ValueTask<CallState> NameList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1086,7 +1331,7 @@ LOCATE()
 		return string.Join(" ", theGoodOnes);
 	}
 
-	[SharpFunction(Name = "nchildren", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nchildren", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfChildren(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1101,7 +1346,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "next", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "next", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Next(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1150,7 +1395,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "nextdbref", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "nextdbref", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static async ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// nextdbref() returns the next DB reference that will be assigned
@@ -1162,7 +1407,7 @@ LOCATE()
 		return new CallState("#-1 NOT YET IMPLEMENTED");
 	}
 
-	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
 	public static async ValueTask<CallState> NumberOfListSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// nlsearch() returns the count of objects matching lsearch criteria
@@ -1181,14 +1426,14 @@ LOCATE()
 		return new CallState(count);
 	}
 
-	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
 	public static ValueTask<CallState> NumberOfSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// nsearch() is an alias for nlsearch()
 		return NumberOfListSearch(parser, _2);
 	}
 
-	[SharpFunction(Name = "num", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "num", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Number(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1204,7 +1449,7 @@ LOCATE()
 				ValueTask.FromResult<CallState>(found.Object().DBRef));
 	}
 
-	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public static ValueTask<CallState> NumVersion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Return a version number for compatibility
@@ -1212,7 +1457,7 @@ LOCATE()
 		return ValueTask.FromResult<CallState>("20250102000000");
 	}
 
-	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Parent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1278,7 +1523,7 @@ LOCATE()
 		);
 	}
 
-	[SharpFunction(Name = "pmatch", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "pmatch", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["name"])]
 	public static async ValueTask<CallState> PlayerMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1290,7 +1535,7 @@ LOCATE()
 			x => ValueTask.FromResult<CallState>(x.Object.DBRef));
 	}
 
-	[SharpFunction(Name = "rloc", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "rloc", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "levels"])]
 	public static async ValueTask<CallState> RecursiveLocation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// rloc() recursively gets location N levels up
@@ -1333,7 +1578,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "room", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "room", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Room(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1350,7 +1595,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "where", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "where", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Where(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1369,7 +1614,7 @@ LOCATE()
 					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
 	}
 
-	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Zone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1466,7 +1711,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "xthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1502,7 +1747,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "xvcon", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xvcon", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1538,7 +1783,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "xvexits", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xvexits", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1575,7 +1820,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "xvplayers", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xvplayers", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1612,7 +1857,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "xvthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xvthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1649,7 +1894,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "xcon", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xcon", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1684,7 +1929,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "xexits", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xexits", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1720,7 +1965,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "xplayers", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "xplayers", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ExtractPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1756,7 +2001,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lcon", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lcon", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1778,7 +2023,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1801,7 +2046,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1824,7 +2069,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1847,7 +2092,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1873,7 +2118,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lvexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lvexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1900,7 +2145,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lvplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lvplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1927,7 +2172,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "lvthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "lvthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> ListVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1954,7 +2199,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "orflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "orflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public static async ValueTask<CallState> OrFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// orflags() checks if object has ANY of the specified flags
@@ -1978,7 +2223,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "orlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "orlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public static async ValueTask<CallState> OrListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// orlflags() checks a list of objects to see if ANY have ANY of the flags
@@ -2007,7 +2252,7 @@ LOCATE()
 		return new CallState(false);
 	}
 
-	[SharpFunction(Name = "orlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "orlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
 	public static async ValueTask<CallState> OrListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// orlpowers() checks a list of objects to see if ANY have ANY of the powers
@@ -2036,7 +2281,7 @@ LOCATE()
 		return new CallState(false);
 	}
 
-	[SharpFunction(Name = "andflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "andflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public static async ValueTask<CallState> AndFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// andflags() checks if object has ALL of the specified flags
@@ -2060,7 +2305,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "andlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "andlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public static async ValueTask<CallState> AndListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// andlflags() checks if ALL objects in list have ALL of the flags
@@ -2096,7 +2341,7 @@ LOCATE()
 		return new CallState(true);
 	}
 
-	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
 	public static async ValueTask<CallState> AndListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2131,7 +2376,7 @@ LOCATE()
 		return new CallState(true);
 	}
 
-	[SharpFunction(Name = "ncon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "ncon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2152,7 +2397,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "nexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2175,7 +2420,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "nplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2198,7 +2443,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "nthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2221,7 +2466,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "nvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2244,7 +2489,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "nvexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nvexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2268,7 +2513,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "nvplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nvplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2292,7 +2537,7 @@ LOCATE()
 			});
 	}
 
-	[SharpFunction(Name = "nvthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "nvthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> NumberOfVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);

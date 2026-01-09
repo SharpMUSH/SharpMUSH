@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Reflection;
+using System.Diagnostics;
 using System.Linq;
 using Humanizer;
 using Microsoft.Extensions.Logging;
@@ -18,19 +17,19 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using ConfigGenerated = SharpMUSH.Configuration.Generated;
 
 namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
 	[SharpCommand(Name = "@ALLHALT", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^HALT",
-		MinArgs = 0)]
+		MinArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @allhalt - Halt all objects in the game to free up the queue (wizard-only)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		// Get all objects and halt them
+
 		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
 		var haltedCount = 0;
 		
@@ -48,14 +47,12 @@ public partial class Commands
 		Switches =
 		[
 			"ADD", "TYPE", "LETTER", "LIST", "RESTRICT", "DELETE", "ALIAS", "DISABLE", "ENABLE", "DEBUG", "DECOMPILE"
-		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 2)]
+		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "flag"])]
 	public static async ValueTask<Option<CallState>> Flag(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @FLAG command - manage object flags
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
 		
-		// @flag/list - list all flags
 		if (switches.Contains("LIST"))
 		{
 			var output = new System.Text.StringBuilder();
@@ -507,7 +504,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@LOG", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "RECALL"],
-		Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+		Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type", "message"])]
 	public static async ValueTask<Option<CallState>> Log(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -594,7 +591,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1)]
+	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["player"])]
 	public static async ValueTask<Option<CallState>> Poor(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @poor <player> - Set a player's quota to 0 (prevent building)
@@ -642,7 +639,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@SQUOTA", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 1)]
+	[SharpCommand(Name = "@SQUOTA", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 1, ParameterNames = ["type", "value"])]
 	public static async ValueTask<Option<CallState>> ShortQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @squota [<player>] - Short form quota display
@@ -681,7 +678,7 @@ public partial class Commands
 
 
 	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 0)]
+		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Future enhancement: Could pipe message through SPEAK() function for text processing
@@ -702,7 +699,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 1, MaxArgs = 1)]
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Future enhancement: Could pipe message through SPEAK() function for text processing
@@ -723,7 +720,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 1, MaxArgs = 1)]
+		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 1, MaxArgs = 1, ParameterNames = ["type"])]
 	public static async ValueTask<Option<CallState>> AllQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @allquota <amount> - Set quota for all players
@@ -773,7 +770,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -781,7 +778,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["on-off"])]
 	public static async ValueTask<Option<CallState>> Hide(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @HIDE command - sets/unsets the DARK flag on the executor to hide from WHO lists
@@ -845,7 +842,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@MOTD", Switches = ["CONNECT", "LIST", "WIZARD", "DOWN", "FULL", "CLEAR"],
-		Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0)]
+		Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["type", "message"])]
 	public static async ValueTask<Option<CallState>> MessageOfTheDay(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		/*
@@ -956,7 +953,7 @@ public partial class Commands
 
 	[SharpCommand(Name = "@POWER",
 		Switches = ["ADD", "TYPE", "LETTER", "LIST", "RESTRICT", "DELETE", "ALIAS", "DISABLE", "ENABLE", "DECOMPILE"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 2)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "power"])]
 	public static async ValueTask<Option<CallState>> Power(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @POWER command - manage object powers
@@ -1308,7 +1305,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@REJECTMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 0)]
+		MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> RejectMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
@@ -1341,7 +1338,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SUGGEST", Switches = ["ADD", "DELETE", "LIST"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 2)]
+		MinArgs = 0, MaxArgs = 2, ParameterNames = ["text"])]
 	public static async ValueTask<Option<CallState>> Suggest(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @suggest - List all suggestion categories
@@ -1476,7 +1473,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@BOOT", Switches = ["PORT", "ME", "SILENT"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@BOOT", Switches = ["PORT", "ME", "SILENT"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player"])]
 	public static async ValueTask<Option<CallState>> Boot(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1554,7 +1551,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 1, MaxArgs = 1)]
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
 	public static async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2) 
 		=> await ConfigSetHelper(parser, isEnable: false);
 
@@ -1563,7 +1560,7 @@ public partial class Commands
 		[
 			"LIST", "AFTER", "BEFORE", "EXTEND", "IGSWITCH", "IGNORE", "OVERRIDE", "INPLACE", "INLINE", "LOCALIZE",
 			"CLEARREGS", "NOBREAK"
-		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD|POWER^HOOK", MinArgs = 0)]
+		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD|POWER^HOOK", MinArgs = 0, ParameterNames = ["type", "object/attribute"])]
 	public static async ValueTask<Option<CallState>> Hook(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1693,7 +1690,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["player", "password"])]
 	public static async ValueTask<Option<CallState>> NewPassword(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1745,7 +1742,7 @@ public partial class Commands
 		return new CallState(arg1);
 	}
 
-	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @purge - Advance destruction clock and purge GOING_TWICE objects
@@ -1790,7 +1787,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SHUTDOWN", Switches = ["PANIC", "REBOOT", "PARANOID"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type"])]
 	public static async ValueTask<Option<CallState>> Shutdown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @shutdown - Shut down the game server
@@ -1847,7 +1844,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Uptime(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -1899,7 +1896,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"],
-		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 2)]
+		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-owner", "new-owner"])]
 	public static async ValueTask<Option<CallState>> Chown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @chownall <player>[=<new owner>] - Change ownership of all objects owned by player
@@ -2014,7 +2011,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DUMP", Switches = ["PARANOID", "DEBUG", "NOFORK"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type"])]
 	public static async ValueTask<Option<CallState>> Dump(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2025,7 +2022,7 @@ public partial class Commands
 	/// <remarks>
 	/// Creating on the DBRef is not implemented.
 	/// </remarks>
-	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default, MinArgs = 2, MaxArgs = 3)]
+	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default, MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
 	public static async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Validate Name and Passwords
@@ -2055,7 +2052,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@QUOTA", Switches = ["ALL", "SET"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0,
-		MaxArgs = 2)]
+		MaxArgs = 2, ParameterNames = ["player", "quota"])]
 	public static async ValueTask<Option<CallState>> Quota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @quota [<player>] - Display quota for player
@@ -2179,7 +2176,7 @@ public partial class Commands
 	/// @sitelock/remove &lt;pattern&gt; - Removes a rule (not yet implemented)
 	/// </summary>
 	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER", "LIST"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["site", "rule"])]
 	public static async ValueTask<Option<CallState>> SiteLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2339,7 +2336,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD ROYALTY|POWER^ANNOUNCE", MinArgs = 0)]
+		CommandLock = "FLAG^WIZARD ROYALTY|POWER^ANNOUNCE", MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Future enhancement: Could pipe message through SPEAK() function for text processing
@@ -2360,7 +2357,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
-		MinArgs = 2, MaxArgs = 2)]
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["old-zone", "new-zone"])]
 	public static async ValueTask<Option<CallState>> ChangeZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2467,11 +2464,11 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD",
-		MinArgs = 1, MaxArgs = 1)]
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
 	public static async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2) 
 		=> await ConfigSetHelper(parser, isEnable: true);
 
-	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["player"])]
 	public static async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2509,7 +2506,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@POLL", Switches = ["CLEAR"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0)]
+	[SharpCommand(Name = "@POLL", Switches = ["CLEAR"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Poll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @poll - Display/set message at top of WHO/DOING
@@ -2572,23 +2569,39 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0)]
+	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> ReadCache(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @readcache - Reload cached text files and rebuild help indexes
-		// In SharpMUSH's web-based architecture, cached files are loaded at startup
-		// This command provides a notification but doesn't actually reload files
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
-		await NotifyService!.Notify(executor, "Cached files (help, news, etc.) are loaded at server startup in SharpMUSH.");
-		await NotifyService!.Notify(executor, "To reload configuration and cached files, use @shutdown/reboot or restart the server.");
-		await NotifyService!.Notify(executor, "In a cloud/web deployment, consider using container restarts or rolling deployments.");
-		
+
+		if (TextFileService == null)
+		{
+			await NotifyService!.Notify(executor, "Text file service not available.");
+			return CallState.Empty;
+		}
+
+		await NotifyService!.Notify(executor, "Reindexing text files...");
+
+		var startTime = DateTime.UtcNow;
+		try
+		{
+			await TextFileService.ReindexAsync();
+			var elapsed = DateTime.UtcNow - startTime;
+			await NotifyService!.Notify(executor, 
+				$"Text file cache rebuilt in {elapsed.TotalMilliseconds:F0}ms.");
+		}
+		catch (Exception ex)
+		{
+			var elapsed = DateTime.UtcNow - startTime;
+			await NotifyService!.Notify(executor, 
+				$"Error reindexing text files after {elapsed.TotalMilliseconds:F0}ms: {ex.Message}");
+		}
+
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 0)]
+		MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
@@ -2637,62 +2650,39 @@ public partial class Commands
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
-		// Use reflection to find the configuration option (same as @config)
-		var optionsType = typeof(SharpMUSH.Configuration.Options.SharpMUSHOptions);
-		var categoryProperties = optionsType.GetProperties();
-		
-		// Search for the option across all categories
-		var allOptions = categoryProperties
-			.SelectMany(category =>
-			{
-				var categoryType = category.PropertyType;
-				var props = categoryType.GetProperties();
-				return props.Select(prop =>
-				{
-					var attr = prop.GetCustomAttribute<SharpMUSH.Configuration.SharpConfigAttribute>();
-					if (attr == null) return null;
-					var categoryValue = category.GetValue(Configuration!.CurrentValue);
-					var value = prop.GetValue(categoryValue);
-					return new
-					{
-						Category = category.Name,
-						CategoryInstance = categoryValue,
-						PropertyInfo = prop,
-						PropertyName = prop.Name,
-						ConfigAttr = attr,
-						Value = value
-					};
-				}).Where(x => x != null);
-			})
-			.Select(x => x!)
-			.ToList();
+		// Use generated ConfigMetadata to find the configuration option
+		// Find matching property by attribute name (case-insensitive)
+		var matchingProperty = ConfigGenerated.ConfigMetadata.PropertyToAttributeName
+			.FirstOrDefault(kvp => kvp.Value.Equals(optionName, StringComparison.OrdinalIgnoreCase));
 
-		// Find the matching option (case-insensitive)
-		var matchingOption = allOptions.FirstOrDefault(opt =>
-			opt.ConfigAttr.Name.Equals(optionName, StringComparison.OrdinalIgnoreCase));
-
-		if (matchingOption == null)
+		if (matchingProperty.Key == null)
 		{
 			await NotifyService!.Notify(executor, $"No configuration option named '{optionName}'.");
 			return new CallState("#-1 NOT FOUND");
 		}
 
 		// Check if the option is a boolean
-		if (matchingOption.PropertyInfo.PropertyType != typeof(bool))
+		var propertyType = ConfigGenerated.ConfigAccessor.GetPropertyType(matchingProperty.Key);
+		if (propertyType != typeof(bool))
 		{
+			var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
 			await NotifyService!.Notify(executor, 
-				$"Option '{matchingOption.ConfigAttr.Name}' is not a boolean option. Use @config/set instead.");
+				$"Option '{attr.Name}' is not a boolean option. Use @config/set instead.");
 			return new CallState("#-1 INVALID TYPE");
 		}
+
+		// Get current value
+		var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration!.CurrentValue, matchingProperty.Key);
+		var attr2 = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
 
 		// Note: Runtime configuration modification is not yet fully implemented
 		// This would require writing to a configuration file or database and reloading
 		await NotifyService!.Notify(executor, 
-			$"@{(isEnable ? "enable" : "disable")} is equivalent to @config/set {matchingOption.ConfigAttr.Name}={(isEnable ? "yes" : "no")}");
+			$"@{(isEnable ? "enable" : "disable")} is equivalent to @config/set {attr2.Name}={(isEnable ? "yes" : "no")}");
 		await NotifyService.Notify(executor, 
 			"Runtime configuration modification is not yet implemented. Changes require server restart.");
 		await NotifyService.Notify(executor, 
-			$"Current value: {matchingOption.ConfigAttr.Name}={(matchingOption.Value?.ToString() ?? "null")}");
+			$"Current value: {attr2.Name}={(value?.ToString() ?? "null")}");
 		
 		return new CallState("#-1 NOT IMPLEMENTED");
 	}

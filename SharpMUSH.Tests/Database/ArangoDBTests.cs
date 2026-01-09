@@ -102,7 +102,7 @@ public class ArangoDBTests
 		
 		await Assert.That(realResult).IsNotNull();
 		await Assert.That(realResult!.Flags).IsNotNull();
-		await Assert.That(realResult.Flags).Count().EqualTo(2);
+		await Assert.That(realResult.Flags).Count().IsEqualTo(2);
 		await Assert.That(realResult.Flags).Contains(x => x.Name == "no_command");
 		await Assert.That(realResult.Flags).Contains(x => x.Name == "visual");
 	}
@@ -193,7 +193,7 @@ public class ArangoDBTests
 		var parents = await (await Database.GetParentsAsync(child.Object.Id!, CancellationToken.None)).ToListAsync();
 		
 		// Should get Parent2 and Parent1 in order
-		await Assert.That(parents).Count().EqualTo(2);
+		await Assert.That(parents).Count().IsEqualTo(2);
 		await Assert.That(parents[0].Key).IsEqualTo(parent2.Object.Key);
 		await Assert.That(parents[1].Key).IsEqualTo(parent1.Object.Key);
 	}

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using Mediator;
@@ -25,6 +26,22 @@ namespace SharpMUSH.Implementation.Visitors;
 /// This class implements the SharpMUSHParserBaseVisitor from the Generated code.
 /// If additional pieces of the parse-tree are added, the Generated project must be re-generated 
 /// and new Visitors may need to be added.
+/// 
+/// <para><b>Performance Optimizations:</b></para>
+/// <list type="bullet">
+/// <item><description>Services are injected via constructor and cached (not resolved per-visit)</description></item>
+/// <item><description>Helper methods reduce code duplication and improve performance:
+///   <list type="bullet">
+///     <item><description><c>GetContextText()</c> - Centralized context text extraction</description></item>
+///     <item><description><c>CreateDeferredEvaluation()</c> - Efficient lazy evaluation for NoParse functions</description></item>
+///     <item><description><c>AggregateResult()</c> - Optimized result aggregation with aggressive inlining</description></item>
+///   </list>
+/// </description></item>
+/// <item><description>ANTLR4 ParserRuleContext objects are reused when possible to reduce allocations</description></item>
+/// <item><description>String operations use MString/Span-based methods to avoid allocations</description></item>
+/// </list>
+/// 
+/// <para>For details on optimization patterns, see PARSER_OPTIMIZATION_ANALYSIS.md</para>
 /// </summary>
 /// <param name="parser">The Parser, so that inner functions can force a parser-call.</param>
 /// <param name="source">The original MarkupString. A plain GetText is not good enough to get the proper value back.</param>
@@ -56,6 +73,110 @@ public class SharpMUSHParserVisitor(
 			? mushParser.ServiceProvider.GetService<ITelemetryService>() 
 			: null;
 
+	/// <summary>
+	/// Sends debug or verbose output to owner and DEBUGFORWARDLIST recipients.
+	/// </summary>
+	/// <param name="executor">The executor object</param>
+	/// <param name="message">The message to send</param>
+	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
+	{
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		await NotifyService.Notify(owner, MModule.single(message));
+		
+		var debugForwardAttr = await AttributeService.GetAttributeAsync(
+			executor, executor, "DEBUGFORWARDLIST", 
+			IAttributeService.AttributeMode.Read, parent: false);
+		
+		if (debugForwardAttr.IsAttribute)
+		{
+			var attr = debugForwardAttr.AsAttribute.Last();
+			var forwardListText = attr.Value.ToPlainText();
+			if (!string.IsNullOrWhiteSpace(forwardListText))
+			{
+				var targets = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				foreach (var targetStr in targets)
+				{
+					var locateResult = await LocateService.Locate(
+						parser,
+						executor,
+						executor,
+						targetStr,
+						LocateFlags.AbsoluteMatch);
+					
+					if (locateResult.IsValid())
+					{
+						var forwardTarget = locateResult.WithoutError().WithoutNone();
+						await NotifyService.Notify(forwardTarget, MModule.single(message));
+					}
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// Formats register output for DEBUG mode, showing q-registers and stack registers separately.
+	/// </summary>
+	/// <param name="state">Parser state containing registers</param>
+	/// <param name="dbrefNumber">DBRef number for output prefix</param>
+	/// <param name="indent">Indentation string</param>
+	/// <returns>Formatted register output string, or empty if no registers</returns>
+	private string FormatRegisterOutput(ParserState state, int dbrefNumber, string indent)
+	{
+		var output = new System.Text.StringBuilder();
+		var qRegisters = new List<string>();
+		var stackRegisters = new List<string>();
+
+		// Get q-registers from Registers stack (set via setq())
+		if (state.Registers.TryPeek(out var registers) && registers.Count > 0)
+		{
+			foreach (var reg in registers.OrderBy(r => r.Key))
+			{
+				var key = reg.Key;
+				var value = reg.Value.ToString();
+				
+				// Check if it's a q-register (single letter A-Z)
+				if (key.Length == 1 && char.IsLetter(key[0]))
+				{
+					qRegisters.Add($"%q{key.ToLower()}:{value}");
+				}
+			}
+		}
+
+		// Get stack registers from EnvironmentRegisters (set via command arguments like $-commands)
+		if (state.EnvironmentRegisters.Count > 0)
+		{
+			foreach (var reg in state.EnvironmentRegisters.OrderBy(r => r.Key))
+			{
+				var key = reg.Key;
+				var value = reg.Value.Message?.ToString() ?? string.Empty;
+				
+				// Check if it's a stack register (0-9)
+				if (key.Length == 1 && char.IsDigit(key[0]))
+				{
+					stackRegisters.Add($"%{key}:{value}");
+				}
+			}
+		}
+
+		// Output q-registers if any exist
+		if (qRegisters.Count > 0)
+		{
+			output.Append($"#{dbrefNumber}! {indent}[Q-Registers: {string.Join(", ", qRegisters)}]");
+		}
+
+		// Output stack registers if any exist
+		if (stackRegisters.Count > 0)
+		{
+			if (output.Length > 0)
+			{
+				output.AppendLine();
+			}
+			output.Append($"#{dbrefNumber}! {indent}[Registers: {string.Join(", ", stackRegisters)}]");
+		}
+
+		return output.ToString();
+	}
+
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
 		if (node is null) return null;
@@ -70,6 +191,12 @@ public class SharpMUSHParserVisitor(
 			result = child is null 
 				? AggregateResult(result, null) 
 				: AggregateResult(result, await child.Accept(this));
+			
+			// Halt evaluation if a limit has been exceeded
+			if (parser.CurrentState.LimitExceeded?.IsExceeded == true)
+			{
+				break;
+			}
 		}
 
 		return result;
@@ -109,6 +236,44 @@ public class SharpMUSHParserVisitor(
 				=> agg ?? next
 		};
 
+	/// <summary>
+	/// Extracts text from a parser context using the source string.
+	/// This helper reduces code duplication and centralizes the substring extraction logic.
+	/// </summary>
+	/// <param name="context">The parser rule context to extract text from</param>
+	/// <returns>The text content as an MString</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private MString GetContextText(ParserRuleContext context)
+	{
+		var length = context.Stop?.StopIndex is null
+			? 0
+			: (context.Stop.StopIndex - context.Start.StartIndex + 1);
+		return MModule.substring(context.Start.StartIndex, length, source);
+	}
+
+	/// <summary>
+	/// Creates a deferred evaluation function for a parser context.
+	/// This is used for lazy evaluation in functions with NoParse flags.
+	/// Instead of creating inline lambdas, this centralizes the pattern and reduces allocations.
+	/// </summary>
+	/// <param name="context">The evaluation string context to evaluate later</param>
+	/// <param name="visitor">The visitor to use for evaluation</param>
+	/// <param name="stripAnsi">Whether to strip ANSI codes from the result</param>
+	/// <returns>A function that evaluates the context when called</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static Func<ValueTask<MString?>> CreateDeferredEvaluation(
+		EvaluationStringContext context,
+		SharpMUSHParserVisitor visitor,
+		bool stripAnsi)
+	{
+		return async () =>
+		{
+			var result = await visitor.VisitChildren(context);
+			var message = result?.Message ?? MModule.empty();
+			return stripAnsi ? MModule.plainText2(message) : message;
+		};
+	}
+
 	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
@@ -120,13 +285,60 @@ public class SharpMUSHParserVisitor(
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
 		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
 
-		/* await NotifyService!.Notify(parser.CurrentState.Executor!.Value, MModule.single(
-			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} :")); */
+		var executor = await parser.CurrentState.ExecutorObject(Mediator);
+		var shouldDebug = false;
+		AnySharpObject? executorObj = null;
+		string? indent = null;
+		int dbrefNumber = 0;
+		
+		if (!executor.IsNone)
+		{
+			executorObj = executor.Known();
+			
+			if (parser.CurrentState.AttributeDebugOverride.HasValue)
+			{
+				shouldDebug = parser.CurrentState.AttributeDebugOverride.Value;
+			}
+			else
+			{
+				shouldDebug = await executorObj.HasFlag("DEBUG");
+			}
+			
+			if (shouldDebug)
+			{
+				var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
+				indent = new string(' ', depth);
+				dbrefNumber = executorObj.Object().DBRef.Number;
+			}
+		}
+		
+		if (shouldDebug && executorObj != null && indent != null)
+		{
+			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} :";
+			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			
+			// Output register contents before evaluation
+			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
+			if (!string.IsNullOrEmpty(registerOutput))
+			{
+				await SendDebugOrVerboseOutput(executorObj, registerOutput);
+			}
+		}
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
 
-		/* await NotifyService!.Notify(parser.CurrentState.Caller!.Value, MModule.single(
-			$"#{parser.CurrentState.Caller!.Value.Number}! {new string(' ', parser.CurrentState.ParserFunctionDepth!.Value)}{context.GetText()} => {result.Message}")); */
+		if (shouldDebug && executorObj != null && indent != null)
+		{
+			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
+			await SendDebugOrVerboseOutput(executorObj, debugOutput);
+			
+			// Output register contents after evaluation
+			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
+			if (!string.IsNullOrEmpty(registerOutput))
+			{
+				await SendDebugOrVerboseOutput(executorObj, registerOutput);
+			}
+		}
 
 		return result;
 	}
@@ -146,6 +358,8 @@ public class SharpMUSHParserVisitor(
 	{
 		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var success = true;
+		var didPushFunction = false;
+		LimitExceededFlag? limitExceeded = null;
 		
 		try
 		{
@@ -169,9 +383,26 @@ public class SharpMUSHParserVisitor(
 			var currentStack = parser.State;
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
-			var stackDepth = currentStack.Count();
-			var recursionDepth = currentStack.Count(x => x.Function == name);
-
+			
+			var invocationCounter = currentState.TotalInvocations!;
+			var callDepth = currentState.CallDepth!;
+			var recursionDepths = currentState.FunctionRecursionDepths!;
+			limitExceeded = currentState.LimitExceeded!;
+			
+			
+			var totalInvocations = invocationCounter.Increment();
+			if (totalInvocations > Configuration.CurrentValue.Limit.FunctionInvocationLimit)
+			{
+				limitExceeded.IsExceeded = true;
+				return new CallState(Errors.ErrorInvoke, contextDepth);
+			}
+			
+			var currentDepth = callDepth.Increment();
+			didPushFunction = true;
+			
+			// Built-in functions do NOT track recursion - only nesting depth
+			// Recursion tracking only applies to user-defined attributes (u(), ufun(), etc.)
+			
 			List<CallState> refinedArguments;
 
 			// TODO: Check Permissions here.
@@ -179,7 +410,6 @@ public class SharpMUSHParserVisitor(
 			/* Validation, this should probably go into its own function! */
 			if (args.Length > attribute.MaxArgs)
 			{
-				// Better Error Needed.
 				return new CallState(Errors.ErrorArgRange, context.Depth());
 			}
 
@@ -201,21 +431,21 @@ public class SharpMUSHParserVisitor(
 
 			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
 			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
-			if (contextDepth > Configuration.CurrentValue.Limit.CallLimit)
+				
+			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
-				// TODO: Context Depth is not the correct value to use here.
+				limitExceeded.IsExceeded = true;
+				return new CallState(Errors.ErrorDepth, contextDepth);
+			}
+			
+			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
+			{
+				limitExceeded.IsExceeded = true;
 				return new CallState(Errors.ErrorCall, contextDepth);
 			}
 
-			if (stackDepth > Configuration.CurrentValue.Limit.MaxDepth)
-			{
-				return new CallState(Errors.ErrorInvoke, stackDepth);
-			}
-
-			if (recursionDepth > Configuration.CurrentValue.Limit.FunctionRecursionLimit)
-			{
-				return new CallState(Errors.ErrorRecursion, recursionDepth);
-			}
+			// Built-in functions do NOT check recursion limit
+			// Only user-defined attributes check recursion (see AttributeService.EvaluateAttributeFunctionAsync)
 
 			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
 
@@ -241,17 +471,21 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				refinedArguments = args.Select(x => new CallState(stripAnsi
-							? MModule.plainText2(MModule.substring(x.Start.StartIndex,
-								context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), src))
-							: MModule.substring(x.Start.StartIndex,
-								context.Stop?.StopIndex is null ? 0 : (x.Stop.StopIndex - x.Start.StartIndex + 1), src),
-						x.Depth(), null,
-						async () => stripAnsi
-							? MModule.plainText2((await visitor.VisitChildren(x))!.Message)
-							: (await visitor.VisitChildren(x))!.Message))
-					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
-					.ToList();
+				// For NoParse functions with multiple arguments, store unevaluated text with deferred evaluation
+				refinedArguments = args.Select(x =>
+				{
+					var text = GetContextText(x);
+					var evalText = stripAnsi ? MModule.plainText2(text) : text;
+					return new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi));
+				})
+				.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
+				.ToList();
+			}
+			
+			// If a limit was exceeded during argument evaluation, return immediately
+			if (limitExceeded.IsExceeded)
+			{
+				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 
 			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
@@ -273,7 +507,13 @@ public class SharpMUSHParserVisitor(
 				Executor: currentState.Executor,
 				Enactor: currentState.Enactor,
 				Caller: currentState.Caller,
-				Handle: currentState.Handle
+				Handle: currentState.Handle,
+				ParseMode: currentState.ParseMode,
+				HttpResponse: currentState.HttpResponse,
+				CallDepth: callDepth,
+				FunctionRecursionDepths: recursionDepths,
+				TotalInvocations: invocationCounter,
+				LimitExceeded: limitExceeded
 			));
 
 			var result = await function(newParser);
@@ -296,6 +536,19 @@ public class SharpMUSHParserVisitor(
 		}
 		finally
 		{
+			// Only decrement counters if we successfully executed the function
+			// If a limit was exceeded, we returned early and should NOT decrement
+			// (otherwise the counter resets and the limit never works)
+			if (didPushFunction && (limitExceeded == null || !limitExceeded.IsExceeded))
+			{
+				var currentCallDepth = parser.CurrentState.CallDepth;
+				
+				currentCallDepth?.Decrement();
+				
+				// NOTE: Built-in functions do NOT track recursion
+				// Only user-defined attributes track recursion (see AttributeService.EvaluateAttributeFunctionAsync)
+			}
+			
 			var elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
 			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success);
 		}
@@ -811,6 +1064,16 @@ public class SharpMUSHParserVisitor(
 				var commandSuccess = true;
 				Option<CallState> commandResult;
 				
+				if (!executor.IsNone)
+				{
+					var executorObj = executor.Known();
+					if (await executorObj.HasFlag("VERBOSE"))
+					{
+						var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
+						await SendDebugOrVerboseOutput(executorObj, verboseOutput);
+					}
+				}
+				
 				try
 				{
 					commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
@@ -1119,8 +1382,7 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> VisitEvaluationString(
 		[NotNull] EvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
-		MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1), source),
+		GetContextText(context),
 		context.Depth());
 
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
@@ -1135,11 +1397,7 @@ public class SharpMUSHParserVisitor(
 		} */
 
 		return await VisitChildren(context)
-		       ?? new CallState(
-			       MModule.substring(context.Start.StartIndex,
-				       context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1),
-				       source),
-			       context.Depth());
+		       ?? new CallState(GetContextText(context), context.Depth());
 
 		/* if (!isGenericText)
 		{
@@ -1158,12 +1416,7 @@ public class SharpMUSHParserVisitor(
 
 		if (_braceDepthCounter <= 1)
 		{
-			result = vc ?? new CallState(
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null
-						? 0
-						: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
-				context.Depth());
+			result = vc ?? new CallState(GetContextText(context), context.Depth());
 		}
 		else
 		{
@@ -1176,12 +1429,7 @@ public class SharpMUSHParserVisitor(
 						MModule.single("}")
 					])
 				}
-				: new CallState(
-					MModule.substring(context.Start.StartIndex,
-						context.Stop?.StopIndex is null
-							? 0
-							: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
-					context.Depth());
+				: new CallState(GetContextText(context), context.Depth());
 		}
 
 		_braceDepthCounter--;
@@ -1199,11 +1447,7 @@ public class SharpMUSHParserVisitor(
 			*/
 
 			var resultQ = await VisitChildren(context)
-			              ?? new CallState(
-				              MModule.substring(context.Start.StartIndex,
-					              context.Stop?.StopIndex is null ? 0 : (context.Stop.StopIndex - context.Start.StartIndex + 1),
-					              source),
-				              context.Depth());
+			              ?? new CallState(GetContextText(context), context.Depth());
 
 
 			return resultQ;
@@ -1212,12 +1456,7 @@ public class SharpMUSHParserVisitor(
 		var result = await VisitChildren(context);
 		if (result is null)
 		{
-			return new CallState(
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null
-						? 0
-						: context.Stop.StopIndex - context.Start.StartIndex + 1, source),
-				context.Depth());
+			return new CallState(GetContextText(context), context.Depth());
 		}
 
 		return result with
@@ -1232,24 +1471,12 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> VisitGenericText([NotNull] GenericTextContext context)
 		=> await VisitChildren(context)
-		   ?? new CallState(
-			   MModule.substring(context.Start.StartIndex,
-				   context.Stop?.StopIndex is null
-					   ? 0
-					   : context.Stop.StopIndex - context.Start.StartIndex + 1,
-				   source),
-			   context.Depth());
+		   ?? new CallState(GetContextText(context), context.Depth());
 
 	public override async ValueTask<CallState?> VisitBeginGenericText(
 		[NotNull] BeginGenericTextContext context)
 		=> await VisitChildren(context)
-		   ?? new CallState(
-			   MModule.substring(context.Start.StartIndex,
-				   context.Stop?.StopIndex is null
-					   ? 0
-					   : context.Stop.StopIndex - context.Start.StartIndex + 1,
-				   source),
-			   context.Depth());
+		   ?? new CallState(GetContextText(context), context.Depth());
 
 	public override async ValueTask<CallState?> VisitValidSubstitution(
 		[NotNull] ValidSubstitutionContext context)
@@ -1353,12 +1580,7 @@ public class SharpMUSHParserVisitor(
 			return result;
 		}
 
-		var text = MModule.substring(context.Start.StartIndex,
-			context.Stop?.StopIndex is null
-				? 0
-				: context.Stop.StopIndex - context.Start.StartIndex + 1,
-			source);
-		return new CallState(text, context.Depth());
+		return new CallState(GetContextText(context), context.Depth());
 	}
 
 	public override async ValueTask<CallState?> VisitEscapedText([NotNull] EscapedTextContext context)

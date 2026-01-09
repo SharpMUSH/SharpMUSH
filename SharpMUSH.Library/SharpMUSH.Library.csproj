@@ -13,8 +13,8 @@
     <PackageReference Include="DotNext" Version="5.26.1" />
     <PackageReference Include="DotNext.Threading" Version="5.26.1" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.1" />
     <PackageReference Include="morelinq" Version="4.4.0" />
 		<PackageReference Include="MassTransit.Abstractions" Version="8.5.7" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
@@ -23,10 +23,10 @@
     <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.14.0" />
     <PackageReference Include="Quartz.Lambda" Version="1.0.5" />
-    <PackageReference Include="StackExchange.Redis" Version="2.8.16" />
+    <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
-    <PackageReference Include="TelnetNegotiationCore" Version="1.1.0" />
-    <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.4.0" />
+    <PackageReference Include="TelnetNegotiationCore" Version="1.1.1" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.5.0" />
 		<PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>
 

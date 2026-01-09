@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using DotNext.Collections.Generic;
+﻿using DotNext.Collections.Generic;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -34,6 +33,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static ITelemetryService? TelemetryService { get; set; }
 	private static IMoveService? MoveService { get; set; }
 	private static IEventService? EventService { get; set; }
+	private static IBooleanExpressionParser? BooleanExpressionParser { get; set; }
+	private static ITextFileService? TextFileService { get; set; }
 	private static ILogger<Functions>? Logger { get; set; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
@@ -61,7 +62,9 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ISqlService sqlService,
 		ITelemetryService telemetryService,
 		IMoveService moveService,
-		IEventService eventService)
+		IEventService eventService,
+		IBooleanExpressionParser booleanExpressionParser,
+		ITextFileService textFileService)
 	{
 		Logger = logger;
 		Mediator = mediator;
@@ -84,6 +87,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		TelemetryService = telemetryService;
 		MoveService = moveService;
 		EventService = eventService;
+		BooleanExpressionParser = booleanExpressionParser;
+		TextFileService = textFileService;
 
 		foreach (var command in Generated.FunctionLibrary.Functions)
 		{

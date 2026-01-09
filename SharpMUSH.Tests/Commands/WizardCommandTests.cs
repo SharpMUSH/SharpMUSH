@@ -268,7 +268,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_OnSwitch_SetsHidden()
 	{
 		// Test that @hide/on sets the DARK flag
@@ -288,7 +287,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_NoSwitch_UnsetsHidden()
 	{
 		// Test that @hide/no unsets the DARK flag
@@ -383,7 +381,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("startup") || s.Value.ToString()!.Contains("SharpMUSH loads")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Reindexing text files") || s.Value.ToString()!.Contains("Text file cache rebuilt")));
 	}
 
 	[Test]

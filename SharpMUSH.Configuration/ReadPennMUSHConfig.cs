@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Configuration.Generated;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Configuration;
@@ -11,23 +11,11 @@ public static partial class ReadPennMushConfig
 	public static SharpMUSHOptions Create(string configFile)
 	{
 		string[] text;
-		var keys = typeof(SharpMUSHOptions)
-			.GetProperties()
-			.Select(property => property.PropertyType)
-			.SelectMany(configType => configType
-				.GetProperties()
-				.Select(configProperty => configProperty
-					.GetCustomAttributes<SharpConfigAttribute>()
-					.Select(attribute => (configProperty, attribute))
-					.FirstOrDefault()
-				)).ToImmutableHashSet();
-
-		var propertyDictionary = keys.ToDictionary(
-			key => key.configProperty.Name,
-			key => key.attribute.Name);
-		var configDictionary = keys.ToDictionary(
-			key => key.attribute.Name,
-			_ => string.Empty);
+		
+		// Use generated metadata instead of reflection
+		var propertyDictionary = ConfigMetadata.PropertyToAttributeName;
+		var configDictionary = ConfigMetadata.AttributeToPropertyName.Keys
+			.ToDictionary(key => key, _ => string.Empty);
 
 		var splitter = KeyValueSplittingRegex();
 
@@ -309,6 +297,11 @@ public static partial class ReadPennMushConfig
 			),
 			Warning = new WarningOptions(
 				WarnInterval: RequiredString(Get(nameof(WarningOptions.WarnInterval)), "1h")
+			),
+			TextFile = new TextFileOptions(
+				TextFilesDirectory: RequiredString(Get(nameof(TextFileOptions.TextFilesDirectory)), "TextFiles"),
+				EnableMarkdownRendering: Boolean(Get(nameof(TextFileOptions.EnableMarkdownRendering)), true),
+				CacheOnStartup: Boolean(Get(nameof(TextFileOptions.CacheOnStartup)), true)
 			)
 		};
 

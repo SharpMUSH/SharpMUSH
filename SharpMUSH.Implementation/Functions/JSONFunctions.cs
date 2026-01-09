@@ -11,10 +11,12 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -31,14 +33,14 @@ public partial class Functions
 		{"object", JsonHelpers.ObjectJSON }
 	};
 
-	[SharpFunction(Name = "json", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "json", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
 	public static async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState.Arguments["0"].Message!).ToLower(), out var jsonFunction)
 			? await jsonFunction(parser.CurrentState.ArgumentsOrdered)
 			: new CallState(MModule.single("#-1 Invalid Type"));
 
 
-	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public static ValueTask<CallState> IsJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		try
@@ -52,7 +54,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["attribute", "json", "path"])]
 	public static async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -200,7 +202,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "json_mod", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "json_mod", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "path", "value"])]
 	public static async ValueTask<CallState> json_mod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
@@ -305,7 +307,7 @@ public partial class Functions
 		return targetObj;
 	}
 
-	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "path"])]
 	public static async ValueTask<CallState> json_query(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
@@ -342,7 +344,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "oob", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "oob", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["command", "arguments..."])]
 	public static async ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -418,5 +420,41 @@ public partial class Functions
 		}
 
 		return new CallState(sentCount.ToString());
+	}
+
+	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["json", "player"])]
+	public static async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Send JSON data via websocket - similar to wsjson()
+		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		AnySharpObject target;
+		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
+		{
+			var targetRef = targetArg.Message!.ToPlainText();
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				executor,
+				executor,
+				targetRef,
+				PlayersPreference | AbsoluteMatch);
+
+			if (locateResult.IsError)
+			{
+				return new CallState(locateResult.AsError);
+			}
+
+			target = locateResult.AsAnyObject;
+		}
+		else
+		{
+			target = executor;
+		}
+
+		// TODO: Implement actual websocket/out-of-band JSON communication
+		// Placeholder - returns empty string as OOB data doesn't display in-band
+		return CallState.Empty;
 	}
 }

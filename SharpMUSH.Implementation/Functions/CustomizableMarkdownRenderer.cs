@@ -77,9 +77,6 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 	protected override MString RenderHeading(HeadingBlock heading)
 	{
-		// First render using base to get the formatted content
-		var baseResult = base.RenderHeading(heading);
-		
 		// Extract level for template selection
 		var templateName = heading.Level switch
 		{
@@ -89,13 +86,34 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 			_ => "H3"
 		};
 
+		// Render the heading content (inline elements) without default formatting
+		var content = RenderInlineContent(heading.Inline);
+
 		var args = new Dictionary<string, CallState>
 		{
-			{ "0", new CallState(baseResult) }
+			{ "0", new CallState(content) }
 		};
 
 		var custom = TryEvaluateTemplate(templateName, args).GetAwaiter().GetResult();
-		return custom ?? baseResult;
+		return custom ?? base.RenderHeading(heading);
+	}
+	
+	/// <summary>
+	/// Helper method to render inline content (similar to private RenderInlines in base class)
+	/// </summary>
+	private MString RenderInlineContent(Inline? inline)
+	{
+		var parts = new List<MString>();
+		while (inline != null)
+		{
+			var rendered = Render(inline);
+			if (rendered.Length > 0)
+			{
+				parts.Add(rendered);
+			}
+			inline = inline.NextSibling;
+		}
+		return MModule.multiple(parts);
 	}
 
 	protected override MString RenderCodeBlock(CodeBlock code)
@@ -121,7 +139,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var args = new Dictionary<string, CallState>
 		{
 			{ "0", new CallState(MModule.single(isOrdered ? "1" : "0")) },
-			{ "1", new CallState(MModule.single(index.ToString())) },
+			{ "1", new CallState(MModule.single((index + 1).ToString())) }, // Convert to 1-based index
 			{ "2", new CallState(content) }
 		};
 

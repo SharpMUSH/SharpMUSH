@@ -599,24 +599,25 @@ public class MarkdownFunctionUnitTests
 		
 		// Set up custom templates for all supported element types
 		// Each template produces distinctly different output from default rendering
+		// Use & command instead of attrib_set() to avoid evaluating the template before storing
 		
 		// H1: Prefix with ">>> " and use high green color
-		var h1Set = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`H1,[ansi(hg,>>> %0)])"));
+		var h1Set = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`H1 {testDbref}=[ansi(hg,>>> %0)]"));
 		
 		// H2: Prefix with ">> " and use high cyan color
-		var h2Set = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`H2,[ansi(hc,>> %0)])"));
+		var h2Set = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`H2 {testDbref}=[ansi(hc,>> %0)]"));
 		
 		// H3: Prefix with "> " and use high magenta color
-		var h3Set = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`H3,[ansi(hm,> %0)])"));
+		var h3Set = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`H3 {testDbref}=[ansi(hm,> %0)]"));
 		
 		// CODEBLOCK: Wrap in brackets with high yellow color
-		var cbSet = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`CODEBLOCK,[ansi(hy,%[CODE:%])]%r[ansi(h,%0)])"));
+		var cbSet = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`CODEBLOCK {testDbref}=[ansi(hy,%[CODE:%])]%r[ansi(h,%0)]"));
 		
 		// LISTITEM: Custom bullet for unordered (★) and custom number format for ordered
-		var liSet = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`LISTITEM,[if(%0,[ansi(hr,%(%1%). %2)],[ansi(hb,★ %2)])])"));
+		var liSet = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`LISTITEM {testDbref}=[if(%0,[ansi(hr,%(%1%). %2)],[ansi(hb,★ %2)])]"));
 		
 		// QUOTE: Prefix with "QUOTE: " in high blue
-		var qSet = await Parser.FunctionParse(MModule.single($"attrib_set({testDbref}/RENDERMARKUP`QUOTE,[ansi(hb,QUOTE: %0)])"));
+		var qSet = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`QUOTE {testDbref}=[ansi(hb,QUOTE: %0)]"));
 		
 		// Test markdown with all element types
 		var markdown = "# H1 Title%r## H2 Title%r### H3 Title%r%r```%rcode line 1%rcode line 2%r```%r%r1. First item%r2. Second item%r%r- Bullet one%r- Bullet two%r%r> This is a quote";

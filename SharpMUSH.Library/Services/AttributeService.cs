@@ -21,7 +21,8 @@ public class AttributeService(
 	IPermissionService ps,
 	ILocateService locateService,
 	IValidateService validateService, 
-	INotifyService notifyService)
+	INotifyService notifyService,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IAttributeService
 {
 	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
@@ -257,17 +258,55 @@ public class AttributeService(
 			return MModule.single(Errors.ErrorNoSuchAttribute);
 		}
 
-		var result = await parser.With(s =>
-				s with
-				{
-					Arguments = args,
-					EnvironmentRegisters = args,
-					CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.AsAttribute.Last().LongName!),
-				},
-			async newParser =>
-				await newParser.FunctionParse(attr.AsAttribute.Last().Value));
+		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
+		
+		// Use shared tracking collections from parser state.
+		// These are guaranteed to be non-null because:
+		// - CommandParse creates them for each command evaluation
+		// - FunctionParse creates them for standalone parsing
+		// - All nested calls propagate them through parser state
+		var callDepth = parser.CurrentState.CallDepth!;
+		var recursionDepths = parser.CurrentState.FunctionRecursionDepths!;
+		var limitExceeded = parser.CurrentState.LimitExceeded!;
+		
+		callDepth.Increment();
+		if (!recursionDepths.TryGetValue(attributeName, out var depth))
+		{
+			depth = 0;
+		}
+		recursionDepths[attributeName] = ++depth;
+		
+		// Check recursion limit for attributes (same as built-in functions)
+		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
+		{
+			limitExceeded.IsExceeded = true;
+			return MModule.single(Errors.ErrorRecursion);
+		}
+		
+		try
+		{
+			var result = await parser.With(s =>
+					s with
+					{
+						Arguments = args,
+						EnvironmentRegisters = args,
+						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
+						Function = attributeName
+					},
+				async newParser =>
+					await newParser.FunctionParse(attr.AsAttribute.Last().Value));
 
-		return result!.Message!;
+			return result!.Message!;
+		}
+		finally
+		{
+			// Decrement tracking when done
+			callDepth.Decrement();
+			if (recursionDepths.TryGetValue(attributeName, out var currentDepth) && currentDepth > 0)
+			{
+				recursionDepths[attributeName] = currentDepth - 1;
+			}
+		}
 	}
 
 	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
@@ -377,7 +416,14 @@ public class AttributeService(
 				}
 				
 				var result = await parser.With(
-					s => s with { Arguments = slimArgs, EnvironmentRegisters = slimArgs },
+					s => s with { 
+						Arguments = slimArgs, 
+						EnvironmentRegisters = slimArgs,
+						CallDepth = s.CallDepth,
+						FunctionRecursionDepths = s.FunctionRecursionDepths,
+						TotalInvocations = s.TotalInvocations,
+						LimitExceeded = s.LimitExceeded
+					},
 					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
 				);
 
@@ -395,7 +441,13 @@ public class AttributeService(
 		// LAMBDA.
 		if (lambdaPredicate && !ignoreLambda)
 		{
-			var result = await parser.With(s => s with { Arguments = args },
+			var result = await parser.With(s => s with { 
+				Arguments = args,
+				CallDepth = s.CallDepth,
+				FunctionRecursionDepths = s.FunctionRecursionDepths,
+				TotalInvocations = s.TotalInvocations,
+				LimitExceeded = s.LimitExceeded
+			},
 				async np => await np.FunctionParse(attribute));
 			return result!.Message!;
 		}

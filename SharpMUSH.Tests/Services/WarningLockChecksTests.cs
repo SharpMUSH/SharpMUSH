@@ -8,7 +8,6 @@ public class WarningLockChecksTests
 	[Test]
 	public async Task LockChecks_FlagValue_IsCorrect()
 	{
-		// Verify lock-checks flag has correct value (0x100000)
 		var lockProbs = WarningType.LockProbs;
 		await Assert.That((uint)lockProbs).IsEqualTo(0x100000u);
 	}
@@ -24,7 +23,6 @@ public class WarningLockChecksTests
 	[Test]
 	public async Task LockChecks_InSeriousGroup()
 	{
-		// Verify lock-checks is included in "serious" warning group
 		var serious = WarningType.Serious;
 		await Assert.That(serious.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
 	}
@@ -32,7 +30,6 @@ public class WarningLockChecksTests
 	[Test]
 	public async Task LockChecks_InNormalGroup()
 	{
-		// Verify lock-checks is included in "normal" warning group
 		var normal = WarningType.Normal;
 		await Assert.That(normal.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
 	}
@@ -40,7 +37,6 @@ public class WarningLockChecksTests
 	[Test]
 	public async Task LockChecks_InExtraGroup()
 	{
-		// Verify lock-checks is included in "extra" warning group
 		var extra = WarningType.Extra;
 		await Assert.That(extra.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
 	}
@@ -48,7 +44,6 @@ public class WarningLockChecksTests
 	[Test]
 	public async Task LockChecks_InAllGroup()
 	{
-		// Verify lock-checks is included in "all" warning group
 		var all = WarningType.All;
 		await Assert.That(all.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
 	}

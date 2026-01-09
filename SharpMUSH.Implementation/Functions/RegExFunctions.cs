@@ -14,85 +14,89 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "regmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public static ValueTask<CallState> regmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegMatchInternal(parser, false);
 	}
 
-	[SharpFunction(Name = "regmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public static ValueTask<CallState> regmatchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegMatchInternal(parser, true);
 	}
 
-	[SharpFunction(Name = "regrab", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regrab", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> regrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, false, false);
 	}
 
-	[SharpFunction(Name = "regraball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regraball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> regraball(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, false, true);
 	}
 
-	[SharpFunction(Name = "regraballi", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regraballi", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> regraballi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, true, true);
 	}
 
-	[SharpFunction(Name = "regrabi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regrabi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> regrabi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, true, false);
 	}
 
-	[SharpFunction(Name = "reglmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "reglmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> reglmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, false, false);
 	}
 
-	[SharpFunction(Name = "reglmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "reglmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> reglmatchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, true, false);
 	}
 
-	[SharpFunction(Name = "reglmatchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "reglmatchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public static ValueTask<CallState> reglmatchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, false, true);
 	}
 
-	[SharpFunction(Name = "regmatchalli", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "regmatchalli", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public static ValueTask<CallState> regmatchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, true, true);
 	}
 
-	[SharpFunction(Name = "reswitch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "reswitch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, 
+		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, false, false);
 	}
 
-	[SharpFunction(Name = "reswitchall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "reswitchall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
+		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, false, true);
 	}
 
-	[SharpFunction(Name = "reswitchalli", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "reswitchalli", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
+		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, true, true);
 	}
 
-	[SharpFunction(Name = "reswitchi", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	[SharpFunction(Name = "reswitchi", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
+		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, true, false);
@@ -376,5 +380,37 @@ public partial class Functions
 		}
 		
 		return new CallState(MModule.empty());
+	}
+
+	[SharpFunction(Name = "REGREPLACE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+		ParameterNames = ["string", "pattern", "replacement", "flags"])]
+	public static ValueTask<CallState> RegReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var pattern = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var replacement = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
+		var flags = parser.CurrentState.Arguments.TryGetValue("3", out var flagsArg)
+			? flagsArg.Message!.ToPlainText().ToLowerInvariant()
+			: "";
+
+		try
+		{
+			var regexOptions = RegexOptions.None;
+			
+			if (flags.Contains('i'))
+			{
+				regexOptions |= RegexOptions.IgnoreCase;
+			}
+			
+			// 'g' flag for global replace is default behavior of Regex.Replace
+			// So we don't need special handling for it
+			
+			var result = Regex.Replace(str, pattern, replacement, regexOptions);
+			return ValueTask.FromResult<CallState>(result);
+		}
+		catch (Exception)
+		{
+			return ValueTask.FromResult<CallState>("#-1 INVALID REGEX");
+		}
 	}
 }

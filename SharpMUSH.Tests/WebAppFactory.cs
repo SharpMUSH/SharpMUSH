@@ -74,7 +74,11 @@ public class WebAppFactory : IAsyncInitializer
 					Executor: _one,
 					Enactor: _one,
 					Caller: _one,
-					Handle: 1
+					Handle: 1,
+					CallDepth: new InvocationCounter(),
+					FunctionRecursionDepths: new Dictionary<string, int>(),
+					TotalInvocations: new InvocationCounter(),
+					LimitExceeded: new LimitExceededFlag()
 				));
 		}
 	}
@@ -106,7 +110,11 @@ public class WebAppFactory : IAsyncInitializer
 					Executor: _one,
 					Enactor: _one,
 					Caller: _one,
-					Handle: 1
+					Handle: 1,
+					CallDepth: new InvocationCounter(),
+					FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+					TotalInvocations: new InvocationCounter(),
+					LimitExceeded: new LimitExceededFlag()
 				));
 		}
 	}
@@ -129,19 +137,15 @@ public class WebAppFactory : IAsyncInitializer
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		// Get Prometheus URL from the test container
 		var prometheusUrl = $"http://localhost:{PrometheusTestServer.Instance.GetMappedPublicPort(9090)}";
 
-		// Get Redis connection from the test container
 		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
 		var redisConnection = $"localhost:{redisPort}";
 		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
 
-		// Get Kafka/RedPanda connection from the test container
 		var kafkaHost = RedPandaTestServer.Instance.GetBootstrapAddress();
 		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
 
-		// Create required Kafka topics before starting the application
 		await CreateKafkaTopicsAsync(kafkaHost);
 
 		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
@@ -157,13 +161,11 @@ public class WebAppFactory : IAsyncInitializer
 		// Migrate the database, which ensures we have a #1 object to bind to.
 		await databaseService.Migrate();
 
-		// Retrieve the object with DBRef #1 and bind it to a connection.
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
 		_one = realOne.Object()!.DBRef;
 		await connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await connectionService.Bind(1, _one);
 		
-		// Start the Quartz scheduler for test environment
 		var schedulerFactory = provider.GetRequiredService<ISchedulerFactory>();
 		var scheduler = await schedulerFactory.GetScheduler();
 		if (!scheduler.IsStarted)
@@ -174,20 +176,15 @@ public class WebAppFactory : IAsyncInitializer
 
 	private static async Task CreateKafkaTopicsAsync(string bootstrapServers)
 	{
-		// Parse the bootstrap servers address to handle various formats
 		// Format can be: "//127.0.0.1:9092/", "kafka://127.0.0.1:9092", or "127.0.0.1:9092"
 		var cleanedAddress = bootstrapServers;
 		
-		// Remove protocol prefix if present
 		if (cleanedAddress.Contains("://"))
 		{
 			cleanedAddress = cleanedAddress.Substring(cleanedAddress.IndexOf("://") + 3);
 		}
 		
-		// Remove leading slashes
 		cleanedAddress = cleanedAddress.TrimStart('/');
-		
-		// Remove trailing slashes
 		cleanedAddress = cleanedAddress.TrimEnd('/');
 		
 		var config = new AdminClientConfig
@@ -220,7 +217,6 @@ public class WebAppFactory : IAsyncInitializer
 		{
 			await adminClient.CreateTopicsAsync(topicSpecifications);
 			
-			// Wait a bit for topics to be ready
 			await Task.Delay(2000);
 		}
 		catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists || r.Error.Code == ErrorCode.NoError))

@@ -717,7 +717,7 @@ public partial class ArangoDatabase(
 		if (key is not null)
 		{
 			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphObjectData, DatabaseConstants.ObjectData,
-				key, new Dictionary<string, object> { { dataType, data } }, cancellationToken: ct, keepNull: false);
+				key, new Dictionary<string, object> { { dataType, data } }, waitForSync: true, cancellationToken: ct, keepNull: false);
 			return;
 		}
 
@@ -726,13 +726,13 @@ public partial class ArangoDatabase(
 		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, dynamic>(handle,
 			DatabaseConstants.GraphObjectData,
 			DatabaseConstants.ObjectData,
-			newJson, cancellationToken: ct);
+			newJson, waitForSync: true, cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(handle,
 			DatabaseConstants.GraphObjectData,
 			DatabaseConstants.HasObjectData, new SharpEdgeCreateRequest(
 				From: sharpObjectId,
-				To: newVertex.Vertex.GetProperty("_id").GetString()!), cancellationToken: ct);
+				To: newVertex.Vertex.GetProperty("_id").GetString()!), waitForSync: true, cancellationToken: ct);
 	}
 
 	public async ValueTask<T?> GetExpandedObjectData<T>(string sharpObjectId, string dataType,
@@ -759,7 +759,9 @@ public partial class ArangoDatabase(
 			newJson,
 			overwriteMode: ArangoOverwriteMode.Update,
 			mergeObjects: true,
-			keepNull: true, cancellationToken: ct);
+			keepNull: true,
+			waitForSync: true,
+			cancellationToken: ct);
 	}
 
 	public record ArangoDocumentWrapper<T>(T Data);
@@ -2462,7 +2464,26 @@ public partial class ArangoDatabase(
 
 		// Build the complete query
 		var filterClause = filters.Count > 0 ? $"FILTER {string.Join(" AND ", filters)}" : "";
-		var query = $"FOR v IN {DatabaseConstants.Objects:@} {filterClause} RETURN v._id";
+		
+		// Add LIMIT clause for pagination (START/COUNT)
+		var limitClause = "";
+		if (filter.Skip.HasValue || filter.Limit.HasValue)
+		{
+			var skip = filter.Skip ?? 0;
+			// ArangoDB syntax: LIMIT offset, count or LIMIT count (when offset is 0)
+			// When only skip is provided without limit, we skip but don't limit the count
+			if (filter.Limit.HasValue)
+			{
+				limitClause = skip > 0 ? $"LIMIT {skip}, {filter.Limit.Value}" : $"LIMIT {filter.Limit.Value}";
+			}
+			else if (skip > 0)
+			{
+				// Skip without limit - use a very large number for count
+				limitClause = $"LIMIT {skip}, 999999999";
+			}
+		}
+		
+		var query = $"FOR v IN {DatabaseConstants.Objects:@} {filterClause} {limitClause} RETURN v._id".Trim();
 
 		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle, query, bindVars, cancellationToken: ct) 
 			?? AsyncEnumerable.Empty<string>();

@@ -39,8 +39,7 @@ scrape_configs:
 
 	public override async ValueTask InitializeAsync()
 	{
-		_container = new ContainerBuilder()
-			.WithImage("prom/prometheus:latest")
+		_container = new ContainerBuilder("prom/prometheus:latest")
 			.WithPortBinding(9090, true) // Random host port
 			.WithCommand("--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus")
 			.WithResourceMapping(

@@ -265,7 +265,7 @@ public class MailFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single("mailstatus(1)")))?.Message!;
 		var status = result.ToPlainText();
 		// Status should be 5 characters in NCUF+ format
-		await Assert.That(status).Length().EqualTo(5);
+		await Assert.That(status).Length().IsEqualTo(5);
 		// Should contain valid status characters (N or -, C or -, U or -, F or -, + or -)
 		await Assert.That(status!.All(c => c == 'N' || c == 'C' || c == 'U' || c == 'F' || c == '+' || c == '-')).IsTrue();
 	}

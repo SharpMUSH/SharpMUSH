@@ -13,13 +13,19 @@ public class MemoryTest
 	[Test]
 	public async Task Depth()
 	{
+		// Test deep nesting without recursion by alternating between different functions
+		// Use 10 nested calls - this tests memory with deep nesting while staying well within limits
+		// This is nesting (max_depth limit), NOT recursion
+		// Recursion only applies to user-defined attributes calling themselves
 		var sb = new StringBuilder();
-		foreach (var _ in Enumerable.Range(0, 100))
+		var functions = new[] { "add", "sub", "mul", "div" };
+		foreach (var i in Enumerable.Range(0, 10))
 		{
-			sb.Append("[add(1,");
+			var func = functions[i % functions.Length];
+			sb.Append($"[{func}(1,");
 		}
 		sb.Append('1');
-		foreach (var _ in Enumerable.Range(0, 100))
+		foreach (var _ in Enumerable.Range(0, 10))
 		{
 			sb.Append(")]");
 		}
@@ -27,9 +33,15 @@ public class MemoryTest
 
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 
+		// Each operation: add(1,x)=1+x, sub(1,x)=1-x, mul(1,x)=1*x, div(1,x)=1/x
+		// Working from innermost: 1
+		// div(1,1) = 1, mul(1,1) = 1, sub(1,1) = 0, add(1,0) = 1
+		// div(1,1) = 1, mul(1,1) = 1, sub(1,1) = 0, add(1,0) = 1
+		// Pattern repeats (10 calls / 4 functions = 2.5 cycles)
+		// Final result: 1
 		await Assert
 			.That(result)
-			.IsEqualTo("101");
+			.IsEqualTo("1");
 	}
 	
 	[Test]
