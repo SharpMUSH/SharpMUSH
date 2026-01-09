@@ -285,9 +285,9 @@ public static partial class ArgHelpers
 
 		// Check if input contains '/' character which indicates room/obj format
 		var slashIndex = input.IndexOf('/');
-		if (slashIndex <= 0)
+		if (slashIndex < 0 || slashIndex == 0)
 		{
-			return null; // No room/obj format
+			return null; // No room/obj format, or empty room name (invalid)
 		}
 
 		var roomName = input.Substring(0, slashIndex).Trim();

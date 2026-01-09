@@ -168,12 +168,18 @@ public partial class Functions
 				roomName,
 				LocateFlags.All);
 
-			if (!locateResult.IsValid() || !locateResult.WithoutError().WithoutNone().IsContainer)
+			if (!locateResult.IsValid())
 			{
 				return CallState.Empty;
 			}
 
-			targetRoom = locateResult.WithoutError().WithoutNone().AsContainer;
+			var locatedObject = locateResult.WithoutError().WithoutNone();
+			if (!locatedObject.IsContainer)
+			{
+				return CallState.Empty;
+			}
+
+			targetRoom = locatedObject.AsContainer;
 
 			// Resolve objects to exclude
 			foreach (var objName in objectNames)
@@ -430,7 +436,7 @@ public partial class Functions
 
 		// Support room/obj format like PennMUSH: "room/obj1 obj2" emits to room excluding listed objects
 		AnySharpContainer targetRoom;
-		var excludeObjects = new List<AnySharpObject>();
+		var excludeObjects = new HashSet<AnySharpObject>();
 
 		var roomObjFormat = ArgHelpers.ParseRoomObjectFormat(objects);
 		if (roomObjFormat.HasValue)
@@ -446,12 +452,18 @@ public partial class Functions
 				roomName,
 				LocateFlags.All);
 
-			if (!locateResult.IsValid() || !locateResult.WithoutError().WithoutNone().IsContainer)
+			if (!locateResult.IsValid())
 			{
 				return CallState.Empty;
 			}
 
-			targetRoom = locateResult.WithoutError().WithoutNone().AsContainer;
+			var locatedObject = locateResult.WithoutError().WithoutNone();
+			if (!locatedObject.IsContainer)
+			{
+				return CallState.Empty;
+			}
+
+			targetRoom = locatedObject.AsContainer;
 
 			// Resolve objects to exclude
 			foreach (var objName in objectNames)
