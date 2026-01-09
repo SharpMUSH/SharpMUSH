@@ -98,10 +98,20 @@ public partial class Functions
 
 		// TODO: Implement actual websocket/out-of-band communication
 		// For now, this is a placeholder that sends the JSON as a regular notification
-		// In a full implementation, this would:
-		// 1. Check if the target connection supports websockets/GMCP
-		// 2. Send the JSON data through the appropriate out-of-band channel
-		// 3. Return empty string (since OOB data doesn't display in-band)
+		//
+		// Full implementation requirements:
+		// 1. Add websocket support to ConnectionService (ws:// and wss:// protocols)
+		// 2. Implement GMCP (Generic MUD Communication Protocol) support
+		// 3. Add connection capability negotiation (detect websocket/GMCP support)
+		// 4. Modify ConnectionData to include supported protocols/capabilities
+		// 5. Route OOB data through appropriate channel based on connection type
+		// 6. Support GMCP packages: Client.Media, Client.GUI, etc.
+		// 7. Implement MXP (MUD eXtension Protocol) as alternative to GMCP
+		//
+		// When implemented:
+		// - Check if target connection supports websockets/GMCP
+		// - Send the JSON data through the appropriate out-of-band channel
+		// - Return empty string (since OOB data doesn't display in-band)
 
 		// Placeholder: Send as notification for now
 		// await NotifyService!.Notify(target, jsonContent, executor, INotifyService.NotificationType.Announce);
@@ -147,10 +157,19 @@ public partial class Functions
 
 		// TODO: Implement actual websocket/out-of-band communication
 		// For now, this is a placeholder that sends the HTML as a regular notification
-		// In a full implementation, this would:
-		// 1. Check if the target connection supports websockets/HTML
-		// 2. Send the HTML data through the appropriate out-of-band channel
-		// 3. Return empty string (since OOB data doesn't display in-band)
+		//
+		// Full implementation requirements:
+		// 1. Add websocket support to ConnectionService (ws:// and wss:// protocols)
+		// 2. Implement HTML-over-websocket or MXP (MUD eXtension Protocol)
+		// 3. Add connection capability negotiation (detect HTML support)
+		// 4. Sanitize HTML to prevent XSS attacks (whitelist safe tags)
+		// 5. Support HTML features: colors, links, images, formatting
+		// 6. Implement CSP (Content Security Policy) for safety
+		//
+		// When implemented:
+		// - Check if target connection supports websockets/HTML
+		// - Sanitize and send the HTML data through the appropriate channel
+		// - Return empty string (since OOB data doesn't display in-band)
 
 		// Placeholder: Send as notification for now
 		// await NotifyService!.Notify(target, htmlContent, executor, INotifyService.NotificationType.Announce);
@@ -191,6 +210,14 @@ public partial class Functions
 		}
 
 		// TODO: Implement actual websocket/out-of-band HTML communication
+		// 
+		// Full implementation requirements:
+		// 1. Add websocket support to ConnectionService
+		// 2. Implement HTML rendering capability detection
+		// 3. Add HTML sanitization to prevent security issues
+		// 4. Support rich HTML features for web-based MUSH clients
+		//
+		// When implemented, this will send HTML through OOB channel
 		// Placeholder - returns empty string as OOB data doesn't display in-band
 		return CallState.Empty;
 	}
