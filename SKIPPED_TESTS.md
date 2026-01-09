@@ -11,9 +11,9 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 ## Summary
 
 - **Total Skipped Tests**: 204
-- **TODO**: 80
+- **TODO**: 0
 - **SUCCESS**: 16
-- **FAIL**: 108
+- **FAIL**: 188
 
 ## Tests by Category
 
@@ -68,7 +68,7 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 - **SUCCESS**: DoDigForCommandListCheck2
 - **FAIL**: LinkExit (IndexOutOfRangeException - array bounds error)
 - **FAIL**: LockObject (ReceivedCallsException - test interference, 43 notify calls)
-- **TODO**: NameObject (listed elsewhere, marked as FAIL)
+- **FAIL**: NameObject (AssertionException - returns "#-1 CAN'T SEE THAT HERE")
 - **FAIL**: SetParent (RedundantArgumentMatcherException - mock specification issue)
 - **FAIL**: UnlinkExit (ReceivedCallsException - test interference, 41 notify calls)
 - **FAIL**: UnlockObject (ReceivedCallsException - test interference, 44 notify calls)
@@ -130,8 +130,8 @@ Note: 2 of these 7 tests actually passed - need to identify which ones from deta
 
 #### `Commands/DebugVerboseTests.cs`
 
-- **TODO**: AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug
-- **TODO**: AttributeNoDebugFlag_SuppressesOutput_EvenWithObjectDebug
+- **FAIL**: AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug (TODO - Needs Investigation)
+- **FAIL**: AttributeNoDebugFlag_SuppressesOutput_EvenWithObjectDebug (TODO - Needs Investigation)
 
 #### `Commands/FlagAndPowerCommandTests.cs`
 
@@ -210,189 +210,189 @@ Note: 2 of these 7 tests actually passed - need to identify which ones from deta
 
 #### `Commands/ObjectManipulationCommandTests.cs`
 
-- **TODO**: DestroyCommand
-- **TODO**: NukeCommand
-- **TODO**: UndestroyCommand
-- **TODO**: UseCommand
+- **FAIL**: DestroyCommand (Not Yet Implemented)
+- **FAIL**: NukeCommand (Not Yet Implemented)
+- **FAIL**: UndestroyCommand (Not Yet Implemented)
+- **FAIL**: UseCommand (Not Yet Implemented)
 
 #### `Commands/QuotaCommandTests.cs`
 
-- **TODO**: SquotaCommand
+- **FAIL**: SquotaCommand (Not Yet Implemented)
 
 #### `Commands/SocialCommandTests.cs`
 
-- **TODO**: PageCommand
-- **TODO**: PoseCommand
-- **TODO**: SemiposeCommand
-- **TODO**: WhisperCommand
+- **FAIL**: PageCommand (Not Yet Implemented)
+- **FAIL**: PoseCommand (Not Yet Implemented)
+- **FAIL**: SemiposeCommand (Not Yet Implemented)
+- **FAIL**: WhisperCommand (Not Yet Implemented)
 
 #### `Commands/SystemCommandTests.cs`
 
-- **TODO**: AtrchownCommand
-- **TODO**: AtrlockCommand
-- **TODO**: AttributeCommand
-- **TODO**: CommandCommand
-- **TODO**: FirstexitCommand
-- **TODO**: FlagCommand
-- **TODO**: FunctionCommand
-- **TODO**: HideCommand
-- **TODO**: HookCommand
-- **TODO**: KickCommand
-- **TODO**: PowerCommand
+- **FAIL**: AtrchownCommand (Not Yet Implemented)
+- **FAIL**: AtrlockCommand (Not Yet Implemented)
+- **FAIL**: AttributeCommand (Not Yet Implemented)
+- **FAIL**: CommandCommand (Not Yet Implemented)
+- **FAIL**: FirstexitCommand (Not Yet Implemented)
+- **FAIL**: FlagCommand (Not Yet Implemented)
+- **FAIL**: FunctionCommand (Not Yet Implemented)
+- **FAIL**: HideCommand (Not Yet Implemented)
+- **FAIL**: HookCommand (Not Yet Implemented)
+- **FAIL**: KickCommand (Not Yet Implemented)
+- **FAIL**: PowerCommand (Not Yet Implemented)
 
 #### `Commands/UserDefinedCommandsTests.cs`
 
-- **TODO**: SetAndResetCacheTest
+- **FAIL**: SetAndResetCacheTest (Not Yet Implemented)
 
 #### `Commands/UtilityCommandTests.cs`
 
-- **TODO**: EntrancesCommand
-- **TODO**: FindCommand
-- **TODO**: SearchCommand
-- **TODO**: StatsCommand
-- **TODO**: WhereisCommand
+- **FAIL**: EntrancesCommand (Not Yet Implemented)
+- **FAIL**: FindCommand (Not Yet Implemented)
+- **FAIL**: SearchCommand (Not Yet Implemented)
+- **FAIL**: StatsCommand (Not Yet Implemented)
+- **FAIL**: WhereisCommand (Not Yet Implemented)
 
 #### `Commands/VerbCommandTests.cs`
 
-- **TODO**: VerbExecutesAwhat
-- **TODO**: VerbInsufficientArgs
-- **TODO**: VerbPermissionDenied
-- **TODO**: VerbWithAttributes
-- **TODO**: VerbWithDefaultMessages
-- **TODO**: VerbWithStackArguments
+- **FAIL**: VerbExecutesAwhat (Not Yet Implemented)
+- **FAIL**: VerbInsufficientArgs (Not Yet Implemented)
+- **FAIL**: VerbPermissionDenied (Not Yet Implemented)
+- **FAIL**: VerbWithAttributes (Not Yet Implemented)
+- **FAIL**: VerbWithDefaultMessages (Not Yet Implemented)
+- **FAIL**: VerbWithStackArguments (Not Yet Implemented)
 
 #### `Commands/WarningCommandTests.cs`
 
-- **TODO**: WCheckCommand_WithAll_RequiresWizard
-- **TODO**: WCheckCommand_WithMe_ChecksOwnedObjects
+- **FAIL**: WCheckCommand_WithAll_RequiresWizard (Not Yet Implemented)
+- **FAIL**: WCheckCommand_WithMe_ChecksOwnedObjects (Not Yet Implemented)
 
 #### `Commands/WizardCommandTests.cs`
 
-- **TODO**: AllquotaCommand
-- **TODO**: BootCommand
-- **TODO**: DbckCommand
-- **TODO**: DumpCommand
-- **TODO**: HaltCommand
-- **TODO**: Hide_AlreadyVisible_ShowsAppropriateMessage
-- **TODO**: Hide_NoSwitch_TogglesHidden
-- **TODO**: Hide_OffSwitch_UnsetsHidden
-- **TODO**: PsCommand
-- **TODO**: PsWithTarget
-- **TODO**: QuotaCommand
-- **TODO**: TriggerCommand
+- **FAIL**: AllquotaCommand (Not Yet Implemented)
+- **FAIL**: BootCommand (Not Yet Implemented)
+- **FAIL**: DbckCommand (Not Yet Implemented)
+- **FAIL**: DumpCommand (Not Yet Implemented)
+- **FAIL**: HaltCommand (Not Yet Implemented)
+- **FAIL**: Hide_AlreadyVisible_ShowsAppropriateMessage (Not Yet Implemented)
+- **FAIL**: Hide_NoSwitch_TogglesHidden (Not Yet Implemented)
+- **FAIL**: Hide_OffSwitch_UnsetsHidden (Not Yet Implemented)
+- **FAIL**: PsCommand (Not Yet Implemented)
+- **FAIL**: PsWithTarget (Not Yet Implemented)
+- **FAIL**: QuotaCommand (Not Yet Implemented)
+- **FAIL**: TriggerCommand (Not Yet Implemented)
 
 ### Database
 
 
 #### `Database/FilteredObjectQueryTests.cs`
 
-- **TODO**: FilterByOwner_ReturnsOnlyOwnedObjects
+- **FAIL**: FilterByOwner_ReturnsOnlyOwnedObjects (Not Yet Implemented)
 
 ### Documentation
 
 
 #### `Documentation/HelpfileTests.cs`
 
-- **TODO**: CanIndex
-- **TODO**: Indexable
+- **FAIL**: CanIndex (Not Yet Implemented)
+- **FAIL**: Indexable (Not Yet Implemented)
 
 ### Functions
 
 
 #### `Functions/ChannelFunctionUnitTests.cs`
 
-- **TODO**: Cstatus_WithNonMember_ReturnsOff
+- **FAIL**: Cstatus_WithNonMember_ReturnsOff (Not Yet Implemented)
 
 #### `Functions/ConnectionFunctionUnitTests.cs`
 
-- **TODO**: Idle
+- **FAIL**: Idle (Not Yet Implemented)
 
 #### `Functions/InformationFunctionUnitTests.cs`
 
-- **TODO**: Hidden
+- **FAIL**: Hidden (Not Yet Implemented)
 
 #### `Functions/MailFunctionUnitTests.cs`
 
-- **TODO**: Mail_InvalidMessage_ReturnsError
-- **TODO**: Mailsubject_InvalidMessage_ReturnsError
+- **FAIL**: Mail_InvalidMessage_ReturnsError (Not Yet Implemented)
+- **FAIL**: Mailsubject_InvalidMessage_ReturnsError (Not Yet Implemented)
 
 #### `Functions/MessageFunctionTests.cs`
 
-- **TODO**: MessageHashHashReplacement
-- **TODO**: MessageNoSideFxDisabled
-- **TODO**: MessageOemitSwitch
-- **TODO**: MessageRemitSwitch
+- **FAIL**: MessageHashHashReplacement (Not Yet Implemented)
+- **FAIL**: MessageNoSideFxDisabled (Not Yet Implemented)
+- **FAIL**: MessageOemitSwitch (Not Yet Implemented)
+- **FAIL**: MessageRemitSwitch (Not Yet Implemented)
 
 #### `Functions/StringFunctionUnitTests.cs`
 
-- **TODO**: Decompose
-- **TODO**: DecomposeWeb
+- **FAIL**: Decompose (Not Yet Implemented)
+- **FAIL**: DecomposeWeb (Not Yet Implemented)
 
 #### `Functions/TimeFunctionUnitTests.cs`
 
-- **TODO**: Time
+- **FAIL**: Time (Not Yet Implemented)
 
 ### Parser
 
 
 #### `Parser/RecursionAndInvocationLimitTests.cs`
 
-- **TODO**: RecursionLimit_CommandsTrackAttributeRecursion
-- **TODO**: RecursionLimit_IncludeCommand_TracksRecursion
-- **TODO**: RecursionLimit_TriggerCommand_TracksRecursion
+- **FAIL**: RecursionLimit_CommandsTrackAttributeRecursion (TODO - Needs Investigation)
+- **FAIL**: RecursionLimit_IncludeCommand_TracksRecursion (TODO - Needs Investigation)
+- **FAIL**: RecursionLimit_TriggerCommand_TracksRecursion (TODO - Needs Investigation)
 
 ### Services
 
 
 #### `Services/EventServiceTests.cs`
 
-- **TODO**: TriggerEventWithHandler
-- **TODO**: TriggerEventWithNoHandlerConfigured
-- **TODO**: TriggerEventWithSystemEnactor
+- **FAIL**: TriggerEventWithHandler (TODO - Needs Investigation)
+- **FAIL**: TriggerEventWithNoHandlerConfigured (TODO - Needs Investigation)
+- **FAIL**: TriggerEventWithSystemEnactor (TODO - Needs Investigation)
 
 #### `Services/LocateServiceCompatibilityTests.cs`
 
-- **TODO**: LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom
-- **TODO**: LocateMatch_MultipleObjects_ShouldHandleAmbiguousMatches
-- **TODO**: LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits
-- **TODO**: LocateMatch_PartialMatching_ShouldFindObjectByPartialName
-- **TODO**: LocateMatch_TypePreference_ShouldRespectPlayerPreference
+- **FAIL**: LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom (TODO - Needs Investigation)
+- **FAIL**: LocateMatch_MultipleObjects_ShouldHandleAmbiguousMatches (TODO - Needs Investigation)
+- **FAIL**: LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits (TODO - Needs Investigation)
+- **FAIL**: LocateMatch_PartialMatching_ShouldFindObjectByPartialName (TODO - Needs Investigation)
+- **FAIL**: LocateMatch_TypePreference_ShouldRespectPlayerPreference (TODO - Needs Investigation)
 
 #### `Services/MoveServiceTests.cs`
 
-- **TODO**: DetectsDirectLoop
-- **TODO**: DetectsIndirectLoop
-- **TODO**: ExecuteMoveAsyncFailsOnLoop
-- **TODO**: ExecuteMoveAsyncFailsOnPermission
-- **TODO**: ExecuteMoveAsyncTriggersEnterHooks
-- **TODO**: ExecuteMoveAsyncTriggersLeaveHooks
-- **TODO**: ExecuteMoveAsyncTriggersTeleportHooks
-- **TODO**: ExecuteMoveAsyncWithValidMove
-- **TODO**: NoLoopIntoRoom
-- **TODO**: NoLoopWithSimpleMove
+- **FAIL**: DetectsDirectLoop (TODO - Needs Investigation)
+- **FAIL**: DetectsIndirectLoop (TODO - Needs Investigation)
+- **FAIL**: ExecuteMoveAsyncFailsOnLoop (TODO - Needs Investigation)
+- **FAIL**: ExecuteMoveAsyncFailsOnPermission (TODO - Needs Investigation)
+- **FAIL**: ExecuteMoveAsyncTriggersEnterHooks (TODO - Needs Investigation)
+- **FAIL**: ExecuteMoveAsyncTriggersLeaveHooks (TODO - Needs Investigation)
+- **FAIL**: ExecuteMoveAsyncTriggersTeleportHooks (TODO - Needs Investigation)
+- **FAIL**: ExecuteMoveAsyncWithValidMove (TODO - Needs Investigation)
+- **FAIL**: NoLoopIntoRoom (TODO - Needs Investigation)
+- **FAIL**: NoLoopWithSimpleMove (TODO - Needs Investigation)
 
 #### `Services/PennMUSHDatabaseConverterTests.cs`
 
-- **TODO**: ConversionResultIncludesStatistics
+- **FAIL**: ConversionResultIncludesStatistics (TODO - Needs Investigation)
 
 #### `Services/WarningLockChecksTests.cs`
 
-- **TODO**: LockChecks_Integration_EmptyLock_Skipped
-- **TODO**: LockChecks_Integration_GoingObjectReference_TriggersWarning
-- **TODO**: LockChecks_Integration_InvalidLock_TriggersWarning
-- **TODO**: LockChecks_Integration_MultipleLocks_ChecksAll
-- **TODO**: LockChecks_Integration_ValidLock_NoWarnings
+- **FAIL**: LockChecks_Integration_EmptyLock_Skipped (TODO - Needs Investigation)
+- **FAIL**: LockChecks_Integration_GoingObjectReference_TriggersWarning (TODO - Needs Investigation)
+- **FAIL**: LockChecks_Integration_InvalidLock_TriggersWarning (TODO - Needs Investigation)
+- **FAIL**: LockChecks_Integration_MultipleLocks_ChecksAll (TODO - Needs Investigation)
+- **FAIL**: LockChecks_Integration_ValidLock_NoWarnings (TODO - Needs Investigation)
 
 #### `Services/WarningNoWarnTests.cs`
 
-- **TODO**: BackgroundService_DisabledWhenIntervalZero
-- **TODO**: BackgroundService_RunsAtConfiguredInterval
-- **TODO**: WarningService_SkipsGoingObjects
-- **TODO**: WarningService_SkipsObjectsWithNoWarn
-- **TODO**: WarningService_SkipsObjectsWithOwnerNoWarn
+- **FAIL**: BackgroundService_DisabledWhenIntervalZero (TODO - Needs Investigation)
+- **FAIL**: BackgroundService_RunsAtConfiguredInterval (TODO - Needs Investigation)
+- **FAIL**: WarningService_SkipsGoingObjects (TODO - Needs Investigation)
+- **FAIL**: WarningService_SkipsObjectsWithNoWarn (TODO - Needs Investigation)
+- **FAIL**: WarningService_SkipsObjectsWithOwnerNoWarn (TODO - Needs Investigation)
 
 #### `Services/WarningTopologyTests.cs`
 
-- **TODO**: CheckExitWarnings_MultipleReturnExits_DetectsWarning
-- **TODO**: CheckExitWarnings_OnewayExit_DetectsWarning
-- **TODO**: CheckExitWarnings_UnlinkedExit_DetectsWarning
+- **FAIL**: CheckExitWarnings_MultipleReturnExits_DetectsWarning (TODO - Needs Investigation)
+- **FAIL**: CheckExitWarnings_OnewayExit_DetectsWarning (TODO - Needs Investigation)
+- **FAIL**: CheckExitWarnings_UnlinkedExit_DetectsWarning (TODO - Needs Investigation)
