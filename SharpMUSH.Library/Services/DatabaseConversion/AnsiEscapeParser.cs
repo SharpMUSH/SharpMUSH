@@ -349,26 +349,48 @@ public static class AnsiEscapeParser
 			return MarkupStringModule.single(text);
 		}
 
-		// Build the markup based on state
-		// TODO: Implement hyperlink support for OSC 8 sequences
-		// Currently, linkText and linkUrl parameters are omitted because they require
-		// FSharpOption<FSharpOption<string>> types which need special handling from C#.
-		// To implement: use Microsoft.FSharp.Core.FSharpOption<T>.Some() to wrap values,
-		// or investigate if there's a simpler way to pass hyperlink data to AnsiMarkup.Create.
-		// See ParseOscHyperlink() method which already extracts hyperlink URLs from OSC 8 sequences.
-		var markup = AnsiMarkup.Create(
-			foreground: state.Foreground,
-			background: state.Background,
-			blink: state.Blink,
-			bold: state.Bold,
-			clear: false,
-			faint: state.Faint,
-			inverted: state.Inverted,
-			italic: state.Italic,
-			overlined: state.Overlined,
-			underlined: state.Underlined,
-			strikeThrough: state.StrikeThrough
-		);
+		// Build the markup based on state, including hyperlink support if present
+		AnsiMarkup markup;
+		
+		if (state.LinkUrl != null)
+		{
+			// Create markup with hyperlink
+			var linkText = Microsoft.FSharp.Core.FSharpOption<string>.Some(text);
+			var linkUrl = Microsoft.FSharp.Core.FSharpOption<string>.Some(state.LinkUrl);
+			
+			markup = AnsiMarkup.Create(
+				foreground: state.Foreground,
+				background: state.Background,
+				linkText: Microsoft.FSharp.Core.FSharpOption<Microsoft.FSharp.Core.FSharpOption<string>>.Some(linkText),
+				linkUrl: Microsoft.FSharp.Core.FSharpOption<Microsoft.FSharp.Core.FSharpOption<string>>.Some(linkUrl),
+				blink: state.Blink,
+				bold: state.Bold,
+				clear: false,
+				faint: state.Faint,
+				inverted: state.Inverted,
+				italic: state.Italic,
+				overlined: state.Overlined,
+				underlined: state.Underlined,
+				strikeThrough: state.StrikeThrough
+			);
+		}
+		else
+		{
+			// Create markup without hyperlink
+			markup = AnsiMarkup.Create(
+				foreground: state.Foreground,
+				background: state.Background,
+				blink: state.Blink,
+				bold: state.Bold,
+				clear: false,
+				faint: state.Faint,
+				inverted: state.Inverted,
+				italic: state.Italic,
+				overlined: state.Overlined,
+				underlined: state.Underlined,
+				strikeThrough: state.StrikeThrough
+			);
+		}
 
 		return MarkupStringModule.markupSingle(markup, text);
 	}

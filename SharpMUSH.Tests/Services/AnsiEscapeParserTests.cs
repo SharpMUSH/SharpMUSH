@@ -144,4 +144,28 @@ public class AnsiEscapeParserTests
 		
 		await Assert.That(result.ToPlainText()).IsEqualTo("Success! You found 5 gold coins.");
 	}
+
+	[Test]
+	public async ValueTask OSC8HyperlinkConverted()
+	{
+		// OSC 8 hyperlink: ESC]8;;urlESC\textESC]8;;ESC\
+		var input = "\x1b]8;;https://example.com\x1b\\Click here\x1b]8;;\x1b\\";
+		var result = AnsiEscapeParser.ConvertAnsiToMarkupString(input);
+		
+		// Should preserve the text
+		await Assert.That(result.ToPlainText()).IsEqualTo("Click here");
+		
+		// Markup should be applied (can't easily test URL in result, but it shouldn't crash)
+		await Assert.That(result.ToString()).Contains("Click here");
+	}
+
+	[Test]
+	public async ValueTask OSC8HyperlinkWithBELTerminator()
+	{
+		// OSC 8 with BEL (0x07) terminator instead of ESC\
+		var input = "\x1b]8;;https://example.com\x07Link Text\x1b]8;;\x07";
+		var result = AnsiEscapeParser.ConvertAnsiToMarkupString(input);
+		
+		await Assert.That(result.ToPlainText()).IsEqualTo("Link Text");
+	}
 }
