@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Text;
 using System.Text.RegularExpressions;
 using Mediator;
 using Microsoft.Extensions.Options;
@@ -19,8 +21,10 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
-	// Cache compiled regexes for attribute validation
-	private readonly Dictionary<string, Regex> _regexCache = new();
+	// Thread-safe cache for compiled regexes for attribute validation
+	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
+	// Thread-safe cache for compiled glob patterns
+	private readonly ConcurrentDictionary<string, Regex> _globCache = new();
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
 		OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target)
 		=> type switch
@@ -123,36 +127,86 @@ public partial class ValidateService(
 
 	private bool CheckAttributeRegex(string name, string regex, string value)
 	{
-		// Cache regex by attribute name for performance
-		if (!_regexCache.TryGetValue(name, out var reg))
-		{
-			reg = new Regex(regex, RegexOptions.Compiled);
-			_regexCache[name] = reg;
-		}
+		// Thread-safe cache access for compiled regexes
+		var reg = _regexCache.GetOrAdd(name, _ => new Regex(regex, RegexOptions.Compiled));
 		return reg.IsMatch(value);
 	}
-
+	
 	/// <summary>
 	/// Checks if an attribute value is valid against a SharpAttributeEntry.
-	/// TODO: Ensure enum can do globbing.
-	/// TODO: Add length check for attribute values.
+	/// Supports enum validation with wildcard globbing patterns.
+	/// Enforces maximum attribute value length from configuration.
 	/// </summary>
 	/// <param name="value">Value</param>
 	/// <param name="attribute">Attribute Entry</param>
 	/// <returns>True or false</returns>
-	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute) =>
-		attribute switch
+	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
+	{
+		// Check attribute value byte length using configured limit
+		// Convert to plain text and measure UTF-8 bytes for multi-byte character support
+		var plainValue = value.ToPlainText();
+		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
+		
+		if (Encoding.UTF8.GetByteCount(plainValue) > maxBytes)
+		{
+			return false;
+		}
+		
+		return attribute switch
 		{
 			{ Limit: null } and { Enum: null } => true,
 			{ Limit: not null } and { Enum: not null }
-				=> attribute.Enum.Contains(value.ToPlainText())
-				   && CheckAttributeRegex(attribute.Name, attribute.Limit, value.ToPlainText()),
+				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum)
+				   && CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
 			{ Enum: not null }
-				=> attribute.Enum.Contains(value.ToPlainText()),
+				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum),
 			{ Limit: not null }
-				=> CheckAttributeRegex(attribute.Name, attribute.Limit, value.ToPlainText()),
+				=> CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
 			_ => false
 		};
+	}
+	
+	/// <summary>
+	/// Checks if a value matches any of the enum patterns, supporting glob wildcards (* and ?).
+	/// Uses thread-safe caching to avoid recompiling regex patterns.
+	/// </summary>
+	/// <param name="value">The value to check</param>
+	/// <param name="enumPatterns">Array of allowed patterns (can include * and ? wildcards)</param>
+	/// <returns>True if value matches any pattern</returns>
+	private bool MatchesEnumWithGlobbing(string value, string[] enumPatterns)
+	{
+		foreach (var pattern in enumPatterns)
+		{
+			// If pattern has no wildcards, do exact match for performance
+			if (!pattern.Contains('*') && !pattern.Contains('?'))
+			{
+				if (value.Equals(pattern, StringComparison.Ordinal))
+				{
+					return true;
+				}
+				continue;
+			}
+			
+			// Thread-safe cache access for compiled regex patterns
+			var regex = _globCache.GetOrAdd(pattern, p =>
+			{
+				// Convert glob pattern to regex
+				var regexPattern = "^" + Regex.Escape(p)
+					.Replace("\\*", ".*")  // * matches any characters
+					.Replace("\\?", ".")   // ? matches single character
+					+ "$";
+				
+				return new Regex(regexPattern, RegexOptions.Compiled);
+			});
+			
+			if (regex.IsMatch(value))
+			{
+				return true;
+			}
+		}
+		
+		return false;
+	}
 
 	[GeneratedRegex("^[!\"#%&\\(\\)\\+,\\-\\./0-9A-Za-z:;\\<\\>=\\?@`_]+$")]
 	private static partial Regex ValidAttributeNameRegex();

@@ -108,8 +108,11 @@ public class MoveService(
 			return new Error<string>("Permission denied.");
 		}
 		
-		// 3. Calculate and check move cost
-		// TODO: Implement quota checking and deduction when quota system is available
+		// 3. Check and track move cost (quota system integration point)
+		// Note: In MUSH servers, quota typically affects object creation, not movement.
+		// This section is reserved for future quota-related move cost tracking if needed.
+		// The quota checking itself is implemented in object creation commands.
+		// For now, moves are allowed regardless of quota status.
 		
 		// 4. Get old location for hooks
 		var oldLocation = await objectToMove.Match<ValueTask<DBRef>>(
