@@ -12,7 +12,9 @@ public partial class Commands
 	[SharpCommand(Name = "]", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: There is likely a better way to pick this up where this left off, instead of re-parsing.
+		// Re-parse the command with NoEval mode. This is necessary because the command
+		// was already tokenized in Default mode by the time we reach this handler.
+		// The "]" prefix changes evaluation semantics for the entire command.
 		var oldCommand = MModule.multipleWithDelimiter(MModule.single(" "),
 		[
 			parser.CurrentState.Arguments["0"].Message!,
