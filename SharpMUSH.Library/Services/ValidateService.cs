@@ -21,13 +21,6 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
-	/// <summary>
-	/// Maximum byte length for attribute values in standard MUSH servers.
-	/// This is a widely-adopted limit across PennMUSH, TinyMUSH, and other MUSH derivatives.
-	/// Could be made configurable in future versions if needed.
-	/// </summary>
-	private const int MaxAttributeValueBytes = 8192;
-	
 	// Thread-safe cache for compiled regexes for attribute validation
 	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
 	// Thread-safe cache for compiled glob patterns
@@ -142,17 +135,19 @@ public partial class ValidateService(
 	/// <summary>
 	/// Checks if an attribute value is valid against a SharpAttributeEntry.
 	/// Supports enum validation with wildcard globbing patterns.
-	/// Enforces maximum attribute value length (8192 bytes, standard MUSH limit).
+	/// Enforces maximum attribute value length from configuration (lbuf_size).
 	/// </summary>
 	/// <param name="value">Value</param>
 	/// <param name="attribute">Attribute Entry</param>
 	/// <returns>True or false</returns>
 	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
 	{
-		// Check attribute value byte length - convert to plain text and measure UTF-8 bytes
-		// This is the correct way to enforce the 8KB limit for multi-byte characters
+		// Check attribute value byte length using configured limit (lbuf_size)
+		// Convert to plain text and measure UTF-8 bytes for multi-byte character support
 		var plainValue = value.ToPlainText();
-		if (Encoding.UTF8.GetByteCount(plainValue) > MaxAttributeValueBytes)
+		var maxBytes = (int)configuration.CurrentValue.Limit.LBufSize;
+		
+		if (Encoding.UTF8.GetByteCount(plainValue) > maxBytes)
 		{
 			return false;
 		}
