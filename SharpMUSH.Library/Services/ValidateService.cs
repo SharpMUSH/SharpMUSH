@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text.RegularExpressions;
 using Mediator;
@@ -19,8 +20,10 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
-	// Cache compiled regexes for attribute validation
-	private readonly Dictionary<string, Regex> _regexCache = new();
+	// Thread-safe cache for compiled regexes for attribute validation
+	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
+	// Thread-safe cache for compiled glob patterns
+	private readonly ConcurrentDictionary<string, Regex> _globCache = new();
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
 		OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target)
 		=> type switch
@@ -123,17 +126,10 @@ public partial class ValidateService(
 
 	private bool CheckAttributeRegex(string name, string regex, string value)
 	{
-		// Cache regex by attribute name for performance
-		if (!_regexCache.TryGetValue(name, out var reg))
-		{
-			reg = new Regex(regex, RegexOptions.Compiled);
-			_regexCache[name] = reg;
-		}
+		// Thread-safe cache access for compiled regexes
+		var reg = _regexCache.GetOrAdd(name, _ => new Regex(regex, RegexOptions.Compiled));
 		return reg.IsMatch(value);
 	}
-
-	// Cache for compiled glob patterns to avoid recreating regex objects
-	private readonly Dictionary<string, Regex> _globCache = new();
 	
 	/// <summary>
 	/// Checks if an attribute value is valid against a SharpAttributeEntry.
@@ -172,7 +168,7 @@ public partial class ValidateService(
 	
 	/// <summary>
 	/// Checks if a value matches any of the enum patterns, supporting glob wildcards (* and ?).
-	/// Uses caching to avoid recompiling regex patterns.
+	/// Uses thread-safe caching to avoid recompiling regex patterns.
 	/// </summary>
 	/// <param name="value">The value to check</param>
 	/// <param name="enumPatterns">Array of allowed patterns (can include * and ? wildcards)</param>
@@ -191,18 +187,17 @@ public partial class ValidateService(
 				continue;
 			}
 			
-			// Check cache for compiled regex
-			if (!_globCache.TryGetValue(pattern, out var regex))
+			// Thread-safe cache access for compiled regex patterns
+			var regex = _globCache.GetOrAdd(pattern, p =>
 			{
-				// Convert glob pattern to regex and cache it
-				var regexPattern = "^" + Regex.Escape(pattern)
+				// Convert glob pattern to regex
+				var regexPattern = "^" + Regex.Escape(p)
 					.Replace("\\*", ".*")  // * matches any characters
 					.Replace("\\?", ".")   // ? matches single character
 					+ "$";
 				
-				regex = new Regex(regexPattern, RegexOptions.Compiled);
-				_globCache[pattern] = regex;
-			}
+				return new Regex(regexPattern, RegexOptions.Compiled);
+			});
 			
 			if (regex.IsMatch(value))
 			{
