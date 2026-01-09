@@ -777,17 +777,44 @@ public partial class Commands
 
 		if (!switches.Contains("OPAQUE") && !switches.Contains("BRIEF") && contents.Length > 0)
 		{
-			// TODO: Proper carry format.
-			await NotifyService!.Notify(enactor, $"Contents:\n" +
-			                                    $"{string.Join("\n", contentKeys)}");
+			// Use CONFORMAT attribute if present, following PennMUSH conventions
+			var conFormatResult = await AttributeService!.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
+				IAttributeService.AttributeMode.Read, false);
+			
+			if (conFormatResult.IsAttribute)
+			{
+				// Format with CONFORMAT: %0 = space-separated dbrefs, %1 = pipe-separated names
+				var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
+				var contentNames = string.Join("|", contentKeys);
+				
+				var formatArgs = new Dictionary<string, CallState>
+				{
+					["0"] = new CallState(contentDbrefs),
+					["1"] = new CallState(contentNames)
+				};
+				
+				var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+					parser, executor, viewingKnown, "CONFORMAT", formatArgs);
+				
+				await NotifyService!.Notify(enactor, formattedContents);
+			}
+			else
+			{
+				// Default format when CONFORMAT is not set
+				await NotifyService!.Notify(enactor, $"Contents:\n" +
+				                                    $"{string.Join("\n", contentKeys)}");
+			}
 		}
 
 		if (!switches.Contains("BRIEF") && !viewingKnown.IsRoom)
 		{
-			// TODO: Proper Format.
-			await NotifyService.Notify(enactor, $"Home: {(await viewingKnown.MinusRoom().Home()).Object().Name}");
+			// Format Home and Location display
+			var homeObj = await viewingKnown.MinusRoom().Home();
+			var locationObj = await viewingKnown.AsContent.Location();
+			
+			await NotifyService.Notify(enactor, $"Home: {homeObj.Object().Name}");
 			await NotifyService.Notify(enactor,
-				$"Location: {(await viewingKnown.AsContent.Location()).Object().Name}");
+				$"Location: {locationObj.Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());
