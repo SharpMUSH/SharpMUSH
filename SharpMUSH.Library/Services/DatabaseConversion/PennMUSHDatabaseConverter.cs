@@ -271,12 +271,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
 				// Update Room #0 name from PennMUSH data
-				var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-				if (room0Obj.IsT1)
-				{
-					await _database.SetObjectName(room0Obj.AsT1, MModule.single(room0Penn.Name), cancellationToken);
-					_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
-				}
+				await _database.SetObjectName(existingRoom0.AsT1, MModule.single(room0Penn.Name), cancellationToken);
+				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
 		else
