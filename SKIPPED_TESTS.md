@@ -11,9 +11,9 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 ## Summary
 
 - **Total Skipped Tests**: 204
-- **TODO**: 163
+- **TODO**: 151
 - **SUCCESS**: 15
-- **FAIL**: 26
+- **FAIL**: 38
 
 ## Tests by Category
 
@@ -86,18 +86,19 @@ Note: 2 of these 7 tests actually passed - need to identify which ones from deta
 
 #### `Commands/CommunicationCommandTests.cs`
 
-- **TODO**: ComListEmpty
-- **TODO**: ComTitleBasic
-- **TODO**: LemitBasic
-- **TODO**: NsemitBasic
-- **TODO**: NslemitBasic
-- **TODO**: NsoemitBasic
-- **TODO**: NspemitBasic
-- **TODO**: NsremitBasic
-- **TODO**: NszemitBasic
-- **TODO**: OemitBasic
-- **TODO**: RemitBasic
-- **TODO**: ZemitBasic
+- **FAIL**: ComTitleBasic (ReceivedCallsException - test interference, received 24 notify calls from other tests)
+- **FAIL**: LemitBasic (ReceivedCallsException - test interference, received 14 notify calls)
+- **FAIL**: NsemitBasic (RedundantArgumentMatcherException - mock specification issue with Arg.Any<string>())
+- **FAIL**: NslemitBasic (RedundantArgumentMatcherException - mock specification issue with Arg.Any<string>())
+- **FAIL**: NsoemitBasic (RedundantArgumentMatcherException - mock specification issue with Arg.Any<string>())
+- **FAIL**: NspemitBasic (RedundantArgumentMatcherException - mock specification issue with Arg.Any<string>())
+- **FAIL**: NsremitBasic (RedundantArgumentMatcherException - mock specification issue with Arg.Any<string>())
+- **FAIL**: NszemitBasic (RedundantArgumentMatcherException - mock specification issue with Arg.Any<string>())
+- **FAIL**: OemitBasic (ReceivedCallsException - test interference, received 15 notify calls)
+- **FAIL**: RemitBasic (ReceivedCallsException - test interference, received 13 notify calls)
+- **FAIL**: ZemitBasic (ReceivedCallsException - wrong message, expected "Test zone emit" but received "Don't you have anything to say?")
+- **TODO**: ComListEmpty (skipped with "TODO")
+- **TODO**: AddComInvalidArgs (2 tests skipped with "TODO")
 
 #### `Commands/ConfigCommandTests.cs`
 
