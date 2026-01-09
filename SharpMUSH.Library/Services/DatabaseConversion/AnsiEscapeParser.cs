@@ -350,8 +350,12 @@ public static class AnsiEscapeParser
 		}
 
 		// Build the markup based on state
-		// Note: linkText and linkUrl are optional and have complex FSharpOption types
-		// For now, we'll create the markup without hyperlinks as they need special handling
+		// TODO: Implement hyperlink support for OSC 8 sequences
+		// Currently, linkText and linkUrl parameters are omitted because they require
+		// FSharpOption<FSharpOption<string>> types which need special handling from C#.
+		// To implement: use Microsoft.FSharp.Core.FSharpOption<T>.Some() to wrap values,
+		// or investigate if there's a simpler way to pass hyperlink data to AnsiMarkup.Create.
+		// See ParseOscHyperlink() method which already extracts hyperlink URLs from OSC 8 sequences.
 		var markup = AnsiMarkup.Create(
 			foreground: state.Foreground,
 			background: state.Background,
