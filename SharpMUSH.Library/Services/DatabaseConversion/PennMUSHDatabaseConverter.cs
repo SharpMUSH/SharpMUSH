@@ -199,8 +199,15 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var godPennObject = pennDatabase.GetObject(1);
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
-				// TODO: Update God player name/password from PennMUSH data
-				_logger.LogDebug("PennMUSH God player #{PennDBRef} data available: {Name}", 1, godPennObject.Name);
+				// Update God player name/password from PennMUSH data
+				await _database.SetObjectName(existingPlayer1.AsT0, MModule.single(godPennObject.Name), cancellationToken);
+				
+				if (!string.IsNullOrEmpty(godPennObject.Password))
+				{
+					await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, godPennObject.Password, cancellationToken);
+				}
+				
+				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
 			}
 		}
 		else
@@ -263,8 +270,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var room0Penn = pennDatabase.GetObject(0);
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
-				// TODO: Update Room #0 name from PennMUSH data
-				_logger.LogDebug("PennMUSH Limbo room #{PennDBRef} data available: {Name}", 0, room0Penn.Name);
+				// Update Room #0 name from PennMUSH data
+				await _database.SetObjectName(existingRoom0.AsT1, MModule.single(room0Penn.Name), cancellationToken);
+				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
 		else
@@ -546,17 +554,33 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				// Handle parent relationship
 				if (pennObj.Parent >= 0 && _dbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
 				{
-					// TODO: Set parent relationship
-					// This requires database support for setting parent
-					_logger.LogDebug("Would set parent for #{PennDBRef} to #{ParentDBRef}", pennObj.DBRef, pennObj.Parent);
+					// Set parent relationship
+					var parentObj = await _database.GetObjectNodeAsync(parentDbRef, cancellationToken);
+					if (!parentObj.IsNone)
+					{
+						await _database.SetObjectParent(sharpObj.Known, parentObj.Known, cancellationToken);
+						_logger.LogDebug("Set parent for #{PennDBRef} to #{ParentDBRef}", pennObj.DBRef, pennObj.Parent);
+					}
+					else
+					{
+						warnings.Add($"Parent object #{pennObj.Parent} not found for object #{pennObj.DBRef}");
+					}
 				}
 
 				// Handle zone relationship
 				if (pennObj.Zone >= 0 && _dbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
 				{
-					// TODO: Set zone relationship
-					// This requires database support for setting zone
-					_logger.LogDebug("Would set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
+					// Set zone relationship
+					var zoneObj = await _database.GetObjectNodeAsync(zoneDbRef, cancellationToken);
+					if (!zoneObj.IsNone)
+					{
+						await _database.SetObjectZone(sharpObj.Known, zoneObj.Known, cancellationToken);
+						_logger.LogDebug("Set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
+					}
+					else
+					{
+						warnings.Add($"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
+					}
 				}
 			}
 			catch (Exception ex)
@@ -610,19 +634,15 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					try
 					{
-						// Strip ANSI and Pueblo escape sequences from attribute value
-						// TODO: Convert these to proper MarkupStrings instead of stripping
-						var cleanedValue = StripEscapeSequences(pennAttr.Value);
+						// Convert ANSI escape sequences to MarkupString
+						var value = AnsiEscapeParser.ConvertAnsiToMarkupString(pennAttr.Value);
 						
-						// Log if escape sequences were removed
-						if (cleanedValue != pennAttr.Value)
+						// Log if escape sequences were converted
+						if (pennAttr.Value != null && pennAttr.Value.Contains('\x1b'))
 						{
-							_logger.LogTrace("Stripped escape sequences from attribute {AttrName} on object #{DBRef}", 
+							_logger.LogTrace("Converted ANSI escape sequences from attribute {AttrName} on object #{DBRef}", 
 								pennAttr.Name, pennObj.DBRef);
 						}
-						
-						// Convert PennMUSH attribute value to MString
-						var value = MModule.single(cleanedValue);
 
 						// Set the attribute using AttributeService
 						var result = await _attributeService.SetAttributeAsync(
@@ -766,25 +786,27 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Strips Pueblo ANSI escape sequences from text as stored in PennMUSH database files.
+	/// Converts Pueblo ANSI escape sequences from text as stored in PennMUSH database files to MarkupStrings.
 	/// PennMUSH stores ANSI escape codes as literal ESC sequences in attribute text.
 	/// Standard HTML tags are preserved as they may be intentional content.
 	/// 
 	/// Handles Pueblo-specific ANSI formats:
 	/// - CSI sequences: ESC[...m (colors, styles) - e.g., ESC[31m (red), ESC[1m (bold), ESC[38;5;n]m (256-color)
-	/// - OSC sequences: ESC]...ESC\ (operating system commands, used by Pueblo for special markup)
-	/// - Simple escapes: ESC followed by single character
+	/// - OSC sequences: ESC]...ESC\ (operating system commands, used by Pueblo for special markup and hyperlinks)
+	/// - Simple escapes: ESC followed by single character (stripped if not recognized)
 	/// 
-	/// TODO: Convert these escape sequences to proper MarkupStrings instead of stripping them.
-	/// This will require:
-	/// - Parsing ANSI SGR (Select Graphic Rendition) codes to MarkupString colors/styles
-	/// - Mapping ANSI 256-color codes (ESC[38;5;nm, ESC[48;5;nm) to MarkupString colors
-	/// - Mapping ANSI RGB codes (ESC[38;2;r;g;bm, ESC[48;2;r;g;bm) to MarkupString colors
-	/// - Converting bold (ESC[1m), underline (ESC[4m), etc. to MarkupString formatting
-	/// - Handling Pueblo OSC sequences and converting to MarkupString equivalents
+	/// Converted to MarkupStrings:
+	/// - ANSI SGR (Select Graphic Rendition) codes → MarkupString colors/styles
+	/// - ANSI 256-color codes (ESC[38;5;nm, ESC[48;5;nm) → MarkupString RGB colors
+	/// - ANSI RGB codes (ESC[38;2;r;g;bm, ESC[48;2;r;g;bm) → MarkupString RGB colors
+	/// - Bold (ESC[1m), underline (ESC[4m), etc. → MarkupString formatting
+	/// - Pueblo OSC 8 sequences (hyperlinks) → MarkupString hyperlinks
+	/// 
+	/// Unrecognized escape sequences are stripped from the output.
 	/// </summary>
 	/// <param name="text">Text potentially containing Pueblo ANSI escape sequences</param>
 	/// <returns>Text with escape sequences removed but standard HTML preserved, or empty string if input is null</returns>
+	[Obsolete("Use AnsiEscapeParser.ConvertAnsiToMarkupString instead")]
 	private static string StripEscapeSequences(string? text)
 	{
 		if (string.IsNullOrEmpty(text))
