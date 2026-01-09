@@ -1657,28 +1657,29 @@ public partial class Functions
 		return validationType switch
 		{
 			IValidateService.ValidationType.AttributeValue when target is not null
-				=> await ValidateService!.Valid(validationType, str, await GetAttributeEntry(target)),
-			IValidateService.ValidationType.AttributeValue => await ValidateService!.Valid(validationType, str, new None()),
+				=> new CallState(await ValidateService!.Valid(validationType, str, await GetAttributeEntry(target)) ? "1" : "0"),
+			IValidateService.ValidationType.AttributeValue 
+				=> new CallState(await ValidateService!.Valid(validationType, str, new None()) ? "1" : "0"),
 
 			IValidateService.ValidationType.PlayerName when target is null
-				=> await ValidateService!.Valid(validationType, str, caller),
+				=> new CallState(await ValidateService!.Valid(validationType, str, caller) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName
 				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
 					is { IsAnyObject: true, AsAnyObject: var obj }
-				=> await ValidateService!.Valid(validationType, str, obj),
+				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName => Errors.ErrorCantSeeThat,
 
-			IValidateService.ValidationType.ChannelName => await ValidateService!.Valid(validationType, str,
-				await GetChannel(target ?? string.Empty)),
+			IValidateService.ValidationType.ChannelName 
+				=> new CallState(await ValidateService!.Valid(validationType, str, await GetChannel(target ?? string.Empty)) ? "1" : "0"),
 
 			IValidateService.ValidationType.LockType when target is null
-				=> await ValidateService!.Valid(validationType, str, caller),
+				=> new CallState(await ValidateService!.Valid(validationType, str, caller) ? "1" : "0"),
 			IValidateService.ValidationType.LockType
 				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
 					is { IsAnyObject: true, AsAnyObject: var obj }
-				=> await ValidateService!.Valid(validationType, str, obj),
+				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.LockType => Errors.ErrorCantSeeThat,
-			_ => await ValidateService!.Valid(validationType, str, new None())
+			_ => new CallState(await ValidateService!.Valid(validationType, str, new None()) ? "1" : "0")
 		};
 
 		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetChannel(string t)
