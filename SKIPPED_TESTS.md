@@ -11,9 +11,9 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 ## Summary
 
 - **Total Skipped Tests**: 204
-- **TODO**: 130
+- **TODO**: 80
 - **SUCCESS**: 16
-- **FAIL**: 58
+- **FAIL**: 108
 
 ## Tests by Category
 
@@ -135,78 +135,78 @@ Note: 2 of these 7 tests actually passed - need to identify which ones from deta
 
 #### `Commands/FlagAndPowerCommandTests.cs`
 
-- **TODO**: Flag_Delete_HandlesNonExistentFlag
-- **TODO**: Flag_Disable_PreventsSystemFlagDisable
-- **TODO**: Power_Delete_HandlesNonExistentPower
-- **TODO**: Power_Disable_PreventsSystemPowerDisable
-- **TODO**: Power_Enable_EnablesDisabledPower
+- **FAIL**: Flag_Delete_HandlesNonExistentFlag (Not Yet Implemented)
+- **FAIL**: Flag_Disable_PreventsSystemFlagDisable (Not Yet Implemented)
+- **FAIL**: Power_Delete_HandlesNonExistentPower (Not Yet Implemented)
+- **FAIL**: Power_Disable_PreventsSystemPowerDisable (Not Yet Implemented)
+- **FAIL**: Power_Enable_EnablesDisabledPower (Not Yet Implemented)
 
 #### `Commands/GameCommandTests.cs`
 
-- **TODO**: BuyCommand
-- **TODO**: DesertCommand
-- **TODO**: DismissCommand
-- **TODO**: FollowCommand
-- **TODO**: ScoreCommand
-- **TODO**: TeachCommand
-- **TODO**: UnfollowCommand
-- **TODO**: WithCommand
+- **FAIL**: BuyCommand (Not Yet Implemented)
+- **FAIL**: DesertCommand (Not Yet Implemented)
+- **FAIL**: DismissCommand (Not Yet Implemented)
+- **FAIL**: FollowCommand (Not Yet Implemented)
+- **FAIL**: ScoreCommand (Not Yet Implemented)
+- **FAIL**: TeachCommand (Not Yet Implemented)
+- **FAIL**: UnfollowCommand (Not Yet Implemented)
+- **FAIL**: WithCommand (Not Yet Implemented)
 
 #### `Commands/GeneralCommandTests.cs`
 
-- **TODO**: Attribute_DisplaysAttributeInfo
-- **TODO**: Command_ShowsCommandInfo
-- **TODO**: DolistCommand
-- **TODO**: Halt_ClearsQueue
+- **FAIL**: Attribute_DisplaysAttributeInfo (Not Yet Implemented)
+- **FAIL**: Command_ShowsCommandInfo (Not Yet Implemented)
+- **FAIL**: DolistCommand (Not Yet Implemented)
+- **FAIL**: Halt_ClearsQueue (Not Yet Implemented)
 
 #### `Commands/LogCommandTests.cs`
 
-- **TODO**: LogwipeCommand
+- **FAIL**: LogwipeCommand (Not Yet Implemented)
 
 #### `Commands/MailCommandTests.cs`
 
-- **TODO**: MailCommand
-- **TODO**: MaliasCommand
+- **FAIL**: MailCommand (Not Yet Implemented)
+- **FAIL**: MaliasCommand (Not Yet Implemented)
 
 #### `Commands/MessageCommandTests.cs`
 
-- **TODO**: MessageOemitSwitch
-- **TODO**: MessageRemitSwitch
+- **FAIL**: MessageOemitSwitch (Not Yet Implemented)
+- **FAIL**: MessageRemitSwitch (Not Yet Implemented)
 
 #### `Commands/MiscCommandTests.cs`
 
-- **TODO**: BriefCommand
-- **TODO**: ConnectCommand
-- **TODO**: EditCommand
-- **TODO**: NspromptCommand
-- **TODO**: PromptCommand
-- **TODO**: QuitCommand
-- **TODO**: SessionCommand
-- **TODO**: SweepCommand
-- **TODO**: VerbCommand
-- **TODO**: WhoCommand
+- **FAIL**: BriefCommand (Not Yet Implemented)
+- **FAIL**: ConnectCommand (Not Yet Implemented)
+- **FAIL**: EditCommand (Not Yet Implemented)
+- **FAIL**: NspromptCommand (Not Yet Implemented)
+- **FAIL**: PromptCommand (Not Yet Implemented)
+- **FAIL**: QuitCommand (Not Yet Implemented)
+- **FAIL**: SessionCommand (Not Yet Implemented)
+- **FAIL**: SweepCommand (Not Yet Implemented)
+- **FAIL**: VerbCommand (Not Yet Implemented)
+- **FAIL**: WhoCommand (Not Yet Implemented)
 
 #### `Commands/MovementCommandTests.cs`
 
-- **TODO**: EnterCommand
-- **TODO**: GotoCommand
+- **FAIL**: EnterCommand (Not Yet Implemented)
+- **FAIL**: GotoCommand (Not Yet Implemented)
 
 #### `Commands/NetworkCommandTests.cs`
 
-- **TODO**: HttpCommand
-- **TODO**: MapsqlCommand
-- **TODO**: SlaveCommand
-- **TODO**: SocksetCommand
-- **TODO**: SqlCommand
+- **FAIL**: HttpCommand (Not Yet Implemented)
+- **FAIL**: MapsqlCommand (Not Yet Implemented)
+- **FAIL**: SlaveCommand (Not Yet Implemented)
+- **FAIL**: SocksetCommand (Not Yet Implemented)
+- **FAIL**: SqlCommand (Not Yet Implemented)
 
 #### `Commands/NotificationCommandTests.cs`
 
-- **TODO**: MessageCommand
-- **TODO**: RespondCommand
-- **TODO**: RwallCommand
-- **TODO**: SuggestCommand
-- **TODO**: WarningsCommand
-- **TODO**: WcheckCommand
+- **FAIL**: MessageCommand (Not Yet Implemented)
+- **FAIL**: RespondCommand (Not Yet Implemented)
+- **FAIL**: RwallCommand (Not Yet Implemented)
+- **FAIL**: SuggestCommand (Not Yet Implemented)
+- **FAIL**: WarningsCommand (Not Yet Implemented)
+- **FAIL**: WcheckCommand (Not Yet Implemented)
 
 #### `Commands/ObjectManipulationCommandTests.cs`
 
