@@ -454,6 +454,15 @@ public partial class Functions
 		}
 
 		// TODO: Implement actual websocket/out-of-band JSON communication
+		//
+		// Full implementation requirements:
+		// 1. Add websocket support to ConnectionService
+		// 2. Implement GMCP (Generic MUD Communication Protocol) for JSON
+		// 3. Support standard GMCP packages and custom packages
+		// 4. Add JSON schema validation for safety
+		// 5. Implement bidirectional JSON communication
+		//
+		// When implemented, this will send JSON through GMCP/websocket channel
 		// Placeholder - returns empty string as OOB data doesn't display in-band
 		return CallState.Empty;
 	}

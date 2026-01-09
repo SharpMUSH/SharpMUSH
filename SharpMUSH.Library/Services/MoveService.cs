@@ -1,6 +1,7 @@
 using Mediator;
 using OneOf;
 using OneOf.Types;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -15,7 +16,8 @@ public class MoveService(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IPermissionService permissionService,
-	INotifyService notifyService) : IMoveService
+	INotifyService notifyService,
+	IOptionsWrapper<SharpMUSHOptions> configuration) : IMoveService
 {
 	/// <summary>
 	/// Standard attribute names for move hooks
@@ -108,8 +110,30 @@ public class MoveService(
 			return new Error<string>("Permission denied.");
 		}
 		
-		// 3. Calculate and check move cost
-		// TODO: Implement quota checking and deduction when quota system is available
+		// 3. Calculate and check quota if enabled
+		if (configuration.CurrentValue.Limit.UseQuota)
+		{
+			// Get the owner of the object being moved
+			var owner = await objectToMove.Object().Owner.WithCancellation(CancellationToken.None);
+			if (owner is not null)
+			{
+				var ownedCount = await mediator.Send(new GetOwnedObjectCountQuery(owner));
+				
+				// Check if owner is over quota
+				if (ownedCount >= owner.Quota)
+				{
+					// Only enforce if not a wizard/admin
+					var ownerAsObject = new AnySharpObject(owner);
+					if (!await ownerAsObject.IsRoyalty())
+					{
+						await notifyService.Notify(enactorObj, 
+							$"Quota exceeded: {owner.Object.Name.ToString()} owns {ownedCount} of {owner.Quota} objects.",
+							enactorObj);
+						return new Error<string>("Quota exceeded.");
+					}
+				}
+			}
+		}
 		
 		// 4. Get old location for hooks
 		var oldLocation = await objectToMove.Match<ValueTask<DBRef>>(

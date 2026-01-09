@@ -134,25 +134,71 @@ public partial class ValidateService(
 
 	/// <summary>
 	/// Checks if an attribute value is valid against a SharpAttributeEntry.
-	/// TODO: Ensure enum can do globbing.
-	/// TODO: Add length check for attribute values.
+	/// Supports enum validation with wildcard globbing patterns.
+	/// Enforces maximum attribute value length (8192 bytes, standard MUSH limit).
 	/// </summary>
 	/// <param name="value">Value</param>
 	/// <param name="attribute">Attribute Entry</param>
 	/// <returns>True or false</returns>
-	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute) =>
-		attribute switch
+	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
+	{
+		const int MaxAttributeValueLength = 8192; // Standard MUSH attribute value limit
+		var plainValue = value.ToPlainText();
+		
+		// Check attribute value length - standard MUSH servers limit to 8KB
+		if (plainValue.Length > MaxAttributeValueLength)
+		{
+			return false;
+		}
+		
+		return attribute switch
 		{
 			{ Limit: null } and { Enum: null } => true,
 			{ Limit: not null } and { Enum: not null }
-				=> attribute.Enum.Contains(value.ToPlainText())
-				   && CheckAttributeRegex(attribute.Name, attribute.Limit, value.ToPlainText()),
+				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum)
+				   && CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
 			{ Enum: not null }
-				=> attribute.Enum.Contains(value.ToPlainText()),
+				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum),
 			{ Limit: not null }
-				=> CheckAttributeRegex(attribute.Name, attribute.Limit, value.ToPlainText()),
+				=> CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
 			_ => false
 		};
+	}
+	
+	/// <summary>
+	/// Checks if a value matches any of the enum patterns, supporting glob wildcards (* and ?).
+	/// </summary>
+	/// <param name="value">The value to check</param>
+	/// <param name="enumPatterns">Array of allowed patterns (can include * and ? wildcards)</param>
+	/// <returns>True if value matches any pattern</returns>
+	private static bool MatchesEnumWithGlobbing(string value, string[] enumPatterns)
+	{
+		foreach (var pattern in enumPatterns)
+		{
+			// If pattern has no wildcards, do exact match for performance
+			if (!pattern.Contains('*') && !pattern.Contains('?'))
+			{
+				if (value.Equals(pattern, StringComparison.Ordinal))
+				{
+					return true;
+				}
+				continue;
+			}
+			
+			// Convert glob pattern to regex
+			var regexPattern = "^" + Regex.Escape(pattern)
+				.Replace("\\*", ".*")  // * matches any characters
+				.Replace("\\?", ".")   // ? matches single character
+				+ "$";
+			
+			if (Regex.IsMatch(value, regexPattern))
+			{
+				return true;
+			}
+		}
+		
+		return false;
+	}
 
 	[GeneratedRegex("^[!\"#%&\\(\\)\\+,\\-\\./0-9A-Za-z:;\\<\\>=\\?@`_]+$")]
 	private static partial Regex ValidAttributeNameRegex();
