@@ -151,7 +151,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				GuestPaycheck: 0,
 				IdleTimeout: 0,
 				KeepaliveTimeout: 300,
-				LBufSize: 8192,
+				MaxAttributeValueLength: 8192,
 				MailLimit: 300,
 				MaxAliases: 3,
 				MaxAttributesPerObj: 2048,

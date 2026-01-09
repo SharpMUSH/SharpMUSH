@@ -135,17 +135,17 @@ public partial class ValidateService(
 	/// <summary>
 	/// Checks if an attribute value is valid against a SharpAttributeEntry.
 	/// Supports enum validation with wildcard globbing patterns.
-	/// Enforces maximum attribute value length from configuration (lbuf_size).
+	/// Enforces maximum attribute value length from configuration.
 	/// </summary>
 	/// <param name="value">Value</param>
 	/// <param name="attribute">Attribute Entry</param>
 	/// <returns>True or false</returns>
 	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
 	{
-		// Check attribute value byte length using configured limit (lbuf_size)
+		// Check attribute value byte length using configured limit
 		// Convert to plain text and measure UTF-8 bytes for multi-byte character support
 		var plainValue = value.ToPlainText();
-		var maxBytes = (int)configuration.CurrentValue.Limit.LBufSize;
+		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
 		
 		if (Encoding.UTF8.GetByteCount(plainValue) > maxBytes)
 		{

@@ -31,5 +31,5 @@ public record LimitOptions(
 	[property: SharpConfig(Name = "queue_entry_cpu_time", Category = "Limit", Description = "CPU time limit per queued command (seconds)", ValidationPattern = @"^\d+$")] uint QueueEntryCpuTime,
 	[property: SharpConfig(Name = "use_quota", Category = "Limit", Description = "Enable quota system for object creation")] bool UseQuota,
 	[property: SharpConfig(Name = "chunk_migrate", Category = "Limit", Description = "Number of objects to migrate per database optimization cycle", ValidationPattern = @"^\d+$")] uint ChunkMigrate,
-	[property: SharpConfig(Name = "lbuf_size", Category = "Limit", Description = "Maximum byte length for attribute values (lbuf size)", ValidationPattern = @"^\d+$")] uint LBufSize
+	[property: SharpConfig(Name = "max_attribute_value_length", Category = "Limit", Description = "Maximum byte length for attribute values", ValidationPattern = @"^\d+$")] uint MaxAttributeValueLength
 );
