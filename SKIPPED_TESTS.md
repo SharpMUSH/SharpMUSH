@@ -11,9 +11,9 @@ This document tracks all skipped tests in the SharpMUSH test suite.
 ## Summary
 
 - **Total Skipped Tests**: 204
-- **TODO**: 141
-- **SUCCESS**: 15
-- **FAIL**: 48
+- **TODO**: 130
+- **SUCCESS**: 16
+- **FAIL**: 58
 
 ## Tests by Category
 
@@ -112,19 +112,21 @@ Note: 2 of these 7 tests actually passed - need to identify which ones from deta
 
 #### `Commands/ControlFlowCommandTests.cs`
 
-- **TODO**: AssertCommand
-- **TODO**: BreakCommand
-- **TODO**: IncludeCommand
-- **TODO**: RetryCommand
-- **TODO**: SelectCommand
-- **TODO**: SwitchCommand
+- **FAIL**: AssertCommand (Not Yet Implemented)
+- **FAIL**: BreakCommand (Not Yet Implemented)
+- **FAIL**: IncludeCommand (Not Yet Implemented)
+- **FAIL**: RetryCommand (Not Yet Implemented)
+- **FAIL**: SelectCommand (Not Yet Implemented)
+- **FAIL**: SwitchCommand (Not Yet Implemented)
 
 #### `Commands/DatabaseCommandTests.cs`
 
-- **TODO**: DisableCommand
-- **TODO**: EnableCommand
-- **TODO**: ListCommand
-- **TODO**: UnrecycleCommand
+- **SUCCESS**: ClockCommand
+- **FAIL**: Test_Sql_Count (ReceivedCallsException - test interference, received 4 notify calls from previous tests)
+- **FAIL**: DisableCommand (Not Yet Implemented)
+- **FAIL**: EnableCommand (Not Yet Implemented)
+- **FAIL**: ListCommand (Not Yet Implemented)
+- **FAIL**: UnrecycleCommand (Not Yet Implemented)
 
 #### `Commands/DebugVerboseTests.cs`
 
