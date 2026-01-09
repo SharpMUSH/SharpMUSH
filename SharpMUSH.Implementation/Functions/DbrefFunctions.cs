@@ -1422,8 +1422,8 @@ LOCATE()
 			return new CallState("#0:0");
 		}
 
-		// Find the highest dbref key
-		var maxKey = allObjects.Max(o => o.Key);
+		// Find the highest dbref key - use DefaultIfEmpty for safety
+		var maxKey = allObjects.Select(o => o.Key).DefaultIfEmpty(-1).Max();
 		var nextKey = maxKey + 1;
 
 		// Return the next dbref with timestamp 0 (will be set when created)

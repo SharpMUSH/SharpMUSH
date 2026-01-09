@@ -1643,7 +1643,7 @@ public partial class Functions
 			"colorname" => IValidateService.ValidationType.ColorName,
 			"ansicodes" => IValidateService.ValidationType.AnsiCode,
 			"channel" => IValidateService.ValidationType.ChannelName,
-			"timezome" => IValidateService.ValidationType.Timezone,
+			"timezone" => IValidateService.ValidationType.Timezone,
 			"locktype" => IValidateService.ValidationType.LockType,
 			"lockkey" => IValidateService.ValidationType.LockKey,
 			_ => IValidateService.ValidationType.Invalid
