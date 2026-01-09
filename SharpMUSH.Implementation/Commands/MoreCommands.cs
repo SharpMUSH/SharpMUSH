@@ -2381,7 +2381,6 @@ public partial class Commands
 			}
 			
 			// Check @lock/page unless OVERRIDE switch is used
-			// TODO: Most of this nonsense is not evaluating those VERBs correctly.
 			if (!isOverride)
 			{
 				var lockResult = await PermissionService!.CanInteract(executor, recipient, IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page);
@@ -2398,8 +2397,7 @@ public partial class Commands
 						}
 						case { IsAttribute: true, AsAttribute: var attr }:
 						{
-							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value.ToPlainText(),
-								INotifyService.NotificationType.Announce, recipient);
+							await NotifyService!.Notify(executor, attr.Last().Value);
 							break;
 						}
 					}
@@ -2415,8 +2413,8 @@ public partial class Commands
 						}
 						case { IsAttribute: true, AsAttribute: var attr }:
 						{
-							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value.ToPlainText(),
-								INotifyService.NotificationType.Announce, recipient);
+							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value,
+								INotifyService.NotificationType.Emit, excludeObjects: [executor, recipient]);
 							break;
 						}
 					}
@@ -2430,10 +2428,9 @@ public partial class Commands
 						{
 							break;
 						}
-						case { IsAttribute: true }:
+						case { IsAttribute: true, AsAttribute: var attr }:
 						{
-							await CommunicationService!.SendToRoomAsync(executor, await executor.Where(), _ => messageArg,
-								INotifyService.NotificationType.Announce, recipient);
+							await parser.CommandParse(attr.Last().Value);
 							break;
 						}
 					}
@@ -2963,14 +2960,13 @@ public partial class Commands
 		}
 		
 		// Execute the command as the target
-		// Note: This changes the enactor context temporarily
-		await NotifyService!.Notify(executor, $"Executing as {target.Object().Name}: {command.ToPlainText()}");
-		
-		// Parse and execute command as target
-		// The parser will need to temporarily change the executor context
-		// For now, we'll just notify that this would execute
-		// TODO: Implement proper context switching in parser
-		await NotifyService.Notify(executor, "WITH command execution not fully implemented - requires parser context switching.");
+		// Switch context: target becomes executor, original executor becomes enactor
+		await parser.With(s => s with 
+		{ 
+			Executor = target.Object().DBRef, 
+			Enactor = executor.Object().DBRef 
+		}, 
+		async np => await np.CommandParse(command));
 		
 		return CallState.Empty;
 	}
