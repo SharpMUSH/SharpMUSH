@@ -34,7 +34,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("All objects halted")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "All objects halted")));
 	}
 
 	[Test]
@@ -215,7 +215,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("poll") || s.Value.ToString()!.Contains("Poll")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "poll") || TestHelpers.MessageContains(s, "Poll")));
 	}
 
 	[Test]
@@ -231,7 +231,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("hidden")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "hidden")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 		
@@ -243,7 +243,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("no longer hidden") || s.Value.ToString()!.Contains("visible")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -264,7 +264,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("hidden")));
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "hidden")));
 	}
 
 	[Test]
@@ -302,7 +302,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s
-				=> s.Value.ToString()!.Contains("no longer hidden") || s.Value.ToString()!.Contains("visible")));
+				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")));
 	}
 
 	[Test]
@@ -322,7 +322,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
-				=> s.Value.ToString()!.Contains("no longer hidden") || s.Value.ToString()!.Contains("visible")));
+				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")));
 	}
 
 	[Test]
@@ -371,7 +371,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Purge complete") || s.Value.ToString()!.Contains("GOING_TWICE")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Purge complete") || TestHelpers.MessageContains(s, "GOING_TWICE")));
 	}
 
 	[Test]
@@ -381,7 +381,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Reindexing text files") || s.Value.ToString()!.Contains("Text file cache rebuilt")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Reindexing text files") || TestHelpers.MessageContains(s, "Text file cache rebuilt")));
 	}
 
 	[Test]
@@ -391,7 +391,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("SHUTDOWN") || s.Value.ToString()!.Contains("web") || s.Value.ToString()!.Contains("orchestration")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "SHUTDOWN") || TestHelpers.MessageContains(s, "web") || s.Value.ToString()!.Contains("orchestration")));
 	}
 
 	[Test]
@@ -401,7 +401,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("REBOOT") || s.Value.ToString()!.Contains("web") || s.Value.ToString()!.Contains("orchestration")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "REBOOT") || TestHelpers.MessageContains(s, "web") || s.Value.ToString()!.Contains("orchestration")));
 	}
 
 	[Test]
@@ -413,7 +413,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Permission denied") || s.Value.ToString()!.Contains("objects") || s.Value.ToString()!.Contains("ownership")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Permission denied") || TestHelpers.MessageContains(s, "objects") || s.Value.ToString()!.Contains("ownership")));
 	}
 
 	[Test]
@@ -424,7 +424,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Suggestion categories") || s.Value.ToString()!.Contains("No suggestion categories")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Suggestion categories") || TestHelpers.MessageContains(s, "No suggestion categories")));
 	}
 
 	[Test]
@@ -435,7 +435,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Added 'testword923' to category 'testcat547'")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Added 'testword923' to category 'testcat547'")));
 	}
 
 	[Test]
@@ -446,7 +446,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Poll message set") || s.Value.ToString()!.Contains("Permission")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Poll message set") || TestHelpers.MessageContains(s, "Permission")));
 	}
 
 	[Test]
@@ -457,7 +457,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Poll message cleared") || s.Value.ToString()!.Contains("Permission")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Poll message cleared") || TestHelpers.MessageContains(s, "Permission")));
 	}
 
 

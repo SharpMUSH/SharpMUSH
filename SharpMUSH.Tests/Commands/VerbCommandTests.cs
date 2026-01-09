@@ -23,9 +23,7 @@ public class VerbCommandTests
 			s => s == expected);
 
 	private static bool MessageContains(OneOf<MString, string> msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText().Contains(expected),
-			s => s.Contains(expected));
+		TestHelpers.MessageContains(msg, expected);
 
 	[Test]
 	[Skip("Test environment issue with @verb notification capture")]
@@ -40,9 +38,7 @@ public class VerbCommandTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
-			return msg.Match(
-				ms => ms.ToPlainText().Contains("VerbActorDefault_Value_52830"),
-				s => s.Contains("VerbActorDefault_Value_52830"));
+			return TestHelpers.MessageContains(msg, "VerbActorDefault_Value_52830");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -63,9 +59,7 @@ public class VerbCommandTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
-			return msg.Match(
-				ms => ms.ToPlainText().Contains("VerbAction_Value_74102"),
-				s => s.Contains("VerbAction_Value_74102"));
+			return TestHelpers.MessageContains(msg, "VerbAction_Value_74102");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -85,9 +79,7 @@ public class VerbCommandTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
-			return msg.Match(
-				ms => ms.ToPlainText().Contains("VerbArgs_Value_91605"),
-				s => s.Contains("VerbArgs_Value_91605"));
+			return TestHelpers.MessageContains(msg, "VerbArgs_Value_91605");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();
@@ -106,9 +98,7 @@ public class VerbCommandTests
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
-			return msg.Match(
-				ms => ms.ToPlainText().Contains("Usage: @verb"),
-				s => s.Contains("Usage: @verb"));
+			return TestHelpers.MessageContains(msg, "Usage: @verb");
 		});
 		
 		await Assert.That(messageCall).IsNotNull();

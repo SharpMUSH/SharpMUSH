@@ -60,10 +60,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains($"DoDigTestRoom created with room number #{newDb.Number}"),
-					str => str.Contains($"DoDigTestRoom created with room number #{newDb.Number}")
-				)));
+				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number #{newDb.Number}")));
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
@@ -303,7 +300,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("loop") || s.Value.ToString()!.Contains("cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -346,7 +343,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("loop") || s.Value.ToString()!.Contains("cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -368,7 +365,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("loop") || s.Value.ToString()!.Contains("cycle") || s.Value.ToString()!.Contains("circular") || s.Value.ToString()!.Contains("itself")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular") || TestHelpers.MessageContains(s, "itself")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -409,7 +406,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("loop") || s.Value.ToString()!.Contains("cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || s.Value.ToString()!.Contains("circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -443,10 +440,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.DidNotReceive()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("PERMISSION DENIED"),
-					str => str.Contains("PERMISSION DENIED")
-				)));
+				TestHelpers.MessageContains(msg, "PERMISSION DENIED")));
 	}
 
 	[Test]
@@ -466,10 +460,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("Zoned"),
-					str => str.Contains("Zoned")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				TestHelpers.MessageContains(msg, "Zoned")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -485,10 +476,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("Marked for destruction"),
-					str => str.Contains("Marked for destruction")
-				)));
+				TestHelpers.MessageContains(msg, "Marked for destruction")));
 	}
 
 	[Test]
@@ -506,10 +494,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("Unlinked"),
-					str => str.Contains("Unlinked")
-				)));
+				TestHelpers.MessageContains(msg, "Unlinked")));
 	}
 
 	[Test]
