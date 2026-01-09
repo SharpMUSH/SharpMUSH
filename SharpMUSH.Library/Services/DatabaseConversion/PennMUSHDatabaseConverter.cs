@@ -199,8 +199,15 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var godPennObject = pennDatabase.GetObject(1);
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
-				// TODO: Update God player name/password from PennMUSH data
-				_logger.LogDebug("PennMUSH God player #{PennDBRef} data available: {Name}", 1, godPennObject.Name);
+				// Update God player name/password from PennMUSH data
+				await _database.SetObjectName(existingPlayer1.AsT0, MModule.single(godPennObject.Name), cancellationToken);
+				
+				if (!string.IsNullOrEmpty(godPennObject.Password))
+				{
+					await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, godPennObject.Password, cancellationToken);
+				}
+				
+				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
 			}
 		}
 		else
@@ -263,8 +270,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var room0Penn = pennDatabase.GetObject(0);
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
-				// TODO: Update Room #0 name from PennMUSH data
-				_logger.LogDebug("PennMUSH Limbo room #{PennDBRef} data available: {Name}", 0, room0Penn.Name);
+				// Update Room #0 name from PennMUSH data
+				var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
+				if (room0Obj.IsT1)
+				{
+					await _database.SetObjectName(room0Obj.AsT1, MModule.single(room0Penn.Name), cancellationToken);
+					_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
+				}
 			}
 		}
 		else
@@ -546,17 +558,33 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				// Handle parent relationship
 				if (pennObj.Parent >= 0 && _dbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
 				{
-					// TODO: Set parent relationship
-					// This requires database support for setting parent
-					_logger.LogDebug("Would set parent for #{PennDBRef} to #{ParentDBRef}", pennObj.DBRef, pennObj.Parent);
+					// Set parent relationship
+					var parentObj = await _database.GetObjectNodeAsync(parentDbRef, cancellationToken);
+					if (!parentObj.IsNone)
+					{
+						await _database.SetObjectParent(sharpObj.Known, parentObj.Known, cancellationToken);
+						_logger.LogDebug("Set parent for #{PennDBRef} to #{ParentDBRef}", pennObj.DBRef, pennObj.Parent);
+					}
+					else
+					{
+						warnings.Add($"Parent object #{pennObj.Parent} not found for object #{pennObj.DBRef}");
+					}
 				}
 
 				// Handle zone relationship
 				if (pennObj.Zone >= 0 && _dbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
 				{
-					// TODO: Set zone relationship
-					// This requires database support for setting zone
-					_logger.LogDebug("Would set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
+					// Set zone relationship
+					var zoneObj = await _database.GetObjectNodeAsync(zoneDbRef, cancellationToken);
+					if (!zoneObj.IsNone)
+					{
+						await _database.SetObjectZone(sharpObj.Known, zoneObj.Known, cancellationToken);
+						_logger.LogDebug("Set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
+					}
+					else
+					{
+						warnings.Add($"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
+					}
 				}
 			}
 			catch (Exception ex)
