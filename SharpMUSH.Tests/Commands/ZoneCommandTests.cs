@@ -60,10 +60,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains($"Zoned to {zoneName}") || mstr.ToString().Contains($"{objDbRef}"),
-					str => str.Contains($"Zoned to {zoneName}") || str.Contains($"{objDbRef}")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+				(TestHelpers.MessageContains(msg, $"Zoned to {zoneName}") || TestHelpers.MessageContains(msg, $"{objDbRef}"))), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 		
 		// Verify the zone was actually set in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -105,10 +102,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("Zone cleared"),
-					str => str.Contains("Zone cleared")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+				TestHelpers.MessageContains(msg, "Zone cleared")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 		
 		// Verify the zone was actually cleared in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -141,10 +135,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains($"{zoneName}") || mstr.ToString().Contains("Zoned"),
-					str => str.Contains($"{zoneName}") || str.Contains("Zoned")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+				(TestHelpers.MessageContains(msg, $"{zoneName}") || TestHelpers.MessageContains(msg, "Zoned"))), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 		
 		// Verify zone was set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -162,10 +153,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("can't see") || mstr.ToString().Contains("NO SUCH OBJECT"),
-					str => str.Contains("can't see") || str.Contains("NO SUCH OBJECT")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+				(TestHelpers.MessageContains(msg, "can't see") || TestHelpers.MessageContains(msg, "NO SUCH OBJECT"))), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
 	[Test]
@@ -185,10 +173,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("can't see"),
-					str => str.Contains("can't see")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+				TestHelpers.MessageContains(msg, "can't see")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
 	[Test]
@@ -292,10 +277,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("ZMR command executed"),
-					str => str.Contains("ZMR command executed")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+				TestHelpers.MessageContains(msg, "ZMR command executed")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
 	[Test, Skip("Failing and needs to be fixed.")]
@@ -361,10 +343,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("Personal zone command executed"),
-					str => str.Contains("Personal zone command executed")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+				TestHelpers.MessageContains(msg, "Personal zone command executed")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
 	[Test]
@@ -416,9 +395,6 @@ public class ZoneCommandTests
 		await NotifyService
 			.DidNotReceive()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
-				msg.Match(
-					mstr => mstr.ToString().Contains("This should not execute"),
-					str => str.Contains("This should not execute")
-				)), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+				TestHelpers.MessageContains(msg, "This should not execute")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 }

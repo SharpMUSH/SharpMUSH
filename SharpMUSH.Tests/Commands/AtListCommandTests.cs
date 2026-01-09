@@ -31,7 +31,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("You must specify what to list")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "You must specify what to list")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -46,7 +46,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("OBJECT FLAGS:")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "OBJECT FLAGS:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -62,7 +62,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Object Flags:")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -77,7 +77,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("OBJECT POWERS:")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "OBJECT POWERS:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -92,7 +92,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("LOCK TYPES:")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "LOCK TYPES:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -107,7 +107,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("STANDARD ATTRIBUTES:")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "STANDARD ATTRIBUTES:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -122,7 +122,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("COMMANDS:")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "COMMANDS:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -137,7 +137,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("FUNCTIONS:")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "FUNCTIONS:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -152,7 +152,7 @@ public class AtListCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Current Message of the Day settings:")),
+				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Current Message of the Day settings:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
