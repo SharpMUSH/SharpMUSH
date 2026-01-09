@@ -132,6 +132,9 @@ public partial class ValidateService(
 		return reg.IsMatch(value);
 	}
 
+	// Cache for compiled glob patterns to avoid recreating regex objects
+	private readonly Dictionary<string, Regex> _globCache = new();
+	
 	/// <summary>
 	/// Checks if an attribute value is valid against a SharpAttributeEntry.
 	/// Supports enum validation with wildcard globbing patterns.
@@ -143,13 +146,15 @@ public partial class ValidateService(
 	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
 	{
 		const int MaxAttributeValueLength = 8192; // Standard MUSH attribute value limit
-		var plainValue = value.ToPlainText();
 		
-		// Check attribute value length - standard MUSH servers limit to 8KB
-		if (plainValue.Length > MaxAttributeValueLength)
+		// Check attribute value length first - avoid conversion if too long
+		// Use the string length as a proxy since MString wraps string content
+		if (value.Length > MaxAttributeValueLength)
 		{
 			return false;
 		}
+		
+		var plainValue = value.ToPlainText();
 		
 		return attribute switch
 		{
@@ -167,11 +172,12 @@ public partial class ValidateService(
 	
 	/// <summary>
 	/// Checks if a value matches any of the enum patterns, supporting glob wildcards (* and ?).
+	/// Uses caching to avoid recompiling regex patterns.
 	/// </summary>
 	/// <param name="value">The value to check</param>
 	/// <param name="enumPatterns">Array of allowed patterns (can include * and ? wildcards)</param>
 	/// <returns>True if value matches any pattern</returns>
-	private static bool MatchesEnumWithGlobbing(string value, string[] enumPatterns)
+	private bool MatchesEnumWithGlobbing(string value, string[] enumPatterns)
 	{
 		foreach (var pattern in enumPatterns)
 		{
@@ -185,13 +191,20 @@ public partial class ValidateService(
 				continue;
 			}
 			
-			// Convert glob pattern to regex
-			var regexPattern = "^" + Regex.Escape(pattern)
-				.Replace("\\*", ".*")  // * matches any characters
-				.Replace("\\?", ".")   // ? matches single character
-				+ "$";
+			// Check cache for compiled regex
+			if (!_globCache.TryGetValue(pattern, out var regex))
+			{
+				// Convert glob pattern to regex and cache it
+				var regexPattern = "^" + Regex.Escape(pattern)
+					.Replace("\\*", ".*")  // * matches any characters
+					.Replace("\\?", ".")   // ? matches single character
+					+ "$";
+				
+				regex = new Regex(regexPattern, RegexOptions.Compiled);
+				_globCache[pattern] = regex;
+			}
 			
-			if (Regex.IsMatch(value, regexPattern))
+			if (regex.IsMatch(value))
 			{
 				return true;
 			}

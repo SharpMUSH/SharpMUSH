@@ -1,7 +1,6 @@
 using Mediator;
 using OneOf;
 using OneOf.Types;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -16,8 +15,7 @@ public class MoveService(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IPermissionService permissionService,
-	INotifyService notifyService,
-	IOptionsWrapper<SharpMUSHOptions> configuration) : IMoveService
+	INotifyService notifyService) : IMoveService
 {
 	/// <summary>
 	/// Standard attribute names for move hooks
@@ -110,30 +108,11 @@ public class MoveService(
 			return new Error<string>("Permission denied.");
 		}
 		
-		// 3. Calculate and check quota if enabled
-		if (configuration.CurrentValue.Limit.UseQuota)
-		{
-			// Get the owner of the object being moved
-			var owner = await objectToMove.Object().Owner.WithCancellation(CancellationToken.None);
-			if (owner is not null)
-			{
-				var ownedCount = await mediator.Send(new GetOwnedObjectCountQuery(owner));
-				
-				// Check if owner is over quota
-				if (ownedCount >= owner.Quota)
-				{
-					// Only enforce if not a wizard/admin
-					var ownerAsObject = new AnySharpObject(owner);
-					if (!await ownerAsObject.IsRoyalty())
-					{
-						await notifyService.Notify(enactorObj, 
-							$"Quota exceeded: {owner.Object.Name.ToString()} owns {ownedCount} of {owner.Quota} objects.",
-							enactorObj);
-						return new Error<string>("Quota exceeded.");
-					}
-				}
-			}
-		}
+		// 3. Check and track move cost (quota system integration point)
+		// Note: In MUSH servers, quota typically affects object creation, not movement.
+		// This section is reserved for future quota-related move cost tracking if needed.
+		// The quota checking itself is implemented in object creation commands.
+		// For now, moves are allowed regardless of quota status.
 		
 		// 4. Get old location for hooks
 		var oldLocation = await objectToMove.Match<ValueTask<DBRef>>(
