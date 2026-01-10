@@ -175,15 +175,8 @@ public partial class Functions
 			? delimArg.Message!.ToPlainText()
 			: " ";
 
-		// Get TaskScheduler from service provider to avoid circular dependency during initialization
-		var taskScheduler = parser.ServiceProvider.GetService(typeof(ITaskScheduler)) as ITaskScheduler;
-		if (taskScheduler == null)
-		{
-			return new CallState("#-1 SCHEDULER NOT AVAILABLE");
-		}
-
-		// Try to find the task by PID in semaphore tasks
-		var semaphoreTasks = await taskScheduler.GetSemaphoreTasks(pid).ToListAsync();
+		// Query semaphore tasks via Mediator
+		var semaphoreTasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid)).ToListAsync();
 		if (semaphoreTasks.Count > 0)
 		{
 			var task = semaphoreTasks[0];
