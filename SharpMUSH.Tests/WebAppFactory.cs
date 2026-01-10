@@ -26,7 +26,7 @@ using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
 
-public class WebAppFactory : IAsyncInitializer
+public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 {
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
@@ -223,5 +223,33 @@ public class WebAppFactory : IAsyncInitializer
 		{
 			// Topics already exist or were created successfully, which is fine
 		}
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		// Shutdown the Quartz scheduler gracefully with a timeout
+		if (_server?.Services != null)
+		{
+			var schedulerFactory = _server.Services.GetService<ISchedulerFactory>();
+			if (schedulerFactory != null)
+			{
+				var scheduler = await schedulerFactory.GetScheduler();
+				if (scheduler.IsStarted)
+				{
+					// Force shutdown after 5 seconds if jobs don't complete
+					using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+					try
+					{
+						await scheduler.Shutdown(waitForJobsToComplete: false, cts.Token);
+					}
+					catch (OperationCanceledException)
+					{
+						// Timeout occurred, forcefully stop
+					}
+				}
+			}
+		}
+		
+		GC.SuppressFinalize(this);
 	}
 }
