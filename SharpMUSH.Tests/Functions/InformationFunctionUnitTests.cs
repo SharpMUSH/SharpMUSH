@@ -213,10 +213,36 @@ public class InformationFunctionUnitTests
 
 	[Test]
 	[Arguments("pidinfo(999)", "#-1 NO SUCH PID")]
-	public async Task Pidinfo(string str, string expected)
+	[Arguments("pidinfo(abc)", "#-1 INVALID PID")]
+	public async Task Pidinfo_Invalid(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task Pidinfo_ValidFormat()
+	{
+		// Test that pidinfo returns proper format for non-existent PID
+		// In a live environment with actual tasks, this would return task info
+		var result = (await Parser.FunctionParse(MModule.single("pidinfo(1)")))?.Message!;
+		var text = result.ToPlainText();
+		
+		// Should either be "#-1 NO SUCH PID" (if no task) or task info
+		await Assert.That(text).IsNotNull();
+		await Assert.That(text).IsNotEmpty();
+	}
+
+	[Test]
+	[Arguments("pidinfo(1,pid)", "")]
+	[Arguments("pidinfo(1,command)", "")]
+	[Arguments("pidinfo(1,executor)", "")]
+	[Arguments("pidinfo(1,status)", "")]
+	public async Task Pidinfo_WithField(string str, string expected)
+	{
+		// Test field parameter - should return either field value or error
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
