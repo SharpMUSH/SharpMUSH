@@ -730,4 +730,27 @@ public class GeneralCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Inner message")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
+
+	[Test]
+	public async ValueTask DoListWithDelimiter()
+	{
+		// Test @dolist with /delimit switch
+		// Format: @dolist/delimit <delimiter> <list>=<action>
+		// Delimiter is separated by space from list
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dolist/inline/delimit , apple,banana,orange=@pemit #1=Fruit: %i0"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Fruit: apple")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Fruit: banana")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Fruit: orange")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
 }
