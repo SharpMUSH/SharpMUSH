@@ -2399,10 +2399,19 @@ public partial class ArangoDatabase(
 			bindVars["types"] = filter.Types;
 		}
 
-		// Name pattern filter (case-insensitive substring match)
+		// Name pattern filter (case-insensitive substring match or regex)
 		if (!string.IsNullOrEmpty(filter.NamePattern))
 		{
-			filters.Add("CONTAINS(LOWER(v.Name), LOWER(@namePattern))");
+			if (filter.UseRegex)
+			{
+				// Use REGEX_TEST for regex matching (case-insensitive)
+				filters.Add("REGEX_TEST(v.Name, @namePattern, true)");
+			}
+			else
+			{
+				// Use CONTAINS for substring matching (case-insensitive)
+				filters.Add("CONTAINS(LOWER(v.Name), LOWER(@namePattern))");
+			}
 			bindVars["namePattern"] = filter.NamePattern;
 		}
 

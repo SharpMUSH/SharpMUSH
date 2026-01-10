@@ -108,26 +108,10 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("lstats()", "0 0 0 0 0")]
-	public async Task Lstats(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
 	[Arguments("next(%#)", "")]
 	public async Task Next(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("nextdbref()", "#-1 NOT YET IMPLEMENTED")]
-	public async Task Nextdbref(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

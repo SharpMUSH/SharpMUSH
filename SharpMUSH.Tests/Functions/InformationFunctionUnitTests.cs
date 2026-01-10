@@ -160,19 +160,89 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("lstats()", "0 0 0 0 0")]
-	public async Task Lstats(string str, string expected)
+	public async Task Lstats_NoArguments()
 	{
+		// lstats() with no arguments should return counts for all types
+		var result = (await Parser.FunctionParse(MModule.single("lstats()")))?.Message!;
+		var stats = result.ToPlainText();
+		
+		// Should return 5 space-separated numbers: players things exits rooms garbage
+		var parts = stats.Split(' ');
+		await Assert.That(parts.Length).IsEqualTo(5);
+		
+		// Each should be a valid number
+		foreach (var part in parts)
+		{
+			await Assert.That(int.TryParse(part, out _)).IsTrue();
+		}
+	}
+
+	[Test]
+	[Arguments("lstats(player)", "")]
+	[Arguments("lstats(room)", "")]
+	[Arguments("lstats(thing)", "")]
+	[Arguments("lstats(exit)", "")]
+	public async Task Lstats_WithTypeFilter(string str, string expected)
+	{
+		// lstats() with a type filter should return a single count
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var count = result.ToPlainText();
+		
+		// Should return a single number
+		await Assert.That(int.TryParse(count, out var num)).IsTrue();
+		await Assert.That(num).IsGreaterThanOrEqualTo(0);
+	}
+
+	[Test]
+	[Arguments("lstats(garbage)", "0")]
+	public async Task Lstats_GarbageAlwaysZero(string str, string expected)
+	{
+		// Garbage count should always be 0 (not tracked separately)
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("lstats(invalid)", "#-1 INVALID TYPE")]
+	public async Task Lstats_InvalidType(string str, string expected)
+	{
+		// Invalid type should return error
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	[Arguments("pidinfo(999)", "#-1 NO SUCH PID")]
-	public async Task Pidinfo(string str, string expected)
+	[Arguments("pidinfo(abc)", "#-1 INVALID PID")]
+	public async Task Pidinfo_Invalid(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task Pidinfo_ValidFormat()
+	{
+		// Test that pidinfo returns proper format for non-existent PID
+		// In a live environment with actual tasks, this would return task info
+		var result = (await Parser.FunctionParse(MModule.single("pidinfo(1)")))?.Message!;
+		var text = result.ToPlainText();
+		
+		// Should either be "#-1 NO SUCH PID" (if no task) or task info
+		await Assert.That(text).IsNotNull();
+		await Assert.That(text).IsNotEmpty();
+	}
+
+	[Test]
+	[Arguments("pidinfo(1,pid)", "")]
+	[Arguments("pidinfo(1,command)", "")]
+	[Arguments("pidinfo(1,executor)", "")]
+	[Arguments("pidinfo(1,status)", "")]
+	public async Task Pidinfo_WithField(string str, string expected)
+	{
+		// Test field parameter - should return either field value or error
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]

@@ -1643,7 +1643,7 @@ public partial class Functions
 			"colorname" => IValidateService.ValidationType.ColorName,
 			"ansicodes" => IValidateService.ValidationType.AnsiCode,
 			"channel" => IValidateService.ValidationType.ChannelName,
-			"timezome" => IValidateService.ValidationType.Timezone,
+			"timezone" => IValidateService.ValidationType.Timezone,
 			"locktype" => IValidateService.ValidationType.LockType,
 			"lockkey" => IValidateService.ValidationType.LockKey,
 			_ => IValidateService.ValidationType.Invalid
@@ -1656,29 +1656,30 @@ public partial class Functions
 
 		return validationType switch
 		{
-			// TODO: TARGET ATTRIBUTE!
-			// TODO: Mediator & Service for getting the entry.
-			IValidateService.ValidationType.AttributeValue => await ValidateService!.Valid(validationType, str, new None()),
+			IValidateService.ValidationType.AttributeValue when target is not null
+				=> new CallState(await ValidateService!.Valid(validationType, str, await GetAttributeEntry(target)) ? "1" : "0"),
+			IValidateService.ValidationType.AttributeValue 
+				=> new CallState(await ValidateService!.Valid(validationType, str, new None()) ? "1" : "0"),
 
 			IValidateService.ValidationType.PlayerName when target is null
-				=> await ValidateService!.Valid(validationType, str, caller),
+				=> new CallState(await ValidateService!.Valid(validationType, str, caller) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName
 				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
 					is { IsAnyObject: true, AsAnyObject: var obj }
-				=> await ValidateService!.Valid(validationType, str, obj),
+				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName => Errors.ErrorCantSeeThat,
 
-			IValidateService.ValidationType.ChannelName => await ValidateService!.Valid(validationType, str,
-				await GetChannel(target ?? string.Empty)),
+			IValidateService.ValidationType.ChannelName 
+				=> new CallState(await ValidateService!.Valid(validationType, str, await GetChannel(target ?? string.Empty)) ? "1" : "0"),
 
 			IValidateService.ValidationType.LockType when target is null
-				=> await ValidateService!.Valid(validationType, str, caller),
+				=> new CallState(await ValidateService!.Valid(validationType, str, caller) ? "1" : "0"),
 			IValidateService.ValidationType.LockType
 				when await LocateService!.LocateAndNotifyIfInvalid(parser, caller, caller, target, LocateFlags.All)
 					is { IsAnyObject: true, AsAnyObject: var obj }
-				=> await ValidateService!.Valid(validationType, str, obj),
+				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.LockType => Errors.ErrorCantSeeThat,
-			_ => await ValidateService!.Valid(validationType, str, new None())
+			_ => new CallState(await ValidateService!.Valid(validationType, str, new None()) ? "1" : "0")
 		};
 
 		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetChannel(string t)
@@ -1687,6 +1688,14 @@ public partial class Functions
 			return channel is null
 				? new None()
 				: channel;
+		}
+
+		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetAttributeEntry(string name)
+		{
+			var entry = await Mediator!.Send(new GetAttributeEntryQuery(name));
+			return entry is null
+				? new None()
+				: entry;
 		}
 	}
 
