@@ -155,7 +155,7 @@ public partial class Functions
 		return (uptimeData?.LastRebootTime ?? DateTimeOffset.Now).ToUnixTimeMilliseconds();
 	}
 
-	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["pid"])]
+	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["pid", "field", "delimiter"])]
 	public static async ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// pidinfo() returns information about a process ID
@@ -163,25 +163,62 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var pidStr = args["0"].Message!.ToPlainText();
 		
-		if (!int.TryParse(pidStr, out var pid))
+		if (!long.TryParse(pidStr, out var pid))
 		{
 			return new CallState("#-1 INVALID PID");
 		}
 
-		// TODO: Implement actual PID tracking and information retrieval
-		// This requires integration with the queue/process management system.
-		// 
-		// Implementation plan:
-		// 1. Add a PID tracking service that maintains a registry of running processes
-		// 2. Each queued command should be assigned a unique PID
-		// 3. Store process metadata: command text, executor, start time, CPU usage
-		// 4. Implement pidinfo() to query this registry
-		// 5. Support fields: "command", "executor", "start_time", "cpu_time", "status"
-		// 6. Return format: space-delimited values when delimiter not specified
-		//
-		// For now, return placeholder indicating not implemented
-		await ValueTask.CompletedTask;
+		var field = args.TryGetValue("1", out var fieldArg) 
+			? fieldArg.Message!.ToPlainText().ToLowerInvariant()
+			: null;
+		var delimiter = args.TryGetValue("2", out var delimArg)
+			? delimArg.Message!.ToPlainText()
+			: " ";
+
+		if (TaskScheduler == null)
+		{
+			return new CallState("#-1 SCHEDULER NOT AVAILABLE");
+		}
+
+		// Try to find the task by PID in semaphore tasks
+		var semaphoreTasks = await TaskScheduler.GetSemaphoreTasks(pid).ToListAsync();
+		if (semaphoreTasks.Count > 0)
+		{
+			var task = semaphoreTasks[0];
+			return FormatTaskInfo(task, field, delimiter);
+		}
+
+		// If not found in semaphore tasks, return "NO SUCH PID"
 		return new CallState("#-1 NO SUCH PID");
+	}
+
+	private static CallState FormatTaskInfo(SemaphoreTaskData task, string? field, string delimiter)
+	{
+		if (field == null)
+		{
+			// Return all fields: pid command executor status delay
+			var parts = new List<string>
+			{
+				task.Pid.ToString(),
+				task.Command.ToPlainText(),
+				task.Owner.ToString(),
+				"waiting",
+				task.RunDelay?.TotalSeconds.ToString("F2") ?? "0"
+			};
+			return new CallState(string.Join(delimiter, parts));
+		}
+
+		// Return specific field
+		return field switch
+		{
+			"pid" => new CallState(task.Pid.ToString()),
+			"command" => new CallState(task.Command.ToPlainText()),
+			"executor" => new CallState(task.Owner.ToString()),
+			"status" => new CallState("waiting"),
+			"delay" => new CallState(task.RunDelay?.TotalSeconds.ToString("F2") ?? "0"),
+			"semaphore" => new CallState(task.SemaphoreSource.ToString()),
+			_ => new CallState("#-1 INVALID FIELD")
+		};
 	}
 
 	[SharpFunction(Name = "alias", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]

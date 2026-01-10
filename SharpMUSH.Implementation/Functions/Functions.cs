@@ -35,6 +35,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static IEventService? EventService { get; set; }
 	private static IBooleanExpressionParser? BooleanExpressionParser { get; set; }
 	private static ITextFileService? TextFileService { get; set; }
+	private static ITaskScheduler? TaskScheduler { get; set; }
 	private static ILogger<Functions>? Logger { get; set; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
@@ -64,7 +65,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IMoveService moveService,
 		IEventService eventService,
 		IBooleanExpressionParser booleanExpressionParser,
-		ITextFileService textFileService)
+		ITextFileService textFileService,
+		ITaskScheduler taskScheduler)
 	{
 		Logger = logger;
 		Mediator = mediator;
@@ -89,6 +91,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		EventService = eventService;
 		BooleanExpressionParser = booleanExpressionParser;
 		TextFileService = textFileService;
+		TaskScheduler = taskScheduler;
 
 		foreach (var command in Generated.FunctionLibrary.Functions)
 		{
