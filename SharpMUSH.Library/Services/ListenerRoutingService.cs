@@ -16,10 +16,14 @@ namespace SharpMUSH.Library.Services;
 /// Handles @listen attributes, ^-listen patterns, and puppet relaying.
 /// </summary>
 /// <remarks>
-/// TODO: Complete implementation
-/// - Add @listen attribute processing (requires IAttributeService integration)
-/// - Add queue integration for triggered ^-listen actions
-/// - Add @prefix attribute support for puppets
+/// Phase 3 implementation status:
+/// - ✅ @prefix attribute support for puppets
+/// - ⏳ @listen attribute matching (needs parser integration)
+/// - ⏳ Action queue for ^-listen patterns (needs parser integration)
+/// 
+/// Note: Full attribute execution requires IMUSHCodeParser which is not available
+/// in the notification context. This will be addressed in a future phase when
+/// we can create parsers on-demand or integrate with the command queue system.
 /// </remarks>
 public class ListenerRoutingService(
 	IMediator mediator,
@@ -27,6 +31,7 @@ public class ListenerRoutingService(
 	IPermissionService permissionService,
 	ILockService lockService,
 	IConnectionService connectionService,
+	IAttributeService attributeService,
 	IBus publishEndpoint) : IListenerRoutingService
 {
 	public async ValueTask ProcessNotificationAsync(
@@ -72,9 +77,80 @@ public class ListenerRoutingService(
 			// Process ^-listen patterns (if MONITOR flag)
 			await ProcessListenPatternsAsync(objAsObject, messageText, actualSender);
 			
+			// Process @listen attribute
+			await ProcessListenAttributeAsync(objAsObject, messageText, actualSender);
+			
 			// Process puppet relaying (if PUPPET flag)
 			await ProcessPuppetRelayAsync(objAsObject, message, actualSender, type);
 		}
+	}
+	
+	private async ValueTask ProcessListenAttributeAsync(
+		AnySharpObject listener,
+		string message,
+		AnySharpObject speaker)
+	{
+		// Get @listen attribute
+		var listenAttr = await attributeService.GetAttributeAsync(
+			listener, listener, "LISTEN",
+			IAttributeService.AttributeMode.Read,
+			parent: false);
+		
+		if (!listenAttr.IsAttribute)
+			return;
+		
+		var listenPattern = listenAttr.AsAttribute.Last().Value.ToPlainText();
+		if (string.IsNullOrWhiteSpace(listenPattern))
+			return;
+		
+		// Check @lock/listen
+		var passesListenLock = lockService.Evaluate(LockType.Listen, listener, speaker);
+		if (!passesListenLock)
+			return;
+		
+		// Match message against pattern using wildcard matching
+		var regex = new System.Text.RegularExpressions.Regex(
+			MModule.getWildcardMatchAsRegex(MModule.single(listenPattern)),
+			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		
+		if (!regex.IsMatch(message))
+			return;
+		
+		// Determine which action attribute would be triggered
+		// Note: Actual execution requires a parser, which we don't have in this context
+		// For now, we document which attribute would be triggered
+		var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
+		
+		// Priority: AAHEAR > (AMHEAR if self) > AHEAR
+		// These would be executed if we had a parser available
+#pragma warning disable CS0219 // Variable assigned but not used - documented for future parser integration
+		string triggerAttrName;
+#pragma warning restore CS0219
+		if (await AttributeExistsAsync(listener, "AAHEAR"))
+		{
+			triggerAttrName = "AAHEAR";
+		}
+		else if (isSelf && await AttributeExistsAsync(listener, "AMHEAR"))
+		{
+			triggerAttrName = "AMHEAR";
+		}
+		else
+		{
+			triggerAttrName = "AHEAR";
+		}
+		
+		// TODO: Queue attribute execution when parser integration is available
+		// For now, @listen patterns are matched but actions are not executed
+		// This requires integration with the command queue or parser factory
+	}
+	
+	private async ValueTask<bool> AttributeExistsAsync(AnySharpObject obj, string attributeName)
+	{
+		var result = await attributeService.GetAttributeAsync(
+			obj, obj, attributeName,
+			IAttributeService.AttributeMode.Read,
+			parent: false);
+		return result.IsAttribute;
 	}
 	
 	private async ValueTask ProcessListenPatternsAsync(
@@ -147,9 +223,15 @@ public class ListenerRoutingService(
 				return;
 		}
 		
-		// Get prefix (default to puppet name)
-		// TODO: Use @prefix attribute when IAttributeService integration is complete
-		var prefix = $"[{puppet.Object().Name}] ";
+		// Get prefix from @prefix attribute or use default
+		var prefixAttr = await attributeService.GetAttributeAsync(
+			puppet, puppet, "PREFIX",
+			IAttributeService.AttributeMode.Read,
+			parent: false);
+		
+		var prefix = prefixAttr.IsAttribute
+			? prefixAttr.AsAttribute.Last().Value.ToPlainText()
+			: $"[{puppet.Object().Name}] ";
 		
 		// Relay message to owner with prefix
 		var relayedText = message.Match(
