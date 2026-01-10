@@ -2,6 +2,7 @@
 using System.Text;
 using MarkupString;
 using MassTransit;
+using Mediator;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -17,7 +18,11 @@ namespace SharpMUSH.Library.Services;
 /// All notifications are automatically batched with a 10ms timeout to reduce Kafka overhead.
 /// Messages are accumulated and flushed after 10ms of inactivity, or immediately when explicitly flushed.
 /// </summary>
-public class NotifyService(IBus publishEndpoint, IConnectionService connections) : INotifyService
+public class NotifyService(
+	IBus publishEndpoint, 
+	IConnectionService connections,
+	IListenerRoutingService? listenerRoutingService = null,
+	Mediator.IMediator? mediator = null) : INotifyService
 {
 	private readonly ConcurrentDictionary<long, BatchingState> _batchingStates = new();
 	private static readonly AsyncLocal<BatchingContext?> _batchingContext = new();
@@ -57,6 +62,35 @@ public class NotifyService(IBus publishEndpoint, IConnectionService connections)
 		))
 		{
 			return;
+		}
+
+		// Route to listeners if service is available and we have location context
+		if (listenerRoutingService != null && mediator != null && sender != null)
+		{
+			try
+			{
+				// Determine the location for listener routing
+				var location = await sender.Match<ValueTask<DBRef>>(
+					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+					room => ValueTask.FromResult(room.Object.DBRef),
+					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+				);
+				
+				var notificationContext = new NotificationContext(
+					Target: who,
+					Location: location,
+					IsRoomBroadcast: false,
+					ExcludedObjects: []
+				);
+				
+				// Fire and forget - don't await to avoid blocking notification
+				_ = listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
+			}
+			catch
+			{
+				// Silently ignore errors in listener routing to not block notifications
+			}
 		}
 
 		var text = what.Match(
