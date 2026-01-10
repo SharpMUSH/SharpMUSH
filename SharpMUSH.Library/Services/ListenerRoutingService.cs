@@ -1,9 +1,11 @@
 using Mediator;
 using MassTransit;
 using OneOf;
+using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
@@ -16,14 +18,10 @@ namespace SharpMUSH.Library.Services;
 /// Handles @listen attributes, ^-listen patterns, and puppet relaying.
 /// </summary>
 /// <remarks>
-/// Phase 3 implementation status:
+/// Phase 3 + 4 implementation complete:
 /// - ✅ @prefix attribute support for puppets
-/// - ⏳ @listen attribute matching (needs parser integration)
-/// - ⏳ Action queue for ^-listen patterns (needs parser integration)
-/// 
-/// Note: Full attribute execution requires IMUSHCodeParser which is not available
-/// in the notification context. This will be addressed in a future phase when
-/// we can create parsers on-demand or integrate with the command queue system.
+/// - ✅ @listen attribute matching with wildcard patterns
+/// - ✅ Action queue for ^-listen patterns via Mediator
 /// </remarks>
 public class ListenerRoutingService(
 	IMediator mediator,
@@ -116,16 +114,11 @@ public class ListenerRoutingService(
 		if (!regex.IsMatch(message))
 			return;
 		
-		// Determine which action attribute would be triggered
-		// Note: Actual execution requires a parser, which we don't have in this context
-		// For now, we document which attribute would be triggered
+		// Determine which action attribute to trigger
 		var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
 		
 		// Priority: AAHEAR > (AMHEAR if self) > AHEAR
-		// These would be executed if we had a parser available
-#pragma warning disable CS0219 // Variable assigned but not used - documented for future parser integration
 		string triggerAttrName;
-#pragma warning restore CS0219
 		if (await AttributeExistsAsync(listener, "AAHEAR"))
 		{
 			triggerAttrName = "AAHEAR";
@@ -139,9 +132,21 @@ public class ListenerRoutingService(
 			triggerAttrName = "AHEAR";
 		}
 		
-		// TODO: Queue attribute execution when parser integration is available
-		// For now, @listen patterns are matched but actions are not executed
-		// This requires integration with the command queue or parser factory
+		// Build registers dictionary
+		var registers = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(message),
+			["#"] = new CallState(speaker.Object().DBRef.ToString()),
+			["!"] = new CallState(listener.Object().DBRef.ToString())
+		};
+		
+		// Fire and forget - execute via Mediator command
+		_ = mediator.Send(new ExecuteListenPatternCommand(
+			listener,
+			speaker,
+			triggerAttrName,
+			registers
+		));
 	}
 	
 	private async ValueTask<bool> AttributeExistsAsync(AnySharpObject obj, string attributeName)
@@ -173,13 +178,29 @@ public class ListenerRoutingService(
 		// Match against ^-listen patterns
 		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker);
 		
-		// TODO: Queue matched patterns for execution with captured groups
-		// This would integrate with the existing queue system
-		// For now, patterns are matched but not executed
+		// Execute matched patterns
 		foreach (var match in matches)
 		{
-			// Future: Queue attribute execution with registers set from captured groups
-			// Example: Set %0-%9 from match.CapturedGroups, %# = speaker, %! = listener
+			// Build registers dictionary from captured groups
+			var registers = new Dictionary<string, CallState>();
+			
+			// Set %0-%9 from captured groups
+			for (int i = 0; i < match.CapturedGroups.Length && i < 10; i++)
+			{
+				registers[i.ToString()] = new CallState(match.CapturedGroups[i]);
+			}
+			
+			// Set %# (speaker DBRef) and %! (listener DBRef)
+			registers["#"] = new CallState(speaker.Object().DBRef.ToString());
+			registers["!"] = new CallState(listener.Object().DBRef.ToString());
+			
+			// Fire and forget - execute via Mediator command
+			_ = mediator.Send(new ExecuteListenPatternCommand(
+				listener,
+				speaker,
+				match.Attribute.Name,
+				registers
+			));
 		}
 	}
 	
