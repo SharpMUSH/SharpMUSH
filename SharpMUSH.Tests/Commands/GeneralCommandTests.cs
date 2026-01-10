@@ -735,9 +735,10 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithDelimiter()
 	{
 		// Test @dolist with /delimit switch
-		// First character of list should be the delimiter
+		// Format: @dolist/delimit <delimiter> <list>=<action>
+		// Delimiter is separated by space from list
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dolist/inline/delimit ,apple,banana,orange=@pemit #1=Fruit: %i0"));
+			MModule.single("@dolist/inline/delimit , apple,banana,orange=@pemit #1=Fruit: %i0"));
 
 		await NotifyService
 			.Received()

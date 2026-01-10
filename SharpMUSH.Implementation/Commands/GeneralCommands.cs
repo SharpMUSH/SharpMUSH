@@ -41,12 +41,13 @@ public partial class Commands
 	private static readonly string[] DefaultSemaphoreAttributeArray = [DefaultSemaphoreAttribute];
 
 	/// <summary>
-	/// Handles delimiter extraction for @dolist and @map commands when /DELIMIT is used.
-	/// Returns the delimiter and the remaining list text.
+	/// Handles delimiter/pid extraction for @dolist and @map commands when /DELIMIT or /PID is used.
+	/// Format: @dolist/delimit <delimiter> <list>=<action>
+	/// Returns the delimiter/pid value and the remaining list text.
 	/// </summary>
-	private static (string delimiter, MString listText) ExtractDelimiter(MString originalListText, bool useDelimit)
+	private static (string paramValue, MString listText) ExtractFirstParameter(MString originalListText, bool extractParameter)
 	{
-		if (!useDelimit)
+		if (!extractParameter)
 		{
 			return (" ", originalListText);
 		}
@@ -58,12 +59,20 @@ public partial class Commands
 			return (" ", originalListText);
 		}
 
-		var delimiter = plainListText.Substring(0, 1);
-		var remainingText = plainListText.Length > 1 
-			? MModule.single(plainListText.Substring(1)) 
+		// Split on first space to separate parameter from list
+		var spaceIndex = plainListText.IndexOf(' ');
+		if (spaceIndex <= 0)
+		{
+			// No space found or space at beginning - treat entire string as parameter, empty list
+			return (plainListText, MModule.empty());
+		}
+
+		var paramValue = plainListText.Substring(0, spaceIndex);
+		var remainingText = plainListText.Length > spaceIndex + 1
+			? MModule.single(plainListText.Substring(spaceIndex + 1))
 			: MModule.empty();
 		
-		return (delimiter, remainingText);
+		return (paramValue, remainingText);
 	}
 
 	/// <summary>
@@ -182,7 +191,7 @@ public partial class Commands
 		
 		// Handle /DELIMIT switch using helper method
 		var originalListText = args.Count >= 2 ? args["1"].Message! : MModule.empty();
-		var (delimiter, listText) = ExtractDelimiter(originalListText, switches.Contains("DELIMIT"));
+		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
 		var list = MModule.split(delimiter, listText);
 		
 		await NotifyService!.Notify(executor, $"@map: Would iterate over {list.Length} elements and execute {objSpec}/{attrName}");
@@ -215,7 +224,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
-		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"], ParameterNames = ["list", "command"])]
+		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID"], ParameterNames = ["list", "command"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
@@ -227,10 +236,37 @@ public partial class Commands
 			return new None();
 		}
 
-		// Handle /DELIMIT switch using helper method
-		var (delimiter, listText) = ExtractDelimiter(
-			parser.CurrentState.Arguments["0"].Message!, 
-			switches.Contains("DELIMIT"));
+		// Handle /DELIMIT or /PID switch - extract delimiter or PID from first argument
+		var hasDelimit = switches.Contains("DELIMIT");
+		var hasPid = switches.Contains("PID");
+		
+		string delimiter = " ";
+		string? notifyPid = null;
+		MString listText;
+		
+		if (hasDelimit)
+		{
+			// Format: @dolist/delimit <delimiter> <list>=<action>
+			var (delimiterParam, extractedList) = ExtractFirstParameter(
+				parser.CurrentState.Arguments["0"].Message!,
+				true);
+			delimiter = delimiterParam;
+			listText = extractedList;
+		}
+		else if (hasPid)
+		{
+			// Format: @dolist/pid <pid> <list>=<action>
+			var (pidParam, extractedList) = ExtractFirstParameter(
+				parser.CurrentState.Arguments["0"].Message!,
+				true);
+			notifyPid = pidParam;
+			listText = extractedList;
+		}
+		else
+		{
+			// Format: @dolist <list>=<action>
+			listText = parser.CurrentState.Arguments["0"].Message!;
+		}
 		
 		var list = MModule.split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message!;
@@ -260,11 +296,19 @@ public partial class Commands
 
 				parser.CurrentState.IterationRegisters.TryPop(out _);
 
-				// If /notify switch is present with /inline, queue "@notify me" after inline execution
+				// If /notify or /pid switch is present with /inline, queue "@notify" after inline execution
 				if (switches.Contains("NOTIFY"))
 				{
 					await Mediator!.Send(new QueueCommandListRequest(
 						MModule.single("@notify me"),
+						parser.CurrentState,
+						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+						-1));
+				}
+				else if (hasPid && !string.IsNullOrEmpty(notifyPid))
+				{
+					await Mediator!.Send(new QueueCommandListRequest(
+						MModule.single($"@notify {notifyPid}"),
 						parser.CurrentState,
 						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 						-1));
@@ -305,11 +349,19 @@ public partial class Commands
 					-1));
 			}
 
-			// If /notify switch is present, queue "@notify me" after all iterations
+			// If /notify or /pid switch is present, queue "@notify" after all iterations
 			if (switches.Contains("NOTIFY"))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single($"@notify {notifyPid}"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
