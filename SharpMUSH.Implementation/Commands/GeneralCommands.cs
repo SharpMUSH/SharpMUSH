@@ -41,6 +41,41 @@ public partial class Commands
 	private static readonly string[] DefaultSemaphoreAttributeArray = [DefaultSemaphoreAttribute];
 
 	/// <summary>
+	/// Handles delimiter/pid extraction for @dolist and @map commands when /DELIMIT or /PID is used.
+	/// Format: @dolist/delimit <delimiter> <list>=<action>
+	/// Returns the delimiter/pid value and the remaining list text.
+	/// </summary>
+	private static (string paramValue, MString listText) ExtractFirstParameter(MString originalListText, bool extractParameter)
+	{
+		if (!extractParameter)
+		{
+			return (" ", originalListText);
+		}
+
+		var plainListText = MModule.plainText(originalListText);
+		if (plainListText.Length == 0)
+		{
+			// Empty list - return default delimiter and empty list
+			return (" ", originalListText);
+		}
+
+		// Split on first space to separate parameter from list
+		var spaceIndex = plainListText.IndexOf(' ');
+		if (spaceIndex <= 0)
+		{
+			// No space found or space at beginning - treat entire string as parameter, empty list
+			return (plainListText, MModule.empty());
+		}
+
+		var paramValue = plainListText.Substring(0, spaceIndex);
+		var remainingText = plainListText.Length > spaceIndex + 1
+			? MModule.single(plainListText.Substring(spaceIndex + 1))
+			: MModule.empty();
+		
+		return (paramValue, remainingText);
+	}
+
+	/// <summary>
 	/// Helper method to execute attribute content with recursion tracking.
 	/// This ensures commands like @INCLUDE, @TRIGGER, etc. track recursion the same way u/ufun/ulocal do.
 	/// </summary>
@@ -139,18 +174,27 @@ public partial class Commands
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 		
-		string? listToMap = null;
-		if (args.Count >= 2)
+		// Parse object/attribute path
+		var pathSplit = HelperFunctions.SplitDbRefAndOptionalAttr(attributePath);
+		if (!pathSplit.TryPickT0(out var pathDetails, out _))
 		{
-			listToMap = args["1"].Message?.ToPlainText();
+			await NotifyService!.Notify(executor, "Invalid object/attribute path format.");
+			return new CallState("#-1 INVALID PATH");
 		}
 		
-		await NotifyService!.Notify(executor, $"@map: Would iterate over list and execute attribute '{attributePath}'");
-		
-		if (listToMap != null)
+		var (objSpec, attrName) = pathDetails;
+		if (string.IsNullOrEmpty(attrName))
 		{
-			await NotifyService.Notify(executor, $"  List: {listToMap}");
+			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
+			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
+		
+		// Handle /DELIMIT switch using helper method
+		var originalListText = args.Count >= 2 ? args["1"].Message! : MModule.empty();
+		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
+		var list = MModule.split(delimiter, listText);
+		
+		await NotifyService!.Notify(executor, $"@map: Would iterate over {list.Length} elements and execute {objSpec}/{attrName}");
 		
 		if (switches.Contains("INLINE"))
 		{
@@ -172,16 +216,15 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will localize Q-registers");
 		}
 		
-		// TODO: Full implementation requires parsing object/attribute path, splitting list into elements,
-		// executing the attribute for each element with element as %0, handling enactor preservation
-		// and Q-register management, and handling /inline vs queued execution and /notify switch.
-		await NotifyService.Notify(executor, "Note: @map command queueing and execution not yet implemented.");
+		// TODO: Full implementation requires executing the attribute for each element with element as %0,
+		// handling enactor preservation and Q-register management, and handling /inline vs queued execution.
+		await NotifyService.Notify(executor, "Note: @map command attribute execution not yet implemented.");
 		
 		return new CallState("#-1 NOT IMPLEMENTED");
 	}
 
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
-		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY"], ParameterNames = ["list", "command"])]
+		Switches = ["CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID"], ParameterNames = ["list", "command"])]
 	public static async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
@@ -193,7 +236,39 @@ public partial class Commands
 			return new None();
 		}
 
-		var list = MModule.split(" ", parser.CurrentState.Arguments["0"].Message!);
+		// Handle /DELIMIT or /PID switch - extract delimiter or PID from first argument
+		var hasDelimit = switches.Contains("DELIMIT");
+		var hasPid = switches.Contains("PID");
+		
+		string delimiter = " ";
+		string? notifyPid = null;
+		MString listText;
+		
+		if (hasDelimit)
+		{
+			// Format: @dolist/delimit <delimiter> <list>=<action>
+			var (delimiterParam, extractedList) = ExtractFirstParameter(
+				parser.CurrentState.Arguments["0"].Message!,
+				true);
+			delimiter = delimiterParam;
+			listText = extractedList;
+		}
+		else if (hasPid)
+		{
+			// Format: @dolist/pid <pid> <list>=<action>
+			var (pidParam, extractedList) = ExtractFirstParameter(
+				parser.CurrentState.Arguments["0"].Message!,
+				true);
+			notifyPid = pidParam;
+			listText = extractedList;
+		}
+		else
+		{
+			// Format: @dolist <list>=<action>
+			listText = parser.CurrentState.Arguments["0"].Message!;
+		}
+		
+		var list = MModule.split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
 		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
@@ -214,17 +289,26 @@ public partial class Commands
 					wrappedIteration.Value = item!;
 					wrappedIteration.Iteration++;
 
-					// TODO: This should not need parsing each time. Just evaluation by getting the Context and visiting the children multiple times.
+					// Note: Command is parsed once (line above loop), then the visitor is called
+					// multiple times with different iteration register values. This is optimized.
 					lastCallState = await visitorFunc();
 				}
 
 				parser.CurrentState.IterationRegisters.TryPop(out _);
 
-				// If /notify switch is present with /inline, queue "@notify me" after inline execution
+				// If /notify or /pid switch is present with /inline, queue "@notify" after inline execution
 				if (switches.Contains("NOTIFY"))
 				{
 					await Mediator!.Send(new QueueCommandListRequest(
 						MModule.single("@notify me"),
+						parser.CurrentState,
+						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+						-1));
+				}
+				else if (hasPid && !string.IsNullOrEmpty(notifyPid))
+				{
+					await Mediator!.Send(new QueueCommandListRequest(
+						MModule.single($"@notify {notifyPid}"),
 						parser.CurrentState,
 						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 						-1));
@@ -265,11 +349,19 @@ public partial class Commands
 					-1));
 			}
 
-			// If /notify switch is present, queue "@notify me" after all iterations
+			// If /notify or /pid switch is present, queue "@notify" after all iterations
 			if (switches.Contains("NOTIFY"))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single($"@notify {notifyPid}"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -777,17 +869,44 @@ public partial class Commands
 
 		if (!switches.Contains("OPAQUE") && !switches.Contains("BRIEF") && contents.Length > 0)
 		{
-			// TODO: Proper carry format.
-			await NotifyService!.Notify(enactor, $"Contents:\n" +
-			                                    $"{string.Join("\n", contentKeys)}");
+			// Use CONFORMAT attribute if present, following PennMUSH conventions
+			var conFormatResult = await AttributeService!.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
+				IAttributeService.AttributeMode.Read, false);
+			
+			if (conFormatResult.IsAttribute)
+			{
+				// Format with CONFORMAT: %0 = space-separated dbrefs, %1 = pipe-separated names
+				var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
+				var contentNames = string.Join("|", contentKeys);
+				
+				var formatArgs = new Dictionary<string, CallState>
+				{
+					["0"] = new CallState(contentDbrefs),
+					["1"] = new CallState(contentNames)
+				};
+				
+				var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+					parser, executor, viewingKnown, "CONFORMAT", formatArgs);
+				
+				await NotifyService!.Notify(enactor, formattedContents);
+			}
+			else
+			{
+				// Default format when CONFORMAT is not set
+				await NotifyService!.Notify(enactor, $"Contents:\n" +
+				                                    $"{string.Join("\n", contentKeys)}");
+			}
 		}
 
 		if (!switches.Contains("BRIEF") && !viewingKnown.IsRoom)
 		{
-			// TODO: Proper Format.
-			await NotifyService.Notify(enactor, $"Home: {(await viewingKnown.MinusRoom().Home()).Object().Name}");
+			// Format Home and Location display
+			var homeObj = await viewingKnown.MinusRoom().Home();
+			var locationObj = await viewingKnown.AsContent.Location();
+			
+			await NotifyService.Notify(enactor, $"Home: {homeObj.Object().Name}");
 			await NotifyService.Notify(enactor,
-				$"Location: {(await viewingKnown.AsContent.Location()).Object().Name}");
+				$"Location: {locationObj.Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());

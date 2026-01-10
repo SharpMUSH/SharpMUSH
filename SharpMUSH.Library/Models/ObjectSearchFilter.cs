@@ -23,6 +23,11 @@ public record ObjectSearchFilter
 	public string? NamePattern { get; init; }
 
 	/// <summary>
+	/// Whether to treat NamePattern as a regex pattern. Default is false (wildcard/substring match).
+	/// </summary>
+	public bool UseRegex { get; init; }
+
+	/// <summary>
 	/// Filter by minimum DBRef number. Null means no minimum.
 	/// </summary>
 	public int? MinDbRef { get; init; }

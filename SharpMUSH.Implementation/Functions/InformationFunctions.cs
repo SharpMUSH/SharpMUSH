@@ -155,7 +155,7 @@ public partial class Functions
 		return (uptimeData?.LastRebootTime ?? DateTimeOffset.Now).ToUnixTimeMilliseconds();
 	}
 
-	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["pid"])]
+	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["pid", "field", "delimiter"])]
 	public static async ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// pidinfo() returns information about a process ID
@@ -163,16 +163,57 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var pidStr = args["0"].Message!.ToPlainText();
 		
-		if (!int.TryParse(pidStr, out var pid))
+		if (!long.TryParse(pidStr, out var pid))
 		{
 			return new CallState("#-1 INVALID PID");
 		}
 
-		// TODO: Implement actual PID tracking and information retrieval
-		// This requires integration with the queue/process management system
-		// For now, return placeholder indicating not implemented
-		await ValueTask.CompletedTask;
+		var field = args.TryGetValue("1", out var fieldArg) 
+			? fieldArg.Message!.ToPlainText().ToLowerInvariant()
+			: null;
+		var delimiter = args.TryGetValue("2", out var delimArg)
+			? delimArg.Message!.ToPlainText()
+			: " ";
+
+		// Query semaphore tasks via Mediator
+		var semaphoreTasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid)).ToListAsync();
+		if (semaphoreTasks.Count > 0)
+		{
+			var task = semaphoreTasks[0];
+			return FormatTaskInfo(task, field, delimiter);
+		}
+
+		// If not found in semaphore tasks, return "NO SUCH PID"
 		return new CallState("#-1 NO SUCH PID");
+	}
+
+	private static CallState FormatTaskInfo(SemaphoreTaskData task, string? field, string delimiter)
+	{
+		if (field == null)
+		{
+			// Return all fields: pid command executor status delay
+			var parts = new List<string>
+			{
+				task.Pid.ToString(),
+				task.Command.ToPlainText(),
+				task.Owner.ToString(),
+				"waiting",
+				task.RunDelay?.TotalSeconds.ToString("F2") ?? "0"
+			};
+			return new CallState(string.Join(delimiter, parts));
+		}
+
+		// Return specific field
+		return field switch
+		{
+			"pid" => new CallState(task.Pid.ToString()),
+			"command" => new CallState(task.Command.ToPlainText()),
+			"executor" => new CallState(task.Owner.ToString()),
+			"status" => new CallState("waiting"),
+			"delay" => new CallState(task.RunDelay?.TotalSeconds.ToString("F2") ?? "0"),
+			"semaphore" => new CallState(task.SemaphoreSource.ToString()),
+			_ => new CallState("#-1 INVALID FIELD")
+		};
 	}
 
 	[SharpFunction(Name = "alias", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
@@ -492,12 +533,40 @@ public partial class Functions
 	public static async ValueTask<CallState> LStats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lstats() returns statistics about objects in the database
-		// For now, return placeholder values until database iteration is implemented
-		await ValueTask.CompletedTask;
-		
-		// TODO: Implement database-wide object counting
 		// Format: <players> <things> <exits> <rooms> <garbage>
-		return new CallState("0 0 0 0 0");
+		var args = parser.CurrentState.Arguments;
+		var typeFilter = args.TryGetValue("0", out var typeArg) 
+			? typeArg.Message!.ToPlainText().ToUpperInvariant() 
+			: null;
+
+		// Get all objects from the database
+		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery())
+			.ToListAsync();
+
+		// If a specific type is requested, filter and count only that type
+		if (!string.IsNullOrEmpty(typeFilter))
+		{
+			var count = typeFilter switch
+			{
+				"PLAYER" or "PLAYERS" => allObjects.Count(o => o.Type == "PLAYER"),
+				"THING" or "THINGS" => allObjects.Count(o => o.Type == "THING"),
+				"EXIT" or "EXITS" => allObjects.Count(o => o.Type == "EXIT"),
+				"ROOM" or "ROOMS" => allObjects.Count(o => o.Type == "ROOM"),
+				"GARBAGE" => 0, // SharpMUSH doesn't track garbage separately
+				_ => -1
+			};
+
+			return count >= 0 ? new CallState(count.ToString()) : new CallState("#-1 INVALID TYPE");
+		}
+
+		// Count each type
+		var players = allObjects.Count(o => o.Type == "PLAYER");
+		var things = allObjects.Count(o => o.Type == "THING");
+		var exits = allObjects.Count(o => o.Type == "EXIT");
+		var rooms = allObjects.Count(o => o.Type == "ROOM");
+		var garbage = 0; // SharpMUSH doesn't track garbage separately
+
+		return new CallState($"{players} {things} {exits} {rooms} {garbage}");
 	}
 
 	[SharpFunction(Name = "money", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -624,10 +693,20 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found =>
 			{
-				// TODO: Implement actual quota checking when database iteration is available
-				// For now, return unlimited quota
-				await ValueTask.CompletedTask;
-				return new CallState("0 999999");
+				// Get the player owner of the object
+				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
+				
+				// Object has no owner - return "0 0" (0 objects owned, 0 quota limit)
+				if (owner is null)
+				{
+					return new CallState("0 0");
+				}
+				
+				// Get the actual count of objects owned by the player
+				var ownedCount = await Mediator!.Send(new GetOwnedObjectCountQuery(owner));
+				
+				// Return "owned quota" format (e.g., "42 100" means 42 objects owned of 100 quota)
+				return new CallState($"{ownedCount} {owner.Quota}");
 			});
 	}
 

@@ -534,4 +534,27 @@ public class AttributeFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
+
+	[Test]
+	[Arguments("valid(name,TestName)", "1")]
+	[Arguments("valid(name,)", "0")]
+	public async Task Valid_Name(string str, string expected)
+	{
+		// Test valid() function with name validation
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Skip("Attribute value validation without target attribute requires ValidateService enhancement")]
+	[Arguments("valid(attrvalue,test_value)", "1")]
+	[Arguments("valid(attrvalue,test_value,NONEXISTENT_ATTR)", "1")]
+	public async Task Valid_AttributeValue(string str, string expected)
+	{
+		// Test valid() function with attribute value validation
+		// First argument is attrvalue, second is the value to test
+		// Optional third argument is the target attribute name
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }

@@ -101,9 +101,7 @@ public class DebugVerboseTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), 
 				Arg.Is<OneOf<MString, string>>(msg =>
-					msg.Match(
-						mstr => mstr.ToString().Contains("=> 99"),
-						str => str.Contains("=> 99"))),
+					TestHelpers.MessageContains(msg, "=> 99")),
 				Arg.Any<AnySharpObject>(), 
 				Arg.Any<INotifyService.NotificationType>());
 		
