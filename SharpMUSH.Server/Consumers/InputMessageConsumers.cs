@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
+using System.Globalization;
 
 namespace SharpMUSH.Server.Consumers;
 
@@ -81,8 +82,8 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionS
 			message.Handle, message.Width, message.Height);
 
 		// Update connection metadata with new window size
-		connectionService.Update(message.Handle, "HEIGHT", message.Height.ToString());
-		connectionService.Update(message.Handle, "WIDTH", message.Width.ToString());
+		connectionService.Update(message.Handle, "HEIGHT", message.Height.ToString(CultureInfo.InvariantCulture));
+		connectionService.Update(message.Handle, "WIDTH", message.Width.ToString(CultureInfo.InvariantCulture));
 		
 		return Task.CompletedTask;
 	}
