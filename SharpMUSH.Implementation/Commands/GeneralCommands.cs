@@ -3897,7 +3897,13 @@ public partial class Commands
 				}
 			}
 			
-			// TODO: Set parent if not default
+			// Set parent if not default (default is no parent)
+			var parent = await obj.Parent.WithCancellation(CancellationToken.None);
+			if (!parent.IsNone)
+			{
+				var parentObj = parent.Known.Object();
+				outputs.Add($"{prefix}@parent {objectRef}={parentObj.DBRef}");
+			}
 		}
 		
 		if (showAttribs)
