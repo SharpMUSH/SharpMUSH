@@ -84,8 +84,7 @@ public static partial class ArgHelpers
 	/// </summary>
 	private static string FormatDecimal(decimal value)
 	{
-		var str = value.ToString("0.##########", CultureInfo.InvariantCulture);
-		return str;
+		return value.ToString("0.##########", CultureInfo.InvariantCulture);
 	}
 
 	public static ValueTask<CallState> AggregateIntegers(ImmutableSortedDictionary<string, CallState> args,
