@@ -34,3 +34,13 @@ public record WebSocketPromptMessage(long Handle, string Data);
 /// Message sent from MainProcess to ConnectionServer to send GMCP data to a connection
 /// </summary>
 public record GMCPOutputMessage(long Handle, string Module, string Message);
+
+/// <summary>
+/// Message sent from MainProcess to ConnectionServer to send MSDP variable updates to a connection
+/// </summary>
+public record MSDPOutputMessage(long Handle, Dictionary<string, string> Variables);
+
+/// <summary>
+/// Message sent from MainProcess to ConnectionServer to send MSSP configuration to a connection
+/// </summary>
+public record MSSPOutputMessage(long Handle, Dictionary<string, string> Configuration);

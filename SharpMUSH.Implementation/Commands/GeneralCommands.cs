@@ -3897,7 +3897,13 @@ public partial class Commands
 				}
 			}
 			
-			// TODO: Set parent if not default
+			// Set parent if not default (default is no parent)
+			var parent = await obj.Parent.WithCancellation(CancellationToken.None);
+			if (!parent.IsNone)
+			{
+				var parentObj = parent.Known.Object();
+				outputs.Add($"{prefix}@parent {objectRef}={parentObj.DBRef}");
+			}
 		}
 		
 		if (showAttribs)
@@ -5683,7 +5689,6 @@ public partial class Commands
 		return new CallState(!falsey);
 	}
 
-	// TODO: Handle switches
 	[SharpCommand(Name = "@MESSAGE", Switches = ["NOEVAL", "SPOOF", "NOSPOOF", "REMIT", "OEMIT", "SILENT", "NOISY"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 3, MaxArgs = 0, ParameterNames = ["object", "type", "message"])]
 	public static async ValueTask<Option<CallState>> Message(IMUSHCodeParser parser, SharpCommandAttribute _2)

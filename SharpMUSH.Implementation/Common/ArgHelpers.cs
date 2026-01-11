@@ -65,14 +65,26 @@ public static partial class ArgHelpers
 	{
 		try
 		{
-			return ValueTask.FromResult<CallState>(args
+			var result = args
 				.Select(x => decimal.Parse(EmptyStringToZero(MModule.plainText(x.Value.Message))))
-				.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture));
+				.Aggregate(aggregateFunction);
+			
+			// Format decimal to remove unnecessary trailing zeros and decimal point
+			return ValueTask.FromResult<CallState>(FormatDecimal(result));
 		}
 		catch (Exception)
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
+	}
+	
+	/// <summary>
+	/// Formats a decimal number to remove unnecessary trailing zeros and decimal point.
+	/// E.g., 10.0 -> "10", 10.5 -> "10.5", 10.123 -> "10.123"
+	/// </summary>
+	private static string FormatDecimal(decimal value)
+	{
+		return value.ToString("0.##########", CultureInfo.InvariantCulture);
 	}
 
 	public static ValueTask<CallState> AggregateIntegers(ImmutableSortedDictionary<string, CallState> args,
@@ -128,8 +140,8 @@ public static partial class ArgHelpers
 	{
 		try
 		{
-			return ValueTask.FromResult<CallState>(
-				func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
+			var result = func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message))));
+			return ValueTask.FromResult<CallState>(FormatDecimal(result));
 		}
 		catch (Exception)
 		{

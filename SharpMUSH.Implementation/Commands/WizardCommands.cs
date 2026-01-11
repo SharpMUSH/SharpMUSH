@@ -1526,10 +1526,15 @@ public partial class Commands
 			}
 			var playerObj = maybePlayer.AsSharpObject.AsPlayer;
 			var targetDbRef = playerObj.Object.DBRef;
-			// TODO: This should only boot the last active connection, to match Penn behavior.
+			// Boot only the last active connection to match PennMUSH behavior
+			IConnectionService.ConnectionData? lastConnection = null;
 			await foreach (var cd in ConnectionService!.Get(targetDbRef))
 			{
-				targetHandles.Add(cd.Handle);
+				lastConnection = cd;
+			}
+			if (lastConnection is not null)
+			{
+				targetHandles.Add(lastConnection.Handle);
 			}
 			if (targetHandles.Count == 0)
 			{

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
+using System.Globalization;
 
 namespace SharpMUSH.Server.Consumers;
 
@@ -40,7 +41,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 /// <summary>
 /// Consumes GMCP signal messages from ConnectionServer
 /// </summary>
-public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger) : IConsumer<GMCPSignalMessage>
+public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionService connectionService) : IConsumer<GMCPSignalMessage>
 {
 	public Task Consume(ConsumeContext<GMCPSignalMessage> context)
 	{
@@ -48,15 +49,49 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger) : IConsumer<
 		logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}",
 			message.Handle, message.Package, message.Info);
 
-		// TODO: Implement GMCP signal handling
+		// Store GMCP package and info in connection metadata
+		connectionService.Update(message.Handle, $"GMCP_{message.Package}", message.Info);
+		
+		// Handle specific GMCP packages
+		HandleGMCPPackage(message.Handle, message.Package, message.Info);
+		
 		return Task.CompletedTask;
+	}
+	
+	private void HandleGMCPPackage(long handle, string package, string info)
+	{
+		// Process specific GMCP packages
+		switch (package)
+		{
+			case "Core.Hello":
+				logger.LogInformation("Client {Handle} sent Core.Hello: {Info}", handle, info);
+				connectionService.Update(handle, "GMCP_ClientHello", info);
+				break;
+				
+			case "Core.Supports.Set":
+				logger.LogInformation("Client {Handle} supports: {Info}", handle, info);
+				connectionService.Update(handle, "GMCP_ClientSupports", info);
+				break;
+				
+			case "Char.Vitals":
+				logger.LogDebug("Client {Handle} sent Char.Vitals update", handle);
+				break;
+				
+			case "Comm.Channel":
+				logger.LogDebug("Client {Handle} sent Comm.Channel data", handle);
+				break;
+				
+			default:
+				logger.LogDebug("Unhandled GMCP package {Package} from handle {Handle}", package, handle);
+				break;
+		}
 	}
 }
 
 /// <summary>
 /// Consumes MSDP update messages from ConnectionServer
 /// </summary>
-public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger) : IConsumer<MSDPUpdateMessage>
+public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionService connectionService) : IConsumer<MSDPUpdateMessage>
 {
 	public Task Consume(ConsumeContext<MSDPUpdateMessage> context)
 	{
@@ -64,15 +99,56 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger) : IConsumer<
 		logger.LogDebug("Received MSDP update from handle {Handle} with {Count} variables",
 			message.Handle, message.Variables.Count);
 
-		// TODO: Implement MSDP update handling
+		// Store each MSDP variable in connection metadata
+		foreach (var variable in message.Variables)
+		{
+			connectionService.Update(message.Handle, $"MSDP_{variable.Key}", variable.Value);
+		}
+		
+		// Handle specific MSDP variables
+		HandleMSDPVariables(message.Handle, message.Variables);
+		
 		return Task.CompletedTask;
+	}
+	
+	private void HandleMSDPVariables(long handle, Dictionary<string, string> variables)
+	{
+		// Process specific MSDP variables
+		foreach (var variable in variables)
+		{
+			switch (variable.Key)
+			{
+				case "CLIENT_NAME":
+					logger.LogInformation("Client {Handle} name: {ClientName}", handle, variable.Value);
+					connectionService.Update(handle, "ClientName", variable.Value);
+					break;
+					
+				case "CLIENT_VERSION":
+					logger.LogInformation("Client {Handle} version: {ClientVersion}", handle, variable.Value);
+					connectionService.Update(handle, "ClientVersion", variable.Value);
+					break;
+					
+				case "REPORTABLE_VARIABLES":
+					logger.LogDebug("Client {Handle} reportable variables: {Variables}", handle, variable.Value);
+					break;
+					
+				case "TERMINAL_TYPE":
+					logger.LogInformation("Client {Handle} terminal type: {TerminalType}", handle, variable.Value);
+					connectionService.Update(handle, "TerminalType", variable.Value);
+					break;
+					
+				default:
+					logger.LogDebug("MSDP variable {Key}={Value} from handle {Handle}", variable.Key, variable.Value, handle);
+					break;
+			}
+		}
 	}
 }
 
 /// <summary>
 /// Consumes NAWS update messages from ConnectionServer
 /// </summary>
-public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger) : IConsumer<NAWSUpdateMessage>
+public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionService connectionService) : IConsumer<NAWSUpdateMessage>
 {
 	public Task Consume(ConsumeContext<NAWSUpdateMessage> context)
 	{
@@ -80,7 +156,10 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger) : IConsumer<
 		logger.LogDebug("Received NAWS update from handle {Handle}: {Width}x{Height}",
 			message.Handle, message.Width, message.Height);
 
-		// TODO: Implement NAWS update handling (update connection metadata)
+		// Update connection metadata with new window size
+		connectionService.Update(message.Handle, "HEIGHT", message.Height.ToString(CultureInfo.InvariantCulture));
+		connectionService.Update(message.Handle, "WIDTH", message.Width.ToString(CultureInfo.InvariantCulture));
+		
 		return Task.CompletedTask;
 	}
 }

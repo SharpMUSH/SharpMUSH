@@ -59,7 +59,7 @@ public class MathFunctionUnitTests
 
 	[Test]
 	[Arguments("mul(2,3)", "6")]
-	[Arguments("mul(2.5,4)", "10.0")] // TODO: This should return 10
+	[Arguments("mul(2.5,4)", "10")]
 	[Arguments("mul(2.3,4)", "9.2")]
 	[Arguments("mul(-2,3)", "-6")]
 	[Arguments("mul(2,3,4)", "24")]
