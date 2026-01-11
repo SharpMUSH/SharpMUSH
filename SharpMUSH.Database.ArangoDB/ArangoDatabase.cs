@@ -12,6 +12,7 @@ using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -486,6 +487,14 @@ public partial class ArangoDatabase(
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 			contentEdge, new { To = owner.Id }, cancellationToken: ct);
 	}
+
+	public async ValueTask SetObjectWarnings(AnySharpObject obj, WarningType warnings, CancellationToken ct = default)
+		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
+			new
+			{
+				obj.Object().Key,
+				Warnings = warnings
+			}, cancellationToken: ct);
 
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag,
 		CancellationToken ct = default)
