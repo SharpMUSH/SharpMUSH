@@ -41,7 +41,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 /// <summary>
 /// Consumes GMCP signal messages from ConnectionServer
 /// </summary>
-public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger) : IConsumer<GMCPSignalMessage>
+public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionService connectionService) : IConsumer<GMCPSignalMessage>
 {
 	public Task Consume(ConsumeContext<GMCPSignalMessage> context)
 	{
@@ -49,7 +49,12 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger) : IConsumer<
 		logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}",
 			message.Handle, message.Package, message.Info);
 
-		// TODO: Implement GMCP signal handling
+		// Store GMCP package and info in connection metadata
+		connectionService.Update(message.Handle, $"GMCP_{message.Package}", message.Info);
+		
+		// TODO: Implement full GMCP signal handling - trigger events or process specific GMCP packages
+		// Different GMCP packages may require different handling (e.g., Core.Hello, Char.Vitals, etc.)
+		
 		return Task.CompletedTask;
 	}
 }
@@ -57,7 +62,7 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger) : IConsumer<
 /// <summary>
 /// Consumes MSDP update messages from ConnectionServer
 /// </summary>
-public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger) : IConsumer<MSDPUpdateMessage>
+public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionService connectionService) : IConsumer<MSDPUpdateMessage>
 {
 	public Task Consume(ConsumeContext<MSDPUpdateMessage> context)
 	{
@@ -65,7 +70,15 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger) : IConsumer<
 		logger.LogDebug("Received MSDP update from handle {Handle} with {Count} variables",
 			message.Handle, message.Variables.Count);
 
-		// TODO: Implement MSDP update handling
+		// Store each MSDP variable in connection metadata
+		foreach (var variable in message.Variables)
+		{
+			connectionService.Update(message.Handle, $"MSDP_{variable.Key}", variable.Value);
+		}
+		
+		// TODO: Implement full MSDP update handling - process specific MSDP variables
+		// Different MSDP variables may trigger different actions (e.g., REPORTABLE_VARIABLES, CLIENT_VERSION, etc.)
+		
 		return Task.CompletedTask;
 	}
 }
