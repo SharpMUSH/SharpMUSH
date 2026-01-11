@@ -72,7 +72,7 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger) : IConsumer<
 /// <summary>
 /// Consumes NAWS update messages from ConnectionServer
 /// </summary>
-public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger) : IConsumer<NAWSUpdateMessage>
+public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionService connectionService) : IConsumer<NAWSUpdateMessage>
 {
 	public Task Consume(ConsumeContext<NAWSUpdateMessage> context)
 	{
@@ -80,7 +80,10 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger) : IConsumer<
 		logger.LogDebug("Received NAWS update from handle {Handle}: {Width}x{Height}",
 			message.Handle, message.Width, message.Height);
 
-		// TODO: Implement NAWS update handling (update connection metadata)
+		// Update connection metadata with new window size
+		connectionService.Update(message.Handle, "HEIGHT", message.Height.ToString());
+		connectionService.Update(message.Handle, "WIDTH", message.Width.ToString());
+		
 		return Task.CompletedTask;
 	}
 }
