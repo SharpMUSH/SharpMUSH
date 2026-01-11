@@ -52,10 +52,39 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 		// Store GMCP package and info in connection metadata
 		connectionService.Update(message.Handle, $"GMCP_{message.Package}", message.Info);
 		
-		// TODO: Implement full GMCP signal handling - trigger events or process specific GMCP packages
-		// Different GMCP packages may require different handling (e.g., Core.Hello, Char.Vitals, etc.)
+		// Handle specific GMCP packages
+		HandleGMCPPackage(message.Handle, message.Package, message.Info);
 		
 		return Task.CompletedTask;
+	}
+	
+	private void HandleGMCPPackage(long handle, string package, string info)
+	{
+		// Process specific GMCP packages
+		switch (package)
+		{
+			case "Core.Hello":
+				logger.LogInformation("Client {Handle} sent Core.Hello: {Info}", handle, info);
+				connectionService.Update(handle, "GMCP_ClientHello", info);
+				break;
+				
+			case "Core.Supports.Set":
+				logger.LogInformation("Client {Handle} supports: {Info}", handle, info);
+				connectionService.Update(handle, "GMCP_ClientSupports", info);
+				break;
+				
+			case "Char.Vitals":
+				logger.LogDebug("Client {Handle} sent Char.Vitals update", handle);
+				break;
+				
+			case "Comm.Channel":
+				logger.LogDebug("Client {Handle} sent Comm.Channel data", handle);
+				break;
+				
+			default:
+				logger.LogDebug("Unhandled GMCP package {Package} from handle {Handle}", package, handle);
+				break;
+		}
 	}
 }
 
@@ -76,10 +105,43 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 			connectionService.Update(message.Handle, $"MSDP_{variable.Key}", variable.Value);
 		}
 		
-		// TODO: Implement full MSDP update handling - process specific MSDP variables
-		// Different MSDP variables may trigger different actions (e.g., REPORTABLE_VARIABLES, CLIENT_VERSION, etc.)
+		// Handle specific MSDP variables
+		HandleMSDPVariables(message.Handle, message.Variables);
 		
 		return Task.CompletedTask;
+	}
+	
+	private void HandleMSDPVariables(long handle, Dictionary<string, string> variables)
+	{
+		// Process specific MSDP variables
+		foreach (var variable in variables)
+		{
+			switch (variable.Key)
+			{
+				case "CLIENT_NAME":
+					logger.LogInformation("Client {Handle} name: {ClientName}", handle, variable.Value);
+					connectionService.Update(handle, "ClientName", variable.Value);
+					break;
+					
+				case "CLIENT_VERSION":
+					logger.LogInformation("Client {Handle} version: {ClientVersion}", handle, variable.Value);
+					connectionService.Update(handle, "ClientVersion", variable.Value);
+					break;
+					
+				case "REPORTABLE_VARIABLES":
+					logger.LogDebug("Client {Handle} reportable variables: {Variables}", handle, variable.Value);
+					break;
+					
+				case "TERMINAL_TYPE":
+					logger.LogInformation("Client {Handle} terminal type: {TerminalType}", handle, variable.Value);
+					connectionService.Update(handle, "TerminalType", variable.Value);
+					break;
+					
+				default:
+					logger.LogDebug("MSDP variable {Key}={Value} from handle {Handle}", variable.Key, variable.Value, handle);
+					break;
+			}
+		}
 	}
 }
 
