@@ -4093,9 +4093,13 @@ public partial class Commands
 	/// </summary>
 	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
-		// For now, empty flags are considered default for most attributes
-		// In the future, this could check against @attribute/access definitions
-		// stored in the database for standard attributes
+		// For now, empty flags are considered default for most attributes.
+		// TODO: In the future, implement proper checking against @attribute/access definitions
+		// stored in the database for standard attributes that have custom default flags.
+		// This would require:
+		// 1. Database table/collection for attribute definitions with default flags
+		// 2. Query to check if attribute has custom defaults
+		// 3. Comparison of current flags against those defaults
 		var flagList = flags.ToList();
 		return flagList.Count == 0;
 	}
