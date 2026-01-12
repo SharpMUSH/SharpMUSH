@@ -405,7 +405,43 @@ public class SharpMUSHParserVisitor(
 			
 			List<CallState> refinedArguments;
 
-			// TODO: Check Permissions here.
+			// Check function-level permissions
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			
+			// Check if function is restricted to Wizards
+			if (attribute.Flags.HasFlag(FunctionFlags.WizardOnly) && !await executor.IsWizard())
+			{
+				success = false;
+				return new CallState(Errors.ErrorPerm, contextDepth);
+			}
+			
+			// Check if function is restricted to Admins (Wizards or higher)
+			if (attribute.Flags.HasFlag(FunctionFlags.AdminOnly) && !await executor.IsWizard())
+			{
+				success = false;
+				return new CallState(Errors.ErrorPerm, contextDepth);
+			}
+			
+			// Check if function is restricted to God
+			if (attribute.Flags.HasFlag(FunctionFlags.GodOnly) && !executor.IsGod())
+			{
+				success = false;
+				return new CallState(Errors.ErrorPerm, contextDepth);
+			}
+			
+			// Check if function cannot be used by Guests
+			if (attribute.Flags.HasFlag(FunctionFlags.NoGuest) && await executor.IsGuest())
+			{
+				success = false;
+				return new CallState(Errors.ErrorPerm, contextDepth);
+			}
+			
+			// Check if function cannot be used by Gagged players
+			if (attribute.Flags.HasFlag(FunctionFlags.NoGagged) && await executor.HasFlag("GAGGED"))
+			{
+				success = false;
+				return new CallState(Errors.ErrorPerm, contextDepth);
+			}
 
 			/* Validation, this should probably go into its own function! */
 			if (args.Length > attribute.MaxArgs)
