@@ -4309,13 +4309,19 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  For player: {playerName}");
 		}
 		
-		// TODO: Query actual database statistics
-		await NotifyService.Notify(executor, "  Rooms: (query pending)");
-		await NotifyService.Notify(executor, "  Exits: (query pending)");
-		await NotifyService.Notify(executor, "  Things: (query pending)");
-		await NotifyService.Notify(executor, "  Players: (query pending)");
-		await NotifyService.Notify(executor, "  Total: (query pending)");
-		await NotifyService.Notify(executor, "Note: Full database statistics not yet implemented.");
+		// Query actual database statistics
+		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery()).ToListAsync();
+		var roomCount = allObjects.Count(o => o.Type == "ROOM");
+		var exitCount = allObjects.Count(o => o.Type == "EXIT");
+		var thingCount = allObjects.Count(o => o.Type == "THING");
+		var playerCount = allObjects.Count(o => o.Type == "PLAYER");
+		var totalCount = roomCount + exitCount + thingCount + playerCount;
+		
+		await NotifyService.Notify(executor, $"  Rooms: {roomCount}");
+		await NotifyService.Notify(executor, $"  Exits: {exitCount}");
+		await NotifyService.Notify(executor, $"  Things: {thingCount}");
+		await NotifyService.Notify(executor, $"  Players: {playerCount}");
+		await NotifyService.Notify(executor, $"  Total: {totalCount}");
 		
 		return CallState.Empty;
 	}
@@ -4546,15 +4552,44 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
 		
-		// TODO: Query database for objects linked to target
-		// - Exits linked to target
-		// - Things with home = target  
-		// - Players with home = target
-		// - Rooms with drop-to = target
-		await NotifyService.Notify(executor, "Note: Database query for linked objects not yet implemented.");
-		await NotifyService.Notify(executor, "0 entrances found.");
+		// Query database for exits linked to target
+		var entrances = await Mediator!.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
 		
-		return new CallState("0");
+		// Apply type filters if specified
+		if (filterTypes.Count > 0)
+		{
+			if (!filterTypes.Contains("exits"))
+			{
+				entrances.Clear(); // GetEntrancesQuery only returns exits, so if exits not requested, clear
+			}
+		}
+		
+		// Apply range filters if specified
+		if (beginDbref.HasValue || endDbref.HasValue)
+		{
+			entrances = entrances.Where(e =>
+			{
+				var key = e.Object.Key;
+				return (!beginDbref.HasValue || key >= beginDbref.Value) &&
+				       (!endDbref.HasValue || key <= endDbref.Value);
+			}).ToList();
+		}
+		
+		// Display results
+		if (entrances.Count == 0)
+		{
+			await NotifyService.Notify(executor, "0 entrances found.");
+		}
+		else
+		{
+			foreach (var entrance in entrances)
+			{
+				await NotifyService.Notify(executor, $"  #{entrance.Object.Key} ({entrance.Object.Name})");
+			}
+			await NotifyService.Notify(executor, $"{entrances.Count} entrance(s) found.");
+		}
+		
+		return new CallState(entrances.Count.ToString());
 	}
 
 	[SharpCommand(Name = "@GREP", Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
