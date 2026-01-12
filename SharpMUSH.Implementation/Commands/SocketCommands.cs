@@ -6,6 +6,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -173,7 +174,14 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
-		// TODO: Display Disconnect Banner.
+		
+		// Display Disconnect Banner (DownMotd) if configured
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+		if (!string.IsNullOrWhiteSpace(motdData?.DownMotd))
+		{
+			await NotifyService!.Notify(executor, motdData.DownMotd);
+		}
+		
 		await ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
 		return new None();
 	}
