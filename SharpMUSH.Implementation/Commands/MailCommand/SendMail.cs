@@ -1,5 +1,6 @@
 ﻿using DotNext.Threading;
 using Mediator;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -14,8 +15,9 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 public static class SendMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IPermissionService permissionService,
-		IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, MString nameList,
-		MString subjectAndMessage, string[] switches)
+		IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, 
+		IAttributeService attributeService, IOptionsWrapper<SharpMUSHOptions> configuration,
+		MString nameList, MString subjectAndMessage, string[] switches)
 	{
 		var urgent = switches.Contains("URGENT");
 		var silent = switches.Contains("SILENT");
@@ -87,7 +89,31 @@ public static class SendMail
 					$"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.");
 			}
 
-			// TODO: If AMAIL is config true, and AMAIL &attribute is set on the target, trigger it.
+			// Trigger AMAIL attribute if configured and present
+			if (configuration.CurrentValue.Attribute.AMail)
+			{
+				var playerAsAny = new AnySharpObject(player);
+				var amailAttr = await attributeService.GetAttributeAsync(
+					sender, 
+					playerAsAny, 
+					"AMAIL", 
+					IAttributeService.AttributeMode.Read,
+					false);
+					
+				if (amailAttr.IsAttribute)
+				{
+					var attribute = amailAttr.AsAttribute.Last();
+					// Execute AMAIL attribute with player as executor and sender as enactor
+					await parser.With(state => state with
+					{
+						Executor = player.Object.DBRef,
+						Enactor = sender.Object().DBRef
+					}, async newParser =>
+					{
+						await newParser.CommandListParse(attribute.Value);
+					});
+				}
+			}
 		}
 
 		return MModule.multipleWithDelimiter(

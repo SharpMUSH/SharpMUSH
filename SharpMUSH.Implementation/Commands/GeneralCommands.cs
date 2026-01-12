@@ -4074,9 +4074,18 @@ public partial class Commands
 	/// </summary>
 	private static bool IsDefaultFlag(string type, string flagName)
 	{
-		// TODO: Implement proper default flag checking based on object type
-		// For now, return false to show all flags
-		return false;
+		// Get default flags from configuration
+		var defaultFlags = type.ToUpperInvariant() switch
+		{
+			"PLAYER" => Configuration?.CurrentValue.Flag.PlayerFlags ?? [],
+			"ROOM" => Configuration?.CurrentValue.Flag.RoomFlags ?? [],
+			"THING" => Configuration?.CurrentValue.Flag.ThingFlags ?? [],
+			"EXIT" => Configuration?.CurrentValue.Flag.ExitFlags ?? [],
+			_ => Array.Empty<string>()
+		};
+		
+		// Check if the flag is in the default list (case-insensitive comparison)
+		return defaultFlags.Any(f => f.Equals(flagName, StringComparison.OrdinalIgnoreCase));
 	}
 	
 	/// <summary>
@@ -4084,9 +4093,11 @@ public partial class Commands
 	/// </summary>
 	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
-		// TODO: Implement proper default attribute flag checking
-		// For now, return false to show all flags
-		return false;
+		// For now, empty flags are considered default for most attributes
+		// In the future, this could check against @attribute/access definitions
+		// stored in the database for standard attributes
+		var flagList = flags.ToList();
+		return flagList.Count == 0;
 	}
 
 	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
@@ -5000,7 +5011,7 @@ public partial class Commands
 					arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when arg0?.Length != 0 && arg1?.Length != 0
-				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, arg0!,
+				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, AttributeService!, Configuration!, arg0!,
 					arg1!, switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
 			                        int.TryParse(arg0?.ToPlainText(), out var number)
