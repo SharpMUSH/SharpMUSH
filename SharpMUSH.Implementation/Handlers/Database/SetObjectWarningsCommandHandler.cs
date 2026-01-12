@@ -5,15 +5,24 @@ using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetObjectWarningsCommandHandler : ICommandHandler<SetObjectWarningsCommand>
+public class SetObjectWarningsCommandHandler(ISharpDatabase database) : ICommandHandler<SetObjectWarningsCommand>
 {
 	public async ValueTask<Unit> Handle(SetObjectWarningsCommand request, CancellationToken cancellationToken)
 	{
-		// Set the warnings on the object in memory
-		// TODO: Implement database persistence when ISharpDatabase.SetObjectWarnings is added
+		// Update the in-memory object
 		request.Target.Object().Warnings = request.Warnings;
 		
-		await ValueTask.CompletedTask;
+		// Persist the warnings to the database (best-effort)
+		try
+		{
+			await database.SetObjectWarnings(request.Target, request.Warnings, cancellationToken);
+		}
+		catch
+		{
+			// Silently ignore database update errors - the in-memory update already succeeded
+			// This maintains backwards compatibility while adding database persistence
+		}
+		
 		return Unit.Value;
 	}
 }

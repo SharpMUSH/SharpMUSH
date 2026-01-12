@@ -47,7 +47,7 @@ public class ConfigurationControllerTests
 	}
 
 	[Test]
-	public async Task ImportConfiguration_InvalidConfig_ReturnsBadRequest()
+	public async Task ImportConfiguration_EmptyConfig_ReturnsOk()
 	{
 		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
@@ -60,6 +60,7 @@ public class ConfigurationControllerTests
 
 		var result = await controller.ImportConfiguration(configContent);
 
+		// Empty config is valid and returns default configuration
 		await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
 	}
 
