@@ -2005,7 +2005,8 @@ public partial class Commands
 				// Set HALT flag
 				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "HALT", false);
 				
-				// TODO: Clear powers - requires power clearing implementation
+				// Clear all powers from the object
+				await ManipulateSharpObjectService!.ClearAllPowers(executor, objAny, false);
 			}
 		}
 		
@@ -2473,7 +2474,9 @@ public partial class Commands
 										{
 											await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, anyObj, "!TRUST", false);
 										}
-										// TODO: Strip powers
+										
+										// Clear all powers from the object
+										await ManipulateSharpObjectService!.ClearAllPowers(executor, anyObj, false);
 									}
 
 									count++;
