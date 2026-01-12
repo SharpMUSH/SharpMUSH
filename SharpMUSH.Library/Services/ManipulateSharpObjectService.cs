@@ -384,6 +384,12 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
+		// Early return if object has no powers
+		if (!await obj.Object().Powers.Value.AnyAsync())
+		{
+			return true;
+		}
+
 		// Materialize the powers collection to avoid modification during iteration
 		var objectPowers = await obj.Object().Powers.Value.ToArrayAsync();
 		var powersCleared = 0;

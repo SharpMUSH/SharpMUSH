@@ -2050,8 +2050,7 @@ public partial class Commands
 		
 		// Check if player name already exists
 		// This is necessary because ValidationType.Name only checks format, not uniqueness
-		var existingPlayer = await Mediator!.CreateStream(new GetPlayerQuery(name)).FirstOrDefaultAsync();
-		if (existingPlayer is not null)
+		if (await Mediator!.CreateStream(new GetPlayerQuery(name)).AnyAsync())
 		{
 			await NotifyService!.Notify(executor, "That player name already exists.");
 			return CallState.Empty;

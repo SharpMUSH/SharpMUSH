@@ -177,7 +177,7 @@ public partial class Commands
 		
 		// Display Disconnect Banner (DownMotd) if configured
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
-		if (motdData?.DownMotd is not null && !string.IsNullOrWhiteSpace(motdData.DownMotd))
+		if (!string.IsNullOrWhiteSpace(motdData?.DownMotd))
 		{
 			await NotifyService!.Notify(executor, motdData.DownMotd);
 		}
