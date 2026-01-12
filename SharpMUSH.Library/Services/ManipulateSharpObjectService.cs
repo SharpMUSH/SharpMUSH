@@ -373,6 +373,51 @@ public class ManipulateSharpObjectService(
 		return true;
 	}
 
+	public async ValueTask<CallState> ClearAllPowers(AnySharpObject executor, AnySharpObject obj, bool notify)
+	{
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "You do not control that object.");
+			}
+			return Errors.ErrorPerm;
+		}
+
+		// Early return if object has no powers
+		if (!await obj.Object().Powers.Value.AnyAsync())
+		{
+			return true;
+		}
+
+		// Materialize the powers collection to avoid modification during iteration
+		var objectPowers = await obj.Object().Powers.Value.ToArrayAsync();
+		var powersCleared = 0;
+
+		foreach (var power in objectPowers)
+		{
+			// Unset each power
+			await mediator.Send(new UnsetObjectPowerCommand(obj, power));
+			
+			// Publish notification for each power cleared
+			await publisher.Publish(new ObjectFlagChangedNotification(
+				obj,
+				power.Name,
+				"POWER",
+				false, // IsSet = false (clearing)
+				executor.Object().DBRef));
+			
+			powersCleared++;
+		}
+
+		if (notify && powersCleared > 0)
+		{
+			await notifyService.Notify(executor, $"Cleared {powersCleared} power(s) from {obj.Object().Name}.");
+		}
+
+		return true;
+	}
+
 	public async ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify)
 	{
 		if (!await permissionService.Controls(executor, obj) 
