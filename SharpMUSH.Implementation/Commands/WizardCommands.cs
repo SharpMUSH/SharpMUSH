@@ -2030,7 +2030,6 @@ public partial class Commands
 	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default, MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
 	public static async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Validate Name and Passwords
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var startingQuota = (int)Configuration!.CurrentValue.Limit.StartingQuota;
@@ -2038,6 +2037,28 @@ public partial class Commands
 		var name = MModule.plainText(args["0"].Message!);
 		var password = MModule.plainText(args["1"].Message!);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Validate the player name
+		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, MModule.single(name), new None()))
+		{
+			await NotifyService!.Notify(executor, "That is not a valid player name.");
+			return CallState.Empty;
+		}
+		
+		// Check if player name already exists
+		var existingPlayer = await Mediator!.CreateStream(new GetPlayerQuery(name)).FirstOrDefaultAsync();
+		if (existingPlayer is not null)
+		{
+			await NotifyService!.Notify(executor, "That player name already exists.");
+			return CallState.Empty;
+		}
+		
+		// Validate the password
+		if (!await ValidateService!.Valid(IValidateService.ValidationType.Password, MModule.single(password), new None()))
+		{
+			await NotifyService!.Notify(executor, "That is not a valid password.");
+			return CallState.Empty;
+		}
 
 		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
