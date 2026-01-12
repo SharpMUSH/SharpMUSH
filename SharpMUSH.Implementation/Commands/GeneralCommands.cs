@@ -4597,12 +4597,9 @@ public partial class Commands
 		var entrances = await Mediator!.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
 		
 		// Apply type filters if specified
-		if (filterTypes.Count > 0)
+		if (filterTypes.Count > 0 && !filterTypes.Contains("exits"))
 		{
-			if (!filterTypes.Contains("exits"))
-			{
-				entrances.Clear(); // GetEntrancesQuery only returns exits, so if exits not requested, clear
-			}
+			entrances.Clear(); // GetEntrancesQuery only returns exits, so if exits not requested, clear
 		}
 		
 		// Apply range filters if specified
