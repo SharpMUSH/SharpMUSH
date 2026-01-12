@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
 using MarkupString;
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using Mediator;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;

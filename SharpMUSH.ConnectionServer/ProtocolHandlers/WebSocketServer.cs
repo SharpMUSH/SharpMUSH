@@ -1,6 +1,6 @@
 using System.Net.WebSockets;
 using System.Text;
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using Microsoft.AspNetCore.Http;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;

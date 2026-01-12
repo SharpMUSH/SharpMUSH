@@ -1,4 +1,4 @@
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using Mediator;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Messages;

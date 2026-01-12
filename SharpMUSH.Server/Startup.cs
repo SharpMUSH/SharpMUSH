@@ -1,6 +1,6 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;

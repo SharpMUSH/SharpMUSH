@@ -1,5 +1,5 @@
 using Mediator;
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using OneOf;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;

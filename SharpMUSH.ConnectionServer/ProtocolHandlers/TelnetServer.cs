@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Services;

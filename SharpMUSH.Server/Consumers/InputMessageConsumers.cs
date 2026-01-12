@@ -1,4 +1,4 @@
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using MarkupString;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;

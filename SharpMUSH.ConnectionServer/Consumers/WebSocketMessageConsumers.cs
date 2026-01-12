@@ -1,4 +1,4 @@
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;
 using System.Text;

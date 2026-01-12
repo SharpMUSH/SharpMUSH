@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 

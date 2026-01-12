@@ -1,5 +1,5 @@
 using System.Text;
-using MassTransit;
+using SharpMUSH.Messaging.Adapters;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.ConnectionServer.Services;
