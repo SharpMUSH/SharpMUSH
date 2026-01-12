@@ -25,6 +25,41 @@ public class FunctionPermissionTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IServiceProvider Services => WebAppFactoryArg.Services;
 
+	/// <summary>
+	/// Helper method to create a parser with a specific executor
+	/// </summary>
+	private IMUSHCodeParser CreateParserWithExecutor(DBRef executorDbRef)
+	{
+		return new MUSHCodeParser(
+			Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MUSHCodeParser>>(),
+			Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
+			Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+			Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+			Services,
+			state: new ParserState(
+				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				ExecutionStack: [],
+				EnvironmentRegisters: [],
+				CurrentEvaluation: null,
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: "think",
+				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
+				Switches: [],
+				Arguments: [],
+				Executor: executorDbRef,
+				Enactor: executorDbRef,
+				Caller: executorDbRef,
+				Handle: 1,
+				CallDepth: new InvocationCounter(),
+				FunctionRecursionDepths: new Dictionary<string, int>(),
+				TotalInvocations: new InvocationCounter(),
+				LimitExceeded: new LimitExceededFlag()
+			));
+	}
+
 	[Test]
 	public async Task WizardOnlyFunction_AllowsWizard()
 	{
@@ -48,34 +83,7 @@ public class FunctionPermissionTests
 			100));
 
 		// Create a parser with the non-wizard player as executor
-		var parser = new MUSHCodeParser(
-			Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MUSHCodeParser>>(),
-			Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-			Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
-			Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>(),
-			Services,
-			state: new ParserState(
-				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: "think",
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new OneOf.Types.None())),
-				Switches: [],
-				Arguments: [],
-				Executor: player,
-				Enactor: player,
-				Caller: player,
-				Handle: 1,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag()
-			));
+		var parser = CreateParserWithExecutor(player);
 
 		// Try to call a WizardOnly function (pcreate)
 		var result = await parser.FunctionParse(MModule.single("pcreate(AnotherPlayer,password)"));
@@ -107,34 +115,7 @@ public class FunctionPermissionTests
 			100));
 
 		// Create a parser with the non-wizard player as executor
-		var parser = new MUSHCodeParser(
-			Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MUSHCodeParser>>(),
-			Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-			Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
-			Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>(),
-			Services,
-			state: new ParserState(
-				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
-				IterationRegisters: [],
-				RegexRegisters: [],
-				ExecutionStack: [],
-				EnvironmentRegisters: [],
-				CurrentEvaluation: null,
-				ParserFunctionDepth: 0,
-				Function: null,
-				Command: "think",
-				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new OneOf.Types.None())),
-				Switches: [],
-				Arguments: [],
-				Executor: player,
-				Enactor: player,
-				Caller: player,
-				Handle: 1,
-				CallDepth: new InvocationCounter(),
-				FunctionRecursionDepths: new Dictionary<string, int>(),
-				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag()
-			));
+		var parser = CreateParserWithExecutor(player);
 
 		// Try to call an AdminOnly function (beep)
 		var result = await parser.FunctionParse(MModule.single("beep()"));
