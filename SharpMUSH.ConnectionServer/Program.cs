@@ -1,4 +1,5 @@
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Kafka;
+using SharpMUSH.Messaging.Abstractions;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;

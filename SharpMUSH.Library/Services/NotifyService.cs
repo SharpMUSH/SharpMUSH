@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
 using MarkupString;
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -19,7 +19,7 @@ namespace SharpMUSH.Library.Services;
 /// Messages are accumulated and flushed after 10ms of inactivity, or immediately when explicitly flushed.
 /// </summary>
 public class NotifyService(
-	IBus publishEndpoint, 
+	IMessageBus publishEndpoint, 
 	IConnectionService connections,
 	IListenerRoutingService? listenerRoutingService = null,
 	Mediator.IMediator? mediator = null) : INotifyService

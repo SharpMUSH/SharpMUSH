@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Services;
@@ -19,7 +19,7 @@ public class TelnetServer : ConnectionHandler
 {
 	private readonly ILogger _logger;
 	private readonly IConnectionServerService _connectionService;
-	private readonly IBus _publishEndpoint;
+	private readonly IMessageBus _publishEndpoint;
 	private readonly IDescriptorGeneratorService _descriptorGenerator;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 	private readonly SemaphoreSlim _semaphoreSlimForWriter = new(1, 1);
@@ -27,7 +27,7 @@ public class TelnetServer : ConnectionHandler
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
 		IConnectionServerService connectionService,
-		IBus publishEndpoint,
+		IMessageBus publishEndpoint,
 		IDescriptorGeneratorService descriptorGenerator)
 	{
 		Console.OutputEncoding = Encoding.UTF8;

@@ -1,5 +1,5 @@
 using System.Text;
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.ConnectionServer.Services;
@@ -17,7 +17,7 @@ public class WebSocketConnectionServiceTests
 	{
 		// Arrange
 		var logger = new LoggerFactory().CreateLogger<ConnectionServerService>();
-		var publishEndpoint = Substitute.For<IBus>();
+		var publishEndpoint = Substitute.For<IMessageBus>();
 		var service = new ConnectionServerService(logger, publishEndpoint);
 		
 		var handle = 1000001L;
@@ -73,7 +73,7 @@ public class WebSocketConnectionServiceTests
 	{
 		// Arrange
 		var logger = new LoggerFactory().CreateLogger<ConnectionServerService>();
-		var publishEndpoint = Substitute.For<IBus>();
+		var publishEndpoint = Substitute.For<IMessageBus>();
 		var service = new ConnectionServerService(logger, publishEndpoint);
 		
 		var handle = 1000002L;
@@ -103,7 +103,7 @@ public class WebSocketConnectionServiceTests
 	{
 		// Arrange
 		var logger = new LoggerFactory().CreateLogger<ConnectionServerService>();
-		var publishEndpoint = Substitute.For<IBus>();
+		var publishEndpoint = Substitute.For<IMessageBus>();
 		var service = new ConnectionServerService(logger, publishEndpoint);
 
 		// Register multiple connections
@@ -134,7 +134,7 @@ public class WebSocketConnectionServiceTests
 	{
 		// Arrange
 		var logger = new LoggerFactory().CreateLogger<ConnectionServerService>();
-		var publishEndpoint = Substitute.For<IBus>();
+		var publishEndpoint = Substitute.For<IMessageBus>();
 		var service = new ConnectionServerService(logger, publishEndpoint);
 		
 		var handle = 1000003L;

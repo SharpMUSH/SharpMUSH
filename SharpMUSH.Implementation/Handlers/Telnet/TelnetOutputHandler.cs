@@ -1,4 +1,4 @@
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Messages;
@@ -6,7 +6,7 @@ using System.Text;
 
 namespace SharpMUSH.Implementation.Handlers.Telnet;
 
-public class TelnetOutputHandler(IBus publisher) : INotificationHandler<TelnetOutputNotification>
+public class TelnetOutputHandler(IMessageBus publisher) : INotificationHandler<TelnetOutputNotification>
 {
 	public async ValueTask Handle(TelnetOutputNotification notification, CancellationToken cancellationToken)
 	{

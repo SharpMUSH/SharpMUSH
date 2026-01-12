@@ -217,7 +217,7 @@ public class KafkaConsumerHost : BackgroundService
 			return;
 		}
 
-		// Create the consumer type and invoke it
+		// Get the consumer and invoke it
 		var consumerType = typeof(IMessageConsumer<>).MakeGenericType(registration.MessageType);
 		var consumer = scope.ServiceProvider.GetService(consumerType);
 
@@ -227,10 +227,10 @@ public class KafkaConsumerHost : BackgroundService
 			return;
 		}
 
-		var consumeMethod = consumerType.GetMethod("Consume");
-		if (consumeMethod != null)
+		var handleMethod = consumerType.GetMethod("HandleAsync");
+		if (handleMethod != null)
 		{
-			var task = (Task?)consumeMethod.Invoke(consumer, [message, cancellationToken]);
+			var task = (Task?)handleMethod.Invoke(consumer, [message, cancellationToken]);
 			if (task != null)
 			{
 				await task;
@@ -260,10 +260,10 @@ public class KafkaConsumerHost : BackgroundService
 		if (batchConsumer != null)
 		{
 			// Use batch consumer
-			var consumeBatchMethod = batchConsumerType.GetMethod("ConsumeBatch");
-			if (consumeBatchMethod != null)
+			var handleBatchMethod = batchConsumerType.GetMethod("HandleBatchAsync");
+			if (handleBatchMethod != null)
 			{
-				var task = (Task?)consumeBatchMethod.Invoke(batchConsumer, [messages, cancellationToken]);
+				var task = (Task?)handleBatchMethod.Invoke(batchConsumer, [messages, cancellationToken]);
 				if (task != null)
 				{
 					await task;
@@ -282,12 +282,12 @@ public class KafkaConsumerHost : BackgroundService
 				return;
 			}
 
-			var consumeMethod = consumerType.GetMethod("Consume");
-			if (consumeMethod != null)
+			var handleMethod = consumerType.GetMethod("HandleAsync");
+			if (handleMethod != null)
 			{
 				foreach (var message in messages)
 				{
-					var task = (Task?)consumeMethod.Invoke(consumer, [message, cancellationToken]);
+					var task = (Task?)handleMethod.Invoke(consumer, [message, cancellationToken]);
 					if (task != null)
 					{
 						await task;

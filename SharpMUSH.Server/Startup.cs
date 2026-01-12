@@ -1,6 +1,6 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +27,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
+using SharpMUSH.Messaging.Kafka;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;

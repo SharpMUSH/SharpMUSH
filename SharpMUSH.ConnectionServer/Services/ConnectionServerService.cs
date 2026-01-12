@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 
@@ -11,7 +11,7 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// </summary>
 public class ConnectionServerService(
 	ILogger<ConnectionServerService> logger, 
-	IBus publishEndpoint,
+	IMessageBus publishEndpoint,
 	IConnectionStateStore? stateStore = null) : IConnectionServerService
 {
 	private readonly ConcurrentDictionary<long, ConnectionData> _sessionState = [];

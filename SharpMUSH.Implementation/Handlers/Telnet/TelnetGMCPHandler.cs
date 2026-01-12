@@ -1,11 +1,11 @@
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Messages;
 
 namespace SharpMUSH.Implementation.Handlers.Telnet;
 
-public class TelnetGMCPHandler(IBus publisher) : INotificationHandler<SignalGMCPNotification>
+public class TelnetGMCPHandler(IMessageBus publisher) : INotificationHandler<SignalGMCPNotification>
 {
 	public async ValueTask Handle(SignalGMCPNotification notification, CancellationToken cancellationToken)
 	{

@@ -1,15 +1,15 @@
 namespace SharpMUSH.Messaging.Abstractions;
 
 /// <summary>
-/// Interface for message consumers
+/// Interface for Kafka message consumers
 /// </summary>
 /// <typeparam name="T">The message type to consume</typeparam>
-public interface IMessageConsumer<T> where T : class
+public interface IMessageConsumer<in T> where T : class
 {
 	/// <summary>
-	/// Consumes a message
+	/// Handles a consumed message from Kafka
 	/// </summary>
-	/// <param name="message">The message to consume</param>
+	/// <param name="message">The message to handle</param>
 	/// <param name="cancellationToken">Cancellation token</param>
-	Task Consume(T message, CancellationToken cancellationToken = default);
+	Task HandleAsync(T message, CancellationToken cancellationToken = default);
 }

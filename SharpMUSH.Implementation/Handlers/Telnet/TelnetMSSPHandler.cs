@@ -1,4 +1,4 @@
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Notifications;
@@ -6,7 +6,7 @@ using SharpMUSH.Messages;
 
 namespace SharpMUSH.Implementation.Handlers.Telnet;
 
-public class TelnetMSSPHandler(ILogger<TelnetMSSPHandler> logger, IBus publisher) : INotificationHandler<UpdateMSSPNotification>
+public class TelnetMSSPHandler(ILogger<TelnetMSSPHandler> logger, IMessageBus publisher) : INotificationHandler<UpdateMSSPNotification>
 {
 	public async ValueTask Handle(UpdateMSSPNotification notification, CancellationToken cancellationToken)
 	{

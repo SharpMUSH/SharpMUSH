@@ -1,5 +1,5 @@
 using Mediator;
-using SharpMUSH.Messaging.Adapters;
+using SharpMUSH.Messaging.Abstractions;
 using OneOf;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -30,7 +30,7 @@ public class ListenerRoutingService(
 	ILockService lockService,
 	IConnectionService connectionService,
 	IAttributeService attributeService,
-	IBus publishEndpoint) : IListenerRoutingService
+	IMessageBus publishEndpoint) : IListenerRoutingService
 {
 	public async ValueTask ProcessNotificationAsync(
 		NotificationContext context,
