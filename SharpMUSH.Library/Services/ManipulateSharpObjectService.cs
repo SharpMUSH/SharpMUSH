@@ -384,11 +384,11 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		// Get all powers currently set on the object
-		var objectPowers = obj.Object().Powers.Value;
+		// Materialize the powers collection to avoid modification during iteration
+		var objectPowers = await obj.Object().Powers.Value.ToArrayAsync();
 		var powersCleared = 0;
 
-		await foreach (var power in objectPowers)
+		foreach (var power in objectPowers)
 		{
 			// Unset each power
 			await mediator.Send(new UnsetObjectPowerCommand(obj, power));

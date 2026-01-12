@@ -2039,7 +2039,9 @@ public partial class Commands
 		var password = MModule.plainText(args["1"].Message!);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
-		// Validate the player name
+		// Validate the player name format
+		// Note: We use ValidationType.Name instead of PlayerName because PlayerName requires
+		// an existing AnySharpObject target (for rename operations), which we don't have yet
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, MModule.single(name), new None()))
 		{
 			await NotifyService!.Notify(executor, "That is not a valid player name.");
@@ -2047,6 +2049,7 @@ public partial class Commands
 		}
 		
 		// Check if player name already exists
+		// This is necessary because ValidationType.Name only checks format, not uniqueness
 		var existingPlayer = await Mediator!.CreateStream(new GetPlayerQuery(name)).FirstOrDefaultAsync();
 		if (existingPlayer is not null)
 		{
