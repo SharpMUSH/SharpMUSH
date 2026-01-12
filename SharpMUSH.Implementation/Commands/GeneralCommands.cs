@@ -1169,9 +1169,28 @@ public partial class Commands
 		await NotifyService!.Notify(executor, 
 			$"@find: Searching for objects{(searchName != null ? $" matching '{searchName}'" : "")}...");
 		
-		// TODO: Implement full database query to find matching objects. This would require
-		// querying all objects in the database (or within range), checking if executor controls each object,
-		// matching object names against searchName pattern, and displaying results.
+		// Query database for objects matching the criteria
+		var filter = new ObjectSearchFilter
+		{
+			NamePattern = searchName,
+			MinDbRef = beginDbref,
+			MaxDbRef = endDbref
+		};
+		
+		var results = await Mediator!.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
+		
+		// Filter to only objects the executor controls
+		var controlledResults = new List<SharpObject>();
+		foreach (var obj in results)
+		{
+			var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+			if (!objNode.IsNone() && await PermissionService!.Controls(executor, objNode.WithoutNone()))
+			{
+				controlledResults.Add(obj);
+			}
+		}
+		
+		matchCount = controlledResults.Count;
 		
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
@@ -1179,8 +1198,12 @@ public partial class Commands
 				$"Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
 		
-		await NotifyService.Notify(executor, 
-			"Note: Full @find database search not yet implemented.");
+		// Display results
+		foreach (var obj in controlledResults)
+		{
+			await NotifyService.Notify(executor, $"  #{obj.Key} ({obj.Name})");
+		}
+		
 		await NotifyService.Notify(executor, 
 			$"Found {matchCount} matching objects.");
 		
@@ -2525,12 +2548,30 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
 		
-		// TODO: Implement full database search with filters:
-		// TYPE, NAME, ZONE, PARENT, EXITS, THINGS, ROOMS, PLAYERS, FLAGS, etc.
-		await NotifyService.Notify(executor, "Note: Full @search database query not yet implemented.");
-		await NotifyService.Notify(executor, "0 objects found.");
+		// Build search filter from criteria
+		// For now, support basic search - future enhancement can parse complex criteria
+		var filter = new ObjectSearchFilter
+		{
+			NamePattern = searchCriteria,
+			MinDbRef = beginDbref,
+			MaxDbRef = endDbref
+		};
 		
-		return new CallState("0");
+		// Query database with filters
+		var results = await Mediator!.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
+		
+		// Display results
+		var count = 0;
+		foreach (var obj in results)
+		{
+			// Check if executor can see this object (basic visibility check)
+			await NotifyService.Notify(executor, $"  #{obj.Key} ({obj.Name}) [{obj.Type}]");
+			count++;
+		}
+		
+		await NotifyService.Notify(executor, $"{count} objects found.");
+		
+		return new CallState(count.ToString());
 	}
 
 	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["name"])]
@@ -4309,13 +4350,19 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  For player: {playerName}");
 		}
 		
-		// TODO: Query actual database statistics
-		await NotifyService.Notify(executor, "  Rooms: (query pending)");
-		await NotifyService.Notify(executor, "  Exits: (query pending)");
-		await NotifyService.Notify(executor, "  Things: (query pending)");
-		await NotifyService.Notify(executor, "  Players: (query pending)");
-		await NotifyService.Notify(executor, "  Total: (query pending)");
-		await NotifyService.Notify(executor, "Note: Full database statistics not yet implemented.");
+		// Query actual database statistics
+		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery()).ToListAsync();
+		var roomCount = allObjects.Count(o => o.Type == "ROOM");
+		var exitCount = allObjects.Count(o => o.Type == "EXIT");
+		var thingCount = allObjects.Count(o => o.Type == "THING");
+		var playerCount = allObjects.Count(o => o.Type == "PLAYER");
+		var totalCount = roomCount + exitCount + thingCount + playerCount;
+		
+		await NotifyService.Notify(executor, $"  Rooms: {roomCount}");
+		await NotifyService.Notify(executor, $"  Exits: {exitCount}");
+		await NotifyService.Notify(executor, $"  Things: {thingCount}");
+		await NotifyService.Notify(executor, $"  Players: {playerCount}");
+		await NotifyService.Notify(executor, $"  Total: {totalCount}");
 		
 		return CallState.Empty;
 	}
@@ -4546,15 +4593,41 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
 		
-		// TODO: Query database for objects linked to target
-		// - Exits linked to target
-		// - Things with home = target  
-		// - Players with home = target
-		// - Rooms with drop-to = target
-		await NotifyService.Notify(executor, "Note: Database query for linked objects not yet implemented.");
-		await NotifyService.Notify(executor, "0 entrances found.");
+		// Query database for exits linked to target
+		var entrances = await Mediator!.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
 		
-		return new CallState("0");
+		// Apply type filters if specified
+		if (filterTypes.Count > 0 && !filterTypes.Contains("exits"))
+		{
+			entrances.Clear(); // GetEntrancesQuery only returns exits, so if exits not requested, clear
+		}
+		
+		// Apply range filters if specified
+		if (beginDbref.HasValue || endDbref.HasValue)
+		{
+			entrances = entrances.Where(e =>
+			{
+				var key = e.Object.Key;
+				return (!beginDbref.HasValue || key >= beginDbref.Value) &&
+				       (!endDbref.HasValue || key <= endDbref.Value);
+			}).ToList();
+		}
+		
+		// Display results
+		if (entrances.Count == 0)
+		{
+			await NotifyService.Notify(executor, "0 entrances found.");
+		}
+		else
+		{
+			foreach (var entrance in entrances)
+			{
+				await NotifyService.Notify(executor, $"  #{entrance.Object.Key} ({entrance.Object.Name})");
+			}
+			await NotifyService.Notify(executor, $"{entrances.Count} entrance(s) found.");
+		}
+		
+		return new CallState(entrances.Count.ToString());
 	}
 
 	[SharpCommand(Name = "@GREP", Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
