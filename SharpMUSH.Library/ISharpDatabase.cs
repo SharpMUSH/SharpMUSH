@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
@@ -389,6 +390,14 @@ public interface ISharpDatabase
 	/// <param name="owner">New Value</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Sets the warning type flags for an object.
+	/// </summary>
+	/// <param name="obj">Object</param>
+	/// <param name="warnings">Warning type flags</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	ValueTask SetObjectWarnings(AnySharpObject obj, WarningType warnings, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Unset an Object flag.
