@@ -155,6 +155,25 @@ public interface ISharpDatabase
 	
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Get an attribute with full inheritance chain resolution in a single database call.
+	/// Follows the inheritance order: object → parent chain → zone chains.
+	/// Returns the attribute with metadata about where it was found and flags adjusted for inheritance.
+	/// </summary>
+	/// <param name="dbref">DBRef of the object to start the search from</param>
+	/// <param name="attribute">Attribute path to search for</param>
+	/// <param name="checkParent">Whether to check parent and zone inheritance chains</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>AttributeWithInheritance if found, null otherwise</returns>
+	ValueTask<AttributeWithInheritance?> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
+		bool checkParent = true, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Lazy version of GetAttributeWithInheritanceAsync for efficient retrieval.
+	/// </summary>
+	ValueTask<LazyAttributeWithInheritance?> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
+		bool checkParent = true, CancellationToken cancellationToken = default);
 	
 	/// <summary>
 	/// Get all attribute entries from the attribute table.
