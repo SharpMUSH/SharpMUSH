@@ -94,8 +94,8 @@ public static class SendMail
 			{
 				var playerAsAny = new AnySharpObject(player);
 				var amailAttr = await attributeService.GetAttributeAsync(
-					sender, 
-					playerAsAny, 
+					playerAsAny,  // executor is the player themselves
+					playerAsAny,  // object is also the player
 					"AMAIL", 
 					IAttributeService.AttributeMode.Read,
 					false);
