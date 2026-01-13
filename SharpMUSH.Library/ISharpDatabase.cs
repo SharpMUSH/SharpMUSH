@@ -639,6 +639,12 @@ public interface ISharpDatabase
 	ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder, CancellationToken cancellationToken = default);
 	
 	ValueTask MoveMailFolderAsync(string mailId, string newFolder, CancellationToken cancellationToken = default);
+	
+	/// <summary>
+	/// Gets ALL mail in the system regardless of owner or folder.
+	/// WARNING: This bypasses all access controls and should only be used in God-level administrative operations.
+	/// </summary>
+	IAsyncEnumerable<SharpMail> GetAllSystemMailAsync(CancellationToken cancellationToken = default);
 		
 	/// <summary>
 	/// Sets expanded data for a SharpObject, that does not fit on the light-weight nature of a SharpObject or Attributes.

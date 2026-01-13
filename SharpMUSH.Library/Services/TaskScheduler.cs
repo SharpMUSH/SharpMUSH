@@ -320,6 +320,21 @@ public class TaskScheduler(
 		await _scheduler.UnscheduleJobs(enqueued);
 	}
 
+	public async ValueTask<bool> HaltByPid(long pid)
+	{
+		// Search all trigger groups for the specific PID
+		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+		var pidString = $"-{pid}";
+		
+		var matchingKeys = allKeys.Where(key => key.Name.EndsWith(pidString)).ToList();
+		
+		if (matchingKeys.Count == 0)
+			return false;
+			
+		await _scheduler.UnscheduleJobs(matchingKeys);
+		return true;
+	}
+
 	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay) =>
 		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
 			builder => builder
