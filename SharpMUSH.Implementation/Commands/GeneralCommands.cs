@@ -3807,7 +3807,24 @@ public partial class Commands
 		// no /spoof: target object becomes both enactor and executor
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
 		
-		// Environment arguments and Q-registers are handled by the hook system
+		// Build argument registers %0-%29 from the provided arguments
+		var registerDict = new Dictionary<string, MString>();
+		for (var i = 1; i < args.Count && i <= 30; i++)
+		{
+			// Arguments start at index 1 (index 0 is the object/attribute path)
+			// They map to %0-%29
+			if (args.TryGetValue((i - 1).ToString(), out var argValue) && argValue.Message != null)
+			{
+				registerDict[(i - 1).ToString()] = argValue.Message;
+			}
+		}
+		
+		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
+		if (registerDict.Count > 0)
+		{
+			registerStack.Push(registerDict);
+		}
+		
 		// TODO: Handle /match for pattern matching when pattern engine available
 		// Note: INLINE switch executes immediately (current default behavior)
 		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements
@@ -3815,10 +3832,14 @@ public partial class Commands
 		// Execute with recursion tracking and DEBUG/VERBOSE support
 		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 		{
-			await parser.With(state => state with { 
+			var stateWithRegisters = parser.CurrentState with
+			{
 				Executor = targetObject.Object().DBRef,
-				Enactor = executionEnactor 
-			}, newParser => newParser.WithAttributeDebug(attribute,
+				Enactor = executionEnactor,
+				Registers = registerStack
+			};
+			
+			await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
 				async p => await p.CommandListParseVisitor(attribute.Value)()));
 			
 			return CallState.Empty;
