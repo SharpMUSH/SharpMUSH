@@ -3641,7 +3641,7 @@ public partial class Commands
 				{
 					return new CallState("#-1 INVALID TARGET");
 				}
-				target = maybeTarget;
+				target = maybeTarget.WithoutError().WithoutNone();
 			}
 		}
 		else
@@ -3699,7 +3699,7 @@ public partial class Commands
 		}
 		
 		// Show detailed queue for target
-		var targetName = target.IsPlayer ? $"Player {target.AsPlayer.Name}" : target.Object().DBRef.ToString();
+		var targetName = target.Object().DBRef.ToString();
 		await NotifyService!.Notify(executor, $"@ps: Queue for {targetName}");
 		await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
 		await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");

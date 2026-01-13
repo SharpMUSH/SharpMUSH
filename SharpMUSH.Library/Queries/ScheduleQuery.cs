@@ -11,4 +11,4 @@ public record ScheduleDelayQuery(DBRef Query) : IStreamQuery<long>;
 
 public record ScheduleEnqueueQuery(DBRef Query) : IStreamQuery<long>;
 
-public record ScheduleAllTasksQuery : IStreamQuery<SemaphoreTaskData>;
+public record ScheduleAllTasksQuery : IStreamQuery<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])>;

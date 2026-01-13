@@ -137,4 +137,11 @@ public interface ITaskScheduler
 	/// <param name="handle">Trigger Handle</param>
 	/// <param name="delay">How long from now to reschedule it to</param>
 	ValueTask RescheduleSemaphoreTask(long handle, TimeSpan delay);
+
+	/// <summary>
+	/// Halts a specific task by PID.
+	/// </summary>
+	/// <param name="pid">Process ID</param>
+	/// <returns>True if task was found and halted, false otherwise</returns>
+	ValueTask<bool> HaltByPid(long pid);
 }
