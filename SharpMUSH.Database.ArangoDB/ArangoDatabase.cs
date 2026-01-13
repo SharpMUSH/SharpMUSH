@@ -2974,6 +2974,23 @@ public partial class ArangoDatabase(
 		}
 	}
 
+	/// <summary>
+	/// Retrieves an attribute with full inheritance chain resolution in a single AQL query.
+	/// </summary>
+	/// <param name="dbref">The object to retrieve the attribute from</param>
+	/// <param name="attribute">The attribute path (e.g., ["DESC"] or ["LISTEN", "PARENT"])</param>
+	/// <param name="checkParent">Whether to check parent and zone inheritance chains</param>
+	/// <param name="ct">Cancellation token</param>
+	/// <returns>AttributeWithInheritance containing the attribute data and source metadata, or null if not found</returns>
+	/// <remarks>
+	/// Inheritance order (precedence):
+	/// 1. Object itself
+	/// 2. Parent chain (parent → grandparent → great-grandparent → ...)
+	/// 3. Object's zones (zone → zone's zone → ...)
+	/// 4. Parent's zones, Grandparent's zones, etc.
+	/// 
+	/// IMPORTANT: Parents ALWAYS take precedence over zones at all levels.
+	/// </remarks>
 	public async ValueTask<AttributeWithInheritance?> GetAttributeWithInheritanceAsync(
 		DBRef dbref,
 		string[] attribute,
@@ -2983,23 +3000,11 @@ public partial class ArangoDatabase(
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		
-		// INHERITANCE ORDER (PRECEDENCE):
-		// 1. Object itself
-		// 2. Parent chain (parent → grandparent → great-grandparent → ...)
-		// 3. Object's zones (zone → zone's zone → ...)
-		// 4. Parent's zones
-		// 5. Grandparent's zones
-		// ... and so on
-		// IMPORTANT: Parents ALWAYS take precedence over zones at all levels
-		
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
-		// Single AQL query that handles entire inheritance chain
-		// This query:
-		// 1. Checks object itself first
-		// 2. If checkParent=true, traverses parent chain
-		// 3. Checks zone chains at each level
-		// 4. Returns first match with proper precedence
+		// Single AQL query that handles entire inheritance chain.
+		// The query checks the object itself first, then parent chain, then zone chains.
+		// It returns the first match found, respecting the precedence order.
 		var query = $@"
 			LET start = DOCUMENT(@startVertex)
 			LET attrPath = @attr
@@ -3007,7 +3012,7 @@ public partial class ArangoDatabase(
 			
 			// 1. Check object itself
 			LET selfAttrs = (
-				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH '{DatabaseConstants.GraphAttributes}'
+				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
 					RETURN v
@@ -3021,9 +3026,9 @@ public partial class ArangoDatabase(
 			
 			// 2. Check parent chain (only if checkParent=true and selfResult is null)
 			LET parentResults = @checkParent && selfResult == null ? (
-				FOR parent IN 1..100 OUTBOUND start GRAPH '{DatabaseConstants.GraphParents}'
+				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
 					LET parentAttrs = (
-						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH '{DatabaseConstants.GraphAttributes}'
+						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
 							RETURN v
@@ -3042,15 +3047,15 @@ public partial class ArangoDatabase(
 			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
 				// Get all objects in the inheritance chain (object + all parents)
 				LET inheritanceChain = APPEND([start], (
-					FOR parent IN 1..100 OUTBOUND start GRAPH '{DatabaseConstants.GraphParents}'
+					FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
 						RETURN parent
 				))
 				
 				// For each object in chain, check its zone chain
 				FOR obj IN inheritanceChain
-					FOR zone IN 1..100 OUTBOUND obj GRAPH '{DatabaseConstants.GraphZones}'
+					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
 						LET zoneAttrs = (
-							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH '{DatabaseConstants.GraphAttributes}'
+							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
 								RETURN v
@@ -3066,7 +3071,6 @@ public partial class ArangoDatabase(
 			) : []
 			
 			// Return first match in precedence order
-			// Filter out nulls and return the first non-null result
 			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
 			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
 			RETURN FIRST(filtered)
@@ -3080,40 +3084,22 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
-		logger.LogInformation("GetAttributeWithInheritanceAsync: Executing query for dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}", 
-			dbref, string.Join("`", attribute), checkParent);
-		logger.LogInformation("Query: {Query}", query);
-		logger.LogInformation("BindVars: {BindVars}", System.Text.Json.JsonSerializer.Serialize(bindVars));
-		
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 		
-		// Debug logging
-		logger.LogInformation("GetAttributeWithInheritanceAsync: dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}, resultNull={ResultNull}, resultsCount={ResultsCount}", 
-			dbref, string.Join("`", attribute), checkParent, result == null, results?.Count() ?? 0);
-		if (result != null)
-		{
-			logger.LogInformation("Result: source={Source}, sourceId={SourceId}, attributesNull={AttrsNull}, attributesCount={AttrsCount}", 
-				result.source, result.sourceId, result.attributes == null, result.attributes?.Count ?? 0);
-		}
-		
 		if (result == null || result.attributes == null)
 		{
-			logger.LogWarning("Returning null: result={ResultNull}, attributes={AttrsNull}", result == null, result?.attributes == null);
 			return null;
 		}
 		
-		// Convert query results to AttributeWithInheritance
+		// Convert query results to SharpAttribute array
 		var attrs = new SharpAttribute[result.attributes.Count];
 		for (int i = 0; i < result.attributes.Count; i++)
 		{
 			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
 		}
 		
-		// Parse the DBRef from the source ID
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
-		
-		// Parse source type
 		var sourceType = result.source switch
 		{
 			"Self" => AttributeSource.Self,
@@ -3122,7 +3108,7 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Get flags from last attribute
+		// Filter flags to only inheritable ones if the attribute came from parent or zone
 		var lastAttr = attrs.Last();
 		var flags = result.filterFlags 
 			? lastAttr.Flags.Where(f => f.Inheritable)
@@ -3131,7 +3117,9 @@ public partial class ArangoDatabase(
 		return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
 	
-	// Helper record for query results
+	/// <summary>
+	/// Helper record for AQL query results containing attribute data and source metadata.
+	/// </summary>
 	private record QueryResult(
 		List<SharpAttributeQueryResult>? attributes,
 		string sourceId,
@@ -3139,10 +3127,14 @@ public partial class ArangoDatabase(
 		bool filterFlags
 	);
 	
-	// Helper method to parse DBRef from ArangoDB Key
+	/// <summary>
+	/// Parses a DBRef from an ArangoDB document key.
+	/// </summary>
+	/// <param name="key">The ArangoDB document key (just the number portion)</param>
+	/// <returns>The parsed DBRef</returns>
+	/// <exception cref="InvalidOperationException">Thrown if the key cannot be parsed as an integer</exception>
 	private static DBRef ParseDbRefFromId(string key)
 	{
-		// Key is just the DBRef number as a string
 		if (int.TryParse(key, out var number))
 		{
 			return new DBRef(number);
@@ -3150,6 +3142,19 @@ public partial class ArangoDatabase(
 		throw new InvalidOperationException($"Cannot parse DBRef from key: {key}");
 	}
 
+	/// <summary>
+	/// Retrieves an attribute with lazy evaluation and full inheritance chain resolution.
+	/// This method uses multiple database calls with early returns for efficiency.
+	/// </summary>
+	/// <param name="dbref">The object to retrieve the attribute from</param>
+	/// <param name="attribute">The attribute path (e.g., ["DESC"] or ["LISTEN", "PARENT"])</param>
+	/// <param name="checkParent">Whether to check parent and zone inheritance chains</param>
+	/// <param name="ct">Cancellation token</param>
+	/// <returns>LazyAttributeWithInheritance containing the attribute data and source metadata, or null if not found</returns>
+	/// <remarks>
+	/// This method is optimized for cases where early termination is expected.
+	/// It checks the object first, then parents, then zones, with early returns at each step.
+	/// </remarks>
 	public async ValueTask<LazyAttributeWithInheritance?> GetLazyAttributeWithInheritanceAsync(
 		DBRef dbref,
 		string[] attribute,
@@ -3159,7 +3164,7 @@ public partial class ArangoDatabase(
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		
-		// Try getting the attribute directly from the object first
+		// 1. Check object itself first
 		var directAttr = GetLazyAttributeAsync(dbref, attribute, ct);
 		if (directAttr != null)
 		{
@@ -3175,7 +3180,7 @@ public partial class ArangoDatabase(
 			}
 		}
 
-		// If checkParent is false or we found it, stop here
+		// If checkParent is false, stop here
 		if (!checkParent)
 		{
 			return null;
@@ -3190,7 +3195,7 @@ public partial class ArangoDatabase(
 
 		var currentObj = obj.Known;
 		
-		// Walk parent chain
+		// 2. Walk parent chain
 		while (true)
 		{
 			var parent = await currentObj.Object().Parent.WithCancellation(ct);
@@ -3220,7 +3225,7 @@ public partial class ArangoDatabase(
 			}
 		}
 
-		// Walk zone chains - first the object's zones, then each parent's zones
+		// 3. Walk zone chains - first the object's zones, then each parent's zones
 		currentObj = obj.Known;
 		
 		while (true)
