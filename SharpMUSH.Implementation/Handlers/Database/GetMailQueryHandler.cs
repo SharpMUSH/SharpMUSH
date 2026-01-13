@@ -48,3 +48,11 @@ public class GetAllSentMailListQueryHandler(ISharpDatabase database)
 		Handle(GetAllSentMailListQuery query, CancellationToken cancellationToken) =>
 		database.GetAllSentMailsAsync(query.Sender, cancellationToken);
 }
+
+public class GetAllSystemMailQueryHandler(ISharpDatabase database)
+	: IStreamQueryHandler<GetAllSystemMailQuery, SharpMail>
+{
+	public IAsyncEnumerable<SharpMail>
+		Handle(GetAllSystemMailQuery query, CancellationToken cancellationToken) =>
+		database.GetAllSystemMailAsync(cancellationToken);
+}

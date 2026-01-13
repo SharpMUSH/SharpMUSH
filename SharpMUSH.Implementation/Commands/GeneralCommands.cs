@@ -216,11 +216,115 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will localize Q-registers");
 		}
 		
-		// TODO: Full implementation requires executing the attribute for each element with element as %0,
-		// handling enactor preservation and Q-register management, and handling /inline vs queued execution.
-		await NotifyService.Notify(executor, "Note: @map command attribute execution not yet implemented.");
+		// Locate the target object
+		var targetObject = await LocateService!.LocateAndNotifyIfInvalid(
+			parser, executor, executor, objSpec, LocateFlags.All);
 		
-		return new CallState("#-1 NOT IMPLEMENTED");
+		if (!targetObject.IsValid())
+		{
+			return new CallState("#-1 OBJECT NOT FOUND");
+		}
+		
+		var target = targetObject.WithoutError().WithoutNone();
+		
+		// Get the attribute to execute
+		var attributeResult = await AttributeService!.GetAttributeAsync(
+			executor, target, attrName, IAttributeService.AttributeMode.Read, false);
+		
+		if (attributeResult.IsNone || attributeResult.IsError)
+		{
+			await NotifyService.Notify(executor, $"Attribute {attrName} not found on {target.Object().Name}.");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
+		}
+		
+		var attribute = attributeResult.AsAttribute.Last();
+		var attributeText = attribute.Value.ToPlainText();
+		
+		if (string.IsNullOrWhiteSpace(attributeText))
+		{
+			// Empty attribute - nothing to execute
+			return CallState.Empty;
+		}
+		
+		var isInline = switches.Contains("INLINE");
+		var results = new List<string>();
+		
+		if (isInline)
+		{
+			// Inline execution - execute immediately for each element
+			foreach (var element in list)
+			{
+				// Set %0 to the current element
+				var registerDict = new Dictionary<string, MString> { ["0"] = element! };
+				var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
+				registerStack.Push(registerDict);
+				
+				var stateForElement = parser.CurrentState with
+				{
+					Registers = registerStack,
+					Executor = target.Object().DBRef
+				};
+				
+				// Execute the attribute with the element as %0
+				var result = await parser.With(state => stateForElement, async newParser =>
+				{
+					return await newParser.WithAttributeDebug(attribute,
+						async p => await p.CommandListParse(attribute.Value));
+				});
+				
+				if (result != null && result.Message != null)
+				{
+					results.Add(result.Message.ToPlainText() ?? string.Empty);
+				}
+			}
+			
+			// If /notify switch is present, queue "@notify" after inline execution
+			if (switches.Contains("NOTIFY"))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			
+			return new CallState(string.Join(" ", results));
+		}
+		else
+		{
+			// Queued execution - queue each element's execution
+			foreach (var element in list)
+			{
+				// Set %0 to the current element  
+				var registerDict = new Dictionary<string, MString> { ["0"] = element! };
+				var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
+				registerStack.Push(registerDict);
+				
+				var stateForElement = parser.CurrentState with
+				{
+					Registers = registerStack,
+					Executor = target.Object().DBRef
+				};
+				
+				await Mediator!.Send(new QueueCommandListRequest(
+					attribute.Value,
+					stateForElement,
+					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			
+			// If /notify switch is present, queue "@notify" after all executions
+			if (switches.Contains("NOTIFY"))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			
+			return CallState.Empty;
+		}
 	}
 
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
@@ -1066,13 +1170,65 @@ public partial class Commands
 
 		var validDestination = destination.WithoutError().WithoutNone();
 
+		AnySharpContainer destinationContainer;
 		if (validDestination.IsExit)
 		{
-			// TODO: Implement Teleporting through an Exit.
-			return CallState.Empty;
+			// Teleporting through an exit - resolve the exit's destination using the same logic as @goto
+			var exitObj = validDestination.AsExit;
+			var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
+			
+			if (homeLocation.Object().DBRef.Number == -1)
+			{
+				// Exit is unlinked - check for DESTINATION attribute
+				var destAttr = await AttributeService!.GetAttributeAsync(
+					executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
+				
+				const string exitUnlinkedMsg = "That exit doesn't go anywhere.";
+				
+				if (destAttr.IsNone || destAttr.IsError)
+				{
+					await NotifyService!.Notify(executor, exitUnlinkedMsg);
+					return CallState.Empty;
+				}
+				
+				var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
+				if (string.IsNullOrWhiteSpace(destValue))
+				{
+					await NotifyService!.Notify(executor, exitUnlinkedMsg);
+					return CallState.Empty;
+				}
+				
+				var located = await LocateService!.LocateAndNotifyIfInvalid(
+					parser,
+					executor,
+					executor,
+					destValue,
+					LocateFlags.All);
+				
+				if (!located.IsValid())
+				{
+					await NotifyService!.Notify(executor, exitUnlinkedMsg);
+					return CallState.Empty;
+				}
+				
+				var locatedObj = located.WithoutError().WithoutNone();
+				if (!locatedObj.IsContainer)
+				{
+					await NotifyService!.Notify(executor, "That exit doesn't go to a valid location.");
+					return CallState.Empty;
+				}
+				
+				destinationContainer = locatedObj.AsContainer;
+			}
+			else
+			{
+				destinationContainer = homeLocation;
+			}
 		}
-
-		var destinationContainer = validDestination.AsContainer;
+		else
+		{
+			destinationContainer = validDestination.AsContainer;
+		}
 
 		foreach (var obj in toTeleportStringList)
 		{
@@ -1118,9 +1274,18 @@ public partial class Commands
 				// Notify the target player that they were teleported
 				await NotifyService!.Notify(target.Object().DBRef, "You have been teleported.");
 				
-				// TODO: Show the target player their new location (equivalent to LOOK)
-				// This requires executing commands in the target's parser context, not the executor's
-				// For now, the player can manually type 'look' to see their surroundings
+				// Show the target player their new location by executing LOOK as them
+				var targetPlayerState = parser.CurrentState with 
+				{ 
+					Executor = target.Object().DBRef,
+					Enactor = target.Object().DBRef
+				};
+				
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single("look"),
+					targetPlayerState,
+					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
 			}
 		}
 
@@ -1232,14 +1397,14 @@ public partial class Commands
 			// Halt all objects in the game
 			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
-				await scheduler.Halt(obj.DBRef);
+				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 			}
 			
 			await NotifyService!.Notify(executor, "All objects halted.");
 			return CallState.Empty;
 		}
 		
-		// @halt/pid - halt specific queue entry (not yet fully implemented)
+		// @halt/pid - halt specific queue entry
 		if (switches.Contains("PID"))
 		{
 			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
@@ -1249,15 +1414,31 @@ public partial class Commands
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
 			
-			// This would require additional TaskScheduler methods to halt by PID
-			await NotifyService!.Notify(executor, $"@halt/pid: PID-specific halting not yet implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			if (!long.TryParse(pidStr, out var pid))
+			{
+				await NotifyService!.Notify(executor, "Invalid process ID format.");
+				return new CallState("#-1 INVALID PID");
+			}
+			
+			// Halt the specific task by PID
+			var halted = await Mediator!.Send(new HaltByPidRequest(pid));
+			if (halted)
+			{
+				await NotifyService!.Notify(executor, $"Task {pid} halted.");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"No task found with PID {pid}.");
+				return new CallState("#-1 NOT FOUND");
+			}
+			
+			return CallState.Empty;
 		}
 		
 		// @halt with no arguments - clear executor's queue without setting HALT flag
 		if (args.Count == 0)
 		{
-			await scheduler.Halt(executor.Object().DBRef);
+			await Mediator!.Send(new HaltObjectQueueRequest(executor.Object().DBRef));
 			await NotifyService!.Notify(executor, "Halted.");
 			return CallState.Empty;
 		}
@@ -1300,31 +1481,39 @@ public partial class Commands
 		
 		if (target.IsPlayer)
 		{
-			await scheduler.Halt(targetObject.DBRef);
+			await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
 			
-			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
-					await scheduler.Halt(obj.DBRef);
+					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 				}
 			}
 			
 			if (hasReplacementActions)
 			{
-				await scheduler.WriteCommandList(replacementActions!, parser.CurrentState);
+				await Mediator!.Send(new QueueCommandListRequest(
+					replacementActions!,
+					parser.CurrentState,
+					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
+					-1));
 			}
 			
 			await NotifyService!.Notify(executor, $"Halted {targetObject.Name} and all their objects.");
 		}
 		else
 		{
-			await scheduler.Halt(targetObject.DBRef);
+			await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
 			
 			if (hasReplacementActions)
 			{
-				await scheduler.WriteCommandList(replacementActions!, parser.CurrentState);
+				await Mediator!.Send(new QueueCommandListRequest(
+					replacementActions!,
+					parser.CurrentState,
+					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
+					-1));
 				await NotifyService!.Notify(executor, $"Halted {targetObject.Name} with replacement actions.");
 			}
 			else
@@ -1465,8 +1654,7 @@ public partial class Commands
 				break;
 			case "SETQ":
 				// Modify Q-registers of the first waiting task, then trigger it
-				var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-				var modified = await scheduler.ModifyQRegisters(dbRefAttribute, qRegisters!);
+				var modified = await Mediator!.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
 				if (!modified)
 				{
 					await NotifyService!.Notify(executor, "No task is waiting on that semaphore.");
@@ -3397,29 +3585,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
-		// Check for /summary switch
-		if (switches.Contains("SUMMARY"))
-		{
-			await NotifyService!.Notify(executor, "@ps/summary: Queue totals");
-			await NotifyService.Notify(executor, "  Command queue: 0/0");
-			await NotifyService.Notify(executor, "  Wait queue: 0/0");
-			await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
-			await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return CallState.Empty;
-		}
-		
-		// Check for /quick switch
-		if (switches.Contains("QUICK"))
-		{
-			await NotifyService!.Notify(executor, "@ps/quick: Your queue totals");
-			await NotifyService.Notify(executor, "  Command queue: 0/0");
-			await NotifyService.Notify(executor, "  Wait queue: 0/0");
-			await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return CallState.Empty;
-		}
+		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		
 		// Check if showing debug info for a specific PID
 		if (switches.Contains("DEBUG"))
@@ -3431,10 +3597,84 @@ public partial class Commands
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
 			
-			await NotifyService!.Notify(executor, $"@ps/debug: Would show debug info for PID {pidStr}");
-			await NotifyService.Notify(executor, "  Would show: Arguments, Q-registers, executor, enactor, caller");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			if (!long.TryParse(pidStr, out var pid))
+			{
+				await NotifyService!.Notify(executor, "Invalid process ID format.");
+				return new CallState("#-1 INVALID PID");
+			}
+			
+			// Find the semaphore task with this PID
+			var tasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid)).ToArrayAsync();
+			if (tasks.Length == 0)
+			{
+				await NotifyService!.Notify(executor, $"No task found with PID {pid}.");
+				return new CallState("#-1 NOT FOUND");
+			}
+			
+			var task = tasks[0];
+			await NotifyService!.Notify(executor, $"@ps/debug: Task {pid}");
+			await NotifyService.Notify(executor, $"  Owner: {task.Owner}");
+			await NotifyService.Notify(executor, $"  Semaphore: {task.SemaphoreSource}");
+			await NotifyService.Notify(executor, $"  Command: {task.Command.ToPlainText()}");
+			if (task.RunDelay.HasValue)
+			{
+				await NotifyService.Notify(executor, $"  Delay: {task.RunDelay.Value.TotalSeconds:F1}s");
+			}
+			
+			return CallState.Empty;
+		}
+		
+		// Determine target object
+		AnySharpObject target;
+		if (args.Count > 0)
+		{
+			var playerName = args["0"].Message?.ToPlainText();
+			if (string.IsNullOrEmpty(playerName))
+			{
+				target = executor;
+			}
+			else
+			{
+				var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+					parser, executor, executor, playerName, LocateFlags.All);
+				if (!maybeTarget.IsValid())
+				{
+					return new CallState("#-1 INVALID TARGET");
+				}
+				target = maybeTarget.WithoutError().WithoutNone();
+			}
+		}
+		else
+		{
+			target = executor;
+		}
+		
+		var targetDbRef = target.Object().DBRef;
+		
+		// Get queue counts
+		var semaphoreTasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(targetDbRef)).ToArrayAsync();
+		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
+		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
+		
+		// Check for /summary switch
+		if (switches.Contains("SUMMARY"))
+		{
+			await NotifyService!.Notify(executor, "@ps/summary: Queue totals");
+			await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+			await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+			await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+			await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
+			return CallState.Empty;
+		}
+		
+		// Check for /quick switch
+		if (switches.Contains("QUICK"))
+		{
+			await NotifyService!.Notify(executor, "@ps/quick: Your queue totals");
+			await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+			await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+			await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+			return CallState.Empty;
 		}
 		
 		// Check for /all switch (wizard only)
@@ -3446,33 +3686,55 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 			
-			await NotifyService!.Notify(executor, "@ps/all: Would show full queue for all objects");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			// Get all tasks across the system
+			var allTasks = await Mediator!.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
+			
+			await NotifyService!.Notify(executor, "@ps/all: All queued tasks");
+			foreach (var (group, tasks) in allTasks)
+			{
+				await NotifyService.Notify(executor, $"Group: {group} ({tasks.Length} tasks)");
+			}
+			
+			return CallState.Empty;
 		}
 		
-		// Show queue for specific player or self
-		string targetName = "you";
-		if (args.Count > 0)
+		// Show detailed queue for target
+		var targetName = target.Object().DBRef.ToString();
+		await NotifyService!.Notify(executor, $"@ps: Queue for {targetName}");
+		await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+		await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+		await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+		
+		// List semaphore tasks
+		if (semaphoreTasks.Length > 0)
 		{
-			var playerName = args["0"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(playerName))
+			await NotifyService.Notify(executor, "");
+			await NotifyService.Notify(executor, "Semaphore tasks:");
+			foreach (var task in semaphoreTasks.Take(10))
 			{
-				targetName = playerName;
+				var delay = task.RunDelay.HasValue ? $"+{task.RunDelay.Value.TotalSeconds:F1}s" : "ready";
+				await NotifyService.Notify(executor, $"  [{task.Pid}] {task.SemaphoreSource} ({delay}): {task.Command.ToPlainText().Substring(0, Math.Min(40, task.Command.ToPlainText().Length))}");
+			}
+			if (semaphoreTasks.Length > 10)
+			{
+				await NotifyService.Notify(executor, $"  ... and {semaphoreTasks.Length - 10} more");
 			}
 		}
 		
-		await NotifyService!.Notify(executor, $"@ps: Queue for {targetName}");
-		await NotifyService.Notify(executor, "  Command queue: 0/0");
-		await NotifyService.Notify(executor, "  Wait queue: 0/0");
-		await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
-		await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
-		
-		// TODO: Full implementation requires:
-		// - Queue management system to track all queued commands
-		// - Process IDs for each queue entry
-		// - Ability to list queue entries with format: [PID] <semaphore> <wait> <object> <command>
-		// - Load average tracking
+		// List delay tasks
+		if (delayTasks.Length > 0)
+		{
+			await NotifyService.Notify(executor, "");
+			await NotifyService.Notify(executor, "Wait queue tasks:");
+			foreach (var pid in delayTasks.Take(10))
+			{
+				await NotifyService.Notify(executor, $"  [{pid}] (delayed)");
+			}
+			if (delayTasks.Length > 10)
+			{
+				await NotifyService.Notify(executor, $"  ... and {delayTasks.Length - 10} more");
+			}
+		}
 		// - Permission checks for viewing other players' queues
 		await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
 		
@@ -3564,10 +3826,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "@TRIGGER",
 		Switches = ["CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31, ParameterNames = ["object/attribute", "arguments..."])]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public static async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @trigger[/<switches>] <object>/<attribute>[=<arg0>, ..., <arg29>]
+		// @trigger[/<switches>] <object>/<attribute>[=<arg0>, <arg1>, ...]
 		// @trigger/match[/<switches>] <object>/<attribute>=<string>
 		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -3642,7 +3904,24 @@ public partial class Commands
 		// no /spoof: target object becomes both enactor and executor
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
 		
-		// Environment arguments and Q-registers are handled by the hook system
+		// Build argument registers from all provided arguments
+		// Arguments start at index 1 (index 0 is the object/attribute path)
+		// They map to %0, %1, %2, etc. with no upper limit
+		var registerDict = new Dictionary<string, MString>();
+		for (var i = 1; i < args.Count; i++)
+		{
+			if (args.TryGetValue((i - 1).ToString(), out var argValue) && argValue.Message != null)
+			{
+				registerDict[(i - 1).ToString()] = argValue.Message;
+			}
+		}
+		
+		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
+		if (registerDict.Count > 0)
+		{
+			registerStack.Push(registerDict);
+		}
+		
 		// TODO: Handle /match for pattern matching when pattern engine available
 		// Note: INLINE switch executes immediately (current default behavior)
 		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements
@@ -3650,10 +3929,14 @@ public partial class Commands
 		// Execute with recursion tracking and DEBUG/VERBOSE support
 		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 		{
-			await parser.With(state => state with { 
+			var stateWithRegisters = parser.CurrentState with
+			{
 				Executor = targetObject.Object().DBRef,
-				Enactor = executionEnactor 
-			}, newParser => newParser.WithAttributeDebug(attribute,
+				Enactor = executionEnactor,
+				Registers = registerStack
+			};
+			
+			await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
 				async p => await p.CommandListParseVisitor(attribute.Value)()));
 			
 			return CallState.Empty;
@@ -5144,7 +5427,7 @@ public partial class Commands
 			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				// Halt the object's queue
-				await scheduler.Halt(obj.DBRef);
+				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 				
 				// Trigger @STARTUP attribute if it exists (non-inherited)
 				try
@@ -5202,18 +5485,18 @@ public partial class Commands
 		var targetObject = target.Object();
 		
 		// Halt the object's queue first
-		await scheduler.Halt(targetObject.DBRef);
+		await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
 		
 		// For players, restart all owned objects too
 		if (target.IsPlayer)
 		{
 			// Halt and restart all objects owned by the player
-			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
-					await scheduler.Halt(obj.DBRef);
+					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 					
 					// Trigger @STARTUP if it exists
 					try
@@ -5557,21 +5840,46 @@ public partial class Commands
 			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "*";
 			var retroactive = switches.Contains("RETROACTIVE");
 			
-			await NotifyService!.Notify(executor, "@attribute/decompile: Decompiling attribute table");
-			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
-			if (retroactive)
+			// Get all attribute entries from the database
+			var allEntries = await Mediator!.CreateStream(new GetAllAttributeEntriesQuery()).ToArrayAsync();
+			
+			// Filter by pattern (simple wildcard matching)
+			var matchingEntries = allEntries.Where(entry => 
+				pattern == "*" || 
+				entry.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
+				(pattern.Contains('*') && MatchesWildcard(entry.Name, pattern))
+			).ToArray();
+			
+			if (matchingEntries.Length == 0)
 			{
-				await NotifyService.Notify(executor, "  Including /retroactive switch");
+				await NotifyService!.Notify(executor, $"No attributes match pattern '{pattern}'.");
+				return CallState.Empty;
 			}
 			
-			// TODO: Full implementation requires:
-			// - Iterate through all standard attributes in the attribute table
-			// - Filter by pattern (wildcard matching)
-			// - Output @attribute/access commands for each matching attribute
-			// - Include attribute flags and creator dbref
-			await NotifyService.Notify(executor, "Note: Attribute table decompilation not yet implemented.");
+			await NotifyService!.Notify(executor, $"@attribute/decompile: {matchingEntries.Length} attributes match pattern '{pattern}'");
 			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			// Output @attribute/access command for each matching attribute
+			foreach (var entry in matchingEntries.OrderBy(e => e.Name))
+			{
+				var flagList = string.Join(" ", entry.DefaultFlags);
+				var retroFlag = retroactive ? "/retroactive" : "";
+				await NotifyService.Notify(executor, $"@attribute/access{retroFlag} {entry.Name}={flagList}");
+				
+				// Include limit pattern if present
+				if (!string.IsNullOrEmpty(entry.Limit))
+				{
+					await NotifyService.Notify(executor, $"@attribute/limit {entry.Name}={entry.Limit}");
+				}
+				
+				// Include enum values if present
+				if (entry.Enum != null && entry.Enum.Length > 0)
+				{
+					var enumList = string.Join(" ", entry.Enum);
+					await NotifyService.Notify(executor, $"@attribute/enum {entry.Name}={enumList}");
+				}
+			}
+			
+			return CallState.Empty;
 		}
 		
 		// All other operations require at least one argument
@@ -5649,15 +5957,21 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 			
-			await NotifyService!.Notify(executor, $"@attribute/delete: Removing attribute '{attrName}' from table");
+			// Remove attribute from standard attribute table
+			var deleted = await Mediator!.Send(new DeleteAttributeEntryCommand(attrName.ToUpper()));
 			
-			// TODO: Full implementation requires:
-			// - Remove attribute from standard attribute table
-			// - Existing copies remain but are no longer "standard"
-			// - Save changes to persist across reboots
-			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			if (deleted)
+			{
+				await NotifyService!.Notify(executor, $"Attribute '{attrName}' removed from standard attribute table.");
+				await NotifyService.Notify(executor, "Existing copies remain but are no longer \"standard\".");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in table.");
+				return new CallState("#-1 NOT FOUND");
+			}
 			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return CallState.Empty;
 		}
 		
 		if (switches.Contains("RENAME"))
@@ -5675,15 +5989,27 @@ public partial class Commands
 			}
 			
 			var newName = args["1"].Message?.ToPlainText();
-			await NotifyService!.Notify(executor, $"@attribute/rename: Renaming '{attrName}' to '{newName}'");
+			if (string.IsNullOrEmpty(newName))
+			{
+				await NotifyService!.Notify(executor, "You must specify a new name.");
+				return new CallState("#-1 NO NEW NAME SPECIFIED");
+			}
 			
-			// TODO: Full implementation requires:
-			// - Rename attribute in standard attribute table
-			// - Update all references to use new name
-			// - Save changes to persist across reboots
-			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			// Rename attribute in standard attribute table
+			var renamed = await Mediator!.Send(new RenameAttributeEntryCommand(attrName.ToUpper(), newName.ToUpper()));
 			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			if (renamed != null)
+			{
+				await NotifyService!.Notify(executor, $"Attribute '{attrName}' renamed to '{newName}' in standard attribute table.");
+				// Note: Existing attribute instances keep their original names - this only affects new instances
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in table.");
+				return new CallState("#-1 NOT FOUND");
+			}
+			
+			return CallState.Empty;
 		}
 		
 		if (switches.Contains("LIMIT"))
@@ -5812,4 +6138,18 @@ public partial class Commands
 
 		return result;
 	}
+
+/// <summary>
+/// Simple wildcard matching helper for attribute name patterns.
+/// Supports * as wildcard character.
+/// </summary>
+private static bool MatchesWildcard(string text, string pattern)
+{
+// Convert wildcard pattern to regex
+var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+.Replace("\\*", ".*") + "$";
+
+return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern, 
+System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+}
 }
