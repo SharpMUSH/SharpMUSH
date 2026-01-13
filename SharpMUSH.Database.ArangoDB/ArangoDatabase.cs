@@ -2992,30 +2992,15 @@ public partial class ArangoDatabase(
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		
-		// INHERITANCE ORDER (PRECEDENCE):
-		// 1. Object itself
-		// 2. Parent chain (parent → grandparent → great-grandparent → ...)
-		// 3. Object's zones (zone → zone's zone → ...)
-		// 4. Parent's zones
-		// 5. Grandparent's zones
-		// ... and so on
-		// IMPORTANT: Parents ALWAYS take precedence over zones at all levels
-		
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
 		// Single AQL query that handles entire inheritance chain
-		// This query:
-		// 1. Checks object itself first
-		// 2. If checkParent=true, traverses parent chain
-		// 3. Checks zone chains at each level
-		// 4. Returns first match with proper precedence
 		var query = $@"
 			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
 			LET attrPath = @attr
 			LET maxDepth = @max
 			
-			// 1. Check object itself
 			LET selfAttrs = (
 				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
@@ -3029,7 +3014,6 @@ public partial class ArangoDatabase(
 				filterFlags: false
 			}} : null
 			
-			// 2. Check parent chain (only if checkParent=true and selfResult is null)
 			LET parentResults = @checkParent && selfResult == null ? (
 				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
 					LET parentObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
@@ -3049,15 +3033,12 @@ public partial class ArangoDatabase(
 					}}
 			) : []
 			
-			// 3. Check zone chains (only if no result from self or parents)
 			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
-				// Get all objects in the inheritance chain (object + all parents)
 				LET inheritanceChain = APPEND([start], (
 					FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
 						RETURN parent
 				))
 				
-				// For each object in chain, check its zone chain
 				FOR obj IN inheritanceChain
 					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
 						LET zoneObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
@@ -3077,16 +3058,10 @@ public partial class ArangoDatabase(
 						}}
 			) : []
 			
-			// Return first match in precedence order
-			// Filter out nulls and return the first non-null result
 			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
 			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
 			RETURN FIRST(filtered)
 		";
-		
-		// ASSUMPTION TEST: startVertex should be full document ID like "node_objects/4"
-		logger.LogInformation("ASSUMPTION TEST: dbref={DbRef}, startVertex={StartVertex}", 
-			dbref, startVertex);
 		
 		var bindVars = new Dictionary<string, object>
 		{
@@ -3096,27 +3071,11 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
-		logger.LogInformation("GetAttributeWithInheritanceAsync: Executing query for dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}", 
-			dbref, string.Join("`", attribute), checkParent);
-		logger.LogInformation("StartVertex: {StartVertex}", startVertex);
-		logger.LogInformation("Query: {Query}", query);
-		logger.LogInformation("BindVars: {BindVars}", System.Text.Json.JsonSerializer.Serialize(bindVars));
-		
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 		
-		// Debug logging
-		logger.LogInformation("GetAttributeWithInheritanceAsync: dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}, resultNull={ResultNull}, resultsCount={ResultsCount}", 
-			dbref, string.Join("`", attribute), checkParent, result == null, results?.Count() ?? 0);
-		if (result != null)
-		{
-			logger.LogInformation("Result: source={Source}, sourceId={SourceId}, attributesNull={AttrsNull}, attributesCount={AttrsCount}", 
-				result.source, result.sourceId, result.attributes == null, result.attributes?.Count ?? 0);
-		}
-		
 		if (result == null || result.attributes == null)
 		{
-			logger.LogWarning("Returning null: result={ResultNull}, attributes={AttrsNull}", result == null, result?.attributes == null);
 			return null;
 		}
 		
