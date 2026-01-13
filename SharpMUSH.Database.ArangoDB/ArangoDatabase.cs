@@ -3001,7 +3001,7 @@ public partial class ArangoDatabase(
 		// 3. Checks zone chains at each level
 		// 4. Returns first match with proper precedence
 		var query = $@"
-			LET start = DOCUMENT(CONCAT('{DatabaseConstants.Objects}/', @dbrefNumber))
+			LET start = DOCUMENT(@startVertex)
 			LET attrPath = @attr
 			LET maxDepth = @max
 			
@@ -3072,10 +3072,14 @@ public partial class ArangoDatabase(
 			RETURN FIRST(filtered)
 		";
 		
+		// ASSUMPTION TEST: startVertex should be full document ID like "node_objects/4"
+		logger.LogInformation("ASSUMPTION TEST: dbref={DbRef}, startVertex={StartVertex}", 
+			dbref, startVertex);
+		
 		var bindVars = new Dictionary<string, object>
 		{
 			{ "attr", attribute },
-			{ "dbrefNumber", dbref.Number.ToString() },
+			{ StartVertex, startVertex },
 			{ "max", attribute.Length },
 			{ "checkParent", checkParent }
 		};
