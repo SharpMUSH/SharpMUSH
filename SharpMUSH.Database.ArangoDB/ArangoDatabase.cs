@@ -596,6 +596,11 @@ public partial class ArangoDatabase(
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} FILTER v.Folder == {folder} RETURN v",
 			cancellationToken: ct).Select(ConvertMailQueryResult);
 
+	public IAsyncEnumerable<SharpMail> GetAllSystemMailAsync(CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpMailQueryResult>(handle,
+			$"FOR v IN {DatabaseConstants.Mails} RETURN v",
+			cancellationToken: ct).Select(ConvertMailQueryResult);
+
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id, CancellationToken ct = default)
 	{
 		// There is an error here. 
