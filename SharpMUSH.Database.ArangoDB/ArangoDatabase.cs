@@ -3001,7 +3001,7 @@ public partial class ArangoDatabase(
 		// 3. Checks zone chains at each level
 		// 4. Returns first match with proper precedence
 		var query = $@"
-			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET start = DOCUMENT(@startVertex)
 			LET attrPath = @attr
 			LET maxDepth = @max
 			
@@ -3082,6 +3082,15 @@ public partial class ArangoDatabase(
 		
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
+		
+		// Debug logging
+		logger.LogInformation("GetAttributeWithInheritanceAsync: dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}, resultNull={ResultNull}", 
+			dbref, string.Join("`", attribute), checkParent, result == null);
+		if (result != null)
+		{
+			logger.LogInformation("Result: source={Source}, sourceId={SourceId}, attributesNull={AttrsNull}, attributesCount={AttrsCount}", 
+				result.source, result.sourceId, result.attributes == null, result.attributes?.Count ?? 0);
+		}
 		
 		if (result == null || result.attributes == null)
 		{
