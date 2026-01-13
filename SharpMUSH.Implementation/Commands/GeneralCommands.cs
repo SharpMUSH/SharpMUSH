@@ -1404,7 +1404,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 		
-		// @halt/pid - halt specific queue entry (not yet fully implemented)
+		// @halt/pid - halt specific queue entry
 		if (switches.Contains("PID"))
 		{
 			var pidStr = args.GetValueOrDefault("0")?.Message?.ToPlainText();
@@ -1414,9 +1414,25 @@ public partial class Commands
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
 			
-			// This would require additional TaskScheduler methods to halt by PID
-			await NotifyService!.Notify(executor, $"@halt/pid: PID-specific halting not yet implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			if (!long.TryParse(pidStr, out var pid))
+			{
+				await NotifyService!.Notify(executor, "Invalid process ID format.");
+				return new CallState("#-1 INVALID PID");
+			}
+			
+			// Halt the specific task by PID
+			var halted = await scheduler.HaltByPid(pid);
+			if (halted)
+			{
+				await NotifyService!.Notify(executor, $"Task {pid} halted.");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"No task found with PID {pid}.");
+				return new CallState("#-1 NOT FOUND");
+			}
+			
+			return CallState.Empty;
 		}
 		
 		// @halt with no arguments - clear executor's queue without setting HALT flag
@@ -3562,29 +3578,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
-		// Check for /summary switch
-		if (switches.Contains("SUMMARY"))
-		{
-			await NotifyService!.Notify(executor, "@ps/summary: Queue totals");
-			await NotifyService.Notify(executor, "  Command queue: 0/0");
-			await NotifyService.Notify(executor, "  Wait queue: 0/0");
-			await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
-			await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return CallState.Empty;
-		}
-		
-		// Check for /quick switch
-		if (switches.Contains("QUICK"))
-		{
-			await NotifyService!.Notify(executor, "@ps/quick: Your queue totals");
-			await NotifyService.Notify(executor, "  Command queue: 0/0");
-			await NotifyService.Notify(executor, "  Wait queue: 0/0");
-			await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return CallState.Empty;
-		}
+		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		
 		// Check if showing debug info for a specific PID
 		if (switches.Contains("DEBUG"))
@@ -3596,10 +3590,84 @@ public partial class Commands
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
 			
-			await NotifyService!.Notify(executor, $"@ps/debug: Would show debug info for PID {pidStr}");
-			await NotifyService.Notify(executor, "  Would show: Arguments, Q-registers, executor, enactor, caller");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			if (!long.TryParse(pidStr, out var pid))
+			{
+				await NotifyService!.Notify(executor, "Invalid process ID format.");
+				return new CallState("#-1 INVALID PID");
+			}
+			
+			// Find the semaphore task with this PID
+			var tasks = await scheduler.GetSemaphoreTasks(pid).ToArrayAsync();
+			if (tasks.Length == 0)
+			{
+				await NotifyService!.Notify(executor, $"No task found with PID {pid}.");
+				return new CallState("#-1 NOT FOUND");
+			}
+			
+			var task = tasks[0];
+			await NotifyService!.Notify(executor, $"@ps/debug: Task {pid}");
+			await NotifyService.Notify(executor, $"  Owner: {task.Owner}");
+			await NotifyService.Notify(executor, $"  Semaphore: {task.SemaphoreSource}");
+			await NotifyService.Notify(executor, $"  Command: {task.Command.ToPlainText()}");
+			if (task.RunDelay.HasValue)
+			{
+				await NotifyService.Notify(executor, $"  Delay: {task.RunDelay.Value.TotalSeconds:F1}s");
+			}
+			
+			return CallState.Empty;
+		}
+		
+		// Determine target object
+		AnySharpObject target;
+		if (args.Count > 0)
+		{
+			var playerName = args["0"].Message?.ToPlainText();
+			if (string.IsNullOrEmpty(playerName))
+			{
+				target = executor;
+			}
+			else
+			{
+				var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
+					parser, executor, executor, playerName, LocateFlags.All);
+				if (!maybeTarget.IsValid())
+				{
+					return new CallState("#-1 INVALID TARGET");
+				}
+				target = maybeTarget;
+			}
+		}
+		else
+		{
+			target = executor;
+		}
+		
+		var targetDbRef = target.Object().DBRef;
+		
+		// Get queue counts
+		var semaphoreTasks = await scheduler.GetSemaphoreTasks(targetDbRef).ToArrayAsync();
+		var delayTasks = await scheduler.GetDelayTasks(targetDbRef).ToArrayAsync();
+		var enqueueTasks = await scheduler.GetEnqueueTasks(targetDbRef).ToArrayAsync();
+		
+		// Check for /summary switch
+		if (switches.Contains("SUMMARY"))
+		{
+			await NotifyService!.Notify(executor, "@ps/summary: Queue totals");
+			await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+			await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+			await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+			await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
+			return CallState.Empty;
+		}
+		
+		// Check for /quick switch
+		if (switches.Contains("QUICK"))
+		{
+			await NotifyService!.Notify(executor, "@ps/quick: Your queue totals");
+			await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+			await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+			await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+			return CallState.Empty;
 		}
 		
 		// Check for /all switch (wizard only)
@@ -3611,33 +3679,55 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 			
-			await NotifyService!.Notify(executor, "@ps/all: Would show full queue for all objects");
-			await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-			return new CallState("#-1 NOT IMPLEMENTED");
+			// Get all tasks across the system
+			var allTasks = await scheduler.GetAllTasks().ToArrayAsync();
+			
+			await NotifyService!.Notify(executor, "@ps/all: All queued tasks");
+			foreach (var (group, tasks) in allTasks)
+			{
+				await NotifyService.Notify(executor, $"Group: {group} ({tasks.Length} tasks)");
+			}
+			
+			return CallState.Empty;
 		}
 		
-		// Show queue for specific player or self
-		string targetName = "you";
-		if (args.Count > 0)
+		// Show detailed queue for target
+		var targetName = target.IsPlayer ? $"Player {target.AsPlayer.Name}" : target.Object().DBRef.ToString();
+		await NotifyService!.Notify(executor, $"@ps: Queue for {targetName}");
+		await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+		await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+		await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+		
+		// List semaphore tasks
+		if (semaphoreTasks.Length > 0)
 		{
-			var playerName = args["0"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(playerName))
+			await NotifyService.Notify(executor, "");
+			await NotifyService.Notify(executor, "Semaphore tasks:");
+			foreach (var task in semaphoreTasks.Take(10))
 			{
-				targetName = playerName;
+				var delay = task.RunDelay.HasValue ? $"+{task.RunDelay.Value.TotalSeconds:F1}s" : "ready";
+				await NotifyService.Notify(executor, $"  [{task.Pid}] {task.SemaphoreSource} ({delay}): {task.Command.ToPlainText().Substring(0, Math.Min(40, task.Command.ToPlainText().Length))}");
+			}
+			if (semaphoreTasks.Length > 10)
+			{
+				await NotifyService.Notify(executor, $"  ... and {semaphoreTasks.Length - 10} more");
 			}
 		}
 		
-		await NotifyService!.Notify(executor, $"@ps: Queue for {targetName}");
-		await NotifyService.Notify(executor, "  Command queue: 0/0");
-		await NotifyService.Notify(executor, "  Wait queue: 0/0");
-		await NotifyService.Notify(executor, "  Semaphore queue: 0/0");
-		await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
-		
-		// TODO: Full implementation requires:
-		// - Queue management system to track all queued commands
-		// - Process IDs for each queue entry
-		// - Ability to list queue entries with format: [PID] <semaphore> <wait> <object> <command>
-		// - Load average tracking
+		// List delay tasks
+		if (delayTasks.Length > 0)
+		{
+			await NotifyService.Notify(executor, "");
+			await NotifyService.Notify(executor, "Wait queue tasks:");
+			foreach (var pid in delayTasks.Take(10))
+			{
+				await NotifyService.Notify(executor, $"  [{pid}] (delayed)");
+			}
+			if (delayTasks.Length > 10)
+			{
+				await NotifyService.Notify(executor, $"  ... and {delayTasks.Length - 10} more");
+			}
+		}
 		// - Permission checks for viewing other players' queues
 		await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
 		
