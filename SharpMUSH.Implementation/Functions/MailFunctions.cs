@@ -74,8 +74,8 @@ public partial class Functions
 		public static PlayerMessageResult Success(AnySharpObject player, string messageSpec)
 			=> new() { IsError = false, Player = player, MessageSpec = messageSpec };
 
-		public static PlayerMessageResult FromError(string error)
-			=> new() { IsError = true, Error = error };
+		public static PlayerMessageResult FromError(string? error)
+			=> new() { IsError = true, Error = error ?? "#-1 ERROR" };
 	}
 
 	/// <summary>
