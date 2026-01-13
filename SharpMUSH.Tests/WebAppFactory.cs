@@ -230,12 +230,11 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		// Output telemetry summary before disposing
 		try
 		{
-			await Console.Error.WriteLineAsync("[DEBUG] WebAppFactory.DisposeAsync called");
 			await OutputTelemetrySummaryAsync();
 		}
 		catch (Exception ex)
 		{
-			await Console.Error.WriteLineAsync($"[DEBUG] Error in telemetry output: {ex}");
+			Console.Error.WriteLine($"Error outputting telemetry summary: {ex.Message}");
 		}
 		
 		// Shutdown the Quartz scheduler gracefully with a timeout
@@ -280,97 +279,97 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 			}
 
 			// Use Console.Error to ensure output is visible even if stdout is redirected
-			await Console.Error.WriteLineAsync();
-			await Console.Error.WriteLineAsync("═══════════════════════════════════════════════════════════════");
-			await Console.Error.WriteLineAsync("                  TEST SESSION TELEMETRY SUMMARY");
-			await Console.Error.WriteLineAsync("═══════════════════════════════════════════════════════════════");
-			await Console.Error.WriteLineAsync();
+			Console.Error.WriteLine();
+			Console.Error.WriteLine("═══════════════════════════════════════════════════════════════");
+			Console.Error.WriteLine("                  TEST SESSION TELEMETRY SUMMARY");
+			Console.Error.WriteLine("═══════════════════════════════════════════════════════════════");
+			Console.Error.WriteLine();
 
 			// Get health status
 			var healthStatus = await prometheusService.GetHealthStatusAsync();
 			if (healthStatus.Count > 0)
 			{
-				await Console.Error.WriteLineAsync("┌─ Health Status");
+				Console.Error.WriteLine("┌─ Health Status");
 				foreach (var (service, status) in healthStatus)
 				{
 					var statusText = status == 1 ? "✓ Healthy" : "✗ Unhealthy";
-					await Console.Error.WriteLineAsync($"│  {service,-20}: {statusText}");
+					Console.Error.WriteLine($"│  {service,-20}: {statusText}");
 				}
-				await Console.Error.WriteLineAsync();
+				Console.Error.WriteLine();
 			}
 
 			// Get connection metrics
 			var (activeConnections, loggedInPlayers) = await prometheusService.GetConnectionMetricsAsync();
-			await Console.Error.WriteLineAsync("┌─ Connection Metrics");
-			await Console.Error.WriteLineAsync($"│  Active Connections    : {activeConnections}");
-			await Console.Error.WriteLineAsync($"│  Logged In Players     : {loggedInPlayers}");
-			await Console.Error.WriteLineAsync();
+			Console.Error.WriteLine("┌─ Connection Metrics");
+			Console.Error.WriteLine($"│  Active Connections    : {activeConnections}");
+			Console.Error.WriteLine($"│  Logged In Players     : {loggedInPlayers}");
+			Console.Error.WriteLine();
 
 			// Get most called functions (test session duration)
 			var mostCalledFunctions = await prometheusService.GetMostCalledFunctionsAsync("1h", 10);
 			if (mostCalledFunctions.Count > 0)
 			{
-				await Console.Error.WriteLineAsync("┌─ Most Called Functions (Top 10)");
-				await Console.Error.WriteLineAsync("│  Function                    Calls/sec");
-				await Console.Error.WriteLineAsync("│  ────────────────────────────────────────");
+				Console.Error.WriteLine("┌─ Most Called Functions (Top 10)");
+				Console.Error.WriteLine("│  Function                    Calls/sec");
+				Console.Error.WriteLine("│  ────────────────────────────────────────");
 				foreach (var (functionName, callsPerSecond) in mostCalledFunctions)
 				{
-					await Console.Error.WriteLineAsync($"│  {functionName,-28} {callsPerSecond,9:F3}");
+					Console.Error.WriteLine($"│  {functionName,-28} {callsPerSecond,9:F3}");
 				}
-				await Console.Error.WriteLineAsync();
+				Console.Error.WriteLine();
 			}
 
 			// Get slowest functions
 			var slowestFunctions = await prometheusService.GetSlowestFunctionsAsync("1h", 10);
 			if (slowestFunctions.Count > 0)
 			{
-				await Console.Error.WriteLineAsync("┌─ Slowest Functions (Top 10)");
-				await Console.Error.WriteLineAsync("│  Function                    Avg Time (ms)");
-				await Console.Error.WriteLineAsync("│  ────────────────────────────────────────────");
+				Console.Error.WriteLine("┌─ Slowest Functions (Top 10)");
+				Console.Error.WriteLine("│  Function                    Avg Time (ms)");
+				Console.Error.WriteLine("│  ────────────────────────────────────────────");
 				foreach (var (functionName, avgDuration) in slowestFunctions)
 				{
-					await Console.Error.WriteLineAsync($"│  {functionName,-28} {avgDuration,13:F3}");
+					Console.Error.WriteLine($"│  {functionName,-28} {avgDuration,13:F3}");
 				}
-				await Console.Error.WriteLineAsync();
+				Console.Error.WriteLine();
 			}
 
 			// Get most called commands
 			var mostCalledCommands = await prometheusService.GetMostCalledCommandsAsync("1h", 10);
 			if (mostCalledCommands.Count > 0)
 			{
-				await Console.Error.WriteLineAsync("┌─ Most Called Commands (Top 10)");
-				await Console.Error.WriteLineAsync("│  Command                     Calls/sec");
-				await Console.Error.WriteLineAsync("│  ────────────────────────────────────────");
+				Console.Error.WriteLine("┌─ Most Called Commands (Top 10)");
+				Console.Error.WriteLine("│  Command                     Calls/sec");
+				Console.Error.WriteLine("│  ────────────────────────────────────────");
 				foreach (var (commandName, callsPerSecond) in mostCalledCommands)
 				{
-					await Console.Error.WriteLineAsync($"│  {commandName,-28} {callsPerSecond,9:F3}");
+					Console.Error.WriteLine($"│  {commandName,-28} {callsPerSecond,9:F3}");
 				}
-				await Console.Error.WriteLineAsync();
+				Console.Error.WriteLine();
 			}
 
 			// Get slowest commands
 			var slowestCommands = await prometheusService.GetSlowestCommandsAsync("1h", 10);
 			if (slowestCommands.Count > 0)
 			{
-				await Console.Error.WriteLineAsync("┌─ Slowest Commands (Top 10)");
-				await Console.Error.WriteLineAsync("│  Command                     Avg Time (ms)");
-				await Console.Error.WriteLineAsync("│  ────────────────────────────────────────────");
+				Console.Error.WriteLine("┌─ Slowest Commands (Top 10)");
+				Console.Error.WriteLine("│  Command                     Avg Time (ms)");
+				Console.Error.WriteLine("│  ────────────────────────────────────────────");
 				foreach (var (commandName, avgDuration) in slowestCommands)
 				{
-					await Console.Error.WriteLineAsync($"│  {commandName,-28} {avgDuration,13:F3}");
+					Console.Error.WriteLine($"│  {commandName,-28} {avgDuration,13:F3}");
 				}
-				await Console.Error.WriteLineAsync();
+				Console.Error.WriteLine();
 			}
 
-			await Console.Error.WriteLineAsync("═══════════════════════════════════════════════════════════════");
-			await Console.Error.WriteLineAsync("                    END TELEMETRY SUMMARY");
-			await Console.Error.WriteLineAsync("═══════════════════════════════════════════════════════════════");
-			await Console.Error.WriteLineAsync();
+			Console.Error.WriteLine("═══════════════════════════════════════════════════════════════");
+			Console.Error.WriteLine("                    END TELEMETRY SUMMARY");
+			Console.Error.WriteLine("═══════════════════════════════════════════════════════════════");
+			Console.Error.WriteLine();
 		}
 		catch (Exception ex)
 		{
 			// Gracefully handle any errors - don't let telemetry reporting break test cleanup
-			await Console.Error.WriteLineAsync($"Note: Unable to retrieve telemetry summary: {ex.Message}");
+			Console.Error.WriteLine($"Note: Unable to retrieve telemetry summary: {ex.Message}");
 		}
 	}
 }

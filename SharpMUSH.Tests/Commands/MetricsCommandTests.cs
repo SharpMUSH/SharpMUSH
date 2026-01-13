@@ -16,9 +16,6 @@ public class MetricsCommandTests
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	[ClassDataSource<TelemetrySessionReporter>(Shared = SharedType.PerTestSession)]
-	public required TelemetrySessionReporter TelemetryReporter { get; init; }
-
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
