@@ -31,7 +31,8 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 			CompressionType = ParseCompressionType(options.CompressionType),
 			BatchSize = options.BatchSize,
 			LingerMs = options.LingerMs,
-			Acks = Acks.Leader, // Leader acknowledgment only (faster)
+			// When idempotence is enabled, acks must be set to All
+			Acks = options.EnableIdempotence ? Acks.All : Acks.Leader,
 			MaxInFlight = 5,
 			MessageMaxBytes = options.MaxMessageBytes,
 			// Performance optimizations

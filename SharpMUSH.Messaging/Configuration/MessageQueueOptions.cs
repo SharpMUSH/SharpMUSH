@@ -99,7 +99,8 @@ public class MessageQueueOptions
 			{ "compression.type", CompressionType },
 			{ "batch.size", BatchSize.ToString() },
 			{ "linger.ms", LingerMs.ToString() },
-			{ "acks", "1" }, // Leader acknowledgment only (faster)
+			// When idempotence is enabled, acks must be set to "all"
+			{ "acks", EnableIdempotence ? "all" : "1" },
 			{ "max.request.size", MaxMessageBytes.ToString() },
 			{ "message.max.bytes", MaxMessageBytes.ToString() }
 		};
