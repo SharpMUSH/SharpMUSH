@@ -1070,7 +1070,16 @@ public partial class Commands
 		if (validDestination.IsExit)
 		{
 			// Teleporting through an exit - get the exit's destination
-			var exitDestination = await validDestination.AsExit.Location.WithCancellation(CancellationToken.None);
+			// Using Home property like @goto command does (line 970) for consistency
+			var exitDestination = await validDestination.AsExit.Home.WithCancellation(CancellationToken.None);
+			
+			// Check if exit is unlinked (dbref -1)
+			if (exitDestination.Object().DBRef.Number == -1)
+			{
+				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+				return CallState.Empty;
+			}
+			
 			destinationContainer = exitDestination;
 		}
 		else
