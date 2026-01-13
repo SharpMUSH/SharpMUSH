@@ -187,15 +187,15 @@ However, our implementation provides better performance characteristics:
 
 2. **Better Batching on Producer Side**
    ```csharp
-   LingerMs = 5,        // Wait 5ms to batch messages
+   LingerMs = 8,        // Wait 8ms to batch messages
    BatchSize = 32768,   // Batch up to 32KB
    ```
-   - Kafka producer automatically batches messages sent within 5ms window
-   - For @dolist with 1000 iterations, if all execute within 5ms, they'll be batched
+   - Kafka producer automatically batches messages sent within 8ms window
+   - For @dolist with 1000 iterations, if all execute within 8ms, they'll be batched
    - This reduces network overhead significantly
 
 3. **Better Batching on Consumer Side**
-   - Explicit batch processing with configurable size (100) and time (10ms)
+   - Explicit batch processing with configurable size (100) and time (8ms)
    - Processes multiple messages together, reducing per-message overhead
 
 ### Expected Performance Results
@@ -211,13 +211,15 @@ However, our implementation provides better performance characteristics:
 
 **Still slower than iter() (30ms) but 60-70% faster than MassTransit.**
 
+**Combined latency:** ~16ms (8ms producer + 8ms consumer) approaches 60fps for interactive operations.
+
 ## Performance Optimization Recommendations
 
 ### Already Implemented
 ✅ Direct Confluent.Kafka (no MassTransit overhead)
-✅ Producer batching (LingerMs = 5)
+✅ Producer batching (LingerMs = 8ms)
 ✅ LZ4 compression
-✅ Consumer-side batching (100 messages/10ms)
+✅ Consumer-side batching (100 messages/8ms)
 ✅ Leader acknowledgment (Acks.Leader)
 ✅ Large queue buffers (100k messages)
 
@@ -226,7 +228,7 @@ However, our implementation provides better performance characteristics:
 1. **Increase Producer Batch Size**
    ```csharp
    BatchSize = 65536,  // 64KB instead of 32KB
-   LingerMs = 10,      // Wait 10ms instead of 5ms
+   LingerMs = 10,      // Wait 10ms instead of 8ms
    ```
    - **Estimated gain**: 10-15% for high-throughput scenarios
 

@@ -15,8 +15,9 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Notifies objects and sends telnet data with automatic batching support.
-/// All notifications are automatically batched with a 10ms timeout to reduce Kafka overhead.
-/// Messages are accumulated and flushed after 10ms of inactivity.
+/// All notifications are automatically batched with an 8ms timeout to reduce Kafka overhead.
+/// Messages are accumulated and flushed after 8ms of inactivity.
+/// Combined with Kafka producer batching (8ms), provides ~16ms total latency (approaching 60fps).
 /// </summary>
 public class NotifyService(
 	IMessageBus publishEndpoint, 
@@ -79,7 +80,7 @@ public class NotifyService(
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 10ms timeout
+		// Always use automatic batching with 8ms timeout
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
 			AddToBatch(handle, bytes);
@@ -106,7 +107,7 @@ public class NotifyService(
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 10ms timeout
+		// Always use automatic batching with 8ms timeout
 		AddToBatch(handle, bytes);
 	}
 
@@ -127,7 +128,7 @@ public class NotifyService(
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 10ms timeout
+		// Always use automatic batching with 8ms timeout
 		foreach (var handle in handles)
 		{
 			AddToBatch(handle, bytes);
@@ -226,7 +227,7 @@ public class NotifyService(
 		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
 
 	/// <summary>
-	/// Adds a message to the batch for the specified handle and starts/resets the 10ms flush timer.
+	/// Adds a message to the batch for the specified handle and starts/resets the 8ms flush timer.
 	/// </summary>
 	private void AddToBatch(long handle, byte[] bytes)
 	{
@@ -235,7 +236,7 @@ public class NotifyService(
 		{
 			state.AccumulatedMessages.Add(bytes);
 
-			// Start or reset the timer to 10ms
+			// Start or reset the timer to 8ms
 			if (state.FlushTimer == null)
 			{
 				state.FlushTimer = new Timer(
@@ -253,20 +254,20 @@ public class NotifyService(
 						}
 					},
 					null,
-					10,
+					8,
 					Timeout.Infinite
 				);
 			}
 			else
 			{
-				state.FlushTimer.Change(10, Timeout.Infinite);
+				state.FlushTimer.Change(8, Timeout.Infinite);
 			}
 		}
 	}
 
 	/// <summary>
 	/// Flushes accumulated messages for a specific handle.
-	/// Called automatically by the 10ms timer or manually by EndBatchingScope.
+	/// Called automatically by the 8ms timer or manually by EndBatchingScope.
 	/// </summary>
 	private async Task FlushHandle(long handle)
 	{

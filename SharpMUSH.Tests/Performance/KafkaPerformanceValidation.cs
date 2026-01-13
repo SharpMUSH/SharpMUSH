@@ -46,7 +46,7 @@ Console.WriteLine($"Throughput: {messageCount * 1000.0 / elapsedMs:F2} msg/sec")
 Console.WriteLine($"Average latency: {(double)elapsedMs / messageCount:F2}ms per message");
 
 // Performance expectations:
-// - Worst case (no batching): ~15ms per message = 15,000ms total
+// - Worst case (no batching): ~18ms per message = 15,000ms total
 // - With producer batching: ~8-10ms per message = 8,000-10,000ms total
 // - Optimal: ~5-7ms per message = 5,000-7,000ms total
 await Assert.That(elapsedMs).IsLessThan(15000)
@@ -73,7 +73,7 @@ var elapsedMs = sw.ElapsedMilliseconds;
 Console.WriteLine($"Single message latency: {elapsedMs}ms");
 
 // Direct Kafka should have lower latency than MassTransit
-// Expected: < 50ms (including producer batching linger time of 5ms)
+// Expected: < 50ms (including producer batching linger time of 8ms)
 await Assert.That(elapsedMs).IsLessThan(100)
 .Because("Single message latency should be low (<100ms)");
 }

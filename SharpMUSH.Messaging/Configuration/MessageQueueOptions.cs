@@ -67,8 +67,9 @@ public class MessageQueueOptions
 
 	/// <summary>
 	/// Linger time in milliseconds (how long to wait for batching)
+	/// Combined with consumer batching (8ms), provides ~16ms total latency (approaching 60fps)
 	/// </summary>
-	public int LingerMs { get; set; } = 5;
+	public int LingerMs { get; set; } = 8;
 
 	/// <summary>
 	/// Maximum message size in bytes (6MB for SharpMUSH production)
@@ -83,9 +84,9 @@ public class MessageQueueOptions
 
 	/// <summary>
 	/// Maximum time to wait for a full batch (in milliseconds)
-	/// Lower values provide better responsiveness, higher values allow more batching
+	/// Combined with producer batching (8ms), provides ~16ms total latency (approaching 60fps)
 	/// </summary>
-	public TimeSpan BatchTimeLimit { get; set; } = TimeSpan.FromMilliseconds(10);
+	public TimeSpan BatchTimeLimit { get; set; } = TimeSpan.FromMilliseconds(8);
 
 	/// <summary>
 	/// Gets Kafka producer configuration
