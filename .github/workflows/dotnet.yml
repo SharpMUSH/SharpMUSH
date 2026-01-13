@@ -28,4 +28,16 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal
+      run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
+    - name: Display Telemetry Summary
+      if: always()
+      run: |
+        echo "## 📊 Test Telemetry Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Telemetry metrics are displayed in the test output above when running with \`--output Detailed\`." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Look for the **TEST SESSION TELEMETRY SUMMARY** section in the test output to see:" >> $GITHUB_STEP_SUMMARY
+        echo "- 📡 Health status of services" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔌 Connection metrics" >> $GITHUB_STEP_SUMMARY
+        echo "- ⚡ Most called functions and commands" >> $GITHUB_STEP_SUMMARY
+        echo "- 🐌 Slowest functions and commands" >> $GITHUB_STEP_SUMMARY
