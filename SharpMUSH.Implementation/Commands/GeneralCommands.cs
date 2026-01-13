@@ -1069,18 +1069,49 @@ public partial class Commands
 		AnySharpContainer destinationContainer;
 		if (validDestination.IsExit)
 		{
-			// Teleporting through an exit - get the exit's destination
-			// Using Home property like @goto command does (line 970) for consistency
-			var exitDestination = await validDestination.AsExit.Home.WithCancellation(CancellationToken.None);
+			// Teleporting through an exit - resolve the exit's destination using the same logic as @goto
+			var exitObj = validDestination.AsExit;
+			var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
 			
-			// Check if exit is unlinked (dbref -1)
-			if (exitDestination.Object().DBRef.Number == -1)
+			if (homeLocation.Object().DBRef.Number == -1)
 			{
-				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
-				return CallState.Empty;
+				// Exit is unlinked - check for DESTINATION attribute
+				var destAttr = await AttributeService!.GetAttributeAsync(
+					executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
+				
+				if (destAttr.IsNone || destAttr.IsError)
+				{
+					await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+					return CallState.Empty;
+				}
+				
+				var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
+				var located = await LocateService!.LocateAndNotifyIfInvalid(
+					parser,
+					executor,
+					executor,
+					destValue!,
+					LocateFlags.All);
+				
+				if (!located.IsValid())
+				{
+					await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+					return CallState.Empty;
+				}
+				
+				var locatedObj = located.WithoutError().WithoutNone();
+				if (!locatedObj.IsContainer)
+				{
+					await NotifyService!.Notify(executor, "That exit doesn't go to a valid location.");
+					return CallState.Empty;
+				}
+				
+				destinationContainer = locatedObj.AsContainer;
 			}
-			
-			destinationContainer = exitDestination;
+			else
+			{
+				destinationContainer = homeLocation;
+			}
 		}
 		else
 		{
