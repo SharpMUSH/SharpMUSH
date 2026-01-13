@@ -74,8 +74,8 @@ public partial class Functions
 		public static PlayerMessageResult Success(AnySharpObject player, string messageSpec)
 			=> new() { IsError = false, Player = player, MessageSpec = messageSpec };
 
-		public static PlayerMessageResult FromError(string? error)
-			=> new() { IsError = true, Error = error ?? "#-1 ERROR" };
+		public static PlayerMessageResult FromError(string error)
+			=> new() { IsError = true, Error = error };
 	}
 
 	/// <summary>
@@ -105,7 +105,7 @@ public partial class Functions
 
 		if (locateResult.IsError)
 		{
-			return PlayerMessageResult.FromError(locateResult.AsError.Value);
+			return PlayerMessageResult.FromError(locateResult.AsError.Value ?? "#-1 NO SUCH PLAYER");
 		}
 
 		if (locateResult.IsNone)
