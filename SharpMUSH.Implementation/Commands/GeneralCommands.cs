@@ -1397,7 +1397,7 @@ public partial class Commands
 			// Halt all objects in the game
 			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
-				await scheduler.Halt(obj.DBRef);
+				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 			}
 			
 			await NotifyService!.Notify(executor, "All objects halted.");
@@ -1421,7 +1421,7 @@ public partial class Commands
 			}
 			
 			// Halt the specific task by PID
-			var halted = await scheduler.HaltByPid(pid);
+			var halted = await Mediator!.Send(new HaltByPidRequest(pid));
 			if (halted)
 			{
 				await NotifyService!.Notify(executor, $"Task {pid} halted.");
@@ -1438,7 +1438,7 @@ public partial class Commands
 		// @halt with no arguments - clear executor's queue without setting HALT flag
 		if (args.Count == 0)
 		{
-			await scheduler.Halt(executor.Object().DBRef);
+			await Mediator!.Send(new HaltObjectQueueRequest(executor.Object().DBRef));
 			await NotifyService!.Notify(executor, "Halted.");
 			return CallState.Empty;
 		}
@@ -1481,31 +1481,39 @@ public partial class Commands
 		
 		if (target.IsPlayer)
 		{
-			await scheduler.Halt(targetObject.DBRef);
+			await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
 			
-			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
-					await scheduler.Halt(obj.DBRef);
+					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 				}
 			}
 			
 			if (hasReplacementActions)
 			{
-				await scheduler.WriteCommandList(replacementActions!, parser.CurrentState);
+				await Mediator!.Send(new QueueCommandListRequest(
+					replacementActions!,
+					parser.CurrentState,
+					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
+					-1));
 			}
 			
 			await NotifyService!.Notify(executor, $"Halted {targetObject.Name} and all their objects.");
 		}
 		else
 		{
-			await scheduler.Halt(targetObject.DBRef);
+			await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
 			
 			if (hasReplacementActions)
 			{
-				await scheduler.WriteCommandList(replacementActions!, parser.CurrentState);
+				await Mediator!.Send(new QueueCommandListRequest(
+					replacementActions!,
+					parser.CurrentState,
+					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
+					-1));
 				await NotifyService!.Notify(executor, $"Halted {targetObject.Name} with replacement actions.");
 			}
 			else
@@ -1646,8 +1654,7 @@ public partial class Commands
 				break;
 			case "SETQ":
 				// Modify Q-registers of the first waiting task, then trigger it
-				var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-				var modified = await scheduler.ModifyQRegisters(dbRefAttribute, qRegisters!);
+				var modified = await Mediator!.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
 				if (!modified)
 				{
 					await NotifyService!.Notify(executor, "No task is waiting on that semaphore.");
@@ -3597,7 +3604,7 @@ public partial class Commands
 			}
 			
 			// Find the semaphore task with this PID
-			var tasks = await scheduler.GetSemaphoreTasks(pid).ToArrayAsync();
+			var tasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid)).ToArrayAsync();
 			if (tasks.Length == 0)
 			{
 				await NotifyService!.Notify(executor, $"No task found with PID {pid}.");
@@ -3645,9 +3652,9 @@ public partial class Commands
 		var targetDbRef = target.Object().DBRef;
 		
 		// Get queue counts
-		var semaphoreTasks = await scheduler.GetSemaphoreTasks(targetDbRef).ToArrayAsync();
-		var delayTasks = await scheduler.GetDelayTasks(targetDbRef).ToArrayAsync();
-		var enqueueTasks = await scheduler.GetEnqueueTasks(targetDbRef).ToArrayAsync();
+		var semaphoreTasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(targetDbRef)).ToArrayAsync();
+		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
+		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
 		
 		// Check for /summary switch
 		if (switches.Contains("SUMMARY"))
@@ -3680,7 +3687,7 @@ public partial class Commands
 			}
 			
 			// Get all tasks across the system
-			var allTasks = await scheduler.GetAllTasks().ToArrayAsync();
+			var allTasks = await Mediator!.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
 			
 			await NotifyService!.Notify(executor, "@ps/all: All queued tasks");
 			foreach (var (group, tasks) in allTasks)
@@ -5420,7 +5427,7 @@ public partial class Commands
 			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				// Halt the object's queue
-				await scheduler.Halt(obj.DBRef);
+				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 				
 				// Trigger @STARTUP attribute if it exists (non-inherited)
 				try
@@ -5478,18 +5485,18 @@ public partial class Commands
 		var targetObject = target.Object();
 		
 		// Halt the object's queue first
-		await scheduler.Halt(targetObject.DBRef);
+		await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
 		
 		// For players, restart all owned objects too
 		if (target.IsPlayer)
 		{
 			// Halt and restart all objects owned by the player
-			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
-					await scheduler.Halt(obj.DBRef);
+					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 					
 					// Trigger @STARTUP if it exists
 					try

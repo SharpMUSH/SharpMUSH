@@ -105,3 +105,31 @@ public class ScheduleHaltHandler(ITaskScheduler scheduler) : IRequestHandler<Hal
 		return await Unit.ValueTask;
 	}
 }
+
+public class GetEnqueueTasksHandler(ITaskScheduler scheduler)
+	: IStreamQueryHandler<ScheduleEnqueueQuery, long>
+{
+	public IAsyncEnumerable<long> Handle(ScheduleEnqueueQuery query,
+		CancellationToken cancellationToken)
+		=> scheduler.GetEnqueueTasks(query.Query);
+}
+
+public class GetAllTasksHandler(ITaskScheduler scheduler)
+	: IStreamQueryHandler<ScheduleAllTasksQuery, SemaphoreTaskData>
+{
+	public IAsyncEnumerable<SemaphoreTaskData> Handle(ScheduleAllTasksQuery query,
+		CancellationToken cancellationToken)
+		=> scheduler.GetAllTasks();
+}
+
+public class HaltByPidHandler(ITaskScheduler scheduler) : IRequestHandler<HaltByPidRequest, bool>
+{
+	public async ValueTask<bool> Handle(HaltByPidRequest request, CancellationToken cancellationToken)
+		=> await scheduler.HaltByPid(request.Pid);
+}
+
+public class ModifyQRegistersHandler(ITaskScheduler scheduler) : IRequestHandler<ModifyQRegistersRequest, bool>
+{
+	public async ValueTask<bool> Handle(ModifyQRegistersRequest request, CancellationToken cancellationToken)
+		=> await scheduler.ModifyQRegisters(request.DbRefAttribute, request.QRegisters);
+}
