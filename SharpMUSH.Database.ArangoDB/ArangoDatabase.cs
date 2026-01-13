@@ -3001,13 +3001,13 @@ public partial class ArangoDatabase(
 		// 3. Checks zone chains at each level
 		// 4. Returns first match with proper precedence
 		var query = $@"
-			LET start = DOCUMENT(@startVertex)
+			LET start = DOCUMENT(CONCAT('{DatabaseConstants.Objects}/', @dbrefNumber))
 			LET attrPath = @attr
 			LET maxDepth = @max
 			
 			// 1. Check object itself
 			LET selfAttrs = (
-				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH '{DatabaseConstants.GraphAttributes}'
+				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
 					RETURN v
@@ -3021,9 +3021,9 @@ public partial class ArangoDatabase(
 			
 			// 2. Check parent chain (only if checkParent=true and selfResult is null)
 			LET parentResults = @checkParent && selfResult == null ? (
-				FOR parent IN 1..100 OUTBOUND start GRAPH '{DatabaseConstants.GraphParents}'
+				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
 					LET parentAttrs = (
-						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH '{DatabaseConstants.GraphAttributes}'
+						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
 							RETURN v
@@ -3042,15 +3042,15 @@ public partial class ArangoDatabase(
 			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
 				// Get all objects in the inheritance chain (object + all parents)
 				LET inheritanceChain = APPEND([start], (
-					FOR parent IN 1..100 OUTBOUND start GRAPH '{DatabaseConstants.GraphParents}'
+					FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
 						RETURN parent
 				))
 				
 				// For each object in chain, check its zone chain
 				FOR obj IN inheritanceChain
-					FOR zone IN 1..100 OUTBOUND obj GRAPH '{DatabaseConstants.GraphZones}'
+					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
 						LET zoneAttrs = (
-							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH '{DatabaseConstants.GraphAttributes}'
+							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
 								RETURN v
@@ -3075,13 +3075,14 @@ public partial class ArangoDatabase(
 		var bindVars = new Dictionary<string, object>
 		{
 			{ "attr", attribute },
-			{ StartVertex, startVertex },
+			{ "dbrefNumber", dbref.Number.ToString() },
 			{ "max", attribute.Length },
 			{ "checkParent", checkParent }
 		};
 		
 		logger.LogInformation("GetAttributeWithInheritanceAsync: Executing query for dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}", 
 			dbref, string.Join("`", attribute), checkParent);
+		logger.LogInformation("StartVertex: {StartVertex}", startVertex);
 		logger.LogInformation("Query: {Query}", query);
 		logger.LogInformation("BindVars: {BindVars}", System.Text.Json.JsonSerializer.Serialize(bindVars));
 		
