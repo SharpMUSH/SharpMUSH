@@ -34,12 +34,19 @@ public static class AdminMail
 				return MModule.single("MAIL: NOTHING TO DEBUG");
 			case [.., "NUKE"] when executor.IsGod():
 				// Delete ALL mail in the entire system (God-only operation)
+				// Note: This operation may take time for large mail systems
 				var allMailList = mediator!.CreateStream(new GetAllSystemMailQuery());
 				var totalCount = 0;
 				await foreach (var mail in allMailList)
 				{
 					await mediator.Send(new DeleteMailCommand(mail));
 					totalCount++;
+					
+					// Provide progress feedback for large deletions
+					if (totalCount % 100 == 0)
+					{
+						await notifyService!.Notify(executor, $"MAIL: Deleted {totalCount} messages so far...");
+					}
 				}
 				await notifyService!.Notify(executor, $"MAIL: All mail deleted from system. Total: {totalCount}");
 				return MModule.single(totalCount.ToString());
