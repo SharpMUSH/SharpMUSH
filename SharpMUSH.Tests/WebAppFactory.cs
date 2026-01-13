@@ -265,111 +265,17 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 
 	private async Task OutputTelemetrySummaryAsync()
 	{
-		try
+		if (_server?.Services == null)
 		{
-			if (_server?.Services == null)
-			{
-				return;
-			}
-
-			var prometheusService = _server.Services.GetService<IPrometheusQueryService>();
-			if (prometheusService == null)
-			{
-				return;
-			}
-
-			// Use Console.Error to ensure output is visible even if stdout is redirected
-			Console.Error.WriteLine();
-			Console.Error.WriteLine("═══════════════════════════════════════════════════════════════");
-			Console.Error.WriteLine("                  TEST SESSION TELEMETRY SUMMARY");
-			Console.Error.WriteLine("═══════════════════════════════════════════════════════════════");
-			Console.Error.WriteLine();
-
-			// Get health status
-			var healthStatus = await prometheusService.GetHealthStatusAsync();
-			if (healthStatus.Count > 0)
-			{
-				Console.Error.WriteLine("┌─ Health Status");
-				foreach (var (service, status) in healthStatus)
-				{
-					var statusText = status == 1 ? "✓ Healthy" : "✗ Unhealthy";
-					Console.Error.WriteLine($"│  {service,-20}: {statusText}");
-				}
-				Console.Error.WriteLine();
-			}
-
-			// Get connection metrics
-			var (activeConnections, loggedInPlayers) = await prometheusService.GetConnectionMetricsAsync();
-			Console.Error.WriteLine("┌─ Connection Metrics");
-			Console.Error.WriteLine($"│  Active Connections    : {activeConnections}");
-			Console.Error.WriteLine($"│  Logged In Players     : {loggedInPlayers}");
-			Console.Error.WriteLine();
-
-			// Get most called functions (test session duration)
-			var mostCalledFunctions = await prometheusService.GetMostCalledFunctionsAsync("1h", 10);
-			if (mostCalledFunctions.Count > 0)
-			{
-				Console.Error.WriteLine("┌─ Most Called Functions (Top 10)");
-				Console.Error.WriteLine("│  Function                    Calls/sec");
-				Console.Error.WriteLine("│  ────────────────────────────────────────");
-				foreach (var (functionName, callsPerSecond) in mostCalledFunctions)
-				{
-					Console.Error.WriteLine($"│  {functionName,-28} {callsPerSecond,9:F3}");
-				}
-				Console.Error.WriteLine();
-			}
-
-			// Get slowest functions
-			var slowestFunctions = await prometheusService.GetSlowestFunctionsAsync("1h", 10);
-			if (slowestFunctions.Count > 0)
-			{
-				Console.Error.WriteLine("┌─ Slowest Functions (Top 10)");
-				Console.Error.WriteLine("│  Function                    Avg Time (ms)");
-				Console.Error.WriteLine("│  ────────────────────────────────────────────");
-				foreach (var (functionName, avgDuration) in slowestFunctions)
-				{
-					Console.Error.WriteLine($"│  {functionName,-28} {avgDuration,13:F3}");
-				}
-				Console.Error.WriteLine();
-			}
-
-			// Get most called commands
-			var mostCalledCommands = await prometheusService.GetMostCalledCommandsAsync("1h", 10);
-			if (mostCalledCommands.Count > 0)
-			{
-				Console.Error.WriteLine("┌─ Most Called Commands (Top 10)");
-				Console.Error.WriteLine("│  Command                     Calls/sec");
-				Console.Error.WriteLine("│  ────────────────────────────────────────");
-				foreach (var (commandName, callsPerSecond) in mostCalledCommands)
-				{
-					Console.Error.WriteLine($"│  {commandName,-28} {callsPerSecond,9:F3}");
-				}
-				Console.Error.WriteLine();
-			}
-
-			// Get slowest commands
-			var slowestCommands = await prometheusService.GetSlowestCommandsAsync("1h", 10);
-			if (slowestCommands.Count > 0)
-			{
-				Console.Error.WriteLine("┌─ Slowest Commands (Top 10)");
-				Console.Error.WriteLine("│  Command                     Avg Time (ms)");
-				Console.Error.WriteLine("│  ────────────────────────────────────────────");
-				foreach (var (commandName, avgDuration) in slowestCommands)
-				{
-					Console.Error.WriteLine($"│  {commandName,-28} {avgDuration,13:F3}");
-				}
-				Console.Error.WriteLine();
-			}
-
-			Console.Error.WriteLine("═══════════════════════════════════════════════════════════════");
-			Console.Error.WriteLine("                    END TELEMETRY SUMMARY");
-			Console.Error.WriteLine("═══════════════════════════════════════════════════════════════");
-			Console.Error.WriteLine();
+			return;
 		}
-		catch (Exception ex)
+
+		var prometheusService = _server.Services.GetService<IPrometheusQueryService>();
+		if (prometheusService == null)
 		{
-			// Gracefully handle any errors - don't let telemetry reporting break test cleanup
-			Console.Error.WriteLine($"Note: Unable to retrieve telemetry summary: {ex.Message}");
+			return;
 		}
+
+		await TelemetryOutputHelper.OutputTelemetrySummaryAsync(prometheusService);
 	}
 }
