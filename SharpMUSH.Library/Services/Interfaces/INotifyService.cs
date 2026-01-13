@@ -39,13 +39,6 @@ public interface INotifyService
 	ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
 	/// <summary>
-	/// Begin a context-based batching scope that batches notifications to ANY target.
-	/// Returns an IDisposable that should be disposed to end the scope and flush messages.
-	/// Supports ref-counting for nested scopes.
-	/// </summary>
-	IDisposable BeginBatchingContext();
-
-	/// <summary>
 	/// Unified error handling: optionally notify user, then return error.
 	/// The notify message and error return are SEPARATE and can be different strings.
 	/// 

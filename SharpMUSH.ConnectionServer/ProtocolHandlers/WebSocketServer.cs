@@ -1,6 +1,6 @@
 using System.Net.WebSockets;
 using System.Text;
-using MassTransit;
+using SharpMUSH.Messaging.Abstractions;
 using Microsoft.AspNetCore.Http;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;
@@ -14,13 +14,13 @@ public class WebSocketServer
 {
 	private readonly ILogger<WebSocketServer> _logger;
 	private readonly IConnectionServerService _connectionService;
-	private readonly IBus _publishEndpoint;
+	private readonly IMessageBus _publishEndpoint;
 	private readonly IDescriptorGeneratorService _descriptorGenerator;
 
 	public WebSocketServer(
 		ILogger<WebSocketServer> logger,
 		IConnectionServerService connectionService,
-		IBus publishEndpoint,
+		IMessageBus publishEndpoint,
 		IDescriptorGeneratorService descriptorGenerator)
 	{
 		_logger = logger;

@@ -280,42 +280,39 @@ public partial class Commands
 				{ Value = MModule.empty(), Break = false, NoBreak = noBreak, Iteration = 0 };
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
-			using (NotifyService!.BeginBatchingContext())
+			var lastCallState = CallState.Empty;
+			var visitorFunc = parser.CommandListParseVisitor(command);
+			foreach (var item in list)
 			{
-				var lastCallState = CallState.Empty;
-				var visitorFunc = parser.CommandListParseVisitor(command);
-				foreach (var item in list)
-				{
-					wrappedIteration.Value = item!;
-					wrappedIteration.Iteration++;
+				wrappedIteration.Value = item!;
+				wrappedIteration.Iteration++;
 
-					// Note: Command is parsed once (line above loop), then the visitor is called
-					// multiple times with different iteration register values. This is optimized.
-					lastCallState = await visitorFunc();
-				}
-
-				parser.CurrentState.IterationRegisters.TryPop(out _);
-
-				// If /notify or /pid switch is present with /inline, queue "@notify" after inline execution
-				if (switches.Contains("NOTIFY"))
-				{
-					await Mediator!.Send(new QueueCommandListRequest(
-						MModule.single("@notify me"),
-						parser.CurrentState,
-						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
-						-1));
-				}
-				else if (hasPid && !string.IsNullOrEmpty(notifyPid))
-				{
-					await Mediator!.Send(new QueueCommandListRequest(
-						MModule.single($"@notify {notifyPid}"),
-						parser.CurrentState,
-						new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
-						-1));
-				}
-
-				return lastCallState!;
+				// Note: Command is parsed once (line above loop), then the visitor is called
+				// multiple times with different iteration register values. This is optimized.
+				lastCallState = await visitorFunc();
 			}
+
+			parser.CurrentState.IterationRegisters.TryPop(out _);
+
+			// If /notify or /pid switch is present with /inline, queue "@notify" after inline execution
+			if (switches.Contains("NOTIFY"))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single($"@notify {notifyPid}"),
+					parser.CurrentState,
+					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+
+			return lastCallState!;
 		}
 		else
 		{

@@ -16,7 +16,6 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.1" />
     <PackageReference Include="morelinq" Version="4.4.0" />
-		<PackageReference Include="MassTransit.Abstractions" Version="8.5.7" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
     <PackageReference Include="NaturalSort.Extension" Version="4.4.1" />
 		<PackageReference Include="OneOf" Version="3.0.271" />
@@ -33,6 +32,7 @@
   <ItemGroup>
 	  <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
 	  <ProjectReference Include="..\SharpMUSH.Messages\SharpMUSH.Messages.csproj" />
+	  <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
 	  <ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" />
 	  <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
   </ItemGroup>
