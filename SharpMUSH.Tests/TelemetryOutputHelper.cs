@@ -12,6 +12,10 @@ public static class TelemetryOutputHelper
 	/// </summary>
 	/// <param name="prometheusService">The Prometheus query service to use for retrieving metrics.</param>
 	/// <param name="outputStream">The output stream to write to (defaults to Console.Error).</param>
+	/// <remarks>
+	/// Uses synchronous WriteLine calls instead of async WriteLineAsync to ensure output is not buffered
+	/// and appears immediately in test runners like TUnit that capture console output.
+	/// </remarks>
 	public static async Task OutputTelemetrySummaryAsync(IPrometheusQueryService prometheusService, TextWriter? outputStream = null)
 	{
 		outputStream ??= Console.Error;
