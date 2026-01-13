@@ -1079,23 +1079,31 @@ public partial class Commands
 				var destAttr = await AttributeService!.GetAttributeAsync(
 					executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
 				
+				const string exitUnlinkedMsg = "That exit doesn't go anywhere.";
+				
 				if (destAttr.IsNone || destAttr.IsError)
 				{
-					await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+					await NotifyService!.Notify(executor, exitUnlinkedMsg);
 					return CallState.Empty;
 				}
 				
 				var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
+				if (string.IsNullOrWhiteSpace(destValue))
+				{
+					await NotifyService!.Notify(executor, exitUnlinkedMsg);
+					return CallState.Empty;
+				}
+				
 				var located = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
 					executor,
 					executor,
-					destValue!,
+					destValue,
 					LocateFlags.All);
 				
 				if (!located.IsValid())
 				{
-					await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
+					await NotifyService!.Notify(executor, exitUnlinkedMsg);
 					return CallState.Empty;
 				}
 				
