@@ -216,11 +216,115 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will localize Q-registers");
 		}
 		
-		// TODO: Full implementation requires executing the attribute for each element with element as %0,
-		// handling enactor preservation and Q-register management, and handling /inline vs queued execution.
-		await NotifyService.Notify(executor, "Note: @map command attribute execution not yet implemented.");
+		// Locate the target object
+		var targetObject = await LocateService!.LocateAndNotifyIfInvalid(
+			parser, executor, executor, objSpec, LocateFlags.All);
 		
-		return new CallState("#-1 NOT IMPLEMENTED");
+		if (!targetObject.IsValid())
+		{
+			return new CallState("#-1 OBJECT NOT FOUND");
+		}
+		
+		var target = targetObject.WithoutError().WithoutNone();
+		
+		// Get the attribute to execute
+		var attributeResult = await AttributeService!.GetAttributeAsync(
+			executor, target, attrName, IAttributeService.AttributeMode.Read, false);
+		
+		if (attributeResult.IsNone || attributeResult.IsError)
+		{
+			await NotifyService.Notify(executor, $"Attribute {attrName} not found on {target.Object().Name}.");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
+		}
+		
+		var attribute = attributeResult.AsAttribute.Last();
+		var attributeText = attribute.Value.ToPlainText();
+		
+		if (string.IsNullOrWhiteSpace(attributeText))
+		{
+			// Empty attribute - nothing to execute
+			return CallState.Empty;
+		}
+		
+		var isInline = switches.Contains("INLINE");
+		var results = new List<string>();
+		
+		if (isInline)
+		{
+			// Inline execution - execute immediately for each element
+			foreach (var element in list)
+			{
+				// Set %0 to the current element
+				var registerDict = new Dictionary<string, MString> { ["0"] = element! };
+				var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
+				registerStack.Push(registerDict);
+				
+				var stateForElement = parser.CurrentState with
+				{
+					Registers = registerStack,
+					Executor = target.Object().DBRef
+				};
+				
+				// Execute the attribute with the element as %0
+				var result = await parser.With(state => stateForElement, async newParser =>
+				{
+					return await newParser.WithAttributeDebug(attribute,
+						async p => await p.CommandListParse(attribute.Value));
+				});
+				
+				if (result != null && result.Message != null)
+				{
+					results.Add(result.Message.ToPlainText() ?? string.Empty);
+				}
+			}
+			
+			// If /notify switch is present, queue "@notify" after inline execution
+			if (switches.Contains("NOTIFY"))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			
+			return new CallState(string.Join(" ", results));
+		}
+		else
+		{
+			// Queued execution - queue each element's execution
+			foreach (var element in list)
+			{
+				// Set %0 to the current element  
+				var registerDict = new Dictionary<string, MString> { ["0"] = element! };
+				var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
+				registerStack.Push(registerDict);
+				
+				var stateForElement = parser.CurrentState with
+				{
+					Registers = registerStack,
+					Executor = target.Object().DBRef
+				};
+				
+				await Mediator!.Send(new QueueCommandListRequest(
+					attribute.Value,
+					stateForElement,
+					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			
+			// If /notify switch is present, queue "@notify" after all executions
+			if (switches.Contains("NOTIFY"))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+			
+			return CallState.Empty;
+		}
 	}
 
 	[SharpCommand(Name = "@DOLIST", Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
