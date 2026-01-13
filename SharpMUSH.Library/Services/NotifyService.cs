@@ -16,7 +16,7 @@ namespace SharpMUSH.Library.Services;
 /// <summary>
 /// Notifies objects and sends telnet data with automatic batching support.
 /// All notifications are automatically batched with a 10ms timeout to reduce Kafka overhead.
-/// Messages are accumulated and flushed after 10ms of inactivity, or immediately when explicitly flushed.
+/// Messages are accumulated and flushed after 10ms of inactivity.
 /// </summary>
 public class NotifyService(
 	IMessageBus publishEndpoint, 
@@ -25,7 +25,6 @@ public class NotifyService(
 	Mediator.IMediator? mediator = null) : INotifyService
 {
 	private readonly ConcurrentDictionary<long, BatchingState> _batchingStates = new();
-	private static readonly AsyncLocal<BatchingContext?> _batchingContext = new();
 
 	private class BatchingState
 	{
@@ -34,26 +33,6 @@ public class NotifyService(
 		public Timer? FlushTimer { get; set; }
 	}
 
-	private class BatchingContext
-	{
-		public int RefCount { get; set; }
-		public ConcurrentDictionary<long, List<byte[]>> AccumulatedMessages { get; } = new();
-		public object Lock { get; } = new();
-	}
-
-	private class BatchingScopeDisposable(NotifyService service) : IDisposable
-	{
-		private bool _disposed;
-
-		public void Dispose()
-		{
-			if (!_disposed)
-			{
-				_disposed = true;
-				service.EndBatchingContextInternal().AsTask().Wait();
-			}
-		}
-	}
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
@@ -99,22 +78,6 @@ public class NotifyService(
 		);
 
 		var bytes = Encoding.UTF8.GetBytes(text);
-
-		// Check if we're in a batching context (AsyncLocal-based batching)
-		var context = _batchingContext.Value;
-		if (context != null)
-		{
-			// Accumulate messages for all handles in the context
-			await foreach (var handle in connections.Get(who).Select(x => x.Handle))
-			{
-				var messages = context.AccumulatedMessages.GetOrAdd(handle, _ => []);
-				lock (messages)
-				{
-					messages.Add(bytes);
-				}
-			}
-			return;
-		}
 
 		// Always use automatic batching with 10ms timeout
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
@@ -261,83 +224,6 @@ public class NotifyService(
 
 	public async ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
-
-	/// <summary>
-	/// Begin a context-based batching scope that batches notifications to ANY target.
-	/// Returns an IDisposable that should be disposed to end the scope and flush messages.
-	/// Supports ref-counting for nested scopes.
-	/// </summary>
-	public IDisposable BeginBatchingContext()
-	{
-		var context = _batchingContext.Value;
-		if (context != null)
-		{
-			// Already in a batching context, increment ref count
-			lock (context.Lock)
-			{
-				context.RefCount++;
-			}
-		}
-		else
-		{
-			// Create new batching context
-			_batchingContext.Value = new BatchingContext { RefCount = 1 };
-		}
-
-		return new BatchingScopeDisposable(this);
-	}
-
-	private async ValueTask EndBatchingContextInternal()
-	{
-		var context = _batchingContext.Value;
-		if (context == null)
-		{
-			return;
-		}
-
-		Dictionary<long, List<byte[]>>? messagesToFlush = null;
-
-		lock (context.Lock)
-		{
-			context.RefCount--;
-			if (context.RefCount <= 0)
-			{
-				// This is the outermost scope, collect all messages to flush
-				messagesToFlush = new Dictionary<long, List<byte[]>>(context.AccumulatedMessages);
-				_batchingContext.Value = null;
-			}
-		}
-
-		// Flush messages outside the lock
-		if (messagesToFlush != null)
-		{
-			foreach (var (handle, messages) in messagesToFlush)
-			{
-				if (messages.Count > 0)
-				{
-					var totalSize = messages.Sum(m => m.Length) + (messages.Count - 1) * 2; // +2 for \r\n
-					var combined = new byte[totalSize];
-					var offset = 0;
-
-					for (var i = 0; i < messages.Count; i++)
-					{
-						var message = messages[i];
-						Array.Copy(message, 0, combined, offset, message.Length);
-						offset += message.Length;
-
-						// Add \r\n between messages (not after the last one)
-						if (i < messages.Count - 1)
-						{
-							combined[offset++] = (byte)'\r';
-							combined[offset++] = (byte)'\n';
-						}
-					}
-
-					await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
-				}
-			}
-		}
-	}
 
 	/// <summary>
 	/// Adds a message to the batch for the specified handle and starts/resets the 10ms flush timer.
