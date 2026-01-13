@@ -1066,13 +1066,17 @@ public partial class Commands
 
 		var validDestination = destination.WithoutError().WithoutNone();
 
+		AnySharpContainer destinationContainer;
 		if (validDestination.IsExit)
 		{
-			// TODO: Implement Teleporting through an Exit.
-			return CallState.Empty;
+			// Teleporting through an exit - get the exit's destination
+			var exitDestination = await validDestination.AsExit.Location.WithCancellation(CancellationToken.None);
+			destinationContainer = exitDestination;
 		}
-
-		var destinationContainer = validDestination.AsContainer;
+		else
+		{
+			destinationContainer = validDestination.AsContainer;
+		}
 
 		foreach (var obj in toTeleportStringList)
 		{
@@ -1118,9 +1122,18 @@ public partial class Commands
 				// Notify the target player that they were teleported
 				await NotifyService!.Notify(target.Object().DBRef, "You have been teleported.");
 				
-				// TODO: Show the target player their new location (equivalent to LOOK)
-				// This requires executing commands in the target's parser context, not the executor's
-				// For now, the player can manually type 'look' to see their surroundings
+				// Show the target player their new location by executing LOOK as them
+				var targetPlayerState = parser.CurrentState with 
+				{ 
+					Executor = target.Object().DBRef,
+					Enactor = target.Object().DBRef
+				};
+				
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single("look"),
+					targetPlayerState,
+					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
 			}
 		}
 
