@@ -3007,7 +3007,7 @@ public partial class ArangoDatabase(
 			
 			// 1. Check object itself
 			LET selfAttrs = (
-				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
+				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH '{DatabaseConstants.GraphAttributes}'
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
 					RETURN v
@@ -3021,9 +3021,9 @@ public partial class ArangoDatabase(
 			
 			// 2. Check parent chain (only if checkParent=true and selfResult is null)
 			LET parentResults = @checkParent && selfResult == null ? (
-				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
+				FOR parent IN 1..100 OUTBOUND start GRAPH '{DatabaseConstants.GraphParents}'
 					LET parentAttrs = (
-						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
+						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH '{DatabaseConstants.GraphAttributes}'
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
 							RETURN v
@@ -3042,15 +3042,15 @@ public partial class ArangoDatabase(
 			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
 				// Get all objects in the inheritance chain (object + all parents)
 				LET inheritanceChain = APPEND([start], (
-					FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
+					FOR parent IN 1..100 OUTBOUND start GRAPH '{DatabaseConstants.GraphParents}'
 						RETURN parent
 				))
 				
 				// For each object in chain, check its zone chain
 				FOR obj IN inheritanceChain
-					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
+					FOR zone IN 1..100 OUTBOUND obj GRAPH '{DatabaseConstants.GraphZones}'
 						LET zoneAttrs = (
-							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
+							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH '{DatabaseConstants.GraphAttributes}'
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
 								RETURN v
@@ -3080,12 +3080,17 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
+		logger.LogInformation("GetAttributeWithInheritanceAsync: Executing query for dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}", 
+			dbref, string.Join("`", attribute), checkParent);
+		logger.LogInformation("Query: {Query}", query);
+		logger.LogInformation("BindVars: {BindVars}", System.Text.Json.JsonSerializer.Serialize(bindVars));
+		
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 		
 		// Debug logging
-		logger.LogInformation("GetAttributeWithInheritanceAsync: dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}, resultNull={ResultNull}", 
-			dbref, string.Join("`", attribute), checkParent, result == null);
+		logger.LogInformation("GetAttributeWithInheritanceAsync: dbref={DbRef}, attribute={Attribute}, checkParent={CheckParent}, resultNull={ResultNull}, resultsCount={ResultsCount}", 
+			dbref, string.Join("`", attribute), checkParent, result == null, results?.Count() ?? 0);
 		if (result != null)
 		{
 			logger.LogInformation("Result: source={Source}, sourceId={SourceId}, attributesNull={AttrsNull}, attributesCount={AttrsCount}", 
@@ -3094,6 +3099,7 @@ public partial class ArangoDatabase(
 		
 		if (result == null || result.attributes == null)
 		{
+			logger.LogWarning("Returning null: result={ResultNull}, attributes={AttrsNull}", result == null, result?.attributes == null);
 			return null;
 		}
 		
