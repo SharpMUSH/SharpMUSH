@@ -223,4 +223,111 @@ public class AttributeWithInheritanceTests
 		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Parent);
 		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("From Parent");
 	}
+
+	[Test]
+	[DependsOn(nameof(GetAttributeWithInheritance_ParentTakesPrecedenceOverZone))]
+	public async Task GetAttributeWithInheritance_NestedAttributes_WorksCorrectly()
+	{
+		// Test nested attributes like FOO`BAR
+		var objResult = await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single("@create NestedAttrTest"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Set nested attribute
+		await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single($"&NESTED`ATTR {objDbRef}=Nested Value"));
+
+		// Query using the new method
+		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+			objDbRef,
+			new[] { "NESTED", "ATTR" },
+			CheckParent: true));
+
+		// Verify
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Self);
+		await Assert.That(result.Attributes.Length).IsEqualTo(2);
+		await Assert.That(result.Attributes[1].Value.ToPlainText()).IsEqualTo("Nested Value");
+	}
+
+	[Test]
+	[DependsOn(nameof(GetAttributeWithInheritance_NestedAttributes_WorksCorrectly))]
+	public async Task GetAttributeWithInheritance_ComplexHierarchy_CorrectPrecedence()
+	{
+		// Test complex hierarchy: Child <- Parent <- Grandparent
+		// with zones at multiple levels
+		
+		// Create grandparent with attribute
+		var grandparentResult = await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single("@create ComplexGrandparent"));
+		var grandparentDbRef = DBRef.Parse(grandparentResult.Message!.ToPlainText()!);
+
+		await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single($"&COMPLEX_ATTR {grandparentDbRef}=From Grandparent"));
+
+		// Create parent with grandparent as parent
+		var parentResult = await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single("@create ComplexParent"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
+
+		await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single($"@parent {parentDbRef}={grandparentDbRef}"));
+
+		// Create child with parent
+		var childResult = await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single("@create ComplexChild"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
+
+		await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single($"@parent {childDbRef}={parentDbRef}"));
+
+		// Query - should find attribute from grandparent
+		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+			childDbRef,
+			new[] { "COMPLEX_ATTR" },
+			CheckParent: true));
+
+		// Verify
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Parent);
+		await Assert.That(result.SourceObject.Number).IsEqualTo(grandparentDbRef.Number);
+		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("From Grandparent");
+	}
+
+	[Test]
+	[DependsOn(nameof(GetAttributeWithInheritance_ComplexHierarchy_CorrectPrecedence))]
+	public async Task GetAttributeWithInheritance_NonExistentAttribute_ReturnsNull()
+	{
+		// Test that non-existent attributes return null
+		var objResult = await WebAppFactoryArg.CommandParser.CommandParse(
+			1,
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			MModule.single("@create NonExistentAttrTest"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Query for non-existent attribute
+		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+			objDbRef,
+			new[] { "DOES_NOT_EXIST" },
+			CheckParent: true));
+
+		// Verify
+		await Assert.That(result).IsNull();
+	}
 }
