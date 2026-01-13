@@ -1,4 +1,5 @@
-using MassTransit;
+using SharpMUSH.Messaging.Kafka;
+using SharpMUSH.Messaging.Abstractions;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -101,12 +102,8 @@ builder.Services.AddConnectionServerMessaging(
 	x =>
 	{
 		// Register batch consumer for telnet output messages (solves @dolist performance issue)
-		x.AddConsumer<BatchTelnetOutputConsumer>(c =>
-		{
-			c.Options<BatchOptions>(o => o
-				.SetMessageLimit(100)
-				.SetTimeLimit(TimeSpan.FromMilliseconds(10)));
-		});
+		// Batching is now configured via MessageQueueOptions.BatchMaxSize and BatchTimeLimit
+		x.AddConsumer<BatchTelnetOutputConsumer>();
 		
 		// Register individual consumers for other message types
 		x.AddConsumer<TelnetPromptConsumer>();
