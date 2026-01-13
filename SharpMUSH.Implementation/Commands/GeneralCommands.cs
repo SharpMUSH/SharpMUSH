@@ -3729,10 +3729,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "@TRIGGER",
 		Switches = ["CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 31, ParameterNames = ["object/attribute", "arguments..."])]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public static async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @trigger[/<switches>] <object>/<attribute>[=<arg0>, ..., <arg29>]
+		// @trigger[/<switches>] <object>/<attribute>[=<arg0>, <arg1>, ...]
 		// @trigger/match[/<switches>] <object>/<attribute>=<string>
 		
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -3807,12 +3807,12 @@ public partial class Commands
 		// no /spoof: target object becomes both enactor and executor
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
 		
-		// Build argument registers %0-%29 from the provided arguments
+		// Build argument registers from all provided arguments
+		// Arguments start at index 1 (index 0 is the object/attribute path)
+		// They map to %0, %1, %2, etc. with no upper limit
 		var registerDict = new Dictionary<string, MString>();
-		for (var i = 1; i < args.Count && i <= 30; i++)
+		for (var i = 1; i < args.Count; i++)
 		{
-			// Arguments start at index 1 (index 0 is the object/attribute path)
-			// They map to %0-%29
 			if (args.TryGetValue((i - 1).ToString(), out var argValue) && argValue.Message != null)
 			{
 				registerDict[(i - 1).ToString()] = argValue.Message;
