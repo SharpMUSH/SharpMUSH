@@ -3001,7 +3001,8 @@ public partial class ArangoDatabase(
 		// 3. Checks zone chains at each level
 		// 4. Returns first match with proper precedence
 		var query = $@"
-			LET start = DOCUMENT(@startVertex)
+			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
 			LET attrPath = @attr
 			LET maxDepth = @max
 			
@@ -3014,7 +3015,7 @@ public partial class ArangoDatabase(
 			)
 			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
 				attributes: selfAttrs,
-				sourceId: start._key,
+				sourceId: startObjKey,
 				source: 'Self',
 				filterFlags: false
 			}} : null
@@ -3022,6 +3023,7 @@ public partial class ArangoDatabase(
 			// 2. Check parent chain (only if checkParent=true and selfResult is null)
 			LET parentResults = @checkParent && selfResult == null ? (
 				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
+					LET parentObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
 					LET parentAttrs = (
 						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
@@ -3032,7 +3034,7 @@ public partial class ArangoDatabase(
 					LIMIT 1
 					RETURN {{
 						attributes: parentAttrs,
-						sourceId: parent._key,
+						sourceId: parentObjId,
 						source: 'Parent',
 						filterFlags: true
 					}}
@@ -3049,6 +3051,7 @@ public partial class ArangoDatabase(
 				// For each object in chain, check its zone chain
 				FOR obj IN inheritanceChain
 					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
+						LET zoneObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
 						LET zoneAttrs = (
 							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
@@ -3059,7 +3062,7 @@ public partial class ArangoDatabase(
 						LIMIT 1
 						RETURN {{
 							attributes: zoneAttrs,
-							sourceId: zone._key,
+							sourceId: zoneObjId,
 							source: 'Zone',
 							filterFlags: true
 						}}
