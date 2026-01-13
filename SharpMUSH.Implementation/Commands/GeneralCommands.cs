@@ -5743,21 +5743,46 @@ public partial class Commands
 			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "*";
 			var retroactive = switches.Contains("RETROACTIVE");
 			
-			await NotifyService!.Notify(executor, "@attribute/decompile: Decompiling attribute table");
-			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
-			if (retroactive)
+			// Get all attribute entries from the database
+			var allEntries = await Mediator!.CreateStream(new GetAllAttributeEntriesQuery()).ToArrayAsync();
+			
+			// Filter by pattern (simple wildcard matching)
+			var matchingEntries = allEntries.Where(entry => 
+				pattern == "*" || 
+				entry.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
+				(pattern.Contains('*') && MatchesWildcard(entry.Name, pattern))
+			).ToArray();
+			
+			if (matchingEntries.Length == 0)
 			{
-				await NotifyService.Notify(executor, "  Including /retroactive switch");
+				await NotifyService!.Notify(executor, $"No attributes match pattern '{pattern}'.");
+				return CallState.Empty;
 			}
 			
-			// TODO: Full implementation requires:
-			// - Iterate through all standard attributes in the attribute table
-			// - Filter by pattern (wildcard matching)
-			// - Output @attribute/access commands for each matching attribute
-			// - Include attribute flags and creator dbref
-			await NotifyService.Notify(executor, "Note: Attribute table decompilation not yet implemented.");
+			await NotifyService!.Notify(executor, $"@attribute/decompile: {matchingEntries.Length} attributes match pattern '{pattern}'");
 			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			// Output @attribute/access command for each matching attribute
+			foreach (var entry in matchingEntries.OrderBy(e => e.Name))
+			{
+				var flagList = string.Join(" ", entry.DefaultFlags);
+				var retroFlag = retroactive ? "/retroactive" : "";
+				await NotifyService.Notify(executor, $"@attribute/access{retroFlag} {entry.Name}={flagList}");
+				
+				// Include limit pattern if present
+				if (!string.IsNullOrEmpty(entry.Limit))
+				{
+					await NotifyService.Notify(executor, $"@attribute/limit {entry.Name}={entry.Limit}");
+				}
+				
+				// Include enum values if present
+				if (entry.Enum != null && entry.Enum.Length > 0)
+				{
+					var enumList = string.Join(" ", entry.Enum);
+					await NotifyService.Notify(executor, $"@attribute/enum {entry.Name}={enumList}");
+				}
+			}
+			
+			return CallState.Empty;
 		}
 		
 		// All other operations require at least one argument
@@ -5835,15 +5860,21 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 			
-			await NotifyService!.Notify(executor, $"@attribute/delete: Removing attribute '{attrName}' from table");
+			// Remove attribute from standard attribute table
+			var deleted = await Mediator!.Send(new DeleteAttributeEntryCommand(attrName.ToUpper()));
 			
-			// TODO: Full implementation requires:
-			// - Remove attribute from standard attribute table
-			// - Existing copies remain but are no longer "standard"
-			// - Save changes to persist across reboots
-			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			if (deleted)
+			{
+				await NotifyService!.Notify(executor, $"Attribute '{attrName}' removed from standard attribute table.");
+				await NotifyService.Notify(executor, "Existing copies remain but are no longer \"standard\".");
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in table.");
+				return new CallState("#-1 NOT FOUND");
+			}
 			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return CallState.Empty;
 		}
 		
 		if (switches.Contains("RENAME"))
@@ -5861,15 +5892,27 @@ public partial class Commands
 			}
 			
 			var newName = args["1"].Message?.ToPlainText();
-			await NotifyService!.Notify(executor, $"@attribute/rename: Renaming '{attrName}' to '{newName}'");
+			if (string.IsNullOrEmpty(newName))
+			{
+				await NotifyService!.Notify(executor, "You must specify a new name.");
+				return new CallState("#-1 NO NEW NAME SPECIFIED");
+			}
 			
-			// TODO: Full implementation requires:
-			// - Rename attribute in standard attribute table
-			// - Update all references to use new name
-			// - Save changes to persist across reboots
-			await NotifyService.Notify(executor, "Note: Attribute table modification not yet implemented.");
+			// Rename attribute in standard attribute table
+			var renamed = await Mediator!.Send(new RenameAttributeEntryCommand(attrName.ToUpper(), newName.ToUpper()));
 			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			if (renamed != null)
+			{
+				await NotifyService!.Notify(executor, $"Attribute '{attrName}' renamed to '{newName}' in standard attribute table.");
+				// Note: Existing attribute instances keep their original names - this only affects new instances
+			}
+			else
+			{
+				await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in table.");
+				return new CallState("#-1 NOT FOUND");
+			}
+			
+			return CallState.Empty;
 		}
 		
 		if (switches.Contains("LIMIT"))
@@ -5998,4 +6041,18 @@ public partial class Commands
 
 		return result;
 	}
+
+/// <summary>
+/// Simple wildcard matching helper for attribute name patterns.
+/// Supports * as wildcard character.
+/// </summary>
+private static bool MatchesWildcard(string text, string pattern)
+{
+// Convert wildcard pattern to regex
+var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+.Replace("\\*", ".*") + "$";
+
+return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern, 
+System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+}
 }
