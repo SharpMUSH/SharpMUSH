@@ -8,8 +8,13 @@ namespace SharpMUSH.Library.Queries.Database;
 /// Query to get an attribute with full inheritance chain resolution in a single database call.
 /// This query searches for an attribute following the inheritance order:
 /// 1. The object itself
-/// 2. Parent chain (if checkParent is true)
-/// 3. Zone chains for each level (if checkParent is true)
+/// 2. Parent chain (parent, grandparent, etc.) - if checkParent is true
+/// 3. Object's zone chains - if checkParent is true
+/// 4. Parent's zone chains - if checkParent is true
+/// 5. Grandparent's zone chains - if checkParent is true
+/// ... and so on for the entire hierarchy
+/// 
+/// IMPORTANT: Parents take precedence over zones at all levels.
 /// </summary>
 /// <param name="DBRef">The DBRef of the object to start the search from</param>
 /// <param name="Attribute">The attribute path to search for (e.g., ["FOO"] or ["FOO", "BAR", "BAZ"])</param>

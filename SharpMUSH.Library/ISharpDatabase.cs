@@ -158,7 +158,8 @@ public interface ISharpDatabase
 
 	/// <summary>
 	/// Get an attribute with full inheritance chain resolution in a single database call.
-	/// Follows the inheritance order: object → parent chain → zone chains.
+	/// Follows the inheritance order: object → parent chain (parent, grandparent, etc.) → object's zones → parent's zones → grandparent's zones, etc.
+	/// This means PARENTS TAKE PRECEDENCE OVER ZONES at all levels.
 	/// Returns the attribute with metadata about where it was found and flags adjusted for inheritance.
 	/// </summary>
 	/// <param name="dbref">DBRef of the object to start the search from</param>

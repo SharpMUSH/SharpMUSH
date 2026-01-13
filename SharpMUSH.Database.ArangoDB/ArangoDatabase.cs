@@ -2983,6 +2983,15 @@ public partial class ArangoDatabase(
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		
+		// INHERITANCE ORDER (PRECEDENCE):
+		// 1. Object itself
+		// 2. Parent chain (parent → grandparent → great-grandparent → ...)
+		// 3. Object's zones (zone → zone's zone → ...)
+		// 4. Parent's zones
+		// 5. Grandparent's zones
+		// ... and so on
+		// IMPORTANT: Parents ALWAYS take precedence over zones at all levels
+		
 		// OPTIMIZATION 1: Check object itself first with single database query
 		// This returns immediately if attribute is found, avoiding inheritance traversal
 		var directAttr = await GetAttributeAsync(dbref, attribute, ct);
