@@ -105,7 +105,7 @@ public partial class Functions
 
 		if (locateResult.IsError)
 		{
-			return PlayerMessageResult.FromError(locateResult.AsError.Value ?? "#-1 NO SUCH PLAYER");
+			return PlayerMessageResult.FromError(locateResult.AsError.Value);
 		}
 
 		if (locateResult.IsNone)
