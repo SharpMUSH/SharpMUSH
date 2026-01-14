@@ -3102,22 +3102,20 @@ public partial class ArangoDatabase(
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting {result.attributes.Count} attributes...");
 		
 		// Convert all attributes BEFORE yielding to avoid async deadlock
-		// Use async Select to convert attributes
-		var convertedAttributes = await Task.WhenAll(
-			result.attributes.Select(async attrResult =>
-			{
-				Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting attribute {attrResult.Name}...");
-				var attr = await SharpAttributeQueryToSharpAttribute(attrResult, ct);
-				Console.WriteLine($"GetAttributeWithInheritanceAsync: Converted attribute {attrResult.Name}");
-				
-				// Apply flag filtering here before yielding
-				var flags = result.filterFlags 
-					? attr.Flags.Where(f => f.Inheritable)
-					: attr.Flags;
-				
-				return new { Attribute = attr, Flags = flags };
-			})
-		);
+		// Use async Select pattern to convert attributes
+		var convertedAttributes = await result.attributes.Select(async (attrResult, _, innerCt) =>
+		{
+			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting attribute {attrResult.Name}...");
+			var attr = await SharpAttributeQueryToSharpAttribute(attrResult, innerCt);
+			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converted attribute {attrResult.Name}");
+			
+			// Apply flag filtering here before yielding
+			var flags = result.filterFlags 
+				? attr.Flags.Where(f => f.Inheritable)
+				: attr.Flags;
+			
+			return new { Attribute = attr, Flags = flags };
+		}).ToArrayAsync(cancellationToken: ct);
 		
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding {convertedAttributes.Length} results...");
 		// For each attribute in the path, yield it with inherited flags merged
@@ -3283,20 +3281,18 @@ public partial class ArangoDatabase(
 		};
 		
 		// Convert all attributes BEFORE yielding to avoid async deadlock
-		// Use async Select to convert attributes
-		var convertedAttributes = await Task.WhenAll(
-			result.attributes.Select(async attrResult =>
-			{
-				var attr = await SharpAttributeQueryToLazySharpAttribute(attrResult, ct);
-				
-				// Apply flag filtering here before yielding
-				var flags = result.filterFlags 
-					? attr.Flags.Where(f => f.Inheritable)
-					: attr.Flags;
-				
-				return new { Attribute = attr, Flags = flags };
-			})
-		);
+		// Use async Select pattern to convert attributes
+		var convertedAttributes = await result.attributes.Select(async (attrResult, _, innerCt) =>
+		{
+			var attr = await SharpAttributeQueryToLazySharpAttribute(attrResult, innerCt);
+			
+			// Apply flag filtering here before yielding
+			var flags = result.filterFlags 
+				? attr.Flags.Where(f => f.Inheritable)
+				: attr.Flags;
+			
+			return new { Attribute = attr, Flags = flags };
+		}).ToArrayAsync(cancellationToken: ct);
 		
 		// For each attribute in the path, yield it with inherited flags merged
 		for (int i = 0; i < convertedAttributes.Length; i++)
