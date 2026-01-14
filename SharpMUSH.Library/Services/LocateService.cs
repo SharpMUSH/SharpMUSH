@@ -232,9 +232,9 @@ public partial class LocateService(IMediator mediator,
 				    || await Nearby(looker, match.WithoutError().WithoutNone())
 				    || await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
 				{
-					// TODO: This needs review - the logic may be incorrect.
+					// Check if the looker controls the found player when OnlyMatchLookerControlledObjects flag is set
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					    || await permissionService.Controls(looker, where))
+					    || await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
 					{
 						return match;
 					}

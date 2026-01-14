@@ -681,7 +681,7 @@ public partial class Commands
 		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Future enhancement: Could pipe message through SPEAK() function for text processing
+		// TODO: Could pipe message through SPEAK() function for text processing
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
@@ -702,7 +702,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Future enhancement: Could pipe message through SPEAK() function for text processing
+		// TODO: Could pipe message through SPEAK() function for text processing
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
@@ -2368,7 +2368,7 @@ public partial class Commands
 		CommandLock = "FLAG^WIZARD ROYALTY|POWER^ANNOUNCE", MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Future enhancement: Could pipe message through SPEAK() function for text processing
+		// TODO: Could pipe message through SPEAK() function for text processing
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 

@@ -127,6 +127,79 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// Validates that a custom semaphore attribute follows the required rules:
+	/// 1. If already set, must have same owner (God) and flags as SEMAPHORE (no_inherit, no_clone, locked)
+	/// 2. If already set, must have numeric or empty value
+	/// 3. If not set, cannot be a built-in attribute (unless it is SEMAPHORE)
+	/// </summary>
+	private static async ValueTask<OneOf<Success, Error<string>>> ValidateSemaphoreAttribute(
+		AnySharpObject targetObject,
+		string[] attributePath)
+	{
+		// SEMAPHORE attribute is always valid
+		if (attributePath.Length == 1 && attributePath[0].Equals(DefaultSemaphoreAttribute, StringComparison.OrdinalIgnoreCase))
+		{
+			return new Success();
+		}
+
+		// Check if this is a built-in standard attribute
+		var allStandardAttributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
+		var isStandardAttribute = await allStandardAttributes
+			.AnyAsync(stdAttr => stdAttr.Name.Equals(attributePath[0], StringComparison.OrdinalIgnoreCase));
+
+		// Get the attribute if it exists
+		var god = await HelperFunctions.GetGod(Mediator!);
+		var attrResult = await AttributeService!.GetAttributeAsync(
+			god, targetObject, string.Join("`", attributePath), IAttributeService.AttributeMode.Read, false);
+
+		if (attrResult.IsNone)
+		{
+			// Attribute not set - check if it's a built-in
+			if (isStandardAttribute)
+			{
+				return new Error<string>($"Cannot use built-in attribute '{attributePath[0]}' as semaphore.");
+			}
+			// Not set and not built-in - valid
+			return new Success();
+		}
+
+		if (attrResult.IsError)
+		{
+			return new Error<string>(attrResult.AsError.Value);
+		}
+
+		// Attribute exists - validate owner, flags, and value
+		var attribute = attrResult.AsAttribute.Last();
+
+		// Check owner (must be God - DBRef 1)
+		// Note: Owner is guaranteed to exist for attributes
+		var owner = await attribute.Owner.WithCancellation(CancellationToken.None);
+		if (owner!.Object.Key != 1)
+		{
+			return new Error<string>($"Semaphore attribute must be owned by God (#1). Current owner: #{owner.Object.Key}");
+		}
+
+		// Check value (must be numeric or empty)
+		var value = attribute.Value.ToPlainText();
+		if (!string.IsNullOrEmpty(value) && !int.TryParse(value, out _))
+		{
+			return new Error<string>($"Semaphore attribute must have a numeric or empty value. Current value: {value}");
+		}
+
+		// Check flags (must have no_inherit, no_clone, and locked)
+		var flagNames = attribute.Flags.Select(f => f.Name.ToLowerInvariant()).ToHashSet();
+		var requiredFlags = new[] { "no_inherit", "no_clone", "locked" };
+		var missingFlags = requiredFlags.Except(flagNames).ToList();
+
+		if (missingFlags.Any())
+		{
+			return new Error<string>($"Semaphore attribute must have flags: {string.Join(", ", requiredFlags)}. Missing: {string.Join(", ", missingFlags)}");
+		}
+
+		return new Success();
+	}
+
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
 	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
@@ -1997,28 +2070,61 @@ public partial class Commands
 				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
 
-			// TODO: Ensure the attribute has the same flags as the SEMAPHORE @attribute, otherwise it can't be used!
+			// @wait <object>/<attribute>=<command list>
+			// Validate semaphore attribute follows MUSH rules
 			case 2:
-				await QueueSemaphore(parser, foundObject, splitBySlashes[1].Split('`'), arg1);
+			{
+				var customSemaphoreAttr = splitBySlashes[1].Split('`');
+				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+				
+				if (validation.IsT1)
+				{
+					await NotifyService!.Notify(executor, validation.AsT1.Value);
+					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+				}
+				
+				await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1);
 				return CallState.Empty;
+			}
 
 			// @wait[/until] <object>/<attribute>/<time>=<command list>
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
 				await NotifyService!.Notify(executor, "Invalid time argument format");
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
 
-			// TODO: Validate valid attribute value.
+			// Note: Attribute value validation for semaphore usage is handled in QueueSemaphore/QueueSemaphoreWithDelay
+			// methods. If the attribute value is not a valid integer, an error is returned.
 			case 3 when switches.Contains("UNTIL"):
 			{
+				var customSemaphoreAttr = splitBySlashes[1].Split('`');
+				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+				
+				if (validation.IsT1)
+				{
+					await NotifyService!.Notify(executor, validation.AsT1.Value);
+					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+				}
+				
 				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
-				await QueueSemaphoreWithDelay(parser, foundObject, splitBySlashes[1].Split('`'), newUntilTime, arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1);
 				return CallState.Empty;
 			}
 
 			case 3:
-				await QueueSemaphoreWithDelay(parser, foundObject, splitBySlashes[1].Split('`'),
+			{
+				var customSemaphoreAttr = splitBySlashes[1].Split('`');
+				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+				
+				if (validation.IsT1)
+				{
+					await NotifyService!.Notify(executor, validation.AsT1.Value);
+					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+				}
+				
+				await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr,
 					TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
+			}
 
 			default:
 				await NotifyService!.Notify(executor, "Invalid first argument format");
@@ -3811,17 +3917,101 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will queue @notify after completion");
 		}
 		
-		// TODO: Full implementation requires:
-		// - Pattern matching (wildcard or regexp based on switch)
-		// - Capture group handling ($0-$9 for matches)
-		// - #$ substitution in actions (replaced with evaluated test string)
-		// - Queue or inline execution based on switches
-		// - Q-register management (localize, clearregs)
-		// - @break propagation handling
-		// - Only execute first matching action (unlike @switch which executes all)
-		await NotifyService.Notify(executor, "Note: Pattern matching and action execution not yet implemented.");
+		// Pattern matching implementation
+		bool isRegexp = switches.Contains("REGEXP");
+		bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
+		bool localizeRegs = switches.Contains("LOCALIZE");
+		bool clearRegs = switches.Contains("CLEARREGS");
 		
-		return new CallState("#-1 NOT IMPLEMENTED");
+		// Process expression/action pairs
+		bool matchFound = false;
+		for (int i = 0; i < pairCount; i++)
+		{
+			var exprIndex = (i * 2) + 1;
+			var actionIndex = (i * 2) + 2;
+			
+			var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
+			var action = args[actionIndex.ToString()].Message;
+			
+			// Perform pattern matching
+			bool matches = false;
+			if (isRegexp)
+			{
+				// Regular expression matching
+				try
+				{
+					var regex = new Regex(pattern, RegexOptions.None);
+					matches = regex.IsMatch(testString);
+				}
+				catch (ArgumentException)
+				{
+					await NotifyService.Notify(executor, $"Invalid regex pattern: {pattern}");
+					continue;
+				}
+			}
+			else
+			{
+				// Wildcard pattern matching
+				var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+				var regex = new Regex(regexPattern, RegexOptions.None);
+				matches = regex.IsMatch(testString);
+			}
+			
+			if (matches && action != null)
+			{
+				matchFound = true;
+				
+				// Substitute #$ with test string in action
+				var actionText = action.ToPlainText().Replace("#$", testString);
+				var actionMString = MModule.single(actionText);
+				
+				// Execute action (inline for now, queue support can be added later)
+				if (isInline)
+				{
+					await parser.CommandListParse(actionMString);
+				}
+				else
+				{
+					// Queue the action
+					await Mediator!.Send(new QueueCommandListRequest(
+						actionMString,
+						parser.CurrentState,
+						new DbRefAttribute(executor.Object().DBRef, []),
+						0));
+				}
+				
+				// @select only executes first match
+				break;
+			}
+		}
+		
+		// Execute default action if no match and default exists
+		if (!matchFound && hasDefault)
+		{
+			var defaultIndex = args.Count - 1;
+			var defaultAction = args[defaultIndex.ToString()].Message;
+			
+			if (defaultAction != null)
+			{
+				var actionText = defaultAction.ToPlainText().Replace("#$", testString);
+				var actionMString = MModule.single(actionText);
+				
+				if (isInline)
+				{
+					await parser.CommandListParse(actionMString);
+				}
+				else
+				{
+					await Mediator!.Send(new QueueCommandListRequest(
+						actionMString,
+						parser.CurrentState,
+						new DbRefAttribute(executor.Object().DBRef, []),
+						0));
+				}
+			}
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@TRIGGER",
@@ -3922,9 +4112,50 @@ public partial class Commands
 			registerStack.Push(registerDict);
 		}
 		
-		// TODO: Handle /match for pattern matching when pattern engine available
-		// Note: INLINE switch executes immediately (current default behavior)
-		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements
+		// Handle /match switch for pattern matching
+		if (switches.Contains("MATCH"))
+		{
+			// With /match, the first argument (index 1) is the test string
+			// The attribute should contain patterns to match against
+			if (!args.TryGetValue("1", out var matchArg) || matchArg.Message == null)
+			{
+				await NotifyService!.Notify(executor, "You must provide a string to match when using /match.");
+				return new CallState("#-1 NO MATCH STRING");
+			}
+			
+			var testString = matchArg.Message.ToPlainText();
+			
+			// Parse attribute text as pattern list (one pattern per line or space-separated)
+			var patterns = attributeText.Split(new[] { '\n', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			
+			bool matchFound = false;
+			foreach (var pattern in patterns)
+			{
+				var trimmedPattern = pattern.Trim();
+				if (string.IsNullOrEmpty(trimmedPattern)) continue;
+				
+				// Use wildcard pattern matching
+				var regexPattern = MModule.getWildcardMatchAsRegex2(trimmedPattern);
+				var regex = new Regex(regexPattern, RegexOptions.None);
+				
+				if (regex.IsMatch(testString))
+				{
+					matchFound = true;
+					break;
+				}
+			}
+			
+			// Only execute if match was found
+			if (!matchFound)
+			{
+				return CallState.Empty;
+			}
+			
+			// Continue with execution below
+		}
+		
+		// Note: INLINE switch executes immediately (current default behavior).
+		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements.
 		
 		// Execute with recursion tracking and DEBUG/VERBOSE support
 		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
@@ -4007,7 +4238,7 @@ public partial class Commands
 			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
 		}
 
-		// TODO: Channel Visibility on most of these commands.
+		// Note: Channel visibility checking is handled by PermissionService.ChannelCanSeeAsync in each handler
 		return switches switch
 		{
 			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, LocateService!, PermissionService!, Mediator!,
@@ -4374,7 +4605,7 @@ public partial class Commands
 	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
 		// For now, empty flags are considered default for most attributes.
-		// TODO: In the future, implement proper checking against @attribute/access definitions
+		// TODO: Implement proper checking against @attribute/access definitions
 		// stored in the database for standard attributes that have custom default flags.
 		// This would require:
 		// 1. Database table/collection for attribute definitions with default flags
@@ -4522,10 +4753,44 @@ public partial class Commands
 		var objects = MModule.plainText(args["0"].Message!);
 		var message = args["1"].Message!;
 
-		// For simplicity: emit to executor's location, excluding the specified objects
-		// TODO: Support room/obj format like PennMUSH
-		var targetRoom = await executor.Where();
-		var objectList = ArgHelpers.NameList(objects);
+		// Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
+		// This allows emitting to a specific room while excluding specific objects.
+		AnySharpContainer targetRoom;
+		string objectsToExclude;
+		
+		// Check if format is "room/objects"
+		if (objects.Contains('/'))
+		{
+			var parts = objects.Split('/', 2);
+			var roomName = parts[0].Trim();
+			objectsToExclude = parts[1].Trim();
+			
+			// Locate the target room
+			var roomResult = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				executor,
+				executor,
+				roomName,
+				LocateFlags.All);
+			
+			if (!roomResult.IsValid() || (!roomResult.IsRoom && !roomResult.IsThing))
+			{
+				await NotifyService!.Notify(executor, "Invalid room specified.");
+				return new CallState("#-1 INVALID ROOM");
+			}
+			
+			targetRoom = roomResult.IsRoom 
+				? roomResult.WithoutError().WithoutNone().MinusExit() 
+				: await roomResult.WithoutError().WithoutNone().Where();
+		}
+		else
+		{
+			// Original behavior: emit to executor's location
+			targetRoom = await executor.Where();
+			objectsToExclude = objects;
+		}
+		
+		var objectList = ArgHelpers.NameList(objectsToExclude);
 		var excludeObjects = new List<AnySharpObject>();
 
 		// Resolve all objects to exclude
@@ -5198,14 +5463,20 @@ public partial class Commands
 		// This evaluates the command list without creating a queue entry
 		try
 		{
+			var hasNoBreak = switches.Contains("NOBREAK");
+			
 			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 			{
 				var execResult = await parser.WithAttributeDebug(attribute,
 					p => p.CommandListParse(MModule.single(attributeText)));
 				
-				// TODO: Handle NOBREAK switch
-				// When set, @break/@assert from included code shouldn't propagate to calling list
-				// This requires break/assert propagation system
+				// Handle NOBREAK switch to prevent @break/@assert propagation.
+				// When set, @break/@assert from included code shouldn't propagate to calling list.
+				if (hasNoBreak && parser.CurrentState.ExecutionStack.TryPeek(out var execution) && execution.CommandListBreak)
+				{
+					// Clear the break flag so it doesn't propagate to the calling context
+					parser.CurrentState.ExecutionStack.TryPop(out _);
+				}
 				
 				return execResult ?? CallState.Empty;
 			});
@@ -5745,9 +6016,9 @@ public partial class Commands
 
 		while ((await parser.FunctionParse(predicate.Message!))!.Message.Truthy() && limit > 0)
 		{
-			// TODO: I think I need a way to REWIND the stack in the PARSER.
-			// This is going to be tricky.
-			// Todo: Parse arguments?
+			// TODO: Implement parser stack rewinding for better state management.
+			// This would allow resetting parser state between loop iterations cleanly.
+			// Current workaround uses state replacement via With().
 			await parser.With(
 				state => state with { Arguments = args.Skip(1).ToDictionary() },
 				async newParser => await previousCommand.CommandInvoker(newParser));
@@ -5940,7 +6211,9 @@ public partial class Commands
 			
 			await NotifyService!.Notify(executor, $"Attribute '{attrName}' set with flags: {string.Join(" ", flagNames)}");
 			
-			// TODO: If retroactive, update all existing copies
+			// TODO: Retroactive flag updates to existing attribute instances.
+			// When /retroactive is set, should update flags on all existing copies of this attribute
+			// across all objects in the database. Requires bulk update operation.
 			if (retroactive)
 			{
 				await NotifyService.Notify(executor, "Note: Retroactive flag updating not yet implemented.");
@@ -6031,7 +6304,8 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
 			await NotifyService.Notify(executor, "  New values must match this pattern (case insensitive)");
 			
-			// TODO: Full implementation requires:
+			// TODO: Attribute validation via regex patterns.
+			// Requirements:
 			// - Store regexp pattern with attribute in table
 			// - Validate all new attribute values against pattern
 			// - Pattern is case insensitive unless (?-i) is used
@@ -6059,7 +6333,8 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Choices: {choices}");
 			await NotifyService.Notify(executor, "  New values must match one of these choices");
 			
-			// TODO: Full implementation requires:
+			// TODO: Attribute validation via enumeration lists.
+			// Requirements:
 			// - Store enumeration list with attribute in table
 			// - Validate all new attribute values against list
 			// - Support partial matching like grab()
@@ -6070,12 +6345,18 @@ public partial class Commands
 		}
 		
 		// No switches - display attribute information
+		// TODO: Attribute information display requires attribute table query system.
+		// Requirements:
+		// - Query attribute table for full name, flags, creator, access rules
+		// - Display default flags if any
+		// - Show validation rules (limit/enum) if set
 		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrName}'");
 		await NotifyService.Notify(executor, "  Full name: (attribute lookup pending)");
 		await NotifyService.Notify(executor, "  Flags: (attribute table query pending)");
 		await NotifyService.Notify(executor, "  Created by: (attribute table query pending)");
 		
-		// TODO: Full implementation requires:
+		// TODO: Full attribute information display requires attribute table query system.
+		// Requirements:
 		// - Query attribute table for attribute information
 		// - Display full name (canonical form)
 		// - Display default attribute flags

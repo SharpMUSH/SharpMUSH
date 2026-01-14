@@ -16,7 +16,9 @@ public class StartupHandler(
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
 		logger.LogInformation("Setting server time data.");
-		// TODO: Move handling of CRON information like this to its own background Handler
+		// TODO: Move CRON/scheduled task management (warning times, purge times, etc.)
+		// to a dedicated background service. This would better separate concerns and allow for
+		// more sophisticated scheduling logic (e.g., configurable schedules, multiple cron jobs).
 		await data.SetExpandedServerDataAsync(new UptimeData(
 			StartTime: DateTimeOffset.UtcNow,
 			LastRebootTime: DateTimeOffset.Now,
