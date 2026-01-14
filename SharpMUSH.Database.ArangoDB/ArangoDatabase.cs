@@ -2994,7 +2994,7 @@ public partial class ArangoDatabase(
 		
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
-		// Single AQL query that handles entire inheritance chain
+		// Single AQL query that handles entire inheritance chain AND fetches flags
 		var query = $@"
 			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
@@ -3005,7 +3005,8 @@ public partial class ArangoDatabase(
 				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
-					RETURN v
+					LET flags = (FOR f IN 1..1 OUTBOUND v._id GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN f)
+					RETURN MERGE(v, {{ flags: flags }})
 			)
 			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
 				attributes: selfAttrs,
@@ -3021,7 +3022,8 @@ public partial class ArangoDatabase(
 						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
-							RETURN v
+							LET flags = (FOR f IN 1..1 OUTBOUND v._id GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN f)
+							RETURN MERGE(v, {{ flags: flags }})
 					)
 					FILTER LENGTH(parentAttrs) == maxDepth
 					LIMIT 1
@@ -3046,7 +3048,8 @@ public partial class ArangoDatabase(
 							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
-								RETURN v
+								LET flags = (FOR f IN 1..1 OUTBOUND v._id GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN f)
+								RETURN MERGE(v, {{ flags: flags }})
 						)
 						FILTER LENGTH(zoneAttrs) == maxDepth
 						LIMIT 1
@@ -3091,27 +3094,25 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Pre-fetch all flags for all attributes at once
-		var allFlags = new Dictionary<string, SharpAttributeFlag[]>();
-		foreach (var attrResult in result.attributes)
-		{
-			var flagsList = new List<SharpAttributeFlag>();
-			await foreach (var flag in GetAttributeFlagsAsync(attrResult.Id, ct))
-			{
-				flagsList.Add(flag);
-			}
-			allFlags[attrResult.Id] = flagsList.ToArray();
-		}
-		
-		// Convert all attributes at once
+		// Convert all attributes at once - flags are now included in the query results
 		var convertedAttributes = new List<SharpAttribute>();
 		foreach (var attrResult in result.attributes)
 		{
+			// Convert flags from query result
+			var flags = attrResult.flags?.Select(f => new SharpAttributeFlag
+			{
+				Name = f.Name,
+				Symbol = f.Symbol,
+				System = f.System,
+				Inheritable = f.Inheritable,
+				Id = f.Id
+			}).ToArray() ?? [];
+			
 			var attr = new SharpAttribute(
 				attrResult.Id,
 				attrResult.Key,
 				attrResult.Name,
-				allFlags[attrResult.Id],
+				flags,
 				null,
 				attrResult.LongName,
 				new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(attrResult.Id, ct))),
@@ -3190,7 +3191,7 @@ public partial class ArangoDatabase(
 		
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
-		// Single AQL query that handles entire inheritance chain
+		// Single AQL query that handles entire inheritance chain AND fetches flags
 		var query = $@"
 			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
@@ -3201,7 +3202,8 @@ public partial class ArangoDatabase(
 				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
-					RETURN v
+					LET flags = (FOR f IN 1..1 OUTBOUND v._id GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN f)
+					RETURN MERGE(v, {{ flags: flags }})
 			)
 			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
 				attributes: selfAttrs,
@@ -3217,7 +3219,8 @@ public partial class ArangoDatabase(
 						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
-							RETURN v
+							LET flags = (FOR f IN 1..1 OUTBOUND v._id GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN f)
+							RETURN MERGE(v, {{ flags: flags }})
 					)
 					FILTER LENGTH(parentAttrs) == maxDepth
 					LIMIT 1
@@ -3242,7 +3245,8 @@ public partial class ArangoDatabase(
 							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
-								RETURN v
+								LET flags = (FOR f IN 1..1 OUTBOUND v._id GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN f)
+								RETURN MERGE(v, {{ flags: flags }})
 						)
 						FILTER LENGTH(zoneAttrs) == maxDepth
 						LIMIT 1
@@ -3287,27 +3291,25 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Pre-fetch all flags for all attributes at once
-		var allFlags = new Dictionary<string, SharpAttributeFlag[]>();
-		foreach (var attrResult in result.attributes)
-		{
-			var flagsList = new List<SharpAttributeFlag>();
-			await foreach (var flag in GetAttributeFlagsAsync(attrResult.Id, ct))
-			{
-				flagsList.Add(flag);
-			}
-			allFlags[attrResult.Id] = flagsList.ToArray();
-		}
-		
-		// Convert all attributes at once
+		// Convert all attributes at once - flags are now included in the query results
 		var convertedAttributes = new List<LazySharpAttribute>();
 		foreach (var attrResult in result.attributes)
 		{
+			// Convert flags from query result
+			var flags = attrResult.flags?.Select(f => new SharpAttributeFlag
+			{
+				Name = f.Name,
+				Symbol = f.Symbol,
+				System = f.System,
+				Inheritable = f.Inheritable,
+				Id = f.Id
+			}).ToArray() ?? [];
+			
 			var attr = new LazySharpAttribute(
 				attrResult.Id,
 				attrResult.Key,
 				attrResult.Name,
-				allFlags[attrResult.Id],
+				flags,
 				null,
 				attrResult.LongName,
 				new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(attrResult.Id, ct))),
