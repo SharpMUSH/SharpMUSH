@@ -1704,7 +1704,7 @@ public partial class ArangoDatabase(
 		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
 		//
 		// Note: Results may not be sorted hierarchically (parent before children).
-		// Future enhancement: Add SORT clause for hierarchical ordering.
+		// TODO: Add SORT clause for hierarchical ordering.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
@@ -1744,7 +1744,7 @@ public partial class ArangoDatabase(
 		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
 		//
 		// Note: Results may not be sorted hierarchically (parent before children).
-		// Future enhancement: Add SORT clause for hierarchical ordering.
+		// TODO: Add SORT clause for hierarchical ordering.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?

@@ -1871,7 +1871,7 @@ public partial class Commands
 		// Try to parse as a number for pennies/money
 		if (int.TryParse(thingToGive, out var amount))
 		{
-			// Not Implemented: Money/penny transfer system.
+			// TODO: Money/penny transfer system.
 			// Requires implementing full economy system with balance tracking, transaction logging, etc.
 			await NotifyService!.Notify(executor, "Money transfer not yet implemented.");
 			return CallState.Empty;

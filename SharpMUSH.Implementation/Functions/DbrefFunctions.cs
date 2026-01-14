@@ -1336,7 +1336,7 @@ LOCATE()
 		var strListAsDbrefs = strListExisting.Select(x => x.Item2.AsAnyObject.Object().DBRef);
 
 		var theGoodOnes = dbrefListExisting.Union(strListAsDbrefs);
-		// Future enhancement: Support obj/attr syntax for evaluation of bad results
+		// TODO: Support obj/attr syntax for evaluation of bad results
 		// When a name doesn't resolve to an object, check if it's in "object/attribute" format
 		// and evaluate that attribute instead. This requires parsing the format and retrieving
 		// the attribute value from the specified object.

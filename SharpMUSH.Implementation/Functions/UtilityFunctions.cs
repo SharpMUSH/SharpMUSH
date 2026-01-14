@@ -24,7 +24,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	// Future Enhancement: pcreate() returns #1234:timestamp format which includes both dbref and creation time.
+	// TODO: pcreate() returns #1234:timestamp format which includes both dbref and creation time.
 	// This is not directly compatible with functions that expect just a DBREF (#1234).
 	// Consider adding a configuration option for backward compatibility mode.
 	[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly)]
@@ -61,7 +61,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 
-		// Future Enhancement: Move ANSI color processing to AnsiMarkup module for better integration.
+		// TODO: Move ANSI color processing to AnsiMarkup module for better integration.
 		// This would allow align() and other markup functions to work directly with parsed ANSI structures.
 		var foreground = AnsiColor.NoAnsi;
 		var background = AnsiColor.NoAnsi;
@@ -138,7 +138,7 @@ public partial class Functions
 						curHilight = false;
 						break;
 					case 'n':
-						// Future Enhancement: ANSI 'n' (clear/normal) handling may need improvement.
+						// TODO: ANSI 'n' (clear/normal) handling may need improvement.
 						// Current implementation sets a simple flag, but proper handling would involve
 						// clearing the entire ANSI state tree structure to reset all formatting.
 						clear = true;
@@ -1519,7 +1519,7 @@ public partial class Functions
 	[SharpFunction(Name = "stext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Not Implemented: stext() requires text file system integration which is planned for future release.
+		// TODO: stext() requires text file system integration which is planned for future release.
 		// Text files allow storing large amounts of text accessible via file://<filename> references.
 		// See CoPilot Files/TEXT_FILE_SYSTEM_PLAN.md for implementation details.
 		return ValueTask.FromResult(new CallState(Errors.NotSupported));

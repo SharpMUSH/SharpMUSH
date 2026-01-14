@@ -453,7 +453,7 @@ public partial class Functions
 			target = executor;
 		}
 
-		// Not Implemented: Actual websocket/out-of-band JSON communication is planned for future release.
+		// TODO: Actual websocket/out-of-band JSON communication is planned for future release.
 		// For now, this returns an error as the feature requires websocket support.
 		//
 		// Full implementation requirements:

@@ -64,7 +64,7 @@ public static class StatusMail
 		await foreach (var mail in actualList)
 		{
 			await mediator.Send(new UpdateMailCommand(mail, mailUpdate));
-			// Future Enhancement: Mail IDs shown to users should be per-player inbox numbers, not database IDs.
+			// TODO: Mail IDs shown to users should be per-player inbox numbers, not database IDs.
 			// This requires implementing a mail numbering system that tracks each player's mail order.
 			// Currently shows internal database IDs which aren't useful to users.
 			await notifyService.Notify(executor, $"Mail {id} updated.");

@@ -2000,7 +2000,7 @@ public partial class Commands
 			// @wait <object>/<attribute>=<command list>
 			// Note: When using a custom semaphore attribute (not "SEMAPHORE"), the attribute should ideally
 			// have the same flags as the system SEMAPHORE attribute. Currently no validation is performed.
-			// Future enhancement: Validate that custom semaphore attributes have appropriate flags.
+			// TODO: Validate that custom semaphore attributes have appropriate flags.
 			case 2:
 				await QueueSemaphore(parser, foundObject, splitBySlashes[1].Split('`'), arg1);
 				return CallState.Empty;
@@ -3815,7 +3815,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will queue @notify after completion");
 		}
 		
-		// Not Implemented: Full @switch implementation requires pattern matching engine.
+		// TODO: Full @switch implementation requires pattern matching engine.
 		// Requirements:
 		// - Pattern matching (wildcard or regexp based on switch)
 		// - Capture group handling ($0-$9 for matches)
@@ -3927,7 +3927,7 @@ public partial class Commands
 			registerStack.Push(registerDict);
 		}
 		
-		// Future Enhancement: /match switch for pattern matching requires pattern engine implementation.
+		// TODO: /match switch for pattern matching requires pattern engine implementation.
 		// Note: INLINE switch executes immediately (current default behavior).
 		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements.
 		
@@ -4012,7 +4012,7 @@ public partial class Commands
 			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
 		}
 
-		// Future Enhancement: Channel visibility checking needs implementation.
+		// TODO: Channel visibility checking needs implementation.
 		// This would filter channels based on who can see them (private channels, etc.).
 		return switches switch
 		{
@@ -4380,7 +4380,7 @@ public partial class Commands
 	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
 		// For now, empty flags are considered default for most attributes.
-		// Future Enhancement: Implement proper checking against @attribute/access definitions
+		// TODO: Implement proper checking against @attribute/access definitions
 		// stored in the database for standard attributes that have custom default flags.
 		// This would require:
 		// 1. Database table/collection for attribute definitions with default flags
@@ -4529,7 +4529,7 @@ public partial class Commands
 		var message = args["1"].Message!;
 
 		// For simplicity: emit to executor's location, excluding the specified objects
-		// Future Enhancement: Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
+		// TODO: Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
 		// This would allow emitting to a specific room while excluding specific objects.
 		var targetRoom = await executor.Where();
 		var objectList = ArgHelpers.NameList(objects);
@@ -5210,7 +5210,7 @@ public partial class Commands
 				var execResult = await parser.WithAttributeDebug(attribute,
 					p => p.CommandListParse(MModule.single(attributeText)));
 				
-				// Future Enhancement: Handle NOBREAK switch to prevent @break/@assert propagation.
+				// TODO: Handle NOBREAK switch to prevent @break/@assert propagation.
 				// When set, @break/@assert from included code shouldn't propagate to calling list.
 				// This requires implementing a break/assert propagation control system.
 				
@@ -5752,7 +5752,7 @@ public partial class Commands
 
 		while ((await parser.FunctionParse(predicate.Message!))!.Message.Truthy() && limit > 0)
 		{
-			// Future Enhancement: Implement parser stack rewinding for better state management.
+			// TODO: Implement parser stack rewinding for better state management.
 			// This would allow resetting parser state between loop iterations cleanly.
 			// Current workaround uses state replacement via With().
 			await parser.With(
@@ -5947,7 +5947,7 @@ public partial class Commands
 			
 			await NotifyService!.Notify(executor, $"Attribute '{attrName}' set with flags: {string.Join(" ", flagNames)}");
 			
-			// Future Enhancement: Retroactive flag updates to existing attribute instances.
+			// TODO: Retroactive flag updates to existing attribute instances.
 			// When /retroactive is set, should update flags on all existing copies of this attribute
 			// across all objects in the database. Requires bulk update operation.
 			if (retroactive)
@@ -6040,7 +6040,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
 			await NotifyService.Notify(executor, "  New values must match this pattern (case insensitive)");
 			
-			// Not Implemented: Attribute validation via regex patterns.
+			// TODO: Attribute validation via regex patterns.
 			// Requirements:
 			// - Store regexp pattern with attribute in table
 			// - Validate all new attribute values against pattern
@@ -6069,7 +6069,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Choices: {choices}");
 			await NotifyService.Notify(executor, "  New values must match one of these choices");
 			
-			// Not Implemented: Attribute validation via enumeration lists.
+			// TODO: Attribute validation via enumeration lists.
 			// Requirements:
 			// - Store enumeration list with attribute in table
 			// - Validate all new attribute values against list
@@ -6081,7 +6081,7 @@ public partial class Commands
 		}
 		
 		// No switches - display attribute information
-		// Not Implemented: Attribute information display requires attribute table query system.
+		// TODO: Attribute information display requires attribute table query system.
 		// Requirements:
 		// - Query attribute table for full name, flags, creator, access rules
 		// - Display default flags if any
@@ -6091,7 +6091,7 @@ public partial class Commands
 		await NotifyService.Notify(executor, "  Flags: (attribute table query pending)");
 		await NotifyService.Notify(executor, "  Created by: (attribute table query pending)");
 		
-		// Not Implemented: Full attribute information display requires attribute table query system.
+		// TODO: Full attribute information display requires attribute table query system.
 		// Requirements:
 		// - Query attribute table for attribute information
 		// - Display full name (canonical form)
