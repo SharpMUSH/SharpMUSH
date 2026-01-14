@@ -3135,111 +3135,119 @@ public partial class ArangoDatabase(
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		
-		// Try getting the attribute directly from the object first
-		var directAttr = GetLazyAttributeAsync(dbref, attribute, ct);
-		if (directAttr != null)
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
+		
+		// Single AQL query that handles entire inheritance chain
+		var query = $@"
+			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
+			LET attrPath = @attr
+			LET maxDepth = @max
+			
+			LET selfAttrs = (
+				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
+					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+					FILTER !condition
+					RETURN v
+			)
+			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
+				attributes: selfAttrs,
+				sourceId: startObjKey,
+				source: 'Self',
+				filterFlags: false
+			}} : null
+			
+			LET parentResults = @checkParent && selfResult == null ? (
+				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
+					LET parentObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
+					LET parentAttrs = (
+						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
+							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+							FILTER !condition
+							RETURN v
+					)
+					FILTER LENGTH(parentAttrs) == maxDepth
+					LIMIT 1
+					RETURN {{
+						attributes: parentAttrs,
+						sourceId: parentObjId,
+						source: 'Parent',
+						filterFlags: true
+					}}
+			) : []
+			
+			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
+				LET inheritanceChain = APPEND([start], (
+					FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
+						RETURN parent
+				))
+				
+				FOR obj IN inheritanceChain
+					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
+						LET zoneObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
+						LET zoneAttrs = (
+							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
+								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+								FILTER !condition
+								RETURN v
+						)
+						FILTER LENGTH(zoneAttrs) == maxDepth
+						LIMIT 1
+						RETURN {{
+							attributes: zoneAttrs,
+							sourceId: zoneObjId,
+							source: 'Zone',
+							filterFlags: true
+						}}
+			) : []
+			
+			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
+			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
+			RETURN FIRST(filtered)
+		";
+		
+		var bindVars = new Dictionary<string, object>
 		{
-			var attrArray = await directAttr.ToArrayAsync(ct);
-			if (attrArray.Length == attribute.Length)
-			{
-				var lastAttr = attrArray.Last();
-				return new LazyAttributeWithInheritance(
-					attrArray,
-					dbref,
-					AttributeSource.Self,
-					lastAttr.Flags);
-			}
-		}
-
-		// If checkParent is false or we found it, stop here
-		if (!checkParent)
+			{ "attr", attribute },
+			{ StartVertex, startVertex },
+			{ "max", attribute.Length },
+			{ "checkParent", checkParent }
+		};
+		
+		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var result = results.FirstOrDefault();
+		
+		if (result == null || result.attributes == null)
 		{
 			return null;
 		}
-
-		// Get the object to walk its inheritance chain
-		var obj = await GetObjectNodeAsync(dbref, ct);
-		if (obj.IsNone)
-		{
-			return null;
-		}
-
-		var currentObj = obj.Known;
 		
-		// Walk parent chain
-		while (true)
+		// Convert query results to lazy attributes
+		var attrs = new LazySharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
 		{
-			var parent = await currentObj.Object().Parent.WithCancellation(ct);
-			if (parent.IsNone)
-			{
-				break;
-			}
-
-			currentObj = parent.Known;
-			var parentDbRef = currentObj.Object().DBRef;
-			
-			var parentAttr = GetLazyAttributeAsync(parentDbRef, attribute, ct);
-			if (parentAttr != null)
-			{
-				var attrArray = await parentAttr.ToArrayAsync(ct);
-				if (attrArray.Length == attribute.Length)
-				{
-					var lastAttr = attrArray.Last();
-					var inheritedFlags = lastAttr.Flags.Where(f => f.Inheritable);
-					
-					return new LazyAttributeWithInheritance(
-						attrArray,
-						parentDbRef,
-						AttributeSource.Parent,
-						inheritedFlags);
-				}
-			}
+			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
 		}
-
-		// Walk zone chains - first the object's zones, then each parent's zones
-		currentObj = obj.Known;
 		
-		while (true)
+		// Parse the DBRef from the source ID
+		var sourceDbRef = ParseDbRefFromId(result.sourceId);
+		
+		// Parse source type
+		var sourceType = result.source switch
 		{
-			var zone = await currentObj.Object().Zone.WithCancellation(ct);
-			
-			// Check this level's zone chain
-			while (!zone.IsNone)
-			{
-				var zoneDbRef = zone.Known.Object().DBRef;
-				var zoneAttr = GetLazyAttributeAsync(zoneDbRef, attribute, ct);
-				
-				if (zoneAttr != null)
-				{
-					var attrArray = await zoneAttr.ToArrayAsync(ct);
-					if (attrArray.Length == attribute.Length)
-					{
-						var lastAttr = attrArray.Last();
-						var inheritedFlags = lastAttr.Flags.Where(f => f.Inheritable);
-						
-						return new LazyAttributeWithInheritance(
-							attrArray,
-							zoneDbRef,
-							AttributeSource.Zone,
-							inheritedFlags);
-					}
-				}
-				
-				// Walk up the zone chain
-				zone = await zone.Known.Object().Zone.WithCancellation(ct);
-			}
-			
-			// Move to parent to check parent's zones
-			var parent = await currentObj.Object().Parent.WithCancellation(ct);
-			if (parent.IsNone)
-			{
-				break;
-			}
-			
-			currentObj = parent.Known;
-		}
-
-		return null;
+			"Self" => AttributeSource.Self,
+			"Parent" => AttributeSource.Parent,
+			"Zone" => AttributeSource.Zone,
+			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
+		};
+		
+		// Get flags from last attribute - already loaded in SharpAttributeQueryToLazySharpAttribute
+		var lastAttr = attrs.Last();
+		var finalFlags = result.filterFlags 
+			? lastAttr.Flags.Where(f => f.Inheritable)
+			: lastAttr.Flags;
+		
+		return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, finalFlags);
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
