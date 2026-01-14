@@ -5463,14 +5463,20 @@ public partial class Commands
 		// This evaluates the command list without creating a queue entry
 		try
 		{
+			var hasNoBreak = switches.Contains("NOBREAK");
+			
 			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 			{
 				var execResult = await parser.WithAttributeDebug(attribute,
 					p => p.CommandListParse(MModule.single(attributeText)));
 				
-				// TODO: Handle NOBREAK switch to prevent @break/@assert propagation.
+				// Handle NOBREAK switch to prevent @break/@assert propagation.
 				// When set, @break/@assert from included code shouldn't propagate to calling list.
-				// This requires implementing a break/assert propagation control system.
+				if (hasNoBreak && parser.CurrentState.ExecutionStack.TryPeek(out var execution) && execution.CommandListBreak)
+				{
+					// Clear the break flag so it doesn't propagate to the calling context
+					parser.CurrentState.ExecutionStack.TryPop(out _);
+				}
 				
 				return execResult ?? CallState.Empty;
 			});
