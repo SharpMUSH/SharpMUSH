@@ -4537,7 +4537,7 @@ public partial class Commands
 		{
 			var parts = objects.Split('/', 2);
 			var roomName = parts[0].Trim();
-			objectsToExclude = parts.Length > 1 ? parts[1].Trim() : "";
+			objectsToExclude = parts[1].Trim();
 			
 			// Locate the target room
 			var roomResult = await LocateService!.LocateAndNotifyIfInvalid(

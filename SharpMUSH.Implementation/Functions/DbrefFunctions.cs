@@ -1335,7 +1335,7 @@ LOCATE()
 
 		var strListAsDbrefs = strListExisting.Select(x => x.Item2.AsAnyObject.Object().DBRef);
 
-		var theGoodOnes = System.Linq.Enumerable.ToHashSet(dbrefListExisting.Union(strListAsDbrefs));
+		var theGoodOnes = Enumerable.ToHashSet(dbrefListExisting.Union(strListAsDbrefs));
 		
 		// Support obj/attr syntax for evaluation of bad results
 		// When a name doesn't resolve to an object, check if it's in "object/attribute" format
@@ -1348,6 +1348,11 @@ LOCATE()
 			if (name.Contains('/'))
 			{
 				var parts = name.Split('/', 2);
+				if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[1]))
+				{
+					continue; // Skip malformed obj/attr syntax
+				}
+				
 				var objName = parts[0].Trim();
 				var attrName = parts[1].Trim();
 				
