@@ -3119,12 +3119,10 @@ public partial class ArangoDatabase(
 		
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding {convertedAttributes.Length} results...");
 		// For each attribute in the path, yield it with inherited flags merged
-		for (int i = 0; i < convertedAttributes.Length; i++)
+		foreach (var item in convertedAttributes)
 		{
-			var item = convertedAttributes[i];
-			
 			// Return a single-element array for this segment
-			Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding attribute {i}: {item.Attribute.Name}");
+			Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding attribute: {item.Attribute.Name}");
 			yield return new AttributeWithInheritance([item.Attribute], sourceDbRef, sourceType, item.Flags);
 		}
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: DONE");
@@ -3134,14 +3132,14 @@ public partial class ArangoDatabase(
 	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttributeSimple(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 	{
-		// Get flags synchronously by converting the stream to a list
-		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToListAsync(cancellationToken);
+		// Get flags directly as an array
+		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
 		
 		return new SharpAttribute(
 			x.Id,
 			x.Key,
 			x.Name,
-			flags.ToArray(),
+			flags,
 			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
@@ -3294,10 +3292,8 @@ public partial class ArangoDatabase(
 		}).ToArrayAsync(cancellationToken: ct);
 		
 		// For each attribute in the path, yield it with inherited flags merged
-		for (int i = 0; i < convertedAttributes.Length; i++)
+		foreach (var item in convertedAttributes)
 		{
-			var item = convertedAttributes[i];
-			
 			// Return a single-element array for this segment
 			yield return new LazyAttributeWithInheritance([item.Attribute], sourceDbRef, sourceType, item.Flags);
 		}
@@ -3307,14 +3303,14 @@ public partial class ArangoDatabase(
 	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttributeSimple(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 	{
-		// Get flags synchronously by converting the stream to a list
-		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToListAsync(cancellationToken);
+		// Get flags directly as an array
+		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
 		
 		return new LazySharpAttribute(
 			x.Id,
 			x.Key,
 			x.Name,
-			flags.ToArray(),
+			flags,
 			null,
 			x.LongName,
 			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id, ct))),
