@@ -3069,14 +3069,20 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
-		// Use ExecuteStreamAsync to stream query results
-		var resultStream = arangoDb.Query.ExecuteStreamAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
-		var result = await resultStream.FirstOrDefaultAsync(ct);
+		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var result = results.FirstOrDefault();
 		
 		if (result == null || result.attributes == null)
 		{
 			// No results - don't yield anything (empty enumerable)
 			yield break;
+		}
+		
+		// Convert query results to SharpAttribute array
+		var attrs = new SharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
 		}
 		
 		// Parse the DBRef from the source ID
@@ -3091,29 +3097,14 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Convert all attributes with flags pre-fetched using async Select pattern
-		var convertedAttributes = await result.attributes.ToAsyncEnumerable().Select(async (attrResult, _, innerCt) =>
-		{
-			// Fetch flags and create attribute with flags already included
-			var attr = await SharpAttributeQueryToSharpAttribute(attrResult, innerCt);
-			
-			// Apply flag filtering here before yielding
-			var flags = result.filterFlags 
-				? attr.Flags.Where(f => f.Inheritable)
-				: attr.Flags;
-			
-			return new { Attribute = attr, Flags = flags };
-		}).ToArrayAsync(cancellationToken: ct);
+		// Get flags from last attribute
+		var lastAttr = attrs.Last();
+		var flags = result.filterFlags 
+			? lastAttr.Flags.Where(f => f.Inheritable)
+			: lastAttr.Flags;
 		
-		// Merge all flags from all attributes in the path
-		var allFlags = convertedAttributes.SelectMany(item => item.Flags).Distinct();
-		
-		// Yield a SINGLE result containing ALL attributes in the path
-		yield return new AttributeWithInheritance(
-			convertedAttributes.Select(item => item.Attribute).ToArray(),
-			sourceDbRef,
-			sourceType,
-			allFlags);
+		// Yield the single result
+		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
 	
 	// Simplified version that doesn't need nested async operations
@@ -3245,14 +3236,20 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
-		// Use ExecuteStreamAsync to stream query results
-		var resultStream = arangoDb.Query.ExecuteStreamAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
-		var result = await resultStream.FirstOrDefaultAsync(ct);
+		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var result = results.FirstOrDefault();
 		
 		if (result == null || result.attributes == null)
 		{
 			// No results - don't yield anything (empty enumerable)
 			yield break;
+		}
+		
+		// Convert query results to LazySharpAttribute array
+		var attrs = new LazySharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
 		}
 		
 		// Parse the DBRef from the source ID
@@ -3267,28 +3264,14 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Convert all lazy attributes using async Select pattern
-		var convertedAttributes = await result.attributes.ToAsyncEnumerable().Select(async (attrResult, _, innerCt) =>
-		{
-			var attr = await SharpAttributeQueryToLazySharpAttribute(attrResult, innerCt);
-			
-			// Apply flag filtering here before yielding
-			var flags = result.filterFlags 
-				? attr.Flags.Where(f => f.Inheritable)
-				: attr.Flags;
-			
-			return new { Attribute = attr, Flags = flags };
-		}).ToArrayAsync(cancellationToken: ct);
+		// Get flags from last attribute
+		var lastAttr = attrs.Last();
+		var flags = result.filterFlags 
+			? lastAttr.Flags.Where(f => f.Inheritable)
+			: lastAttr.Flags;
 		
-		// Merge all flags from all attributes in the path
-		var allFlags = convertedAttributes.SelectMany(item => item.Flags).Distinct();
-		
-		// Yield a SINGLE result containing ALL attributes in the path
-		yield return new LazyAttributeWithInheritance(
-			convertedAttributes.Select(item => item.Attribute).ToArray(),
-			sourceDbRef,
-			sourceType,
-			allFlags);
+		// Yield the single result
+		yield return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
 	
 	// Simplified version that doesn't need nested async operations
