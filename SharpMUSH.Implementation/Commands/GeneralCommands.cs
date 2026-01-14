@@ -6091,7 +6091,8 @@ public partial class Commands
 		await NotifyService.Notify(executor, "  Flags: (attribute table query pending)");
 		await NotifyService.Notify(executor, "  Created by: (attribute table query pending)");
 		
-		// TODO: Full implementation requires:
+		// Not Implemented: Full attribute information display requires attribute table query system.
+		// Requirements:
 		// - Query attribute table for attribute information
 		// - Display full name (canonical form)
 		// - Display default attribute flags

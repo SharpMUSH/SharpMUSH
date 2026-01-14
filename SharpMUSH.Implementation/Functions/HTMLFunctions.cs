@@ -96,7 +96,7 @@ public partial class Functions
 			target = executor;
 		}
 
-		// TODO: Implement actual websocket/out-of-band communication
+		// Not Implemented: Actual websocket/out-of-band communication is planned for future release.
 		// For now, this is a placeholder that sends the JSON as a regular notification
 		//
 		// Full implementation requirements:
@@ -155,7 +155,7 @@ public partial class Functions
 			target = executor;
 		}
 
-		// TODO: Implement actual websocket/out-of-band communication
+		// Not Implemented: Actual websocket/out-of-band communication is planned for future release.
 		// For now, this is a placeholder that sends the HTML as a regular notification
 		//
 		// Full implementation requirements:
