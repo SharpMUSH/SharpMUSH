@@ -1703,13 +1703,12 @@ public partial class ArangoDatabase(
 		// - Question mark (?) matches a single character
 		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
 		//
-		// Note: Results may not be sorted hierarchically (parent before children).
-		// TODO: Add SORT clause for hierarchical ordering.
+		// Results are sorted hierarchically (parent before children) by LongName.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN v";
 
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -1743,14 +1742,13 @@ public partial class ArangoDatabase(
 		// - Question mark (?) matches a single character
 		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
 		//
-		// Note: Results may not be sorted hierarchically (parent before children).
-		// TODO: Add SORT clause for hierarchical ordering.
+		// Results are sorted hierarchically (parent before children) by LongName.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN v";
 
 		return arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 				new Dictionary<string, object>

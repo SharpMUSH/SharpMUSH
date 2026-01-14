@@ -351,13 +351,30 @@ public static partial class HelperFunctions
 	[GeneratedRegex(@"#$(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
-	// TODO: Create separate regex patterns for attribute wildcards and regex patterns.
-	// Currently all special characters are allowed in attribute names, but wildcard patterns (*, ?)
-	// and regex patterns should have different validation/parsing rules than literal attribute names.
-	// This would improve attribute name validation and pattern matching.
+	/// <summary>
+	/// A regular expression for literal attribute names (no wildcards).
+	/// Only allows alphanumeric, @, _, -, ., and ` (for tree navigation).
+	/// </summary>
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`]+)$")]
+	private static partial Regex ObjectWithLiteralAttribute();
+
+	/// <summary>
+	/// A regular expression for wildcard attribute patterns.
+	/// Allows * and ? for pattern matching in addition to literal characters.
+	/// </summary>
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\*\?]+)$")]
+	private static partial Regex ObjectWithWildcardAttribute();
+
+	/// <summary>
+	/// A regular expression for regex attribute patterns.
+	/// Allows full regex syntax for advanced pattern matching.
+	/// </summary>
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
+	private static partial Regex ObjectWithRegexAttribute();
 	
 	/// <summary>
 	/// A regular expression that takes the form of 'Object/attributeName'.
+	/// Legacy method - use ObjectWithLiteralAttribute, ObjectWithWildcardAttribute, or ObjectWithRegexAttribute instead.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
