@@ -3815,7 +3815,8 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will queue @notify after completion");
 		}
 		
-		// TODO: Full implementation requires:
+		// Not Implemented: Full @switch implementation requires pattern matching engine.
+		// Requirements:
 		// - Pattern matching (wildcard or regexp based on switch)
 		// - Capture group handling ($0-$9 for matches)
 		// - #$ substitution in actions (replaced with evaluated test string)
@@ -3926,9 +3927,9 @@ public partial class Commands
 			registerStack.Push(registerDict);
 		}
 		
-		// TODO: Handle /match for pattern matching when pattern engine available
-		// Note: INLINE switch executes immediately (current default behavior)
-		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements
+		// Future Enhancement: /match switch for pattern matching requires pattern engine implementation.
+		// Note: INLINE switch executes immediately (current default behavior).
+		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements.
 		
 		// Execute with recursion tracking and DEBUG/VERBOSE support
 		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
@@ -4011,7 +4012,8 @@ public partial class Commands
 			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
 		}
 
-		// TODO: Channel Visibility on most of these commands.
+		// Future Enhancement: Channel visibility checking needs implementation.
+		// This would filter channels based on who can see them (private channels, etc.).
 		return switches switch
 		{
 			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, LocateService!, PermissionService!, Mediator!,
@@ -4378,7 +4380,7 @@ public partial class Commands
 	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
 		// For now, empty flags are considered default for most attributes.
-		// TODO: In the future, implement proper checking against @attribute/access definitions
+		// Future Enhancement: Implement proper checking against @attribute/access definitions
 		// stored in the database for standard attributes that have custom default flags.
 		// This would require:
 		// 1. Database table/collection for attribute definitions with default flags
@@ -4527,7 +4529,8 @@ public partial class Commands
 		var message = args["1"].Message!;
 
 		// For simplicity: emit to executor's location, excluding the specified objects
-		// TODO: Support room/obj format like PennMUSH
+		// Future Enhancement: Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
+		// This would allow emitting to a specific room while excluding specific objects.
 		var targetRoom = await executor.Where();
 		var objectList = ArgHelpers.NameList(objects);
 		var excludeObjects = new List<AnySharpObject>();
@@ -5207,9 +5210,9 @@ public partial class Commands
 				var execResult = await parser.WithAttributeDebug(attribute,
 					p => p.CommandListParse(MModule.single(attributeText)));
 				
-				// TODO: Handle NOBREAK switch
-				// When set, @break/@assert from included code shouldn't propagate to calling list
-				// This requires break/assert propagation system
+				// Future Enhancement: Handle NOBREAK switch to prevent @break/@assert propagation.
+				// When set, @break/@assert from included code shouldn't propagate to calling list.
+				// This requires implementing a break/assert propagation control system.
 				
 				return execResult ?? CallState.Empty;
 			});
@@ -5749,9 +5752,9 @@ public partial class Commands
 
 		while ((await parser.FunctionParse(predicate.Message!))!.Message.Truthy() && limit > 0)
 		{
-			// TODO: I think I need a way to REWIND the stack in the PARSER.
-			// This is going to be tricky.
-			// Todo: Parse arguments?
+			// Future Enhancement: Implement parser stack rewinding for better state management.
+			// This would allow resetting parser state between loop iterations cleanly.
+			// Current workaround uses state replacement via With().
 			await parser.With(
 				state => state with { Arguments = args.Skip(1).ToDictionary() },
 				async newParser => await previousCommand.CommandInvoker(newParser));
@@ -5944,7 +5947,9 @@ public partial class Commands
 			
 			await NotifyService!.Notify(executor, $"Attribute '{attrName}' set with flags: {string.Join(" ", flagNames)}");
 			
-			// TODO: If retroactive, update all existing copies
+			// Future Enhancement: Retroactive flag updates to existing attribute instances.
+			// When /retroactive is set, should update flags on all existing copies of this attribute
+			// across all objects in the database. Requires bulk update operation.
 			if (retroactive)
 			{
 				await NotifyService.Notify(executor, "Note: Retroactive flag updating not yet implemented.");
@@ -6035,7 +6040,8 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
 			await NotifyService.Notify(executor, "  New values must match this pattern (case insensitive)");
 			
-			// TODO: Full implementation requires:
+			// Not Implemented: Attribute validation via regex patterns.
+			// Requirements:
 			// - Store regexp pattern with attribute in table
 			// - Validate all new attribute values against pattern
 			// - Pattern is case insensitive unless (?-i) is used
@@ -6063,7 +6069,8 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Choices: {choices}");
 			await NotifyService.Notify(executor, "  New values must match one of these choices");
 			
-			// TODO: Full implementation requires:
+			// Not Implemented: Attribute validation via enumeration lists.
+			// Requirements:
 			// - Store enumeration list with attribute in table
 			// - Validate all new attribute values against list
 			// - Support partial matching like grab()
@@ -6074,6 +6081,11 @@ public partial class Commands
 		}
 		
 		// No switches - display attribute information
+		// Not Implemented: Attribute information display requires attribute table query system.
+		// Requirements:
+		// - Query attribute table for full name, flags, creator, access rules
+		// - Display default flags if any
+		// - Show validation rules (limit/enum) if set
 		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrName}'");
 		await NotifyService.Notify(executor, "  Full name: (attribute lookup pending)");
 		await NotifyService.Notify(executor, "  Flags: (attribute table query pending)");
