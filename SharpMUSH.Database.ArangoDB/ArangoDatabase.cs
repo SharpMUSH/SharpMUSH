@@ -3100,30 +3100,34 @@ public partial class ArangoDatabase(
 		};
 		
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting {result.attributes.Count} attributes...");
-		// Convert all attributes BEFORE yielding to avoid async deadlock
-		var convertedAttributes = new List<SharpAttribute>();
-		foreach (var attrResult in result.attributes)
-		{
-			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting attribute {attrResult.Name}...");
-			var attr = await SharpAttributeQueryToSharpAttribute(attrResult, ct);
-			convertedAttributes.Add(attr);
-			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converted attribute {attrResult.Name}");
-		}
 		
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding {convertedAttributes.Count} results...");
+		// Convert all attributes BEFORE yielding to avoid async deadlock
+		// Use async Select to convert attributes
+		var convertedAttributes = await Task.WhenAll(
+			result.attributes.Select(async attrResult =>
+			{
+				Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting attribute {attrResult.Name}...");
+				var attr = await SharpAttributeQueryToSharpAttribute(attrResult, ct);
+				Console.WriteLine($"GetAttributeWithInheritanceAsync: Converted attribute {attrResult.Name}");
+				
+				// Apply flag filtering here before yielding
+				var flags = result.filterFlags 
+					? attr.Flags.Where(f => f.Inheritable)
+					: attr.Flags;
+				
+				return new { Attribute = attr, Flags = flags };
+			})
+		);
+		
+		Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding {convertedAttributes.Length} results...");
 		// For each attribute in the path, yield it with inherited flags merged
-		for (int i = 0; i < convertedAttributes.Count; i++)
+		for (int i = 0; i < convertedAttributes.Length; i++)
 		{
-			var attr = convertedAttributes[i];
-			
-			// Get flags from this attribute, filtered if inherited
-			var flags = result.filterFlags 
-				? attr.Flags.Where(f => f.Inheritable)
-				: attr.Flags;
+			var item = convertedAttributes[i];
 			
 			// Return a single-element array for this segment
-			Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding attribute {i}: {attr.Name}");
-			yield return new AttributeWithInheritance([attr], sourceDbRef, sourceType, flags);
+			Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding attribute {i}: {item.Attribute.Name}");
+			yield return new AttributeWithInheritance([item.Attribute], sourceDbRef, sourceType, item.Flags);
 		}
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: DONE");
 	}
@@ -3279,25 +3283,28 @@ public partial class ArangoDatabase(
 		};
 		
 		// Convert all attributes BEFORE yielding to avoid async deadlock
-		var convertedAttributes = new List<LazySharpAttribute>();
-		foreach (var attrResult in result.attributes)
-		{
-			var attr = await SharpAttributeQueryToLazySharpAttribute(attrResult, ct);
-			convertedAttributes.Add(attr);
-		}
+		// Use async Select to convert attributes
+		var convertedAttributes = await Task.WhenAll(
+			result.attributes.Select(async attrResult =>
+			{
+				var attr = await SharpAttributeQueryToLazySharpAttribute(attrResult, ct);
+				
+				// Apply flag filtering here before yielding
+				var flags = result.filterFlags 
+					? attr.Flags.Where(f => f.Inheritable)
+					: attr.Flags;
+				
+				return new { Attribute = attr, Flags = flags };
+			})
+		);
 		
 		// For each attribute in the path, yield it with inherited flags merged
-		for (int i = 0; i < convertedAttributes.Count; i++)
+		for (int i = 0; i < convertedAttributes.Length; i++)
 		{
-			var attr = convertedAttributes[i];
-			
-			// Get flags from this attribute, filtered if inherited
-			var flags = result.filterFlags 
-				? attr.Flags.Where(f => f.Inheritable)
-				: attr.Flags;
+			var item = convertedAttributes[i];
 			
 			// Return a single-element array for this segment
-			yield return new LazyAttributeWithInheritance([attr], sourceDbRef, sourceType, flags);
+			yield return new LazyAttributeWithInheritance([item.Attribute], sourceDbRef, sourceType, item.Flags);
 		}
 	}
 	
