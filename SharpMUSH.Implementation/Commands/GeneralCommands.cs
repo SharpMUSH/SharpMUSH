@@ -127,6 +127,86 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// Validates that a custom semaphore attribute follows the required rules:
+	/// 1. If already set, must have same owner (God) and flags as SEMAPHORE (no_inherit, no_clone, locked)
+	/// 2. If already set, must have numeric or empty value
+	/// 3. If not set, cannot be a built-in attribute (unless it is SEMAPHORE)
+	/// </summary>
+	private static async ValueTask<OneOf<Success, Error<string>>> ValidateSemaphoreAttribute(
+		AnySharpObject targetObject,
+		string[] attributePath)
+	{
+		// SEMAPHORE attribute is always valid
+		if (attributePath.Length == 1 && attributePath[0].Equals(DefaultSemaphoreAttribute, StringComparison.OrdinalIgnoreCase))
+		{
+			return new Success();
+		}
+
+		// Check if this is a built-in standard attribute
+		var allStandardAttributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
+		var isStandardAttribute = false;
+		await foreach (var stdAttr in allStandardAttributes)
+		{
+			if (stdAttr.Name.Equals(attributePath[0], StringComparison.OrdinalIgnoreCase))
+			{
+				isStandardAttribute = true;
+				break;
+			}
+		}
+
+		// Get the attribute if it exists
+		var god = await HelperFunctions.GetGod(Mediator!);
+		var attrResult = await AttributeService!.GetAttributeAsync(
+			god, targetObject, string.Join("`", attributePath), IAttributeService.AttributeMode.Read, false);
+
+		if (attrResult.IsNone)
+		{
+			// Attribute not set - check if it's a built-in
+			if (isStandardAttribute)
+			{
+				return new Error<string>($"Cannot use built-in attribute '{attributePath[0]}' as semaphore.");
+			}
+			// Not set and not built-in - valid
+			return new Success();
+		}
+
+		if (attrResult.IsError)
+		{
+			return new Error<string>(attrResult.AsError.Value);
+		}
+
+		// Attribute exists - validate owner, flags, and value
+		var attribute = attrResult.AsAttribute.Last();
+
+		// Check owner (must be God - DBRef 1)
+		var owner = await attribute.Owner.WithCancellation(CancellationToken.None);
+		if (owner == null || owner.Object.Key != 1)
+		{
+			var ownerDbref = owner?.Object.Key.ToString() ?? "unknown";
+			return new Error<string>($"Semaphore attribute must be owned by God (#1). Current owner: #{ownerDbref}");
+		}
+
+		// Check value (must be numeric or empty)
+		var value = attribute.Value.ToPlainText();
+		if (!string.IsNullOrEmpty(value) && !int.TryParse(value, out _))
+		{
+			return new Error<string>($"Semaphore attribute must have a numeric or empty value. Current value: {value}");
+		}
+
+		// Check flags (must have no_inherit, no_clone, and locked)
+		var flagNames = attribute.Flags.Select(f => f.Name.ToLowerInvariant()).ToHashSet();
+		var requiredFlags = new[] { "no_inherit", "no_clone", "locked" };
+		var missingFlags = requiredFlags.Where(f => !flagNames.Contains(f)).ToList();
+
+		if (missingFlags.Any())
+		{
+			return new Error<string>($"Semaphore attribute must have flags: {string.Join(", ", requiredFlags)}. Missing: {string.Join(", ", missingFlags)}");
+		}
+
+		return new Success();
+	}
+
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
 	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
@@ -1998,12 +2078,21 @@ public partial class Commands
 				return CallState.Empty;
 
 			// @wait <object>/<attribute>=<command list>
-			// Note: When using a custom semaphore attribute (not "SEMAPHORE"), the attribute should ideally
-			// have the same flags as the system SEMAPHORE attribute. Currently no validation is performed.
-			// TODO: Validate that custom semaphore attributes have appropriate flags.
+			// Validate semaphore attribute follows MUSH rules
 			case 2:
-				await QueueSemaphore(parser, foundObject, splitBySlashes[1].Split('`'), arg1);
+			{
+				var customSemaphoreAttr = splitBySlashes[1].Split('`');
+				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+				
+				if (validation.IsT1)
+				{
+					await NotifyService!.Notify(executor, validation.AsT1.Value);
+					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+				}
+				
+				await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1);
 				return CallState.Empty;
+			}
 
 			// @wait[/until] <object>/<attribute>/<time>=<command list>
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
@@ -2014,15 +2103,35 @@ public partial class Commands
 			// methods. If the attribute value is not a valid integer, an error is returned.
 			case 3 when switches.Contains("UNTIL"):
 			{
+				var customSemaphoreAttr = splitBySlashes[1].Split('`');
+				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+				
+				if (validation.IsT1)
+				{
+					await NotifyService!.Notify(executor, validation.AsT1.Value);
+					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+				}
+				
 				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
-				await QueueSemaphoreWithDelay(parser, foundObject, splitBySlashes[1].Split('`'), newUntilTime, arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1);
 				return CallState.Empty;
 			}
 
 			case 3:
-				await QueueSemaphoreWithDelay(parser, foundObject, splitBySlashes[1].Split('`'),
+			{
+				var customSemaphoreAttr = splitBySlashes[1].Split('`');
+				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+				
+				if (validation.IsT1)
+				{
+					await NotifyService!.Notify(executor, validation.AsT1.Value);
+					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+				}
+				
+				await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr,
 					TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
+			}
 
 			default:
 				await NotifyService!.Notify(executor, "Invalid first argument format");
