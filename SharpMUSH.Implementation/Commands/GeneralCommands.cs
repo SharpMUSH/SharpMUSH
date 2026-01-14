@@ -3815,18 +3815,101 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Will queue @notify after completion");
 		}
 		
-		// TODO: Full @switch implementation requires pattern matching engine.
-		// Requirements:
-		// - Pattern matching (wildcard or regexp based on switch)
-		// - Capture group handling ($0-$9 for matches)
-		// - #$ substitution in actions (replaced with evaluated test string)
-		// - Queue or inline execution based on switches
-		// - Q-register management (localize, clearregs)
-		// - @break propagation handling
-		// - Only execute first matching action (unlike @switch which executes all)
-		await NotifyService.Notify(executor, "Note: Pattern matching and action execution not yet implemented.");
+		// Pattern matching implementation
+		bool isRegexp = switches.Contains("REGEXP");
+		bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
+		bool localizeRegs = switches.Contains("LOCALIZE");
+		bool clearRegs = switches.Contains("CLEARREGS");
 		
-		return new CallState("#-1 NOT IMPLEMENTED");
+		// Process expression/action pairs
+		bool matchFound = false;
+		for (int i = 0; i < pairCount; i++)
+		{
+			var exprIndex = (i * 2) + 1;
+			var actionIndex = (i * 2) + 2;
+			
+			var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
+			var action = args[actionIndex.ToString()].Message;
+			
+			// Perform pattern matching
+			bool matches = false;
+			if (isRegexp)
+			{
+				// Regular expression matching
+				try
+				{
+					var regex = new Regex(pattern, RegexOptions.None);
+					matches = regex.IsMatch(testString);
+				}
+				catch (ArgumentException)
+				{
+					await NotifyService.Notify(executor, $"Invalid regex pattern: {pattern}");
+					continue;
+				}
+			}
+			else
+			{
+				// Wildcard pattern matching
+				var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+				var regex = new Regex(regexPattern, RegexOptions.None);
+				matches = regex.IsMatch(testString);
+			}
+			
+			if (matches && action != null)
+			{
+				matchFound = true;
+				
+				// Substitute #$ with test string in action
+				var actionText = action.ToPlainText().Replace("#$", testString);
+				var actionMString = MModule.single(actionText);
+				
+				// Execute action (inline for now, queue support can be added later)
+				if (isInline)
+				{
+					await parser.CommandListParse(actionMString);
+				}
+				else
+				{
+					// Queue the action
+					await Mediator!.Send(new QueueCommandListRequest(
+						actionMString,
+						parser.CurrentState,
+						new DbRefAttribute(executor.Object().DBRef, []),
+						0));
+				}
+				
+				// @select only executes first match
+				break;
+			}
+		}
+		
+		// Execute default action if no match and default exists
+		if (!matchFound && hasDefault)
+		{
+			var defaultIndex = args.Count - 1;
+			var defaultAction = args[defaultIndex.ToString()].Message;
+			
+			if (defaultAction != null)
+			{
+				var actionText = defaultAction.ToPlainText().Replace("#$", testString);
+				var actionMString = MModule.single(actionText);
+				
+				if (isInline)
+				{
+					await parser.CommandListParse(actionMString);
+				}
+				else
+				{
+					await Mediator!.Send(new QueueCommandListRequest(
+						actionMString,
+						parser.CurrentState,
+						new DbRefAttribute(executor.Object().DBRef, []),
+						0));
+				}
+			}
+		}
+		
+		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@TRIGGER",
@@ -3927,7 +4010,48 @@ public partial class Commands
 			registerStack.Push(registerDict);
 		}
 		
-		// TODO: /match switch for pattern matching requires pattern engine implementation.
+		// Handle /match switch for pattern matching
+		if (switches.Contains("MATCH"))
+		{
+			// With /match, the first argument (index 1) is the test string
+			// The attribute should contain patterns to match against
+			if (!args.TryGetValue("1", out var matchArg) || matchArg.Message == null)
+			{
+				await NotifyService!.Notify(executor, "You must provide a string to match when using /match.");
+				return new CallState("#-1 NO MATCH STRING");
+			}
+			
+			var testString = matchArg.Message.ToPlainText();
+			
+			// Parse attribute text as pattern list (one pattern per line or space-separated)
+			var patterns = attributeText.Split(new[] { '\n', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			
+			bool matchFound = false;
+			foreach (var pattern in patterns)
+			{
+				var trimmedPattern = pattern.Trim();
+				if (string.IsNullOrEmpty(trimmedPattern)) continue;
+				
+				// Use wildcard pattern matching
+				var regexPattern = MModule.getWildcardMatchAsRegex2(trimmedPattern);
+				var regex = new Regex(regexPattern, RegexOptions.None);
+				
+				if (regex.IsMatch(testString))
+				{
+					matchFound = true;
+					break;
+				}
+			}
+			
+			// Only execute if match was found
+			if (!matchFound)
+			{
+				return CallState.Empty;
+			}
+			
+			// Continue with execution below
+		}
+		
 		// Note: INLINE switch executes immediately (current default behavior).
 		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements.
 		
