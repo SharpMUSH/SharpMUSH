@@ -351,7 +351,10 @@ public static partial class HelperFunctions
 	[GeneratedRegex(@"#$(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
-	// TODO: Make split versions for Patterns and Regex Patterns, which are different from normal attributes.
+	// Future Enhancement: Create separate regex patterns for attribute wildcards and regex patterns.
+	// Currently all special characters are allowed in attribute names, but wildcard patterns (*, ?)
+	// and regex patterns should have different validation/parsing rules than literal attribute names.
+	// This would improve attribute name validation and pattern matching.
 	
 	/// <summary>
 	/// A regular expression that takes the form of 'Object/attributeName'.

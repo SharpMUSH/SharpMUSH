@@ -2778,7 +2778,10 @@ public class Migration_CreateDatabase : IArangoMigration
 				System = true,
 				Inheritable = false
 			}),
-		// TODO: Consider if this is needed for our purposes at all.
+		// NOTE: The "branch" attribute flag (symbol `) is defined here for PennMUSH compatibility
+		// but is not currently used in SharpMUSH code. Backtick is used as a separator in attribute
+		// paths (e.g., MAIL`1`SUBJECT), but there is no corresponding flag functionality.
+		// This flag can likely be removed in a future major version that breaks database compatibility.
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
 			new
 			{
