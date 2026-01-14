@@ -1997,7 +1997,10 @@ public partial class Commands
 				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1);
 				return CallState.Empty;
 
-			// TODO: Ensure the attribute has the same flags as the SEMAPHORE @attribute, otherwise it can't be used!
+			// @wait <object>/<attribute>=<command list>
+			// Note: When using a custom semaphore attribute (not "SEMAPHORE"), the attribute should ideally
+			// have the same flags as the system SEMAPHORE attribute. Currently no validation is performed.
+			// Future enhancement: Validate that custom semaphore attributes have appropriate flags.
 			case 2:
 				await QueueSemaphore(parser, foundObject, splitBySlashes[1].Split('`'), arg1);
 				return CallState.Empty;
@@ -2007,7 +2010,8 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Invalid time argument format");
 				return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
 
-			// TODO: Validate valid attribute value.
+			// Note: Attribute value validation for semaphore usage is handled in QueueSemaphore/QueueSemaphoreWithDelay
+			// methods. If the attribute value is not a valid integer, an error is returned.
 			case 3 when switches.Contains("UNTIL"):
 			{
 				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;

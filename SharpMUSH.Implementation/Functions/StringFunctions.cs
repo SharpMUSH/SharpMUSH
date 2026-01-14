@@ -1023,7 +1023,9 @@ public partial class Functions
 		var right = MModule.substring(endInt, str.Length - endInt, str);
 		var remainder = MModule.substring(endInt - startInt, str.Length - endInt + startInt, str);
 
-		// TODO: MModule.apply2 over the remainder to apply the attribute-function to each character.
+		// Future Enhancement: Apply attribute function to each character in remainder using MModule.apply2.
+		// This would allow per-character transformation via user-defined attributes.
+		// Currently returns raw remainder string without transformation.
 
 		return MModule.multiple([left, remainder, right]);
 	}
@@ -1046,7 +1048,9 @@ public partial class Functions
 	{
 		var input = parser.CurrentState.Arguments["0"].Message!;
 
-		// TODO: ansi() needs to happen after the replacements, of seperately from the replacements.
+		// Future Enhancement: ANSI reconstruction needs to happen after text replacements to preserve
+		// proper nesting structure. Current implementation may produce incorrect output when ANSI codes
+		// interact with special character replacements.
 		var reconstructed = MModule.evaluateWith((markupType, innerText) =>
 		{
 			return markupType switch

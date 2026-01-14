@@ -453,7 +453,8 @@ public partial class Functions
 			target = executor;
 		}
 
-		// TODO: Implement actual websocket/out-of-band JSON communication
+		// Not Implemented: Actual websocket/out-of-band JSON communication is planned for future release.
+		// For now, this returns an error as the feature requires websocket support.
 		//
 		// Full implementation requirements:
 		// 1. Add websocket support to ConnectionService

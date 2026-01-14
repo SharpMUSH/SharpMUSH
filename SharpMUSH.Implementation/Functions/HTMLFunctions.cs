@@ -209,7 +209,7 @@ public partial class Functions
 			target = executor;
 		}
 
-		// TODO: Implement actual websocket/out-of-band HTML communication
+		// Not Implemented: Actual websocket/out-of-band HTML communication is planned for future release.
 		// 
 		// Full implementation requirements:
 		// 1. Add websocket support to ConnectionService
