@@ -2983,7 +2983,7 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(
+	public async IAsyncEnumerable<AttributeWithInheritance?> GetAttributeWithInheritanceAsync(
 		DBRef dbref,
 		string[] attribute,
 		bool checkParent = true,
@@ -3077,15 +3077,18 @@ public partial class ArangoDatabase(
 		
 		// Use ExecuteStreamAsync to stream query results
 		var resultStream = arangoDb.Query.ExecuteStreamAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: Query executing...");
+        Console.WriteLine("About to await FirstOrDefaultAsync...");
 		var result = await resultStream.FirstOrDefaultAsync(ct);
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: Result = {(result == null ? "NULL" : "Found")}");
+        Console.WriteLine($"Query result: {(result == null ? "NULL" : result.source ?? "NO SOURCE")}");
 		
 		if (result == null || result.attributes == null)
+            Console.WriteLine("No results - yielding null");
 		{
-			Console.WriteLine($"GetAttributeWithInheritanceAsync: No results, yielding break");
+			// Yield a single null when no results found
+			yield return null;
 			yield break;
 		}
+        Console.WriteLine($"Found {result.attributes.Count} attributes from {result.source}");
 		
 		// Parse the DBRef from the source ID
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
@@ -3099,15 +3102,11 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting {result.attributes.Count} attributes...");
-		
 		// Convert all attributes with flags pre-fetched using async Select pattern
 		var convertedAttributes = await result.attributes.ToAsyncEnumerable().Select(async (attrResult, _, innerCt) =>
 		{
-			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting attribute {attrResult.Name}...");
 			// Fetch flags and create attribute with flags already included
 			var attr = await SharpAttributeQueryToSharpAttribute(attrResult, innerCt);
-			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converted attribute {attrResult.Name}");
 			
 			// Apply flag filtering here before yielding
 			var flags = result.filterFlags 
@@ -3117,15 +3116,15 @@ public partial class ArangoDatabase(
 			return new { Attribute = attr, Flags = flags };
 		}).ToArrayAsync(cancellationToken: ct);
 		
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding {convertedAttributes.Length} results...");
-		// For each attribute in the path, yield it with inherited flags merged
-		foreach (var item in convertedAttributes)
-		{
-			// Return a single-element array for this segment
-			Console.WriteLine($"GetAttributeWithInheritanceAsync: Yielding attribute: {item.Attribute.Name}");
-			yield return new AttributeWithInheritance([item.Attribute], sourceDbRef, sourceType, item.Flags);
-		}
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: DONE");
+		// Merge all flags from all attributes in the path
+		var allFlags = convertedAttributes.SelectMany(item => item.Flags).Distinct();
+		
+		// Yield a SINGLE result containing ALL attributes in the path
+		yield return new AttributeWithInheritance(
+			convertedAttributes.Select(item => item.Attribute).ToArray(),
+			sourceDbRef,
+			sourceType,
+			allFlags);
 	}
 	
 	// Simplified version that doesn't need nested async operations
@@ -3169,7 +3168,7 @@ public partial class ArangoDatabase(
 		throw new InvalidOperationException($"Cannot parse DBRef from key: {key}");
 	}
 
-	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
+	public async IAsyncEnumerable<LazyAttributeWithInheritance?> GetLazyAttributeWithInheritanceAsync(
 		DBRef dbref,
 		string[] attribute,
 		bool checkParent = true,
@@ -3263,6 +3262,8 @@ public partial class ArangoDatabase(
 		
 		if (result == null || result.attributes == null)
 		{
+			// Yield a single null when no results found
+			yield return null;
 			yield break;
 		}
 		
@@ -3291,12 +3292,15 @@ public partial class ArangoDatabase(
 			return new { Attribute = attr, Flags = flags };
 		}).ToArrayAsync(cancellationToken: ct);
 		
-		// For each attribute in the path, yield it with inherited flags merged
-		foreach (var item in convertedAttributes)
-		{
-			// Return a single-element array for this segment
-			yield return new LazyAttributeWithInheritance([item.Attribute], sourceDbRef, sourceType, item.Flags);
-		}
+		// Merge all flags from all attributes in the path
+		var allFlags = convertedAttributes.SelectMany(item => item.Flags).Distinct();
+		
+		// Yield a SINGLE result containing ALL attributes in the path
+		yield return new LazyAttributeWithInheritance(
+			convertedAttributes.Select(item => item.Attribute).ToArray(),
+			sourceDbRef,
+			sourceType,
+			allFlags);
 	}
 	
 	// Simplified version that doesn't need nested async operations
