@@ -145,15 +145,8 @@ public partial class Commands
 
 		// Check if this is a built-in standard attribute
 		var allStandardAttributes = Mediator!.CreateStream(new GetAllAttributeEntriesQuery());
-		var isStandardAttribute = false;
-		await foreach (var stdAttr in allStandardAttributes)
-		{
-			if (stdAttr.Name.Equals(attributePath[0], StringComparison.OrdinalIgnoreCase))
-			{
-				isStandardAttribute = true;
-				break;
-			}
-		}
+		var isStandardAttribute = await allStandardAttributes
+			.AnyAsync(stdAttr => stdAttr.Name.Equals(attributePath[0], StringComparison.OrdinalIgnoreCase));
 
 		// Get the attribute if it exists
 		var god = await HelperFunctions.GetGod(Mediator!);
@@ -180,11 +173,11 @@ public partial class Commands
 		var attribute = attrResult.AsAttribute.Last();
 
 		// Check owner (must be God - DBRef 1)
+		// Note: Owner is guaranteed to exist for attributes
 		var owner = await attribute.Owner.WithCancellation(CancellationToken.None);
-		if (owner == null || owner.Object.Key != 1)
+		if (owner!.Object.Key != 1)
 		{
-			var ownerDbref = owner?.Object.Key.ToString() ?? "unknown";
-			return new Error<string>($"Semaphore attribute must be owned by God (#1). Current owner: #{ownerDbref}");
+			return new Error<string>($"Semaphore attribute must be owned by God (#1). Current owner: #{owner.Object.Key}");
 		}
 
 		// Check value (must be numeric or empty)
@@ -197,7 +190,7 @@ public partial class Commands
 		// Check flags (must have no_inherit, no_clone, and locked)
 		var flagNames = attribute.Flags.Select(f => f.Name.ToLowerInvariant()).ToHashSet();
 		var requiredFlags = new[] { "no_inherit", "no_clone", "locked" };
-		var missingFlags = requiredFlags.Where(f => !flagNames.Contains(f)).ToList();
+		var missingFlags = requiredFlags.Except(flagNames).ToList();
 
 		if (missingFlags.Any())
 		{
