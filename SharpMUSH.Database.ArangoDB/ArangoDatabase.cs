@@ -3069,6 +3069,7 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
+		// Execute query and get first result
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 		
@@ -3076,13 +3077,6 @@ public partial class ArangoDatabase(
 		{
 			// No results - don't yield anything (empty enumerable)
 			yield break;
-		}
-		
-		// Convert query results to SharpAttribute array
-		var attrs = new SharpAttribute[result.attributes.Count];
-		for (int i = 0; i < result.attributes.Count; i++)
-		{
-			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
 		}
 		
 		// Parse the DBRef from the source ID
@@ -3097,13 +3091,20 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Get flags from last attribute
+		// Convert all attributes (simple loop to avoid nested async operations)
+		var attrs = new SharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
+		}
+		
+		// Get flags from last attribute only
 		var lastAttr = attrs.Last();
 		var flags = result.filterFlags 
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
 		
-		// Yield the single result
+		// Yield a SINGLE result containing ALL attributes in the path
 		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
 	
@@ -3236,6 +3237,7 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
+		// Execute query and get first result
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 		
@@ -3243,13 +3245,6 @@ public partial class ArangoDatabase(
 		{
 			// No results - don't yield anything (empty enumerable)
 			yield break;
-		}
-		
-		// Convert query results to LazySharpAttribute array
-		var attrs = new LazySharpAttribute[result.attributes.Count];
-		for (int i = 0; i < result.attributes.Count; i++)
-		{
-			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
 		}
 		
 		// Parse the DBRef from the source ID
@@ -3264,13 +3259,20 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Get flags from last attribute
+		// Convert all lazy attributes (simple loop to avoid nested async operations)
+		var attrs = new LazySharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
+		}
+		
+		// Get flags from last attribute only
 		var lastAttr = attrs.Last();
 		var flags = result.filterFlags 
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
 		
-		// Yield the single result
+		// Yield a SINGLE result containing ALL attributes in the path
 		yield return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
 	

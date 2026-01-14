@@ -162,9 +162,10 @@ public class AttributeWithInheritanceTests
 			childDbRef,
 			new[] { "NO_PARENT_ATTR" },
 			CheckParent: false)).ToListAsync();
+		var result = results[0];
 
-		// Should not find the attribute (empty results)
-		await Assert.That(results.Count).IsEqualTo(0);
+		// Should not find the attribute
+		await Assert.That(result).IsNull();
 	}
 
 	[Test]
@@ -326,8 +327,9 @@ public class AttributeWithInheritanceTests
 			objDbRef,
 			new[] { "DOES_NOT_EXIST" },
 			CheckParent: true)).ToListAsync();
+		var result = results[0];
 
-		// Should not find the attribute (empty results)
-		await Assert.That(results.Count).IsEqualTo(0);
+		// Verify
+		await Assert.That(result).IsNull();
 	}
 }
