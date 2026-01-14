@@ -2987,13 +2987,10 @@ public partial class ArangoDatabase(
 		bool checkParent = true,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: START - dbref={dbref}, attr={string.Join(",", attribute)}");
-		
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: startVertex={startVertex}");
 		
 		// Single AQL query that handles entire inheritance chain (WITHOUT inline flag fetching for performance)
 		var query = $@"
@@ -3064,7 +3061,6 @@ public partial class ArangoDatabase(
 			RETURN FIRST(filtered)
 		";
 		
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: Executing query...");
 		var bindVars = new Dictionary<string, object>
 		{
 			{ "attr", attribute },
@@ -3075,16 +3071,13 @@ public partial class ArangoDatabase(
 		
 		// Use ExecuteStreamAsync to stream query results
 		var resultStream = arangoDb.Query.ExecuteStreamAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
-        Console.WriteLine("About to await FirstOrDefaultAsync...");
 		var result = await resultStream.FirstOrDefaultAsync(ct);
-        Console.WriteLine($"Query result: {(result == null ? "NULL" : result.source ?? "NO SOURCE")}");
 		
 		if (result == null || result.attributes == null)
 		{
 			// No results - don't yield anything (empty enumerable)
 			yield break;
 		}
-        Console.WriteLine($"Found {result.attributes.Count} attributes from {result.source}");
 		
 		// Parse the DBRef from the source ID
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
