@@ -4012,8 +4012,7 @@ public partial class Commands
 			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
 		}
 
-		// TODO: Channel visibility checking needs implementation.
-		// This would filter channels based on who can see them (private channels, etc.).
+		// Note: Channel visibility checking is handled by PermissionService.ChannelCanSeeAsync in each handler
 		return switches switch
 		{
 			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, LocateService!, PermissionService!, Mediator!,
@@ -4528,11 +4527,44 @@ public partial class Commands
 		var objects = MModule.plainText(args["0"].Message!);
 		var message = args["1"].Message!;
 
-		// For simplicity: emit to executor's location, excluding the specified objects
-		// TODO: Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
-		// This would allow emitting to a specific room while excluding specific objects.
-		var targetRoom = await executor.Where();
-		var objectList = ArgHelpers.NameList(objects);
+		// Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
+		// This allows emitting to a specific room while excluding specific objects.
+		AnySharpContainer targetRoom;
+		string objectsToExclude;
+		
+		// Check if format is "room/objects"
+		if (objects.Contains('/'))
+		{
+			var parts = objects.Split('/', 2);
+			var roomName = parts[0].Trim();
+			objectsToExclude = parts.Length > 1 ? parts[1].Trim() : "";
+			
+			// Locate the target room
+			var roomResult = await LocateService!.LocateAndNotifyIfInvalid(
+				parser,
+				executor,
+				executor,
+				roomName,
+				LocateFlags.All);
+			
+			if (!roomResult.IsValid() || (!roomResult.IsRoom && !roomResult.IsThing))
+			{
+				await NotifyService!.Notify(executor, "Invalid room specified.");
+				return new CallState("#-1 INVALID ROOM");
+			}
+			
+			targetRoom = roomResult.IsRoom 
+				? roomResult.WithoutError().WithoutNone().MinusExit() 
+				: await roomResult.WithoutError().WithoutNone().Where();
+		}
+		else
+		{
+			// Original behavior: emit to executor's location
+			targetRoom = await executor.Where();
+			objectsToExclude = objects;
+		}
+		
+		var objectList = ArgHelpers.NameList(objectsToExclude);
 		var excludeObjects = new List<AnySharpObject>();
 
 		// Resolve all objects to exclude
