@@ -1335,11 +1335,54 @@ LOCATE()
 
 		var strListAsDbrefs = strListExisting.Select(x => x.Item2.AsAnyObject.Object().DBRef);
 
-		var theGoodOnes = dbrefListExisting.Union(strListAsDbrefs);
-		// TODO: Support obj/attr syntax for evaluation of bad results
+		var theGoodOnes = System.Linq.Enumerable.ToHashSet(dbrefListExisting.Union(strListAsDbrefs));
+		
+		// Support obj/attr syntax for evaluation of bad results
 		// When a name doesn't resolve to an object, check if it's in "object/attribute" format
-		// and evaluate that attribute instead. This requires parsing the format and retrieving
-		// the attribute value from the specified object.
+		// and evaluate that attribute instead
+		var strListNotExisting = strList.Except(strListExisting.Select(x => x.x));
+		
+		foreach (var name in strListNotExisting)
+		{
+			// Check if it matches obj/attr format
+			if (name.Contains('/'))
+			{
+				var parts = name.Split('/', 2);
+				var objName = parts[0].Trim();
+				var attrName = parts[1].Trim();
+				
+				// Try to locate the object
+				var objResult = await LocateService!.Locate(
+					parser,
+					executor,
+					executor,
+					objName,
+					LocateFlags.All);
+				
+				if (objResult.IsValid())
+				{
+					// Get the attribute value
+					var attrQuery = new GetAttributeQuery(
+						objResult.WithoutError().WithoutNone().Object().DBRef,
+						attrName.Split('`'));
+					
+					var attrStream = Mediator!.CreateStream(attrQuery);
+					var attr = await attrStream.FirstOrDefaultAsync();
+					
+					if (attr != null)
+					{
+						// Parse the attribute value as a dbref
+						var attrValue = attr.Value.ToPlainText();
+						var parsedDbref = HelperFunctions.ParseDbRef(attrValue);
+						
+						if (parsedDbref.IsSome())
+						{
+							theGoodOnes.Add(parsedDbref.AsValue());
+						}
+					}
+				}
+			}
+		}
 
 		return string.Join(" ", theGoodOnes);
 	}
