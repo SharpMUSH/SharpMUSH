@@ -3091,10 +3091,42 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// For each attribute in the path, yield it with inherited flags merged
-		for (int i = 0; i < result.attributes.Count; i++)
+		// Pre-fetch all flags for all attributes at once
+		var allFlags = new Dictionary<string, SharpAttributeFlag[]>();
+		foreach (var attrResult in result.attributes)
 		{
-			var attr = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
+			var flagsList = new List<SharpAttributeFlag>();
+			await foreach (var flag in GetAttributeFlagsAsync(attrResult.Id, ct))
+			{
+				flagsList.Add(flag);
+			}
+			allFlags[attrResult.Id] = flagsList.ToArray();
+		}
+		
+		// Convert all attributes at once
+		var convertedAttributes = new List<SharpAttribute>();
+		foreach (var attrResult in result.attributes)
+		{
+			var attr = new SharpAttribute(
+				attrResult.Id,
+				attrResult.Key,
+				attrResult.Name,
+				allFlags[attrResult.Id],
+				null,
+				attrResult.LongName,
+				new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(attrResult.Id, ct))),
+				new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(attrResult.Id, ct)),
+				new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(attrResult.Id, ct)))
+			{
+				Value = MarkupStringModule.deserialize(attrResult.Value)
+			};
+			convertedAttributes.Add(attr);
+		}
+		
+		// For each attribute in the path, yield it with inherited flags merged
+		for (int i = 0; i < convertedAttributes.Count; i++)
+		{
+			var attr = convertedAttributes[i];
 			
 			// Get flags from this attribute, filtered if inherited
 			var flags = result.filterFlags 
@@ -3104,6 +3136,28 @@ public partial class ArangoDatabase(
 			// Return a single-element array for this segment
 			yield return new AttributeWithInheritance([attr], sourceDbRef, sourceType, flags);
 		}
+	}
+	
+	// Simplified version that doesn't need nested async operations
+	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttributeSimple(SharpAttributeQueryResult x,
+		CancellationToken cancellationToken = default)
+	{
+		// Get flags synchronously by converting the stream to a list
+		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToListAsync(cancellationToken);
+		
+		return new SharpAttribute(
+			x.Id,
+			x.Key,
+			x.Name,
+			flags.ToArray(),
+			null,
+			x.LongName,
+			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
+			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
+			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
+		{
+			Value = MarkupStringModule.deserialize(x.Value)
+		};
 	}
 	
 	// Helper record for query results
@@ -3233,10 +3287,41 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// For each attribute in the path, yield it with inherited flags merged
-		for (int i = 0; i < result.attributes.Count; i++)
+		// Pre-fetch all flags for all attributes at once
+		var allFlags = new Dictionary<string, SharpAttributeFlag[]>();
+		foreach (var attrResult in result.attributes)
 		{
-			var attr = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
+			var flagsList = new List<SharpAttributeFlag>();
+			await foreach (var flag in GetAttributeFlagsAsync(attrResult.Id, ct))
+			{
+				flagsList.Add(flag);
+			}
+			allFlags[attrResult.Id] = flagsList.ToArray();
+		}
+		
+		// Convert all attributes at once
+		var convertedAttributes = new List<LazySharpAttribute>();
+		foreach (var attrResult in result.attributes)
+		{
+			var attr = new LazySharpAttribute(
+				attrResult.Id,
+				attrResult.Key,
+				attrResult.Name,
+				allFlags[attrResult.Id],
+				null,
+				attrResult.LongName,
+				new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(attrResult.Id, ct))),
+				new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(attrResult.Id, ct)),
+				new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(attrResult.Id, ct)),
+				new AsyncLazy<MarkupStringModule.MarkupString>(ct =>
+					Task.FromResult(MarkupStringModule.deserialize(attrResult.Value))));
+			convertedAttributes.Add(attr);
+		}
+		
+		// For each attribute in the path, yield it with inherited flags merged
+		for (int i = 0; i < convertedAttributes.Count; i++)
+		{
+			var attr = convertedAttributes[i];
 			
 			// Get flags from this attribute, filtered if inherited
 			var flags = result.filterFlags 
@@ -3246,6 +3331,27 @@ public partial class ArangoDatabase(
 			// Return a single-element array for this segment
 			yield return new LazyAttributeWithInheritance([attr], sourceDbRef, sourceType, flags);
 		}
+	}
+	
+	// Simplified version that doesn't need nested async operations
+	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttributeSimple(SharpAttributeQueryResult x,
+		CancellationToken cancellationToken = default)
+	{
+		// Get flags synchronously by converting the stream to a list
+		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToListAsync(cancellationToken);
+		
+		return new LazySharpAttribute(
+			x.Id,
+			x.Key,
+			x.Name,
+			flags.ToArray(),
+			null,
+			x.LongName,
+			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id, ct))),
+			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
+			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
+			new AsyncLazy<MarkupStringModule.MarkupString>(ct =>
+				Task.FromResult(MarkupStringModule.deserialize(x.Value))));
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
