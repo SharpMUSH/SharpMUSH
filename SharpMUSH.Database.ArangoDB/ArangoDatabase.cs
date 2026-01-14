@@ -3075,10 +3075,10 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
-		// Execute query and materialize result BEFORE yielding to avoid async issues
-		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
-		Console.WriteLine($"GetAttributeWithInheritanceAsync: Query executed, getting first result...");
-		var result = results.FirstOrDefault();
+		// Use ExecuteStreamAsync to stream query results
+		var resultStream = arangoDb.Query.ExecuteStreamAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		Console.WriteLine($"GetAttributeWithInheritanceAsync: Query executing...");
+		var result = await resultStream.FirstOrDefaultAsync(ct);
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: Result = {(result == null ? "NULL" : "Found")}");
 		
 		if (result == null || result.attributes == null)
@@ -3101,11 +3101,11 @@ public partial class ArangoDatabase(
 		
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting {result.attributes.Count} attributes...");
 		
-		// Convert all attributes BEFORE yielding to avoid async deadlock
-		// Use async Select pattern to convert attributes
+		// Convert all attributes with flags pre-fetched using async Select pattern
 		var convertedAttributes = await result.attributes.Select(async (attrResult, _, innerCt) =>
 		{
 			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting attribute {attrResult.Name}...");
+			// Fetch flags and create attribute with flags already included
 			var attr = await SharpAttributeQueryToSharpAttribute(attrResult, innerCt);
 			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converted attribute {attrResult.Name}");
 			
@@ -3259,9 +3259,9 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
-		// Execute query and materialize result BEFORE yielding to avoid async issues
-		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
-		var result = results.FirstOrDefault();
+		// Use ExecuteStreamAsync to stream query results
+		var resultStream = arangoDb.Query.ExecuteStreamAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var result = await resultStream.FirstOrDefaultAsync(ct);
 		
 		if (result == null || result.attributes == null)
 		{
@@ -3280,8 +3280,7 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Convert all attributes BEFORE yielding to avoid async deadlock
-		// Use async Select pattern to convert attributes
+		// Convert all lazy attributes using async Select pattern
 		var convertedAttributes = await result.attributes.Select(async (attrResult, _, innerCt) =>
 		{
 			var attr = await SharpAttributeQueryToLazySharpAttribute(attrResult, innerCt);
