@@ -2983,7 +2983,7 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async IAsyncEnumerable<AttributeWithInheritance?> GetAttributeWithInheritanceAsync(
+	public async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(
 		DBRef dbref,
 		string[] attribute,
 		bool checkParent = true,
@@ -3082,10 +3082,8 @@ public partial class ArangoDatabase(
         Console.WriteLine($"Query result: {(result == null ? "NULL" : result.source ?? "NO SOURCE")}");
 		
 		if (result == null || result.attributes == null)
-            Console.WriteLine("No results - yielding null");
 		{
-			// Yield a single null when no results found
-			yield return null;
+			// No results - don't yield anything (empty enumerable)
 			yield break;
 		}
         Console.WriteLine($"Found {result.attributes.Count} attributes from {result.source}");
@@ -3168,7 +3166,7 @@ public partial class ArangoDatabase(
 		throw new InvalidOperationException($"Cannot parse DBRef from key: {key}");
 	}
 
-	public async IAsyncEnumerable<LazyAttributeWithInheritance?> GetLazyAttributeWithInheritanceAsync(
+	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
 		DBRef dbref,
 		string[] attribute,
 		bool checkParent = true,
@@ -3262,8 +3260,7 @@ public partial class ArangoDatabase(
 		
 		if (result == null || result.attributes == null)
 		{
-			// Yield a single null when no results found
-			yield return null;
+			// No results - don't yield anything (empty enumerable)
 			yield break;
 		}
 		

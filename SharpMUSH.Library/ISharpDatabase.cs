@@ -168,14 +168,14 @@ public interface ISharpDatabase
 	/// <param name="checkParent">Whether to check parent and zone inheritance chains</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Stream of AttributeWithInheritance for each segment in the attribute path, or empty if not found</returns>
-	IAsyncEnumerable<AttributeWithInheritance?> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
+	IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
 		bool checkParent = true, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Lazy version of GetAttributeWithInheritanceAsync for efficient retrieval.
 	/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
 	/// </summary>
-	IAsyncEnumerable<LazyAttributeWithInheritance?> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
+	IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
 		bool checkParent = true, CancellationToken cancellationToken = default);
 	
 	/// <summary>

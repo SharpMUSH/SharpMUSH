@@ -11,9 +11,9 @@ namespace SharpMUSH.Implementation.Handlers.Database;
 /// Returns the complete attribute path (FOO → BAR → BAZ) as a stream of AttributeWithInheritance instances.
 /// </summary>
 public class GetAttributeWithInheritanceQueryHandler(ISharpDatabase database)
-	: IStreamQueryHandler<GetAttributeWithInheritanceQuery, AttributeWithInheritance?>
+	: IStreamQueryHandler<GetAttributeWithInheritanceQuery, AttributeWithInheritance>
 {
-	public IAsyncEnumerable<AttributeWithInheritance?> Handle(
+	public IAsyncEnumerable<AttributeWithInheritance> Handle(
 		GetAttributeWithInheritanceQuery request,
 		CancellationToken cancellationToken)
 	{
@@ -31,9 +31,9 @@ public class GetAttributeWithInheritanceQueryHandler(ISharpDatabase database)
 /// Returns the complete attribute path (FOO → BAR → BAZ) as a stream of LazyAttributeWithInheritance instances.
 /// </summary>
 public class GetLazyAttributeWithInheritanceQueryHandler(ISharpDatabase database)
-	: IStreamQueryHandler<GetLazyAttributeWithInheritanceQuery, LazyAttributeWithInheritance?>
+	: IStreamQueryHandler<GetLazyAttributeWithInheritanceQuery, LazyAttributeWithInheritance>
 {
-	public IAsyncEnumerable<LazyAttributeWithInheritance?> Handle(
+	public IAsyncEnumerable<LazyAttributeWithInheritance> Handle(
 		GetLazyAttributeWithInheritanceQuery request,
 		CancellationToken cancellationToken)
 	{
