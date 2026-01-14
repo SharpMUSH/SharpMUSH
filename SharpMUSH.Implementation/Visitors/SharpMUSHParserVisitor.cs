@@ -344,9 +344,12 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
-	/// TODO: Optimization needed. We should at least grab the in-built ones at startup.
-	/// TODO: Move this to a Library Service implementation.
+	/// Parses and executes a function call.
 	/// </summary>
+	/// <remarks>
+	/// Future Optimization: Cache built-in function lookups at startup instead of runtime lookup.
+	/// Future Enhancement: Move function resolution to a dedicated Library Service for better separation of concerns.
+	/// </remarks>
 	/// <param name="name">Function Name</param>
 	/// <param name="src">The source MarkupString</param>
 	/// <param name="context">Function Context for Depth</param>
@@ -465,8 +468,9 @@ public class SharpMUSHParserVisitor(
 				return new CallState(string.Format(Errors.ErrorGotUnEvenArgs, name), contextDepth);
 			}
 
-			// TODO: Reconsider where this is. We Push down below, after we have the refined arguments.
-			// But each RefinedArguments call will create a new call to this FunctionParser without depth info.
+			// Future Optimization: Depth checking is done here before argument refinement.
+			// Consider moving after RefinedArguments to avoid extra parsing. However, each
+			// RefinedArguments call creates a new FunctionParser call without depth info.
 				
 			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
 			{
@@ -524,7 +528,8 @@ public class SharpMUSHParserVisitor(
 				return new CallState(Errors.ErrorInvoke, contextDepth);
 			}
 
-			// TODO: Consider adding the ParserContexts as Arguments, so that Evaluation can be more optimized.
+			// Future Optimization: Pass ParserContexts directly as arguments instead of creating
+			// new ParserState, which would reduce object allocations and improve performance.
 			var newParser = parser.Push(new ParserState(
 				Registers: currentState.Registers,
 				IterationRegisters: currentState.IterationRegisters,
@@ -669,7 +674,8 @@ public class SharpMUSHParserVisitor(
 
 			// Step 2a: Check for the channel single-token command.
 
-			// TODO: Better channel name matching within the channel helper.
+			// Future Enhancement: Improve channel name matching with fuzzy/partial matching.
+			// Current implementation uses simple StartsWith matching which may not handle all cases.
 			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
 				var channels = Mediator.CreateStream(new GetChannelListQuery());
@@ -685,7 +691,7 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 2b: Check for a single-token command
-			// TODO: Optimize
+			// Future Optimization: Cache or index single-token commands for faster lookup.
 			var singleTokenCommandPattern = parser.CommandLibrary.Where(x
 				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)
 				   && x.Value.IsSystem
@@ -740,7 +746,8 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 6: Check @attribute setting
-			// TODO: This step is for checking if we're setting an attribute with @attribute syntax
+			// Note: @attribute syntax for setting attributes (e.g., @NAME me=value) is handled
+			// elsewhere in the codebase. This step is reserved for future enhancements.
 			// For now, this is handled elsewhere and we'll skip to step 7
 			
 			// Step 7: Enter Aliases
@@ -1293,7 +1300,8 @@ public class SharpMUSHParserVisitor(
 		var rest = command[1..];
 		var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
 
-		// TODO: Should Single Commands split? - Getting errors out of this.
+		// Future Enhancement: Investigate if single-token commands should support argument splitting.
+		// Currently causing errors, may require special handling for single-character commands.
 		var arguments = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation);
 
 		return await prs.With(state =>
@@ -1360,7 +1368,8 @@ public class SharpMUSHParserVisitor(
 		var noRsParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.RSNoParse);
 		var nArgs = argCallState?.Arguments?.Length;
 
-		// TODO: Implement lsargs - but there are no immediate commands that need it.
+		// Future Enhancement: Implement lsargs (list-style arguments) support.
+		// No immediate commands require this feature yet, so implementation is deferred.
 		if (argCallState is null)
 		{
 			return arguments;
@@ -1378,7 +1387,8 @@ public class SharpMUSHParserVisitor(
 			{
 				arguments.AddRange(argCallState.Arguments!
 					.Skip(1)
-					// TODO: Implement Parsed Message alt
+					// Future Enhancement: Implement parsed message alternative for better performance.
+					// Currently creates deferred evaluation via Task, could be optimized.
 					.Select(x =>
 						new CallState(x,
 							argCallState.Depth,
@@ -1519,7 +1529,9 @@ public class SharpMUSHParserVisitor(
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
-			// TODO: This does not work in the case of a QREG with an evaluationstring in it.
+			// Future Enhancement: Handle Q-registers containing evaluation strings properly.
+			// In NoParse/NoEval mode, Q-registers with unevaluated code should still be processed,
+			// but currently returns the raw substitution syntax instead.
 			return new CallState("%" + context.GetText());
 		}
 
