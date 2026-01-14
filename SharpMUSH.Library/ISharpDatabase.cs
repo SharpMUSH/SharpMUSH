@@ -160,20 +160,22 @@ public interface ISharpDatabase
 	/// Get an attribute with full inheritance chain resolution in a single database call.
 	/// Follows the inheritance order: object → parent chain (parent, grandparent, etc.) → object's zones → parent's zones → grandparent's zones, etc.
 	/// This means PARENTS TAKE PRECEDENCE OVER ZONES at all levels.
-	/// Returns the attribute with metadata about where it was found and flags adjusted for inheritance.
+	/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
+	/// Streams each attribute in the path with inherited flags merged from deeper inheritance levels.
 	/// </summary>
 	/// <param name="dbref">DBRef of the object to start the search from</param>
-	/// <param name="attribute">Attribute path to search for</param>
+	/// <param name="attribute">Attribute path to search for (e.g., ["FOO", "BAR", "BAZ"])</param>
 	/// <param name="checkParent">Whether to check parent and zone inheritance chains</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>AttributeWithInheritance if found, null otherwise</returns>
-	ValueTask<AttributeWithInheritance?> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
+	/// <returns>Stream of AttributeWithInheritance for each segment in the attribute path, or empty if not found</returns>
+	IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
 		bool checkParent = true, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Lazy version of GetAttributeWithInheritanceAsync for efficient retrieval.
+	/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
 	/// </summary>
-	ValueTask<LazyAttributeWithInheritance?> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
+	IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
 		bool checkParent = true, CancellationToken cancellationToken = default);
 	
 	/// <summary>

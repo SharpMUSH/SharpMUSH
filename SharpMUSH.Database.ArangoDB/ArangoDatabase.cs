@@ -2983,11 +2983,11 @@ public partial class ArangoDatabase(
 		}
 	}
 
-	public async ValueTask<AttributeWithInheritance?> GetAttributeWithInheritanceAsync(
+	public async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(
 		DBRef dbref,
 		string[] attribute,
 		bool checkParent = true,
-		CancellationToken ct = default)
+		[EnumeratorCancellation] CancellationToken ct = default)
 	{
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
@@ -3076,14 +3076,7 @@ public partial class ArangoDatabase(
 		
 		if (result == null || result.attributes == null)
 		{
-			return null;
-		}
-		
-		// Convert query results to AttributeWithInheritance
-		var attrs = new SharpAttribute[result.attributes.Count];
-		for (int i = 0; i < result.attributes.Count; i++)
-		{
-			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
+			yield break;
 		}
 		
 		// Parse the DBRef from the source ID
@@ -3098,13 +3091,19 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Get flags from last attribute
-		var lastAttr = attrs.Last();
-		var flags = result.filterFlags 
-			? lastAttr.Flags.Where(f => f.Inheritable)
-			: lastAttr.Flags;
-		
-		return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
+		// For each attribute in the path, yield it with inherited flags merged
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			var attr = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
+			
+			// Get flags from this attribute, filtered if inherited
+			var flags = result.filterFlags 
+				? attr.Flags.Where(f => f.Inheritable)
+				: attr.Flags;
+			
+			// Return a single-element array for this segment
+			yield return new AttributeWithInheritance([attr], sourceDbRef, sourceType, flags);
+		}
 	}
 	
 	// Helper record for query results
@@ -3126,11 +3125,11 @@ public partial class ArangoDatabase(
 		throw new InvalidOperationException($"Cannot parse DBRef from key: {key}");
 	}
 
-	public async ValueTask<LazyAttributeWithInheritance?> GetLazyAttributeWithInheritanceAsync(
+	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
 		DBRef dbref,
 		string[] attribute,
 		bool checkParent = true,
-		CancellationToken ct = default)
+		[EnumeratorCancellation] CancellationToken ct = default)
 	{
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
@@ -3219,14 +3218,7 @@ public partial class ArangoDatabase(
 		
 		if (result == null || result.attributes == null)
 		{
-			return null;
-		}
-		
-		// Convert query results to lazy attributes
-		var attrs = new LazySharpAttribute[result.attributes.Count];
-		for (int i = 0; i < result.attributes.Count; i++)
-		{
-			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
+			yield break;
 		}
 		
 		// Parse the DBRef from the source ID
@@ -3241,13 +3233,19 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Get flags from last attribute - already loaded in SharpAttributeQueryToLazySharpAttribute
-		var lastAttr = attrs.Last();
-		var finalFlags = result.filterFlags 
-			? lastAttr.Flags.Where(f => f.Inheritable)
-			: lastAttr.Flags;
-		
-		return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, finalFlags);
+		// For each attribute in the path, yield it with inherited flags merged
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			var attr = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
+			
+			// Get flags from this attribute, filtered if inherited
+			var flags = result.filterFlags 
+				? attr.Flags.Where(f => f.Inheritable)
+				: attr.Flags;
+			
+			// Return a single-element array for this segment
+			yield return new LazyAttributeWithInheritance([attr], sourceDbRef, sourceType, flags);
+		}
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]

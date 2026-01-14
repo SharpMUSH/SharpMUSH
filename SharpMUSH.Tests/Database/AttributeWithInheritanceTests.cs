@@ -32,14 +32,14 @@ public class AttributeWithInheritanceTests
 			MModule.single($"&TEST_ATTR {objDbRef}=Direct Value"));
 
 		// Query using the new method
-		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			objDbRef,
 			new[] { "TEST_ATTR" },
-			CheckParent: true));
+			CheckParent: true)).ToListAsync();
+		var result = results[0];
 
 		// Verify
-		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Self);
+		await Assert.That(result.Source).IsEqualTo(AttributeSource.Self);
 		await Assert.That(result.SourceObject.Number).IsEqualTo(objDbRef.Number);
 		await Assert.That(result.Attributes.Length).IsEqualTo(1);
 		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("Direct Value");
@@ -75,14 +75,14 @@ public class AttributeWithInheritanceTests
 			MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
 		// Query using the new method
-		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			childDbRef,
 			new[] { "PARENT_ATTR" },
-			CheckParent: true));
+			CheckParent: true)).ToListAsync();
+		var result = results[0];
 
 		// Verify
-		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Parent);
+		await Assert.That(result.Source).IsEqualTo(AttributeSource.Parent);
 		await Assert.That(result.SourceObject.Number).IsEqualTo(parentDbRef.Number);
 		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("Parent Value");
 	}
@@ -117,14 +117,14 @@ public class AttributeWithInheritanceTests
 			MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		// Query using the new method
-		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			objDbRef,
 			new[] { "ZONE_ATTR" },
-			CheckParent: true));
+			CheckParent: true)).ToListAsync();
+		var result = results[0];
 
 		// Verify
-		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Zone);
+		await Assert.That(result.Source).IsEqualTo(AttributeSource.Zone);
 		await Assert.That(result.SourceObject.Number).IsEqualTo(zoneDbRef.Number);
 		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("Zone Value");
 	}
@@ -158,10 +158,11 @@ public class AttributeWithInheritanceTests
 			MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
 		// Query with checkParent=false
-		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			childDbRef,
 			new[] { "NO_PARENT_ATTR" },
-			CheckParent: false));
+			CheckParent: false)).ToListAsync();
+		var result = results[0];
 
 		// Should not find the attribute
 		await Assert.That(result).IsNull();
@@ -213,14 +214,14 @@ public class AttributeWithInheritanceTests
 			MModule.single($"@chzone {childDbRef}={zoneDbRef}"));
 
 		// Query
-		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			childDbRef,
 			new[] { "PREC_ATTR" },
-			CheckParent: true));
+			CheckParent: true)).ToListAsync();
+		var result = results[0];
 
 		// Parent should take precedence
-		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Parent);
+		await Assert.That(result.Source).IsEqualTo(AttributeSource.Parent);
 		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("From Parent");
 	}
 
@@ -242,14 +243,14 @@ public class AttributeWithInheritanceTests
 			MModule.single($"&NESTED`ATTR {objDbRef}=Nested Value"));
 
 		// Query using the new method
-		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			objDbRef,
 			new[] { "NESTED", "ATTR" },
-			CheckParent: true));
+			CheckParent: true)).ToListAsync();
+		var result = results[0];
 
 		// Verify
-		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Self);
+		await Assert.That(result.Source).IsEqualTo(AttributeSource.Self);
 		await Assert.That(result.Attributes.Length).IsEqualTo(2);
 		await Assert.That(result.Attributes[1].Value.ToPlainText()).IsEqualTo("Nested Value");
 	}
@@ -298,14 +299,14 @@ public class AttributeWithInheritanceTests
 			MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
 		// Query - should find attribute from grandparent
-		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			childDbRef,
 			new[] { "COMPLEX_ATTR" },
-			CheckParent: true));
+			CheckParent: true)).ToListAsync();
+		var result = results[0];
 
 		// Verify
-		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Source).IsEqualTo(AttributeSource.Parent);
+		await Assert.That(result.Source).IsEqualTo(AttributeSource.Parent);
 		await Assert.That(result.SourceObject.Number).IsEqualTo(grandparentDbRef.Number);
 		await Assert.That(result.Attributes[0].Value.ToPlainText()).IsEqualTo("From Grandparent");
 	}
@@ -322,10 +323,11 @@ public class AttributeWithInheritanceTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Query for non-existent attribute
-		var result = await Mediator.Send(new GetAttributeWithInheritanceQuery(
+		var results = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
 			objDbRef,
 			new[] { "DOES_NOT_EXIST" },
-			CheckParent: true));
+			CheckParent: true)).ToListAsync();
+		var result = results[0];
 
 		// Verify
 		await Assert.That(result).IsNull();

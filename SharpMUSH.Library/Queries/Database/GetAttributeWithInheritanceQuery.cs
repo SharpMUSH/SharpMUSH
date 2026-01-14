@@ -15,6 +15,9 @@ namespace SharpMUSH.Library.Queries.Database;
 /// ... and so on for the entire hierarchy
 /// 
 /// IMPORTANT: Parents take precedence over zones at all levels.
+/// 
+/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
+/// Each attribute in the path is returned as a separate AttributeWithInheritance instance with inherited flags merged.
 /// </summary>
 /// <param name="DBRef">The DBRef of the object to start the search from</param>
 /// <param name="Attribute">The attribute path to search for (e.g., ["FOO"] or ["FOO", "BAR", "BAZ"])</param>
@@ -23,7 +26,7 @@ public record GetAttributeWithInheritanceQuery(
 	DBRef DBRef,
 	string[] Attribute,
 	bool CheckParent = true)
-	: IQuery<AttributeWithInheritance?>, ICacheable
+	: IStreamQuery<AttributeWithInheritance>, ICacheable
 {
 	public string CacheKey => $"attribute-inheritance:{DBRef}:{string.Join("`", Attribute)}:{CheckParent}";
 	
@@ -32,12 +35,13 @@ public record GetAttributeWithInheritanceQuery(
 
 /// <summary>
 /// Lazy version of GetAttributeWithInheritanceQuery for efficient retrieval.
+/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
 /// </summary>
 public record GetLazyAttributeWithInheritanceQuery(
 	DBRef DBRef,
 	string[] Attribute,
 	bool CheckParent = true)
-	: IQuery<LazyAttributeWithInheritance?>, ICacheable
+	: IStreamQuery<LazyAttributeWithInheritance>, ICacheable
 {
 	public string CacheKey => $"lazy-attribute-inheritance:{DBRef}:{string.Join("`", Attribute)}:{CheckParent}";
 	
