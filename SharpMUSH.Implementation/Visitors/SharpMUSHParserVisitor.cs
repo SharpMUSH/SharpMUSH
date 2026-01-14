@@ -60,23 +60,6 @@ public class SharpMUSHParserVisitor(
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	private int _braceDepthCounter;
-	
-	/// <summary>
-	/// Cached built-in function lookups initialized at startup for O(1) runtime access.
-	/// Eliminates dictionary lookups from FunctionLibrary on every function call.
-	/// </summary>
-	private readonly Dictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)> _functionCache
-		= new Dictionary<string, (FunctionDefinition, bool)>(parser.FunctionLibrary, StringComparer.OrdinalIgnoreCase);
-	
-	/// <summary>
-	/// Indexed cache of single-token commands by first character for fast lookup.
-	/// Eliminates expensive LINQ queries on CommandLibrary for every command parse.
-	/// </summary>
-	private readonly Dictionary<string, List<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>>> _singleTokenCommandIndex
-		= parser.CommandLibrary
-			.Where(x => x.Value.IsSystem && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken))
-			.GroupBy(x => x.Key[..1], StringComparer.OrdinalIgnoreCase)
-			.ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
 
@@ -364,7 +347,6 @@ public class SharpMUSHParserVisitor(
 	/// Parses and executes a function call.
 	/// </summary>
 	/// <remarks>
-	/// Built-in function lookups are cached at startup for improved performance.
 	/// TODO: Move function resolution to a dedicated Library Service for better separation of concerns.
 	/// </remarks>
 	/// <param name="name">Function Name</param>
@@ -383,7 +365,7 @@ public class SharpMUSHParserVisitor(
 		
 		try
 		{
-			if (!_functionCache.TryGetValue(name, out var libraryMatch))
+			if (!parser.FunctionLibrary.TryGetValue(name, out var libraryMatch))
 			{
 				var discoveredFunction = DiscoverBuiltInFunction(name);
 
@@ -707,9 +689,13 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
-			// Step 2b: Check for a single-token command using indexed cache
-			if (_singleTokenCommandIndex.TryGetValue(command[..1], out var singleTokenCommandPattern)
-			    && singleTokenCommandPattern.Count != 0)
+			// Step 2b: Check for a single-token command
+			var singleTokenCommandPattern = parser.CommandLibrary.Where(x
+				=> x.Key.Equals(command[..1], StringComparison.CurrentCultureIgnoreCase)
+				   && x.Value.IsSystem
+				   && x.Value.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken)).ToList();
+
+			if (singleTokenCommandPattern.Count != 0)
 			{
 				return await HandleSingleTokenCommandPattern(parser, src, context, command, singleTokenCommandPattern);
 			}
