@@ -11,9 +11,9 @@ namespace SharpMUSH.Library.Services;
 /// Service for matching listen patterns on objects.
 /// </summary>
 /// <remarks>
-/// TODO: Complete implementation with proper API usage
-/// - Fix DBRef comparison (need to use .Object() extension)
-/// - Use proper async enumeration for cached attributes
+/// Implements listen pattern matching for ^-prefixed attributes that trigger on speech.
+/// Supports AHEAR (others only), AAHEAR (anyone), and AMHEAR (self only) behaviors.
+/// Can optionally check parent objects with LISTEN_PARENT flag.
 /// </remarks>
 public class ListenPatternMatcher(IMediator mediator) : IListenPatternMatcher
 {

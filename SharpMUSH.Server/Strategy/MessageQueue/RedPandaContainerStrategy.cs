@@ -1,7 +1,10 @@
 namespace SharpMUSH.Server.Strategy.MessageQueue;
 
-// TODO: Update this for Kafka configuration without MassTransit
+/// <summary>
+/// Strategy for RedPanda container configuration.
+/// Reserved for future use to configure RedPanda-specific Kafka settings for production environments.
+/// </summary>
 public class RedPandaContainerStrategy : MessageQueueStrategy
 {
-// public override void ConfigureKafka(IBusRegistrationContext context, IKafkaFactoryConfigurator cfg) { }
+	// Reserved for future RedPanda-specific configuration
 }
