@@ -3102,7 +3102,7 @@ public partial class ArangoDatabase(
 		Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting {result.attributes.Count} attributes...");
 		
 		// Convert all attributes with flags pre-fetched using async Select pattern
-		var convertedAttributes = await result.attributes.Select(async (attrResult, _, innerCt) =>
+		var convertedAttributes = await result.attributes.ToAsyncEnumerable().Select(async (attrResult, _, innerCt) =>
 		{
 			Console.WriteLine($"GetAttributeWithInheritanceAsync: Converting attribute {attrResult.Name}...");
 			// Fetch flags and create attribute with flags already included
@@ -3281,7 +3281,7 @@ public partial class ArangoDatabase(
 		};
 		
 		// Convert all lazy attributes using async Select pattern
-		var convertedAttributes = await result.attributes.Select(async (attrResult, _, innerCt) =>
+		var convertedAttributes = await result.attributes.ToAsyncEnumerable().Select(async (attrResult, _, innerCt) =>
 		{
 			var attr = await SharpAttributeQueryToLazySharpAttribute(attrResult, innerCt);
 			
