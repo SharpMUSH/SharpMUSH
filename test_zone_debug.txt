@@ -1,0 +1,11 @@
+Test creates two rooms with @dig
+Then tries to zone room1 to zmr with @chzone
+On original code: works
+On my code: zone is not set
+
+Possible issues:
+1. SafeToAddZone returning false when it shouldn't
+2. Permission check failing
+3. SetObjectZoneCommand not executing
+
+Need to trace through the execution

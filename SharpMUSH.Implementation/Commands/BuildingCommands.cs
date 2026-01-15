@@ -657,7 +657,9 @@ public partial class Commands
 				// Handle "none" to remove zone
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
-					return await ManipulateSharpObjectService!.UnsetZone(executor, obj, true);
+					await Mediator!.Send(new UnsetObjectZoneCommand(obj));
+					await NotifyService!.Notify(executor, "Zone cleared.");
+					return CallState.Empty;
 				}
 
 				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -677,20 +679,24 @@ public partial class Commands
 								shouldNotify: true);
 						}
 
-						// Use SetZone service method which includes cycle detection
-						var setResult = await ManipulateSharpObjectService!.SetZone(executor, obj, zoneObj, false);
-						
-						// If setting zone failed, return the error
-						if (setResult.Message != null && setResult.Message.ToPlainText()!.StartsWith("#-1"))
+						// Check for cycles before setting the zone
+						if (!await HelperFunctions.SafeToAddZone(obj, zoneObj))
 						{
-							return setResult;
+							return await NotifyService!.NotifyAndReturn(
+								executor.Object().DBRef,
+								errorReturn: Errors.ZoneLoop,
+								notifyMessage: "Cannot add zone: would create a cycle.",
+								shouldNotify: true);
 						}
+
+						// Set the zone using database edge
+						await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
 
 						// Auto-set ChZone lock if not present on zone object
 						// Default ChZone lock is the zone object itself (allows controlled objects)
 						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
 						{
-							await Mediator!.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
+							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
 						}
 						
 						// Clear privileged flags and powers unless /preserve is used
