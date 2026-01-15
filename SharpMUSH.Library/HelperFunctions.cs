@@ -274,7 +274,8 @@ public static partial class HelperFunctions
 		var newRelatedDbRef = newRelated.Object().DBRef;
 
 		// Check for self-reference (object trying to be its own parent/zone)
-		if (startDbRef == newRelatedDbRef)
+		// Compare by number only, ignoring timestamps
+		if (startDbRef.Number == newRelatedDbRef.Number)
 		{
 			return false;
 		}
@@ -283,7 +284,7 @@ public static partial class HelperFunctions
 		if (isParent)
 		{
 			var currentParent = await start.Object().Parent.WithCancellation(CancellationToken.None);
-			if (!currentParent.IsNone && currentParent.Object()!.DBRef == newRelatedDbRef)
+			if (!currentParent.IsNone && currentParent.Object()!.DBRef.Number == newRelatedDbRef.Number)
 			{
 				return true;
 			}
@@ -291,14 +292,15 @@ public static partial class HelperFunctions
 		else
 		{
 			var currentZone = await start.Object().Zone.WithCancellation(CancellationToken.None);
-			if (!currentZone.IsNone && currentZone.Object()!.DBRef == newRelatedDbRef)
+			if (!currentZone.IsNone && currentZone.Object()!.DBRef.Number == newRelatedDbRef.Number)
 			{
 				return true;
 			}
 		}
 
-		// Use a set to track visited objects and prevent infinite loops
-		var visited = new HashSet<DBRef>();
+		// Use a set to track visited object numbers (not full DBRefs with timestamps)
+		// This ensures we match objects regardless of how DBRef was constructed
+		var visited = new HashSet<int>();
 		var toCheck = new Queue<AnySharpObject>();
 		toCheck.Enqueue(newRelated);
 
@@ -309,16 +311,17 @@ public static partial class HelperFunctions
 		while (toCheck.Count > 0 && depth < maxDepth)
 		{
 			var current = toCheck.Dequeue();
-			var currentDbRef = current.Object().DBRef;
+			var currentNumber = current.Object().DBRef.Number;
 
-			// Skip if already visited
-			if (!visited.Add(currentDbRef))
+			// Skip if already visited (compare by number only)
+			if (!visited.Add(currentNumber))
 			{
 				continue;
 			}
 
 			// If we find start object in the traversal, it would create a cycle
-			if (currentDbRef == startDbRef)
+			// Compare by number only, ignoring timestamps
+			if (currentNumber == startDbRef.Number)
 			{
 				return false;
 			}
