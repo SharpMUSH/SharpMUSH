@@ -3072,40 +3072,19 @@ public partial class ArangoDatabase(
 			{ "max", attribute.Length },
 			{ "checkParent", checkParent }
 		};
-		// DEBUG: Prove bind variable values and types
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] About to execute query with bindVars:");
-		Console.WriteLine($"  - attr={string.Join("`", attribute)} (type={attribute.GetType().Name})");
-		Console.WriteLine($"  - startVertex={startVertex} (type={startVertex.GetType().Name})");
-		Console.WriteLine($"  - max={attribute.Length} (type={attribute.Length.GetType().Name})");
-		Console.WriteLine($"  - checkParent={checkParent} (type={checkParent.GetType().Name})");
-		
 		
 		// Execute query and get first result
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Query executed successfully, results.Count={results.Count}");
-		
-		
-		if (result == null)
-		{
-			Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] FirstOrDefault returned NULL - query found no matching attributes");
-		}
-		else
-		{
-			Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] FirstOrDefault returned result: attributes={result.attributes?.Count ?? 0} items, sourceId={result.sourceId}, source={result.source}, filterFlags={result.filterFlags}");
-		}
 		
 		if (result == null || result.attributes == null)
 		{
 			// No results - don't yield anything (empty enumerable)
-			Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Yielding nothing (empty enumerable) - no attributes found");
 			yield break;
 		}
 		
 		// Parse the DBRef from the source ID
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Parsing sourceId={result.sourceId} to DBRef");
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Parsed DBRef={sourceDbRef}");
 		
 		// Parse source type
 		var sourceType = result.source switch
@@ -3115,29 +3094,22 @@ public partial class ArangoDatabase(
 			"Zone" => AttributeSource.Zone,
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Source type={sourceType}");
 		
 		// Convert all attributes (simple loop to avoid nested async operations)
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Converting {result.attributes.Count} attributes to SharpAttribute objects");
 		var attrs = new SharpAttribute[result.attributes.Count];
 		for (int i = 0; i < result.attributes.Count; i++)
 		{
 			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
-			Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync]   Converted attribute [{i}]: Name={attrs[i].Name}, Key={attrs[i].Key}");
 		}
 		
 		// Get flags from last attribute only
 		var lastAttr = attrs.Last();
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Last attribute: Name={lastAttr.Name}, Flags.Count={lastAttr.Flags.Count()}, filterFlags={result.filterFlags}");
 		var flags = result.filterFlags 
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Filtered flags count={flags.Count()}");
 		
 		// Yield a SINGLE result containing ALL attributes in the path
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] About to yield AttributeWithInheritance with {attrs.Length} attributes");
 		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
-		Console.WriteLine($"[DEBUG GetAttributeWithInheritanceAsync] Successfully yielded result - method complete");
 	}
 	
 	// Simplified version that doesn't need nested async operations
