@@ -311,6 +311,18 @@ public partial class Commands
 		if (selectedGuest == null)
 		{
 			// This shouldn't happen, but handle it just in case
+			// Trigger SOCKET`LOGINFAIL for unexpected guest selection failure
+			await EventService!.TriggerEventAsync(
+				parser,
+				"SOCKET`LOGINFAIL",
+				null,
+				handle.ToString(),
+				ipAddress,
+				"1",
+				"unexpected guest selection failure",
+				"#-1",
+				"guest");
+
 			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
 			return new None();
 		}
