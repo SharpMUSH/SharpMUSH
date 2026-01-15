@@ -240,4 +240,25 @@ public class ZoneParentCycleTests
 		var message = result.Message!.ToPlainText()!.ToLowerInvariant();
 		await Assert.That(message.Contains("cycle") || message.Contains("loop")).IsTrue();
 	}
+
+	[Test]
+	public async ValueTask ChzoneCommand_Simple_ShouldSucceed()
+	{
+		// Create two objects
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create SimpleZone"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create SimpleObj"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Set obj's zone to zone
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
+
+		// Verify zone was set
+		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objZone = await updated.Known.Object().Zone.WithCancellation(CancellationToken.None);
+
+		await Assert.That(objZone.IsNone).IsFalse();
+		await Assert.That(objZone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+	}
 }
