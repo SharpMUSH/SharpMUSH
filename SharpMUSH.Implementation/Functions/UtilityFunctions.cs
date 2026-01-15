@@ -138,10 +138,17 @@ public partial class Functions
 						curHilight = false;
 						break;
 					case 'n':
-						// TODO: ANSI 'n' (clear/normal) handling may need improvement.
-						// Current implementation sets a simple flag, but proper handling would involve
-						// clearing the entire ANSI state tree structure to reset all formatting.
+						// ANSI 'n' (clear/normal) resets all formatting to defaults.
+						// Setting clear=true adds a clear ANSI code to the output,
+						// while resetting the fields ensures the structure has no formatting.
 						clear = true;
+						foreground = AnsiColor.NoAnsi;
+						background = AnsiColor.NoAnsi;
+						blink = false;
+						bold = false;
+						invert = false;
+						underline = false;
+						curHilight = false;
 						break;
 					case 'd':
 						foreground = StringExtensions.ansiBytes(highlightFunc(curHilight, 39));
