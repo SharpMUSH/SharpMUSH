@@ -4505,7 +4505,7 @@ public partial class Commands
 					// Output attribute flags if not in TF mode and not skipdefaults
 					if (!isTf && attr.Flags.Any())
 					{
-						if (!skipDefaults || !await AreDefaultAttrFlags(attr.Name, attr.Flags))
+						if (!skipDefaults || !await AreDefaultAttrFlagsAsync(attr.Name, attr.Flags))
 						{
 							foreach (var flag in attr.Flags)
 							{
@@ -4602,7 +4602,7 @@ public partial class Commands
 	/// <summary>
 	/// Checks if attribute flags are the default for that attribute
 	/// </summary>
-	private static async ValueTask<bool> AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
+	private static async ValueTask<bool> AreDefaultAttrFlagsAsync(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
 		// Query the attribute entry to check for custom default flags
 		var entry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
@@ -6350,6 +6350,7 @@ public partial class Commands
 			var limit = existingEntry?.Limit;
 			
 			// Create or update the attribute entry with enum values
+			// Note: Command parameter is EnumValues, model property is Enum
 			var enumAttrEntry = await Mediator!.Send(new CreateAttributeEntryCommand(
 				attrName.ToUpper(), 
 				defaultFlags,

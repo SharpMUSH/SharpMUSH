@@ -138,7 +138,9 @@ public partial class Functions
 						curHilight = false;
 						break;
 					case 'n':
-						// ANSI 'n' (clear/normal) resets all formatting to defaults
+						// ANSI 'n' (clear/normal) resets all formatting to defaults.
+						// Setting clear=true adds a clear ANSI code to the output,
+						// while resetting the fields ensures the structure has no formatting.
 						clear = true;
 						foreground = AnsiColor.NoAnsi;
 						background = AnsiColor.NoAnsi;
