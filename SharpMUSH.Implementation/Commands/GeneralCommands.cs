@@ -6335,19 +6335,32 @@ public partial class Commands
 			}
 			
 			var choices = args["1"].Message?.ToPlainText();
-			await NotifyService!.Notify(executor, $"@attribute/enum: Setting choices for '{attrName}'");
-			await NotifyService.Notify(executor, $"  Choices: {choices}");
+			var choiceArray = choices?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
+			
+			if (choiceArray.Length == 0)
+			{
+				await NotifyService!.Notify(executor, "You must specify at least one choice.");
+				return new CallState("#-1 NO CHOICES SPECIFIED");
+			}
+			
+			// Create or update the attribute entry with enum values
+			var enumAttrEntry = await Mediator!.Send(new CreateAttributeEntryCommand(
+				attrName.ToUpper(), 
+				[], // No flags for enum-only update
+				Limit: null,
+				EnumValues: choiceArray));
+			
+			if (enumAttrEntry == null)
+			{
+				await NotifyService!.Notify(executor, "Failed to update attribute entry.");
+				return new CallState("#-1 UPDATE FAILED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@attribute/enum: Set choices for '{attrName}'");
+			await NotifyService.Notify(executor, $"  Choices: {string.Join(" ", choiceArray)}");
 			await NotifyService.Notify(executor, "  New values must match one of these choices");
 			
-			// TODO: Attribute validation via enumeration lists.
-			// Requirements:
-			// - Store enumeration list with attribute in table
-			// - Validate all new attribute values against list
-			// - Support partial matching like grab()
-			// - Support custom delimiters (default is space)
-			await NotifyService.Notify(executor, "Note: Attribute validation not yet implemented.");
-			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return CallState.Empty;
 		}
 		
 		// No switches - display attribute information
