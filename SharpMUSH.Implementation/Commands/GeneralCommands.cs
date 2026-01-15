@@ -6351,23 +6351,37 @@ public partial class Commands
 		}
 		
 		// No switches - display attribute information
-		// TODO: Attribute information display requires attribute table query system.
-		// Requirements:
-		// - Query attribute table for full name, flags, creator, access rules
-		// - Display default flags if any
-		// - Show validation rules (limit/enum) if set
-		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrName}'");
-		await NotifyService.Notify(executor, "  Full name: (attribute lookup pending)");
-		await NotifyService.Notify(executor, "  Flags: (attribute table query pending)");
-		await NotifyService.Notify(executor, "  Created by: (attribute table query pending)");
+		var attrEntry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
 		
-		// TODO: Full attribute information display requires attribute table query system.
-		// Requirements:
-		// - Query attribute table for attribute information
-		// - Display full name (canonical form)
-		// - Display default attribute flags
-		// - Display dbref of object that added it to table
-		await NotifyService.Notify(executor, "Note: Attribute table query not yet implemented.");
+		if (attrEntry == null)
+		{
+			await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in standard attribute table.");
+			await NotifyService.Notify(executor, "This is not an error - the attribute may still be used on objects.");
+			return CallState.Empty;
+		}
+		
+		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrEntry.Name}'");
+		
+		// Display default flags if any
+		if (attrEntry.DefaultFlags.Any())
+		{
+			await NotifyService.Notify(executor, $"  Default flags: {string.Join(" ", attrEntry.DefaultFlags)}");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Default flags: none");
+		}
+		
+		// Show validation rules if set
+		if (!string.IsNullOrEmpty(attrEntry.Limit))
+		{
+			await NotifyService.Notify(executor, $"  Limit pattern: {attrEntry.Limit}");
+		}
+		
+		if (attrEntry.Enum != null && attrEntry.Enum.Any())
+		{
+			await NotifyService.Notify(executor, $"  Enum values: {string.Join(" ", attrEntry.Enum)}");
+		}
 		
 		return CallState.Empty;
 	}
