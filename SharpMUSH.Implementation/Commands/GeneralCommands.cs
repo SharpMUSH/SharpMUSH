@@ -4505,7 +4505,7 @@ public partial class Commands
 					// Output attribute flags if not in TF mode and not skipdefaults
 					if (!isTf && attr.Flags.Any())
 					{
-						if (!skipDefaults || !AreDefaultAttrFlags(attr.Name, attr.Flags))
+						if (!skipDefaults || !await AreDefaultAttrFlagsAsync(attr.Name, attr.Flags))
 						{
 							foreach (var flag in attr.Flags)
 							{
@@ -4602,17 +4602,23 @@ public partial class Commands
 	/// <summary>
 	/// Checks if attribute flags are the default for that attribute
 	/// </summary>
-	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
+	private static async ValueTask<bool> AreDefaultAttrFlagsAsync(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
-		// For now, empty flags are considered default for most attributes.
-		// TODO: Implement proper checking against @attribute/access definitions
-		// stored in the database for standard attributes that have custom default flags.
-		// This would require:
-		// 1. Database table/collection for attribute definitions with default flags
-		// 2. Query to check if attribute has custom defaults
-		// 3. Comparison of current flags against those defaults
-		var flagList = flags.ToList();
-		return flagList.Count == 0;
+		// Query the attribute entry to check for custom default flags
+		var entry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
+		
+		if (entry == null)
+		{
+			// No entry means no custom defaults; empty flags are considered default
+			return !flags.Any();
+		}
+		
+		// Convert current flags to names for comparison
+		var currentFlagNames = flags.Select(f => f.Name.ToUpper()).OrderBy(n => n).ToList();
+		var defaultFlagNames = entry.DefaultFlags.Select(f => f.ToUpper()).OrderBy(n => n).ToList();
+		
+		// Compare flag lists
+		return currentFlagNames.SequenceEqual(defaultFlagNames);
 	}
 
 	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
@@ -6329,39 +6335,73 @@ public partial class Commands
 			}
 			
 			var choices = args["1"].Message?.ToPlainText();
-			await NotifyService!.Notify(executor, $"@attribute/enum: Setting choices for '{attrName}'");
-			await NotifyService.Notify(executor, $"  Choices: {choices}");
+			var choiceArray = choices?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
+			
+			// Validate that after parsing, we have actual choices (not just whitespace)
+			if (choiceArray.Length == 0)
+			{
+				await NotifyService!.Notify(executor, "You must specify at least one choice.");
+				return new CallState("#-1 NO CHOICES SPECIFIED");
+			}
+			
+			// Get existing entry to preserve flags and limit
+			var existingEntry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
+			var defaultFlags = existingEntry?.DefaultFlags ?? [];
+			var limit = existingEntry?.Limit;
+			
+			// Create or update the attribute entry with enum values
+			// Note: Command parameter is EnumValues, model property is Enum
+			var enumAttrEntry = await Mediator!.Send(new CreateAttributeEntryCommand(
+				attrName.ToUpper(), 
+				defaultFlags,
+				Limit: limit,
+				EnumValues: choiceArray));
+			
+			if (enumAttrEntry == null)
+			{
+				await NotifyService!.Notify(executor, "Failed to update attribute entry.");
+				return new CallState("#-1 UPDATE FAILED");
+			}
+			
+			await NotifyService!.Notify(executor, $"@attribute/enum: Set choices for '{attrName}'");
+			await NotifyService.Notify(executor, $"  Choices: {string.Join(" ", choiceArray)}");
 			await NotifyService.Notify(executor, "  New values must match one of these choices");
 			
-			// TODO: Attribute validation via enumeration lists.
-			// Requirements:
-			// - Store enumeration list with attribute in table
-			// - Validate all new attribute values against list
-			// - Support partial matching like grab()
-			// - Support custom delimiters (default is space)
-			await NotifyService.Notify(executor, "Note: Attribute validation not yet implemented.");
-			
-			return new CallState("#-1 NOT IMPLEMENTED");
+			return CallState.Empty;
 		}
 		
 		// No switches - display attribute information
-		// TODO: Attribute information display requires attribute table query system.
-		// Requirements:
-		// - Query attribute table for full name, flags, creator, access rules
-		// - Display default flags if any
-		// - Show validation rules (limit/enum) if set
-		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrName}'");
-		await NotifyService.Notify(executor, "  Full name: (attribute lookup pending)");
-		await NotifyService.Notify(executor, "  Flags: (attribute table query pending)");
-		await NotifyService.Notify(executor, "  Created by: (attribute table query pending)");
+		var attrEntry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
 		
-		// TODO: Full attribute information display requires attribute table query system.
-		// Requirements:
-		// - Query attribute table for attribute information
-		// - Display full name (canonical form)
-		// - Display default attribute flags
-		// - Display dbref of object that added it to table
-		await NotifyService.Notify(executor, "Note: Attribute table query not yet implemented.");
+		if (attrEntry == null)
+		{
+			await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in standard attribute table.");
+			await NotifyService.Notify(executor, "This is not an error - the attribute may still be used on objects.");
+			return CallState.Empty;
+		}
+		
+		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrEntry.Name}'");
+		
+		// Display default flags if any
+		if (attrEntry.DefaultFlags.Any())
+		{
+			await NotifyService.Notify(executor, $"  Default flags: {string.Join(" ", attrEntry.DefaultFlags)}");
+		}
+		else
+		{
+			await NotifyService.Notify(executor, "  Default flags: none");
+		}
+		
+		// Show validation rules if set
+		if (!string.IsNullOrEmpty(attrEntry.Limit))
+		{
+			await NotifyService.Notify(executor, $"  Limit pattern: {attrEntry.Limit}");
+		}
+		
+		if (attrEntry.Enum != null && attrEntry.Enum.Any())
+		{
+			await NotifyService.Notify(executor, $"  Enum values: {string.Join(" ", attrEntry.Enum)}");
+		}
 		
 		return CallState.Empty;
 	}
