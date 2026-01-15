@@ -3031,10 +3031,10 @@ public partial class ArangoDatabase(
 		var testResult2 = await arangoDb.Query.ExecuteAsync<Dictionary<string, object>>(handle, testQuery2, testBindVars2, cancellationToken: ct);
 		Console.WriteLine($"[AQL DEBUG STEP 2b] Self attributes test: {string.Join(", ", testResult2.First().Select(kv => $"{kv.Key}={kv.Value}"))}");
 		
-		// Step 3: Test parent traversal
+		// Step 3: Test parent traversal from Object node (not Thing)
 		var testQuery3 = $@"
-			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
-			LET parentsList = (FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents} RETURN parent)
+			LET startObj = DOCUMENT(@startVertex)
+			LET parentsList = (FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents} RETURN parent)
 			RETURN {{ 
 				parentsCount: LENGTH(parentsList),
 				parentsIds: (FOR p IN parentsList RETURN p._id),
@@ -3049,22 +3049,24 @@ public partial class ArangoDatabase(
 		var testResult3 = await arangoDb.Query.ExecuteAsync<Dictionary<string, object>>(handle, testQuery3, testBindVars3, cancellationToken: ct);
 		Console.WriteLine($"[AQL DEBUG STEP 2c] Parent traversal test: {string.Join(", ", testResult3.First().Select(kv => $"{kv.Key}={kv.Value}"))}");
 		
-		// Step 4: Test parent attribute finding
+		// Step 4: Test parent attribute finding from Object node
 		var testQuery4 = $@"
-			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObj = DOCUMENT(@startVertex)
 			LET attrPath = @attr
 			LET maxDepth = @max
 			LET parentWithAttr = (
-				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
-					LET parentObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
+				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentObjId = parent._key
 					LET parentAttrs = (
-						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
+						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
 							RETURN v
 					)
 					RETURN {{
 						parentId: parent._id,
+						parentThingId: parentThing._id,
 						parentObjId: parentObjId,
 						attrsCount: LENGTH(parentAttrs),
 						attrsNames: (FOR a IN parentAttrs RETURN a.Name),
@@ -3086,11 +3088,14 @@ public partial class ArangoDatabase(
 		
 		Console.WriteLine($"\n[AQL DEBUG STEP 3] ===== EXECUTE FULL QUERY =====");
 		// Single AQL query that handles entire inheritance chain
-		// Note: Parent and zone edges connect Object nodes, not Thing/Room/Player nodes
-		// So we traverse from the Object node (@startVertex), not from the Thing/Room/Player node
+		// Graph structure:
+		// - Thing/Room/Player --OUTBOUND graph_objects--> Object
+		// - Object --OUTBOUND graph_parents--> Object (parent)
+		// - Object --OUTBOUND graph_zones--> Object (zone)
+		// So: Use INBOUND to go Object -> Thing, use OUTBOUND to go Object -> parent/zone
 		var query = $@"
 			LET startObj = DOCUMENT(@startVertex)
-			LET startThing = FIRST(FOR v IN 1..1 OUTBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
 			LET attrPath = @attr
 			LET maxDepth = @max
@@ -3110,7 +3115,7 @@ public partial class ArangoDatabase(
 			
 			LET parentResults = @checkParent && selfResult == null ? (
 				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
-					LET parentThing = FIRST(FOR v IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 					LET parentObjId = parent._key
 					LET parentAttrs = (
 						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
@@ -3136,7 +3141,7 @@ public partial class ArangoDatabase(
 				
 				FOR obj IN inheritanceChain
 					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
-						LET zoneThing = FIRST(FOR v IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+						LET zoneThing = FIRST(FOR v IN 1..1 INBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 						LET zoneObjId = zone._key
 						LET zoneAttrs = (
 							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
@@ -3275,11 +3280,14 @@ public partial class ArangoDatabase(
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
 		// Single AQL query that handles entire inheritance chain (WITHOUT inline flag fetching for performance)
-		// Note: Parent and zone edges connect Object nodes, not Thing/Room/Player nodes
-		// So we traverse from the Object node (@startVertex), not from the Thing/Room/Player node
+		// Graph structure:
+		// - Thing/Room/Player --OUTBOUND graph_objects--> Object
+		// - Object --OUTBOUND graph_parents--> Object (parent)
+		// - Object --OUTBOUND graph_zones--> Object (zone)
+		// So: Use INBOUND to go Object -> Thing, use OUTBOUND to go Object -> parent/zone
 		var query = $@"
 			LET startObj = DOCUMENT(@startVertex)
-			LET startThing = FIRST(FOR v IN 1..1 OUTBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
 			LET attrPath = @attr
 			LET maxDepth = @max
@@ -3299,7 +3307,7 @@ public partial class ArangoDatabase(
 			
 			LET parentResults = @checkParent && selfResult == null ? (
 				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
-					LET parentThing = FIRST(FOR v IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 					LET parentObjId = parent._key
 					LET parentAttrs = (
 						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
@@ -3325,7 +3333,7 @@ public partial class ArangoDatabase(
 				
 				FOR obj IN inheritanceChain
 					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
-						LET zoneThing = FIRST(FOR v IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+						LET zoneThing = FIRST(FOR v IN 1..1 INBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 						LET zoneObjId = zone._key
 						LET zoneAttrs = (
 							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
