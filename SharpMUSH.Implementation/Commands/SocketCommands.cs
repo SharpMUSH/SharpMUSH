@@ -70,7 +70,7 @@ public partial class Commands
 		if (ConnectionService!.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
 		{
 			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
-			return new None();
+			return new CallState("#-1 ALREADY CONNECTED");
 		}
 
 		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message!.ToString());
@@ -105,7 +105,7 @@ public partial class Commands
 				username);
 			
 			await NotifyService!.Notify(handle, "Could not find that player.");
-			return new None();
+			return new CallState("#-1 PLAYER NOT FOUND");
 		}
 
 		var nameItem = nameItems.First();
@@ -132,7 +132,7 @@ public partial class Commands
 				username);
 			
 			await NotifyService!.Notify(handle, "Could not find that player.");
-			return new None();
+			return new CallState("#-1 PLAYER NOT FOUND");
 		}
 
 		var validPassword = PasswordService!.PasswordIsValid($"#{foundDB.Object.Key}:{foundDB.Object.CreationTime}",
@@ -154,7 +154,7 @@ public partial class Commands
 				foundDB.Object.Name);
 			
 			await NotifyService!.Notify(handle, "Invalid Password.");
-			return new None();
+			return new CallState("#-1 INVALID PASSWORD");
 		}
 
 		// Future feature: Site lock checking would go here
@@ -174,7 +174,7 @@ public partial class Commands
 
 		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
 		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
-		return new None();
+		return new CallState(playerDbRef);
 	}
 
 	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
@@ -183,7 +183,7 @@ public partial class Commands
 		if (!Configuration!.CurrentValue.Net.Guests)
 		{
 			await NotifyService!.Notify(handle, "Guest logins are not enabled.");
-			return new None();
+			return new CallState("#-1 GUEST LOGINS DISABLED");
 		}
 
 		// Get all players and filter for those with Guest power
@@ -206,7 +206,7 @@ public partial class Commands
 				"guest");
 
 			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
-			return new None();
+			return new CallState("#-1 NO GUEST CHARACTERS");
 		}
 
 		// Get max_guests configuration
@@ -245,7 +245,7 @@ public partial class Commands
 					"guest");
 
 				await NotifyService!.Notify(handle, "Sorry, all guest characters are currently in use.");
-				return new None();
+				return new CallState("#-1 ALL GUESTS IN USE");
 			}
 		}
 		else if (maxGuests == 0)
@@ -279,7 +279,7 @@ public partial class Commands
 					"guest");
 
 				await NotifyService!.Notify(handle, "Sorry, the maximum number of guest connections has been reached.");
-				return new None();
+				return new CallState("#-1 MAX GUESTS REACHED");
 			}
 
 			// Find the guest with fewest connections
@@ -317,7 +317,7 @@ public partial class Commands
 				"guest");
 
 			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
-			return new None();
+			return new CallState("#-1 GUEST SELECTION FAILED");
 		}
 
 		// Bind the connection to the selected guest
@@ -336,7 +336,7 @@ public partial class Commands
 
 		await NotifyService!.Notify(handle, "Connected!");
 		Serilog.Log.Logger.Debug("Successful guest login for {@guest}", selectedGuest.Object);
-		return new None();
+		return new CallState(playerDbRef);
 	}
 
 	[SharpCommand(Name = "QUIT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]

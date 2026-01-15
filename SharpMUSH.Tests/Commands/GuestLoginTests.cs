@@ -26,14 +26,15 @@ public class GuestLoginTests
 		
 		// Give the database a moment to persist
 		await Task.Delay(100);
-		
-		// Clear the notify service to reset call tracking
-		NotifyService.ClearReceivedCalls();
 
 		// Connect using a fresh handle (not yet bound to a player)
 		var guestHandle = 1000L;
-		await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
+		var result = await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
 
+		// Should return a DBRef (not an error)
+		var resultMessage = result.Message?.ToString() ?? "";
+		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
+		
 		// Should receive "Connected!" message
 		await NotifyService
 			.Received()
@@ -50,13 +51,14 @@ public class GuestLoginTests
 		
 		// Give the database a moment to persist
 		await Task.Delay(100);
-		
-		// Clear the notify service to reset call tracking
-		NotifyService.ClearReceivedCalls();
 
 		// Connect with different case variations
 		var guestHandle = 1001L;
-		await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect GUEST"));
+		var result = await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect GUEST"));
+
+		// Should return a DBRef (not an error)
+		var resultMessage = result.Message?.ToString() ?? "";
+		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
 
 		await NotifyService
 			.Received()
@@ -68,11 +70,14 @@ public class GuestLoginTests
 	public async ValueTask ConnectGuest_NoGuestCharacters_FailsWithError()
 	{
 		// Don't create any guest characters
-		NotifyService.ClearReceivedCalls();
-
 		var guestHandle = 1002L;
-		await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
+		var result = await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
 
+		// Should return error CallState
+		var resultMessage = result.Message?.ToString() ?? "";
+		await Assert.That(resultMessage.Contains("#-1")).IsTrue();
+		await Assert.That(resultMessage.Contains("NO GUEST CHARACTERS")).IsTrue();
+		
 		// Should receive error message about no guest characters
 		await NotifyService
 			.Received()
@@ -94,12 +99,14 @@ public class GuestLoginTests
 		
 		// Give the database a moment to persist
 		await Task.Delay(100);
-		
-		NotifyService.ClearReceivedCalls();
 
 		// Connect as guest - should connect to one of the available guests
 		var guestHandle = 1003L;
-		await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
+		var result = await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
+
+		// Should return a DBRef (not an error)
+		var resultMessage = result.Message?.ToString() ?? "";
+		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
 
 		await NotifyService
 			.Received()
