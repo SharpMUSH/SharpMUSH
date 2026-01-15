@@ -493,4 +493,61 @@ public class ManipulateSharpObjectService(
 		
 		return true;
 	}
+
+	public async ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone,
+		bool notify)
+	{
+		// Check if executor controls the object
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Permission denied.");
+			}
+
+			return Errors.ErrorPerm;
+		}
+
+		var safeToAdd = await HelperFunctions.SafeToAddZone(obj, newZone);
+		
+		if (!safeToAdd)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Cannot add zone: would create a cycle.");
+			}
+
+			return Errors.ZoneLoop;
+		}
+
+		await mediator.Send(new SetObjectZoneCommand(obj, newZone));
+
+		if (notify)
+		{
+			await notifyService.Notify(executor, $"Zone set.");
+		}
+
+		return true;
+	}
+
+	public async ValueTask<CallState> UnsetZone(AnySharpObject executor, AnySharpObject obj, bool notify)
+	{
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Permission denied.");
+			}
+			return Errors.ErrorPerm;
+		}
+		
+		await mediator.Send(new UnsetObjectZoneCommand(obj));
+		
+		if (notify)
+		{
+			await notifyService.Notify(executor, "Zone cleared.");
+		}
+		
+		return true;
+	}
 }

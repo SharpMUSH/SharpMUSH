@@ -23,4 +23,8 @@ public interface IManipulateSharpObjectService
 	ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent, bool notify);
 	
 	ValueTask<CallState> UnsetParent(AnySharpObject executor, AnySharpObject obj, bool notify);
+	
+	ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone, bool notify);
+	
+	ValueTask<CallState> UnsetZone(AnySharpObject executor, AnySharpObject obj, bool notify);
 }

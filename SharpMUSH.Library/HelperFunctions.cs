@@ -260,56 +260,113 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>
+	/// This function detects any chance of a loop when combining parent and zone chains.
+	/// It checks if adding a relationship (parent or zone) would create a cycle by following
+	/// both parent and zone links from the new relationship target.
+	/// </summary>
+	/// <param name="start">The object that will have a new relationship set</param>
+	/// <param name="newRelated">The object being set as parent or zone</param>
+	/// <param name="isParent">True if setting parent, false if setting zone</param>
+	/// <returns>True if safe to add (no cycle), false if it would create a cycle</returns>
+	public static async ValueTask<bool> SafeToAddRelationship(AnySharpObject start, AnySharpObject newRelated, bool isParent)
+	{
+		var startDbRef = start.Object().DBRef;
+		var newRelatedDbRef = newRelated.Object().DBRef;
+
+		// Check for self-reference (object trying to be its own parent/zone)
+		if (startDbRef == newRelatedDbRef)
+		{
+			return false;
+		}
+
+		// Check if newRelated is already the current parent/zone - that's OK (no-op)
+		if (isParent)
+		{
+			var currentParent = await start.Object().Parent.WithCancellation(CancellationToken.None);
+			if (!currentParent.IsNone && currentParent.Object()!.DBRef == newRelatedDbRef)
+			{
+				return true;
+			}
+		}
+		else
+		{
+			var currentZone = await start.Object().Zone.WithCancellation(CancellationToken.None);
+			if (!currentZone.IsNone && currentZone.Object()!.DBRef == newRelatedDbRef)
+			{
+				return true;
+			}
+		}
+
+		// Use a set to track visited objects and prevent infinite loops
+		var visited = new HashSet<DBRef>();
+		var toCheck = new Queue<AnySharpObject>();
+		toCheck.Enqueue(newRelated);
+
+		const int maxDepth = 100; // Safety limit
+		var depth = 0;
+
+		// BFS traversal of both parent and zone chains
+		while (toCheck.Count > 0 && depth < maxDepth)
+		{
+			var current = toCheck.Dequeue();
+			var currentDbRef = current.Object().DBRef;
+
+			// Skip if already visited
+			if (!visited.Add(currentDbRef))
+			{
+				continue;
+			}
+
+			// If we find start object in the traversal, it would create a cycle
+			if (currentDbRef == startDbRef)
+			{
+				return false;
+			}
+
+			// Follow parent link
+			var parent = await current.Object().Parent.WithCancellation(CancellationToken.None);
+			if (!parent.IsNone)
+			{
+				toCheck.Enqueue(parent.Known);
+			}
+
+			// Follow zone link
+			var zone = await current.Object().Zone.WithCancellation(CancellationToken.None);
+			if (!zone.IsNone)
+			{
+				toCheck.Enqueue(zone.Known);
+			}
+
+			depth++;
+		}
+
+		// If we've reached max depth, assume unsafe to prevent potential issues
+		if (depth >= maxDepth)
+		{
+			return false;
+		}
+
+		// Traversal complete without finding start - safe!
+		return true;
+	}
+
+	/// <summary>
 	/// This function detects any chance of a loop in the parent chain.
 	/// </summary>
 	/// <param name="start"></param>
 	/// <param name="newParent"></param>
 	/// <returns>Whether there's a loop or not</returns>
 	public static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
-	{
-		var startDbRef = start.Object().DBRef;
-		var newParentDbRef = newParent.Object().DBRef;
+		=> await SafeToAddRelationship(start, newParent, isParent: true);
 
-		// Check for self-parent (object trying to be its own parent)
-		if (startDbRef == newParentDbRef)
-		{
-			return false;
-		}
-
-		// Check if newParent is already the parent - that's OK (no-op)
-		var currentParent = await start.Object().Parent.WithCancellation(CancellationToken.None); 
-		if (!currentParent.IsNone && currentParent.Object()!.DBRef == newParentDbRef)
-		{
-			return true;
-		}
-
-		// Check if start is in newParent's parent chain (would create a loop)
-		var checkObj = newParent;
-		var depth = 0;
-		const int maxDepth = 100; // Prevent infinite loops
-		
-		while (depth < maxDepth)
-		{
-			var checkParent = await checkObj.Object().Parent.WithCancellation(CancellationToken.None);
-			if (checkParent.IsNone)
-			{
-				// Reached end of parent chain without finding start - safe!
-				return true;
-			}
-			
-			if (checkParent.Object()!.DBRef == startDbRef)
-			{
-				// Found start in newParent's parent chain - would create loop!
-				return false;
-			}
-			
-			checkObj = checkParent.Known;
-			depth++;
-		}
-		
-		// Reached max depth - assume unsafe to prevent potential issues
-		return false;
-	}
+	/// <summary>
+	/// This function detects any chance of a loop in the zone chain.
+	/// </summary>
+	/// <param name="start"></param>
+	/// <param name="newZone"></param>
+	/// <returns>Whether there's a loop or not</returns>
+	public static async ValueTask<bool> SafeToAddZone(AnySharpObject start, AnySharpObject newZone)
+		=> await SafeToAddRelationship(start, newZone, isParent: false);
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{
