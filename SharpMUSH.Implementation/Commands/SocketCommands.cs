@@ -60,6 +60,7 @@ public partial class Commands
 	/// connect person password
 	/// connect PersonWithoutAPassword
 	/// connect "person without a password"
+	/// connect guest
 	/// </example>
 	[SharpCommand(Name = "CONNECT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 1,
 		MaxArgs = 2, ParameterNames = ["player", "password"])]
@@ -76,10 +77,17 @@ public partial class Commands
 		var username = match.Groups["User"].Value;
 		var password = match.Groups["Password"].Value;
 
-		var nameItems = ArgHelpers.NameList(username).ToList();
 		var handle = parser.CurrentState.Handle!.Value;
 		var connectionData = ConnectionService.Get(handle);
 		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
+
+		// Check if this is a guest login attempt
+		if (username.Equals("guest", StringComparison.OrdinalIgnoreCase))
+		{
+			return await HandleGuestLogin(parser, handle, ipAddress);
+		}
+
+		var nameItems = ArgHelpers.NameList(username).ToList();
 
 		if (nameItems.Count != 1)
 		{
@@ -166,6 +174,163 @@ public partial class Commands
 
 		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
 		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
+		return new None();
+	}
+
+	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
+	{
+		// Check if guest logins are enabled
+		if (!Configuration!.CurrentValue.Net.Guests)
+		{
+			await NotifyService!.Notify(handle, "Guest logins are not enabled.");
+			return new None();
+		}
+
+		// Get all players and filter for those with Guest power
+		var allPlayers = await Mediator!.CreateStream(new GetAllPlayersQuery()).ToListAsync();
+		var guestPlayers = new List<SharpPlayer>();
+
+		foreach (var player in allPlayers)
+		{
+			if (await player.Object.HasPower("Guest"))
+			{
+				guestPlayers.Add(player);
+			}
+		}
+
+		if (guestPlayers.Count == 0)
+		{
+			// Trigger SOCKET`LOGINFAIL for no guest characters
+			await EventService!.TriggerEventAsync(
+				parser,
+				"SOCKET`LOGINFAIL",
+				null,
+				handle.ToString(),
+				ipAddress,
+				"1",
+				"no guest characters available",
+				"#-1",
+				"guest");
+
+			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
+			return new None();
+		}
+
+		// Get max_guests configuration
+		var maxGuests = Configuration!.CurrentValue.Limit.MaxGuests;
+
+		// Find an appropriate guest character based on max_guests policy
+		SharpPlayer? selectedGuest = null;
+
+		if (maxGuests == -1)
+		{
+			// Find a guest that's not currently connected
+			foreach (var guest in guestPlayers)
+			{
+				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
+				var guestConnectionCount = await ConnectionService!.Get(guestDbRef).CountAsync();
+				
+				if (guestConnectionCount == 0)
+				{
+					selectedGuest = guest;
+					break;
+				}
+			}
+
+			if (selectedGuest == null)
+			{
+				// Trigger SOCKET`LOGINFAIL for max guests reached
+				await EventService!.TriggerEventAsync(
+					parser,
+					"SOCKET`LOGINFAIL",
+					null,
+					handle.ToString(),
+					ipAddress,
+					"1",
+					"all guest characters in use",
+					"#-1",
+					"guest");
+
+				await NotifyService!.Notify(handle, "Sorry, all guest characters are currently in use.");
+				return new None();
+			}
+		}
+		else if (maxGuests == 0)
+		{
+			// No limit - use any guest (prefer first)
+			selectedGuest = guestPlayers.First();
+		}
+		else
+		{
+			// Limited to maxGuests total connections
+			// Count total guest connections
+			var totalGuestConnections = 0;
+			foreach (var guest in guestPlayers)
+			{
+				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
+				totalGuestConnections += await ConnectionService!.Get(guestDbRef).CountAsync();
+			}
+
+			if (totalGuestConnections >= maxGuests)
+			{
+				// Trigger SOCKET`LOGINFAIL for max guests reached
+				await EventService!.TriggerEventAsync(
+					parser,
+					"SOCKET`LOGINFAIL",
+					null,
+					handle.ToString(),
+					ipAddress,
+					"1",
+					"maximum guest connections reached",
+					"#-1",
+					"guest");
+
+				await NotifyService!.Notify(handle, "Sorry, the maximum number of guest connections has been reached.");
+				return new None();
+			}
+
+			// Find the guest with fewest connections
+			SharpPlayer? leastUsedGuest = null;
+			var minConnections = int.MaxValue;
+
+			foreach (var guest in guestPlayers)
+			{
+				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
+				var guestConnections = await ConnectionService!.Get(guestDbRef).CountAsync();
+				
+				if (guestConnections < minConnections)
+				{
+					minConnections = guestConnections;
+					leastUsedGuest = guest;
+				}
+			}
+
+			selectedGuest = leastUsedGuest;
+		}
+
+		if (selectedGuest == null)
+		{
+			// This shouldn't happen, but handle it just in case
+			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
+			return new None();
+		}
+
+		// Bind the connection to the selected guest
+		var playerDbRef = new DBRef(selectedGuest.Object.Key, selectedGuest.Object.CreationTime);
+		await ConnectionService!.Bind(handle, playerDbRef);
+
+		// Trigger PLAYER`CONNECT event
+		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
+		await EventService!.TriggerEventAsync(
+			parser,
+			"PLAYER`CONNECT",
+			playerDbRef,
+			$"#{selectedGuest.Object.Key}",
+			connectionCount.ToString(),
+			handle.ToString());
+
+		await NotifyService!.Notify(handle, "Connected!");
+		Serilog.Log.Logger.Debug("Successful guest login for {@guest}", selectedGuest.Object);
 		return new None();
 	}
 
