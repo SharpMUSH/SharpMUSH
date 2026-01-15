@@ -6337,17 +6337,23 @@ public partial class Commands
 			var choices = args["1"].Message?.ToPlainText();
 			var choiceArray = choices?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
 			
+			// Validate that after parsing, we have actual choices (not just whitespace)
 			if (choiceArray.Length == 0)
 			{
 				await NotifyService!.Notify(executor, "You must specify at least one choice.");
 				return new CallState("#-1 NO CHOICES SPECIFIED");
 			}
 			
+			// Get existing entry to preserve flags and limit
+			var existingEntry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
+			var defaultFlags = existingEntry?.DefaultFlags ?? [];
+			var limit = existingEntry?.Limit;
+			
 			// Create or update the attribute entry with enum values
 			var enumAttrEntry = await Mediator!.Send(new CreateAttributeEntryCommand(
 				attrName.ToUpper(), 
-				[], // No flags for enum-only update
-				Limit: null,
+				defaultFlags,
+				Limit: limit,
 				EnumValues: choiceArray));
 			
 			if (enumAttrEntry == null)
