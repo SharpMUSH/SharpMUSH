@@ -4505,7 +4505,7 @@ public partial class Commands
 					// Output attribute flags if not in TF mode and not skipdefaults
 					if (!isTf && attr.Flags.Any())
 					{
-						if (!skipDefaults || !AreDefaultAttrFlags(attr.Name, attr.Flags))
+						if (!skipDefaults || !await AreDefaultAttrFlags(attr.Name, attr.Flags))
 						{
 							foreach (var flag in attr.Flags)
 							{
@@ -4602,17 +4602,23 @@ public partial class Commands
 	/// <summary>
 	/// Checks if attribute flags are the default for that attribute
 	/// </summary>
-	private static bool AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
+	private static async ValueTask<bool> AreDefaultAttrFlags(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
-		// For now, empty flags are considered default for most attributes.
-		// TODO: Implement proper checking against @attribute/access definitions
-		// stored in the database for standard attributes that have custom default flags.
-		// This would require:
-		// 1. Database table/collection for attribute definitions with default flags
-		// 2. Query to check if attribute has custom defaults
-		// 3. Comparison of current flags against those defaults
-		var flagList = flags.ToList();
-		return flagList.Count == 0;
+		// Query the attribute entry to check for custom default flags
+		var entry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
+		
+		if (entry == null)
+		{
+			// No entry means no custom defaults; empty flags are considered default
+			return !flags.Any();
+		}
+		
+		// Convert current flags to names for comparison
+		var currentFlagNames = flags.Select(f => f.Name.ToUpper()).OrderBy(n => n).ToList();
+		var defaultFlagNames = entry.DefaultFlags.Select(f => f.ToUpper()).OrderBy(n => n).ToList();
+		
+		// Compare flag lists
+		return currentFlagNames.SequenceEqual(defaultFlagNames);
 	}
 
 	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
