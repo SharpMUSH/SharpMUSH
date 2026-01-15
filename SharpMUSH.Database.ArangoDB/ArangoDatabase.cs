@@ -2981,6 +2981,302 @@ public partial class ArangoDatabase(
 		}
 	}
 
+	public async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(
+		DBRef dbref,
+		string[] attribute,
+		bool checkParent = true,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		attribute = attribute.Select(x => x.ToUpper()).ToArray();
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
+		
+		var query = $@"
+			LET startObj = DOCUMENT(@startVertex)
+			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
+			LET attrPath = @attr
+			LET maxDepth = @max
+			
+			LET selfAttrs = (
+				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
+					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+					FILTER !condition
+					RETURN v
+			)
+			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
+				attributes: selfAttrs,
+				sourceId: startObjKey,
+				source: 'Self',
+				filterFlags: false
+			}} : null
+			
+			LET parentResults = @checkParent && selfResult == null ? (
+				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentObjId = parent._key
+					LET parentAttrs = (
+						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
+							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+							FILTER !condition
+							RETURN v
+					)
+					FILTER LENGTH(parentAttrs) == maxDepth
+					LIMIT 1
+					RETURN {{
+						attributes: parentAttrs,
+						sourceId: parentObjId,
+						source: 'Parent',
+						filterFlags: true
+					}}
+			) : []
+			
+			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
+				LET inheritanceChain = APPEND([startObj], (
+					FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+						RETURN parent
+				))
+				
+				FOR obj IN inheritanceChain
+					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
+						LET zoneThing = FIRST(FOR v IN 1..1 INBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+						LET zoneObjId = zone._key
+						LET zoneAttrs = (
+							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
+								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+								FILTER !condition
+								RETURN v
+						)
+						FILTER LENGTH(zoneAttrs) == maxDepth
+						LIMIT 1
+						RETURN {{
+							attributes: zoneAttrs,
+							sourceId: zoneObjId,
+							source: 'Zone',
+							filterFlags: true
+						}}
+			) : []
+			
+			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
+			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
+			RETURN FIRST(filtered)
+		";
+		
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "attr", attribute },
+			{ StartVertex, startVertex },
+			{ "max", attribute.Length },
+			{ "checkParent", checkParent }
+		};
+		
+		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var result = results.FirstOrDefault();
+		
+		if (result == null || result.attributes == null)
+		{
+			yield break;
+		}
+		
+		var sourceDbRef = ParseDbRefFromId(result.sourceId);
+		
+		var sourceType = result.source switch
+		{
+			"Self" => AttributeSource.Self,
+			"Parent" => AttributeSource.Parent,
+			"Zone" => AttributeSource.Zone,
+			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
+		};
+		
+		var attrs = new SharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
+		}
+		
+		var lastAttr = attrs.Last();
+		var flags = result.filterFlags 
+			? lastAttr.Flags.Where(f => f.Inheritable)
+			: lastAttr.Flags;
+		
+		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
+	}
+	
+	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttributeSimple(SharpAttributeQueryResult x,
+		CancellationToken cancellationToken = default)
+	{
+		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
+		
+		return new SharpAttribute(
+			x.Id,
+			x.Key,
+			x.Name,
+			flags,
+			null,
+			x.LongName,
+			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
+			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
+			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
+		{
+			Value = MarkupStringModule.deserialize(x.Value)
+		};
+	}
+	
+	private record QueryResult(
+		List<SharpAttributeQueryResult>? attributes,
+		string sourceId,
+		string source,
+		bool filterFlags
+	);
+	
+	private static DBRef ParseDbRefFromId(string key)
+	{
+		if (int.TryParse(key, out var number))
+		{
+			return new DBRef(number);
+		}
+		throw new InvalidOperationException($"Cannot parse DBRef from key: {key}");
+	}
+
+	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
+		DBRef dbref,
+		string[] attribute,
+		bool checkParent = true,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		attribute = attribute.Select(x => x.ToUpper()).ToArray();
+		
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
+		
+		var query = $@"
+			LET startObj = DOCUMENT(@startVertex)
+			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
+			LET attrPath = @attr
+			LET maxDepth = @max
+			
+			LET selfAttrs = (
+				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
+					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+					FILTER !condition
+					RETURN v
+			)
+			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
+				attributes: selfAttrs,
+				sourceId: startObjKey,
+				source: 'Self',
+				filterFlags: false
+			}} : null
+			
+			LET parentResults = @checkParent && selfResult == null ? (
+				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentObjId = parent._key
+					LET parentAttrs = (
+						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
+							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+							FILTER !condition
+							RETURN v
+					)
+					FILTER LENGTH(parentAttrs) == maxDepth
+					LIMIT 1
+					RETURN {{
+						attributes: parentAttrs,
+						sourceId: parentObjId,
+						source: 'Parent',
+						filterFlags: true
+					}}
+			) : []
+			
+			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
+				LET inheritanceChain = APPEND([startObj], (
+					FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+						RETURN parent
+				))
+				
+				FOR obj IN inheritanceChain
+					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
+						LET zoneThing = FIRST(FOR v IN 1..1 INBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+						LET zoneObjId = zone._key
+						LET zoneAttrs = (
+							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
+								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+								FILTER !condition
+								RETURN v
+						)
+						FILTER LENGTH(zoneAttrs) == maxDepth
+						LIMIT 1
+						RETURN {{
+							attributes: zoneAttrs,
+							sourceId: zoneObjId,
+							source: 'Zone',
+							filterFlags: true
+						}}
+			) : []
+			
+			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
+			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
+			RETURN FIRST(filtered)
+		";
+		
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "attr", attribute },
+			{ StartVertex, startVertex },
+			{ "max", attribute.Length },
+			{ "checkParent", checkParent }
+		};
+		
+		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var result = results.FirstOrDefault();
+		
+		if (result == null || result.attributes == null)
+		{
+			yield break;
+		}
+		
+		var sourceDbRef = ParseDbRefFromId(result.sourceId);
+		
+		var sourceType = result.source switch
+		{
+			"Self" => AttributeSource.Self,
+			"Parent" => AttributeSource.Parent,
+			"Zone" => AttributeSource.Zone,
+			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
+		};
+		
+		var attrs = new LazySharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
+		}
+		
+		var lastAttr = attrs.Last();
+		var flags = result.filterFlags 
+			? lastAttr.Flags.Where(f => f.Inheritable)
+			: lastAttr.Flags;
+		
+		yield return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
+	}
+	
+	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttributeSimple(SharpAttributeQueryResult x,
+		CancellationToken cancellationToken = default)
+	{
+		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
+		
+		return new LazySharpAttribute(
+			x.Id,
+			x.Key,
+			x.Name,
+			flags,
+			null,
+			x.LongName,
+			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id, ct))),
+			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
+			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
+			new AsyncLazy<MarkupStringModule.MarkupString>(ct =>
+				Task.FromResult(MarkupStringModule.deserialize(x.Value))));
+	}
+
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
 }
