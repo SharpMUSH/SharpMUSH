@@ -2987,106 +2987,10 @@ public partial class ArangoDatabase(
 		bool checkParent = true,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		Console.WriteLine($"\n[AQL DEBUG STEP 1] ===== METHOD ENTRY =====");
-		Console.WriteLine($"[AQL DEBUG STEP 1] dbref={dbref}, attribute={string.Join("`", attribute)}, checkParent={checkParent}");
-		
 		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
-		Console.WriteLine($"[AQL DEBUG STEP 2] ===== TEST BASIC QUERY COMPONENTS =====");
-		// Step 1: Test if we can get the start node
-		var testQuery1 = $@"
-			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
-			RETURN {{ hasStart: start != null, startId: start._id, startKey: start._key }}
-		";
-		var testBindVars = new Dictionary<string, object> { { StartVertex, startVertex } };
-		var testResult1 = await arangoDb.Query.ExecuteAsync<Dictionary<string, object>>(handle, testQuery1, testBindVars, cancellationToken: ct);
-		Console.WriteLine($"[AQL DEBUG STEP 2a] Start node test: {string.Join(", ", testResult1.First().Select(kv => $"{kv.Key}={kv.Value}"))}");
-		
-		// Step 2: Test if we can find self attributes
-		var testQuery2 = $@"
-			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
-			LET attrPath = @attr
-			LET maxDepth = @max
-			LET selfAttrs = (
-				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
-					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
-					FILTER !condition
-					RETURN v
-			)
-			RETURN {{ 
-				selfAttrsCount: LENGTH(selfAttrs), 
-				selfAttrsNames: (FOR a IN selfAttrs RETURN a.Name),
-				matchesMaxDepth: LENGTH(selfAttrs) == maxDepth,
-				maxDepth: maxDepth
-			}}
-		";
-		var testBindVars2 = new Dictionary<string, object> 
-		{ 
-			{ StartVertex, startVertex },
-			{ "attr", attribute },
-			{ "max", attribute.Length }
-		};
-		var testResult2 = await arangoDb.Query.ExecuteAsync<Dictionary<string, object>>(handle, testQuery2, testBindVars2, cancellationToken: ct);
-		Console.WriteLine($"[AQL DEBUG STEP 2b] Self attributes test: {string.Join(", ", testResult2.First().Select(kv => $"{kv.Key}={kv.Value}"))}");
-		
-		// Step 3: Test parent traversal from Object node (not Thing)
-		var testQuery3 = $@"
-			LET startObj = DOCUMENT(@startVertex)
-			LET parentsList = (FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents} RETURN parent)
-			RETURN {{ 
-				parentsCount: LENGTH(parentsList),
-				parentsIds: (FOR p IN parentsList RETURN p._id),
-				checkParent: @checkParent
-			}}
-		";
-		var testBindVars3 = new Dictionary<string, object> 
-		{ 
-			{ StartVertex, startVertex },
-			{ "checkParent", checkParent }
-		};
-		var testResult3 = await arangoDb.Query.ExecuteAsync<Dictionary<string, object>>(handle, testQuery3, testBindVars3, cancellationToken: ct);
-		Console.WriteLine($"[AQL DEBUG STEP 2c] Parent traversal test: {string.Join(", ", testResult3.First().Select(kv => $"{kv.Key}={kv.Value}"))}");
-		
-		// Step 4: Test parent attribute finding from Object node
-		var testQuery4 = $@"
-			LET startObj = DOCUMENT(@startVertex)
-			LET attrPath = @attr
-			LET maxDepth = @max
-			LET parentWithAttr = (
-				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
-					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
-					LET parentObjId = parent._key
-					LET parentAttrs = (
-						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
-							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
-							FILTER !condition
-							RETURN v
-					)
-					RETURN {{
-						parentId: parent._id,
-						parentThingId: parentThing._id,
-						parentObjId: parentObjId,
-						attrsCount: LENGTH(parentAttrs),
-						attrsNames: (FOR a IN parentAttrs RETURN a.Name),
-						matchesMaxDepth: LENGTH(parentAttrs) == maxDepth
-					}}
-			)
-			RETURN {{ results: parentWithAttr }}
-		";
-		var testBindVars4 = new Dictionary<string, object> 
-		{ 
-			{ StartVertex, startVertex },
-			{ "attr", attribute },
-			{ "max", attribute.Length }
-		};
-		var testResult4 = await arangoDb.Query.ExecuteAsync<Dictionary<string, object>>(handle, testQuery4, testBindVars4, cancellationToken: ct);
-		var results4 = testResult4.First();
-		Console.WriteLine($"[AQL DEBUG STEP 2d] Parent attribute finding test:");
-		Console.WriteLine($"  Results: {results4["results"]}");
-		
-		Console.WriteLine($"\n[AQL DEBUG STEP 3] ===== EXECUTE FULL QUERY =====");
 		// Single AQL query that handles entire inheritance chain
 		// Graph structure:
 		// - Thing/Room/Player --OUTBOUND graph_objects--> Object
@@ -3175,27 +3079,14 @@ public partial class ArangoDatabase(
 		// Execute query and get first result
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
-		Console.WriteLine($"[AQL DEBUG STEP 3] Full query results.Count={results.Count}, result is null={result == null}");
-		
-		if (result == null)
-		{
-			Console.WriteLine($"[AQL DEBUG STEP 3] Result is NULL");
-		}
-		else
-		{
-			Console.WriteLine($"[AQL DEBUG STEP 3] Result: attributes={result.attributes?.Count ?? 0}, sourceId={result.sourceId}, source={result.source}");
-		}
 		
 		if (result == null || result.attributes == null)
 		{
-			Console.WriteLine($"[AQL DEBUG STEP 4] No results - yielding empty enumerable");
 			yield break;
 		}
 		
-		Console.WriteLine($"\n[AQL DEBUG STEP 4] ===== PROCESS RESULTS =====");
 		// Parse the DBRef from the source ID
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
-		Console.WriteLine($"[AQL DEBUG STEP 4a] Parsed DBRef={sourceDbRef} from sourceId={result.sourceId}");
 		
 		// Parse source type
 		var sourceType = result.source switch
@@ -3205,10 +3096,8 @@ public partial class ArangoDatabase(
 			"Zone" => AttributeSource.Zone,
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
-		Console.WriteLine($"[AQL DEBUG STEP 4b] Source type={sourceType}");
 		
 		// Convert all attributes (simple loop to avoid nested async operations)
-		Console.WriteLine($"[AQL DEBUG STEP 4c] Converting {result.attributes.Count} attributes");
 		var attrs = new SharpAttribute[result.attributes.Count];
 		for (int i = 0; i < result.attributes.Count; i++)
 		{
@@ -3220,10 +3109,8 @@ public partial class ArangoDatabase(
 		var flags = result.filterFlags 
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
-		Console.WriteLine($"[AQL DEBUG STEP 4d] Flags: total={lastAttr.Flags.Count()}, filtered={flags.Count()}");
 		
 		// Yield a SINGLE result containing ALL attributes in the path
-		Console.WriteLine($"[AQL DEBUG STEP 5] Yielding result with {attrs.Length} attributes\n");
 		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
 	
