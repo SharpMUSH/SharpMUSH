@@ -3086,14 +3086,17 @@ public partial class ArangoDatabase(
 		
 		Console.WriteLine($"\n[AQL DEBUG STEP 3] ===== EXECUTE FULL QUERY =====");
 		// Single AQL query that handles entire inheritance chain
+		// Note: Parent and zone edges connect Object nodes, not Thing/Room/Player nodes
+		// So we traverse from the Object node (@startVertex), not from the Thing/Room/Player node
 		var query = $@"
-			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObj = DOCUMENT(@startVertex)
+			LET startThing = FIRST(FOR v IN 1..1 OUTBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
 			LET attrPath = @attr
 			LET maxDepth = @max
 			
 			LET selfAttrs = (
-				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
+				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
 					RETURN v
@@ -3106,10 +3109,11 @@ public partial class ArangoDatabase(
 			}} : null
 			
 			LET parentResults = @checkParent && selfResult == null ? (
-				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
-					LET parentObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
+				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+					LET parentThing = FIRST(FOR v IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentObjId = parent._key
 					LET parentAttrs = (
-						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
+						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
 							RETURN v
@@ -3125,16 +3129,17 @@ public partial class ArangoDatabase(
 			) : []
 			
 			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
-				LET inheritanceChain = APPEND([start], (
-					FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
+				LET inheritanceChain = APPEND([startObj], (
+					FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
 						RETURN parent
 				))
 				
 				FOR obj IN inheritanceChain
 					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
-						LET zoneObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
+						LET zoneThing = FIRST(FOR v IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+						LET zoneObjId = zone._key
 						LET zoneAttrs = (
-							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
+							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
 								RETURN v
@@ -3270,14 +3275,17 @@ public partial class ArangoDatabase(
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
 		// Single AQL query that handles entire inheritance chain (WITHOUT inline flag fetching for performance)
+		// Note: Parent and zone edges connect Object nodes, not Thing/Room/Player nodes
+		// So we traverse from the Object node (@startVertex), not from the Thing/Room/Player node
 		var query = $@"
-			LET start = FIRST(FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObj = DOCUMENT(@startVertex)
+			LET startThing = FIRST(FOR v IN 1..1 OUTBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
 			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
 			LET attrPath = @attr
 			LET maxDepth = @max
 			
 			LET selfAttrs = (
-				FOR v,e,p IN 1..maxDepth OUTBOUND start GRAPH {DatabaseConstants.GraphAttributes}
+				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
 					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 					FILTER !condition
 					RETURN v
@@ -3290,10 +3298,11 @@ public partial class ArangoDatabase(
 			}} : null
 			
 			LET parentResults = @checkParent && selfResult == null ? (
-				FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
-					LET parentObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
+				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+					LET parentThing = FIRST(FOR v IN 1..1 OUTBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentObjId = parent._key
 					LET parentAttrs = (
-						FOR v,e,p IN 1..maxDepth OUTBOUND parent GRAPH {DatabaseConstants.GraphAttributes}
+						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
 							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 							FILTER !condition
 							RETURN v
@@ -3309,16 +3318,17 @@ public partial class ArangoDatabase(
 			) : []
 			
 			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
-				LET inheritanceChain = APPEND([start], (
-					FOR parent IN 1..100 OUTBOUND start GRAPH {DatabaseConstants.GraphParents}
+				LET inheritanceChain = APPEND([startObj], (
+					FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
 						RETURN parent
 				))
 				
 				FOR obj IN inheritanceChain
 					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
-						LET zoneObjId = FIRST(FOR objVertex IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN objVertex._key)
+						LET zoneThing = FIRST(FOR v IN 1..1 OUTBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+						LET zoneObjId = zone._key
 						LET zoneAttrs = (
-							FOR v,e,p IN 1..maxDepth OUTBOUND zone GRAPH {DatabaseConstants.GraphAttributes}
+							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
 								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
 								FILTER !condition
 								RETURN v
