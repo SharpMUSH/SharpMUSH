@@ -187,16 +187,9 @@ public partial class Commands
 		}
 
 		// Get all players and filter for those with Guest power
-		var allPlayers = await Mediator!.CreateStream(new GetAllPlayersQuery()).ToListAsync();
-		var guestPlayers = new List<SharpPlayer>();
-
-		foreach (var player in allPlayers)
-		{
-			if (await player.Object.HasPower("Guest"))
-			{
-				guestPlayers.Add(player);
-			}
-		}
+		var guestPlayers = await Mediator!.CreateStream(new GetAllPlayersQuery())
+			.Where(async (player, _) => await player.Object.HasPower("Guest"))
+			.ToListAsync();
 
 		if (guestPlayers.Count == 0)
 		{
