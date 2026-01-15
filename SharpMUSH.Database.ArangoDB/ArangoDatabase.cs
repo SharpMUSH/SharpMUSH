@@ -2987,16 +2987,9 @@ public partial class ArangoDatabase(
 		bool checkParent = true,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
-		// Single AQL query that handles entire inheritance chain
-		// Graph structure:
-		// - Thing/Room/Player --OUTBOUND graph_objects--> Object
-		// - Object --OUTBOUND graph_parents--> Object (parent)
-		// - Object --OUTBOUND graph_zones--> Object (zone)
-		// So: Use INBOUND to go Object -> Thing, use OUTBOUND to go Object -> parent/zone
 		var query = $@"
 			LET startObj = DOCUMENT(@startVertex)
 			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
@@ -3076,7 +3069,6 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
-		// Execute query and get first result
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 		
@@ -3085,10 +3077,8 @@ public partial class ArangoDatabase(
 			yield break;
 		}
 		
-		// Parse the DBRef from the source ID
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
 		
-		// Parse source type
 		var sourceType = result.source switch
 		{
 			"Self" => AttributeSource.Self,
@@ -3097,28 +3087,23 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Convert all attributes (simple loop to avoid nested async operations)
 		var attrs = new SharpAttribute[result.attributes.Count];
 		for (int i = 0; i < result.attributes.Count; i++)
 		{
 			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
 		}
 		
-		// Get flags from last attribute only
 		var lastAttr = attrs.Last();
 		var flags = result.filterFlags 
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
 		
-		// Yield a SINGLE result containing ALL attributes in the path
 		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
 	
-	// Simplified version that doesn't need nested async operations
 	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttributeSimple(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 	{
-		// Get flags directly as an array
 		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
 		
 		return new SharpAttribute(
@@ -3136,7 +3121,6 @@ public partial class ArangoDatabase(
 		};
 	}
 	
-	// Helper record for query results
 	private record QueryResult(
 		List<SharpAttributeQueryResult>? attributes,
 		string sourceId,
@@ -3144,10 +3128,8 @@ public partial class ArangoDatabase(
 		bool filterFlags
 	);
 	
-	// Helper method to parse DBRef from ArangoDB Key
 	private static DBRef ParseDbRefFromId(string key)
 	{
-		// Key is just the DBRef number as a string
 		if (int.TryParse(key, out var number))
 		{
 			return new DBRef(number);
@@ -3161,17 +3143,10 @@ public partial class ArangoDatabase(
 		bool checkParent = true,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		// Normalize attribute names to uppercase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		
-		// Single AQL query that handles entire inheritance chain (WITHOUT inline flag fetching for performance)
-		// Graph structure:
-		// - Thing/Room/Player --OUTBOUND graph_objects--> Object
-		// - Object --OUTBOUND graph_parents--> Object (parent)
-		// - Object --OUTBOUND graph_zones--> Object (zone)
-		// So: Use INBOUND to go Object -> Thing, use OUTBOUND to go Object -> parent/zone
 		var query = $@"
 			LET startObj = DOCUMENT(@startVertex)
 			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
@@ -3251,20 +3226,16 @@ public partial class ArangoDatabase(
 			{ "checkParent", checkParent }
 		};
 		
-		// Execute query and get first result
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
 		
 		if (result == null || result.attributes == null)
 		{
-			// No results - don't yield anything (empty enumerable)
 			yield break;
 		}
 		
-		// Parse the DBRef from the source ID
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
 		
-		// Parse source type
 		var sourceType = result.source switch
 		{
 			"Self" => AttributeSource.Self,
@@ -3273,28 +3244,23 @@ public partial class ArangoDatabase(
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
 		
-		// Convert all lazy attributes (simple loop to avoid nested async operations)
 		var attrs = new LazySharpAttribute[result.attributes.Count];
 		for (int i = 0; i < result.attributes.Count; i++)
 		{
 			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
 		}
 		
-		// Get flags from last attribute only
 		var lastAttr = attrs.Last();
 		var flags = result.filterFlags 
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
 		
-		// Yield a SINGLE result containing ALL attributes in the path
 		yield return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
 	
-	// Simplified version that doesn't need nested async operations
 	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttributeSimple(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 	{
-		// Get flags directly as an array
 		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
 		
 		return new LazySharpAttribute(
