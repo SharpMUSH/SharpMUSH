@@ -9,13 +9,13 @@ namespace SharpMUSH.Tests;
 /// </summary>
 public class TelemetryOutputTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactory { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
 	[Test]
 	public async Task OutputTelemetrySummary()
 	{
-		var prometheusService = WebAppFactory.Services.GetService<IPrometheusQueryService>();
+		var prometheusService = Factory.Services.GetService<IPrometheusQueryService>();
 		if (prometheusService == null)
 		{
 			Console.Error.WriteLine("PrometheusQueryService not available");

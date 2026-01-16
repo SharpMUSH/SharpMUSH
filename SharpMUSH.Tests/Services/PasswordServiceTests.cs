@@ -10,11 +10,11 @@ namespace SharpMUSH.Tests.Services;
 
 public class PasswordServiceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
 	private IPasswordService PasswordService =>
-		WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();
+		Factory.Services.GetRequiredService<IPasswordService>();
 
 	[Test]
 	public async ValueTask ModernPassword_ValidPassword_ReturnsTrue()

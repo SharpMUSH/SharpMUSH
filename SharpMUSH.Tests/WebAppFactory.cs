@@ -41,7 +41,6 @@ namespace SharpMUSH.Tests;
 ///
 /// This class is retained temporarily for reference but will be removed in a future update.
 /// </summary>
-[Obsolete("Use TestClassFactory instead. This class causes state pollution between test classes.", error: false)]
 public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 {
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]

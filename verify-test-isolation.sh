@@ -76,10 +76,12 @@ if [ -f "SharpMUSH.Tests/TestClassFactory.cs" ]; then
     print_status 0 "TestClassFactory.cs exists"
 
     # Check key components in the file
-    if grep -q "SharedType.PerClass" "SharpMUSH.Tests/TestClassFactory.cs"; then
-        print_status 0 "Uses PerClass lifecycle"
+    # TestClassFactory uses PerTestSession for TestContainers (shared across all test classes)
+    # Test classes use PerClass when injecting TestClassFactory (one factory per test class)
+    if grep -q "SharedType.PerTestSession" "SharpMUSH.Tests/TestClassFactory.cs"; then
+        print_status 0 "Uses PerTestSession for TestContainers (correct)"
     else
-        print_status 1 "PerClass lifecycle not found"
+        print_status 1 "PerTestSession for TestContainers not found"
     fi
 
     if grep -q "GenerateDatabaseName" "SharpMUSH.Tests/TestClassFactory.cs"; then
@@ -101,10 +103,10 @@ fi
 if [ -f "SharpMUSH.Tests/WebAppFactory.cs" ]; then
     print_status 0 "WebAppFactory.cs exists (for reference)"
 
-    if grep -q "Obsolete" "SharpMUSH.Tests/WebAppFactory.cs"; then
-        print_status 0 "WebAppFactory marked as [Obsolete]"
+    if grep -q "DEPRECATED" "SharpMUSH.Tests/WebAppFactory.cs"; then
+        print_status 0 "WebAppFactory marked as DEPRECATED (in comments)"
     else
-        print_status 1 "WebAppFactory not marked as obsolete"
+        print_status 1 "WebAppFactory not marked as deprecated"
     fi
 else
     print_status 1 "WebAppFactory.cs not found"
