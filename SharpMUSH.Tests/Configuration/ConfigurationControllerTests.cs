@@ -90,7 +90,6 @@ public class ConfigurationControllerTests
 	{
 		var database = Factory.Services.GetRequiredService<ISharpDatabase>();
 		var configReloadService = Factory.Services.GetRequiredService<ConfigurationReloadService>();
-		var logger = Factory.Services.GetRequiredService<ILogger<ConfigurationController>>();
 		
 		var optionsMonitor = Factory.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
 		

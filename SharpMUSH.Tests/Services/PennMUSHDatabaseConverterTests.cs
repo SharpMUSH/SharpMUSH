@@ -169,7 +169,6 @@ public class PennMUSHDatabaseConverterTests
 	public async ValueTask ConverterSetsParentRelationships()
 	{
 		var converter = GetConverter();
-		var database = Factory.Services.GetRequiredService<Library.ISharpDatabase>();
 		
 		var database1 = new PennMUSHDatabase
 		{
@@ -220,7 +219,6 @@ public class PennMUSHDatabaseConverterTests
 	public async ValueTask ConverterSetsZoneRelationships()
 	{
 		var converter = GetConverter();
-		var database = Factory.Services.GetRequiredService<Library.ISharpDatabase>();
 		
 		var database1 = new PennMUSHDatabase
 		{

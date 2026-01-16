@@ -146,7 +146,7 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 
 	/// <summary>
 	/// The unique database name for this test class.
-	/// Format: SharpMUSH_Test_{ClassName}_{Counter}
+	/// Format: SharpMUSH_Test_{Counter}_{ShortGuid}
 	/// </summary>
 	public string DatabaseName { get; private set; } = string.Empty;
 
