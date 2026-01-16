@@ -29,7 +29,8 @@ scrape_configs:
 			Encoding.UTF8.GetBytes(PrometheusConfig),
 			"/etc/prometheus/prometheus.yml")
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPort(9090).ForPath("/-/ready")))
-		.WithReuse(false)
+		.WithReuse(true)
+		.WithLabel("testcontainers.reuse.hash", "sharpmush-prometheus-test")
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();
