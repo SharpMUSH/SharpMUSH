@@ -11,15 +11,15 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "HELP", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
-	public static async ValueTask<Option<CallState>> Help(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Help(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, "Help system not initialized.");
+			await _notifyService!.Notify(executor, "Help system not initialized.");
 			return new CallState("#-1 HELP SYSTEM NOT INITIALIZED");
 		}
 
@@ -30,11 +30,11 @@ public partial class Commands
 			if (mainHelp != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainHelp);
-				await NotifyService!.Notify(executor, rendered);
+				await _notifyService!.Notify(executor, rendered);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "No help available. Type 'help <topic>' for help on a specific topic.");
+				await _notifyService!.Notify(executor, "No help available. Type 'help <topic>' for help on a specific topic.");
 			}
 			return CallState.Empty;
 		}
@@ -47,7 +47,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("help", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No help entries found containing '{topic}'.");
+				await _notifyService!.Notify(executor, $"No help entries found containing '{topic}'.");
 			}
 			else if (matches.Count == 1)
 			{
@@ -56,14 +56,14 @@ public partial class Commands
 				if (searchContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
-					await NotifyService!.Notify(executor, rendered);
+					await _notifyService!.Notify(executor, rendered);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"Help entries containing '{topic}':");
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await _notifyService!.Notify(executor, $"Help entries containing '{topic}':");
+				await _notifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
 		}
@@ -74,7 +74,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("help", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No help available for '{topic}'.");
+				await _notifyService!.Notify(executor, $"No help available for '{topic}'.");
 			}
 			else if (matches.Count == 1)
 			{
@@ -83,14 +83,14 @@ public partial class Commands
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
-					await NotifyService!.Notify(executor, rendered);
+					await _notifyService!.Notify(executor, rendered);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"Help topics matching '{topic}':");
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await _notifyService!.Notify(executor, $"Help topics matching '{topic}':");
+				await _notifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
 		}
@@ -100,12 +100,12 @@ public partial class Commands
 		if (exactContent != null)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
-			await NotifyService!.Notify(executor, rendered);
+			await _notifyService!.Notify(executor, rendered);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"No help available for '{topic}'.");
-			await NotifyService!.Notify(executor, "Try 'help <pattern>' with wildcards (*) or 'help/search <text>' to search help content.");
+			await _notifyService!.Notify(executor, $"No help available for '{topic}'.");
+			await _notifyService!.Notify(executor, "Try 'help <pattern>' with wildcards (*) or 'help/search <text>' to search help content.");
 		}
 
 		return CallState.Empty;

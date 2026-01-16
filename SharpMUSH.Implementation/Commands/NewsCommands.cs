@@ -12,15 +12,15 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "NEWS", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
-	public static async ValueTask<Option<CallState>> News(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> News(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, "News system not initialized.");
+			await _notifyService!.Notify(executor, "News system not initialized.");
 			return new CallState("#-1 NEWS SYSTEM NOT INITIALIZED");
 		}
 
@@ -31,11 +31,11 @@ public partial class Commands
 			if (mainNews != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainNews);
-				await NotifyService!.Notify(executor, rendered);
+				await _notifyService!.Notify(executor, rendered);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "No news available. Type 'news <topic>' for news on a specific topic.");
+				await _notifyService!.Notify(executor, "No news available. Type 'news <topic>' for news on a specific topic.");
 			}
 			return CallState.Empty;
 		}
@@ -48,7 +48,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No news entries found containing '{topic}'.");
+				await _notifyService!.Notify(executor, $"No news entries found containing '{topic}'.");
 			}
 			else if (matches.Count == 1)
 			{
@@ -57,14 +57,14 @@ public partial class Commands
 				if (searchContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
-					await NotifyService!.Notify(executor, rendered);
+					await _notifyService!.Notify(executor, rendered);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"News entries containing '{topic}':");
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await _notifyService!.Notify(executor, $"News entries containing '{topic}':");
+				await _notifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
 		}
@@ -75,7 +75,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No news available for '{topic}'.");
+				await _notifyService!.Notify(executor, $"No news available for '{topic}'.");
 			}
 			else if (matches.Count == 1)
 			{
@@ -84,14 +84,14 @@ public partial class Commands
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
-					await NotifyService!.Notify(executor, rendered);
+					await _notifyService!.Notify(executor, rendered);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"News topics matching '{topic}':");
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await _notifyService!.Notify(executor, $"News topics matching '{topic}':");
+				await _notifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
 		}
@@ -101,34 +101,34 @@ public partial class Commands
 		if (exactContent != null)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
-			await NotifyService!.Notify(executor, rendered);
+			await _notifyService!.Notify(executor, rendered);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"No news available for '{topic}'.");
-			await NotifyService!.Notify(executor, "Try 'news <pattern>' with wildcards (*) or 'news/search <text>' to search news content.");
+			await _notifyService!.Notify(executor, $"No news available for '{topic}'.");
+			await _notifyService!.Notify(executor, "Try 'news <pattern>' with wildcards (*) or 'news/search <text>' to search news content.");
 		}
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "AHELP", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
-	public static async ValueTask<Option<CallState>> Ahelp(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Ahelp(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
 		// Permission check - only wizards and royalty
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied. This command is for administrators only.");
+			await _notifyService!.Notify(executor, "Permission denied. This command is for administrators only.");
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, "Admin help system not initialized.");
+			await _notifyService!.Notify(executor, "Admin help system not initialized.");
 			return new CallState("#-1 AHELP SYSTEM NOT INITIALIZED");
 		}
 
@@ -139,11 +139,11 @@ public partial class Commands
 			if (mainAhelp != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainAhelp);
-				await NotifyService!.Notify(executor, rendered);
+				await _notifyService!.Notify(executor, rendered);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "No admin help available. Type 'ahelp <topic>' for help on a specific topic.");
+				await _notifyService!.Notify(executor, "No admin help available. Type 'ahelp <topic>' for help on a specific topic.");
 			}
 			return CallState.Empty;
 		}
@@ -156,7 +156,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No admin help entries found containing '{topic}'.");
+				await _notifyService!.Notify(executor, $"No admin help entries found containing '{topic}'.");
 			}
 			else if (matches.Count == 1)
 			{
@@ -165,14 +165,14 @@ public partial class Commands
 				if (searchContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
-					await NotifyService!.Notify(executor, rendered);
+					await _notifyService!.Notify(executor, rendered);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"Admin help entries containing '{topic}':");
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await _notifyService!.Notify(executor, $"Admin help entries containing '{topic}':");
+				await _notifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
 		}
@@ -183,7 +183,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.");
+				await _notifyService!.Notify(executor, $"No admin help available for '{topic}'.");
 			}
 			else if (matches.Count == 1)
 			{
@@ -192,14 +192,14 @@ public partial class Commands
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
-					await NotifyService!.Notify(executor, rendered);
+					await _notifyService!.Notify(executor, rendered);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"Admin help topics matching '{topic}':");
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await _notifyService!.Notify(executor, $"Admin help topics matching '{topic}':");
+				await _notifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
 		}
@@ -209,12 +209,12 @@ public partial class Commands
 		if (exactContent != null)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
-			await NotifyService!.Notify(executor, rendered);
+			await _notifyService!.Notify(executor, rendered);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.");
-			await NotifyService!.Notify(executor, "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.");
+			await _notifyService!.Notify(executor, $"No admin help available for '{topic}'.");
+			await _notifyService!.Notify(executor, "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.");
 		}
 
 		return CallState.Empty;
@@ -222,7 +222,7 @@ public partial class Commands
 
 	// ANEWS is an alias for AHELP in PennMUSH
 	[SharpCommand(Name = "ANEWS", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
-	public static async ValueTask<Option<CallState>> Anews(IMUSHCodeParser parser, SharpCommandAttribute attr)
+	public async ValueTask<Option<CallState>> Anews(IMUSHCodeParser parser, SharpCommandAttribute attr)
 	{
 		// Just forward to Ahelp
 		return await Ahelp(parser, attr);

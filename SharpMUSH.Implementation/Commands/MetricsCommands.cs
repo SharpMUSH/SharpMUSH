@@ -28,16 +28,16 @@ public partial class Commands
 		MinArgs = 0,
 		MaxArgs = 2,
 		ParameterNames = ["time-range", "limit"])]
-	public static async ValueTask<Option<CallState>> Metrics(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Metrics(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (PrometheusQueryService == null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value,
+			await _notifyService!.Notify(parser.CurrentState.Executor!.Value,
 				MModule.single("Prometheus query service is not available."));
 			return new None();
 		}
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 
@@ -97,7 +97,7 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService!.Notify(executor, MModule.single(output.ToString()));
+				await _notifyService!.Notify(executor, MModule.single(output.ToString()));
 				return new None();
 			}
 
@@ -146,7 +146,7 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService!.Notify(executor, MModule.single(output.ToString()));
+				await _notifyService!.Notify(executor, MModule.single(output.ToString()));
 				return new None();
 			}
 
@@ -155,7 +155,7 @@ public partial class Commands
 			{
 				if (args.Count == 0)
 				{
-					await NotifyService!.Notify(executor,
+					await _notifyService!.Notify(executor,
 						MModule.single("Usage: @metrics/query <promql-query>"));
 					return new None();
 				}
@@ -163,7 +163,7 @@ public partial class Commands
 				var query = args["0"].Message?.ToString() ?? "";
 				var result = await PrometheusQueryService.ExecuteQueryAsync(query);
 
-				await NotifyService!.Notify(executor, MModule.single($"Query Result:\n{result}"));
+				await _notifyService!.Notify(executor, MModule.single($"Query Result:\n{result}"));
 				return new None();
 			}
 
@@ -187,7 +187,7 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService!.Notify(executor, MModule.single(output.ToString()));
+				await _notifyService!.Notify(executor, MModule.single(output.ToString()));
 				return new None();
 			}
 
@@ -200,12 +200,12 @@ public partial class Commands
 				output.AppendLine($"Active Connections: {activeConnections}");
 				output.AppendLine($"Logged In Players: {loggedInPlayers}");
 
-				await NotifyService!.Notify(executor, MModule.single(output.ToString()));
+				await _notifyService!.Notify(executor, MModule.single(output.ToString()));
 				return new None();
 			}
 
 			// No switches - show usage
-			await NotifyService!.Notify(executor, MModule.single(@"
+			await _notifyService!.Notify(executor, MModule.single(@"
 Usage: @metrics/<switch> [<time-range>] [<limit>]
 
 Switches:
@@ -229,7 +229,7 @@ Examples:
 		catch (Exception ex)
 		{
 			Logger?.LogError(ex, "Error executing @metrics command");
-			await NotifyService!.Notify(executor,
+			await _notifyService!.Notify(executor,
 				MModule.single($"Error querying metrics: {ex.Message}"));
 			return new None();
 		}

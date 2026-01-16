@@ -31,7 +31,7 @@ public static class ChannelTitle
 		}
 
 		// channel.Title = title.ToPlainText();
-		// await Mediator!.Send(new UpdateChannelCommand(channel));
+		// await _mediator!.Send(new UpdateChannelCommand(channel));
 
 		return new CallState("Channel title has been updated.");
 	}
