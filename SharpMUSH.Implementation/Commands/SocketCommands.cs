@@ -173,7 +173,7 @@ public partial class Commands
 			parser.CurrentState.Handle!.Value.ToString());
 
 		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
-		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
+		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
 	}
 
