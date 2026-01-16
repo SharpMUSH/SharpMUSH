@@ -7,7 +7,7 @@ public class SetPlayerPasswordCommandHandler(ISharpDatabase database) : ICommand
 {
 	public async ValueTask<ValueTask<Unit>> Handle(SetPlayerPasswordCommand command, CancellationToken cancellationToken)
 	{
-		await database.SetPlayerPasswordAsync(command.Player, command.Password, cancellationToken);
+		await database.SetPlayerPasswordAsync(command.Player, command.Password, command.Salt, cancellationToken);
 		return ValueTask.FromResult(new Unit());
 	}
 }

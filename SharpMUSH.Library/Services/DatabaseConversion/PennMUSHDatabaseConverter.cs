@@ -203,9 +203,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				await _database.SetObjectName(existingPlayer1.AsT0, MModule.single(godPennObject.Name), cancellationToken);
 				
 				if (!string.IsNullOrEmpty(godPennObject.Password))
-				{
-					await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, godPennObject.Password, cancellationToken);
-				}
+					{
+						var (salt, hash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
+						await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, hash, salt, cancellationToken);
+					}
 				
 				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
 			}
@@ -216,34 +217,37 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var godPennObject = pennDatabase.GetObject(1);
 			
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
-			{
-				// Create God player first
-				tempGodDbRef = await _database.CreatePlayerAsync(
-					godPennObject.Name,
-					godPennObject.Password ?? "NEEDS_RESET",
-					new DBRef(0), // Limbo room (will create or reuse next)
-					new DBRef(0), // Home is also Limbo
-					godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
-					cancellationToken);
+				{
+					// Create God player first - extract salt from PennMUSH password
+					var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
+					tempGodDbRef = await _database.CreatePlayerAsync(
+						godPennObject.Name,
+						godHash,
+						new DBRef(0), // Limbo room (will create or reuse next)
+						new DBRef(0), // Home is also Limbo
+						godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
+						godSalt,
+						cancellationToken);
 				
-				_dbrefMapping[1] = tempGodDbRef;
-				playersConverted++;
-				_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
-			}
-			else
-			{
-				// Create a default God player
-				tempGodDbRef = await _database.CreatePlayerAsync(
-					"God",
-					"NEEDS_RESET",
-					new DBRef(0),
-					new DBRef(0),
-					10000,
-					cancellationToken);
-				_dbrefMapping[1] = tempGodDbRef;
-				playersConverted++;
-				_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
-			}
+					_dbrefMapping[1] = tempGodDbRef;
+					playersConverted++;
+					_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
+				}
+				else
+				{
+					// Create a default God player (no salt needed for new password)
+					tempGodDbRef = await _database.CreatePlayerAsync(
+						"God",
+						"NEEDS_RESET",
+						new DBRef(0),
+						new DBRef(0),
+						10000,
+						null,
+						cancellationToken);
+					_dbrefMapping[1] = tempGodDbRef;
+					playersConverted++;
+					_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
+				}
 		}
 
 		// Get the God player object for use as creator
@@ -365,19 +369,21 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				switch (pennObj.Type)
 				{
 					case PennMUSHObjectType.Player:
-					{
-						// Create player with password from PennMUSH
-						// Players start in Limbo temporarily
-						newDbRef = await _database.CreatePlayerAsync(
-							pennObj.Name,
-							pennObj.Password ?? "NEEDS_RESET",
-							tempRoom0DbRef, // Start in Limbo
-							tempRoom0DbRef, // Home is Limbo for now
-							pennObj.Pennies > 0 ? pennObj.Pennies : 100,
-							cancellationToken);
-						playersConverted++;
-						break;
-					}
+						{
+							// Create player with password from PennMUSH - extract salt
+							// Players start in Limbo temporarily
+							var (playerSalt, playerHash) = ExtractPennMUSHPasswordParts(pennObj.Password);
+							newDbRef = await _database.CreatePlayerAsync(
+								pennObj.Name,
+								playerHash,
+								tempRoom0DbRef, // Start in Limbo
+								tempRoom0DbRef, // Home is Limbo for now
+								pennObj.Pennies > 0 ? pennObj.Pennies : 100,
+								playerSalt,
+								cancellationToken);
+							playersConverted++;
+							break;
+						}
 
 					case PennMUSHObjectType.Room:
 					{
@@ -806,6 +812,54 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// </summary>
 	/// <param name="text">Text potentially containing Pueblo ANSI escape sequences</param>
 	/// <returns>Text with escape sequences removed but standard HTML preserved, or empty string if input is null</returns>
+	private static string StripPuebloEscapes(string? text)
+	{
+		if (string.IsNullOrEmpty(text))
+		{
+			return string.Empty;
+		}
+
+		// For now, just return the text as-is
+		// TODO: Implement proper Pueblo escape stripping
+		return text;
+	}
+
+	/// <summary>
+	/// Extracts the salt and hash from a PennMUSH password format.
+	/// PennMUSH format: V:ALGO:SALTEDHASH:TIMESTAMP
+	/// The first 2 characters of SALTEDHASH are the salt.
+	/// </summary>
+	/// <param name="password">The PennMUSH password string</param>
+	/// <returns>A tuple of (salt, hash) if valid PennMUSH format, or (null, password) if not</returns>
+	private static (string? salt, string hash) ExtractPennMUSHPasswordParts(string? password)
+	{
+		if (string.IsNullOrEmpty(password))
+			return (null, password ?? "NEEDS_RESET");
+
+		var parts = password.Split(':');
+		if (parts.Length < 3)
+			return (null, password);
+
+		// Check if first part is a version number (1 or 2)
+		if (!int.TryParse(parts[0], out var version) || version < 1 || version > 2)
+			return (null, password);
+
+		// Check if second part is a known algorithm
+		var algo = parts[1].ToUpperInvariant();
+		if (algo is not ("SHA1" or "SHA-1" or "SHA256" or "SHA-256"))
+			return (null, password);
+
+		var saltedHash = parts[2];
+		if (saltedHash.Length < 3)
+			return (null, password);
+
+		// Extract the 2-character salt
+		var salt = saltedHash[..2];
+
+		// Return the salt and the full password (we keep the full format for verification)
+		return (salt, password);
+	}
+
 	[Obsolete("Use AnsiEscapeParser.ConvertAnsiToMarkupString instead")]
 	private static string StripEscapeSequences(string? text)
 	{
