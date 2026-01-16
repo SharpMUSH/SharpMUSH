@@ -16,8 +16,6 @@ public class RedisTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithPortBinding(RedisPort, true) // Random host port
 		.WithCommand("redis-server", "--appendonly", "yes")
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("redis-cli", "ping"))
-		.WithReuse(true)
-		.WithLabel("testcontainers.reuse.hash", "sharpmush-redis-test")
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();

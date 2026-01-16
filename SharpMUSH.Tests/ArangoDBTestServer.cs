@@ -7,8 +7,6 @@ public class ArangoDbTestServer : IAsyncInitializer, IAsyncDisposable
 {
 	public ArangoDbContainer Instance { get; } =  new ArangoDbBuilder("arangodb:latest")
 		.WithPassword("password")
-		.WithReuse(true)
-		.WithLabel("testcontainers.reuse.hash", "sharpmush-arangodb-test")
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();
