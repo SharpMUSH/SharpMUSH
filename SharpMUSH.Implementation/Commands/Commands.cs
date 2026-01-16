@@ -44,38 +44,21 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	/// <summary>
 	/// Thread-static field to store the current Commands instance for this thread.
-	/// Each test thread gets its own instance, avoiding race conditions.
+	/// Set by CommandParse before executing commands to provide the scoped instance.
 	/// </summary>
 	[ThreadStatic]
 	private static Commands? _currentInstance;
 	
 	/// <summary>
 	/// Sets the current Commands instance for the current thread.
-	/// This must be called before executing any commands to ensure static command methods
-	/// access the correct instance for this thread.
+	/// Called by CommandParse before executing commands.
 	/// </summary>
-	public static void SetCurrentInstance(Commands instance)
+	internal static void SetCurrentInstance(Commands instance)
 	{
 		_currentInstance = instance;
-		Console.WriteLine($"[Commands.SetCurrentInstance] Set on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}, instance: {instance != null}");
 	}
 	
-	/// <summary>
-	/// For testing: Gets the current instance to verify it's set.
-	/// </summary>
-	public static Commands? TestGetCurrentInstance() => _currentInstance;
-	
-	private static Commands? CurrentInstance
-	{
-		get
-		{
-			if (_currentInstance == null)
-			{
-				Console.WriteLine($"[Commands.CurrentInstance] WARNING: _currentInstance is null on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
-			}
-			return _currentInstance;
-		}
-	}
+	private static Commands? CurrentInstance => _currentInstance;
 	
 	// Static properties for backward compatibility - delegate to current instance
 	private static IMediator? Mediator => CurrentInstance?._mediator;

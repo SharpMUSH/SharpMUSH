@@ -237,32 +237,9 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 
 		// Set the current Commands and Functions instances for this async context
 		// This ensures static command/function methods access the correct instance from this DI container
-		var commands = provider.GetRequiredService<ILibraryProvider<CommandDefinition>>() as SharpMUSH.Implementation.Commands.Commands;
-		var functions = provider.GetRequiredService<ILibraryProvider<FunctionDefinition>>() as SharpMUSH.Implementation.Functions.Functions;
-		
-		if (commands != null)
-		{
-			SharpMUSH.Implementation.Commands.Commands.SetCurrentInstance(commands);
-			Console.WriteLine($"[TestClassFactory.InitializeAsync] Set Commands on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
-			
-			// Verify it's set
-			var verifySet = SharpMUSH.Implementation.Commands.Commands.TestGetCurrentInstance();
-			Console.WriteLine($"[TestClassFactory.InitializeAsync] Verified Commands is set: {verifySet != null}");
-		}
-		else
-		{
-			Console.WriteLine($"[TestClassFactory] WARNING: Could not get Commands instance!");
-		}
-		
-		if (functions != null)
-		{
-			SharpMUSH.Implementation.Functions.Functions.SetCurrentInstance(functions);
-			Console.WriteLine($"[TestClassFactory] Set current Functions instance for database: {DatabaseName}");
-		}
-		else
-		{
-			Console.WriteLine($"[TestClassFactory] WARNING: Could not get Functions instance!");
-		}
+		// Note: We no longer set current Commands/Functions instances here
+		// CommandParse will set them automatically when commands/functions execute
+		// This ensures the correct scoped instance is used on the execution thread
 
 		// Migrate the database (this will use the class-specific database)
 		await databaseService.Migrate();

@@ -261,6 +261,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <returns>A completed task.</returns>
 	public async ValueTask<CallState> CommandParse(long handle, IConnectionService connectionService, MString text)
 	{
+		// Set current Commands/Functions instances for this scope
+		// This enables static command/function methods to access the scoped instances
+		var commands = ServiceProvider.GetRequiredService<Commands.Commands>();
+		var functions = ServiceProvider.GetRequiredService<Functions.Functions>();
+		Commands.Commands.SetCurrentInstance(commands);
+		Functions.Functions.SetCurrentInstance(functions);
+		
 		var handleId = connectionService.Get(handle);
 		var newParser = Push(new ParserState(
 			Registers: new([[]]),
@@ -298,6 +305,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <returns>A completed task.</returns>
 	public async ValueTask<CallState> CommandParse(MString text)
 	{
+		// Set current Commands/Functions instances for this scope
+		// This enables static command/function methods to access the scoped instances
+		var commands = ServiceProvider.GetRequiredService<Commands.Commands>();
+		var functions = ServiceProvider.GetRequiredService<Functions.Functions>();
+		Commands.Commands.SetCurrentInstance(commands);
+		Functions.Functions.SetCurrentInstance(functions);
+		
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse));
 
 		return result ?? CallState.Empty;

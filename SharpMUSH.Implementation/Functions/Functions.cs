@@ -42,45 +42,46 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	
 	/// <summary>
 	/// Thread-static field to store the current Functions instance for this thread.
-	/// Each test thread gets its own instance, avoiding race conditions.
+	/// Set by CommandParse before executing functions to provide the scoped instance.
 	/// </summary>
 	[ThreadStatic]
 	private static Functions? _currentInstance;
 	
 	/// <summary>
 	/// Sets the current Functions instance for the current thread.
-	/// This must be called before executing any functions to ensure static function methods
-	/// access the correct instance for this thread.
+	/// Called by CommandParse before executing functions.
 	/// </summary>
-	public static void SetCurrentInstance(Functions instance)
+	internal static void SetCurrentInstance(Functions instance)
 	{
 		_currentInstance = instance;
 	}
 	
+	private static Functions? CurrentInstance => _currentInstance;
+	
 	// Static properties for backward compatibility - delegate to current instance
-	private static IMediator? Mediator => _currentInstance?._mediator;
-	private static ILocateService? LocateService => _currentInstance?._locateService;
-	private static IAttributeService? AttributeService => _currentInstance?._attributeService;
-	private static INotifyService? NotifyService => _currentInstance?._notifyService;
-	private static IPermissionService? PermissionService => _currentInstance?._permissionService;
-	private static ICommandDiscoveryService? CommandDiscoveryService => _currentInstance?._commandDiscoveryService;
-	private static IOptionsWrapper<SharpMUSHOptions>? Configuration => _currentInstance?._configuration;
-	private static IOptionsWrapper<ColorsOptions>? ColorConfiguration => _currentInstance?._colorConfiguration;
-	private static IPasswordService? PasswordService => _currentInstance?._passwordService;
-	private static IConnectionService? ConnectionService => _currentInstance?._connectionService;
-	private static IExpandedObjectDataService? ObjectDataService => _currentInstance?._objectDataService;
-	private static IManipulateSharpObjectService? ManipulateSharpObjectService => _currentInstance?._manipulateSharpObjectService;
-	private static ICommunicationService? CommunicationService => _currentInstance?._communicationService;
-	private static IValidateService? ValidateService => _currentInstance?._validateService;
-	private static ISortService? SortService => _currentInstance?._sortService;
-	private static ILockService? LockService => _currentInstance?._lockService;
-	private static ISqlService? SqlService => _currentInstance?._sqlService;
-	private static ITelemetryService? TelemetryService => _currentInstance?._telemetryService;
-	private static IMoveService? MoveService => _currentInstance?._moveService;
-	private static IEventService? EventService => _currentInstance?._eventService;
-	private static IBooleanExpressionParser? BooleanExpressionParser => _currentInstance?._booleanExpressionParser;
-	private static ITextFileService? TextFileService => _currentInstance?._textFileService;
-	private static ILogger<Functions>? Logger => _currentInstance?._logger;
+	private static IMediator? Mediator => CurrentInstance?._mediator;
+	private static ILocateService? LocateService => CurrentInstance?._locateService;
+	private static IAttributeService? AttributeService => CurrentInstance?._attributeService;
+	private static INotifyService? NotifyService => CurrentInstance?._notifyService;
+	private static IPermissionService? PermissionService => CurrentInstance?._permissionService;
+	private static ICommandDiscoveryService? CommandDiscoveryService => CurrentInstance?._commandDiscoveryService;
+	private static IOptionsWrapper<SharpMUSHOptions>? Configuration => CurrentInstance?._configuration;
+	private static IOptionsWrapper<ColorsOptions>? ColorConfiguration => CurrentInstance?._colorConfiguration;
+	private static IPasswordService? PasswordService => CurrentInstance?._passwordService;
+	private static IConnectionService? ConnectionService => CurrentInstance?._connectionService;
+	private static IExpandedObjectDataService? ObjectDataService => CurrentInstance?._objectDataService;
+	private static IManipulateSharpObjectService? ManipulateSharpObjectService => CurrentInstance?._manipulateSharpObjectService;
+	private static ICommunicationService? CommunicationService => CurrentInstance?._communicationService;
+	private static IValidateService? ValidateService => CurrentInstance?._validateService;
+	private static ISortService? SortService => CurrentInstance?._sortService;
+	private static ILockService? LockService => CurrentInstance?._lockService;
+	private static ISqlService? SqlService => CurrentInstance?._sqlService;
+	private static ITelemetryService? TelemetryService => CurrentInstance?._telemetryService;
+	private static IMoveService? MoveService => CurrentInstance?._moveService;
+	private static IEventService? EventService => CurrentInstance?._eventService;
+	private static IBooleanExpressionParser? BooleanExpressionParser => CurrentInstance?._booleanExpressionParser;
+	private static ITextFileService? TextFileService => CurrentInstance?._textFileService;
+	private static ILogger<Functions>? Logger => CurrentInstance?._logger;
 
 	public LibraryService<string, FunctionDefinition> Get() => _functionLibrary;
 
