@@ -227,19 +227,25 @@ public class ZoneParentCycleTests
 		
 		// Create two objects
 		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChzoneCycle1"));
-		var zone1DbRefFull = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
-		var zone1DbRef = new DBRef(zone1DbRefFull.Number); // Use number only
+		var zone1DbRefParsed = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
 
 		var zone2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChzoneCycle2"));
-		var zone2DbRefFull = DBRef.Parse(zone2Result.Message!.ToPlainText()!);
-		var zone2DbRef = new DBRef(zone2DbRefFull.Number); // Use number only
+		var zone2DbRefParsed = DBRef.Parse(zone2Result.Message!.ToPlainText()!);
+
+		Console.WriteLine($"Created objects: #{zone1DbRefParsed.Number} and #{zone2DbRefParsed.Number}");
+
+		// Use number-only DBRefs for commands (to avoid parser issues with timestamps)
+		var zone1Num = zone1DbRefParsed.Number;
+		var zone2Num = zone2DbRefParsed.Number;
 
 		// Set zone1's zone to zone2
-		var firstResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {zone1DbRef}={zone2DbRef}"));
+		var firstCommand = $"@chzone #{zone1Num}=#{zone2Num}";
+		Console.WriteLine($"First command: {firstCommand}");
+		var firstResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single(firstCommand));
 		Console.WriteLine($"First @chzone result: '{firstResult.Message?.ToPlainText()}'");
 		
-		// Verify zone1.zone was set to zone2
-		var zone1Obj = await Mediator.Send(new GetObjectNodeQuery(zone1DbRef));
+		// Verify zone1.zone was set to zone2 (use parsed DBRef for query)
+		var zone1Obj = await Mediator.Send(new GetObjectNodeQuery(zone1DbRefParsed));
 		var zone1Zone = await zone1Obj.Known.Object().Zone.WithCancellation(CancellationToken.None);
 		Console.WriteLine($"zone1.zone IsNone: {zone1Zone.IsNone}");
 		if (!zone1Zone.IsNone)
@@ -248,8 +254,19 @@ public class ZoneParentCycleTests
 		}
 
 		// Try to set zone2's zone to zone1 (should fail with cycle detection)
-		var result = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {zone2DbRef}={zone1DbRef}"));
+		var secondCommand = $"@chzone #{zone2Num}=#{zone1Num}";
+		Console.WriteLine($"Second command: {secondCommand}");
+		var result = await CommandParser.CommandParse(1, ConnectionService, MModule.single(secondCommand));
 		Console.WriteLine($"Second @chzone result: '{result.Message?.ToPlainText()}'");
+
+		// Check if zone2.zone was actually set (it shouldn't be!)
+		var zone2Obj = await Mediator.Send(new GetObjectNodeQuery(zone2DbRefParsed));
+		var zone2Zone = await zone2Obj.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		Console.WriteLine($"zone2.zone IsNone: {zone2Zone.IsNone}");
+		if (!zone2Zone.IsNone)
+		{
+			Console.WriteLine($"zone2.zone = #{zone2Zone.Known.Object().DBRef.Number} (SHOULD NOT BE SET!)");
+		}
 
 		// The command should have failed - verify we got an error message about a cycle/loop
 		await Assert.That(result.Message).IsNotNull();
