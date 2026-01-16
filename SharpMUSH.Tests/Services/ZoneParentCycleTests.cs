@@ -222,6 +222,9 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ChzoneCommand_WithCycle_ShouldFail()
 	{
+		// Clear player zone to avoid inheritance issues
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		
 		// Create two objects
 		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChzoneCycle1"));
 		var zone1DbRef = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
