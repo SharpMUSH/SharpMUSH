@@ -243,7 +243,11 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		if (commands != null)
 		{
 			SharpMUSH.Implementation.Commands.Commands.SetCurrentInstance(commands);
-			Console.WriteLine($"[TestClassFactory] Set current Commands instance for database: {DatabaseName}");
+			Console.WriteLine($"[TestClassFactory.InitializeAsync] Set Commands on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+			
+			// Verify it's set
+			var verifySet = SharpMUSH.Implementation.Commands.Commands.TestGetCurrentInstance();
+			Console.WriteLine($"[TestClassFactory.InitializeAsync] Verified Commands is set: {verifySet != null}");
 		}
 		else
 		{

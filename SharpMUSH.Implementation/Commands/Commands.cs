@@ -42,37 +42,38 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private readonly CommandLibraryService _commandLibrary = [];
 	
-	// Thread-safe dictionary to store Commands instances by their service provider
-	private static readonly System.Collections.Concurrent.ConcurrentDictionary<IServiceProvider, Commands> _instancesByProvider = new();
+	/// <summary>
+	/// Thread-static field to store the current Commands instance for this thread.
+	/// Each test thread gets its own instance, avoiding race conditions.
+	/// </summary>
+	[ThreadStatic]
+	private static Commands? _currentInstance;
 	
 	/// <summary>
-	/// Sets the current Commands instance for the specified service provider.
+	/// Sets the current Commands instance for the current thread.
 	/// This must be called before executing any commands to ensure static command methods
-	/// access the correct instance.
+	/// access the correct instance for this thread.
 	/// </summary>
-	public static void SetCurrentInstance(Commands instance, IServiceProvider provider)
+	public static void SetCurrentInstance(Commands instance)
 	{
-		_instancesByProvider[provider] = instance;
+		_currentInstance = instance;
+		Console.WriteLine($"[Commands.SetCurrentInstance] Set on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}, instance: {instance != null}");
 	}
 	
 	/// <summary>
-	/// Gets the current Commands instance for the current execution context.
-	/// Uses a thread-local service provider to look up the correct instance.
+	/// For testing: Gets the current instance to verify it's set.
 	/// </summary>
-	private static readonly AsyncLocal<IServiceProvider?> _currentProvider = new();
-	
-	public static void SetCurrentProvider(IServiceProvider provider) => _currentProvider.Value = provider;
+	public static Commands? TestGetCurrentInstance() => _currentInstance;
 	
 	private static Commands? CurrentInstance
 	{
 		get
 		{
-			var provider = _currentProvider.Value;
-			if (provider != null && _instancesByProvider.TryGetValue(provider, out var instance))
+			if (_currentInstance == null)
 			{
-				return instance;
+				Console.WriteLine($"[Commands.CurrentInstance] WARNING: _currentInstance is null on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
 			}
-			return null;
+			return _currentInstance;
 		}
 	}
 	
