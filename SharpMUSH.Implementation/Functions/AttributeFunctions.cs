@@ -381,7 +381,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for grep, grepi, pgrep.
 	/// </summary>
-	private static async ValueTask<CallState> GrepInternal(IMUSHCodeParser parser, bool caseInsensitive, bool checkParents)
+	private async ValueTask<CallState> GrepInternal(IMUSHCodeParser parser, bool caseInsensitive, bool checkParents)
 	{
 		var args = parser.CurrentState.Arguments;
 		var objectStr = args["0"].Message!.ToPlainText();
@@ -922,7 +922,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for regedit, regediti, regeditall, regeditalli.
 	/// </summary>
-	private static async ValueTask<CallState> RegEditInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
+	private async ValueTask<CallState> RegEditInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
 		// Get the string to edit - keep as MString
 		var stringArg = await parser.CurrentState.Arguments["0"].ParsedMessage();
@@ -993,7 +993,7 @@ public partial class Functions
 	/// <summary>
 	/// Helper to evaluate a replacement template with captured groups.
 	/// </summary>
-	private static async ValueTask<string> EvaluateReplacement(IMUSHCodeParser parser, Regex regex, Match match, string template)
+	private async ValueTask<string> EvaluateReplacement(IMUSHCodeParser parser, Regex regex, Match match, string template)
 	{
 		var replacement = template;
 		
@@ -1021,7 +1021,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for regrep, regrepi - searches attributes for pattern matches.
 	/// </summary>
-	private static async ValueTask<CallState> RegGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
+	private async ValueTask<CallState> RegGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
 		var args = parser.CurrentState.Arguments;
 		var objectStr = args["0"].Message!.ToPlainText();
@@ -1762,7 +1762,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for wildgrep, wildgrepi.
 	/// </summary>
-	private static async ValueTask<CallState> WildGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
+	private async ValueTask<CallState> WildGrepInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
 		var args = parser.CurrentState.Arguments;
 		var objectStr = args["0"].Message!.ToPlainText();

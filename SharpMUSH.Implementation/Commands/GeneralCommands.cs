@@ -79,7 +79,7 @@ public partial class Commands
 	/// Helper method to execute attribute content with recursion tracking.
 	/// This ensures commands like @INCLUDE, @TRIGGER, etc. track recursion the same way u/ufun/ulocal do.
 	/// </summary>
-	private static async ValueTask<CallState> ExecuteAttributeWithTracking(
+	private async ValueTask<CallState> ExecuteAttributeWithTracking(
 		IMUSHCodeParser parser,
 		string attributeLongName,
 		Func<Task<CallState>> executeFunc)
@@ -133,7 +133,7 @@ public partial class Commands
 	/// 2. If already set, must have numeric or empty value
 	/// 3. If not set, cannot be a built-in attribute (unless it is SEMAPHORE)
 	/// </summary>
-	private static async ValueTask<OneOf<Success, Error<string>>> ValidateSemaphoreAttribute(
+	private async ValueTask<OneOf<Success, Error<string>>> ValidateSemaphoreAttribute(
 		AnySharpObject targetObject,
 		string[] attributePath)
 	{
@@ -2132,7 +2132,7 @@ public partial class Commands
 		}
 	}
 
-	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
+	private async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1)
 	{
 		
@@ -2171,7 +2171,7 @@ public partial class Commands
 		
 	}
 
-	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
+	private async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
@@ -2200,7 +2200,7 @@ public partial class Commands
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
 	}
 
-	private static async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
+	private async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
 		AnySharpObject executor, string? arg1,
 		string[] switches)
 	{
@@ -3226,7 +3226,7 @@ public partial class Commands
 	/// <summary>
 	/// Split search/replace text by comma, respecting curly brace escaping
 	/// </summary>
-	private static string[] SplitSearchReplace(string text)
+	private string[] SplitSearchReplace(string text)
 	{
 		var parts = new List<string>();
 		var current = new StringBuilder();
@@ -3276,7 +3276,7 @@ public partial class Commands
 	/// <summary>
 	/// Perform simple string replacement
 	/// </summary>
-	private static string PerformSimpleEdit(string text, string search, string replace, bool firstOnly)
+	private string PerformSimpleEdit(string text, string search, string replace, bool firstOnly)
 	{
 		if (search == "^")
 		{
@@ -3308,7 +3308,7 @@ public partial class Commands
 	/// <summary>
 	/// Perform regex replacement with evaluation
 	/// </summary>
-	private static async ValueTask<string> PerformRegexEdit(IMUSHCodeParser parser, string text, 
+	private async ValueTask<string> PerformRegexEdit(IMUSHCodeParser parser, string text, 
 		string pattern, string replaceTemplate, bool all, bool nocase)
 	{
 		try
@@ -3353,7 +3353,7 @@ public partial class Commands
 	/// <summary>
 	/// Evaluate replacement template with captured groups
 	/// </summary>
-	private static async ValueTask<string> EvaluateRegexReplacement(IMUSHCodeParser parser, 
+	private async ValueTask<string> EvaluateRegexReplacement(IMUSHCodeParser parser, 
 		Regex regex, Match match, string template)
 	{
 		var replacement = template;
@@ -4529,7 +4529,7 @@ public partial class Commands
 	/// <summary>
 	/// Checks if an MString contains ANSI markup
 	/// </summary>
-	private static bool ContainsAnsiMarkup(MString str)
+	private bool ContainsAnsiMarkup(MString str)
 	{
 		var hasAnsi = false;
 		MModule.evaluateWith((markupType, innerText) =>
@@ -4546,7 +4546,7 @@ public partial class Commands
 	/// <summary>
 	/// Decomposes an attribute value using the decompose() logic from StringFunctions
 	/// </summary>
-	private static string DecomposeAttributeValue(MString input)
+	private string DecomposeAttributeValue(MString input)
 	{
 		// Use same logic as decompose() function from StringFunctions
 		var reconstructed = MModule.evaluateWith((markupType, innerText) =>
@@ -4583,7 +4583,7 @@ public partial class Commands
 	/// <summary>
 	/// Checks if a flag is a default flag for the object type
 	/// </summary>
-	private static bool IsDefaultFlag(string type, string flagName)
+	private bool IsDefaultFlag(string type, string flagName)
 	{
 		// Get default flags from configuration
 		var defaultFlags = type.ToUpperInvariant() switch
@@ -4602,7 +4602,7 @@ public partial class Commands
 	/// <summary>
 	/// Checks if attribute flags are the default for that attribute
 	/// </summary>
-	private static async ValueTask<bool> AreDefaultAttrFlagsAsync(string attrName, IEnumerable<SharpAttributeFlag> flags)
+	private async ValueTask<bool> AreDefaultAttrFlagsAsync(string attrName, IEnumerable<SharpAttributeFlag> flags)
 	{
 		// Query the attribute entry to check for custom default flags
 		var entry = await _mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
@@ -5040,7 +5040,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	private static async ValueTask<MString> GetAttributeOrDefault(
+	private async ValueTask<MString> GetAttributeOrDefault(
 		IMUSHCodeParser parser,
 		IAttributeService attributeService,
 		AnySharpObject executor,
@@ -5647,7 +5647,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	private static bool IsIntegerList(string input)
+	private bool IsIntegerList(string input)
 	{
 		if (string.IsNullOrWhiteSpace(input)) return false;
 
@@ -5966,7 +5966,7 @@ public partial class Commands
 
 		return CallState.Empty;
 
-		static async Task<bool> IsConnectedOrPuppetConnected(AnySharpObject obj)
+		async Task<bool> IsConnectedOrPuppetConnected(AnySharpObject obj)
 		{
 			if (await _connectionService!.IsConnected(obj)) return true;
 
@@ -6464,7 +6464,7 @@ public partial class Commands
 /// Simple wildcard matching helper for attribute name patterns.
 /// Supports * as wildcard character.
 /// </summary>
-private static bool MatchesWildcard(string text, string pattern)
+private bool MatchesWildcard(string text, string pattern)
 {
 // Convert wildcard pattern to regex
 var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)

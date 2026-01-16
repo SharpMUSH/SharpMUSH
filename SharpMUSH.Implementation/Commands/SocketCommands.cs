@@ -79,7 +79,7 @@ public partial class Commands
 
 		var nameItems = ArgHelpers.NameList(username).ToList();
 		var handle = parser.CurrentState.Handle!.Value;
-		var connectionData = _connectionService!Get(handle);
+		var connectionData = _connectionService!.Get(handle);
 		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
 
 		if (nameItems.Count != 1)
@@ -151,19 +151,19 @@ public partial class Commands
 		}
 
 		// Rehash legacy PennMUSH passwords to modern PBKDF2 format on successful login
-		if (validPassword && _passwordService!NeedsRehash(foundDB.PasswordHash))
+		if (validPassword && _passwordService!.NeedsRehash(foundDB.PasswordHash))
 		{
-			await _passwordService!RehashPasswordAsync(foundDB, password);
+			await _passwordService!.RehashPasswordAsync(foundDB, password);
 			Logger?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
 		}
 
 		// Future feature: Site lock checking would go here
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
-		await _connectionService!Bind(parser.CurrentState.Handle!.Value, playerDbRef);
+		await _connectionService!.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible
 		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
-		var connectionCount = await _connectionService!Get(playerDbRef).CountAsync();
+		var connectionCount = await _connectionService!.Get(playerDbRef).CountAsync();
 		await _eventService!.TriggerEventAsync(
 			parser,
 			"PLAYER`CONNECT",

@@ -751,7 +751,7 @@ LOCATE()
 		return types;
 	}
 
-	private static string GetObjectType(AnySharpObject obj)
+	private string GetObjectType(AnySharpObject obj)
 	{
 		return obj.Match(
 			_ => "PLAYER",
@@ -899,7 +899,7 @@ LOCATE()
 		return await ListSearchInternal(parser, _2, useRegex: false);
 	}
 
-	private static async ValueTask<CallState> ListSearchInternal(IMUSHCodeParser parser, SharpFunctionAttribute _2, bool useRegex)
+	private async ValueTask<CallState> ListSearchInternal(IMUSHCodeParser parser, SharpFunctionAttribute _2, bool useRegex)
 	{
 		// lsearch() searches the database for objects matching criteria
 		// Format: lsearch(<player>, <class1>, <restriction1>, <class2>, <restriction2>, ...)
@@ -1263,7 +1263,7 @@ LOCATE()
 	/// Simple wildcard pattern matching for LISTEN and COMMAND searches.
 	/// Supports * as a wildcard that matches any sequence of characters.
 	/// </summary>
-	private static bool IsWildcardMatch(string value, string pattern)
+	private bool IsWildcardMatch(string value, string pattern)
 	{
 		// Convert pattern to regex: escape special chars except *, then replace * with .*
 		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
@@ -1275,7 +1275,7 @@ LOCATE()
 	/// Creates an AnySharpObject from a SharpObject based on its Type property.
 	/// This is needed when we have a raw SharpObject from the database but need to work with the discriminated union.
 	/// </summary>
-	private static async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(SharpObject obj)
+	private async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(SharpObject obj)
 	{
 		// The object needs to be fetched properly from the database to get the correct type-specific object
 		// We use the Mediator to fetch the fully-typed object asynchronously

@@ -563,7 +563,7 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	private static bool IsIntegerList(string input)
+	private bool IsIntegerList(string input)
 	{
 		if (string.IsNullOrWhiteSpace(input)) return false;
 

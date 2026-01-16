@@ -27,7 +27,7 @@ public partial class Commands
 		// No arguments - show main news
 		if (args.Count == 0)
 		{
-			var mainNews = await _textFileService!GetEntryAsync("news", "news");
+			var mainNews = await _textFileService!.GetEntryAsync("news", "news");
 			if (mainNews != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainNews);
@@ -45,7 +45,7 @@ public partial class Commands
 		// /search switch - search content
 		if (switches.Contains("SEARCH"))
 		{
-			var matches = (await _textFileService!SearchEntriesAsync("news", topic)).ToList();
+			var matches = (await _textFileService!.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
 				await _notifyService!.Notify(executor, $"No news entries found containing '{topic}'.");
@@ -53,7 +53,7 @@ public partial class Commands
 			else if (matches.Count == 1)
 			{
 				// Only one match, show it
-				var searchContent = await _textFileService!GetEntryAsync("news", matches[0]);
+				var searchContent = await _textFileService!.GetEntryAsync("news", matches[0]);
 				if (searchContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
@@ -72,7 +72,7 @@ public partial class Commands
 		// Check for wildcard pattern
 		if (topic.Contains('*') || topic.Contains('?'))
 		{
-			var matches = (await _textFileService!SearchEntriesAsync("news", topic)).ToList();
+			var matches = (await _textFileService!.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
 				await _notifyService!.Notify(executor, $"No news available for '{topic}'.");
@@ -80,7 +80,7 @@ public partial class Commands
 			else if (matches.Count == 1)
 			{
 				// Only one match, show it
-				var wildcardContent = await _textFileService!GetEntryAsync("news", matches[0]);
+				var wildcardContent = await _textFileService!.GetEntryAsync("news", matches[0]);
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
@@ -97,7 +97,7 @@ public partial class Commands
 		}
 
 		// Try exact match
-		var exactContent = await _textFileService!GetEntryAsync("news", topic);
+		var exactContent = await _textFileService!.GetEntryAsync("news", topic);
 		if (exactContent != null)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
@@ -135,7 +135,7 @@ public partial class Commands
 		// No arguments - show main admin help
 		if (args.Count == 0)
 		{
-			var mainAhelp = await _textFileService!GetEntryAsync("ahelp", "ahelp");
+			var mainAhelp = await _textFileService!.GetEntryAsync("ahelp", "ahelp");
 			if (mainAhelp != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainAhelp);
@@ -153,7 +153,7 @@ public partial class Commands
 		// /search switch - search content
 		if (switches.Contains("SEARCH"))
 		{
-			var matches = (await _textFileService!SearchEntriesAsync("ahelp", topic)).ToList();
+			var matches = (await _textFileService!.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
 				await _notifyService!.Notify(executor, $"No admin help entries found containing '{topic}'.");
@@ -161,7 +161,7 @@ public partial class Commands
 			else if (matches.Count == 1)
 			{
 				// Only one match, show it
-				var searchContent = await _textFileService!GetEntryAsync("ahelp", matches[0]);
+				var searchContent = await _textFileService!.GetEntryAsync("ahelp", matches[0]);
 				if (searchContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
@@ -180,7 +180,7 @@ public partial class Commands
 		// Check for wildcard pattern
 		if (topic.Contains('*') || topic.Contains('?'))
 		{
-			var matches = (await _textFileService!SearchEntriesAsync("ahelp", topic)).ToList();
+			var matches = (await _textFileService!.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
 				await _notifyService!.Notify(executor, $"No admin help available for '{topic}'.");
@@ -188,7 +188,7 @@ public partial class Commands
 			else if (matches.Count == 1)
 			{
 				// Only one match, show it
-				var wildcardContent = await _textFileService!GetEntryAsync("ahelp", matches[0]);
+				var wildcardContent = await _textFileService!.GetEntryAsync("ahelp", matches[0]);
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
@@ -205,7 +205,7 @@ public partial class Commands
 		}
 
 		// Try exact match
-		var exactContent = await _textFileService!GetEntryAsync("ahelp", topic);
+		var exactContent = await _textFileService!.GetEntryAsync("ahelp", topic);
 		if (exactContent != null)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);

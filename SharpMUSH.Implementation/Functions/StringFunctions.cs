@@ -1120,7 +1120,7 @@ public partial class Functions
 	/// <summary>
 	/// Encodes angle brackets for HTML/Web safety
 	/// </summary>
-	private static string WebEncodeAngleBrackets(string text)
+	private string WebEncodeAngleBrackets(string text)
 	{
 		return text.Replace("<", "&lt;").Replace(">", "&gt;");
 	}
@@ -1128,7 +1128,7 @@ public partial class Functions
 	/// <summary>
 	/// Reconstructs an ansi() function call from AnsiStructure and inner text
 	/// </summary>
-	private static string ReconstructWebCall(AnsiStructure ansiDetails, string innerText)
+	private string ReconstructWebCall(AnsiStructure ansiDetails, string innerText)
 	{
 		Color foregroundColor = Color.Empty;
 		Color backgroundColor = Color.Empty;
@@ -1679,7 +1679,7 @@ public partial class Functions
 			.Aggregate(arg0, (current, match) => MModule.replace(current, arg1, match.Index, match.Length)));
 	}
 
-	private static string RemoveDiacritics(string text)
+	private string RemoveDiacritics(string text)
 	{
 		if (string.IsNullOrWhiteSpace(text))
 			return text;
@@ -1847,7 +1847,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result.ToString()));
 	}
 
-	private static string ExpandRanges(string input)
+	private string ExpandRanges(string input)
 	{
 		if (string.IsNullOrEmpty(input)) return input;
 

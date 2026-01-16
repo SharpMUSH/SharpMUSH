@@ -19,7 +19,7 @@ public partial class Functions
 	/// Helper method to determine which argument is the player and which is the channel name.
 	/// Tries arg0 as player first, then arg1 if that fails.
 	/// </summary>
-	private static async ValueTask<(AnySharpObject? Player, SharpChannel? Channel, CallState? Error)>
+	private async ValueTask<(AnySharpObject? Player, SharpChannel? Channel, CallState? Error)>
 		ResolvePlayerAndChannel(IMUSHCodeParser parser, AnySharpObject executor, string playerName, string channelName)
 	{
 		// Try arg0 as player first

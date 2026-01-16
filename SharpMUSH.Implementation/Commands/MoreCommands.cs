@@ -133,19 +133,19 @@ public partial class Commands
 			var isWizard = await executor.IsWizard();
 			
 			var motdFile = _configuration!.CurrentValue.Message.MessageOfTheDayFile;
-			var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
+			var motdHtmlFile = _configuration!.CurrentValue.Message.MessageOfTheDayHtmlFile;
 			
 			await _notifyService!.Notify(executor, "Current Message of the Day settings:");
-			await _notifyService!Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
-			await _notifyService!Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
+			await _notifyService!.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
+			await _notifyService!.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
 			
 			if (isWizard)
 			{
-				var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
-				var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
+				var wizmotdFile = _configuration!.CurrentValue.Message.WizMessageOfTheDayFile;
+				var wizmotdHtmlFile = _configuration!.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
 				
-				await _notifyService!Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
-				await _notifyService!Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+				await _notifyService!.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
+				await _notifyService!.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
 			}
 			
 			return CallState.Empty;
@@ -2402,7 +2402,7 @@ public partial class Commands
 						}
 					}
 					
-					var oFailureAttr = await _attributeService!GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read);
+					var oFailureAttr = await _attributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read);
 					
 					switch (oFailureAttr)
 					{
@@ -2419,7 +2419,7 @@ public partial class Commands
 						}
 					}
 					
-					var aFailureAttr = await _attributeService!GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read);
+					var aFailureAttr = await _attributeService!.GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read);
 
 					switch (aFailureAttr)
 					{
@@ -3026,7 +3026,7 @@ public partial class Commands
 		return new None();
 	}
 	
-	private static bool MatchesPattern(string playerName, string pattern)
+	private bool MatchesPattern(string playerName, string pattern)
 	{
 		// Check if pattern contains wildcards
 		if (pattern.Contains('*') || pattern.Contains('?'))
@@ -3039,7 +3039,7 @@ public partial class Commands
 		return playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
 	}
 	
-	private static async ValueTask<string> GetDoingText(AnySharpObject executor, AnySharpObject player)
+	private async ValueTask<string> GetDoingText(AnySharpObject executor, AnySharpObject player)
 	{
 		var doingAttr = await _attributeService!.GetAttributeAsync(
 			executor,

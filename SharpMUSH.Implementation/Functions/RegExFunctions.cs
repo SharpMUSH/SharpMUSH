@@ -146,7 +146,7 @@ public partial class Functions
 	/// <summary>
 	/// Helper to set registers from a regex match.
 	/// </summary>
-	private static void SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
+	private void SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
 	{
 		if (!match.Success) return;
 		
@@ -293,7 +293,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for reswitch, reswitchi, reswitchall, reswitchalli.
 	/// </summary>
-	private static async ValueTask<CallState> RegSwitchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
+	private async ValueTask<CallState> RegSwitchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var str = arg0!.ToPlainText();

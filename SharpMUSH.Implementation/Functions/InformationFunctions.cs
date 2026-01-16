@@ -893,14 +893,14 @@ public partial class Functions
 		return (foreground, background, stylesBuilder.ToString());
 	}
 
-	private static bool IsAnsiControlChar(char ch)
+	private bool IsAnsiControlChar(char ch)
 	{
 		return ch is 'f' or 'u' or 'i' or 'h' or 
 		       'x' or 'r' or 'g' or 'y' or 'b' or 'm' or 'c' or 'w' or 
 		       'X' or 'R' or 'G' or 'Y' or 'B' or 'M' or 'C' or 'W';
 	}
 
-	private static string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles, 
+	private string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles, 
 		SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		var result = new List<string>();
@@ -931,7 +931,7 @@ public partial class Functions
 		return result.Count > 0 ? string.Join(" ", result) : ErrorInvalidColor;
 	}
 
-	private static string FormatColorsAsRgb(string? foreground, string? background, string styles, bool includeStyles,
+	private string FormatColorsAsRgb(string? foreground, string? background, string styles, bool includeStyles,
 		SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		var result = new List<string>();
@@ -962,7 +962,7 @@ public partial class Functions
 		return result.Count > 0 ? string.Join(" ", result) : ErrorInvalidColor;
 	}
 
-	private static string FormatColorsAsXterm(string? foreground, string? background, string styles, bool includeStyles,
+	private string FormatColorsAsXterm(string? foreground, string? background, string styles, bool includeStyles,
 		SharpMUSH.Configuration.Options.ColorsOptions config, bool hexFormat)
 	{
 		var result = new List<string>();
@@ -994,7 +994,7 @@ public partial class Functions
 		return result.Count > 0 ? string.Join(" ", result) : ErrorInvalidColor;
 	}
 
-	private static string FormatColorsAs16Color(string? foreground, string? background, string styles, bool includeStyles,
+	private string FormatColorsAs16Color(string? foreground, string? background, string styles, bool includeStyles,
 		SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		var result = new List<string>();
@@ -1025,7 +1025,7 @@ public partial class Functions
 		return result.Count > 0 ? string.Join(" ", result) : ErrorInvalidColor;
 	}
 
-	private static string FormatColorsAsName(string? foreground, string? background, string styles, bool includeStyles,
+	private string FormatColorsAsName(string? foreground, string? background, string styles, bool includeStyles,
 		SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		var result = new List<string>();
@@ -1064,13 +1064,13 @@ public partial class Functions
 		return result.Count > 0 ? string.Join(" ", result) : ErrorNoMatchingColorName;
 	}
 
-	private static string FormatColorsAsAuto(string originalSpec, string? foreground, string? background, string styles, bool includeStyles)
+	private string FormatColorsAsAuto(string originalSpec, string? foreground, string? background, string styles, bool includeStyles)
 	{
 		// For auto mode, return in the same format as provided
 		return originalSpec;
 	}
 
-	private static string? ConvertColorToHex(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
+	private string? ConvertColorToHex(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		// If already hex format
 		if (colorSpec.StartsWith('#'))
@@ -1112,7 +1112,7 @@ public partial class Functions
 		return null;
 	}
 
-	private static string? ConvertColorToRgb(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
+	private string? ConvertColorToRgb(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		var hex = ConvertColorToHex(colorSpec, config);
 		if (hex == null)
@@ -1155,7 +1155,7 @@ public partial class Functions
 		return null;
 	}
 
-	private static string? ConvertColorTo16Color(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
+	private string? ConvertColorTo16Color(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		// Map to 16-color ANSI codes
 		// Basic ANSI colors: x=black, r=red, g=green, y=yellow, b=blue, m=magenta, c=cyan, w=white
@@ -1191,7 +1191,7 @@ public partial class Functions
 		};
 	}
 
-	private static string MapXtermColorTo16Color(int xterm, SharpMUSH.Configuration.Options.ColorsOptions config)
+	private string MapXtermColorTo16Color(int xterm, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		// For colors beyond 16, find the closest match
 		// Get the RGB value and map to closest basic color

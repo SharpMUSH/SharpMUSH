@@ -484,7 +484,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result);
 	}
 	
-	private static string CalculateWeekOfYearFromSunday(DateTimeOffset dt)
+	private string CalculateWeekOfYearFromSunday(DateTimeOffset dt)
 	{
 		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
 		var daysOffset = (int)startOfYear.DayOfWeek;
@@ -493,7 +493,7 @@ public partial class Functions
 		return weekNumber.ToString("D2");
 	}
 	
-	private static string CalculateWeekOfYearFromMonday(DateTimeOffset dt)
+	private string CalculateWeekOfYearFromMonday(DateTimeOffset dt)
 	{
 		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
 		var daysOffset = (int)startOfYear.DayOfWeek;

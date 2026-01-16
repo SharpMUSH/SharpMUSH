@@ -1504,7 +1504,7 @@ public partial class Functions
 	/// <summary>
 	/// Checks if the executor has permission to access connection data for another player.
 	/// </summary>
-	private static async ValueTask<bool> CanAccessConnectionData(AnySharpObject executor, DBRef? targetDbRef)
+	private async ValueTask<bool> CanAccessConnectionData(AnySharpObject executor, DBRef? targetDbRef)
 	{
 		if (targetDbRef == executor.Object().DBRef)
 		{
@@ -1519,7 +1519,7 @@ public partial class Functions
 	/// <summary>
 	/// Builds terminal information string from connection metadata.
 	/// </summary>
-	private static string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails)
+	private string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails)
 	{
 		var terminfo = new List<string>
 		{

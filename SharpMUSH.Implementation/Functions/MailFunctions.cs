@@ -18,7 +18,7 @@ public partial class Functions
 	/// <summary>
 	/// Parse message specification (e.g. "123" or "INBOX:5") into folder and message index
 	/// </summary>
-	private static async ValueTask<(string folder, int messageIndex)> ParseMessageSpec(
+	private async ValueTask<(string folder, int messageIndex)> ParseMessageSpec(
 		IMUSHCodeParser parser,
 		AnySharpObject player,
 		string messageSpec)
@@ -53,7 +53,7 @@ public partial class Functions
 	/// <summary>
 	/// Retrieve mail message by folder and index
 	/// </summary>
-	private static async ValueTask<SharpMail?> GetMailMessage(
+	private async ValueTask<SharpMail?> GetMailMessage(
 		AnySharpObject player,
 		string folder,
 		int messageIndex)
@@ -82,7 +82,7 @@ public partial class Functions
 	/// Helper to parse target player and message spec from function arguments.
 	/// Uses same methodology as commands - returns proper error types.
 	/// </summary>
-	private static async ValueTask<PlayerMessageResult> ParsePlayerAndMessageArgs(
+	private async ValueTask<PlayerMessageResult> ParsePlayerAndMessageArgs(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		Dictionary<string, CallState> args)
@@ -119,7 +119,7 @@ public partial class Functions
 	/// <summary>
 	/// Helper to check if executor can view another player's mail (must be wizard)
 	/// </summary>
-	private static async ValueTask<bool> CanViewOtherPlayerMail(AnySharpObject executor)
+	private async ValueTask<bool> CanViewOtherPlayerMail(AnySharpObject executor)
 	{
 		return executor.IsGod() || await executor.IsWizard();
 	}
@@ -213,7 +213,7 @@ public partial class Functions
 	/// <summary>
 	/// Check if a string is a valid message number (e.g., "123" or "INBOX:5")
 	/// </summary>
-	private static bool IsMessageNumber(string arg)
+	private bool IsMessageNumber(string arg)
 	{
 		if (string.IsNullOrEmpty(arg))
 		{
