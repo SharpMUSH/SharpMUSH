@@ -812,6 +812,18 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// </summary>
 	/// <param name="text">Text potentially containing Pueblo ANSI escape sequences</param>
 	/// <returns>Text with escape sequences removed but standard HTML preserved, or empty string if input is null</returns>
+	private static string StripPuebloEscapes(string? text)
+	{
+		if (string.IsNullOrEmpty(text))
+		{
+			return string.Empty;
+		}
+
+		// For now, just return the text as-is
+		// TODO: Implement proper Pueblo escape stripping
+		return text;
+	}
+
 	/// <summary>
 	/// Extracts the salt and hash from a PennMUSH password format.
 	/// PennMUSH format: V:ALGO:SALTEDHASH:TIMESTAMP
@@ -841,9 +853,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (saltedHash.Length < 3)
 			return (null, password);
 
-		// Extract the 2-character salt and the remaining hash
+		// Extract the 2-character salt
 		var salt = saltedHash[..2];
-		var hash = saltedHash[2..];
 
 		// Return the salt and the full password (we keep the full format for verification)
 		return (salt, password);

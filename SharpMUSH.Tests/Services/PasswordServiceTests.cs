@@ -205,6 +205,42 @@ public class PasswordServiceTests
 		await Assert.That(result).IsTrue();
 	}
 
+	[Test]
+	public async ValueTask NeedsRehash_PennMUSHFormat_ReturnsTrue()
+	{
+		var pennMUSHHash = CreatePennMUSHHash("ab", "password", "SHA1");
+
+		var result = PasswordService.NeedsRehash(pennMUSHHash);
+
+		await Assert.That(result).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask NeedsRehash_ModernPBKDF2Format_ReturnsFalse()
+	{
+		var modernHash = PasswordService.HashPassword("#1:12345", "password");
+
+		var result = PasswordService.NeedsRehash(modernHash);
+
+		await Assert.That(result).IsFalse();
+	}
+
+	[Test]
+	public async ValueTask NeedsRehash_EmptyHash_ReturnsFalse()
+	{
+		var result = PasswordService.NeedsRehash("");
+
+		await Assert.That(result).IsFalse();
+	}
+
+	[Test]
+	public async ValueTask NeedsRehash_NullHash_ReturnsFalse()
+	{
+		var result = PasswordService.NeedsRehash(null!);
+
+		await Assert.That(result).IsFalse();
+	}
+
 	private static string CreatePennMUSHHash(string salt, string password, string algorithm, int version = 2, long? timestamp = null)
 	{
 		var saltedPlaintext = salt + password;

@@ -154,6 +154,6 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 	{
 		var userKey = $"#{player.Object.Key}:{player.Object.CreationTime}";
 		var newHash = HashPassword(userKey, plaintext);
-		await mediator.Send(new SetPlayerPasswordCommand(player, newHash));
+		await mediator.Send(new SetPlayerPasswordCommand(player, newHash, Salt: null));
 	}
 }
