@@ -82,8 +82,6 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 			var integrationServer = _server!;
 			return new MUSHCodeParser(
 				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
-				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 				integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 				integrationServer.Services,
 				state: new ParserState(
@@ -121,8 +119,6 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 			var integrationServer = _server!;
 			return new MUSHCodeParser(
 				integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
-				integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-				integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 				integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 				integrationServer.Services,
 				state: new ParserState(

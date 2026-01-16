@@ -32,8 +32,6 @@ public class FunctionPermissionTests
 	{
 		return new MUSHCodeParser(
 			Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MUSHCodeParser>>(),
-			Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-			Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 			Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			Services,
 			state: new ParserState(
