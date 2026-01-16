@@ -13,31 +13,60 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
-	private static IMediator? Mediator { get; set; }
-	private static ILocateService? LocateService { get; set; }
-	private static IAttributeService? AttributeService { get; set; }
-	private static INotifyService? NotifyService { get; set; }
-	private static IPermissionService? PermissionService { get; set; }
-	private static ICommandDiscoveryService? CommandDiscoveryService { get; set; }
-	private static IOptionsWrapper<SharpMUSHOptions>? Configuration { get; set; }
-	private static IOptionsWrapper<ColorsOptions>? ColorConfiguration { get; set; }
-	private static IPasswordService? PasswordService { get; set; }
-	private static IConnectionService? ConnectionService { get; set; }
-	private static IExpandedObjectDataService? ObjectDataService { get; set; }
-	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
-	private static ICommunicationService? CommunicationService { get; set; }
-	private static IValidateService? ValidateService { get; set; }
-	private static ISortService? SortService { get; set; }
-	private static ILockService? LockService { get; set; }
-	private static ISqlService? SqlService { get; set; }
-	private static ITelemetryService? TelemetryService { get; set; }
-	private static IMoveService? MoveService { get; set; }
-	private static IEventService? EventService { get; set; }
-	private static IBooleanExpressionParser? BooleanExpressionParser { get; set; }
-	private static ITextFileService? TextFileService { get; set; }
-	private static ILogger<Functions>? Logger { get; set; }
+	// Instance fields - each Functions instance has its own dependencies
+	private readonly IMediator _mediator;
+	private readonly ILocateService _locateService;
+	private readonly IAttributeService _attributeService;
+	private readonly INotifyService _notifyService;
+	private readonly IPermissionService _permissionService;
+	private readonly ICommandDiscoveryService _commandDiscoveryService;
+	private readonly IOptionsWrapper<SharpMUSHOptions> _configuration;
+	private readonly IOptionsWrapper<ColorsOptions> _colorConfiguration;
+	private readonly IPasswordService _passwordService;
+	private readonly IConnectionService _connectionService;
+	private readonly IExpandedObjectDataService _objectDataService;
+	private readonly IManipulateSharpObjectService _manipulateSharpObjectService;
+	private readonly ICommunicationService _communicationService;
+	private readonly IValidateService _validateService;
+	private readonly ISortService _sortService;
+	private readonly ILockService _lockService;
+	private readonly ISqlService _sqlService;
+	private readonly ITelemetryService _telemetryService;
+	private readonly IMoveService _moveService;
+	private readonly IEventService _eventService;
+	private readonly IBooleanExpressionParser _booleanExpressionParser;
+	private readonly ITextFileService _textFileService;
+	private readonly ILogger<Functions> _logger;
 
 	private readonly FunctionLibraryService _functionLibrary = [];
+	
+	// Thread-local current instance for static method access
+	private static readonly AsyncLocal<Functions?> _currentInstance = new();
+	
+	// Static properties for backward compatibility - delegate to current instance
+	private static IMediator? Mediator => _currentInstance.Value?._mediator;
+	private static ILocateService? LocateService => _currentInstance.Value?._locateService;
+	private static IAttributeService? AttributeService => _currentInstance.Value?._attributeService;
+	private static INotifyService? NotifyService => _currentInstance.Value?._notifyService;
+	private static IPermissionService? PermissionService => _currentInstance.Value?._permissionService;
+	private static ICommandDiscoveryService? CommandDiscoveryService => _currentInstance.Value?._commandDiscoveryService;
+	private static IOptionsWrapper<SharpMUSHOptions>? Configuration => _currentInstance.Value?._configuration;
+	private static IOptionsWrapper<ColorsOptions>? ColorConfiguration => _currentInstance.Value?._colorConfiguration;
+	private static IPasswordService? PasswordService => _currentInstance.Value?._passwordService;
+	private static IConnectionService? ConnectionService => _currentInstance.Value?._connectionService;
+	private static IExpandedObjectDataService? ObjectDataService => _currentInstance.Value?._objectDataService;
+	private static IManipulateSharpObjectService? ManipulateSharpObjectService => _currentInstance.Value?._manipulateSharpObjectService;
+	private static ICommunicationService? CommunicationService => _currentInstance.Value?._communicationService;
+	private static IValidateService? ValidateService => _currentInstance.Value?._validateService;
+	private static ISortService? SortService => _currentInstance.Value?._sortService;
+	private static ILockService? LockService => _currentInstance.Value?._lockService;
+	private static ISqlService? SqlService => _currentInstance.Value?._sqlService;
+	private static ITelemetryService? TelemetryService => _currentInstance.Value?._telemetryService;
+	private static IMoveService? MoveService => _currentInstance.Value?._moveService;
+	private static IEventService? EventService => _currentInstance.Value?._eventService;
+	private static IBooleanExpressionParser? BooleanExpressionParser => _currentInstance.Value?._booleanExpressionParser;
+	private static ITextFileService? TextFileService => _currentInstance.Value?._textFileService;
+	private static ILogger<Functions>? Logger => _currentInstance.Value?._logger;
 
 	public LibraryService<string, FunctionDefinition> Get() => _functionLibrary;
 
@@ -66,29 +95,32 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IBooleanExpressionParser booleanExpressionParser,
 		ITextFileService textFileService)
 	{
-		Logger = logger;
-		Mediator = mediator;
-		LocateService = locateService;
-		AttributeService = attributeService;
-		NotifyService = notifyService;
-		PermissionService = permissionService;
-		CommandDiscoveryService = commandDiscoveryService;
-		Configuration = configuration;
-		ColorConfiguration = colorOptions;
-		PasswordService = passwordService;
-		ConnectionService = connectionService;
-		ManipulateSharpObjectService = manipulateSharpObjectService;
-		ObjectDataService = objectDataService;
-		SortService = sortService;
-		ValidateService = validateService;
-		CommunicationService = communicationService;
-		LockService = lockService;
-		SqlService = sqlService;
-		TelemetryService = telemetryService;
-		MoveService = moveService;
-		EventService = eventService;
-		BooleanExpressionParser = booleanExpressionParser;
-		TextFileService = textFileService;
+		_logger = logger;
+		_mediator = mediator;
+		_locateService = locateService;
+		_attributeService = attributeService;
+		_notifyService = notifyService;
+		_permissionService = permissionService;
+		_commandDiscoveryService = commandDiscoveryService;
+		_configuration = configuration;
+		_colorConfiguration = colorOptions;
+		_passwordService = passwordService;
+		_connectionService = connectionService;
+		_manipulateSharpObjectService = manipulateSharpObjectService;
+		_objectDataService = objectDataService;
+		_sortService = sortService;
+		_validateService = validateService;
+		_communicationService = communicationService;
+		_lockService = lockService;
+		_sqlService = sqlService;
+		_telemetryService = telemetryService;
+		_moveService = moveService;
+		_eventService = eventService;
+		_booleanExpressionParser = booleanExpressionParser;
+		_textFileService = textFileService;
+
+		// Set this instance as the current instance for this async context
+		_currentInstance.Value = this;
 
 		foreach (var command in Generated.FunctionLibrary.Functions)
 		{
