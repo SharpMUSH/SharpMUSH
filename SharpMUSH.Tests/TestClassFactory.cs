@@ -257,8 +257,8 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 
 	/// <summary>
 	/// Generates a unique database name for this test class.
-	/// Format: SharpMUSH_Test_{Counter}
-	/// Uses a counter to ensure uniqueness across test classes.
+	/// Format: SharpMUSH_Test_{Counter}_{ShortGuid}
+	/// Uses a counter and short GUID to ensure uniqueness across test classes.
 	/// </summary>
 	private string GenerateDatabaseName()
 	{
