@@ -9,7 +9,6 @@ public class MySqlTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithDatabase("sharpmush_test")
 		.WithUsername("testuser")
 		.WithPassword("testpass")
-		.WithReuse(false)
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();

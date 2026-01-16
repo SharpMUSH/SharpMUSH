@@ -20,7 +20,7 @@ public class CommandFlowUnitTests
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("@ifelse 1=@pemit #1=1 True,@pemit #1=1 False", "1 True")]
 	[Arguments("@ifelse 0=@pemit #1=2 True,@pemit #1=2 False", "2 False")]
 	[Arguments("@ifelse 1=@pemit #1=3 True", "3 True")]
