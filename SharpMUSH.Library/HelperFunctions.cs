@@ -298,10 +298,10 @@ public static partial class HelperFunctions
 			}
 		}
 
-		// Use ArangoDB graph traversal to check if start object is reachable from newRelated
-		// following both parent and zone edges. If it is, adding this relationship would create a cycle.
-		// We query from newRelated to see if we can reach start, because after adding the relationship,
-		// there would be a path: start -> newRelated -> ... -> start (cycle)
+		// Use ArangoDB graph traversal to check if adding the relationship would create a cycle.
+		// We check if 'start' is reachable from 'newRelated' by following parent/zone edges.
+		// If true, then after adding the relationship (start -> newRelated), there would be a path
+		// from newRelated back to start (newRelated -> ... -> start), completing the cycle.
 		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: CancellationToken.None);
 		
 		// If start is reachable from newRelated, adding the relationship would create a cycle
