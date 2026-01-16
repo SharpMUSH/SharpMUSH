@@ -6,12 +6,12 @@ namespace SharpMUSH.Tests.Services;
 
 public class ListenPatternMatcherTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
 	private IListenPatternMatcher ListenPatternMatcher => 
-		WebAppFactoryArg.Services.GetRequiredService<IListenPatternMatcher>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		Factory.Services.GetRequiredService<IListenPatternMatcher>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Skip("Integration test - requires database with objects and ^-listen attributes configured")]

@@ -10,12 +10,12 @@ namespace SharpMUSH.Tests.Commands;
 
 public class UserDefinedCommandsTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>(); 
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>(); 
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Test]
 	[Skip("Test needs investigation - unrelated to communication commands")]

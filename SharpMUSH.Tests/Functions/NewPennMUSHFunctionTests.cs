@@ -7,10 +7,10 @@ namespace SharpMUSH.Tests.Functions;
 /// </summary>
 public class NewPennMUSHFunctionTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => Factory.FunctionParser;
 
 	#region DELETE/INSERT Tests (Aliases for ldelete/linsert)
 

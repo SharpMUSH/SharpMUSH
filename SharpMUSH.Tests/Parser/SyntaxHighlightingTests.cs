@@ -4,10 +4,10 @@ namespace SharpMUSH.Tests.Parser;
 
 public class SyntaxHighlightingTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => Factory.FunctionParser;
 
 	[Test]
 	public async Task SimpleText_ShouldTokenize()

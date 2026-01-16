@@ -10,16 +10,15 @@ using System.Linq;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class MetricsCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IPrometheusQueryService PrometheusQueryService => WebAppFactoryArg.Services.GetRequiredService<IPrometheusQueryService>();
+	private IMUSHCodeParser Parser => Factory.CommandParser;
+	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IPrometheusQueryService PrometheusQueryService => Factory.Services.GetRequiredService<IPrometheusQueryService>();
 
 	[Test]
 	public async Task MetricsCommand_Health_ReturnsHealthStatus()
@@ -227,7 +226,7 @@ public class MetricsCommandTests
 	public async Task PrometheusQueryService_IsAvailable()
 	{
 		// Arrange & Act
-		var service = WebAppFactoryArg.Services.GetService<IPrometheusQueryService>();
+		var service = Factory.Services.GetService<IPrometheusQueryService>();
 
 		// Assert
 		await Assert.That(service).IsNotNull();
@@ -259,7 +258,7 @@ public class MetricsCommandTests
 	public async Task PrometheusQueryService_GetMostCalledFunctions_ReturnsInDescendingOrder()
 	{
 		// Arrange - Record some function invocations to generate metrics
-		var telemetryService = WebAppFactoryArg.Services.GetRequiredService<ITelemetryService>();
+		var telemetryService = Factory.Services.GetRequiredService<ITelemetryService>();
 		
 		// Simulate multiple function calls with different frequencies
 		// Function1: 100 calls at 1ms each

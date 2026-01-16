@@ -10,12 +10,12 @@ namespace SharpMUSH.Tests.Commands;
 
 public class AdminCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Factory.CommandParser;
 
 	[Test]
 	[Skip("Test infrastructure issue - state pollution from other tests")]

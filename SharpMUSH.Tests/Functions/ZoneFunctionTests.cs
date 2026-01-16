@@ -10,17 +10,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-[NotInParallel]
 public class ZoneFunctionTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IMUSHCodeParser FunctionParser => Factory.FunctionParser;
+	private IMUSHCodeParser CommandParser => Factory.CommandParser;
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async Task ZoneGetNoZone()
@@ -281,7 +280,7 @@ public class ZoneFunctionTests
 		// Directly test AttributeService to verify zone attribute inheritance
 		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var attributeService = Factory.Services.GetRequiredService<IAttributeService>();
 		
 		var maybeAttr = await attributeService.GetAttributeAsync(
 			executor.Known,
@@ -377,7 +376,7 @@ public class ZoneFunctionTests
 		// Test with AttributeService directly
 		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var attributeService = Factory.Services.GetRequiredService<IAttributeService>();
 		
 		// Should inherit from child's zone
 		var childZoneAttr = await attributeService.GetAttributeAsync(

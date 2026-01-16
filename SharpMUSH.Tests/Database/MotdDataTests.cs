@@ -7,11 +7,11 @@ namespace SharpMUSH.Tests.Database;
 
 public class MotdDataTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private ISharpDatabase _database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	private IExpandedObjectDataService _dataService => WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
+	private ISharpDatabase _database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private IExpandedObjectDataService _dataService => Factory.Services.GetRequiredService<IExpandedObjectDataService>();
 
 	[Test, NotInParallel]
 	public async Task SetAndGetMotdData()

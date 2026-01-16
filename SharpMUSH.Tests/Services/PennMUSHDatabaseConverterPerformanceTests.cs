@@ -10,17 +10,17 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class PennMUSHDatabaseConverterPerformanceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
 	private IPennMUSHDatabaseConverter GetConverter()
 	{
-		return WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
+		return Factory.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
 	}
 
 	private PennMUSHDatabaseParser GetParser()
 	{
-		return WebAppFactoryArg.Services.GetRequiredService<PennMUSHDatabaseParser>();
+		return Factory.Services.GetRequiredService<PennMUSHDatabaseParser>();
 	}
 
 	/// <summary>

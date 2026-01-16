@@ -10,17 +10,17 @@ namespace SharpMUSH.Tests.Services;
 
 public class MoveServiceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMoveService MoveService => WebAppFactoryArg.Services.GetRequiredService<IMoveService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMoveService MoveService => Factory.Services.GetRequiredService<IMoveService>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async ValueTask MoveServiceIsRegistered()
 	{
-		var service = WebAppFactoryArg.Services.GetRequiredService<IMoveService>();
+		var service = Factory.Services.GetRequiredService<IMoveService>();
 		await Assert.That(service).IsNotNull();
 	}
 	
@@ -29,7 +29,7 @@ public class MoveServiceTests
 	{
 		// For now, move costs are always zero
 		// This test ensures the method is implemented and callable
-		var service = WebAppFactoryArg.Services.GetRequiredService<IMoveService>();
+		var service = Factory.Services.GetRequiredService<IMoveService>();
 		await Assert.That(service).IsNotNull();
 	}
 

@@ -11,15 +11,15 @@ namespace SharpMUSH.Tests.Commands;
 
 public class DatabaseCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory SqlWebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory SqlFactory { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
-	private INotifyService NotifyService => SqlWebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => SqlWebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => SqlWebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+	private INotifyService NotifyService => SqlFactory.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => SqlFactory.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => SqlFactory.Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Before(Test)]
 	public async Task InitializeAsync()
@@ -193,7 +193,6 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask Test_MapSql_Basic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_basic #1=think Test_MapSql_Basic: %0 - %1 - %2"));
@@ -207,7 +206,6 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask Test_MapSql_WithMultipleRows()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_mr #1=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
@@ -248,7 +246,6 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask Test_MapSql_WithColnamesSwitch()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_cn #1=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2 - %3"));
@@ -268,7 +265,6 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask Test_MapSql_InvalidObjectAttribute()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr #1=think %0 - %1 - %2"));

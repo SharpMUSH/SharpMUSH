@@ -6,29 +6,28 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Tests.Database;
 
-[NotInParallel]
 public class AttributeWithInheritanceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async Task GetAttributeWithInheritance_DirectAttribute_ReturnsFromSelf()
 	{
 		// Create an object with an attribute
-		var objResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var objResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create TestDirectAttr"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Set an attribute on the object
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"&TEST_ATTR {objDbRef}=Direct Value"));
 
 		// Query using the new method
@@ -50,28 +49,28 @@ public class AttributeWithInheritanceTests
 	public async Task GetAttributeWithInheritance_ParentAttribute_ReturnsFromParent()
 	{
 		// Create a parent object with an attribute
-		var parentResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var parentResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create TestParentAttr"));
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"&PARENT_ATTR {parentDbRef}=Parent Value"));
 
 		// Create a child object
-		var childResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var childResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create TestChildAttr"));
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
 
 		// Set parent
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
 		// Query using the new method
@@ -92,28 +91,28 @@ public class AttributeWithInheritanceTests
 	public async Task GetAttributeWithInheritance_ZoneAttribute_ReturnsFromZone()
 	{
 		// Create a zone master with an attribute
-		var zoneResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var zoneResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create TestZoneAttr"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"&ZONE_ATTR {zoneDbRef}=Zone Value"));
 
 		// Create an object
-		var objResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var objResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create TestZonedObj"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Set zone
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		// Query using the new method
@@ -134,27 +133,27 @@ public class AttributeWithInheritanceTests
 	public async Task GetAttributeWithInheritance_CheckParentFalse_OnlyChecksObject()
 	{
 		// Create a parent with attribute
-		var parentResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var parentResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create TestNoParentCheck"));
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"&NO_PARENT_ATTR {parentDbRef}=Should Not Find"));
 
 		// Create child
-		var childResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var childResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create TestNoParentCheckChild"));
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
 		// Query with checkParent=false
@@ -172,44 +171,44 @@ public class AttributeWithInheritanceTests
 	public async Task GetAttributeWithInheritance_ParentTakesPrecedenceOverZone()
 	{
 		// Create zone with attribute
-		var zoneResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var zoneResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create PrecedenceZone"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"&PREC_ATTR {zoneDbRef}=From Zone"));
 
 		// Create parent with same attribute
-		var parentResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var parentResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create PrecedenceParent"));
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"&PREC_ATTR {parentDbRef}=From Parent"));
 
 		// Create child with both parent and zone
-		var childResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var childResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create PrecedenceChild"));
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"@chzone {childDbRef}={zoneDbRef}"));
 
 		// Query
@@ -229,16 +228,16 @@ public class AttributeWithInheritanceTests
 	public async Task GetAttributeWithInheritance_NestedAttributes_WorksCorrectly()
 	{
 		// Test nested attributes like FOO`BAR
-		var objResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var objResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create NestedAttrTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Set nested attribute
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"&NESTED`ATTR {objDbRef}=Nested Value"));
 
 		// Query using the new method
@@ -262,39 +261,39 @@ public class AttributeWithInheritanceTests
 		// with zones at multiple levels
 		
 		// Create grandparent with attribute
-		var grandparentResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var grandparentResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create ComplexGrandparent"));
 		var grandparentDbRef = DBRef.Parse(grandparentResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"&COMPLEX_ATTR {grandparentDbRef}=From Grandparent"));
 
 		// Create parent with grandparent as parent
-		var parentResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var parentResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create ComplexParent"));
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"@parent {parentDbRef}={grandparentDbRef}"));
 
 		// Create child with parent
-		var childResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var childResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create ComplexChild"));
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
 
-		await WebAppFactoryArg.CommandParser.CommandParse(
+		await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
 		// Query - should find attribute from grandparent
@@ -315,9 +314,9 @@ public class AttributeWithInheritanceTests
 	public async Task GetAttributeWithInheritance_NonExistentAttribute_ReturnsNull()
 	{
 		// Test that non-existent attributes return null
-		var objResult = await WebAppFactoryArg.CommandParser.CommandParse(
+		var objResult = await Factory.CommandParser.CommandParse(
 			1,
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
+			Factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IConnectionService>(),
 			MModule.single("@create NonExistentAttrTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 

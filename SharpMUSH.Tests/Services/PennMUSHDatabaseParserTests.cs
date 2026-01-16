@@ -6,12 +6,12 @@ namespace SharpMUSH.Tests.Services;
 
 public class PennMUSHDatabaseParserTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
 	private PennMUSHDatabaseParser GetParser()
 	{
-		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<PennMUSHDatabaseParser>>();
+		var logger = Factory.Services.GetRequiredService<ILogger<PennMUSHDatabaseParser>>();
 		return new PennMUSHDatabaseParser(logger);
 	}
 

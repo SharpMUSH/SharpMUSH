@@ -10,16 +10,15 @@ using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Tests.Database;
 
-[NotInParallel]
 public class FilteredObjectQueryTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser CommandParser => Factory.CommandParser;
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async ValueTask FilterByType_ReturnsOnlyMatchingTypes()

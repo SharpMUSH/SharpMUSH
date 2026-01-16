@@ -16,12 +16,12 @@ public class ChannelFunctionUnitTests
 	private const string TestChannelPrivilege = "Open";
 	private const int TestPlayerDbRef = 1;
 
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 
 	private SharpChannel? _testChannel;
 	private SharpPlayer? _testPlayer;

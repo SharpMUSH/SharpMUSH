@@ -5,10 +5,10 @@ namespace SharpMUSH.Tests.Commands;
 
 public class RoomsAndMovementTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>();
 	
 	// TODO: Add Tests
 }

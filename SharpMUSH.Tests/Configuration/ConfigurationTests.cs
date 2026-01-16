@@ -7,9 +7,9 @@ namespace SharpMUSH.Tests.Configuration;
 
 public class ConfigurationTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-	private IOptionsWrapper<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
+	private IOptionsWrapper<SharpMUSHOptions> Configuration => Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
 	[Test]
 	public async Task ParseConfigurationFile()

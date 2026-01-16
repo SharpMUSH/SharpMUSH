@@ -9,10 +9,10 @@ namespace SharpMUSH.Tests.Functions;
 /// </summary>
 public class GeneratedFunctionTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => Factory.FunctionParser;
 
 	#region version() Function Tests
 
@@ -150,7 +150,7 @@ public class GeneratedFunctionTests
 		var resultText = result.ToPlainText();
 		
 		// The result should match what we get from ConfigAccessor directly
-		var options = WebAppFactoryArg.Services.GetRequiredService<
+		var options = Factory.Services.GetRequiredService<
 			SharpMUSH.Library.Services.Interfaces.IOptionsWrapper<
 				SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
 		

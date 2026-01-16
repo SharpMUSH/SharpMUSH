@@ -5,16 +5,16 @@ namespace SharpMUSH.Tests.Services;
 
 public class CommandDiscoveryServiceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
 	private ICommandDiscoveryService CommandDiscoveryService => 
-		WebAppFactoryArg.Services.GetRequiredService<ICommandDiscoveryService>();
+		Factory.Services.GetRequiredService<ICommandDiscoveryService>();
 
 	[Test]
 	public async ValueTask CommandDiscoveryServiceIsRegistered()
 	{
-		var service = WebAppFactoryArg.Services.GetRequiredService<ICommandDiscoveryService>();
+		var service = Factory.Services.GetRequiredService<ICommandDiscoveryService>();
 		await Assert.That(service).IsNotNull();
 	}
 }

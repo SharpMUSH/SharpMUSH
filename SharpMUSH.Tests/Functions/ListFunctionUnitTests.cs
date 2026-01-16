@@ -9,13 +9,13 @@ namespace SharpMUSH.Tests.Functions;
 
 public class ListFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser CommandParser => Factory.CommandParser;
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	private static bool _testObjectsCreated = false;
 	private static DBRef _testObjectDbRef;

@@ -11,18 +11,17 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class GeneralCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private IMUSHCodeParser Parser => Factory.CommandParser;
+	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
 
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]
@@ -79,7 +78,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex()
 	{
 		await Parser.CommandParse(1, ConnectionService,
@@ -96,7 +94,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex2()
 	{
 		await Parser.CommandParse(1, ConnectionService,
@@ -118,7 +115,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex3()
 	{
 		await Parser.CommandParse(1, ConnectionService,
@@ -587,7 +583,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithDBRefNotificationBatching()
 	{
 		// This test validates that DBRef-based notifications respect batching scopes.
@@ -611,7 +606,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
 		// This test validates that context-based batching batches notifications to ANY target,
@@ -631,7 +625,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask NestedDoListBatching()
 	{
 		// This test validates that nested @dolists properly use ref-counting for batching context.
@@ -650,7 +643,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
 		// Negative test: Without @break, all loop iterations should send messages
@@ -667,7 +659,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithBreakAfterFirst_OnlyFirstMessageReceived()
 	{
 		// Positive test: @break should stop the loop after first iteration
@@ -687,7 +678,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithBreakFlushesMessages()
 	{
 		// This test validates that @break properly flushes batched messages.
@@ -708,7 +698,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask NestedDoListWithBreakFlushesMessages()
 	{
 		// This test validates that @break in a nested @dolist/inline properly handles

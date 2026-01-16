@@ -11,10 +11,10 @@ namespace SharpMUSH.Tests.Database;
 
 public class ArangoDBTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 	
 	[Test]
 	public async Task TestRoomZero()

@@ -11,12 +11,12 @@ namespace SharpMUSH.Tests.Parser;
 /// </summary>
 public class LockNormalizationTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IBooleanExpressionParser BooleanParser => WebAppFactoryArg.Services.GetRequiredService<IBooleanExpressionParser>();	
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IBooleanExpressionParser BooleanParser => Factory.Services.GetRequiredService<IBooleanExpressionParser>();	
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private IMUSHCodeParser Parser => Factory.FunctionParser;
 
 	[Test]
 	public async Task Normalize_ExactObjectLock_BareDbRef_ConvertsToObjId()

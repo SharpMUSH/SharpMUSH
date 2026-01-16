@@ -19,11 +19,11 @@ namespace SharpMUSH.Tests.Functions;
 
 public class FunctionPermissionTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IServiceProvider Services => WebAppFactoryArg.Services;
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private IServiceProvider Services => Factory.Services;
 
 	/// <summary>
 	/// Helper method to create a parser with a specific executor
@@ -64,7 +64,7 @@ public class FunctionPermissionTests
 	public async Task WizardOnlyFunction_AllowsWizard()
 	{
 		// Test that a wizard can call a WizardOnly function (e.g., pcreate)
-		var parser = WebAppFactoryArg.FunctionParser;
+		var parser = Factory.FunctionParser;
 		var result = await parser.FunctionParse(MModule.single("pcreate(TestWiz,password)"));
 		
 		// Should not return a permission error
@@ -96,7 +96,7 @@ public class FunctionPermissionTests
 	public async Task AdminOnlyFunction_AllowsWizard()
 	{
 		// Test that a wizard can call an AdminOnly function (e.g., beep)
-		var parser = WebAppFactoryArg.FunctionParser;
+		var parser = Factory.FunctionParser;
 		var result = await parser.FunctionParse(MModule.single("beep()"));
 		
 		// Should not return a permission error

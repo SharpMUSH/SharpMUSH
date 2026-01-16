@@ -3,7 +3,9 @@ using System.Text;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Core.Arango;
+using Core.Arango.Migration;
 using Core.Arango.Serialization.Json;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -27,42 +29,44 @@ using TUnit.Core.Interfaces;
 namespace SharpMUSH.Tests;
 
 /// <summary>
-/// DEPRECATED: This class is deprecated and should not be used for new tests.
-/// Use <see cref="TestClassFactory"/> instead, which provides per-class test isolation.
-///
-/// This class was used for per-test-session test infrastructure, which caused state pollution
-/// between test classes (shared database, shared NotifyService mock, etc.).
-///
-/// TestClassFactory provides:
-/// - Per-class database isolation (each test class gets its own ArangoDB database)
-/// - Per-class NotifyService mock (no shared state issues)
-/// - Per-class Parser instances (FunctionParser and CommandParser)
-/// - Same TestContainers (5 containers total for entire test session)
-///
-/// This class is retained temporarily for reference but will be removed in a future update.
+/// Per-class test factory that provides isolated test infrastructure for each test class.
+/// Each test class gets:
+/// - Its own ArangoDB database (on the shared container)
+/// - Its own NotifyService mock (no shared state issues)
+/// - Its own Parser instances (FunctionParser and CommandParser)
+/// - Access to the shared TestContainers (5 containers total for entire test session)
 /// </summary>
-[Obsolete("Use TestClassFactory instead. This class causes state pollution between test classes.", error: false)]
-public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
+public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 {
+	// ===== INJECTED TESTCONTAINERS (PerTestSession - Shared across all test classes) =====
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
-	
+
 	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedPandaTestServer RedPandaTestServer { get; init; }
-	
+
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
-	
+
 	[ClassDataSource<PrometheusTestServer>(Shared = SharedType.PerTestSession)]
 	public required PrometheusTestServer PrometheusTestServer { get; init; }
-	
+
 	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedisTestServer RedisTestServer { get; init; }
 
-	public IServiceProvider Services => _server!.Services;
+	// ===== CLASS-SPECIFIC RESOURCES =====
 	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
+	private static int _databaseCounter = 0;
 
+	/// <summary>
+	/// Service provider for this test class. Use this to get services like IMediator, IConnectionService, etc.
+	/// </summary>
+	public IServiceProvider Services => _server!.Services;
+
+	/// <summary>
+	/// Function parser for this test class. Use this to parse function calls.
+	/// </summary>
 	public IMUSHCodeParser FunctionParser
 	{
 		get
@@ -98,7 +102,10 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 				));
 		}
 	}
-	
+
+	/// <summary>
+	/// Command parser for this test class. Use this to parse command calls.
+	/// </summary>
 	public IMUSHCodeParser CommandParser
 	{
 		get
@@ -134,75 +141,143 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 				));
 		}
 	}
-	
+
+	/// <summary>
+	/// The unique database name for this test class.
+	/// Format: SharpMUSH_Test_{ClassName}_{Counter}
+	/// </summary>
+	public string DatabaseName { get; private set; } = string.Empty;
+
+	/// <summary>
+	/// Initialize the test class factory. This runs once per test class.
+	/// Creates a unique database, runs migrations, and sets up test infrastructure.
+	/// </summary>
 	public async Task InitializeAsync()
 	{
+		// Configure logging
 		var log = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
 			.MinimumLevel.Debug()
 			.CreateLogger();
-		
+
 		Log.Logger = log;
-		
+
+		// Generate unique database name
+		DatabaseName = GenerateDatabaseName();
+		Console.WriteLine($"[TestClassFactory] Initializing test class with database: {DatabaseName}");
+
+		// Configure ArangoDB connection
 		var config = new ArangoConfiguration
 		{
 			ConnectionString = $"Server={ArangoDbTestServer.Instance.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
 		};
 
+		// Create ArangoDB context for database creation
+		var arangoContext = new ArangoContext(config);
+		var handle = new ArangoHandle(DatabaseName);
+
+		// Create the database if it doesn't exist
+		if (!await arangoContext.Database.ExistAsync(handle))
+		{
+			await arangoContext.Database.CreateAsync(handle);
+			Console.WriteLine($"[TestClassFactory] Created database: {DatabaseName}");
+		}
+
+		// Run database migration
+		var migrator = new ArangoMigrator(arangoContext)
+		{
+			HistoryCollection = "MigrationHistory"
+		};
+		migrator.AddMigrations(typeof(SharpMUSH.Database.ArangoDB.ArangoDatabase).Assembly);
+		await migrator.UpgradeAsync(handle);
+		Console.WriteLine($"[TestClassFactory] Migration completed for database: {DatabaseName}");
+
+		// Set up configuration file path
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
+		// Get Prometheus URL
 		var prometheusUrl = $"http://localhost:{PrometheusTestServer.Instance.GetMappedPublicPort(9090)}";
 
+		// Set up Redis connection
 		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
 		var redisConnection = $"localhost:{redisPort}";
 		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
 
+		// Set up Kafka connection
 		var kafkaHost = RedPandaTestServer.Instance.GetBootstrapAddress();
 		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
 
+		// Create Kafka topics
 		await CreateKafkaTopicsAsync(kafkaHost);
 
+		// Create class-specific NotifyService mock
+		var notifyService = Substitute.For<INotifyService>();
+
+		// Create TestWebApplicationBuilderFactory with class-specific database
 		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
-			MySqlTestServer.Instance.GetConnectionString(), 
+			MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			Substitute.For<INotifyService>(),
-			prometheusUrl);
+			notifyService,
+			prometheusUrl,
+			DatabaseName); // Pass the unique database name
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();
 		var databaseService = provider.GetRequiredService<ISharpDatabase>();
-		
-		// Migrate the database, which ensures we have a #1 object to bind to.
+
+		// Migrate the database (this will use the class-specific database)
 		await databaseService.Migrate();
 
+		// Get the #1 object to bind to
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
 		_one = realOne.Object()!.DBRef;
-		await connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+
+		// Register and bind connection
+		await connectionService.Register(1, "localhost", "localhost", "test",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await connectionService.Bind(1, _one);
-		
+
+		// Start Quartz scheduler
 		var schedulerFactory = provider.GetRequiredService<ISchedulerFactory>();
 		var scheduler = await schedulerFactory.GetScheduler();
 		if (!scheduler.IsStarted)
 		{
 			await scheduler.Start();
 		}
+
+		Console.WriteLine($"[TestClassFactory] Initialization complete for database: {DatabaseName}");
 	}
 
+	/// <summary>
+	/// Generates a unique database name for this test class.
+	/// Format: SharpMUSH_Test_{Counter}
+	/// Uses a counter to ensure uniqueness across test classes.
+	/// </summary>
+	private string GenerateDatabaseName()
+	{
+		var counter = Interlocked.Increment(ref _databaseCounter);
+		var shortGuid = Guid.NewGuid().ToString("N")[..8];
+		return $"SharpMUSH_Test_{counter}_{shortGuid}";
+	}
+
+	/// <summary>
+	/// Creates Kafka topics for the test session.
+	/// This is safe to call multiple times (idempotent).
+	/// </summary>
 	private static async Task CreateKafkaTopicsAsync(string bootstrapServers)
 	{
 		// Format can be: "//127.0.0.1:9092/", "kafka://127.0.0.1:9092", or "127.0.0.1:9092"
 		var cleanedAddress = bootstrapServers;
-		
+
 		if (cleanedAddress.Contains("://"))
 		{
-			cleanedAddress = cleanedAddress.Substring(cleanedAddress.IndexOf("://") + 3);
+			cleanedAddress = cleanedAddress[(cleanedAddress.IndexOf("://", StringComparison.Ordinal) + 3)..];
 		}
-		
-		cleanedAddress = cleanedAddress.TrimStart('/');
-		cleanedAddress = cleanedAddress.TrimEnd('/');
-		
+
+		cleanedAddress = cleanedAddress.TrimStart('/').TrimEnd('/');
+
 		var config = new AdminClientConfig
 		{
 			BootstrapServers = cleanedAddress,
@@ -232,7 +307,6 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		try
 		{
 			await adminClient.CreateTopicsAsync(topicSpecifications);
-			
 			await Task.Delay(2000);
 		}
 		catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists || r.Error.Code == ErrorCode.NoError))
@@ -241,8 +315,13 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		}
 	}
 
+	/// <summary>
+	/// Dispose the test class factory. Cleans up resources.
+	/// </summary>
 	public async ValueTask DisposeAsync()
 	{
+		Console.WriteLine($"[TestClassFactory] Disposing test class with database: {DatabaseName}");
+
 		// Output telemetry summary before disposing
 		try
 		{
@@ -252,7 +331,7 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		{
 			Console.Error.WriteLine($"Error outputting telemetry summary: {ex.Message}");
 		}
-		
+
 		// Shutdown the Quartz scheduler gracefully with a timeout
 		if (_server?.Services != null)
 		{
@@ -275,7 +354,12 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 				}
 			}
 		}
-		
+
+		// Note: We intentionally do NOT delete the test database here
+		// This allows for debugging failed tests by inspecting the database state
+		// The database will be cleaned up when the ArangoDB container is disposed at the end of the test session
+
+		Console.WriteLine($"[TestClassFactory] Disposal complete for database: {DatabaseName}");
 		GC.SuppressFinalize(this);
 	}
 

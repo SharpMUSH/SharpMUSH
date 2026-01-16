@@ -9,13 +9,12 @@ namespace SharpMUSH.Tests.Performance;
 /// <summary>
 /// Validates that the Kafka migration maintains or improves messaging performance
 /// </summary>
-[NotInParallel]
 public class KafkaPerformanceValidation
 {
-[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-public required WebAppFactory WebAppFactoryArg { get; init; }
+[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+public required TestClassFactory Factory { get; init; }
 
-private IMessageBus MessageBus => WebAppFactoryArg.Services.GetRequiredService<IMessageBus>();
+private IMessageBus MessageBus => Factory.Services.GetRequiredService<IMessageBus>();
 
 [Test, Explicit]  // Explicit - only run when specifically requested
 public async Task Kafka_ProducerThroughput_ShouldHandleHighVolume()
@@ -111,7 +110,7 @@ await Assert.That(elapsedMs).IsLessThan(1000)
 public async Task Kafka_Configuration_ShouldHavePerformanceOptimizations()
 {
 // Arrange
-var options = WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Messaging.Configuration.MessageQueueOptions>();
+var options = Factory.Services.GetRequiredService<SharpMUSH.Messaging.Configuration.MessageQueueOptions>();
 
 // Assert - Verify performance settings are configured
 await Assert.That(options.CompressionType).IsEqualTo("lz4")
@@ -138,7 +137,7 @@ Console.WriteLine($"  Idempotence: {options.EnableIdempotence}");
 public async Task Kafka_Configuration_ShouldBeOptimizedForDoListScenario()
 {
 // Arrange
-var options = WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Messaging.Configuration.MessageQueueOptions>();
+var options = Factory.Services.GetRequiredService<SharpMUSH.Messaging.Configuration.MessageQueueOptions>();
 
 // Assert - Verify settings optimized for @dolist (rapid sequential messages)
 await Assert.That(options.LingerMs).IsGreaterThanOrEqualTo(1)

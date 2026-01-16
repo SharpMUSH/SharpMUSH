@@ -8,11 +8,11 @@ namespace SharpMUSH.Tests.Parser;
 
 public class BooleanExpressionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IBooleanExpressionParser BooleanParser => WebAppFactoryArg.Services.GetRequiredService<IBooleanExpressionParser>();	
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IBooleanExpressionParser BooleanParser => Factory.Services.GetRequiredService<IBooleanExpressionParser>();	
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 
 	[Arguments("!#FALSE", true)]
 	[Arguments("#TRUE", true)]

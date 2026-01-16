@@ -13,18 +13,17 @@ namespace SharpMUSH.Tests.Integration;
 /// These tests validate the complete hook workflow including command execution,
 /// hook triggering, and $-command matching.
 /// </summary>
-[NotInParallel]
 public class HookIntegrationTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IHookService HookService => WebAppFactoryArg.Services.GetRequiredService<IHookService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Factory.CommandParser;
+	private IHookService HookService => Factory.Services.GetRequiredService<IHookService>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private IAttributeService AttributeService => Factory.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
 	public async ValueTask Hook_BeforeHook_ExecutesBeforeCommand()
@@ -211,17 +210,16 @@ public class HookIntegrationTests
 /// These tests validate the complete mogrification pipeline including
 /// channel message processing and all MOGRIFY` attributes.
 /// </summary>
-[NotInParallel]
 public class MogrifierIntegrationTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Factory.CommandParser;
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private IAttributeService AttributeService => Factory.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
 	public async ValueTask Mogrifier_BlockAttribute_BlocksMessage()

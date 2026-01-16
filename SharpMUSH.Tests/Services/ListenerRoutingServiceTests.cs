@@ -8,12 +8,12 @@ namespace SharpMUSH.Tests.Services;
 
 public class ListenerRoutingServiceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
 	private IListenerRoutingService ListenerRoutingService => 
-		WebAppFactoryArg.Services.GetRequiredService<IListenerRoutingService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		Factory.Services.GetRequiredService<IListenerRoutingService>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask ProcessNotificationAsync_WithNullLocation_ReturnsEarly()

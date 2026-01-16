@@ -6,11 +6,11 @@ namespace SharpMUSH.Tests.Services;
 
 public class EventServiceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IEventService EventService => WebAppFactoryArg.Services.GetRequiredService<IEventService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IEventService EventService => Factory.Services.GetRequiredService<IEventService>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Skip("Integration test - requires database setup with event_handler configured")]
@@ -18,7 +18,7 @@ public class EventServiceTests
 	{
 		// When no event_handler is configured, TriggerEventAsync should return without error
 		await EventService.TriggerEventAsync(
-			WebAppFactoryArg.CommandParser,
+			Factory.CommandParser,
 			"TEST`EVENT",
 			null,
 			"arg0", "arg1");

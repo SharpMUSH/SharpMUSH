@@ -4,10 +4,10 @@ namespace SharpMUSH.Tests.Functions;
 
 public class MiscFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => Factory.FunctionParser;
 
  [Test]
  [Arguments("list(functions)", "list")] // should include the 'list' function name

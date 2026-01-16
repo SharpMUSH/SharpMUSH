@@ -10,12 +10,12 @@ namespace SharpMUSH.Tests.Commands;
 
 public class MessageCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Factory.CommandParser;
 
 	[Test]
 	public async ValueTask MessageBasic()
@@ -86,7 +86,6 @@ public class MessageCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask MessageSilentSwitch()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGSILENT_61829 #1=MessageSilent_Value_61829"));

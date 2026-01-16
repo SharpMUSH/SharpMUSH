@@ -11,11 +11,11 @@ namespace SharpMUSH.Tests.Configuration;
 /// </summary>
 public class CodeGenerationTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
 
 	private IOptionsWrapper<SharpMUSHOptions> Configuration => 
-		WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
 	#region ConfigMetadata Tests
 

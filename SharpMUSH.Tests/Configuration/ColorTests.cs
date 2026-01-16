@@ -7,9 +7,9 @@ namespace SharpMUSH.Tests.Configuration;
 
 public class ColorTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-	private IOptionsWrapper<ColorsOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<ColorsOptions>>();
+	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
+	public required TestClassFactory Factory { get; init; }
+	private IOptionsWrapper<ColorsOptions> Configuration => Factory.Services.GetRequiredService<IOptionsWrapper<ColorsOptions>>();
 
 	[Test]
 	public async Task BasicLookupSuccess()
