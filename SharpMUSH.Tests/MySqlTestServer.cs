@@ -9,6 +9,8 @@ public class MySqlTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithDatabase("sharpmush_test")
 		.WithUsername("testuser")
 		.WithPassword("testpass")
+		.WithReuse(true)
+		.WithLabel("testcontainers.reuse.hash", "sharpmush-mysql-test")
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();
