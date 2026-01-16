@@ -47,12 +47,6 @@ Run the tests with:
 dotnet test
 ```
 
-**Note**: Tests use Docker containers with reuse enabled for performance. After running tests, clean up containers with:
-```bash
-./cleanup-test-containers.sh
-```
-See [CONTAINER_CLEANUP.md](./CONTAINER_CLEANUP.md) for details.
-
 The main entrypoint to set as a Startup Project is [`SharpMUSH.Server`](./SharpMUSH.Server).
 
 For full integration, you will also need to run [`SharpMUSH.ConnectionServer`](./SharpMUSH.ConnectionServer), which handles client connections.
