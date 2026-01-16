@@ -58,8 +58,6 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 	private static int _databaseCounter = 0;
-	private static int _handleCounter = 0;
-	private long _connectionHandle;
 
 	/// <summary>
 	/// Service provider for this test class. Use this to get services like IMediator, IConnectionService, etc.
@@ -96,7 +94,7 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 					Executor: _one,
 					Enactor: _one,
 					Caller: _one,
-					Handle: _connectionHandle,
+					Handle: 1,
 					CallDepth: new InvocationCounter(),
 					FunctionRecursionDepths: new Dictionary<string, int>(),
 					TotalInvocations: new InvocationCounter(),
@@ -135,7 +133,7 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 					Executor: _one,
 					Enactor: _one,
 					Caller: _one,
-					Handle: _connectionHandle,
+					Handle: 1,
 					CallDepth: new InvocationCounter(),
 					FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 					TotalInvocations: new InvocationCounter(),
@@ -236,13 +234,10 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
 		_one = realOne.Object()!.DBRef;
 
-		// Generate unique connection handle for this test class to avoid conflicts
-		_connectionHandle = Interlocked.Increment(ref _handleCounter);
-
-		// Register and bind connection with unique handle
-		await connectionService.Register(_connectionHandle, "localhost", "localhost", "test",
+		// Register and bind connection
+		await connectionService.Register(1, "localhost", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		await connectionService.Bind(_connectionHandle, _one);
+		await connectionService.Bind(1, _one);
 
 		// Start Quartz scheduler
 		var schedulerFactory = provider.GetRequiredService<ISchedulerFactory>();
@@ -326,24 +321,6 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 	public async ValueTask DisposeAsync()
 	{
 		Console.WriteLine($"[TestClassFactory] Disposing test class with database: {DatabaseName}");
-
-		// Disconnect the test connection to clean up ConnectionService state
-		if (_server?.Services != null)
-		{
-			try
-			{
-				var connectionService = _server.Services.GetService<IConnectionService>();
-				if (connectionService != null)
-				{
-					await connectionService.Disconnect(_connectionHandle);
-					Console.WriteLine($"[TestClassFactory] Disconnected connection handle: {_connectionHandle}");
-				}
-			}
-			catch (Exception ex)
-			{
-				Console.Error.WriteLine($"Error disconnecting connection: {ex.Message}");
-			}
-		}
 
 		// Output telemetry summary before disposing
 		try
