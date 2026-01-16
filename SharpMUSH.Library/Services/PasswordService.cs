@@ -144,4 +144,16 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 	{
 		await mediator.Send(new SetPlayerPasswordCommand(user, hashedPassword));
 	}
+
+	public bool NeedsRehash(string hash)
+	{
+		return IsPennMUSHPasswordFormat(hash);
+	}
+
+	public async ValueTask RehashPasswordAsync(SharpPlayer player, string plaintext)
+	{
+		var userKey = $"#{player.Object.Key}:{player.Object.CreationTime}";
+		var newHash = HashPassword(userKey, plaintext);
+		await mediator.Send(new SetPlayerPasswordCommand(player, newHash));
+	}
 }

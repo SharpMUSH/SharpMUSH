@@ -33,4 +33,19 @@ public interface IPasswordService
 	/// </summary>
 	/// <returns>A random password</returns>
 	string GenerateRandomPassword();
+
+	/// <summary>
+	/// Checks if a password hash needs to be rehashed (e.g., legacy PennMUSH format).
+	/// </summary>
+	/// <param name="hash">The stored password hash</param>
+	/// <returns>True if the hash should be upgraded to modern format</returns>
+	bool NeedsRehash(string hash);
+
+	/// <summary>
+	/// Rehashes a password using modern PBKDF2 and updates the database.
+	/// Call this after successful verification of a legacy password to upgrade it.
+	/// </summary>
+	/// <param name="player">The player whose password to rehash</param>
+	/// <param name="plaintext">The plaintext password (captured during login)</param>
+	ValueTask RehashPasswordAsync(SharpPlayer player, string plaintext);
 }

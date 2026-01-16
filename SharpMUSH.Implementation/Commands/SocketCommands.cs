@@ -149,6 +149,13 @@ public partial class Commands
 			return new None();
 		}
 
+		// Rehash legacy PennMUSH passwords to modern PBKDF2 format on successful login
+		if (validPassword && PasswordService.NeedsRehash(foundDB.PasswordHash))
+		{
+			await PasswordService.RehashPasswordAsync(foundDB, password);
+			Serilog.Log.Logger.Information("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
+		}
+
 		// Future feature: Site lock checking would go here
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
