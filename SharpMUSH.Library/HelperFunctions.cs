@@ -268,7 +268,7 @@ public static partial class HelperFunctions
 	/// <param name="newRelated">The object being set as parent or zone</param>
 	/// <param name="isParent">True if setting parent, false if setting zone</param>
 	/// <returns>True if safe to add (no cycle), false if it would create a cycle</returns>
-	public static async ValueTask<bool> SafeToAddRelationship(AnySharpObject start, AnySharpObject newRelated, bool isParent)
+	public static async ValueTask<bool> SafeToAddRelationship(IMediator mediator, AnySharpObject start, AnySharpObject newRelated, bool isParent)
 	{
 		var startDbRef = start.Object().DBRef;
 		var newRelatedDbRef = newRelated.Object().DBRef;
@@ -301,8 +301,8 @@ public static partial class HelperFunctions
 		// Use a set to track visited object numbers (not full DBRefs with timestamps)
 		// This ensures we match objects regardless of how DBRef was constructed
 		var visited = new HashSet<int>();
-		var toCheck = new Queue<AnySharpObject>();
-		toCheck.Enqueue(newRelated);
+		var toCheck = new Queue<int>(); // Store DBRef numbers instead of objects
+		toCheck.Enqueue(newRelatedDbRef.Number);
 
 		const int maxDepth = 100; // Safety limit
 		var depth = 0;
@@ -310,8 +310,7 @@ public static partial class HelperFunctions
 		// BFS traversal of both parent and zone chains
 		while (toCheck.Count > 0 && depth < maxDepth)
 		{
-			var current = toCheck.Dequeue();
-			var currentNumber = current.Object().DBRef.Number;
+			var currentNumber = toCheck.Dequeue();
 
 			// Skip if already visited (compare by number only)
 			if (!visited.Add(currentNumber))
@@ -326,18 +325,27 @@ public static partial class HelperFunctions
 				return false;
 			}
 
+			// Get fresh object from database to avoid cached AsyncLazy values
+			var currentDbRef = new DBRef(currentNumber);
+			var currentObj = await mediator.Send(new GetObjectNodeQuery(currentDbRef));
+			
+			if (currentObj.IsNone)
+			{
+				continue; // Object doesn't exist, skip
+			}
+
 			// Follow parent link
-			var parent = await current.Object().Parent.WithCancellation(CancellationToken.None);
+			var parent = await currentObj.Known.Object().Parent.WithCancellation(CancellationToken.None);
 			if (!parent.IsNone)
 			{
-				toCheck.Enqueue(parent.Known);
+				toCheck.Enqueue(parent.Object()!.DBRef.Number);
 			}
 
 			// Follow zone link
-			var zone = await current.Object().Zone.WithCancellation(CancellationToken.None);
+			var zone = await currentObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
 			if (!zone.IsNone)
 			{
-				toCheck.Enqueue(zone.Known);
+				toCheck.Enqueue(zone.Object()!.DBRef.Number);
 			}
 
 			depth++;
@@ -356,20 +364,22 @@ public static partial class HelperFunctions
 	/// <summary>
 	/// This function detects any chance of a loop in the parent chain.
 	/// </summary>
+	/// <param name="mediator"></param>
 	/// <param name="start"></param>
 	/// <param name="newParent"></param>
 	/// <returns>Whether there's a loop or not</returns>
-	public static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
-		=> await SafeToAddRelationship(start, newParent, isParent: true);
+	public static async ValueTask<bool> SafeToAddParent(IMediator mediator, AnySharpObject start, AnySharpObject newParent)
+		=> await SafeToAddRelationship(mediator, start, newParent, isParent: true);
 
 	/// <summary>
 	/// This function detects any chance of a loop in the zone chain.
 	/// </summary>
+	/// <param name="mediator"></param>
 	/// <param name="start"></param>
 	/// <param name="newZone"></param>
 	/// <returns>Whether there's a loop or not</returns>
-	public static async ValueTask<bool> SafeToAddZone(AnySharpObject start, AnySharpObject newZone)
-		=> await SafeToAddRelationship(start, newZone, isParent: false);
+	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, AnySharpObject start, AnySharpObject newZone)
+		=> await SafeToAddRelationship(mediator, start, newZone, isParent: false);
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{

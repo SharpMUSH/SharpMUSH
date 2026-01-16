@@ -1631,7 +1631,7 @@ LOCATE()
 									return Errors.ErrorPerm;
 								}
 
-								if (!await HelperFunctions.SafeToAddParent(target, newParent))
+								if (!await HelperFunctions.SafeToAddParent(Mediator!, target, newParent))
 								{
 									return "#-1 CYCLE DETECTED";
 								}

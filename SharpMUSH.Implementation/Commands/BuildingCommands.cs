@@ -680,7 +680,7 @@ public partial class Commands
 						}
 
 						// Check for cycles before setting the zone
-						if (!await HelperFunctions.SafeToAddZone(obj, zoneObj))
+						if (!await HelperFunctions.SafeToAddZone(Mediator!, obj, zoneObj))
 						{
 							return await NotifyService!.NotifyAndReturn(
 								executor.Object().DBRef,

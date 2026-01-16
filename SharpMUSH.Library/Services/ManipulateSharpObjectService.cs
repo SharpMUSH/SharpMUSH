@@ -459,7 +459,7 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		var safeToAdd = await HelperFunctions.SafeToAddParent(obj, newParent);
+		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, obj, newParent);
 		
 		if (!safeToAdd)
 		{
@@ -508,7 +508,7 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		var safeToAdd = await HelperFunctions.SafeToAddZone(obj, newZone);
+		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, obj, newZone);
 		
 		if (!safeToAdd)
 		{
