@@ -1,6 +1,6 @@
 # SharpMUSH
 <img align="left" width="300em" src="./Solution Files/Logo.svg" alt="A sharp logo for SharpMUSH."/>
-SharpMUSH is modern iteration of a style of <em>text-based role-playing</em> servers referred to as '<b>MUSHes</b>' or '<b>MU*</b>' written with more modern needs in mind.
+SharpMUSH is a modern iteration of a style of <em>text-based role-playing</em> servers referred to as '<b>MUSHes</b>' or '<b>MU*</b>', written with more modern needs in mind.
 <br/>
 <br/>
 It takes its basis and functionality heavily from PennMUSH and its brethren with the intent of a compatibility layer.
@@ -22,7 +22,7 @@ It takes its basis and functionality heavily from PennMUSH and its brethren with
 <br/>
 
 # Why SharpMUSH
-SharpMUSH is a modern iteration of the time tested MUSH frameworks. It provides a layer of compatibility for PennMUSH for transferability, and building a modern tech landscape around it that does away with many of the limitations that have made MUSHes harder use, without losing what makes them great.
+SharpMUSH is a modern iteration of the time-tested MUSH frameworks. It provides a layer of compatibility for PennMUSH for transferability, and builds a modern tech landscape around it that does away with many of the limitations that have made MUSHes harder to use, without losing what makes them great.
 
 # Documentation
 You can find our documentation here: [SharpMUSH Documentation](https://sharpmush.com).
@@ -47,4 +47,8 @@ Run the tests with:
 dotnet test
 ```
 
-The main entrypoint to set as a Startup Project is SharpMUSH.Server
+The main entrypoint to set as a Startup Project is [`SharpMUSH.Server`](./SharpMUSH.Server).
+
+For full integration, you will also need to run [`SharpMUSH.ConnectionServer`](./SharpMUSH.ConnectionServer), which handles client connections.
+
+Additionally, a Blazor web client is available at [`SharpMUSH.Client`](./SharpMUSH.Client).
