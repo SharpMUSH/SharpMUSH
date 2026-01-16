@@ -145,8 +145,8 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		
 		// Register Commands and Functions as Scoped to enable per-test-class isolation
 		// Each scope (test class, request, etc.) gets its own instance with isolated state
-		services.AddScoped<ILibraryProvider<FunctionDefinition>, Functions>();
-		services.AddScoped<ILibraryProvider<CommandDefinition>, Commands>();
+		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
+		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddScoped(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddScoped(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 		

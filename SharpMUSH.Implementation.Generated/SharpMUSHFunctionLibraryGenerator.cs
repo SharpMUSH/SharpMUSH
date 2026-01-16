@@ -63,10 +63,13 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		               private static SharpMUSH.Library.Definitions.FunctionDefinition CreateFunctionDefinition(SharpMUSH.Library.Attributes.SharpFunctionAttribute attr, Func<SharpMUSH.Library.ParserInterfaces.IMUSHCodeParser, SharpMUSH.Library.Attributes.SharpFunctionAttribute, ValueTask<SharpMUSH.Library.ParserInterfaces.CallState>> method)
 		                 => new SharpMUSH.Library.Definitions.FunctionDefinition(attr, (parser) => method(parser, attr));
 
-		               public static readonly Dictionary<string, SharpMUSH.Library.Definitions.FunctionDefinition> Functions = new Dictionary<string, SharpMUSH.Library.Definitions.FunctionDefinition>
+		               public static Dictionary<string, SharpMUSH.Library.Definitions.FunctionDefinition> GetFunctions(SharpMUSH.Implementation.Functions.Functions instance)
 		               {
-		                 {{string.Join(",\n\t\t", infoList.Select(InfoToSource))}}
-		               };
+		                 return new Dictionary<string, SharpMUSH.Library.Definitions.FunctionDefinition>
+		                 {
+		                   {{string.Join(",\n\t\t", infoList.Select(InfoToSource))}}
+		                 };
+		               }
 		             }
 		             """;
 
@@ -88,7 +91,7 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 			  					Flags = (SharpMUSH.Library.Definitions.FunctionFlags){{info.Flags}},
 			  					Restrict = [ {{string.Join(", ", info.Restrict.Select(x => $"\"{x}\""))}} ]
 			  				},
-			  				{{info.ClassName}}.{{info.MethodName}})
+			  				instance.{{info.MethodName}})
 			  		}
 			  """;
 	}

@@ -136,16 +136,16 @@ public partial class Commands
 			var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
 			
 			await _notifyService!.Notify(executor, "Current Message of the Day settings:");
-			await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
-			await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
+			await _notifyService!Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
+			await _notifyService!Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
 			
 			if (isWizard)
 			{
 				var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
 				var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
 				
-				await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
-				await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+				await _notifyService!Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
+				await _notifyService!Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
 			}
 			
 			return CallState.Empty;
@@ -2402,7 +2402,7 @@ public partial class Commands
 						}
 					}
 					
-					var oFailureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read);
+					var oFailureAttr = await _attributeService!GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read);
 					
 					switch (oFailureAttr)
 					{
@@ -2419,7 +2419,7 @@ public partial class Commands
 						}
 					}
 					
-					var aFailureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read);
+					var aFailureAttr = await _attributeService!GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read);
 
 					switch (aFailureAttr)
 					{

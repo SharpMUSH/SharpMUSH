@@ -96,7 +96,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		_textFileService = textFileService;
 		_functionLibrary = functionLibrary;
 
-		foreach (var command in Generated.CommandLibrary.Commands)
+		// Get command definitions bound to this instance
+		foreach (var command in Generated.CommandLibrary.GetCommands(this))
 		{
 			_commandLibrary.Add(command.Key, (command.Value, true));
 

@@ -584,7 +584,7 @@ public partial class Commands
 			["ExecutorName"] = executor.Object().Name
 		}))
 		{
-			Logger.LogInformation("{LogMessage}", MModule.serialize(logMessage));
+			_logger!LogInformation("{LogMessage}", MModule.serialize(logMessage));
 		}
 		
 		await _notifyService!.Notify(executor, $"Message logged to {category} log.");
@@ -634,7 +634,7 @@ public partial class Commands
 		await _mediator!.Send(new SetPlayerQuotaCommand(player, 0));
 		
 		await _notifyService!.Notify(executor, $"{player.Object.Name} has been set to poor status (quota: 0).");
-		await NotifyService.Notify(player.Object.DBRef, $"Your building quota has been set to 0 by {executor.Object().Name}.");
+		await _notifyService!Notify(player.Object.DBRef, $"Your building quota has been set to 0 by {executor.Object().Name}.");
 		
 		return CallState.Empty;
 	}
@@ -755,7 +755,7 @@ public partial class Commands
 		
 		await foreach (var player in players)
 		{
-			await Mediator.Send(new SetPlayerQuotaCommand(player, amount));
+			await _mediator!Send(new SetPlayerQuotaCommand(player, amount));
 			count++;
 			
 			if (!isQuiet)
@@ -1613,7 +1613,7 @@ public partial class Commands
 				if (hook.ClearRegs) flags.Add("clearregs");
 				
 				var flagStr = flags.Count > 0 ? $" ({string.Join(", ", flags)})" : "";
-				await NotifyService.Notify(executor, $"  {hookType}: {hook.TargetObject}/{hook.AttributeName}{flagStr}");
+				await _notifyService!Notify(executor, $"  {hookType}: {hook.TargetObject}/{hook.AttributeName}{flagStr}");
 			}
 			return CallState.Empty;
 		}
@@ -1726,7 +1726,7 @@ public partial class Commands
 
 			await _mediator!.Send(
 				new SetPlayerPasswordCommand(asPlayer,
-					PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
+					_passwordService!HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
 
 			await _notifyService!.Notify(
 				executor.Object().DBRef,
@@ -1895,7 +1895,7 @@ public partial class Commands
 		             Peak Paged Memory: {peakPaged}
 		             """;
 
-		await NotifyService.Notify(executor, extra);
+		await _notifyService!Notify(executor, extra);
 
 		return new CallState(details);
 	}
@@ -2137,7 +2137,7 @@ public partial class Commands
 			await _mediator!.Send(new SetPlayerQuotaCommand(player, amount));
 			
 			await _notifyService!.Notify(executor, $"Quota for {player.Object.Name} set to {amount}.");
-			await NotifyService.Notify(player.Object.DBRef, $"Your quota has been set to {amount} by {executor.Object().Name}.");
+			await _notifyService!Notify(player.Object.DBRef, $"Your quota has been set to {amount} by {executor.Object().Name}.");
 			
 			return CallState.Empty;
 		}
@@ -2155,16 +2155,16 @@ public partial class Commands
 			}
 			
 			await _notifyService!.Notify(executor, "Quota listing for all players:");
-			await NotifyService.Notify(executor, "Player                      Used/Quota");
-			await NotifyService.Notify(executor, "=========================================");
+			await _notifyService!Notify(executor, "Player                      Used/Quota");
+			await _notifyService!Notify(executor, "=========================================");
 			
 			// Iterate through all players and show their quota
 			var players = _mediator!.CreateStream(new GetAllPlayersQuery());
 			await foreach (var player in players)
 			{
-				var objectCount = await Mediator.Send(new GetOwnedObjectCountQuery(player));
+				var objectCount = await _mediator!Send(new GetOwnedObjectCountQuery(player));
 				var playerName = player.Object.Name.PadRight(27);
-				await NotifyService.Notify(executor, $"{playerName} {objectCount,4}/{player.Quota,-4}");
+				await _notifyService!Notify(executor, $"{playerName} {objectCount,4}/{player.Quota,-4}");
 			}
 			
 			return CallState.Empty;
@@ -2438,7 +2438,7 @@ public partial class Commands
 				}
 
 				// Locate the zone object
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				return await _locateService!LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
@@ -2526,7 +2526,7 @@ public partial class Commands
 		{
 			any = true;
 			await _notifyService!.Notify(cd.Handle, "You have been disconnected.", type: INotifyService.NotificationType.Announce);
-			await ConnectionService.Disconnect(cd.Handle);
+			await _connectionService!Disconnect(cd.Handle);
 		}
 
 		if (!any)
@@ -2616,7 +2616,7 @@ public partial class Commands
 		var startTime = DateTime.UtcNow;
 		try
 		{
-			await TextFileService.ReindexAsync();
+			await _textFileService!ReindexAsync();
 			var elapsed = DateTime.UtcNow - startTime;
 			await _notifyService!.Notify(executor, 
 				$"Text file cache rebuilt in {elapsed.TotalMilliseconds:F0}ms.");
@@ -2710,9 +2710,9 @@ public partial class Commands
 		// This would require writing to a configuration file or database and reloading
 		await _notifyService!.Notify(executor, 
 			$"@{(isEnable ? "enable" : "disable")} is equivalent to @config/set {attr2.Name}={(isEnable ? "yes" : "no")}");
-		await NotifyService.Notify(executor, 
+		await _notifyService!Notify(executor, 
 			"Runtime configuration modification is not yet implemented. Changes require server restart.");
-		await NotifyService.Notify(executor, 
+		await _notifyService!Notify(executor, 
 			$"Current value: {attr2.Name}={(value?.ToString() ?? "null")}");
 		
 		return new CallState("#-1 NOT IMPLEMENTED");

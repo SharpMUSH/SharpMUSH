@@ -65,10 +65,10 @@ public partial class Commands
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
-			var newThing = await Mediator.Send(new GetObjectNodeQuery(thing));
+			var newThing = await _mediator!.Send(new GetObjectNodeQuery(thing));
 			if (!newThing.IsNone)
 			{
-				await Mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
+				await _mediator!.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
 			}
 		}
 		
@@ -101,7 +101,7 @@ public partial class Commands
 					var oldData = o.AsExit;
 					var oldLocation = await oldData.Location.WithCancellation(CancellationToken.None);
 					await _mediator!.Send(new UnlinkExitCommand(oldData));
-					await Mediator.Send(new LinkExitCommand(oldData, oldLocation));
+					await _mediator!.Send(new LinkExitCommand(oldData, oldLocation));
 					return CallState.Empty;
 				}
 			);
@@ -245,7 +245,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 					executor, executor, newOwnerName, LocateFlags.All,
 					async newOwnerObj =>
 					{
@@ -464,7 +464,7 @@ public partial class Commands
 				}
 				else if (exitObj.IsThing || exitObj.IsPlayer)
 				{
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
@@ -488,7 +488,7 @@ public partial class Commands
 				else if (exitObj.IsRoom)
 				{
 					// Set DROP-TO for room
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+					return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
@@ -662,7 +662,7 @@ public partial class Commands
 					return CallState.Empty;
 				}
 
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
@@ -686,7 +686,7 @@ public partial class Commands
 						// Default ChZone lock is the zone object itself (allows controlled objects)
 						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
 						{
-							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
+							await _mediator!.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
 						}
 						
 						// Clear privileged flags and powers unless /preserve is used
@@ -754,10 +754,10 @@ public partial class Commands
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
-			var newRoom = await Mediator.Send(new GetObjectNodeQuery(response));
+			var newRoom = await _mediator!.Send(new GetObjectNodeQuery(response));
 			if (!newRoom.IsNone)
 			{
-				await Mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
+				await _mediator!.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
 			}
 		}
 
@@ -767,16 +767,16 @@ public partial class Commands
 			// CAN CREATE EXIT HERE?
 			// CAN LINK TO DESTINATION?
 
-			var toExitResponse = await Mediator.Send(new CreateExitCommand(exitToName.First(),
+			var toExitResponse = await _mediator!.Send(new CreateExitCommand(exitToName.First(),
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
 			await _notifyService!.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
 			await _notifyService!.Notify(executor.DBRef, "Trying to link...");
 
-			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
-			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(toExitResponse));
+			var newRoomObject = await _mediator!.Send(new GetObjectNodeQuery(response));
+			var newExitObject = await _mediator!.Send(new GetObjectNodeQuery(toExitResponse));
 
-			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
+			await _mediator!.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
 			await _notifyService!.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
 		}
@@ -787,18 +787,18 @@ public partial class Commands
 			// CAN LINK BACK TO CURRENT ROOM?
 
 			var exitFromName = MModule.plainText(exitFrom).Split(";");
-			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
+			var newRoomObject = await _mediator!.Send(new GetObjectNodeQuery(response));
 
-			var fromExitResponse = await Mediator.Send(new CreateExitCommand(exitFromName.First(),
+			var fromExitResponse = await _mediator!.Send(new CreateExitCommand(exitFromName.First(),
 				exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom,
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
+			var newExitObject = await _mediator!.Send(new GetObjectNodeQuery(fromExitResponse));
 
 			await _notifyService!.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
 			await _notifyService!.Notify(executor.DBRef, "Trying to link...");
 
 			var where = await executorBase.Where();
-			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
+			await _mediator!.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
 			await _notifyService!.Notify(executor.DBRef,
 				$"Linked exit #{fromExitResponse.Number} to #{where.Object().DBRef.Number}");
@@ -1047,10 +1047,10 @@ public partial class Commands
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
-			var newExit = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
+			var newExit = await _mediator!.Send(new GetObjectNodeQuery(exitDbRef));
 			if (!newExit.IsNone)
 			{
-				await Mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
+				await _mediator!.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
 			}
 		}
 
@@ -1065,8 +1065,8 @@ public partial class Commands
 			
 			if (!locateResult.IsError && locateResult.AsSharpObject.IsRoom)
 			{
-				var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
-				await Mediator.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsRoom));
+				var exitObj = await _mediator!.Send(new GetObjectNodeQuery(exitDbRef));
+				await _mediator!.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsRoom));
 				await _notifyService!.Notify(executor, $"Linked to {destName}.");
 			}
 		}
@@ -1257,7 +1257,7 @@ public partial class Commands
 						return await _manipulateSharpObjectService!.UnsetParent(executor, target, true);
 					default:
 
-						return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+						return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 							parser, executor, executor,
 							args["1"].Message!.ToPlainText(), LocateFlags.All,
 							async newParent

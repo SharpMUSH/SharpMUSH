@@ -134,7 +134,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		_booleanExpressionParser = booleanExpressionParser;
 		_textFileService = textFileService;
 
-		foreach (var command in Generated.FunctionLibrary.Functions)
+		foreach (var command in Generated.FunctionLibrary.GetFunctions(this))
 		{
 			_functionLibrary.Add(command.Key, (command.Value, true));
 
