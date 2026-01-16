@@ -355,7 +355,7 @@ public partial class Commands
 			await _notifyService!.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ");
 			await _notifyService!.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE");
 			await _notifyService!.Notify(executor, "  Note: Direct log file manipulation not yet implemented");
-			Logger?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object().Name);
+			_logger!?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object().Name);
 		}
 		else
 		{
@@ -363,7 +363,7 @@ public partial class Commands
 			await _notifyService!.Notify(executor, $"@LOGWIPE/{specifiedAction}: Would {specifiedAction.ToLower()} {logDesc}");
 			await _notifyService!.Notify(executor, "Direct log file manipulation not yet implemented.");
 			await _notifyService!.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.");
-			Logger?.LogWarning("@LOGWIPE/{Action} requested for {LogType} by {Executor} - not implemented", 
+			_logger!?.LogWarning("@LOGWIPE/{Action} requested for {LogType} by {Executor} - not implemented", 
 				specifiedAction, logDesc, executor.Object().Name);
 		}
 		
@@ -572,7 +572,7 @@ public partial class Commands
 			await _notifyService!.Notify(executor, "Warnings cleared.");
 		}
 
-		Logger?.LogInformation("@WARNINGS: {Executor} set warnings on {Target} from {Old} to {New}",
+		_logger!?.LogInformation("@WARNINGS: {Executor} set warnings on {Target} from {Old} to {New}",
 			executor.Object().Name, targetObj.Name, oldWarnings, newWarnings);
 		
 		return CallState.Empty;
@@ -601,7 +601,7 @@ public partial class Commands
 			var checkedCount = await _warningService!.CheckAllObjectsAsync();
 			await _notifyService!.Notify(executor, $"Warning checks complete. Checked {checkedCount} objects.");
 			
-			Logger?.LogInformation("@WCHECK/ALL executed by {Executor}, checked {Count} objects",
+			_logger!?.LogInformation("@WCHECK/ALL executed by {Executor}, checked {Count} objects",
 				executor.Object().Name, checkedCount);
 		}
 		else if (checkMe)
@@ -610,7 +610,7 @@ public partial class Commands
 			await _notifyService!.Notify(executor, "Checking objects you own...");
 			var warningCount = await _warningService!.CheckOwnedObjectsAsync(executor);
 			
-			Logger?.LogInformation("@WCHECK/ME executed by {Executor}, found {Count} warnings",
+			_logger!?.LogInformation("@WCHECK/ME executed by {Executor}, found {Count} warnings",
 				executor.Object().Name, warningCount);
 		}
 		else
@@ -645,7 +645,7 @@ public partial class Commands
 			await _warningService!.CheckObjectAsync(executor, target.AsSharpObject);
 			await _notifyService!.Notify(executor, "@wcheck complete.");
 			
-			Logger?.LogInformation("@WCHECK executed by {Executor} on {Target}",
+			_logger!?.LogInformation("@WCHECK executed by {Executor} on {Target}",
 				executor.Object().Name, targetObj.Name);
 		}
 		

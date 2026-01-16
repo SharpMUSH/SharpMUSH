@@ -38,7 +38,7 @@ public static class ChannelBuffer
 			return new CallState("Invalid number of lines.");
 		}
 
-		await Mediator.Send(new UpdateChannelCommand(
+		await Mediator!.Send(new UpdateChannelCommand(
 			Channel: channel,
 			null,
 			null,

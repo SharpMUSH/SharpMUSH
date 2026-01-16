@@ -40,7 +40,7 @@ public static class ChannelAdd
 			return new CallState("#-1 Invalid channel name.");
 		}
 
-		var allChannels = Mediator.CreateStream(new GetChannelListQuery());
+		var allChannels = Mediator!.CreateStream(new GetChannelListQuery());
 		var ownedChannels = await allChannels
 			.Where(async (x, _) =>
 				(await x.Owner.WithCancellation(CancellationToken.None)).Id == executorOwner.Id)
@@ -59,7 +59,7 @@ public static class ChannelAdd
 			return new CallState("#-1 Invalid privileges.");
 		}
 
-		await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));
+		await Mediator!.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));
 
 		await NotifyService.Notify(executor, "Channel has been created.");
 		return new CallState("Channel has been created.");

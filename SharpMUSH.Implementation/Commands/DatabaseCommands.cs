@@ -22,7 +22,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
 		// Check if SQL is available
-		if (SqlService == null || !SqlService.IsAvailable)
+		if (_sqlService! == null || !_sqlService!.IsAvailable)
 		{
 			await _notifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED");
 			return new CallState("#-1 SQL IS NOT ENABLED");
@@ -45,7 +45,7 @@ public partial class Commands
 
 		try
 		{
-			var result = await SqlService.ExecuteQueryAsStringAsync(query);
+			var result = await _sqlService!.ExecuteQueryAsStringAsync(query);
 			await _notifyService!.Notify(executor, result);
 			return new CallState(MModule.single(result));
 		}
@@ -76,7 +76,7 @@ public partial class Commands
 		var spoofSwitch = switches.Contains("SPOOF");
 		
 		// Check if SQL is available
-		if (SqlService == null || !SqlService.IsAvailable)
+		if (_sqlService! == null || !_sqlService!.IsAvailable)
 		{
 			await _notifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED");
 			return new CallState("#-1 SQL IS NOT ENABLED");
@@ -129,7 +129,7 @@ public partial class Commands
 					var firstRow = true;
 					var rowNumber = 1;
 
-					foreach (var row in await SqlService.ExecuteQueryAsync(query))
+					foreach (var row in await _sqlService!.ExecuteQueryAsync(query))
 					{
 						if (colnamesSwitch && firstRow)
 						{

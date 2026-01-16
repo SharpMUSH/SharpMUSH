@@ -2605,7 +2605,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		if (TextFileService == null)
+		if (_textFileService! == null)
 		{
 			await _notifyService!.Notify(executor, "Text file service not available.");
 			return CallState.Empty;

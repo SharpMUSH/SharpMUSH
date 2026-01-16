@@ -31,7 +31,7 @@ public static class ChannelDelete
 			return new CallState("You cannot modify this channel.");
 		}
 
-		await Mediator.Send(new DeleteChannelCommand(channel));
+		await Mediator!.Send(new DeleteChannelCommand(channel));
 
 		return new CallState("Channel has been deleted.");
 	}

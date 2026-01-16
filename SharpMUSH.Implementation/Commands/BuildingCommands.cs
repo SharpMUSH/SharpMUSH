@@ -264,13 +264,13 @@ public partial class Commands
 						{
 							if (await obj.HasFlag("WIZARD"))
 							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
+								await _manipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
 							}
 							if (await obj.HasFlag("ROYALTY"))
 							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
+								await _manipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
 							}
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
+							await _manipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "HALT", false);
 						}
 
 						return result;

@@ -271,22 +271,22 @@ public partial class Commands
 		
 		if (switches.Contains("INLINE"))
 		{
-			await NotifyService.Notify(executor, "  Mode: Inline execution");
+			await _notifyService!.Notify(executor, "  Mode: Inline execution");
 		}
 		
 		if (switches.Contains("NOTIFY"))
 		{
-			await NotifyService.Notify(executor, "  Will queue @notify after completion");
+			await _notifyService!.Notify(executor, "  Will queue @notify after completion");
 		}
 		
 		if (switches.Contains("CLEARREGS"))
 		{
-			await NotifyService.Notify(executor, "  Will clear Q-registers");
+			await _notifyService!.Notify(executor, "  Will clear Q-registers");
 		}
 		
 		if (switches.Contains("LOCALIZE"))
 		{
-			await NotifyService.Notify(executor, "  Will localize Q-registers");
+			await _notifyService!.Notify(executor, "  Will localize Q-registers");
 		}
 		
 		// Locate the target object
@@ -306,7 +306,7 @@ public partial class Commands
 		
 		if (attributeResult.IsNone || attributeResult.IsError)
 		{
-			await NotifyService.Notify(executor, $"Attribute {attrName} not found on {target.Object().Name}.");
+			await _notifyService!.Notify(executor, $"Attribute {attrName} not found on {target.Object().Name}.");
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 		
@@ -625,7 +625,7 @@ public partial class Commands
 		var formattedName = MModule.single(baseName);
 		if (realViewing.IsRoom && viewingFromInside)
 		{
-			var nameFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "NAMEFORMAT",
+			var nameFormatResult = await _attributeService!.GetAttributeAsync(executor, realViewing, "NAMEFORMAT",
 				IAttributeService.AttributeMode.Read, false);
 			
 			if (nameFormatResult.IsAttribute)
@@ -635,7 +635,7 @@ public partial class Commands
 				formatArgs["1"] = new CallState($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
 					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
 				
-				formattedName = await AttributeService.EvaluateAttributeFunctionAsync(
+				formattedName = await _attributeService!.EvaluateAttributeFunctionAsync(
 					parser, executor, realViewing, "NAMEFORMAT", formatArgs);
 			}
 			else
@@ -653,21 +653,21 @@ public partial class Commands
 		}
 
 		var formatAttrName = useIdesc ? "IDESCFORMAT" : "DESCFORMAT";
-		var descFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, formatAttrName,
+		var descFormatResult = await _attributeService!.GetAttributeAsync(executor, realViewing, formatAttrName,
 			IAttributeService.AttributeMode.Read, false);
 		
 		var formattedDesc = baseDesc;
 		if (descFormatResult.IsAttribute)
 		{
 			formatArgs["0"] = new CallState(baseDesc);
-			formattedDesc = await AttributeService.EvaluateAttributeFunctionAsync(
+			formattedDesc = await _attributeService!.EvaluateAttributeFunctionAsync(
 				parser, executor, realViewing, formatAttrName, formatArgs);
 		}
 
 		await _notifyService!.Notify(executor, formattedName);
 		if (MModule.getLength(formattedDesc) > 0)
 		{
-			await NotifyService.Notify(executor, formattedDesc);
+			await _notifyService!.Notify(executor, formattedDesc);
 		}
 
 		var showInventory = realViewing.IsContainer 
@@ -723,7 +723,7 @@ public partial class Commands
 
 			if (visibleContents.Count > 0)
 			{
-				var conFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "CONFORMAT",
+				var conFormatResult = await _attributeService!.GetAttributeAsync(executor, realViewing, "CONFORMAT",
 					IAttributeService.AttributeMode.Read, false);
 				
 				if (conFormatResult.IsAttribute)
@@ -734,22 +734,22 @@ public partial class Commands
 					formatArgs["0"] = new CallState(contentDbrefs);
 					formatArgs["1"] = new CallState(contentNames);
 					
-					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+					var formattedContents = await _attributeService!.EvaluateAttributeFunctionAsync(
 						parser, executor, realViewing, "CONFORMAT", formatArgs);
 					
-					await NotifyService.Notify(executor, formattedContents);
+					await _notifyService!.Notify(executor, formattedContents);
 				}
 				else
 				{
 					var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
 					var contentsList = string.Join("\n", visibleContents.Select(x => x.Object().Name));
-					await NotifyService.Notify(executor, $"{contentsLabel}\n{contentsList}");
+					await _notifyService!.Notify(executor, $"{contentsLabel}\n{contentsList}");
 				}
 			}
 
 			if (visibleExits.Count > 0 && realViewing.IsRoom)
 			{
-				var exitFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "EXITFORMAT",
+				var exitFormatResult = await _attributeService!.GetAttributeAsync(executor, realViewing, "EXITFORMAT",
 					IAttributeService.AttributeMode.Read, false);
 				
 				if (exitFormatResult.IsAttribute)
@@ -758,10 +758,10 @@ public partial class Commands
 					
 					formatArgs["0"] = new CallState(exitDbrefs);
 					
-					var formattedExits = await AttributeService.EvaluateAttributeFunctionAsync(
+					var formattedExits = await _attributeService!.EvaluateAttributeFunctionAsync(
 						parser, executor, realViewing, "EXITFORMAT", formatArgs);
 					
-					await NotifyService.Notify(executor, formattedExits);
+					await _notifyService!.Notify(executor, formattedExits);
 				}
 				else
 				{
@@ -776,18 +776,18 @@ public partial class Commands
 							
 							if (await exit.WithRoomOption().IsOpaque())
 							{
-								await NotifyService.Notify(executor, exitObj.Name);
+								await _notifyService!.Notify(executor, exitObj.Name);
 							}
 							else
 							{
-								await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
+								await _notifyService!.Notify(executor, $"{exitObj.Name} to {destName}");
 							}
 						}
 					}
 					else
 					{
 						var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
-						await NotifyService.Notify(executor, $"Obvious exits:\n{exitNames}");
+						await _notifyService!.Notify(executor, $"Obvious exits:\n{exitNames}");
 					}
 				}
 			}
@@ -867,7 +867,7 @@ public partial class Commands
 		
 		if (switches.Contains("MORTAL") && await executor.IsWizard())
 		{
-			canExamine = await PermissionService.Controls(executor, viewingKnown);
+			canExamine = await _permissionService!.Controls(executor, viewingKnown);
 		}
 		
 		if (!canExamine)
@@ -999,7 +999,7 @@ public partial class Commands
 			{
 				var patternMode = IAttributeService.AttributePatternMode.Wildcard;
 				
-				atrs = await AttributeService.GetAttributePatternAsync(
+				atrs = await _attributeService!.GetAttributePatternAsync(
 					enactor, 
 					viewingKnown, 
 					attributePattern, 
@@ -1008,7 +1008,7 @@ public partial class Commands
 			}
 			else
 			{
-				atrs = await AttributeService.GetVisibleAttributesAsync(enactor, viewingKnown);
+				atrs = await _attributeService!.GetVisibleAttributesAsync(enactor, viewingKnown);
 			}
 
 			if (atrs.IsAttribute)
@@ -1027,7 +1027,7 @@ public partial class Commands
 					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
 					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
 
-					if (!await PermissionService.CanViewAttribute(enactor, viewingKnown, attr)) 
+					if (!await _permissionService!.CanViewAttribute(enactor, viewingKnown, attr)) 
 					    // || showPublicOnly && !showAll && !attr.IsVisual())
 					{
 						continue;
@@ -1059,7 +1059,7 @@ public partial class Commands
 					["1"] = new CallState(contentNames)
 				};
 				
-				var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+				var formattedContents = await _attributeService!.EvaluateAttributeFunctionAsync(
 					parser, executor, viewingKnown, "CONFORMAT", formatArgs);
 				
 				await _notifyService!.Notify(enactor, formattedContents);
@@ -1078,8 +1078,8 @@ public partial class Commands
 			var homeObj = await viewingKnown.MinusRoom().Home();
 			var locationObj = await viewingKnown.AsContent.Location();
 			
-			await NotifyService.Notify(enactor, $"Home: {homeObj.Object().Name}");
-			await NotifyService.Notify(enactor,
+			await _notifyService!.Notify(enactor, $"Home: {homeObj.Object().Name}");
+			await _notifyService!.Notify(enactor,
 				$"Location: {locationObj.Object().Name}");
 		}
 
@@ -1305,7 +1305,7 @@ public partial class Commands
 
 		foreach (var obj in toTeleportStringList)
 		{
-			var locateTarget = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, obj,
+			var locateTarget = await _locateService!.LocateAndNotifyIfInvalid(parser, executor, executor, obj,
 				LocateFlags.All);
 			if (!locateTarget.IsValid() || locateTarget.IsRoom)
 			{
@@ -1418,7 +1418,7 @@ public partial class Commands
 		var controlledResults = new List<SharpObject>();
 		foreach (var obj in results)
 		{
-			var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+			var objNode = await _mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
 			if (!objNode.IsNone() && await _permissionService!.Controls(executor, objNode.WithoutNone()))
 			{
 				controlledResults.Add(obj);
@@ -1429,17 +1429,17 @@ public partial class Commands
 		
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
-			await NotifyService.Notify(executor, 
+			await _notifyService!.Notify(executor, 
 				$"Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
 		
 		// Display results
 		foreach (var obj in controlledResults)
 		{
-			await NotifyService.Notify(executor, $"  #{obj.Key} ({obj.Name})");
+			await _notifyService!.Notify(executor, $"  #{obj.Key} ({obj.Name})");
 		}
 		
-		await NotifyService.Notify(executor, 
+		await _notifyService!.Notify(executor, 
 			$"Found {matchCount} matching objects.");
 		
 		return new CallState(matchCount.ToString());
@@ -1470,7 +1470,7 @@ public partial class Commands
 			// Halt all objects in the game
 			await foreach (var obj in _mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
-				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
+				await _mediator!.Send(new HaltObjectQueueRequest(obj.DBRef));
 			}
 			
 			await _notifyService!.Notify(executor, "All objects halted.");
@@ -1556,12 +1556,12 @@ public partial class Commands
 		{
 			await _mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
 			
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in _mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
-					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
+					await _mediator!.Send(new HaltObjectQueueRequest(obj.DBRef));
 				}
 			}
 			
@@ -1594,7 +1594,7 @@ public partial class Commands
 				var haltFlag = await _mediator!.Send(new GetObjectFlagQuery("HALT"));
 				if (haltFlag != null)
 				{
-					await Mediator.Send(new SetObjectFlagCommand(target, haltFlag));
+					await _mediator!.Send(new SetObjectFlagCommand(target, haltFlag));
 				}
 				await _notifyService!.Notify(executor, $"Halted {targetObject.Name}.");
 			}
@@ -2138,18 +2138,18 @@ public partial class Commands
 		
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var one = await _mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var attrValues = _mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
 			
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+			await _mediator!.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
 			
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
 			
-			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+			await _mediator!.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
 				dbRefAttr, 0));
 			
 			return;
@@ -2161,12 +2161,12 @@ public partial class Commands
 			return;
 		}
 
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+		await _mediator!.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
 		
 		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
 		
-		await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+		await _mediator!.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
 			dbRefAttr2, last));
 		
 	}
@@ -2176,14 +2176,14 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var one = await _mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
+		var attrValues = _mediator!.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
 		if (attrValue is null)
 		{
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+			await _mediator!.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+			await _mediator!.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
 			return;
 		}
@@ -2194,9 +2194,9 @@ public partial class Commands
 			return;
 		}
 
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+		await _mediator!.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+		await _mediator!.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
 	}
 
@@ -2236,7 +2236,7 @@ public partial class Commands
 			}
 
 			var until = DateTimeOffset.UtcNow - dateTimeOffset;
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+			await _mediator!.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
 
 			return new CallState(maybeFoundPid.Pid.ToString());
 		}
@@ -2255,18 +2255,18 @@ public partial class Commands
 		if (arg1.StartsWith('+'))
 		{
 			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) + TimeSpan.FromSeconds(secs);
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+			await _mediator!.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
 			return new CallState(maybeFoundPid.Pid.ToString());
 		}
 
 		if (arg1.StartsWith('-'))
 		{
 			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) - TimeSpan.FromSeconds(secs);
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
+			await _mediator!.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
 			return new CallState(maybeFoundPid.Pid.ToString());
 		}
 
-		await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, TimeSpan.FromSeconds(secs)));
+		await _mediator!.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, TimeSpan.FromSeconds(secs)));
 		return new CallState(maybeFoundPid.Pid.ToString());
 	}
 
@@ -2393,14 +2393,14 @@ public partial class Commands
 		}
 		
 		// No switches - display command information
-		if (CommandLibrary == null)
+		if (_commandLibrary! == null)
 		{
 			await _notifyService!.Notify(executor, "Command library unavailable.");
 			return new CallState("#-1 LIBRARY UNAVAILABLE");
 		}
 		
 		// Try to find the command in the library
-		if (!CommandLibrary.TryGetValue(commandName, out var commandInfo))
+		if (!_commandLibrary!.TryGetValue(commandName, out var commandInfo))
 		{
 			await _notifyService!.Notify(executor, $"Command '{commandName}' not found.");
 			return new CallState("#-1 COMMAND NOT FOUND");
@@ -2410,13 +2410,13 @@ public partial class Commands
 		var attr = definition.Attribute;
 		
 		await _notifyService!.Notify(executor, $"Command: {attr.Name}");
-		await NotifyService.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
-		await NotifyService.Notify(executor, $"  Min Args: {attr.MinArgs}");
-		await NotifyService.Notify(executor, $"  Max Args: {attr.MaxArgs}");
+		await _notifyService!.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
+		await _notifyService!.Notify(executor, $"  Min Args: {attr.MinArgs}");
+		await _notifyService!.Notify(executor, $"  Max Args: {attr.MaxArgs}");
 		
 		if (attr.Switches != null && attr.Switches.Length > 0)
 		{
-			await NotifyService.Notify(executor, $"  Switches: {string.Join(", ", attr.Switches)}");
+			await _notifyService!.Notify(executor, $"  Switches: {string.Join(", ", attr.Switches)}");
 		}
 		
 		var behaviors = new List<string>();
@@ -2430,12 +2430,12 @@ public partial class Commands
 		
 		if (behaviors.Count > 0)
 		{
-			await NotifyService.Notify(executor, $"  Behavior: {string.Join(" | ", behaviors)}");
+			await _notifyService!.Notify(executor, $"  Behavior: {string.Join(" | ", behaviors)}");
 		}
 		
 		if (!string.IsNullOrEmpty(attr.CommandLock))
 		{
-			await NotifyService.Notify(executor, $"  Lock: {attr.CommandLock}");
+			await _notifyService!.Notify(executor, $"  Lock: {attr.CommandLock}");
 		}
 		
 		return CallState.Empty;
@@ -2522,22 +2522,22 @@ public partial class Commands
 				if (hasAll || !drainCount.HasValue)
 				{
 					// Drain all entries and clear attribute
-					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+					await _mediator!.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
+					await _mediator!.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
 						MModule.single("0"),
 						one.AsPlayer));
 				}
 				else
 				{
 					// Drain specified number
-					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
+					await _mediator!.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
 					// Adjust semaphore count
-					var currentAttr = await Mediator.CreateStream(
+					var currentAttr = await _mediator!.CreateStream(
 						new GetAttributeQuery(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute)).LastOrDefaultAsync();
 					if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
 					{
 						var newCount = currentCount + drainCount.Value;
-						await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
+						await _mediator!.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
 							MModule.single(newCount.ToString()),
 							one.AsPlayer));
 					}
@@ -2556,14 +2556,14 @@ public partial class Commands
 				if (hasAll)
 				{
 					// /all also clears the semaphore attribute
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+					await _mediator!.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
 						MModule.single("0"),
 						one.AsPlayer));
 				}
 				else
 				{
 					// Without /all, just set to -1 to indicate no tasks waiting
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+					await _mediator!.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
 						MModule.single("-1"),
 						one.AsPlayer));
 				}
@@ -2573,12 +2573,12 @@ public partial class Commands
 				// Drain specified number
 				await _mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
 				// Adjust semaphore count
-				var currentAttr = await Mediator.CreateStream(
+				var currentAttr = await _mediator!.CreateStream(
 					new GetAttributeQuery(objectToDrain.Object().DBRef, attribute)).LastOrDefaultAsync();
 				if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
 				{
 					var newCount = currentCount + drainCount.Value;
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
+					await _mediator!.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
 						MModule.single(newCount.ToString()),
 						one.AsPlayer));
 				}
@@ -2826,17 +2826,17 @@ public partial class Commands
 		
 		if (playerName != null)
 		{
-			await NotifyService.Notify(executor, $"  Player filter: {playerName}");
+			await _notifyService!.Notify(executor, $"  Player filter: {playerName}");
 		}
 		
 		if (searchCriteria != null)
 		{
-			await NotifyService.Notify(executor, $"  Criteria: {searchCriteria}");
+			await _notifyService!.Notify(executor, $"  Criteria: {searchCriteria}");
 		}
 		
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
-			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
+			await _notifyService!.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
 		
 		// Build search filter from criteria
@@ -2856,11 +2856,11 @@ public partial class Commands
 		foreach (var obj in results)
 		{
 			// Check if executor can see this object (basic visibility check)
-			await NotifyService.Notify(executor, $"  #{obj.Key} ({obj.Name}) [{obj.Type}]");
+			await _notifyService!.Notify(executor, $"  #{obj.Key} ({obj.Name}) [{obj.Type}]");
 			count++;
 		}
 		
-		await NotifyService.Notify(executor, $"{count} objects found.");
+		await _notifyService!.Notify(executor, $"{count} objects found.");
 		
 		return new CallState(count.ToString());
 	}
@@ -2913,7 +2913,7 @@ public partial class Commands
 		{
 			await _notifyService!.Notify(target, 
 				$"{executor.Object().Name} tried to locate you, but was unable to.");
-			await NotifyService.Notify(executor, 
+			await _notifyService!.Notify(executor, 
 				$"{targetObject.Name} is UNFINDABLE.");
 			return new CallState("#-1 UNFINDABLE");
 		}
@@ -2927,7 +2927,7 @@ public partial class Commands
 			$"{executor.Object().Name} has just located your position.");
 
 		// Notify the executor of the target's location
-		await NotifyService.Notify(executor, 
+		await _notifyService!.Notify(executor, 
 			$"{targetObject.Name} is in {locationName}.");
 
 		return new CallState(targetLocation.Object().DBRef.ToString());
@@ -3022,10 +3022,10 @@ public partial class Commands
 			await _notifyService!.Notify(executor, "Configuration Categories:");
 			foreach (var cat in allCategories)
 			{
-				await NotifyService.Notify(executor, $"  {cat}");
+				await _notifyService!.Notify(executor, $"  {cat}");
 			}
-			await NotifyService.Notify(executor, "Use '@config <category>' to see options in a category.");
-			await NotifyService.Notify(executor, "Use '@config <option>' to see the value of an option.");
+			await _notifyService!.Notify(executor, "Use '@config <category>' to see options in a category.");
+			await _notifyService!.Notify(executor, "Use '@config <option>' to see the value of an option.");
 			return CallState.Empty;
 		}
 
@@ -3054,7 +3054,7 @@ public partial class Commands
 			{
 				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
 				var value = opt.Value?.ToString() ?? "null";
-				await NotifyService.Notify(executor, $"  {name}: {value}");
+				await _notifyService!.Notify(executor, $"  {name}: {value}");
 			}
 			return CallState.Empty;
 		}
@@ -3071,8 +3071,8 @@ public partial class Commands
 			var desc = matchingOption.ConfigAttr.Description;
 
 			await _notifyService!.Notify(executor, $"{name}: {value}");
-			await NotifyService.Notify(executor, $"  Description: {desc}");
-			await NotifyService.Notify(executor, $"  Category: {matchingOption.Category}");
+			await _notifyService!.Notify(executor, $"  Description: {desc}");
+			await _notifyService!.Notify(executor, $"  Category: {matchingOption.Category}");
 			return new CallState(value);
 		}
 
@@ -3391,7 +3391,7 @@ public partial class Commands
 		// No arguments - list all user-defined functions
 		if (args.Count == 0)
 		{
-			if (FunctionLibrary == null)
+			if (_functionLibrary! == null)
 			{
 				await _notifyService!.Notify(executor, "Function library unavailable.");
 				return new CallState("#-1 LIBRARY UNAVAILABLE");
@@ -3402,27 +3402,27 @@ public partial class Commands
 			// Check if executor has Functions power or is wizard
 			var canSeeDetails = await executor.IsWizard();
 			
-			var userFunctions = FunctionLibrary.Where(kvp => !kvp.Value.IsSystem).ToArray();
-			var builtinFunctions = FunctionLibrary.Where(kvp => kvp.Value.IsSystem).ToArray();
+			var userFunctions = _functionLibrary!.Where(kvp => !kvp.Value.IsSystem).ToArray();
+			var builtinFunctions = _functionLibrary!.Where(kvp => kvp.Value.IsSystem).ToArray();
 			
 			if (canSeeDetails)
 			{
-				await NotifyService.Notify(executor, $"  User-defined: {userFunctions.Length}");
+				await _notifyService!.Notify(executor, $"  User-defined: {userFunctions.Length}");
 				foreach (var (name, (def, _)) in userFunctions.Take(10))
 				{
-					await NotifyService.Notify(executor, $"    {name}: {def.Attribute.MinArgs}-{def.Attribute.MaxArgs} args, Flags: {def.Attribute.Flags}");
+					await _notifyService!.Notify(executor, $"    {name}: {def.Attribute.MinArgs}-{def.Attribute.MaxArgs} args, Flags: {def.Attribute.Flags}");
 				}
 				if (userFunctions.Length > 10)
 				{
-					await NotifyService.Notify(executor, $"    ... and {userFunctions.Length - 10} more");
+					await _notifyService!.Notify(executor, $"    ... and {userFunctions.Length - 10} more");
 				}
 				
-				await NotifyService.Notify(executor, $"  Built-in: {builtinFunctions.Length}");
+				await _notifyService!.Notify(executor, $"  Built-in: {builtinFunctions.Length}");
 			}
 			else
 			{
-				await NotifyService.Notify(executor, $"  {userFunctions.Length} user-defined functions");
-				await NotifyService.Notify(executor, $"  {builtinFunctions.Length} built-in functions");
+				await _notifyService!.Notify(executor, $"  {userFunctions.Length} user-defined functions");
+				await _notifyService!.Notify(executor, $"  {builtinFunctions.Length} built-in functions");
 			}
 			
 			return CallState.Empty;
@@ -3446,7 +3446,7 @@ public partial class Commands
 			}
 			
 			await _notifyService!.Notify(executor, $"@function/alias: Would create alias '{aliasName}' for function '{functionName}'.");
-			await NotifyService.Notify(executor, "Note: Function aliasing not yet implemented.");
+			await _notifyService!.Notify(executor, "Note: Function aliasing not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
@@ -3460,28 +3460,28 @@ public partial class Commands
 			}
 			
 			await _notifyService!.Notify(executor, $"@function/clone: Would clone function '{functionName}' as '{cloneName}'.");
-			await NotifyService.Notify(executor, "Note: Function cloning not yet implemented.");
+			await _notifyService!.Notify(executor, "Note: Function cloning not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
 		if (switches.Contains("DELETE"))
 		{
 			await _notifyService!.Notify(executor, $"@function/delete: Would delete function '{functionName}'.");
-			await NotifyService.Notify(executor, "Note: Function deletion not yet implemented.");
+			await _notifyService!.Notify(executor, "Note: Function deletion not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
 		if (switches.Contains("DISABLE"))
 		{
 			await _notifyService!.Notify(executor, $"@function/disable: Would disable function '{functionName}'.");
-			await NotifyService.Notify(executor, "Note: Function disabling not yet implemented.");
+			await _notifyService!.Notify(executor, "Note: Function disabling not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
 		if (switches.Contains("ENABLE"))
 		{
 			await _notifyService!.Notify(executor, $"@function/enable: Would enable function '{functionName}'.");
-			await NotifyService.Notify(executor, "Note: Function enabling not yet implemented.");
+			await _notifyService!.Notify(executor, "Note: Function enabling not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
@@ -3489,7 +3489,7 @@ public partial class Commands
 		{
 			var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
 			await _notifyService!.Notify(executor, $"@function/restrict: Would restrict function '{functionName}' to: {restriction ?? "none"}");
-			await NotifyService.Notify(executor, "Note: Function restriction not yet implemented.");
+			await _notifyService!.Notify(executor, "Note: Function restriction not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
 		
@@ -3506,28 +3506,28 @@ public partial class Commands
 				if (args.Count >= 3)
 				{
 					var minArgs = args.GetValueOrDefault("2")?.Message?.ToPlainText();
-					await NotifyService.Notify(executor, $"  Min args: {minArgs ?? "none"}");
+					await _notifyService!.Notify(executor, $"  Min args: {minArgs ?? "none"}");
 				}
 				
 				if (args.Count >= 4)
 				{
 					var maxArgs = args.GetValueOrDefault("3")?.Message?.ToPlainText();
-					await NotifyService.Notify(executor, $"  Max args: {maxArgs ?? "none"}");
+					await _notifyService!.Notify(executor, $"  Max args: {maxArgs ?? "none"}");
 				}
 				
 				if (args.Count >= 5)
 				{
 					var restrictions = args.GetValueOrDefault("4")?.Message?.ToPlainText();
-					await NotifyService.Notify(executor, $"  Restrictions: {restrictions ?? "none"}");
+					await _notifyService!.Notify(executor, $"  Restrictions: {restrictions ?? "none"}");
 				}
 				
-				await NotifyService.Notify(executor, "Note: Dynamic function definition not yet implemented.");
+				await _notifyService!.Notify(executor, "Note: Dynamic function definition not yet implemented.");
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
 		}
 		
 		// Single argument - show function information
-		if (FunctionLibrary == null)
+		if (_functionLibrary! == null)
 		{
 			await _notifyService!.Notify(executor, "Function library unavailable.");
 			return new CallState("#-1 LIBRARY UNAVAILABLE");
@@ -3535,7 +3535,7 @@ public partial class Commands
 		
 		// Try to find the function in the library
 		var functionNameUpper = functionName.ToUpper();
-		if (!FunctionLibrary.TryGetValue(functionNameUpper, out var functionInfo))
+		if (!_functionLibrary!.TryGetValue(functionNameUpper, out var functionInfo))
 		{
 			await _notifyService!.Notify(executor, $"Function '{functionName}' not found.");
 			return new CallState("#-1 FUNCTION NOT FOUND");
@@ -3545,9 +3545,9 @@ public partial class Commands
 		var attr = definition.Attribute;
 		
 		await _notifyService!.Notify(executor, $"Function: {attr.Name}");
-		await NotifyService.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
-		await NotifyService.Notify(executor, $"  Min Args: {attr.MinArgs}");
-		await NotifyService.Notify(executor, $"  Max Args: {attr.MaxArgs}");
+		await _notifyService!.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
+		await _notifyService!.Notify(executor, $"  Min Args: {attr.MinArgs}");
+		await _notifyService!.Notify(executor, $"  Max Args: {attr.MaxArgs}");
 		
 		var flags = new List<string>();
 		if ((attr.Flags & FunctionFlags.Regular) != 0) flags.Add("Regular");
@@ -3558,12 +3558,12 @@ public partial class Commands
 		
 		if (flags.Count > 0)
 		{
-			await NotifyService.Notify(executor, $"  Flags: {string.Join(" | ", flags)}");
+			await _notifyService!.Notify(executor, $"  Flags: {string.Join(" | ", flags)}");
 		}
 		
 		if (attr.Restrict != null && attr.Restrict.Length > 0)
 		{
-			await NotifyService.Notify(executor, $"  Restrictions: {string.Join(", ", attr.Restrict)}");
+			await _notifyService!.Notify(executor, $"  Restrictions: {string.Join(", ", attr.Restrict)}");
 		}
 		
 		return CallState.Empty;
@@ -3617,7 +3617,7 @@ public partial class Commands
 
 		await foreach (var obj in contents
 			               .Where(async (x, _)
-				               => await PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
+				               => await _permissionService!.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
 		{
 			await _notifyService!.Notify(
 				obj.WithRoomOption(),
@@ -3719,12 +3719,12 @@ public partial class Commands
 			
 			var task = tasks[0];
 			await _notifyService!.Notify(executor, $"@ps/debug: Task {pid}");
-			await NotifyService.Notify(executor, $"  Owner: {task.Owner}");
-			await NotifyService.Notify(executor, $"  Semaphore: {task.SemaphoreSource}");
-			await NotifyService.Notify(executor, $"  Command: {task.Command.ToPlainText()}");
+			await _notifyService!.Notify(executor, $"  Owner: {task.Owner}");
+			await _notifyService!.Notify(executor, $"  Semaphore: {task.SemaphoreSource}");
+			await _notifyService!.Notify(executor, $"  Command: {task.Command.ToPlainText()}");
 			if (task.RunDelay.HasValue)
 			{
-				await NotifyService.Notify(executor, $"  Delay: {task.RunDelay.Value.TotalSeconds:F1}s");
+				await _notifyService!.Notify(executor, $"  Delay: {task.RunDelay.Value.TotalSeconds:F1}s");
 			}
 			
 			return CallState.Empty;
@@ -3759,17 +3759,17 @@ public partial class Commands
 		
 		// Get queue counts
 		var semaphoreTasks = await _mediator!.CreateStream(new ScheduleSemaphoreQuery(targetDbRef)).ToArrayAsync();
-		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
-		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
+		var delayTasks = await _mediator!.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
+		var enqueueTasks = await _mediator!.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
 		
 		// Check for /summary switch
 		if (switches.Contains("SUMMARY"))
 		{
 			await _notifyService!.Notify(executor, "@ps/summary: Queue totals");
-			await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
-			await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
-			await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
-			await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
+			await _notifyService!.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+			await _notifyService!.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+			await _notifyService!.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+			await _notifyService!.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
 			return CallState.Empty;
 		}
 		
@@ -3777,9 +3777,9 @@ public partial class Commands
 		if (switches.Contains("QUICK"))
 		{
 			await _notifyService!.Notify(executor, "@ps/quick: Your queue totals");
-			await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
-			await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
-			await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+			await _notifyService!.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+			await _notifyService!.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+			await _notifyService!.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
 			return CallState.Empty;
 		}
 		
@@ -3798,7 +3798,7 @@ public partial class Commands
 			await _notifyService!.Notify(executor, "@ps/all: All queued tasks");
 			foreach (var (group, tasks) in allTasks)
 			{
-				await NotifyService.Notify(executor, $"Group: {group} ({tasks.Length} tasks)");
+				await _notifyService!.Notify(executor, $"Group: {group} ({tasks.Length} tasks)");
 			}
 			
 			return CallState.Empty;
@@ -3807,42 +3807,42 @@ public partial class Commands
 		// Show detailed queue for target
 		var targetName = target.Object().DBRef.ToString();
 		await _notifyService!.Notify(executor, $"@ps: Queue for {targetName}");
-		await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
-		await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
-		await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
+		await _notifyService!.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
+		await _notifyService!.Notify(executor, $"  Wait queue: {delayTasks.Length}");
+		await _notifyService!.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
 		
 		// List semaphore tasks
 		if (semaphoreTasks.Length > 0)
 		{
-			await NotifyService.Notify(executor, "");
-			await NotifyService.Notify(executor, "Semaphore tasks:");
+			await _notifyService!.Notify(executor, "");
+			await _notifyService!.Notify(executor, "Semaphore tasks:");
 			foreach (var task in semaphoreTasks.Take(10))
 			{
 				var delay = task.RunDelay.HasValue ? $"+{task.RunDelay.Value.TotalSeconds:F1}s" : "ready";
-				await NotifyService.Notify(executor, $"  [{task.Pid}] {task.SemaphoreSource} ({delay}): {task.Command.ToPlainText().Substring(0, Math.Min(40, task.Command.ToPlainText().Length))}");
+				await _notifyService!.Notify(executor, $"  [{task.Pid}] {task.SemaphoreSource} ({delay}): {task.Command.ToPlainText().Substring(0, Math.Min(40, task.Command.ToPlainText().Length))}");
 			}
 			if (semaphoreTasks.Length > 10)
 			{
-				await NotifyService.Notify(executor, $"  ... and {semaphoreTasks.Length - 10} more");
+				await _notifyService!.Notify(executor, $"  ... and {semaphoreTasks.Length - 10} more");
 			}
 		}
 		
 		// List delay tasks
 		if (delayTasks.Length > 0)
 		{
-			await NotifyService.Notify(executor, "");
-			await NotifyService.Notify(executor, "Wait queue tasks:");
+			await _notifyService!.Notify(executor, "");
+			await _notifyService!.Notify(executor, "Wait queue tasks:");
 			foreach (var pid in delayTasks.Take(10))
 			{
-				await NotifyService.Notify(executor, $"  [{pid}] (delayed)");
+				await _notifyService!.Notify(executor, $"  [{pid}] (delayed)");
 			}
 			if (delayTasks.Length > 10)
 			{
-				await NotifyService.Notify(executor, $"  ... and {delayTasks.Length - 10} more");
+				await _notifyService!.Notify(executor, $"  ... and {delayTasks.Length - 10} more");
 			}
 		}
 		// - Permission checks for viewing other players' queues
-		await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
+		await _notifyService!.Notify(executor, "Note: Queue management not yet implemented.");
 		
 		return CallState.Empty;
 	}
@@ -3872,49 +3872,49 @@ public partial class Commands
 		int pairCount = (args.Count - 1) / 2;
 		bool hasDefault = (args.Count - 1) % 2 == 1;
 		
-		await NotifyService.Notify(executor, $"  Expression/action pairs: {pairCount}");
+		await _notifyService!.Notify(executor, $"  Expression/action pairs: {pairCount}");
 		if (hasDefault)
 		{
-			await NotifyService.Notify(executor, "  Has default action");
+			await _notifyService!.Notify(executor, "  Has default action");
 		}
 		
 		// Check switches
 		if (switches.Contains("REGEXP"))
 		{
-			await NotifyService.Notify(executor, "  Mode: Regular expression matching");
+			await _notifyService!.Notify(executor, "  Mode: Regular expression matching");
 		}
 		else
 		{
-			await NotifyService.Notify(executor, "  Mode: Wildcard pattern matching");
+			await _notifyService!.Notify(executor, "  Mode: Wildcard pattern matching");
 		}
 		
 		if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
 		{
-			await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
+			await _notifyService!.Notify(executor, "  Execution: Inline (immediate)");
 			
 			if (switches.Contains("NOBREAK"))
 			{
-				await NotifyService.Notify(executor, "  @break won't propagate to caller");
+				await _notifyService!.Notify(executor, "  @break won't propagate to caller");
 			}
 			
 			if (switches.Contains("LOCALIZE"))
 			{
-				await NotifyService.Notify(executor, "  Q-registers will be localized");
+				await _notifyService!.Notify(executor, "  Q-registers will be localized");
 			}
 			
 			if (switches.Contains("CLEARREGS"))
 			{
-				await NotifyService.Notify(executor, "  Q-registers will be cleared");
+				await _notifyService!.Notify(executor, "  Q-registers will be cleared");
 			}
 		}
 		else
 		{
-			await NotifyService.Notify(executor, "  Execution: Queued");
+			await _notifyService!.Notify(executor, "  Execution: Queued");
 		}
 		
 		if (switches.Contains("NOTIFY"))
 		{
-			await NotifyService.Notify(executor, "  Will queue @notify after completion");
+			await _notifyService!.Notify(executor, "  Will queue @notify after completion");
 		}
 		
 		// Pattern matching implementation
@@ -3945,7 +3945,7 @@ public partial class Commands
 				}
 				catch (ArgumentException)
 				{
-					await NotifyService.Notify(executor, $"Invalid regex pattern: {pattern}");
+					await _notifyService!.Notify(executor, $"Invalid regex pattern: {pattern}");
 					continue;
 				}
 			}
@@ -4238,7 +4238,7 @@ public partial class Commands
 			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
 		}
 
-		// Note: Channel visibility checking is handled by PermissionService.ChannelCanSeeAsync in each handler
+		// Note: Channel visibility checking is handled by _permissionService!.ChannelCanSeeAsync in each handler
 		return switches switch
 		{
 			[.., "LIST"] => await ChannelCommand.ChannelList.Handle(parser, _locateService!, _permissionService!, _mediator!,
@@ -4588,10 +4588,10 @@ public partial class Commands
 		// Get default flags from configuration
 		var defaultFlags = type.ToUpperInvariant() switch
 		{
-			"PLAYER" => Configuration?.CurrentValue.Flag.PlayerFlags ?? [],
-			"ROOM" => Configuration?.CurrentValue.Flag.RoomFlags ?? [],
-			"THING" => Configuration?.CurrentValue.Flag.ThingFlags ?? [],
-			"EXIT" => Configuration?.CurrentValue.Flag.ExitFlags ?? [],
+			"PLAYER" => _configuration!.CurrentValue.Flag.PlayerFlags ?? [],
+			"ROOM" => _configuration!.CurrentValue.Flag.RoomFlags ?? [],
+			"THING" => _configuration!.CurrentValue.Flag.ThingFlags ?? [],
+			"EXIT" => _configuration!.CurrentValue.Flag.ExitFlags ?? [],
 			_ => Array.Empty<string>()
 		};
 		
@@ -4668,34 +4668,34 @@ public partial class Commands
 		
 		// Get MOTD file paths from configuration
 		var motdFile = _configuration!.CurrentValue.Message.MessageOfTheDayFile;
-		var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
+		var motdHtmlFile = _configuration!.CurrentValue.Message.MessageOfTheDayHtmlFile;
 		
 		await _notifyService!.Notify(executor, "Current Message of the Day settings:");
-		await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
-		await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
+		await _notifyService!.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
+		await _notifyService!.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
 		
 		if (isWizard)
 		{
-			var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
-			var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
+			var wizmotdFile = _configuration!.CurrentValue.Message.WizMessageOfTheDayFile;
+			var wizmotdHtmlFile = _configuration!.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
 			
-			await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
-			await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+			await _notifyService!.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
+			await _notifyService!.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
 		}
 		
 		// Get temporary MOTD data from ExpandedServerData
 		var motdData = await _objectDataService!.GetExpandedServerDataAsync<MotdData>();
 		if (motdData != null)
 		{
-			await NotifyService.Notify(executor, "");
-			await NotifyService.Notify(executor, "Temporary Message of the Day (cleared on restart):");
-			await NotifyService.Notify(executor, $"  Connect MOTD: {(string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd)}");
+			await _notifyService!.Notify(executor, "");
+			await _notifyService!.Notify(executor, "Temporary Message of the Day (cleared on restart):");
+			await _notifyService!.Notify(executor, $"  Connect MOTD: {(string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd)}");
 			
 			if (isWizard)
 			{
-				await NotifyService.Notify(executor, $"  Wizard MOTD:  {(string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd)}");
-				await NotifyService.Notify(executor, $"  Down MOTD:    {(string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd)}");
-				await NotifyService.Notify(executor, $"  Full MOTD:    {(string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd)}");
+				await _notifyService!.Notify(executor, $"  Wizard MOTD:  {(string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd)}");
+				await _notifyService!.Notify(executor, $"  Down MOTD:    {(string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd)}");
+				await _notifyService!.Notify(executor, $"  Full MOTD:    {(string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd)}");
 			}
 		}
 		
@@ -4913,7 +4913,7 @@ public partial class Commands
 		
 		if (playerName != null)
 		{
-			await NotifyService.Notify(executor, $"  For player: {playerName}");
+			await _notifyService!.Notify(executor, $"  For player: {playerName}");
 		}
 		
 		// Query actual database statistics
@@ -4924,11 +4924,11 @@ public partial class Commands
 		var playerCount = allObjects.Count(o => o.Type == "PLAYER");
 		var totalCount = roomCount + exitCount + thingCount + playerCount;
 		
-		await NotifyService.Notify(executor, $"  Rooms: {roomCount}");
-		await NotifyService.Notify(executor, $"  Exits: {exitCount}");
-		await NotifyService.Notify(executor, $"  Things: {thingCount}");
-		await NotifyService.Notify(executor, $"  Players: {playerCount}");
-		await NotifyService.Notify(executor, $"  Total: {totalCount}");
+		await _notifyService!.Notify(executor, $"  Rooms: {roomCount}");
+		await _notifyService!.Notify(executor, $"  Exits: {exitCount}");
+		await _notifyService!.Notify(executor, $"  Things: {thingCount}");
+		await _notifyService!.Notify(executor, $"  Players: {playerCount}");
+		await _notifyService!.Notify(executor, $"  Total: {totalCount}");
 		
 		return CallState.Empty;
 	}
@@ -5151,12 +5151,12 @@ public partial class Commands
 		
 		if (filterTypes.Count > 0)
 		{
-			await NotifyService.Notify(executor, $"  Filtering for: {string.Join(", ", filterTypes)}");
+			await _notifyService!.Notify(executor, $"  Filtering for: {string.Join(", ", filterTypes)}");
 		}
 		
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
-			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
+			await _notifyService!.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
 		
 		// Query database for exits linked to target
@@ -5182,15 +5182,15 @@ public partial class Commands
 		// Display results
 		if (entrances.Count == 0)
 		{
-			await NotifyService.Notify(executor, "0 entrances found.");
+			await _notifyService!.Notify(executor, "0 entrances found.");
 		}
 		else
 		{
 			foreach (var entrance in entrances)
 			{
-				await NotifyService.Notify(executor, $"  #{entrance.Object.Key} ({entrance.Object.Name})");
+				await _notifyService!.Notify(executor, $"  #{entrance.Object.Key} ({entrance.Object.Name})");
 			}
-			await NotifyService.Notify(executor, $"{entrances.Count} entrance(s) found.");
+			await _notifyService!.Notify(executor, $"{entrances.Count} entrance(s) found.");
 		}
 		
 		return new CallState(entrances.Count.ToString());
@@ -5635,7 +5635,7 @@ public partial class Commands
 				LocateFlags.All,
 				async target =>
 				{
-					if (await PermissionService.CanInteract(target, executor, InteractType.Hear))
+					if (await _permissionService!.CanInteract(target, executor, InteractType.Hear))
 					{
 						await _notifyService!.Notify(target, message, executor, notificationType);
 					}
@@ -5677,8 +5677,8 @@ public partial class Commands
 			return new CallState("#-1 INVALID PASSWORD.");
 		}
 
-		var hashedPassword = PasswordService.HashPassword(executor.Object().DBRef.ToString(), newPassword);
-		await PasswordService.SetPassword(executor.AsPlayer, hashedPassword);
+		var hashedPassword = _passwordService!.HashPassword(executor.Object().DBRef.ToString(), newPassword);
+		await _passwordService!.SetPassword(executor.AsPlayer, hashedPassword);
 
 		return new CallState(string.Empty);
 	}
@@ -5704,12 +5704,12 @@ public partial class Commands
 			await foreach (var obj in _mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				// Halt the object's queue
-				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
+				await _mediator!.Send(new HaltObjectQueueRequest(obj.DBRef));
 				
 				// Trigger @STARTUP attribute if it exists (non-inherited)
 				try
 				{
-					var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+					var objNode = await _mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
 					if (!objNode.IsNone)
 					{
 						await _attributeService!.EvaluateAttributeFunctionAsync(
@@ -5768,17 +5768,17 @@ public partial class Commands
 		if (target.IsPlayer)
 		{
 			// Halt and restart all objects owned by the player
-			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+			await foreach (var obj in _mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
-					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
+					await _mediator!.Send(new HaltObjectQueueRequest(obj.DBRef));
 					
 					// Trigger @STARTUP if it exists
 					try
 					{
-						var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+						var objNode = await _mediator!.Send(new GetObjectNodeQuery(obj.DBRef));
 						if (!objNode.IsNone)
 						{
 							await _attributeService!.EvaluateAttributeFunctionAsync(
@@ -5845,11 +5845,11 @@ public partial class Commands
 				{
 					if (location.IsPlayer)
 					{
-						await NotifyService.Notify(executor, $"{locationObj.Name} is listening.");
+						await _notifyService!.Notify(executor, $"{locationObj.Name} is listening.");
 					}
 					else
 					{
-						await NotifyService.Notify(executor,
+						await _notifyService!.Notify(executor,
 							$"{locationObj.Name} [owner: {locationOwner.Object.Name}] is listening.");
 					}
 				}
@@ -5860,15 +5860,15 @@ public partial class Commands
 				    await locationAnyObject.IsListener())
 				{
 					if (await _connectionService!.IsConnected(locationAnyObject))
-						await NotifyService.Notify(executor, $"{locationObj.Name} (this room) [speech]. (connected)");
+						await _notifyService!.Notify(executor, $"{locationObj.Name} (this room) [speech]. (connected)");
 					else
-						await NotifyService.Notify(executor, $"{locationObj.Name} (this room) [speech].");
+						await _notifyService!.Notify(executor, $"{locationObj.Name} (this room) [speech].");
 				}
 
 				if (await locationAnyObject.HasActiveCommands(_attributeService!))
-					await NotifyService.Notify(executor, $"{locationObj.Name} (this room) [commands].");
+					await _notifyService!.Notify(executor, $"{locationObj.Name} (this room) [commands].");
 				if (await locationAnyObject.IsAudible())
-					await NotifyService.Notify(executor, $"{locationObj.Name} (this room) [broadcasting].");
+					await _notifyService!.Notify(executor, $"{locationObj.Name} (this room) [broadcasting].");
 			}
 
 			// Contents of the room
@@ -5883,11 +5883,11 @@ public partial class Commands
 					{
 						if (obj.IsPlayer)
 						{
-							await NotifyService.Notify(executor, $"{obj.Object().Name} is listening.");
+							await _notifyService!.Notify(executor, $"{obj.Object().Name} is listening.");
 						}
 						else
 						{
-							await NotifyService.Notify(executor,
+							await _notifyService!.Notify(executor,
 								$"{obj.Object().Name} [owner: {objOwner.Object.Name}] is listening.");
 						}
 					}
@@ -5897,13 +5897,13 @@ public partial class Commands
 					if (await fullObj.IsHearer(_connectionService!, _attributeService!) || await fullObj.IsListener())
 					{
 						if (await _connectionService!.IsConnected(fullObj))
-							await NotifyService.Notify(executor, $"{obj.Object().Name} [speech]. (connected)");
+							await _notifyService!.Notify(executor, $"{obj.Object().Name} [speech]. (connected)");
 						else
-							await NotifyService.Notify(executor, $"{obj.Object().Name} [speech].");
+							await _notifyService!.Notify(executor, $"{obj.Object().Name} [speech].");
 					}
 
 					if (await fullObj.HasActiveCommands(_attributeService!))
-						await NotifyService.Notify(executor, $"{obj.Object().Name} [commands].");
+						await _notifyService!.Notify(executor, $"{obj.Object().Name} [commands].");
 				}
 			}
 		}
@@ -5919,7 +5919,7 @@ public partial class Commands
 				{
 					if (await exit.WithRoomOption().IsAudible())
 					{
-						await NotifyService.Notify(executor, $"{exit.Object().Name} [broadcasting].");
+						await _notifyService!.Notify(executor, $"{exit.Object().Name} [broadcasting].");
 					}
 				}
 			}
@@ -5939,11 +5939,11 @@ public partial class Commands
 					{
 						if (obj.IsPlayer)
 						{
-							await NotifyService.Notify(executor, $"{obj.Object().Name} is listening.");
+							await _notifyService!.Notify(executor, $"{obj.Object().Name} is listening.");
 						}
 						else
 						{
-							await NotifyService.Notify(executor,
+							await _notifyService!.Notify(executor,
 								$"{obj.Object().Name} [owner: {objOwner.Object.Name}] is listening.");
 						}
 					}
@@ -5953,13 +5953,13 @@ public partial class Commands
 					if (await fullObj.IsHearer(_connectionService!, _attributeService!) || await fullObj.IsListener())
 					{
 						if (await _connectionService!.IsConnected(fullObj))
-							await NotifyService.Notify(executor, $"{obj.Object().Name} [speech]. (connected)");
+							await _notifyService!.Notify(executor, $"{obj.Object().Name} [speech]. (connected)");
 						else
-							await NotifyService.Notify(executor, $"{obj.Object().Name} [speech].");
+							await _notifyService!.Notify(executor, $"{obj.Object().Name} [speech].");
 					}
 
 					if (await fullObj.HasActiveCommands(_attributeService!))
-						await NotifyService.Notify(executor, $"{obj.Object().Name} [commands].");
+						await _notifyService!.Notify(executor, $"{obj.Object().Name} [commands].");
 				}
 			}
 		}
@@ -5985,7 +5985,7 @@ public partial class Commands
 		{
 			MModule.concat(MModule.single("You are connected to "),
 				MModule.single(_configuration!.CurrentValue.Net.MudName)),
-			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
+			MModule.concat(MModule.single("Address: "), MModule.single(_configuration!.CurrentValue.Net.MudUrl)),
 			MModule.single("SharpMUSH version 0")
 		};
 
@@ -6140,19 +6140,19 @@ public partial class Commands
 			{
 				var flagList = string.Join(" ", entry.DefaultFlags);
 				var retroFlag = retroactive ? "/retroactive" : "";
-				await NotifyService.Notify(executor, $"@attribute/access{retroFlag} {entry.Name}={flagList}");
+				await _notifyService!.Notify(executor, $"@attribute/access{retroFlag} {entry.Name}={flagList}");
 				
 				// Include limit pattern if present
 				if (!string.IsNullOrEmpty(entry.Limit))
 				{
-					await NotifyService.Notify(executor, $"@attribute/limit {entry.Name}={entry.Limit}");
+					await _notifyService!.Notify(executor, $"@attribute/limit {entry.Name}={entry.Limit}");
 				}
 				
 				// Include enum values if present
 				if (entry.Enum != null && entry.Enum.Length > 0)
 				{
 					var enumList = string.Join(" ", entry.Enum);
-					await NotifyService.Notify(executor, $"@attribute/enum {entry.Name}={enumList}");
+					await _notifyService!.Notify(executor, $"@attribute/enum {entry.Name}={enumList}");
 				}
 			}
 			
@@ -6222,7 +6222,7 @@ public partial class Commands
 			// across all objects in the database. Requires bulk update operation.
 			if (retroactive)
 			{
-				await NotifyService.Notify(executor, "Note: Retroactive flag updating not yet implemented.");
+				await _notifyService!.Notify(executor, "Note: Retroactive flag updating not yet implemented.");
 			}
 			
 			return CallState.Empty;
@@ -6242,7 +6242,7 @@ public partial class Commands
 			if (deleted)
 			{
 				await _notifyService!.Notify(executor, $"Attribute '{attrName}' removed from standard attribute table.");
-				await NotifyService.Notify(executor, "Existing copies remain but are no longer \"standard\".");
+				await _notifyService!.Notify(executor, "Existing copies remain but are no longer \"standard\".");
 			}
 			else
 			{
@@ -6307,15 +6307,15 @@ public partial class Commands
 			
 			var pattern = args["1"].Message?.ToPlainText();
 			await _notifyService!.Notify(executor, $"@attribute/limit: Setting pattern for '{attrName}'");
-			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
-			await NotifyService.Notify(executor, "  New values must match this pattern (case insensitive)");
+			await _notifyService!.Notify(executor, $"  Pattern: {pattern}");
+			await _notifyService!.Notify(executor, "  New values must match this pattern (case insensitive)");
 			
 			// TODO: Attribute validation via regex patterns.
 			// Requirements:
 			// - Store regexp pattern with attribute in table
 			// - Validate all new attribute values against pattern
 			// - Pattern is case insensitive unless (?-i) is used
-			await NotifyService.Notify(executor, "Note: Attribute validation not yet implemented.");
+			await _notifyService!.Notify(executor, "Note: Attribute validation not yet implemented.");
 			
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
@@ -6364,8 +6364,8 @@ public partial class Commands
 			}
 			
 			await _notifyService!.Notify(executor, $"@attribute/enum: Set choices for '{attrName}'");
-			await NotifyService.Notify(executor, $"  Choices: {string.Join(" ", choiceArray)}");
-			await NotifyService.Notify(executor, "  New values must match one of these choices");
+			await _notifyService!.Notify(executor, $"  Choices: {string.Join(" ", choiceArray)}");
+			await _notifyService!.Notify(executor, "  New values must match one of these choices");
 			
 			return CallState.Empty;
 		}
@@ -6376,7 +6376,7 @@ public partial class Commands
 		if (attrEntry == null)
 		{
 			await _notifyService!.Notify(executor, $"Attribute '{attrName}' not found in standard attribute table.");
-			await NotifyService.Notify(executor, "This is not an error - the attribute may still be used on objects.");
+			await _notifyService!.Notify(executor, "This is not an error - the attribute may still be used on objects.");
 			return CallState.Empty;
 		}
 		
@@ -6385,22 +6385,22 @@ public partial class Commands
 		// Display default flags if any
 		if (attrEntry.DefaultFlags.Any())
 		{
-			await NotifyService.Notify(executor, $"  Default flags: {string.Join(" ", attrEntry.DefaultFlags)}");
+			await _notifyService!.Notify(executor, $"  Default flags: {string.Join(" ", attrEntry.DefaultFlags)}");
 		}
 		else
 		{
-			await NotifyService.Notify(executor, "  Default flags: none");
+			await _notifyService!.Notify(executor, "  Default flags: none");
 		}
 		
 		// Show validation rules if set
 		if (!string.IsNullOrEmpty(attrEntry.Limit))
 		{
-			await NotifyService.Notify(executor, $"  Limit pattern: {attrEntry.Limit}");
+			await _notifyService!.Notify(executor, $"  Limit pattern: {attrEntry.Limit}");
 		}
 		
 		if (attrEntry.Enum != null && attrEntry.Enum.Any())
 		{
-			await NotifyService.Notify(executor, $"  Enum values: {string.Join(" ", attrEntry.Enum)}");
+			await _notifyService!.Notify(executor, $"  Enum values: {string.Join(" ", attrEntry.Enum)}");
 		}
 		
 		return CallState.Empty;

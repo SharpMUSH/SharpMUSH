@@ -17,7 +17,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		if (TextFileService == null)
+		if (_textFileService! == null)
 		{
 			await _notifyService!.Notify(executor, "Help system not initialized.");
 			return new CallState("#-1 HELP SYSTEM NOT INITIALIZED");
@@ -26,7 +26,7 @@ public partial class Commands
 		// No arguments - show main help
 		if (args.Count == 0)
 		{
-			var mainHelp = await TextFileService.GetEntryAsync("help", "help");
+			var mainHelp = await _textFileService!.GetEntryAsync("help", "help");
 			if (mainHelp != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainHelp);
@@ -44,7 +44,7 @@ public partial class Commands
 		// /search switch - search content
 		if (switches.Contains("SEARCH"))
 		{
-			var matches = (await TextFileService.SearchEntriesAsync("help", topic)).ToList();
+			var matches = (await _textFileService!.SearchEntriesAsync("help", topic)).ToList();
 			if (matches.Count == 0)
 			{
 				await _notifyService!.Notify(executor, $"No help entries found containing '{topic}'.");
@@ -52,7 +52,7 @@ public partial class Commands
 			else if (matches.Count == 1)
 			{
 				// Only one match, show it
-				var searchContent = await TextFileService.GetEntryAsync("help", matches[0]);
+				var searchContent = await _textFileService!.GetEntryAsync("help", matches[0]);
 				if (searchContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
@@ -71,7 +71,7 @@ public partial class Commands
 		// Check for wildcard pattern
 		if (topic.Contains('*') || topic.Contains('?'))
 		{
-			var matches = (await TextFileService.SearchEntriesAsync("help", topic)).ToList();
+			var matches = (await _textFileService!.SearchEntriesAsync("help", topic)).ToList();
 			if (matches.Count == 0)
 			{
 				await _notifyService!.Notify(executor, $"No help available for '{topic}'.");
@@ -79,7 +79,7 @@ public partial class Commands
 			else if (matches.Count == 1)
 			{
 				// Only one match, show it
-				var wildcardContent = await TextFileService.GetEntryAsync("help", matches[0]);
+				var wildcardContent = await _textFileService!.GetEntryAsync("help", matches[0]);
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
@@ -96,7 +96,7 @@ public partial class Commands
 		}
 
 		// Try exact match
-		var exactContent = await TextFileService.GetEntryAsync("help", topic);
+		var exactContent = await _textFileService!.GetEntryAsync("help", topic);
 		if (exactContent != null)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);

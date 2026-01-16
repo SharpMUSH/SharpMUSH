@@ -97,7 +97,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		_functionLibrary = functionLibrary;
 
 		// Get command definitions bound to this instance
-		foreach (var command in Generated.CommandLibrary.GetCommands(this))
+		foreach (var command in SharpMUSH.Implementation.Generated.CommandLibrary.GetCommands(this))
 		{
 			_commandLibrary.Add(command.Key, (command.Value, true));
 

@@ -33,7 +33,7 @@ public partial class Commands
 			.Select(async (player,i,ct) =>
 			{
 				var obj = await _mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
-				var doingText = await Commands.GetDoingText(executor, obj.Known);
+				var doingText = await GetDoingText(executor, obj.Known);
 				
 				return (string.Format(
 					fmt,
@@ -154,7 +154,7 @@ public partial class Commands
 		if (validPassword && _passwordService!.NeedsRehash(foundDB.PasswordHash))
 		{
 			await _passwordService!.RehashPasswordAsync(foundDB, password);
-			Logger?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
+			_logger!?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
 		}
 
 		// Future feature: Site lock checking would go here
@@ -173,7 +173,7 @@ public partial class Commands
 			parser.CurrentState.Handle!.Value.ToString());
 
 		await _notifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
-		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
+		_logger!?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
 	}
 

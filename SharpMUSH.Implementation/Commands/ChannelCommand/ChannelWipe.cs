@@ -31,7 +31,7 @@ public static class ChannelWipe
 		}
 
 		channel.Buffer = 0;
-		// await _mediator!.Send(new UpdateChannelCommand(channel));
+		// await Mediator!.Send(new UpdateChannelCommand(channel));
 
 		return new CallState("Channel buffer has been wiped.");
 	}

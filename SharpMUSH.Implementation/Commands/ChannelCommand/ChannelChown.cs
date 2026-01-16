@@ -44,7 +44,7 @@ public static class ChannelChown
 
 		var newOwnerObject = locate.AsPlayer;
 
-		await Mediator.Send(new UpdateChannelOwnerCommand(channel, newOwnerObject));
+		await Mediator!.Send(new UpdateChannelOwnerCommand(channel, newOwnerObject));
 
 		var output = MModule.multiple([MModule.single("CHAT: "), MModule.single(newOwnerObject.Object.Name), MModule.single(" is the new owner of "), channel.Name]);
 		await NotifyService.Notify(executor, output);

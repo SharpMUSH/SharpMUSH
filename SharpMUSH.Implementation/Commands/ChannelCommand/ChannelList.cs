@@ -14,7 +14,7 @@ public static class ChannelList
 		string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var channels = Mediator.CreateStream(new GetChannelListQuery());
+		var channels = Mediator!.CreateStream(new GetChannelListQuery());
 
 		var quietSwitch = switches.Contains("QUIET");
 		var onSwitch = switches.Contains("ON");
