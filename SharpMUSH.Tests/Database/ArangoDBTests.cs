@@ -108,7 +108,7 @@ public class ArangoDBTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Repeat(2)]
 	public async Task SetAndGetAnAttribute()
 	{

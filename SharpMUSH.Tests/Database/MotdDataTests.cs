@@ -13,7 +13,7 @@ public class MotdDataTests
 	private ISharpDatabase _database => Factory.Services.GetRequiredService<ISharpDatabase>();
 	private IExpandedObjectDataService _dataService => Factory.Services.GetRequiredService<IExpandedObjectDataService>();
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SetAndGetMotdData()
 	{
 		// Create MOTD data
@@ -38,7 +38,7 @@ public class MotdDataTests
 		await Assert.That(result.FullMotd).IsEqualTo("Server is full");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task UpdateMotdData()
 	{
 		// Set initial data
@@ -68,7 +68,7 @@ public class MotdDataTests
 		await Assert.That(result.WizardMotd).IsEqualTo("New wizard message");
 	}
 
-	[Test, NotInParallel, Skip("TODO: Failing test - needs investigation")]
+	[Test, Skip("TODO: Failing test - needs investigation")]
 	public async Task ClearMotdData()
 	{
 		// Set initial data
@@ -100,7 +100,7 @@ public class MotdDataTests
 		await Assert.That(result.FullMotd).IsEqualTo("Full message");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GetMotdData_CanBeRetrieved()
 	{
 		// Set some data first

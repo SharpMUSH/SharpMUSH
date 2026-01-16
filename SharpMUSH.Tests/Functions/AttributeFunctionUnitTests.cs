@@ -13,7 +13,7 @@ public class AttributeFunctionUnitTests
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/attribute,ZAP!)][get(%!/attribute)]", "ZAP!")]
 	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZAP!\e[0m")]
 	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZIP!))][get(%!/attribute)][attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZIP!\e[0m\e[1;31mZAP!\e[0m")]
@@ -76,7 +76,7 @@ public class AttributeFunctionUnitTests
 	
 	
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_1,test_string_grep_case1)]" +
 	           "[attrib_set(%!/Test_Grep_CaseSensitive_2,another_test_value)]" +
 	           "[attrib_set(%!/NO_MATCH,different)][grep(%!,Test_Grep_CaseSensitive_*,test)]", 
@@ -96,7 +96,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Grepi_CaseInsensitive1_1,has_VALUE)]" +
 	           "[attrib_set(%!/Test_Grepi_CaseInsensitive1_2,also_VALUE)]" +
 	           "[attrib_set(%!/Test_Grepi_CaseInsensitive1_UPPER,more_VALUE)]" +
@@ -114,7 +114,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/WILDGREP_1,test_wildcard_*_match)][attrib_set(%!/WILDGREP_2,different)][wildgrep(%!,WILDGREP_*,*wildcard*)]", "WILDGREP_1")]
 	[Arguments("[attrib_set(%!/WILDGREP_1,test_wildcard_value_match)][wildgrep(%!,WILDGREP_*,test_*_match)]", "WILDGREP_1")]
 	public async Task Test_Wildgrep_Pattern(string str, string expected)
@@ -124,7 +124,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/WILDGREP_1,has_WILDCARD)][attrib_set(%!/WILDGREP_UPPER,TEST_WILDCARD)][wildgrepi(%!,WILDGREP_*,*WILDCARD*)]", "WILDGREP_1 WILDGREP_UPPER")]
 	public async Task Test_Wildgrepi_CaseInsensitive(string str, string expected)
 	{
@@ -133,7 +133,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_001,value1)]" +
 	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_002,value2)]" +
 	           "[attrib_set(%!/TESTREGLATTR_UNIQUE_RGX1_100,value3)]" +
@@ -156,7 +156,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_001,value1)]" +
 	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_002,value2)]" +
 	           "[attrib_set(%!/TESTREGNATTR_UNIQUE_CNT1_100,value3)]" +
@@ -176,7 +176,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Regxattr_RangeWithRegex1_001,value1)]" +
 	           "[attrib_set(%!/Test_Regxattr_RangeWithRegex1_002,value2)]" +
 	           "[attrib_set(%!/Test_Regxattr_RangeWithRegex1_100,value3)]" +
@@ -243,7 +243,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_CHILD")]
 	[Arguments("[attrib_set([parent(me,create(PGREP_PARENT))]/PGREP_PARENT,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_PARENT")
 	 , Skip("Parent Mode not implemented yet.")]
@@ -254,7 +254,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Reglattrp_IncludesParents_001,value1)]" +
 	           "[attrib_set([parent(me,create(Test_Reglattrp_IncludesParents))]/Test_Reglattrp_IncludesParents_002,value2)]" +
 	           "[attrib_set(%!/Test_Reglattrp_IncludesParents_100,value3)]" +
@@ -268,7 +268,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Regnattrp_CountWithParents_001,value1)]" +
 	           "[attrib_set([parent(me,create(Test_Regnattrp_CountWithParents))]/Test_Regnattrp_CountWithParents_002,value2)]" +
 	           "[attrib_set(%!/Test_Regnattrp_CountWithParents_100,value3)]" +
@@ -281,7 +281,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)]" +
 	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)]" +
 	           "[attrib_set(%!/Test_Regxattrp_RangeWithParents_100,value3)]" +
@@ -301,7 +301,7 @@ public class AttributeFunctionUnitTests
 
 	// Attribute Tree Tests
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Lattr_AttributeTrees,root)]" +
 	           "[attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH1,leaf1)]" +
 	           "[attrib_set(%!/Test_Lattr_AttributeTrees`BRANCH2,leaf2)]" +
@@ -323,7 +323,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Grep_AttributeTrees,root)]" +
 	           "[attrib_set(%!/Test_Grep_AttributeTrees`BRANCH1,has_search_term)]" +
 	           "[attrib_set(%!/Test_Grep_AttributeTrees`BRANCH2,different)]" +
@@ -339,7 +339,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Reglattr_AttributeTrees1,val)]" +
 	           "[attrib_set(%!/Test_Reglattr_AttributeTrees1`A,val1)]" +
 	           "[attrib_set(%!/Test_Reglattr_AttributeTrees1`B,val2)]" +
@@ -357,7 +357,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Regnattr_AttributeTrees1,v)]" +
 	           "[attrib_set(%!/Test_Regnattr_AttributeTrees1`L1,v)]" +
 	           "[attrib_set(%!/Test_Regnattr_AttributeTrees1`L2,v)]" +
@@ -374,7 +374,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Wildgrep_AttributeTrees,val)]" +
 	           "[attrib_set(%!/Test_Wildgrep_AttributeTrees`CHILD,has_pattern)]" +
 	           "[attrib_set(%!/Test_Wildgrep_AttributeTrees`OTHER,no_match)]" +
@@ -387,7 +387,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Regxattr_AttributeTrees,v1)]" +
 	           "[attrib_set(%!/Test_Regxattr_AttributeTrees`A,v2)]" +
 	           "[attrib_set(%!/Test_Regxattr_AttributeTrees`B,v3)]" +
@@ -402,7 +402,7 @@ public class AttributeFunctionUnitTests
 
 	// Diagnostic test to verify basic functionality
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Basic_AttribSet_And_Get,testvalue)]" +
 	           "[get(%!/Test_Basic_AttribSet_And_Get)]", "testvalue")]
 	[Arguments("[attrib_set(%!/Test_Basic_AttribSet_And_Get21,val1)]" +
@@ -416,7 +416,7 @@ public class AttributeFunctionUnitTests
 
 	// Test lattr which should work (it's already implemented)
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("[attrib_set(%!/Test_Lattr_Simple1,v1)]" +
 	           "[attrib_set(%!/Test_Lattr_Simple2,v2)]" +
 	           "[lattr(%!/Test_Lattr_Simple*)]",

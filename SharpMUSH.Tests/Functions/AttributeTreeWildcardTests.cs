@@ -36,7 +36,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 1: Pattern "ROOT*" should match only ROOT and ROOTOTHER, NOT any with backticks
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Wildcard_Star_NoBacktick()
 	{
 		await SetupAttributeTree();
@@ -55,7 +55,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 2: Pattern "ROOT**" should match ROOT and all descendants
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Wildcard_DoubleStar_MatchAll()
 	{
 		await SetupAttributeTree();
@@ -77,7 +77,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 3: Pattern "ROOT`*" should match only immediate children under ROOT
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Wildcard_ImmediateChildren()
 	{
 		await SetupAttributeTree();
@@ -97,7 +97,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 4: Pattern "ROOT`**" should match entire tree under ROOT (excluding ROOT itself)
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Wildcard_EntireSubtree()
 	{
 		await SetupAttributeTree();
@@ -119,7 +119,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 5: Pattern "ROOT`CHILD1`*" should match only immediate grandchildren under ROOT`CHILD1
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Wildcard_Grandchildren()
 	{
 		await SetupAttributeTree();
@@ -138,7 +138,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 6: Question mark wildcard "ROOT`CHILD?" should match single character
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Wildcard_QuestionMark()
 	{
 		await SetupAttributeTree();
@@ -156,7 +156,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 7: Test with nattr() function to count attributes
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Nattr_Counting()
 	{
 		await SetupAttributeTree();
@@ -178,7 +178,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 8: Test with grep() to search attribute values in tree
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Grep_InAttributeTree()
 	{
 		await SetupAttributeTree();
@@ -202,7 +202,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 9: Test with reglattr() using regex patterns
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Reglattr_WithRegex()
 	{
 		await SetupAttributeTree();
@@ -232,7 +232,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 10: Test wildgrep() with wildcards in attribute tree
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Wildgrep_InAttributeTree()
 	{
 		await SetupAttributeTree();
@@ -253,7 +253,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 11: Test with xattr() to get ranged attribute list
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_Xattr_RangeInTree()
 	{
 		await SetupAttributeTree();
@@ -271,7 +271,7 @@ public class AttributeTreeWildcardTests
 	/// Test Case 12: Verify special characters are properly escaped
 	/// </summary>
 	[Test]
-	[NotInParallel]
+	
 	public async Task Test_SpecialCharacters_Escaped()
 	{
 		// Create attributes with special regex characters in names

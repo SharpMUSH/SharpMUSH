@@ -199,7 +199,7 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SuggestFunction()
 	{
 		var dataService = Factory.Services.GetRequiredService<IExpandedObjectDataService>();

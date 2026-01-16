@@ -16,7 +16,7 @@ public class DatabaseFunctionUnitTests
 	private IMUSHCodeParser Parser => Factory.FunctionParser;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
-	[NotInParallel]
+	
 	[Before(Test)]
 	public async Task InitializeAsync()
 	{

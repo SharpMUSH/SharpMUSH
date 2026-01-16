@@ -66,7 +66,7 @@ public class MemoryTest
 			.IsEqualTo("11");
 	}
 
-	[Test, Timeout(30 * 1000), NotInParallel]
+	[Test, Timeout(30 * 1000)]
 	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]
@@ -101,7 +101,7 @@ public class MemoryTest
 		}).ThrowsNothing();
 	}
 
-	[Test, Timeout(30 * 1000), NotInParallel]
+	[Test, Timeout(30 * 1000)]
 	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]
