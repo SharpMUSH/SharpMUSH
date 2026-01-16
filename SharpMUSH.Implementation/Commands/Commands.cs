@@ -14,6 +14,7 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands : ILibraryProvider<CommandDefinition>
 {
 	private static IMediator? Mediator { get; set; }
+	private static ISharpDatabase? Database { get; set; }
 	private static ILocateService? LocateService { get; set; }
 	private static IAttributeService? AttributeService { get; set; }
 	private static INotifyService? NotifyService { get; set; }
@@ -58,6 +59,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	public LibraryService<string, CommandDefinition> Get() => _commandLibrary;
 
 	public Commands(IMediator mediator,
+		ISharpDatabase database,
 		ILocateService locateService,
 		IAttributeService attributeService,
 		INotifyService notifyService,
@@ -84,6 +86,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
+		Database = database;
 		LocateService = locateService;
 		AttributeService = attributeService;
 		NotifyService = notifyService;

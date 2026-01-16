@@ -268,7 +268,7 @@ public static partial class HelperFunctions
 	/// <param name="newRelated">The object being set as parent or zone</param>
 	/// <param name="isParent">True if setting parent, false if setting zone</param>
 	/// <returns>True if safe to add (no cycle), false if it would create a cycle</returns>
-	public static async ValueTask<bool> SafeToAddRelationship(IMediator mediator, AnySharpObject start, AnySharpObject newRelated, bool isParent)
+	public static async ValueTask<bool> SafeToAddRelationship(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newRelated, bool isParent)
 	{
 		var startDbRef = start.Object().DBRef;
 		var newRelatedDbRef = newRelated.Object().DBRef;
@@ -298,88 +298,37 @@ public static partial class HelperFunctions
 			}
 		}
 
-		// Use a set to track visited object numbers (not full DBRefs with timestamps)
-		// This ensures we match objects regardless of how DBRef was constructed
-		var visited = new HashSet<int>();
-		var toCheck = new Queue<int>(); // Store DBRef numbers instead of objects
-		toCheck.Enqueue(newRelatedDbRef.Number);
-
-		const int maxDepth = 100; // Safety limit
-		var depth = 0;
-
-		// BFS traversal of both parent and zone chains
-		while (toCheck.Count > 0 && depth < maxDepth)
-		{
-			var currentNumber = toCheck.Dequeue();
-
-			// Skip if already visited (compare by number only)
-			if (!visited.Add(currentNumber))
-			{
-				continue;
-			}
-
-			// If we find start object in the traversal, it would create a cycle
-			// Compare by number only, ignoring timestamps
-			if (currentNumber == startDbRef.Number)
-			{
-				return false;
-			}
-
-			// Get fresh object from database to avoid cached AsyncLazy values
-			var currentDbRef = new DBRef(currentNumber);
-			var currentObj = await mediator.Send(new GetObjectNodeQuery(currentDbRef));
-			
-			if (currentObj.IsNone)
-			{
-				continue; // Object doesn't exist, skip
-			}
-
-			// Follow parent link
-			var parent = await currentObj.Known.Object().Parent.WithCancellation(CancellationToken.None);
-			if (!parent.IsNone)
-			{
-				toCheck.Enqueue(parent.Object()!.DBRef.Number);
-			}
-
-			// Follow zone link
-			var zone = await currentObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
-			if (!zone.IsNone)
-			{
-				toCheck.Enqueue(zone.Object()!.DBRef.Number);
-			}
-
-			depth++;
-		}
-
-		// If we've reached max depth, assume unsafe to prevent potential issues
-		if (depth >= maxDepth)
-		{
-			return false;
-		}
-
-		// Traversal complete without finding start - safe!
-		return true;
+		// Use ArangoDB graph traversal to check if start object is reachable from newRelated
+		// following both parent and zone edges. If it is, adding this relationship would create a cycle.
+		// We query from newRelated to see if we can reach start, because after adding the relationship,
+		// there would be a path: start -> newRelated -> ... -> start (cycle)
+		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: CancellationToken.None);
+		
+		// If start is reachable from newRelated, adding the relationship would create a cycle
+		return !isReachable;
 	}
 
 	/// <summary>
 	/// This function detects any chance of a loop in the parent chain.
 	/// </summary>
 	/// <param name="mediator"></param>
+	/// <param name="database"></param>
 	/// <param name="start"></param>
 	/// <param name="newParent"></param>
 	/// <returns>Whether there's a loop or not</returns>
-	public static async ValueTask<bool> SafeToAddParent(IMediator mediator, AnySharpObject start, AnySharpObject newParent)
-		=> await SafeToAddRelationship(mediator, start, newParent, isParent: true);
+	public static async ValueTask<bool> SafeToAddParent(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newParent)
+		=> await SafeToAddRelationship(mediator, database, start, newParent, isParent: true);
 
 	/// <summary>
 	/// This function detects any chance of a loop in the zone chain.
 	/// </summary>
 	/// <param name="mediator"></param>
+	/// <param name="database"></param>
 	/// <param name="start"></param>
 	/// <param name="newZone"></param>
 	/// <returns>Whether there's a loop or not</returns>
-	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, AnySharpObject start, AnySharpObject newZone)
-		=> await SafeToAddRelationship(mediator, start, newZone, isParent: false);
+	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone)
+		=> await SafeToAddRelationship(mediator, database, start, newZone, isParent: false);
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{

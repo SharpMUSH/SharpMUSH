@@ -14,6 +14,7 @@ namespace SharpMUSH.Library.Services;
 
 public class ManipulateSharpObjectService(
 	IMediator mediator,
+	ISharpDatabase database,
 	IPermissionService permissionService,
 	IPasswordService passwordService,
 	IValidateService validateService,
@@ -459,7 +460,7 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, obj, newParent);
+		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
 		
 		if (!safeToAdd)
 		{
@@ -508,7 +509,7 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, obj, newZone);
+		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, database, obj, newZone);
 		
 		if (!safeToAdd)
 		{
