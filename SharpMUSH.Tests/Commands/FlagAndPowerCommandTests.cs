@@ -17,7 +17,7 @@ public class FlagAndPowerCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
@@ -26,6 +26,9 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		// Execute @flag/list
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
 
@@ -41,6 +44,9 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_CreatesNewFlag()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
@@ -70,6 +76,9 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_PreventsSystemFlagCreation()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		// Create a unique flag name
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";

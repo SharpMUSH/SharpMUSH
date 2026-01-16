@@ -13,13 +13,16 @@ public class MessageCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
 	[Test]
 	public async ValueTask MessageBasic()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGBASIC_93751 #1=MessageBasic_UniqueValue_93751"));
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Default,TESTFORMAT_MSGBASIC_93751"));
@@ -45,6 +48,9 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageWithAttribute()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGATTR_84729 #1=MessageWithAttribute_Result_84729:[add(5,10)]"));
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Default,TESTFORMAT_MSGATTR_84729"));
@@ -67,6 +73,8 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageUsesDefaultWhenAttributeMissing()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=DefaultMessage_UniqueValue_72914,NONEXISTENT_ATTR_72914"));
 		
@@ -88,6 +96,9 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageSilentSwitch()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGSILENT_61829 #1=MessageSilent_Value_61829"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
@@ -128,6 +139,9 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageNoisySwitch()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGNOISY_55193 #1=MessageNoisy_Value_55193"));
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message/noisy #1=Default,TESTFORMAT_MSGNOISY_55193"));
@@ -178,6 +192,9 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageNospoofSwitch()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGNOSPOOF_48203 #1=MessageNospoof_Value_48203"));
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message/nospoof #1=Default,TESTFORMAT_MSGNOSPOOF_48203"));

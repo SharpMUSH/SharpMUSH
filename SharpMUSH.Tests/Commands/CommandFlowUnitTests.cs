@@ -13,7 +13,7 @@ public class CommandFlowUnitTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
@@ -29,6 +29,9 @@ public class CommandFlowUnitTests
 	[Arguments("@ifelse 1={@pemit #1=6 True}", "6 True")]
 	public async ValueTask IfElse(string str, string expected)
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MModule.single(str));
 
@@ -42,6 +45,9 @@ public class CommandFlowUnitTests
 	[Explicit] // Currently failing. Needs investigation.
 	public async ValueTask Retry()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
 		await NotifyService.Received(Quantity.Exactly(1))

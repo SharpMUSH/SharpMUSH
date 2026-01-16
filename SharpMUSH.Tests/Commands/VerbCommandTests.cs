@@ -13,7 +13,7 @@ public class VerbCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
@@ -21,6 +21,8 @@ public class VerbCommandTests
 	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithDefaultMessages()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,,,VerbActorDefault_Value_52830,,,VerbOthersDefault_Value_52830"));
 		
@@ -40,6 +42,9 @@ public class VerbCommandTests
 	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithAttributes()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_74102 #1=VerbAction_Value_74102"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&OWHAT_74102 #1=VerbOther_Value_74102"));
 		
@@ -61,6 +66,9 @@ public class VerbCommandTests
 	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithStackArguments()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_ARGS_91605 #1=VerbArgs_Value_91605"));
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_ARGS_91605,Default"));
@@ -81,6 +89,8 @@ public class VerbCommandTests
 	[Skip("Test environment issue with notification capture")]
 	public async ValueTask VerbInsufficientArgs()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#2"));
 

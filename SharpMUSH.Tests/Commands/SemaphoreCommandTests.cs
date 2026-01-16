@@ -16,7 +16,7 @@ public class SemaphoreCommandTests
 	public required TestClassFactory Factory { get; init; }
 
 	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 	private ITaskScheduler Scheduler => Factory.Services.GetRequiredService<ITaskScheduler>();
@@ -25,6 +25,9 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		// Arrange - create a unique semaphore and test message with underscore separator
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
@@ -55,6 +58,9 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask DolistInline_ShouldExecuteImmediately()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		// Arrange
 		var uniqueId = Guid.NewGuid().ToString("N");
 		
@@ -73,6 +79,9 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask DolistDefault_ShouldQueueCommands()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		// Arrange
 		var uniqueId = Guid.NewGuid().ToString("N");
 		
@@ -108,6 +117,9 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		// This test verifies that @notify/setq accepts qreg parameters
 		// Fixed bug where CB.RSArgs was interfering with comma parsing
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -130,6 +142,9 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		// Arrange - create a unique semaphore with a unique test value
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";

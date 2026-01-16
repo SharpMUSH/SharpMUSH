@@ -15,12 +15,15 @@ public class MessageFunctionTests
 
 	private IMUSHCodeParser Parser => Factory.FunctionParser;
 	private IMUSHCodeParser CommandParser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task MessageBasicReturnsEmpty()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC_19283 #1=MessageFunc_Value_19283"));
 		
 		var result = (await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC_19283)")))?.Message!;
@@ -31,6 +34,9 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageBasicSendsNotification()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC2_37291 #1=MessageFuncSends_Value_37291"));
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC2_37291)"));
@@ -50,6 +56,9 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageWithAttributeEvaluation()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGEVAL_82044 #1=MessageEval_Result_82044:[mul(3,7)]"));
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGEVAL_82044)"));
@@ -69,6 +78,9 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageUsesDefaultWhenAttributeMissing()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.FunctionParse(MModule.single("message(#1,MessageDefault_Value_91847,MISSING_ATTR_91847)"));
 		
 		var calls = NotifyService.ReceivedCalls().ToList();
@@ -86,6 +98,9 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageWithMultipleArguments()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
+
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGARGS_63018 #1=MessageArgs_Value_63018"));
 		
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGARGS_63018)"));

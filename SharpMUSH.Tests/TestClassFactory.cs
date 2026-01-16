@@ -56,6 +56,7 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 
 	// ===== CLASS-SPECIFIC RESOURCES =====
 	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
+	private INotifyService? _notifyServiceMock;
 	private DBRef _one;
 	private static int _databaseCounter = 0;
 	private static int _handleCounter = 0;
@@ -65,6 +66,11 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 	/// Service provider for this test class. Use this to get services like IMediator, IConnectionService, etc.
 	/// </summary>
 	public IServiceProvider Services => _server!.Services;
+
+	/// <summary>
+	/// NotifyService mock for this test class. Clear received calls between tests with ClearReceivedCalls().
+	/// </summary>
+	public INotifyService NotifyService => _notifyServiceMock!;
 
 	/// <summary>
 	/// Function parser for this test class. Use this to parse function calls.
@@ -215,13 +221,13 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		await CreateKafkaTopicsAsync(kafkaHost);
 
 		// Create class-specific NotifyService mock
-		var notifyService = Substitute.For<INotifyService>();
+		_notifyServiceMock = Substitute.For<INotifyService>();
 
 		// Create TestWebApplicationBuilderFactory with class-specific database
 		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			notifyService,
+			_notifyServiceMock,
 			prometheusUrl,
 			DatabaseName); // Pass the unique database name
 
