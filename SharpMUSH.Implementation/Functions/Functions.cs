@@ -43,6 +43,13 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	// Thread-local current instance for static method access
 	private static readonly AsyncLocal<Functions?> _currentInstance = new();
 	
+	/// <summary>
+	/// Sets the current Functions instance for the current async context.
+	/// This must be called before executing any functions to ensure static function methods
+	/// access the correct instance.
+	/// </summary>
+	public static void SetCurrentInstance(Functions instance) => _currentInstance.Value = instance;
+	
 	// Static properties for backward compatibility - delegate to current instance
 	private static IMediator? Mediator => _currentInstance.Value?._mediator;
 	private static ILocateService? LocateService => _currentInstance.Value?._locateService;
@@ -118,9 +125,6 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		_eventService = eventService;
 		_booleanExpressionParser = booleanExpressionParser;
 		_textFileService = textFileService;
-
-		// Set this instance as the current instance for this async context
-		_currentInstance.Value = this;
 
 		foreach (var command in Generated.FunctionLibrary.Functions)
 		{

@@ -235,6 +235,31 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		var connectionService = provider.GetRequiredService<IConnectionService>();
 		var databaseService = provider.GetRequiredService<ISharpDatabase>();
 
+		// Set the current Commands and Functions instances for this async context
+		// This ensures static command/function methods access the correct instance from this DI container
+		var commands = provider.GetRequiredService<ILibraryProvider<CommandDefinition>>() as SharpMUSH.Implementation.Commands.Commands;
+		var functions = provider.GetRequiredService<ILibraryProvider<FunctionDefinition>>() as SharpMUSH.Implementation.Functions.Functions;
+		
+		if (commands != null)
+		{
+			SharpMUSH.Implementation.Commands.Commands.SetCurrentInstance(commands);
+			Console.WriteLine($"[TestClassFactory] Set current Commands instance for database: {DatabaseName}");
+		}
+		else
+		{
+			Console.WriteLine($"[TestClassFactory] WARNING: Could not get Commands instance!");
+		}
+		
+		if (functions != null)
+		{
+			SharpMUSH.Implementation.Functions.Functions.SetCurrentInstance(functions);
+			Console.WriteLine($"[TestClassFactory] Set current Functions instance for database: {DatabaseName}");
+		}
+		else
+		{
+			Console.WriteLine($"[TestClassFactory] WARNING: Could not get Functions instance!");
+		}
+
 		// Migrate the database (this will use the class-specific database)
 		await databaseService.Migrate();
 

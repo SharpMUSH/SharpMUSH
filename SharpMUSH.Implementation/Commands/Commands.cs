@@ -42,36 +42,67 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private readonly CommandLibraryService _commandLibrary = [];
 	
-	// Thread-local current instance for static method access
-	private static readonly AsyncLocal<Commands?> _currentInstance = new();
+	// Thread-safe dictionary to store Commands instances by their service provider
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<IServiceProvider, Commands> _instancesByProvider = new();
+	
+	/// <summary>
+	/// Sets the current Commands instance for the specified service provider.
+	/// This must be called before executing any commands to ensure static command methods
+	/// access the correct instance.
+	/// </summary>
+	public static void SetCurrentInstance(Commands instance, IServiceProvider provider)
+	{
+		_instancesByProvider[provider] = instance;
+	}
+	
+	/// <summary>
+	/// Gets the current Commands instance for the current execution context.
+	/// Uses a thread-local service provider to look up the correct instance.
+	/// </summary>
+	private static readonly AsyncLocal<IServiceProvider?> _currentProvider = new();
+	
+	public static void SetCurrentProvider(IServiceProvider provider) => _currentProvider.Value = provider;
+	
+	private static Commands? CurrentInstance
+	{
+		get
+		{
+			var provider = _currentProvider.Value;
+			if (provider != null && _instancesByProvider.TryGetValue(provider, out var instance))
+			{
+				return instance;
+			}
+			return null;
+		}
+	}
 	
 	// Static properties for backward compatibility - delegate to current instance
-	private static IMediator? Mediator => _currentInstance.Value?._mediator;
-	private static ILocateService? LocateService => _currentInstance.Value?._locateService;
-	private static IAttributeService? AttributeService => _currentInstance.Value?._attributeService;
-	private static INotifyService? NotifyService => _currentInstance.Value?._notifyService;
-	private static IPermissionService? PermissionService => _currentInstance.Value?._permissionService;
-	private static ICommandDiscoveryService? CommandDiscoveryService => _currentInstance.Value?._commandDiscoveryService;
-	private static IOptionsWrapper<SharpMUSHOptions>? Configuration => _currentInstance.Value?._configuration;
-	private static IPasswordService? PasswordService => _currentInstance.Value?._passwordService;
-	private static IConnectionService? ConnectionService => _currentInstance.Value?._connectionService;
-	private static IExpandedObjectDataService? ObjectDataService => _currentInstance.Value?._objectDataService;
-	private static IManipulateSharpObjectService? ManipulateSharpObjectService => _currentInstance.Value?._manipulateSharpObjectService;
-	private static IHttpClientFactory? HttpClientFactory => _currentInstance.Value?._httpClientFactory;
-	private static ICommunicationService? CommunicationService => _currentInstance.Value?._communicationService;
-	private static IValidateService? ValidateService => _currentInstance.Value?._validateService;
-	private static ISqlService? SqlService => _currentInstance.Value?._sqlService;
-	private static ILockService? LockService => _currentInstance.Value?._lockService;
-	private static IMoveService? MoveService => _currentInstance.Value?._moveService;
-	private static ILogger<Commands>? Logger => _currentInstance.Value?._logger;
-	private static IHookService? HookService => _currentInstance.Value?._hookService;
-	private static IEventService? EventService => _currentInstance.Value?._eventService;
-	private static ITelemetryService? TelemetryService => _currentInstance.Value?._telemetryService;
-	private static IPrometheusQueryService? PrometheusQueryService => _currentInstance.Value?._prometheusQueryService;
-	private static IWarningService? WarningService => _currentInstance.Value?._warningService;
-	private static ITextFileService? TextFileService => _currentInstance.Value?._textFileService;
-	private static LibraryService<string, CommandDefinition>? CommandLibrary => _currentInstance.Value?._commandLibrary;
-	private static LibraryService<string, FunctionDefinition>? FunctionLibrary => _currentInstance.Value?._functionLibrary;
+	private static IMediator? Mediator => CurrentInstance?._mediator;
+	private static ILocateService? LocateService => CurrentInstance?._locateService;
+	private static IAttributeService? AttributeService => CurrentInstance?._attributeService;
+	private static INotifyService? NotifyService => CurrentInstance?._notifyService;
+	private static IPermissionService? PermissionService => CurrentInstance?._permissionService;
+	private static ICommandDiscoveryService? CommandDiscoveryService => CurrentInstance?._commandDiscoveryService;
+	private static IOptionsWrapper<SharpMUSHOptions>? Configuration => CurrentInstance?._configuration;
+	private static IPasswordService? PasswordService => CurrentInstance?._passwordService;
+	private static IConnectionService? ConnectionService => CurrentInstance?._connectionService;
+	private static IExpandedObjectDataService? ObjectDataService => CurrentInstance?._objectDataService;
+	private static IManipulateSharpObjectService? ManipulateSharpObjectService => CurrentInstance?._manipulateSharpObjectService;
+	private static IHttpClientFactory? HttpClientFactory => CurrentInstance?._httpClientFactory;
+	private static ICommunicationService? CommunicationService => CurrentInstance?._communicationService;
+	private static IValidateService? ValidateService => CurrentInstance?._validateService;
+	private static ISqlService? SqlService => CurrentInstance?._sqlService;
+	private static ILockService? LockService => CurrentInstance?._lockService;
+	private static IMoveService? MoveService => CurrentInstance?._moveService;
+	private static ILogger<Commands>? Logger => CurrentInstance?._logger;
+	private static IHookService? HookService => CurrentInstance?._hookService;
+	private static IEventService? EventService => CurrentInstance?._eventService;
+	private static ITelemetryService? TelemetryService => CurrentInstance?._telemetryService;
+	private static IPrometheusQueryService? PrometheusQueryService => CurrentInstance?._prometheusQueryService;
+	private static IWarningService? WarningService => CurrentInstance?._warningService;
+	private static ITextFileService? TextFileService => CurrentInstance?._textFileService;
+	private static LibraryService<string, CommandDefinition>? CommandLibrary => CurrentInstance?._commandLibrary;
+	private static LibraryService<string, FunctionDefinition>? FunctionLibrary => CurrentInstance?._functionLibrary;
 
 	public LibraryService<string, CommandDefinition> Get() => _commandLibrary;
 
@@ -126,9 +157,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		_warningService = warningService;
 		_textFileService = textFileService;
 		_functionLibrary = functionLibrary;
-
-		// Set this instance as the current instance for this async context
-		_currentInstance.Value = this;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
 		{
