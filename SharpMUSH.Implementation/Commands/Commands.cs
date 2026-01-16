@@ -44,14 +44,16 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	/// <summary>
 	/// Thread-static field to store the current Commands instance for this thread.
-	/// Set by CommandParse before executing commands to provide the scoped instance.
+	/// Set by MUSHCodeParser.CommandParse() before executing commands.
+	/// Now that both parser and Commands are scoped, this provides the bridge between
+	/// scoped instances and static command methods.
 	/// </summary>
 	[ThreadStatic]
 	private static Commands? _currentInstance;
 	
 	/// <summary>
 	/// Sets the current Commands instance for the current thread.
-	/// Called by CommandParse before executing commands.
+	/// Called by MUSHCodeParser.CommandParse() before executing commands.
 	/// </summary>
 	internal static void SetCurrentInstance(Commands instance)
 	{
