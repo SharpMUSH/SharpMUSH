@@ -12,7 +12,7 @@ public class MailCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
@@ -20,6 +20,8 @@ public class MailCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MailCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mail #1=Test subject/Test message"));
 
 		await NotifyService
@@ -31,6 +33,8 @@ public class MailCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MaliasCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@malias add all=*"));
 
 		await NotifyService

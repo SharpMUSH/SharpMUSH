@@ -12,7 +12,7 @@ public class SystemCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
@@ -20,6 +20,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FlagCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
 
 		await NotifyService
@@ -31,6 +33,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PowerCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
 		await NotifyService
@@ -42,6 +46,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HookCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hook/list"));
 
 		await NotifyService
@@ -53,6 +59,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FunctionCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function/list"));
 
 		await NotifyService
@@ -64,6 +72,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask CommandCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@command/list"));
 
 		await NotifyService
@@ -75,6 +85,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HideCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide #1"));
 
 		await NotifyService
@@ -86,6 +98,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask KickCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@kick #1"));
 
 		await NotifyService
@@ -97,6 +111,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AttributeCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TEST=wizard"));
 
 		await NotifyService
@@ -108,6 +124,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrlockCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/TEST=me"));
 
 		await NotifyService
@@ -119,6 +137,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrchownCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrchown #1/TEST=#2"));
 
 		await NotifyService
@@ -130,6 +150,8 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FirstexitCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@firstexit #1=#2"));
 
 		await NotifyService

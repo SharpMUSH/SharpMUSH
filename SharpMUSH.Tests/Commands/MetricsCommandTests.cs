@@ -16,7 +16,7 @@ public class MetricsCommandTests
 	public required TestClassFactory Factory { get; init; }
 
 	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IPrometheusQueryService PrometheusQueryService => Factory.Services.GetRequiredService<IPrometheusQueryService>();
 

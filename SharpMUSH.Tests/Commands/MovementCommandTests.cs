@@ -14,7 +14,7 @@ public class MovementCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
@@ -23,6 +23,8 @@ public class MovementCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask GotoCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("goto #0"));
 
 		await NotifyService
@@ -84,6 +86,8 @@ public class MovementCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EnterCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("enter #1"));
 
 		await NotifyService

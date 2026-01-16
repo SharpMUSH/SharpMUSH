@@ -14,12 +14,14 @@ public class CommunicationFunctionUnitTests
 	public required TestClassFactory Factory { get; init; }
 
 	private IMUSHCodeParser Parser => Factory.FunctionParser;
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task PrivateEmit()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
 		
 		// Execute the function with unique message
@@ -94,6 +96,8 @@ public class CommunicationFunctionUnitTests
 	[Test]
 	public async Task Nspemit()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		const string uniqueMessage = "Nspemit_test_unique_message_for_verification";
 		
 		// Execute the function with unique message

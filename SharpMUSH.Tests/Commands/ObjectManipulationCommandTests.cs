@@ -17,7 +17,7 @@ public class ObjectManipulationCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
@@ -102,6 +102,8 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UseCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("use test object"));
 
 		await NotifyService
@@ -173,6 +175,8 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DestroyCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy #100"));
 
 		await NotifyService
@@ -184,6 +188,8 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask NukeCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nuke #100"));
 
 		await NotifyService
@@ -195,6 +201,8 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UndestroyCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@undestroy #100"));
 
 		await NotifyService

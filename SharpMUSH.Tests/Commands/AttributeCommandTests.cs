@@ -17,7 +17,7 @@ public class AttributeCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
@@ -28,6 +28,8 @@ public class AttributeCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeBasic()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TEST #1=Test Value"));
 
 		await NotifyService
@@ -46,6 +48,8 @@ public class AttributeCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeEmpty()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTCLEAR #1="));
 
 		await NotifyService
@@ -57,6 +61,8 @@ public class AttributeCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeComplexValue()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&COMPLEX #1=This is a [add(1,2)] test"));
 
 		await NotifyService
@@ -68,6 +74,8 @@ public class AttributeCommandTests
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Set attribute directly via database with unique name
 		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"], A.single("test_string_CPATTR_direct"), player);
@@ -103,6 +111,8 @@ public class AttributeCommandTests
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// First set an attribute with unique test string
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_BASIC #1=test_string_CPATTR_basic_unique"));
 		
@@ -135,6 +145,8 @@ public class AttributeCommandTests
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Set source attribute with unique name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_MULTI_UNIQUE #1=test_string_CPATTR_multi_value"));
 		
@@ -167,6 +179,8 @@ public class AttributeCommandTests
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// First set an attribute with unique test string
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&MOVESOURCE_UNIQUE #1=test_string_MVATTR_basic_moved"));
 		
@@ -199,6 +213,8 @@ public class AttributeCommandTests
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Set some attributes with unique test strings
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE1_UNIQUE #1=test_string_WIPE_val1_unique"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE2_UNIQUE #1=test_string_WIPE_val2_unique"));
@@ -234,6 +250,8 @@ public class AttributeCommandTests
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_AtrLock_LockAndUnlock()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Set an attribute with unique name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&LOCKTEST_UNIQUE_ATTR #1=test_string_ATRLOCK_value_unique"));
 		
@@ -278,6 +296,8 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrLock_QueryStatus()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Set an attribute with unique name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&QUERYLOCK_UNIQUE_ATTR #1=test_value_unique_query"));
 		
@@ -296,6 +316,8 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrChown_InvalidArguments()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Try to chown without proper arguments
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrchown #1"));
 
@@ -308,6 +330,8 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_InvalidSource()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Try to copy a non-existent attribute
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/NONEXISTENT_ATTR_TEST=#1/DEST"));
 
@@ -320,6 +344,8 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_MoveAttribute_InvalidSource()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Try to move a non-existent attribute
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mvattr #1/NONEXISTENT_MOVE_TEST=#1/DEST"));
 
@@ -445,6 +471,8 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_NoMatch()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Try to edit a non-existent attribute
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/NONEXISTENT_EDIT_TEST=foo,bar"));
 

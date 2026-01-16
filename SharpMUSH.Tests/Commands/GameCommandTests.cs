@@ -12,7 +12,7 @@ public class GameCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
@@ -20,6 +20,8 @@ public class GameCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask BuyCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("buy sword"));
 
 		await NotifyService
@@ -31,6 +33,8 @@ public class GameCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ScoreCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("score"));
 
 		await NotifyService
@@ -42,6 +46,8 @@ public class GameCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask TeachCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("teach #1=skill"));
 
 		await NotifyService
@@ -53,6 +59,8 @@ public class GameCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FollowCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("follow #1"));
 
 		await NotifyService
@@ -64,6 +72,8 @@ public class GameCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnfollowCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("unfollow"));
 
 		await NotifyService
@@ -75,6 +85,8 @@ public class GameCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DesertCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("desert"));
 
 		await NotifyService
@@ -86,6 +98,8 @@ public class GameCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DismissCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("dismiss #1"));
 
 		await NotifyService
@@ -145,6 +159,8 @@ public class GameCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WithCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("with #1"));
 
 		await NotifyService

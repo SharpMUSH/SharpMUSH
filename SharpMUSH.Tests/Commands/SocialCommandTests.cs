@@ -12,14 +12,14 @@ public class SocialCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
 	[Test]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 
-public async ValueTask SayCommand()
+	public async ValueTask SayCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("say Hello world"));
 
@@ -32,6 +32,8 @@ public async ValueTask SayCommand()
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PoseCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
 
 		await NotifyService
@@ -43,6 +45,8 @@ public async ValueTask SayCommand()
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SemiposeCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
 
 		await NotifyService
@@ -54,6 +58,8 @@ public async ValueTask SayCommand()
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhisperCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
 
 		await NotifyService
@@ -65,6 +71,8 @@ public async ValueTask SayCommand()
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PageCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));
 
 		await NotifyService

@@ -14,13 +14,15 @@ public class NewsCommandTests
 	public required TestClassFactory Factory { get; init; }
 
 	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask NewsCommandWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test that news command runs and returns the main news page
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news"));
 
@@ -35,6 +37,8 @@ public class NewsCommandTests
 	[Test]
 	public async ValueTask NewsWithTopicWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test news with the "welcome" topic
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news welcome"));
 
@@ -49,6 +53,8 @@ public class NewsCommandTests
 	[Test]
 	public async ValueTask NewsWithWildcardWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test news with wildcard pattern - should list matching topics
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news *news*"));
 
@@ -61,6 +67,8 @@ public class NewsCommandTests
 	[Test]
 	public async ValueTask NewsNonExistentTopic()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test news with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news nonexistenttopicxyz123"));
 
@@ -79,13 +87,15 @@ public class AhelpCommandTests
 	public required TestClassFactory Factory { get; init; }
 
 	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask AhelpCommandWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test that ahelp command runs for God (player 1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp"));
 
@@ -100,6 +110,8 @@ public class AhelpCommandTests
 	[Test]
 	public async ValueTask AhelpWithTopicWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test ahelp with the "security" topic
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp security"));
 
@@ -114,6 +126,8 @@ public class AhelpCommandTests
 	[Test]
 	public async ValueTask AnewsAliasWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test that anews is an alias for ahelp
 		await Parser.CommandParse(1, ConnectionService, MModule.single("anews"));
 
@@ -128,6 +142,8 @@ public class AhelpCommandTests
 	[Test]
 	public async ValueTask AhelpNonExistentTopic()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test ahelp with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp nonexistenttopicxyz123"));
 

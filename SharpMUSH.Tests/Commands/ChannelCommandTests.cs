@@ -21,7 +21,7 @@ public class ChannelCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
@@ -63,6 +63,8 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChatCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
 
 		await NotifyService
@@ -75,6 +77,8 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChannelCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/list"));
 
 		await NotifyService
@@ -85,6 +89,8 @@ public class ChannelCommandTests
 	[Test]
 	public async ValueTask CemitCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cemit {TestChannelName}=CemitCommand: Test message"));
 
 		await NotifyService
@@ -98,6 +104,8 @@ public class ChannelCommandTests
 	[Test]
 	public async ValueTask NscemitCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
 
 		await NotifyService
@@ -112,6 +120,8 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AddcomCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom pub=Public"));
 
 		await NotifyService
@@ -123,6 +133,8 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DelcomCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("delcom pub"));
 
 		await NotifyService
@@ -134,6 +146,8 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ClistCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@clist"));
 
 		await NotifyService
@@ -145,6 +159,8 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ComlistCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("comlist"));
 
 		await NotifyService
@@ -156,6 +172,8 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ComtitleCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"comtitle {TestChannelName}=Title"));
 
 		await NotifyService

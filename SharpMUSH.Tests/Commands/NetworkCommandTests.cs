@@ -12,7 +12,7 @@ public class NetworkCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
@@ -20,6 +20,8 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HttpCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@http https://example.com"));
 
 		await NotifyService
@@ -31,6 +33,8 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SqlCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test"));
 
 		await NotifyService
@@ -42,6 +46,8 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MapsqlCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql SELECT * FROM test"));
 
 		await NotifyService
@@ -52,6 +58,8 @@ public class NetworkCommandTests
 	[Test]
 	public async ValueTask SitelockCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sitelock/list"));
 
 		// Verify the command executed and sent output to the user
@@ -65,6 +73,8 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SocksetCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sockset #1=option"));
 
 		await NotifyService
@@ -76,6 +86,8 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SlaveCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@slave"));
 
 		await NotifyService

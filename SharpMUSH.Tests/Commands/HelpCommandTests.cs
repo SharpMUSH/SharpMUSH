@@ -14,13 +14,15 @@ public class HelpCommandTests
 	public required TestClassFactory Factory { get; init; }
 
 	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask HelpCommandWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test that help command runs and returns the main help page
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help"));
 
@@ -35,6 +37,8 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpWithTopicWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test help with the "newbie" topic
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help newbie"));
 
@@ -49,6 +53,8 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpWithWildcardWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test help with wildcard pattern - should list matching topics
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help help*"));
 
@@ -63,6 +69,8 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpSearchWorks()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test help/search switch - should find topics containing the search term
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help/search newbie"));
 
@@ -77,6 +85,8 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpNonExistentTopic()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		// Test help with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help nonexistenttopicxyz123"));
 

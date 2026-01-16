@@ -13,7 +13,7 @@ public class AdminCommandTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
+	private INotifyService NotifyService => Factory.NotifyService;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 
@@ -21,6 +21,8 @@ public class AdminCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PcreateCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate TestPlayerPcreate=passwordPcreate"));
 
 		await NotifyService
@@ -32,6 +34,8 @@ public class AdminCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask NewpasswordCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@newpassword #1=newpassNewpassword"));
 
 		await NotifyService
@@ -43,6 +47,8 @@ public class AdminCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PasswordCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@password oldpassPassword=newpassPassword"));
 
 		await NotifyService
@@ -54,6 +60,8 @@ public class AdminCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ShutdownCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
 
 		await NotifyService
@@ -65,6 +73,8 @@ public class AdminCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RestartCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart"));
 
 		await NotifyService
@@ -76,6 +86,8 @@ public class AdminCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PurgeCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
 
 		await NotifyService
@@ -87,6 +99,8 @@ public class AdminCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PoorCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poor #1001"));
 
 		await NotifyService
@@ -98,6 +112,8 @@ public class AdminCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ReadcacheCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
 
 		await NotifyService
@@ -109,6 +125,8 @@ public class AdminCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask ChownallCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1002=#2002"));
 
 		await NotifyService
@@ -120,6 +138,8 @@ public class AdminCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask ChzoneallCommand()
 	{
+		// Clear any previous calls to the mock
+		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzoneall #1003=#2003"));
 
 		await NotifyService

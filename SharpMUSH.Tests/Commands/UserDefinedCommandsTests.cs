@@ -13,7 +13,7 @@ public class UserDefinedCommandsTests
 	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
 	public required TestClassFactory Factory { get; init; }
 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>(); 
+	private INotifyService NotifyService => Factory.NotifyService; 
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>();
 
