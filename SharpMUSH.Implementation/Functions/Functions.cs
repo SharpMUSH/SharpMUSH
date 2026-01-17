@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -14,6 +15,7 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
 	private static IMediator? Mediator { get; set; }
+	private static ISharpDatabase? Database { get; set; }
 	private static ILocateService? LocateService { get; set; }
 	private static IAttributeService? AttributeService { get; set; }
 	private static INotifyService? NotifyService { get; set; }
@@ -44,6 +46,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	public Functions(
 		ILogger<Functions> logger,
 		IMediator mediator,
+		ISharpDatabase database,
 		ILocateService locateService,
 		IAttributeService attributeService,
 		INotifyService notifyService,
@@ -68,6 +71,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	{
 		Logger = logger;
 		Mediator = mediator;
+		Database = database;
 		LocateService = locateService;
 		AttributeService = attributeService;
 		NotifyService = notifyService;

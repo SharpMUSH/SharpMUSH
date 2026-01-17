@@ -1631,7 +1631,7 @@ LOCATE()
 									return Errors.ErrorPerm;
 								}
 
-								if (!await HelperFunctions.SafeToAddParent(target, newParent))
+								if (!await HelperFunctions.SafeToAddParent(Mediator!, Database!, target, newParent))
 								{
 									return "#-1 CYCLE DETECTED";
 								}
@@ -1800,6 +1800,12 @@ LOCATE()
 					if (!canZone && !LockService!.Evaluate(LockType.ChZone, zone, executor))
 					{
 						return Errors.ErrorPerm;
+					}
+					
+					// Check for cycles before setting the zone
+					if (!await HelperFunctions.SafeToAddZone(Mediator!, Database!, target, zone))
+					{
+						return Errors.ZoneLoop;
 					}
 					
 					// Handle flag/power stripping (simplified - no /preserve in function)
