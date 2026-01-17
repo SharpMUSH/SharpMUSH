@@ -280,23 +280,9 @@ public static partial class HelperFunctions
 			return false;
 		}
 
-		// Check if newRelated is already the current parent/zone - that's OK (no-op)
-		if (isParent)
-		{
-			var currentParent = await start.Object().Parent.WithCancellation(CancellationToken.None);
-			if (!currentParent.IsNone && currentParent.Object()!.DBRef.Number == newRelatedDbRef.Number)
-			{
-				return true;
-			}
-		}
-		else
-		{
-			var currentZone = await start.Object().Zone.WithCancellation(CancellationToken.None);
-			if (!currentZone.IsNone && currentZone.Object()!.DBRef.Number == newRelatedDbRef.Number)
-			{
-				return true;
-			}
-		}
+		// Don't query currentParent/currentZone from the object's AsyncLazy properties
+		// as this can cause caching issues. The database traversal below will handle
+		// the no-op case (trying to set to the same parent/zone) correctly.
 
 		// Use ArangoDB graph traversal to check if adding the relationship would create a cycle.
 		// We check if 'start' is reachable from 'newRelated' by following parent/zone edges.
