@@ -282,7 +282,9 @@ public static partial class HelperFunctions
 
 		// Don't query currentParent/currentZone from the object's AsyncLazy properties
 		// as this can cause caching issues. The database traversal below will handle
-		// the no-op case (trying to set to the same parent/zone) correctly.
+		// the no-op case (trying to set to the same parent/zone) correctly: if newRelated
+		// is already the parent/zone, it won't be reachable from itself via parent/zone
+		// edges, so isReachable will be false and we'll return true (safe).
 
 		// Use ArangoDB graph traversal to check if adding the relationship would create a cycle.
 		// We check if 'start' is reachable from 'newRelated' by following parent/zone edges.
