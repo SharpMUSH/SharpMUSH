@@ -260,8 +260,8 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>
-	/// This function detects any chance of a loop when combining parent and zone chains.
-	/// It checks if adding a relationship (parent or zone) would create a cycle by following
+	/// Detects cycles when combining parent and zone chains.
+	/// Checks if adding a relationship would create a cycle by following
 	/// both parent and zone links from the new relationship target.
 	/// </summary>
 	/// <param name="start">The object that will have a new relationship set</param>
@@ -273,48 +273,29 @@ public static partial class HelperFunctions
 		var startDbRef = start.Object().DBRef;
 		var newRelatedDbRef = newRelated.Object().DBRef;
 
-		// Check for self-reference (object trying to be its own parent/zone)
-		// Compare by number only, ignoring timestamps
+		// Check for self-reference
 		if (startDbRef.Number == newRelatedDbRef.Number)
 		{
 			return false;
 		}
 
-		// Don't query currentParent/currentZone from the object's AsyncLazy properties
-		// as this can cause caching issues. The database traversal below will handle
-		// the no-op case (trying to set to the same parent/zone) correctly: if newRelated
-		// is already the parent/zone, it won't be reachable from itself via parent/zone
-		// edges, so isReachable will be false and we'll return true (safe).
-
 		// Use ArangoDB graph traversal to check if adding the relationship would create a cycle.
-		// We check if 'start' is reachable from 'newRelated' by following parent/zone edges.
-		// If true, then after adding the relationship (start -> newRelated), there would be a path
-		// from newRelated back to start (newRelated -> ... -> start), completing the cycle.
+		// If start is reachable FROM newRelated via parent/zone edges, then adding the relationship
+		// would complete a cycle: start -> newRelated -> ... -> start
 		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: CancellationToken.None);
 		
-		// If start is reachable from newRelated, adding the relationship would create a cycle
 		return !isReachable;
 	}
 
 	/// <summary>
-	/// This function detects any chance of a loop in the parent chain.
+	/// Detects cycles in the parent chain.
 	/// </summary>
-	/// <param name="mediator"></param>
-	/// <param name="database"></param>
-	/// <param name="start"></param>
-	/// <param name="newParent"></param>
-	/// <returns>Whether there's a loop or not</returns>
 	public static async ValueTask<bool> SafeToAddParent(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newParent)
 		=> await SafeToAddRelationship(mediator, database, start, newParent, isParent: true);
 
 	/// <summary>
-	/// This function detects any chance of a loop in the zone chain.
+	/// Detects cycles in the zone chain.
 	/// </summary>
-	/// <param name="mediator"></param>
-	/// <param name="database"></param>
-	/// <param name="start"></param>
-	/// <param name="newZone"></param>
-	/// <returns>Whether there's a loop or not</returns>
 	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone)
 		=> await SafeToAddRelationship(mediator, database, start, newZone, isParent: false);
 

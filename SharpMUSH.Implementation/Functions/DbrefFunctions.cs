@@ -1802,6 +1802,12 @@ LOCATE()
 						return Errors.ErrorPerm;
 					}
 					
+					// Check for cycles before setting the zone
+					if (!await HelperFunctions.SafeToAddZone(Mediator!, Database!, target, zone))
+					{
+						return Errors.ZoneLoop;
+					}
+					
 					// Handle flag/power stripping (simplified - no /preserve in function)
 					if (!target.IsPlayer)
 					{

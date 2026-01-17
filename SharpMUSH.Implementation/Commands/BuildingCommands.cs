@@ -68,7 +68,11 @@ public partial class Commands
 			var newThing = await Mediator.Send(new GetObjectNodeQuery(thing));
 			if (!newThing.IsNone)
 			{
-				await Mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
+				// Check for cycles before inheriting zone from creator
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database!, newThing.Known, creatorZone.Known))
+				{
+					await Mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
+				}
 			}
 		}
 		
@@ -767,7 +771,11 @@ public partial class Commands
 			var newRoom = await Mediator.Send(new GetObjectNodeQuery(response));
 			if (!newRoom.IsNone)
 			{
-				await Mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
+				// Check for cycles before inheriting zone from creator
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database!, newRoom.Known, creatorZone.Known))
+				{
+					await Mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
+				}
 			}
 		}
 
@@ -1060,7 +1068,11 @@ public partial class Commands
 			var newExit = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
 			if (!newExit.IsNone)
 			{
-				await Mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
+				// Check for cycles before inheriting zone from creator
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database!, newExit.Known, creatorZone.Known))
+				{
+					await Mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
+				}
 			}
 		}
 
