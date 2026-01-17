@@ -21,7 +21,6 @@ public class QuotaCommandTests
 	public async ValueTask SquotaCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@squota #1=100"));
 
 		await NotifyService

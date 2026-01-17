@@ -33,7 +33,6 @@ public class SocialCommandTests
 	public async ValueTask PoseCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
 
 		await NotifyService
@@ -46,7 +45,6 @@ public class SocialCommandTests
 	public async ValueTask SemiposeCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
 
 		await NotifyService
@@ -59,7 +57,6 @@ public class SocialCommandTests
 	public async ValueTask WhisperCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
 
 		await NotifyService
@@ -72,7 +69,6 @@ public class SocialCommandTests
 	public async ValueTask PageCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));
 
 		await NotifyService

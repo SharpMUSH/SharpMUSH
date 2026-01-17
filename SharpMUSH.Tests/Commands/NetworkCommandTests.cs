@@ -21,7 +21,6 @@ public class NetworkCommandTests
 	public async ValueTask HttpCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@http https://example.com"));
 
 		await NotifyService
@@ -34,7 +33,6 @@ public class NetworkCommandTests
 	public async ValueTask SqlCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test"));
 
 		await NotifyService
@@ -47,7 +45,6 @@ public class NetworkCommandTests
 	public async ValueTask MapsqlCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql SELECT * FROM test"));
 
 		await NotifyService
@@ -59,7 +56,6 @@ public class NetworkCommandTests
 	public async ValueTask SitelockCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sitelock/list"));
 
 		// Verify the command executed and sent output to the user
@@ -74,7 +70,6 @@ public class NetworkCommandTests
 	public async ValueTask SocksetCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sockset #1=option"));
 
 		await NotifyService
@@ -87,7 +82,6 @@ public class NetworkCommandTests
 	public async ValueTask SlaveCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@slave"));
 
 		await NotifyService

@@ -21,7 +21,6 @@ public class ControlFlowCommandTests
 	public async ValueTask SelectCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@select 1=1,@pemit #1=One,@pemit #1=Other"));
 
 		await NotifyService
@@ -34,7 +33,6 @@ public class ControlFlowCommandTests
 	public async ValueTask SwitchCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@switch 1=1,@pemit #1=One,@pemit #1=Other"));
 
 		await NotifyService
@@ -47,7 +45,6 @@ public class ControlFlowCommandTests
 	public async ValueTask BreakCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@break"));
 
 		await NotifyService
@@ -60,7 +57,6 @@ public class ControlFlowCommandTests
 	public async ValueTask AssertCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@assert 1"));
 
 		await NotifyService
@@ -73,7 +69,6 @@ public class ControlFlowCommandTests
 	public async ValueTask RetryCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@retry 1"));
 
 		await NotifyService
@@ -85,7 +80,6 @@ public class ControlFlowCommandTests
 	public async ValueTask SkipCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@skip 0=@pemit #1=SkipCommand False; @pemit #1=SkipCommand Rest"));
 
 		await NotifyService
@@ -102,7 +96,6 @@ public class ControlFlowCommandTests
 	public async ValueTask IncludeCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@include #1/ATTRIBUTE"));
 
 		await NotifyService
@@ -114,7 +107,6 @@ public class ControlFlowCommandTests
 	public async ValueTask IfElseCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ifelse 1=@pemit #1=IfElseCommand True,@pemit #1=IfElseCommand False"));
 
 		await NotifyService

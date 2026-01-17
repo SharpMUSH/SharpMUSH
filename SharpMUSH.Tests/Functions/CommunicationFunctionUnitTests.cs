@@ -21,7 +21,6 @@ public class CommunicationFunctionUnitTests
 	public async Task PrivateEmit()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
 		
 		// Execute the function with unique message
@@ -97,7 +96,6 @@ public class CommunicationFunctionUnitTests
 	public async Task Nspemit()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		const string uniqueMessage = "Nspemit_test_unique_message_for_verification";
 		
 		// Execute the function with unique message

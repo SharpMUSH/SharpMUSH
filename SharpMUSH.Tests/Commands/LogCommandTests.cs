@@ -21,7 +21,6 @@ public class LogCommandTests
 	public async ValueTask LogCommand_DefaultSwitch_LogsToCommandCategory()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log Test log entry"));
 
 		await NotifyService
@@ -34,7 +33,6 @@ public class LogCommandTests
 	public async ValueTask LogCommand_WithCmdSwitch_LogsToCommandCategory()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/cmd Test command log entry"));
 
 		await NotifyService
@@ -47,7 +45,6 @@ public class LogCommandTests
 	public async ValueTask LogCommand_WithWizSwitch_LogsToWizardCategory()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/wiz Test wizard log entry"));
 
 		await NotifyService
@@ -60,7 +57,6 @@ public class LogCommandTests
 	public async ValueTask LogCommand_WithErrSwitch_LogsToErrorCategory()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/err Test error log entry"));
 
 		await NotifyService
@@ -73,7 +69,6 @@ public class LogCommandTests
 	public async ValueTask LogCommand_NoMessage_ReturnsError()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log"));
 
 		await NotifyService
@@ -86,7 +81,6 @@ public class LogCommandTests
 	public async ValueTask LogCommand_RecallSwitch_RetrievesLogs()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/recall"));
 
 		await NotifyService
@@ -99,7 +93,6 @@ public class LogCommandTests
 	public async ValueTask LogwipeCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@logwipe command"));
 
 		await NotifyService

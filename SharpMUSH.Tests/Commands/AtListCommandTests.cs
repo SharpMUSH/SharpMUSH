@@ -25,7 +25,6 @@ public class AtListCommandTests
 	public async ValueTask List_NoSwitch_DisplaysHelpMessage()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list without switches
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list"));
 
@@ -42,7 +41,6 @@ public class AtListCommandTests
 	public async ValueTask List_Flags_DisplaysFlagList()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list/flags
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/flags"));
 
@@ -60,7 +58,6 @@ public class AtListCommandTests
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list/lowercase/flags (note: switch order matters)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/lowercase/flags"));
 
@@ -77,7 +74,6 @@ public class AtListCommandTests
 	public async ValueTask List_Powers_DisplaysPowerList()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list/powers
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/powers"));
 
@@ -94,7 +90,6 @@ public class AtListCommandTests
 	public async ValueTask List_Locks_DisplaysLockTypes()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list/locks
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/locks"));
 
@@ -111,7 +106,6 @@ public class AtListCommandTests
 	public async ValueTask List_Attribs_DisplaysStandardAttributes()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list/attribs
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/attribs"));
 
@@ -128,7 +122,6 @@ public class AtListCommandTests
 	public async ValueTask List_Commands_DisplaysCommandList()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list/commands
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/commands"));
 
@@ -145,7 +138,6 @@ public class AtListCommandTests
 	public async ValueTask List_Functions_DisplaysFunctionList()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list/functions
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/functions"));
 
@@ -162,7 +154,6 @@ public class AtListCommandTests
 	public async ValueTask List_Motd_DisplaysMotdSettings()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Execute @list/motd
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/motd"));
 

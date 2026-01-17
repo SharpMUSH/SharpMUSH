@@ -51,7 +51,6 @@ public class BuildingCommandTests
 	public async ValueTask DoDigForCommandListCheck()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
 		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
@@ -90,7 +89,6 @@ public class BuildingCommandTests
 	public async ValueTask DoDigForCommandListCheck2()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
 		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
@@ -168,7 +166,6 @@ public class BuildingCommandTests
 	public async ValueTask DigRoomWithExits()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Room With Exits=In;I,Out;O"));
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
@@ -185,7 +182,6 @@ public class BuildingCommandTests
 	public async ValueTask LinkExit()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create room and exit with unique names
 		var roomResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig LinkExitTestRoom"));
 		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!);
@@ -211,7 +207,6 @@ public class BuildingCommandTests
 	public async ValueTask CloneObject()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create an object with unique name
 		var sourceResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CloneObjectTestSource"));
 		var sourceDbRef = DBRef.Parse(sourceResult.Message!.ToPlainText()!);
@@ -291,7 +286,6 @@ public class BuildingCommandTests
 	public async ValueTask ParentCycleDetection_DirectCycle()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create two objects A and B
 		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CycleTest_A"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
@@ -327,7 +321,6 @@ public class BuildingCommandTests
 	public async ValueTask ParentCycleDetection_IndirectCycle()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create three objects A, B, and C
 		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_A"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
@@ -372,7 +365,6 @@ public class BuildingCommandTests
 	public async ValueTask ParentCycleDetection_SelfParent()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create object
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create SelfParentTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -396,7 +388,6 @@ public class BuildingCommandTests
 	public async ValueTask ParentCycleDetection_LongChain()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create a long chain of 5 objects
 		var objDbRefs = new List<DBRef>();
 		for (int i = 0; i < 5; i++)
@@ -440,7 +431,6 @@ public class BuildingCommandTests
 	public async ValueTask SetParent()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create two objects
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Parent Object"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Child Object"));
@@ -475,7 +465,6 @@ public class BuildingCommandTests
 	public async ValueTask ChzoneObject()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create objects
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zone Object"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
@@ -497,7 +486,6 @@ public class BuildingCommandTests
 	public async ValueTask RecycleObject()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create an object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Recycle Test"));
 		
@@ -516,7 +504,6 @@ public class BuildingCommandTests
 	public async ValueTask UnlinkExit()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create and link an exit
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Unlink Room"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@open Unlink Exit=#14"));
@@ -547,7 +534,6 @@ public class BuildingCommandTests
 	public async ValueTask LockObject()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LockObjectTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -564,7 +550,6 @@ public class BuildingCommandTests
 	public async ValueTask UnlockObject()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create UnlockObjectTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);

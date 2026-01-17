@@ -30,7 +30,6 @@ public class CommandFlowUnitTests
 	public async ValueTask IfElse(string str, string expected)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MModule.single(str));
@@ -46,7 +45,6 @@ public class CommandFlowUnitTests
 	public async ValueTask Retry()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 

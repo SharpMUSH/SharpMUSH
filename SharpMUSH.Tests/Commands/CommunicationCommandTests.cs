@@ -66,7 +66,6 @@ public class CommunicationCommandTests
 	public async ValueTask PemitBasic(string command, string expected)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -82,7 +81,6 @@ public class CommunicationCommandTests
 	public async ValueTask EmitBasic(string command, string expected)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -98,7 +96,6 @@ public class CommunicationCommandTests
 	public async ValueTask LemitBasic(string command, string expected)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -113,7 +110,6 @@ public class CommunicationCommandTests
 	public async ValueTask RemitBasic(string command, string expected)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -128,7 +124,6 @@ public class CommunicationCommandTests
 	public async ValueTask OemitBasic(string command, string expected)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -143,7 +138,6 @@ public class CommunicationCommandTests
 	public async ValueTask ZemitBasic(string command, string expected)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -158,7 +152,6 @@ public class CommunicationCommandTests
 	public async ValueTask NsemitBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -174,7 +167,6 @@ public class CommunicationCommandTests
 	public async ValueTask NslemitBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -189,7 +181,6 @@ public class CommunicationCommandTests
 	public async ValueTask NsremitBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -204,7 +195,6 @@ public class CommunicationCommandTests
 	public async ValueTask NsoemitBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -219,7 +209,6 @@ public class CommunicationCommandTests
 	public async ValueTask NspemitBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -234,7 +223,6 @@ public class CommunicationCommandTests
 	public async ValueTask NszemitBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -249,7 +237,6 @@ public class CommunicationCommandTests
 	public async ValueTask AddComBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
@@ -269,7 +256,6 @@ public class CommunicationCommandTests
 	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -287,7 +273,6 @@ public class CommunicationCommandTests
 	public async ValueTask DelComBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
 		// First add an alias
@@ -311,7 +296,6 @@ public class CommunicationCommandTests
 	public async ValueTask DelComNotFound(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
@@ -331,7 +315,6 @@ public class CommunicationCommandTests
 	public async ValueTask CListBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -349,7 +332,6 @@ public class CommunicationCommandTests
 	public async ValueTask ComTitleBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		var parts = command.Split('=');
 		var alias = parts[0].Split(' ')[1];
@@ -377,7 +359,6 @@ public class CommunicationCommandTests
 	public async ValueTask ComTitleNotFound(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
@@ -396,7 +377,6 @@ public class CommunicationCommandTests
 	public async ValueTask ComListBasic(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		// First add some aliases
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
@@ -423,7 +403,6 @@ public class CommunicationCommandTests
 	public async ValueTask ComListEmpty(string command)
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		Console.WriteLine("Testing: {0}", command);
 		// Make sure we have no aliases, just list
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));

@@ -22,7 +22,6 @@ public class VerbCommandTests
 	public async ValueTask VerbWithDefaultMessages()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,,,VerbActorDefault_Value_52830,,,VerbOthersDefault_Value_52830"));
 		
@@ -43,7 +42,6 @@ public class VerbCommandTests
 	public async ValueTask VerbWithAttributes()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_74102 #1=VerbAction_Value_74102"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&OWHAT_74102 #1=VerbOther_Value_74102"));
@@ -67,7 +65,6 @@ public class VerbCommandTests
 	public async ValueTask VerbWithStackArguments()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_ARGS_91605 #1=VerbArgs_Value_91605"));
 		
@@ -90,7 +87,6 @@ public class VerbCommandTests
 	public async ValueTask VerbInsufficientArgs()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#2"));
 

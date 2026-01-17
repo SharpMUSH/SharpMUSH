@@ -24,7 +24,6 @@ public class MovementCommandTests
 	public async ValueTask GotoCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("goto #0"));
 
 		await NotifyService
@@ -87,7 +86,6 @@ public class MovementCommandTests
 	public async ValueTask EnterCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("enter #1"));
 
 		await NotifyService

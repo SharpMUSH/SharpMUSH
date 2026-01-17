@@ -64,7 +64,6 @@ public class ChannelCommandTests
 	public async ValueTask ChatCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
 
 		await NotifyService
@@ -78,7 +77,6 @@ public class ChannelCommandTests
 	public async ValueTask ChannelCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/list"));
 
 		await NotifyService
@@ -90,7 +88,6 @@ public class ChannelCommandTests
 	public async ValueTask CemitCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cemit {TestChannelName}=CemitCommand: Test message"));
 
 		await NotifyService
@@ -105,7 +102,6 @@ public class ChannelCommandTests
 	public async ValueTask NscemitCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
 
 		await NotifyService
@@ -121,7 +117,6 @@ public class ChannelCommandTests
 	public async ValueTask AddcomCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom pub=Public"));
 
 		await NotifyService
@@ -134,7 +129,6 @@ public class ChannelCommandTests
 	public async ValueTask DelcomCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("delcom pub"));
 
 		await NotifyService
@@ -147,7 +141,6 @@ public class ChannelCommandTests
 	public async ValueTask ClistCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@clist"));
 
 		await NotifyService
@@ -160,7 +153,6 @@ public class ChannelCommandTests
 	public async ValueTask ComlistCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("comlist"));
 
 		await NotifyService
@@ -173,7 +165,6 @@ public class ChannelCommandTests
 	public async ValueTask ComtitleCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"comtitle {TestChannelName}=Title"));
 
 		await NotifyService

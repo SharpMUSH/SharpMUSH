@@ -27,7 +27,6 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		// Execute @flag/list
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
@@ -45,7 +44,6 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Add_CreatesNewFlag()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
@@ -77,7 +75,6 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Add_PreventsSystemFlagCreation()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		// Create a unique flag name
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";

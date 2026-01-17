@@ -22,7 +22,6 @@ public class MiscCommandTests
 	public async ValueTask VerbCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=greet,greets,greeting"));
 
 		await NotifyService
@@ -35,7 +34,6 @@ public class MiscCommandTests
 	public async ValueTask SweepCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sweep"));
 
 		await NotifyService
@@ -48,7 +46,6 @@ public class MiscCommandTests
 	public async ValueTask EditCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/DESC=old=new"));
 
 		await NotifyService
@@ -60,7 +57,6 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1=pattern"));
 
 		// Verify that Notify was called at least once (could be "No matching attributes" or a list)
@@ -73,7 +69,6 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithPrintSwitch()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/print #1=pattern"));
 
 		// Verify that Notify was called at least once
@@ -86,7 +81,6 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithWildSwitch()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/wild #1=*pattern*"));
 
 		// Verify that Notify was called at least once
@@ -99,7 +93,6 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithRegexpSwitch()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/regexp #1=.*pattern.*"));
 
 		// Verify that Notify was called at least once
@@ -112,7 +105,6 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithNocaseSwitch()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/nocase #1=PATTERN"));
 
 		// Verify that Notify was called at least once
@@ -125,7 +117,6 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithAttributePattern()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1/DESC*=pattern"));
 
 		// Verify that Notify was called at least once
@@ -139,7 +130,6 @@ public class MiscCommandTests
 	public async ValueTask BriefCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("brief"));
 
 		await NotifyService
@@ -152,7 +142,6 @@ public class MiscCommandTests
 	public async ValueTask WhoCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("who"));
 
 		await NotifyService
@@ -165,7 +154,6 @@ public class MiscCommandTests
 	public async ValueTask SessionCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("session"));
 
 		await NotifyService
@@ -178,7 +166,6 @@ public class MiscCommandTests
 	public async ValueTask QuitCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("quit"));
 
 		await NotifyService
@@ -191,7 +178,6 @@ public class MiscCommandTests
 	public async ValueTask ConnectCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("connect player password"));
 
 		await NotifyService
@@ -204,7 +190,6 @@ public class MiscCommandTests
 	public async ValueTask PromptCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@prompt #1=Enter value:"));
 
 		await NotifyService
@@ -217,7 +202,6 @@ public class MiscCommandTests
 	public async ValueTask NspromptCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nsprompt #1=Enter value:"));
 
 		await NotifyService

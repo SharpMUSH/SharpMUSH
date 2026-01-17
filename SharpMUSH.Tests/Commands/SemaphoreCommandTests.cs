@@ -26,7 +26,6 @@ public class SemaphoreCommandTests
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		// Arrange - create a unique semaphore and test message with underscore separator
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -59,7 +58,6 @@ public class SemaphoreCommandTests
 	public async ValueTask DolistInline_ShouldExecuteImmediately()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		// Arrange
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -80,7 +78,6 @@ public class SemaphoreCommandTests
 	public async ValueTask DolistDefault_ShouldQueueCommands()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		// Arrange
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -118,7 +115,6 @@ public class SemaphoreCommandTests
 	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		// This test verifies that @notify/setq accepts qreg parameters
 		// Fixed bug where CB.RSArgs was interfering with comma parsing
@@ -143,7 +139,6 @@ public class SemaphoreCommandTests
 	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 
 		// Arrange - create a unique semaphore with a unique test value
 		var uniqueId = Guid.NewGuid().ToString("N");

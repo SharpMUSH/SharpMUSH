@@ -103,7 +103,6 @@ public class ObjectManipulationCommandTests
 	public async ValueTask UseCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("use test object"));
 
 		await NotifyService
@@ -176,7 +175,6 @@ public class ObjectManipulationCommandTests
 	public async ValueTask DestroyCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy #100"));
 
 		await NotifyService
@@ -189,7 +187,6 @@ public class ObjectManipulationCommandTests
 	public async ValueTask NukeCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nuke #100"));
 
 		await NotifyService
@@ -202,7 +199,6 @@ public class ObjectManipulationCommandTests
 	public async ValueTask UndestroyCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@undestroy #100"));
 
 		await NotifyService

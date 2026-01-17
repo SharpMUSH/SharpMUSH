@@ -68,7 +68,6 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 	public IServiceProvider Services => _server!.Services;
 
 	/// <summary>
-	/// NotifyService mock for this test class. Clear received calls between tests with ClearReceivedCalls().
 	/// </summary>
 	public INotifyService NotifyService => _notifyServiceMock!;
 

@@ -21,7 +21,6 @@ public class NotificationCommandTests
 	public async ValueTask MessageCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Test message"));
 
 		await NotifyService
@@ -34,7 +33,6 @@ public class NotificationCommandTests
 	public async ValueTask RespondCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond #1=Response"));
 
 		await NotifyService
@@ -47,7 +45,6 @@ public class NotificationCommandTests
 	public async ValueTask RwallCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@rwall Test message"));
 
 		await NotifyService
@@ -60,7 +57,6 @@ public class NotificationCommandTests
 	public async ValueTask WarningsCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings"));
 
 		await NotifyService
@@ -73,7 +69,6 @@ public class NotificationCommandTests
 	public async ValueTask WcheckCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck #1"));
 
 		await NotifyService
@@ -86,7 +81,6 @@ public class NotificationCommandTests
 	public async ValueTask SuggestCommand()
 	{
 		// Clear any previous calls to the mock
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest Test suggestion"));
 
 		await NotifyService
