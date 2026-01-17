@@ -2458,6 +2458,13 @@ public partial class Commands
 								{
 									var anyObj = fullObj.Known;
 									
+									// Check for cycles before setting the zone
+									if (!await HelperFunctions.SafeToAddZone(Mediator, Database!, anyObj, zoneObj))
+									{
+										// Skip this object if it would create a cycle
+										continue;
+									}
+									
 									// Set the zone
 									await Mediator!.Send(new SetObjectZoneCommand(anyObj, zoneObj));
 

@@ -715,4 +715,15 @@ public interface ISharpDatabase
 	ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default);
 	
 	ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status, CancellationToken cancellationToken = default);
+	
+	/// <summary>
+	/// Checks if there is a path from startObject to targetObject following parent and/or zone edges.
+	/// Uses graph traversal to detect potential cycles in combined parent/zone chains.
+	/// </summary>
+	/// <param name="startObject">Starting object for traversal</param>
+	/// <param name="targetObject">Target object to find</param>
+	/// <param name="maxDepth">Maximum depth for traversal (default 100)</param>
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>True if a path exists from start to target, false otherwise</returns>
+	ValueTask<bool> IsReachableViaParentOrZoneAsync(AnySharpObject startObject, AnySharpObject targetObject, int maxDepth = 100, CancellationToken cancellationToken = default);
 }

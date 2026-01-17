@@ -480,6 +480,30 @@ public partial class ArangoDatabase(
 	public async ValueTask UnsetObjectZone(AnySharpObject obj, CancellationToken ct = default)
 		=> await SetObjectZone(obj, null, ct);
 
+	public async ValueTask<bool> IsReachableViaParentOrZoneAsync(AnySharpObject startObject, AnySharpObject targetObject, int maxDepth = 100, CancellationToken ct = default)
+	{
+		// Use ArangoDB graph traversal to check if targetObject is reachable from startObject
+		// following both parent and zone edges in a combined traversal
+		// We traverse using the edge collections directly instead of named graphs
+		var query = $@"
+			FOR v IN 1..@maxDepth OUTBOUND @startVertex {DatabaseConstants.HasParent}, {DatabaseConstants.HasZone}
+				OPTIONS {{uniqueVertices: 'global', order: 'bfs'}}
+				FILTER v._id == @targetVertex
+				LIMIT 1
+				RETURN true
+		";
+
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "startVertex", startObject.Object().Id! },
+			{ "targetVertex", targetObject.Object().Id! },
+			{ "maxDepth", maxDepth }
+		};
+
+		var result = await arangoDb.Query.ExecuteAsync<bool>(handle, query, bindVars, cancellationToken: ct);
+		return result.FirstOrDefault(); // Returns true if found, false if not
+	}
+
 	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken ct = default)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,

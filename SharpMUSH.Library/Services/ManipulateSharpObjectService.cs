@@ -14,6 +14,7 @@ namespace SharpMUSH.Library.Services;
 
 public class ManipulateSharpObjectService(
 	IMediator mediator,
+	ISharpDatabase database,
 	IPermissionService permissionService,
 	IPasswordService passwordService,
 	IValidateService validateService,
@@ -459,7 +460,7 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		var safeToAdd = await HelperFunctions.SafeToAddParent(obj, newParent);
+		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
 		
 		if (!safeToAdd)
 		{
@@ -490,6 +491,63 @@ public class ManipulateSharpObjectService(
 		}
 		
 		await mediator.Send(new UnsetObjectParentCommand(obj));
+		
+		return true;
+	}
+
+	public async ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone,
+		bool notify)
+	{
+		// Check if executor controls the object
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Permission denied.");
+			}
+
+			return Errors.ErrorPerm;
+		}
+
+		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, database, obj, newZone);
+		
+		if (!safeToAdd)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Cannot add zone: would create a cycle.");
+			}
+
+			return Errors.ZoneLoop;
+		}
+
+		await mediator.Send(new SetObjectZoneCommand(obj, newZone));
+
+		if (notify)
+		{
+			await notifyService.Notify(executor, $"Zone set.");
+		}
+
+		return true;
+	}
+
+	public async ValueTask<CallState> UnsetZone(AnySharpObject executor, AnySharpObject obj, bool notify)
+	{
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Permission denied.");
+			}
+			return Errors.ErrorPerm;
+		}
+		
+		await mediator.Send(new UnsetObjectZoneCommand(obj));
+		
+		if (notify)
+		{
+			await notifyService.Notify(executor, "Zone cleared.");
+		}
 		
 		return true;
 	}
