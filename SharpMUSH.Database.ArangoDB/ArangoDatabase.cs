@@ -60,7 +60,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-		CancellationToken ct = default)
+		string? salt = null, CancellationToken ct = default)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var objectLocation = await GetObjectNodeAsync(location, ct);
@@ -96,12 +96,16 @@ public partial class ArangoDatabase(
 				time
 			), returnNew: true, cancellationToken: ct);
 
-		var hashedPassword = passwordService.HashPassword($"#{obj.New.Key}:{obj.New.CreationTime}", password);
+		// If salt is provided (imported password), use the password as-is (it's already hashed)
+		// Otherwise, hash the password for new players
+		var hashedPassword = salt != null 
+			? password 
+			: passwordService.HashPassword($"#{obj.New.Key}:{obj.New.CreationTime}", password);
 
 		var playerResult = await arangoDb.Document.CreateAsync<SharpPlayerCreateRequest, SharpPlayerQueryResult>(
 			transactionHandle,
 			DatabaseConstants.Players,
-			new SharpPlayerCreateRequest([], hashedPassword, quota), cancellationToken: ct);
+			new SharpPlayerCreateRequest([], hashedPassword, salt, quota), cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(playerResult.Id, obj.New.Id), cancellationToken: ct);
@@ -1353,15 +1357,16 @@ public partial class ArangoDatabase(
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.TypePlayer => new SharpPlayer
-			{
-				Id = id, 
-				Object = convertObject,
-				Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)),
-				PasswordHash = res.PasswordHash,
-				Quota = res.Quota
-			},
+					{
+						Id = id, 
+						Object = convertObject,
+						Aliases = res.Aliases,
+						Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+						Home = new(async ct => await GetHomeAsync(id, ct)),
+						PasswordHash = res.PasswordHash,
+						PasswordSalt = res.PasswordSalt,
+						Quota = res.Quota
+					},
 			DatabaseConstants.TypeRoom => new SharpRoom 
 			{ 
 				Id = id, 
@@ -1415,13 +1420,14 @@ public partial class ArangoDatabase(
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
-			{
-				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)), 
-				PasswordHash = res.GetProperty("PasswordHash").GetString()!,
-				Quota = res.GetProperty("Quota").GetInt32()
-			},
+				{
+					Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
+					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+					Home = new(async ct => await GetHomeAsync(id, ct)), 
+					PasswordHash = res.GetProperty("PasswordHash").GetString()!,
+					PasswordSalt = res.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
+					Quota = res.GetProperty("Quota").GetInt32()
+				},
 			DatabaseConstants.Rooms => new SharpRoom 
 			{ 
 				Id = id, 
@@ -2641,14 +2647,19 @@ public partial class ArangoDatabase(
 				{ "count", count }
 			});
 
-	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken ct = default)
+	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken ct = default)
 	{
-		var hashed = passwordService.HashPassword(player.Object.DBRef.ToString(), password);
+		// If salt is provided (imported password), use the password as-is (it's already hashed)
+		// Otherwise, hash the password for new passwords
+		var hashed = salt != null 
+			? password 
+			: passwordService.HashPassword(player.Object.DBRef.ToString(), password);
 
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Players, new
 		{
 			player.Id,
-			PasswordHash = hashed
+			PasswordHash = hashed,
+			PasswordSalt = salt
 		}, mergeObjects: true, cancellationToken: ct);
 	}
 

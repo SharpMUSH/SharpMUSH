@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using DotNext.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -149,6 +150,13 @@ public partial class Commands
 			return new None();
 		}
 
+		// Rehash legacy PennMUSH passwords to modern PBKDF2 format on successful login
+		if (validPassword && PasswordService.NeedsRehash(foundDB.PasswordHash))
+		{
+			await PasswordService.RehashPasswordAsync(foundDB, password);
+			Logger?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
+		}
+
 		// Future feature: Site lock checking would go here
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
@@ -165,7 +173,7 @@ public partial class Commands
 			parser.CurrentState.Handle!.Value.ToString());
 
 		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
-		Serilog.Log.Logger.Debug("Successful login and binding for {@person}", foundDB.Object);
+		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
 	}
 

@@ -25,6 +25,8 @@ public class SharpPlayer
 
 	public required string PasswordHash { get; set; }
 	
+	public string? PasswordSalt { get; set; }
+	
 	/// <summary>
 	/// The player's build quota - maximum number of objects they can own.
 	/// </summary>
