@@ -118,7 +118,7 @@ public static class ChannelHelper
 		MString channelName,
 		bool notify = false)
 	{
-		var channel = await Mediator!.Send(new GetChannelQuery(channelName.ToPlainText()));
+		var channel = await Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
 
 		switch (channel, notify)
 		{

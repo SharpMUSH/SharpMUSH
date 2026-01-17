@@ -27,7 +27,7 @@ public static class ChannelMute
 
 		var channel = maybeChannel.AsChannel;
 
-		var players = Mediator!.CreateStream(new GetPlayerQuery(playerName.ToPlainText()));
+		var players = Mediator.CreateStream(new GetPlayerQuery(playerName.ToPlainText()));
 		var player = await players.FirstOrDefaultAsync();
 		if (player is null)
 		{
@@ -47,7 +47,7 @@ public static class ChannelMute
 			return new CallState("Player is already muted.");
 		}
 
-		await Mediator!.Send(new UpdateChannelUserStatusCommand(channel, executor,
+		await Mediator.Send(new UpdateChannelUserStatusCommand(channel, executor,
 			new SharpChannelStatus(
 				null,
 				null,

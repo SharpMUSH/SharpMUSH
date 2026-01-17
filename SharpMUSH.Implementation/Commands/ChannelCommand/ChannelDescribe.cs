@@ -31,7 +31,7 @@ public static class ChannelDescribe
 			return new CallState("You cannot modify this channel.");
 		}
 
-		await Mediator!.Send(new UpdateChannelCommand(channel,
+		await Mediator.Send(new UpdateChannelCommand(channel,
 			null, 
 			description,
 			null,

@@ -32,7 +32,7 @@ public static class ChannelHide
 
 		if (channelName != null)
 		{
-			var channelList = Mediator!.CreateStream(new GetChannelListQuery());
+			var channelList = Mediator.CreateStream(new GetChannelListQuery());
 			channels = [..await channelList.ToArrayAsync()];
 		}
 		else
@@ -65,7 +65,7 @@ public static class ChannelHide
 			    continue;
 			}
 
-			await Mediator!.Send(new UpdateChannelUserStatusCommand(
+			await Mediator.Send(new UpdateChannelUserStatusCommand(
 				channel, executor, new SharpChannelStatus(
 					null,
 					null,

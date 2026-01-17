@@ -143,12 +143,10 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		// Initialize TextFileService
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
 		
-		// Register Commands and Functions as Scoped to enable per-test-class isolation
-		// Each scope (test class, request, etc.) gets its own instance with isolated state
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
-		services.AddScoped(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
-		services.AddScoped(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
+		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
+		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 		
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();

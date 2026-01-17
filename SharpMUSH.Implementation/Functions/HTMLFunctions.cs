@@ -10,7 +10,7 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "html", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["tag", "text..."])]
-	public ValueTask<CallState> HTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> HTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Basic HTML tag wrapper - wraps content in angle brackets for simple tag generation
 		return new ValueTask<CallState>(new CallState(
@@ -22,15 +22,15 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "tag", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["tagname", "content", "attributes"])]
-	public ValueTask<CallState> Tag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> Tag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>("#-1 USE TAGWRAP INSTEAD");
 
 	[SharpFunction(Name = "endtag", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["tagname"])]
-	public ValueTask<CallState> EndTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> EndTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>("#-1 USE TAGWRAP INSTEAD");
 
 	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["tag", "content"])]
-	public ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static ValueTask<CallState> TagWrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var tagName = args["0"].Message!.ToPlainText();
@@ -62,14 +62,14 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
-	public async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// wsjson() sends JSON data out-of-band (via websocket/GMCP/etc)
 		// First argument is the JSON content to send
 		// Second optional argument is the player/target (defaults to enactor)
 
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		AnySharpObject target;
 
@@ -77,7 +77,7 @@ public partial class Functions
 		{
 			// Target specified - locate the player
 			var targetRef = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -100,7 +100,7 @@ public partial class Functions
 		// For now, this is a placeholder that sends the JSON as a regular notification
 		//
 		// Full implementation requirements:
-		// 1. Add websocket support to _connectionService (ws:// and wss:// protocols)
+		// 1. Add websocket support to ConnectionService (ws:// and wss:// protocols)
 		// 2. Implement GMCP (Generic MUD Communication Protocol) support
 		// 3. Add connection capability negotiation (detect websocket/GMCP support)
 		// 4. Modify ConnectionData to include supported protocols/capabilities
@@ -114,21 +114,21 @@ public partial class Functions
 		// - Return empty string (since OOB data doesn't display in-band)
 
 		// Placeholder: Send as notification for now
-		// await _notifyService!.Notify(target, jsonContent, executor, INotifyService.NotificationType.Announce);
+		// await NotifyService!.Notify(target, jsonContent, executor, INotifyService.NotificationType.Announce);
 
 		// Return empty string - OOB data doesn't produce visible output
 		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html"])]
-	public async ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// wshtml() sends HTML data out-of-band (via websocket/GMCP/etc)
 		// First argument is the HTML content to send
 		// Second optional argument is the player/target (defaults to enactor)
 
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		AnySharpObject target;
 
@@ -136,7 +136,7 @@ public partial class Functions
 		{
 			// Target specified - locate the player
 			var targetRef = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -159,7 +159,7 @@ public partial class Functions
 		// For now, this is a placeholder that sends the HTML as a regular notification
 		//
 		// Full implementation requirements:
-		// 1. Add websocket support to _connectionService (ws:// and wss:// protocols)
+		// 1. Add websocket support to ConnectionService (ws:// and wss:// protocols)
 		// 2. Implement HTML-over-websocket or MXP (MUD eXtension Protocol)
 		// 3. Add connection capability negotiation (detect HTML support)
 		// 4. Sanitize HTML to prevent XSS attacks (whitelist safe tags)
@@ -172,7 +172,7 @@ public partial class Functions
 		// - Return empty string (since OOB data doesn't display in-band)
 
 		// Placeholder: Send as notification for now
-		// await _notifyService!.Notify(target, htmlContent, executor, INotifyService.NotificationType.Announce);
+		// await NotifyService!.Notify(target, htmlContent, executor, INotifyService.NotificationType.Announce);
 
 		// Return empty string - OOB data doesn't produce visible output
 		return CallState.Empty;
@@ -180,17 +180,17 @@ public partial class Functions
 
 	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
 		ParameterNames = ["html", "player"])]
-	public async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Send HTML data via websocket - similar to wshtml()
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		
 		AnySharpObject target;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
 		{
 			var targetRef = targetArg.Message!.ToPlainText();
-			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -212,7 +212,7 @@ public partial class Functions
 		// TODO: Actual websocket/out-of-band HTML communication is planned for future release.
 		// 
 		// Full implementation requirements:
-		// 1. Add websocket support to _connectionService
+		// 1. Add websocket support to ConnectionService
 		// 2. Implement HTML rendering capability detection
 		// 3. Add HTML sanitization to prevent security issues
 		// 4. Support rich HTML features for web-based MUSH clients

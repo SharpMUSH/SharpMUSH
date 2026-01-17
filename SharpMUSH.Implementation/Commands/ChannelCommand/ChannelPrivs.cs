@@ -38,7 +38,7 @@ public static class ChannelPrivs
 				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError.Value)}");
 		}
 		
-		await Mediator!.Send(new UpdateChannelCommand(channel,
+		await Mediator.Send(new UpdateChannelCommand(channel,
 			null, 
 			null,
 			Privs: privilegeList.AsPrivileges,

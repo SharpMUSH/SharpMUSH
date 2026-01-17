@@ -19,18 +19,18 @@ public partial class Functions
 	/// Helper method to determine which argument is the player and which is the channel name.
 	/// Tries arg0 as player first, then arg1 if that fails.
 	/// </summary>
-	private async ValueTask<(AnySharpObject? Player, SharpChannel? Channel, CallState? Error)>
+	private static async ValueTask<(AnySharpObject? Player, SharpChannel? Channel, CallState? Error)>
 		ResolvePlayerAndChannel(IMUSHCodeParser parser, AnySharpObject executor, string playerName, string channelName)
 	{
 		// Try arg0 as player first
 		var maybePlayer =
-			await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerName,
+			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerName,
 				LocateFlags.All);
 
 		if (maybePlayer.IsError) return (null, null, maybePlayer.AsError);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, MModule.single(channelName!), false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, MModule.single(channelName!), false);
 
 		if (maybeChannel.IsError) return (maybePlayer.AsSharpObject, null, maybeChannel.AsError.Value);
 
@@ -38,19 +38,19 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "cbufferadd", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["channel", "message"])]
-	public async ValueTask<CallState> ChannelBufferAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelBufferAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!_configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
 			return new CallState(Errors.ErrorNoSideFx);
 		}
 
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -66,31 +66,31 @@ public partial class Functions
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		using (_logger!.BeginScope("<{DbRef}> {Category}: {Channel}.", 
+		using (Logger!.BeginScope("<{DbRef}> {Category}: {Channel}.", 
 			       executor.Object().ToString(), 
 			       "Channel",
 			       channel.Name.ToPlainText()))
 		{
-			_logger!.LogInformation("{ChatMessage}", message);
+			Logger!.LogInformation("{ChatMessage}", message);
 		}
 		
 		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "cemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["channel", "message"])]
-	public async ValueTask<CallState> ChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!_configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
 			return new CallState(Errors.ErrorNoSideFx);
 		}
 
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -108,7 +108,7 @@ public partial class Functions
 
 		var (_, status) = maybeMemberStatus;
 
-		await _mediator!.Publish(new ChannelMessageNotification(
+		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
@@ -120,25 +120,25 @@ public partial class Functions
 		));
 		
 		
-		using (_logger!.BeginScope("<{DbRef} {Category}: {Channel}.", 
+		using (Logger!.BeginScope("<{DbRef} {Category}: {Channel}.", 
 			       executor.Object().DBRef.ToString(), 
 			       "Channel", 
 			       channel.Name.ToPlainText()))
 		{
-			_logger!.LogInformation("{ChatMessage}", message);
+			Logger!.LogInformation("{ChatMessage}", message);
 		}
 
 		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "cflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -164,7 +164,7 @@ public partial class Functions
 		// If second argument, return player's status flags on the channel
 		var playerArg = arg1.Message!.ToPlainText();
 		var maybePlayer =
-			await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg,
+			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg,
 				LocateFlags.All);
 
 		if (maybePlayer.IsError)
@@ -195,16 +195,16 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "channels", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
-	public async ValueTask<CallState> Channels(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> Channels(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// Get player argument (default to executor)
 		var player = executor;
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0) &&
 		    !string.IsNullOrWhiteSpace(arg0.Message!.ToPlainText()))
 		{
-			var maybePlayer = await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+			var maybePlayer = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				arg0.Message!.ToPlainText(), LocateFlags.All);
 			if (maybePlayer.IsError)
 			{
@@ -222,7 +222,7 @@ public partial class Functions
 		}
 
 		// Get all channels
-		var allChannels = _mediator!.CreateStream(new GetChannelListQuery());
+		var allChannels = Mediator!.CreateStream(new GetChannelListQuery());
 		var channelArray = await allChannels.ToArrayAsync();
 
 		// Filter based on type
@@ -233,7 +233,7 @@ public partial class Functions
 			{
 				"on" => await ChannelHelper.IsMemberOfChannel(player, channel),
 				"off" => !await ChannelHelper.IsMemberOfChannel(player, channel),
-				"quiet" or _ => await _permissionService!.ChannelCanSeeAsync(player, channel)
+				"quiet" or _ => await PermissionService!.ChannelCanSeeAsync(player, channel)
 			};
 
 			if (shouldInclude)
@@ -246,13 +246,13 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "clflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -278,7 +278,7 @@ public partial class Functions
 		// If second argument provided, interpret as player and return their list status flags
 		var playerArg = arg1.Message!.ToPlainText();
 		var maybePlayer =
-			await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg,
+			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg,
 				LocateFlags.All);
 
 		if (maybePlayer.IsError)
@@ -306,13 +306,13 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "clock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(_mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -344,13 +344,13 @@ public partial class Functions
 
 	[SharpFunction(Name = "cmogrifier", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelMogrifier(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelMogrifier(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(_mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -363,13 +363,13 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "cowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(_mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -383,13 +383,13 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "crecall", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel", "lines", "start"])]
-	public async ValueTask<CallState> ChannelRecall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelRecall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -414,7 +414,7 @@ public partial class Functions
 		}
 
 		// Query the actual channel message history from the database
-		var messages = await _mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines))
+		var messages = await Mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines))
 			.Select(x => x.Message)
 			.ToListAsync();
 			
@@ -422,11 +422,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "cstatus", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "channel"])]
-	public async ValueTask<CallState> ChannelStatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelStatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var playerArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// Determine which arg is player and which is channel
 		var (player, channel, error) = await ResolvePlayerAndChannel(parser, executor, channelArg, playerArg);
@@ -456,11 +456,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ctitle", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "channel"])]
-	public async ValueTask<CallState> ChannelTitle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelTitle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// Determine which arg is player and which is channel
 		var (player, channel, error) = await ResolvePlayerAndChannel(parser, executor, arg0, arg1);
@@ -483,13 +483,13 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "cwho", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(_mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -518,19 +518,19 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "nscemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["channel", "message"])]
-	public async ValueTask<CallState> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!_configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
 			return new CallState(Errors.ErrorNoSideFx);
 		}
 
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -548,9 +548,9 @@ public partial class Functions
 
 		var (_, status) = maybeMemberStatus;
 
-		var canNoSpoof = await _permissionService!.CanNoSpoof(executor);
+		var canNoSpoof = await PermissionService!.CanNoSpoof(executor);
 
-		await _mediator!.Publish(new ChannelMessageNotification(
+		await Mediator!.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			canNoSpoof
@@ -567,12 +567,12 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "cbuffer", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelBuffer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelBuffer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -585,13 +585,13 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "cdesc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelDescription(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelDescription(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -604,13 +604,13 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "cmsgs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelMessages(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelMessages(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -620,20 +620,20 @@ public partial class Functions
 		var channel = maybeChannel.AsChannel;
 
 		// Query the actual message count from the database
-		var count = await _mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
+		var count = await Mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
 			.CountAsync();
 			
 		return new CallState(count.ToString());
 	}
 
 	[SharpFunction(Name = "cusers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
-	public async ValueTask<CallState> ChannelUsers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> ChannelUsers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		await parser.CurrentState.KnownExecutorObject(_mediator!);
+		await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{
@@ -650,7 +650,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "CINFO", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
 		ParameterNames = ["channel", "info-type"])]
-	public async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public static async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Get channel information
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
@@ -658,9 +658,9 @@ public partial class Functions
 			? typeArg.Message!.ToPlainText().ToLowerInvariant()
 			: "name";
 
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService!, _permissionService!, _mediator!,
-			_notifyService!, channelName, false);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!,
+			NotifyService!, channelName, false);
 
 		if (maybeChannel.IsError)
 		{

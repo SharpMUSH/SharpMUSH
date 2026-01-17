@@ -17,21 +17,21 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@SQL", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^SQL_OK",
 		MinArgs = 0, ParameterNames = ["query"])]
-	public async ValueTask<Option<CallState>> Sql(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Sql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// Check if SQL is available
-		if (_sqlService! == null || !_sqlService!.IsAvailable)
+		if (SqlService == null || !SqlService.IsAvailable)
 		{
-			await _notifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED");
+			await NotifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED");
 			return new CallState("#-1 SQL IS NOT ENABLED");
 		}
 
 		// Get the query from arguments
 		if (parser.CurrentState.Arguments.Count == 0 || !parser.CurrentState.Arguments.TryGetValue("0", out var queryArg))
 		{
-			await _notifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
+			await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
 			return new CallState("#-1 NO QUERY SPECIFIED");
 		}
 
@@ -39,36 +39,36 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(query))
 		{
-			await _notifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
+			await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
 			return new CallState("#-1 NO QUERY SPECIFIED");
 		}
 
 		try
 		{
-			var result = await _sqlService!.ExecuteQueryAsStringAsync(query);
-			await _notifyService!.Notify(executor, result);
+			var result = await SqlService.ExecuteQueryAsStringAsync(query);
+			await NotifyService!.Notify(executor, result);
 			return new CallState(MModule.single(result));
 		}
 		catch (MySqlException ex)
 		{
 			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-			await _notifyService!.Notify(executor, errorMsg);
+			await NotifyService!.Notify(executor, errorMsg);
 			return new CallState(errorMsg);
 		}
 		catch (InvalidOperationException ex)
 		{
 			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-			await _notifyService!.Notify(executor, errorMsg);
+			await NotifyService!.Notify(executor, errorMsg);
 			return new CallState(errorMsg);
 		}
 	}
 
 	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF"], Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = ["query", "code"])]
-	public async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
 		var switches = parser.CurrentState.Switches.ToHashSet();
 		var notifySwitch = switches.Contains("NOTIFY");
@@ -76,9 +76,9 @@ public partial class Commands
 		var spoofSwitch = switches.Contains("SPOOF");
 		
 		// Check if SQL is available
-		if (_sqlService! == null || !_sqlService!.IsAvailable)
+		if (SqlService == null || !SqlService.IsAvailable)
 		{
-			await _notifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED");
+			await NotifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED");
 			return new CallState("#-1 SQL IS NOT ENABLED");
 		}
 
@@ -87,7 +87,7 @@ public partial class Commands
 		    !parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg) ||
 		    !parser.CurrentState.Arguments.TryGetValue("1", out var queryArg))
 		{
-			await _notifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
+			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -96,24 +96,24 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(query))
 		{
-			await _notifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
+			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			await _notifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE");
+			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE");
 			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
 		}
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
 
-		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
 			async found =>
 			{
-				var maybeAttribute = await _attributeService!.GetAttributeAsync(executor, found, attrName,
+				var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, found, attrName,
 					IAttributeService.AttributeMode.Execute, true);
 
 				if (!maybeAttribute.IsAttribute)
@@ -129,13 +129,13 @@ public partial class Commands
 					var firstRow = true;
 					var rowNumber = 1;
 
-					foreach (var row in await _sqlService!.ExecuteQueryAsync(query))
+					foreach (var row in await SqlService.ExecuteQueryAsync(query))
 					{
 						if (colnamesSwitch && firstRow)
 						{
 							columnNames = row.Keys.ToList();
 
-							await _mediator!.Send(new QueueAttributeRequest(
+							await Mediator!.Send(new QueueAttributeRequest(
 								() =>
 								{
 									var remainder = columnNames
@@ -158,7 +158,7 @@ public partial class Commands
 						}
 
 						var currentRow = rowNumber;
-						await _mediator!.Send(new QueueAttributeRequest(
+						await Mediator!.Send(new QueueAttributeRequest(
 							() =>
 							{
 								var values = row.Values.ToList();
@@ -185,7 +185,7 @@ public partial class Commands
 					// If /notify switch, queue @notify command to signal completion
 					if (notifySwitch)
 					{
-						await _mediator!.Send(new QueueCommandListRequest(
+						await Mediator!.Send(new QueueCommandListRequest(
 							MModule.single("@notify me"),
 							parser.CurrentState,
 							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
@@ -200,19 +200,19 @@ public partial class Commands
 					var message = rowNumber == 1 
 						? "No rows returned." 
 						: $"{rowNumber - 1} row{(rowNumber > 2 ? "s" : "")} queued for execution.";
-					await _notifyService!.Notify(executor, message);
+					await NotifyService!.Notify(executor, message);
 					return new CallState(MModule.single(message));
 				}
 				catch (MySqlException ex)
 				{
 					var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-					await _notifyService!.Notify(executor, errorMsg);
+					await NotifyService!.Notify(executor, errorMsg);
 					return new CallState(errorMsg);
 				}
 				catch (InvalidOperationException ex)
 				{
 					var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-					await _notifyService!.Notify(executor, errorMsg);
+					await NotifyService!.Notify(executor, errorMsg);
 					return new CallState(errorMsg);
 				}
 			});

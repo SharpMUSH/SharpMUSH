@@ -60,13 +60,10 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 		               private static SharpMUSH.Library.Definitions.CommandDefinition CreateCommandDefinition(SharpMUSH.Library.Attributes.SharpCommandAttribute attr, Func<SharpMUSH.Library.ParserInterfaces.IMUSHCodeParser, SharpMUSH.Library.Attributes.SharpCommandAttribute, ValueTask<SharpMUSH.Library.DiscriminatedUnions.Option<SharpMUSH.Library.ParserInterfaces.CallState>>> method)
 		                 => new SharpMUSH.Library.Definitions.CommandDefinition(attr, (parser) => method(parser, attr));
 		             
-		               public static Dictionary<string, SharpMUSH.Library.Definitions.CommandDefinition> GetCommands(SharpMUSH.Implementation.Commands.Commands instance)
+		               public static readonly Dictionary<string, SharpMUSH.Library.Definitions.CommandDefinition> Commands = new Dictionary<string, SharpMUSH.Library.Definitions.CommandDefinition>
 		               {
-		                 return new Dictionary<string, SharpMUSH.Library.Definitions.CommandDefinition>
-		                 {
-		                   {{string.Join(",\n\t\t", infoList.Select(InfoToSource))}}
-		                 };
-		               }
+		                 {{string.Join(",\n\t\t", infoList.Select(InfoToSource))}}
+		               };
 		             }
 		             """;
 
@@ -89,7 +86,7 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 			  					Behavior = (SharpMUSH.Library.Definitions.CommandBehavior){{info.CommandBehavior}},
 			  					Switches = [ {{string.Join(", ", info.Switches.Select(x => $"\"{x}\""))}} ]
 			  				},
-			  				instance.{{info.MethodName}})
+			  				{{info.ClassName}}.{{info.MethodName}})
 			  		}
 			  """;
 	}

@@ -40,7 +40,7 @@ public static class ChannelOff
 		var channel = maybeChannel.AsChannel;
 
 		// Channel join/leave announcements are handled by the channel system
-		await Mediator!.Send(new RemoveUserFromChannelCommand(channel, target));
+		await Mediator.Send(new RemoveUserFromChannelCommand(channel, target));
 
 		await NotifyService.Notify(executor, $"CHAT: {target.Object().Name} has been removed from {channelName}.");
 		return new CallState($"{target.Object().Name} has been removed from {channelName}.");

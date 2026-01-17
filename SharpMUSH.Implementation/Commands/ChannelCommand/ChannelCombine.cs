@@ -30,7 +30,7 @@ public static class ChannelCombine
 			return new CallState("#-1 INVALID OPTION");
 		}
 
-		var channelList = Mediator!.CreateStream(new GetChannelListQuery()); 
+		var channelList = Mediator.CreateStream(new GetChannelListQuery()); 
 		if (channelName is null)
 		{
 			channels = [.. await channelList.ToArrayAsync()];
@@ -65,7 +65,7 @@ public static class ChannelCombine
 				return new CallState($"CHAT: You are already in that combination state on {channel.Name.ToPlainText()}.");
 			}
 
-			await Mediator!.Send(new UpdateChannelUserStatusCommand(channel, executor, new SharpChannelStatus(
+			await Mediator.Send(new UpdateChannelUserStatusCommand(channel, executor, new SharpChannelStatus(
 				Combine: combineOn,
 				null,
 				null,

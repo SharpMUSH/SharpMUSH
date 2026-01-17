@@ -20,11 +20,11 @@ public partial class Commands
 	private static readonly Regex ConnectionPatternRegex = ConnectionPattern();
 
 	[SharpCommand(Name = "WHO", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> Who(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Who(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var everyone = _connectionService!.GetAll();
+		var everyone = ConnectionService!.GetAll();
 		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
 		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
 		
@@ -32,8 +32,8 @@ public partial class Commands
 			.Where(player => player.Ref.HasValue)
 			.Select(async (player,i,ct) =>
 			{
-				var obj = await _mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
-				var doingText = await GetDoingText(executor, obj.Known);
+				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
+				var doingText = await Commands.GetDoingText(executor, obj.Known);
 				
 				return (string.Format(
 					fmt,
@@ -42,7 +42,7 @@ public partial class Commands
 					TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
 					doingText), obj.Known);
 			})
-			.Where(async (player, _) => await _permissionService!.CanSee(executor, player.Known))
+			.Where(async (player, _) => await PermissionService!.CanSee(executor, player.Known))
 			.ToListAsync();
 
 		var sortedPlayers = filteredPlayers.Select(x => x.Item1).ToArray();
@@ -51,7 +51,7 @@ public partial class Commands
 
 		var message = $"{header}\n{string.Join('\n', sortedPlayers)}\n{footer}";
 
-		await _notifyService!.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
+		await NotifyService!.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
 
 		return new None();
 	}
@@ -64,12 +64,12 @@ public partial class Commands
 	/// </example>
 	[SharpCommand(Name = "CONNECT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 1,
 		MaxArgs = 2, ParameterNames = ["player", "password"])]
-	public async ValueTask<Option<CallState>> Connect(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Connect(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// Early HUH if already logged in.
-		if (_connectionService!.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
+		if (ConnectionService!.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
 		{
-			await _notifyService!.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
+			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
 			return new None();
 		}
 
@@ -79,14 +79,14 @@ public partial class Commands
 
 		var nameItems = ArgHelpers.NameList(username).ToList();
 		var handle = parser.CurrentState.Handle!.Value;
-		var connectionData = _connectionService!.Get(handle);
+		var connectionData = ConnectionService.Get(handle);
 		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
 
 		if (nameItems.Count != 1)
 		{
 			// Trigger SOCKET`LOGINFAIL for invalid player name
 			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await _eventService!.TriggerEventAsync(
+			await EventService!.TriggerEventAsync(
 				parser,
 				"SOCKET`LOGINFAIL",
 				null, // System event
@@ -97,23 +97,23 @@ public partial class Commands
 				"#-1", // no valid player
 				username);
 			
-			await _notifyService!.Notify(handle, "Could not find that player.");
+			await NotifyService!.Notify(handle, "Could not find that player.");
 			return new None();
 		}
 
 		var nameItem = nameItems.First();
 		
 		var foundDB = await nameItem.Match(
-			async dbref => (await _mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
+			async dbref => (await Mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
 				? player
 				: null,
-			async name => await (_mediator!.CreateStream(new GetPlayerQuery(name))).FirstOrDefaultAsync());
+			async name => await (Mediator!.CreateStream(new GetPlayerQuery(name))).FirstOrDefaultAsync());
 
 		if (foundDB is null)
 		{
 			// Trigger SOCKET`LOGINFAIL for player not found
 			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await _eventService!.TriggerEventAsync(
+			await EventService!.TriggerEventAsync(
 				parser,
 				"SOCKET`LOGINFAIL",
 				null, // System event
@@ -124,18 +124,18 @@ public partial class Commands
 				"#-1", // no valid player
 				username);
 			
-			await _notifyService!.Notify(handle, "Could not find that player.");
+			await NotifyService!.Notify(handle, "Could not find that player.");
 			return new None();
 		}
 
-		var validPassword = _passwordService!.PasswordIsValid($"#{foundDB.Object.Key}:{foundDB.Object.CreationTime}",
+		var validPassword = PasswordService!.PasswordIsValid($"#{foundDB.Object.Key}:{foundDB.Object.CreationTime}",
 			password, foundDB.PasswordHash);
 
 		if (!validPassword && !string.IsNullOrEmpty(foundDB.PasswordHash))
 		{
 			// Trigger SOCKET`LOGINFAIL for invalid password
 			// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
-			await _eventService!.TriggerEventAsync(
+			await EventService!.TriggerEventAsync(
 				parser,
 				"SOCKET`LOGINFAIL",
 				null, // System event
@@ -146,25 +146,25 @@ public partial class Commands
 				$"#{foundDB.Object.Key}", // valid player objid
 				foundDB.Object.Name);
 			
-			await _notifyService!.Notify(handle, "Invalid Password.");
+			await NotifyService!.Notify(handle, "Invalid Password.");
 			return new None();
 		}
 
 		// Rehash legacy PennMUSH passwords to modern PBKDF2 format on successful login
-		if (validPassword && _passwordService!.NeedsRehash(foundDB.PasswordHash))
+		if (validPassword && PasswordService.NeedsRehash(foundDB.PasswordHash))
 		{
-			await _passwordService!.RehashPasswordAsync(foundDB, password);
-			_logger!?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
+			await PasswordService.RehashPasswordAsync(foundDB, password);
+			Logger?.LogInformation("Rehashed legacy password for player #{Key}", foundDB.Object.Key);
 		}
 
 		// Future feature: Site lock checking would go here
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
-		await _connectionService!.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
+		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
 
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible
 		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
-		var connectionCount = await _connectionService!.Get(playerDbRef).CountAsync();
-		await _eventService!.TriggerEventAsync(
+		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
+		await EventService!.TriggerEventAsync(
 			parser,
 			"PLAYER`CONNECT",
 			playerDbRef, // Enactor is the player who connected
@@ -172,25 +172,25 @@ public partial class Commands
 			connectionCount.ToString(),
 			parser.CurrentState.Handle!.Value.ToString());
 
-		await _notifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
-		_logger!?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
+		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
+		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new None();
 	}
 
 	[SharpCommand(Name = "QUIT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public static async ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
-		await _notifyService!.Notify(executor, MModule.single("GOODBYE."));
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
 		
 		// Display Disconnect Banner (DownMotd) if configured
-		var motdData = await _objectDataService!.GetExpandedServerDataAsync<MotdData>();
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		if (!string.IsNullOrWhiteSpace(motdData?.DownMotd))
 		{
-			await _notifyService!.Notify(executor, motdData.DownMotd);
+			await NotifyService!.Notify(executor, motdData.DownMotd);
 		}
 		
-		await _connectionService!.Disconnect(parser.CurrentState.Handle!.Value);
+		await ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
 		return new None();
 	}
 

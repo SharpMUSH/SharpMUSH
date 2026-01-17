@@ -36,7 +36,7 @@ public static class ChannelMogrifier
 			LocateFlags.All,
 			async locate =>
 			{
-				await Mediator!.Send(new UpdateChannelCommand(channel, 
+				await Mediator.Send(new UpdateChannelCommand(channel, 
 					null, 
 					null, 
 					null, 

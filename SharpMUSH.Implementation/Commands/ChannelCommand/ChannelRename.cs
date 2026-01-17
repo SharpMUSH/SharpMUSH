@@ -47,7 +47,7 @@ public static class ChannelRename
 			return new CallState("#-1 CHAT: Invalid channel name.");
 		}
 
-		await Mediator!.Send(new UpdateChannelCommand(channel,
+		await Mediator.Send(new UpdateChannelCommand(channel,
 			newChannelName,
 			null,
 			null,
