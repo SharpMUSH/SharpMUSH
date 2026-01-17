@@ -1045,16 +1045,16 @@ public partial class Functions
 	{
 		// RNUM is deprecated - use locate() instead
 		// This implements basic functionality for backwards compatibility
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var containerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var objectArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, containerArg, All,
 			async container =>
 			{
 				// Check if executor can examine the container
-				if (!await PermissionService!.CanExamine(executor, container))
+				if (!await _permissionService!.CanExamine(executor, container))
 				{
 					return new CallState("#-1");
 				}
@@ -1066,7 +1066,7 @@ public partial class Functions
 				}
 
 				var matches = new List<AnySharpContent>();
-				await foreach (var item in container.AsContainer.Content(Mediator!))
+				await foreach (var item in container.AsContainer.Content(_mediator!))
 				{
 					var name = item.Object().Name;
 					if (name.Equals(objectArg, StringComparison.OrdinalIgnoreCase) ||

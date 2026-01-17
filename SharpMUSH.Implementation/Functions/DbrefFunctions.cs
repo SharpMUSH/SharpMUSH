@@ -25,9 +25,9 @@ public partial class Functions
 	public async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
+		var locateResult = await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
 			LocateFlags.All);
 
 		if (locateResult.IsError)
@@ -50,7 +50,7 @@ public partial class Functions
 			},
 			async exit =>
 			{
-				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
+				var linkTypeAttr = await _attributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
 				
 				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
 				{
@@ -85,9 +85,9 @@ public partial class Functions
 	[SharpFunction(Name = "children", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Children(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -102,9 +102,9 @@ public partial class Functions
 	[SharpFunction(Name = "con", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Con(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -116,7 +116,7 @@ public partial class Functions
 					return CallState.Empty;
 				}
 
-				var contents = locate.AsContainer.Content(Mediator!);
+				var contents = locate.AsContainer.Content(_mediator!);
 				return string.Join(" ", contents.Take(1).Select(x => x.Object().DBRef.ToString()));
 			});
 	}
@@ -124,14 +124,14 @@ public partial class Functions
 	[SharpFunction(Name = "controls", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "victim"])]
 	public async ValueTask<CallState> Controls(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
 		var arg1Split = arg1.Split('/');
 		var isAttributeCheck = arg1Split.Length > 1;
 
-		var maybeLocateObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var maybeLocateObject = await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
 			arg0,
@@ -148,7 +148,7 @@ public partial class Functions
 		{
 			var attributeObj = arg1Split[0];
 			var attribute = string.Join("/", arg1Split.Skip(1));
-			var maybeLocateAttributeObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			var maybeLocateAttributeObject = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor,
 				executor,
 				attributeObj,
@@ -161,7 +161,7 @@ public partial class Functions
 
 			var attributeObject = maybeLocateAttributeObject.AsSharpObject;
 
-			var locateAttribute = await AttributeService!.GetAttributeAsync(executor, attributeObject, attribute,
+			var locateAttribute = await _attributeService!.GetAttributeAsync(executor, attributeObject, attribute,
 				IAttributeService.AttributeMode.Read);
 
 			if (locateAttribute.IsError)
@@ -176,12 +176,12 @@ public partial class Functions
 
 			var foundAttribute = locateAttribute.AsAttribute;
 
-			var controlsAttribute = await PermissionService!.Controls(locateObject, attributeObject, foundAttribute);
+			var controlsAttribute = await _permissionService!.Controls(locateObject, attributeObject, foundAttribute);
 
 			return controlsAttribute;
 		}
 
-		var maybeLocateVictim = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		var maybeLocateVictim = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
 			arg1,
@@ -194,7 +194,7 @@ public partial class Functions
 
 		var locateVictim = maybeLocateVictim.AsSharpObject;
 
-		var controls = await PermissionService!.Controls(locateObject, locateVictim);
+		var controls = await _permissionService!.Controls(locateObject, locateVictim);
 
 		return controls;
 	}
@@ -204,14 +204,14 @@ public partial class Functions
 	{
 		// entrances() finds all exits that lead to a location
 		// Format: entrances([<location>][, <type>][, <start>][, <count>])
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 
 		AnySharpObject target = executor;
 		if (args.TryGetValue("0", out var locArg))
 		{
 			var locStr = locArg.Message!.ToPlainText();
-			var maybeTarget = await LocateService!.Locate(parser, executor, executor, locStr, LocateFlags.All);
+			var maybeTarget = await _locateService!.Locate(parser, executor, executor, locStr, LocateFlags.All);
 			if (!maybeTarget.IsValid())
 			{
 				return new CallState("#-1 INVALID LOCATION");
@@ -219,7 +219,7 @@ public partial class Functions
 			target = maybeTarget.AsAnyObject;
 		}
 
-		var exits = Mediator!.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
+		var exits = _mediator!.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
 		var entrances = new List<AnySharpObject>();
 
 		await foreach (var exit in exits)
@@ -286,10 +286,10 @@ public partial class Functions
 	[SharpFunction(Name = "exit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Exit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = await parser.CurrentState.KnownEnactorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -307,7 +307,7 @@ public partial class Functions
 				}
 
 				// Todo: Turn Content into async enumerable.
-				var exits = await locate.AsContainer.Content(Mediator!)
+				var exits = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsExit)
 					.Select(x => x.Object().DBRef)
 					.ToArrayAsync();
@@ -323,10 +323,10 @@ public partial class Functions
 	{
 		// followers() returns list of objects following the target
 		// Objects follow by setting their FOLLOWING attribute to the target's dbref
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
@@ -337,7 +337,7 @@ public partial class Functions
 				// Use filtered query to get all objects more efficiently
 				// Note: We can't filter by attribute value in the database easily, 
 				// so we still need to check attributes in application code
-				var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
+				var allObjects = _mediator!.CreateStream(new GetAllObjectsQuery());
 				
 				await foreach (var obj in allObjects)
 				{
@@ -362,15 +362,15 @@ public partial class Functions
 	{
 		// following() returns the object that the target is following
 		// Objects track who they follow via the FOLLOWING attribute
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
 				// Get the FOLLOWING attribute from the target object
-				var followingAttr = await AttributeService!.GetAttributeAsync(
+				var followingAttr = await _attributeService!.GetAttributeAsync(
 					executor, found, "FOLLOWING", IAttributeService.AttributeMode.Read, false);
 				
 				if (followingAttr.IsAttribute)
@@ -386,10 +386,10 @@ public partial class Functions
 	[SharpFunction(Name = "home", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Home(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locateResult = await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, arg0, LocateFlags.All);
 
 		if (locateResult.IsError)
@@ -431,13 +431,13 @@ public partial class Functions
 		if (args.Count == 0)
 		{
 			// Return all available lock flags
-			var flags = LockService!.LockPrivileges.Keys;
+			var flags = _lockService!.LockPrivileges.Keys;
 			return new CallState(string.Join(" ", flags));
 		}
 		
 		// With argument, return flags for a specific lock type
 		var lockType = args["0"].Message!.ToPlainText();
-		if (LockService!.SystemLocks.TryGetValue(lockType, out var lockFlags))
+		if (_lockService!.SystemLocks.TryGetValue(lockType, out var lockFlags))
 		{
 			// Convert flags enum to string representation
 			var flagList = new List<string>();
@@ -481,9 +481,9 @@ public partial class Functions
 		var objectRef = parts[0];
 		var lockType = parts.Length > 1 ? parts[1] : "Basic";
 		
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objectRef, LocateFlags.All,
 			found =>
 			{
@@ -517,11 +517,11 @@ public partial class Functions
 	{
 		// elock() evaluates a lock against an object
 		// Format: elock(<object>, <lock name>)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var lockName = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			found =>
 			{
@@ -532,7 +532,7 @@ public partial class Functions
 				}
 
 				// Evaluate the lock with the executor as the unlocker
-				var result = LockService!.Evaluate(lockData.LockString, found, executor);
+				var result = _lockService!.Evaluate(lockData.LockString, found, executor);
 				return ValueTask.FromResult(new CallState(result));
 			});
 	}
@@ -542,14 +542,14 @@ public partial class Functions
 	{
 		// llocks() lists all locks on an object
 		// Format: llocks([<object>])
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 		
 		AnySharpObject target = executor;
 		if (args.TryGetValue("0", out var objArg))
 		{
 			var objStr = objArg.Message!.ToPlainText();
-			var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
+			var maybeTarget = await _locateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
 			if (!maybeTarget.IsValid())
 			{
 				return new CallState("#-1 INVALID OBJECT");
@@ -567,10 +567,10 @@ public partial class Functions
 	{
 		// locks() is like llocks() but requires an object argument
 		// Format: locks(<object>)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		
-		var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
+		var maybeTarget = await _locateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
 		if (!maybeTarget.IsValid())
 		{
 			return new CallState("#-1 INVALID OBJECT");
@@ -649,11 +649,11 @@ LOCATE()
 		var nameArg = args["1"].Message!.ToPlainText();
 		var parametersArg = args["2"].Message!.ToPlainText();
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
 		// First, locate the looker object
 		var maybeLooker =
-			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, lookerArg,
+			await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, lookerArg,
 				LocateFlags.All);
 		if (maybeLooker.IsError)
 		{
@@ -670,7 +670,7 @@ LOCATE()
 		var requireExactType = parametersArg.Contains('F', StringComparison.OrdinalIgnoreCase);
 
 		// Perform the locate operation
-		var maybeFound = await LocateService.Locate(parser, looker, executor, nameArg, locateFlags);
+		var maybeFound = await _locateService.Locate(parser, looker, executor, nameArg, locateFlags);
 
 		if (maybeFound.IsError)
 		{
@@ -766,14 +766,14 @@ LOCATE()
 	{
 		// lock() gets a lock string from an object
 		// Format: lock(<object>[, <lock name>])
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var args = parser.CurrentState.Arguments;
 		var lockName = args.TryGetValue("1", out var lockArg) 
 			? lockArg.Message!.ToPlainText() 
 			: "Basic";
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			found =>
 			{
@@ -792,7 +792,7 @@ LOCATE()
 	{
 		// lockfilter() filters objects by lock evaluation
 		// Format: lockfilter(<object list>, <lock name>[, <lock eval>])
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 		
 		var objListStr = args["0"].Message!.ToPlainText();
@@ -806,7 +806,7 @@ LOCATE()
 
 		foreach (var objRef in objList)
 		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			var maybeObj = await _locateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 			if (!maybeObj.IsValid())
 			{
 				continue;
@@ -826,7 +826,7 @@ LOCATE()
 			}
 
 			// Evaluate the lock
-			var passes = LockService!.Evaluate(lockData.LockString, found, executor);
+			var passes = _lockService!.Evaluate(lockData.LockString, found, executor);
 			
 			if (passes == shouldPass)
 			{
@@ -842,10 +842,10 @@ LOCATE()
 	{
 		// lockowner() returns the owner of an object (who controls its locks)
 		// Format: lockowner(<object>)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
@@ -857,8 +857,8 @@ LOCATE()
 	[SharpFunction(Name = "lparent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "generations"])]
 	public async ValueTask<CallState> ListParents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var maybeLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var maybeLocate = await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -881,7 +881,7 @@ LOCATE()
 			}
 
 			var knownParent = parent.Known;
-			if (!await PermissionService!.CanExamine(executor, knownParent))
+			if (!await _permissionService!.CanExamine(executor, knownParent))
 			{
 				break;
 			}
@@ -904,7 +904,7 @@ LOCATE()
 		// lsearch() searches the database for objects matching criteria
 		// Format: lsearch(<player>, <class1>, <restriction1>, <class2>, <restriction2>, ...)
 		// Per PennMUSH documentation: comma-separated positional arguments, NOT equals syntax
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 
 		if (args.Count == 0)
@@ -918,7 +918,7 @@ LOCATE()
 
 		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
-			var maybeClass = await LocateService!.Locate(parser, executor, executor, classArg, LocateFlags.All);
+			var maybeClass = await _locateService!.Locate(parser, executor, executor, classArg, LocateFlags.All);
 			if (!maybeClass.IsValid())
 			{
 				return new CallState("#-1 INVALID CLASS");
@@ -1003,11 +1003,11 @@ LOCATE()
 					if (int.TryParse(restriction, out var countVal)) count = countVal;
 					break;
 				case "ZONE":
-					var maybeZone = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
+					var maybeZone = await _locateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object().DBRef;
 					break;
 				case "PARENT":
-					var maybeParent = await LocateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
+					var maybeParent = await _locateService!.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeParent.IsValid()) parent = maybeParent.AsAnyObject.Object().DBRef;
 					break;
 				case "FLAG":
@@ -1047,7 +1047,7 @@ LOCATE()
 					}
 					else
 					{
-						compiledLocks.Add(BooleanExpressionParser!.Compile(value));
+						compiledLocks.Add(_booleanExpressionParser!.Compile(value));
 					}
 					break;
 				
@@ -1104,7 +1104,7 @@ LOCATE()
 		};
 
 		// Query database with filters applied at database level
-		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
+		var filteredObjects = _mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
 		
 		if (!hasAppLevelCriteria)
 		{
@@ -1168,7 +1168,7 @@ LOCATE()
 			if (matches && hasListenCriteria)
 			{
 				// Check if the object has any @listen attributes matching the pattern
-				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
+				var attributesResult = await _attributeService!.GetVisibleAttributesAsync(executor, typedObj);
 				if (!attributesResult.IsError)
 				{
 					var hasMatchingListen = false;
@@ -1202,7 +1202,7 @@ LOCATE()
 			if (matches && hasCommandCriteria)
 			{
 				// Check if the object has any $-commands matching the pattern
-				var attributesResult = await AttributeService!.GetVisibleAttributesAsync(executor, typedObj);
+				var attributesResult = await _attributeService!.GetVisibleAttributesAsync(executor, typedObj);
 				if (!attributesResult.IsError)
 				{
 					var hasMatchingCommand = false;
@@ -1278,9 +1278,9 @@ LOCATE()
 	private async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(SharpObject obj)
 	{
 		// The object needs to be fetched properly from the database to get the correct type-specific object
-		// We use the Mediator to fetch the fully-typed object asynchronously
+		// We use the _mediator to fetch the fully-typed object asynchronously
 		var dbref = new DBRef(obj.Key, obj.CreationTime);
-		var result = await Mediator!.Send(new GetObjectNodeQuery(dbref));
+		var result = await _mediator!.Send(new GetObjectNodeQuery(dbref));
 		
 		if (result.IsNone)
 		{
@@ -1307,7 +1307,7 @@ LOCATE()
 	[SharpFunction(Name = "namelist", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute"])]
 	public async ValueTask<CallState> NameList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var namelist = ArgHelpers.NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 		var hasErrorCallback = parser.CurrentState.Arguments.Count > 1 
 			&& !string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["1"].Message?.ToPlainText());
@@ -1327,7 +1327,7 @@ LOCATE()
 				var objPart = callbackSpec.Substring(0, slashIndex);
 				var attrPart = callbackSpec.Substring(slashIndex + 1);
 				
-				var objResult = await LocateService!.Locate(parser, executor, executor, objPart, LocateFlags.All);
+				var objResult = await _locateService!.Locate(parser, executor, executor, objPart, LocateFlags.All);
 				if (objResult.IsValid())
 				{
 					callbackObject = objResult.WithoutError().WithoutNone();
@@ -1355,7 +1355,7 @@ LOCATE()
 			{
 				// Already a dbref - validate it exists
 				var dbref = item.AsT0;
-				var exists = await Mediator!.Send(new GetBaseObjectNodeQuery(dbref));
+				var exists = await _mediator!.Send(new GetBaseObjectNodeQuery(dbref));
 				
 				if (exists != null)
 				{
@@ -1373,7 +1373,7 @@ LOCATE()
 				var name = item.AsT1;
 				originalName = name;
 				
-				var locateResult = await LocateService!.Locate(parser, executor, executor, name, LocateFlags.All);
+				var locateResult = await _locateService!.Locate(parser, executor, executor, name, LocateFlags.All);
 				
 				if (locateResult.IsValid())
 				{
@@ -1419,7 +1419,7 @@ LOCATE()
 				// Call error callback if provided
 				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
 				{
-					var attrResult = await AttributeService!.GetAttributeAsync(
+					var attrResult = await _attributeService!.GetAttributeAsync(
 						executor, callbackObject, string.Join("`", callbackAttribute),
 						IAttributeService.AttributeMode.Read, true);
 					
@@ -1446,10 +1446,10 @@ LOCATE()
 	[SharpFunction(Name = "nchildren", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfChildren(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg1 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg1, LocateFlags.All,
 			async x =>
 			{
@@ -1461,9 +1461,9 @@ LOCATE()
 	[SharpFunction(Name = "next", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Next(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -1491,7 +1491,7 @@ LOCATE()
 				}
 
 				// Get all contents of the location
-				var contents = await location.Content(Mediator!).ToListAsync();
+				var contents = await location.Content(_mediator!).ToListAsync();
 
 				// Find the current object in the list
 				var currentIndex = contents.FindIndex(x => x.Object().DBRef == locate.Object().DBRef);
@@ -1512,7 +1512,7 @@ LOCATE()
 	{
 		// nextdbref() returns the next DB reference that will be assigned
 		// This requires knowing the highest dbref in the database
-		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery())
+		var allObjects = await _mediator!.CreateStream(new GetAllObjectsQuery())
 			.ToListAsync();
 
 		if (allObjects.Count == 0)
@@ -1558,10 +1558,10 @@ LOCATE()
 	[SharpFunction(Name = "num", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Number(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser,
 			executor,
 			executor,
@@ -1582,7 +1582,7 @@ LOCATE()
 	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Parent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args["0"].Message!.ToPlainText()!;
 		var arg1 = args.TryGetValue("1", out var value)
@@ -1591,23 +1591,23 @@ LOCATE()
 
 		if (arg1 is null)
 		{
-			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, arg0, LocateFlags.All,
 				async found =>
 					(await found.Object().Parent.WithCancellation(CancellationToken.None)).Object()
 					?.DBRef.ToString() ?? "");
 		}
 
-		if (Configuration!.CurrentValue.Function.FunctionSideEffects == false)
+		if (_configuration!.CurrentValue.Function.FunctionSideEffects == false)
 		{
 			return Errors.ErrorNoSideFx;
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
 			async target =>
 			{
-				if (!await PermissionService!.Controls(executor, target))
+				if (!await _permissionService!.Controls(executor, target))
 				{
 					return Errors.ErrorPerm;
 				}
@@ -1617,16 +1617,16 @@ LOCATE()
 					case { Count: 1 }:
 					case { Count: 2 } when args["1"].Message!.ToPlainText()
 						.Equals("none", StringComparison.InvariantCultureIgnoreCase):
-						await Mediator!.Send(new UnsetObjectParentCommand(target));
+						await _mediator!.Send(new UnsetObjectParentCommand(target));
 						return CallState.Empty;
 					default:
-						return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+						return await _locateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 							parser, executor, executor, args["1"].Message!.ToPlainText(), LocateFlags.All,
 							async newParent =>
 							{
-								if (!await PermissionService.Controls(executor, newParent)
+								if (!await _permissionService.Controls(executor, newParent)
 								    || (!await target.HasFlag("LINK_OK")
-								        && !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
+								        && !_permissionService.PassesLock(executor, newParent, LockType.Parent)))
 								{
 									return Errors.ErrorPerm;
 								}
@@ -1636,7 +1636,7 @@ LOCATE()
 									return "#-1 CYCLE DETECTED";
 								}
 
-								await Mediator!.Send(new SetObjectParentCommand(target, newParent));
+								await _mediator!.Send(new SetObjectParentCommand(target, newParent));
 								return newParent;
 							}
 						);
@@ -1648,9 +1648,9 @@ LOCATE()
 	[SharpFunction(Name = "pmatch", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["name"])]
 	public async ValueTask<CallState> PlayerMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -1661,7 +1661,7 @@ LOCATE()
 	public async ValueTask<CallState> RecursiveLocation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// rloc() recursively gets location N levels up
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var levelsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
@@ -1670,7 +1670,7 @@ LOCATE()
 			return new CallState("#-1 INVALID LEVEL");
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
@@ -1703,16 +1703,16 @@ LOCATE()
 	[SharpFunction(Name = "room", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Room(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
 			async x =>
 			{
-				var room = await LocateService.Room(x);
+				var room = await _locateService.Room(x);
 				return room.Object().DBRef;
 			});
 	}
@@ -1720,9 +1720,9 @@ LOCATE()
 	[SharpFunction(Name = "where", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Where(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -1739,12 +1739,12 @@ LOCATE()
 	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Zone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args["0"].Message!.ToPlainText()!;
 		var hasArg1 = args.TryGetValue("1", out var arg1Value);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -1752,7 +1752,7 @@ LOCATE()
 			async target =>
 			{
 				// Check if we can examine the object
-				if (!await PermissionService!.CanExamine(executor, target))
+				if (!await _permissionService!.CanExamine(executor, target))
 				{
 					return "#-1";
 				}
@@ -1760,7 +1760,7 @@ LOCATE()
 				if (hasArg1)
 				{
 					// Setting zone is a side effect
-					if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+					if (!_configuration!.CurrentValue.Function.FunctionSideEffects)
 					{
 						return Errors.ErrorNoSideFx;
 					}
@@ -1772,17 +1772,17 @@ LOCATE()
 					if (arg1Str.Equals("none", StringComparison.OrdinalIgnoreCase))
 					{
 						// Check permissions
-						if (!await PermissionService!.Controls(executor, target))
+						if (!await _permissionService!.Controls(executor, target))
 						{
 							return Errors.ErrorPerm;
 						}
 						
-						await Mediator!.Send(new UnsetObjectZoneCommand(target));
+						await _mediator!.Send(new UnsetObjectZoneCommand(target));
 						return string.Empty;
 					}
 					
 					// Locate the zone object
-					var maybeZone = await LocateService!.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
+					var maybeZone = await _locateService!.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
 					if (!maybeZone.IsValid())
 					{
 						return "#-1 INVALID ZONE";
@@ -1791,13 +1791,13 @@ LOCATE()
 					var zone = maybeZone.AsAnyObject;
 					
 					// Check permissions - must control both object and zone, or pass ChZone lock
-					if (!await PermissionService!.Controls(executor, target))
+					if (!await _permissionService!.Controls(executor, target))
 					{
 						return Errors.ErrorPerm;
 					}
 					
-					bool canZone = await PermissionService.Controls(executor, zone);
-					if (!canZone && !LockService!.Evaluate(LockType.ChZone, zone, executor))
+					bool canZone = await _permissionService.Controls(executor, zone);
+					if (!canZone && !_lockService!.Evaluate(LockType.ChZone, zone, executor))
 					{
 						return Errors.ErrorPerm;
 					}
@@ -1808,24 +1808,24 @@ LOCATE()
 						// Clear privileged flags
 						if (await target.HasFlag("WIZARD"))
 						{
-							await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!WIZARD", false);
+							await _manipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!WIZARD", false);
 						}
 						if (await target.HasFlag("ROYALTY"))
 						{
-							await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!ROYALTY", false);
+							await _manipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!ROYALTY", false);
 						}
 						if (await target.HasFlag("TRUST"))
 						{
-							await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!TRUST", false);
+							await _manipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!TRUST", false);
 						}
 					}
 					
-					await Mediator!.Send(new SetObjectZoneCommand(target, zone));
+					await _mediator!.Send(new SetObjectZoneCommand(target, zone));
 					return string.Empty;
 				}
 
 				// Get zone of the target object - query fresh from database
-				var freshTarget = await Mediator!.Send(new GetObjectNodeQuery(target.Object().DBRef));
+				var freshTarget = await _mediator!.Send(new GetObjectNodeQuery(target.Object().DBRef));
 				var zoneObj = await freshTarget.Known.Object().Zone.WithCancellation(CancellationToken.None);
 				return zoneObj.IsNone 
 					? "#-1" 
@@ -1836,7 +1836,7 @@ LOCATE()
 	[SharpFunction(Name = "xthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ExtractThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -1846,7 +1846,7 @@ LOCATE()
 			return "#-1 INVALID ARGUMENTS";
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -1858,7 +1858,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var things = await locate.AsContainer.Content(Mediator!)
+				var things = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsThing)
 					.Skip(start - 1)
 					.Take(count)
@@ -1872,7 +1872,7 @@ LOCATE()
 	[SharpFunction(Name = "xvcon", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ExtractVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -1882,7 +1882,7 @@ LOCATE()
 			return "#-1 INVALID ARGUMENTS";
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -1894,8 +1894,8 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var paginated = await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+				var paginated = await locate.AsContainer.Content(_mediator!)
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.Skip(start - 1)
 					.Take(count)
 					.Select(x => x.Object().DBRef.ToString())
@@ -1908,7 +1908,7 @@ LOCATE()
 	[SharpFunction(Name = "xvexits", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ExtractVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -1918,7 +1918,7 @@ LOCATE()
 			return "#-1 INVALID ARGUMENTS";
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -1930,9 +1930,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var paginated = await locate.AsContainer.Content(Mediator!)
+				var paginated = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.Skip(start - 1)
 					.Take(count)
 					.Select(x => x.Object().DBRef.ToString())
@@ -1945,7 +1945,7 @@ LOCATE()
 	[SharpFunction(Name = "xvplayers", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ExtractVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -1955,7 +1955,7 @@ LOCATE()
 			return "#-1 INVALID ARGUMENTS";
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -1967,9 +1967,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var paginated = await locate.AsContainer.Content(Mediator!)
+				var paginated = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.Skip(start - 1)
 					.Take(count)
 					.Select(x => x.Object().DBRef.ToString())
@@ -1982,7 +1982,7 @@ LOCATE()
 	[SharpFunction(Name = "xvthings", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ExtractVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -1992,7 +1992,7 @@ LOCATE()
 			return "#-1 INVALID ARGUMENTS";
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -2004,9 +2004,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var paginated = await locate.AsContainer.Content(Mediator!)
+				var paginated = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.Skip(start - 1)
 					.Take(count)
 					.Select(x => x.Object().DBRef.ToString())
@@ -2019,7 +2019,7 @@ LOCATE()
 	[SharpFunction(Name = "xcon", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ExtractContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -2029,7 +2029,7 @@ LOCATE()
 			return "#-1 INVALID ARGUMENTS";
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -2041,7 +2041,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var contents = await locate.AsContainer.Content(Mediator!)
+				var contents = await locate.AsContainer.Content(_mediator!)
 					.Skip(start - 1)
 					.Take(count)
 					.Select(x => x.Object().DBRef.ToString())
@@ -2054,7 +2054,7 @@ LOCATE()
 	[SharpFunction(Name = "xexits", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ExtractExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -2064,7 +2064,7 @@ LOCATE()
 			return "#-1 INVALID ARGUMENTS";
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -2076,7 +2076,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var exits = await locate.AsContainer.Content(Mediator!)
+				var exits = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsExit)
 					.Skip(start - 1)
 					.Take(count)
@@ -2090,7 +2090,7 @@ LOCATE()
 	[SharpFunction(Name = "xplayers", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ExtractPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var arg2 = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -2100,7 +2100,7 @@ LOCATE()
 			return "#-1 INVALID ARGUMENTS";
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			arg0,
@@ -2112,7 +2112,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var players = await  locate.AsContainer.Content(Mediator!)
+				var players = await  locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsPlayer)
 					.Skip(start - 1)
 					.Take(count)
@@ -2126,9 +2126,9 @@ LOCATE()
 	[SharpFunction(Name = "lcon", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2140,7 +2140,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ",  locate.AsContainer.Content(Mediator!)
+				return string.Join(" ",  locate.AsContainer.Content(_mediator!)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
 	}
@@ -2148,9 +2148,9 @@ LOCATE()
 	[SharpFunction(Name = "lexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2162,7 +2162,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", locate.AsContainer.Content(Mediator!)
+				return string.Join(" ", locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsExit)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
@@ -2171,9 +2171,9 @@ LOCATE()
 	[SharpFunction(Name = "lplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2185,7 +2185,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", locate.AsContainer.Content(Mediator!)
+				return string.Join(" ", locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsPlayer)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
@@ -2194,9 +2194,9 @@ LOCATE()
 	[SharpFunction(Name = "lthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2208,7 +2208,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ", locate.AsContainer.Content(Mediator!)
+				return string.Join(" ", locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsThing)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
@@ -2217,9 +2217,9 @@ LOCATE()
 	[SharpFunction(Name = "lvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2231,8 +2231,8 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleContents = await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+				var visibleContents = await locate.AsContainer.Content(_mediator!)
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.Select(x => x.Object().DBRef.ToString())
 					.ToListAsync();
 
@@ -2243,9 +2243,9 @@ LOCATE()
 	[SharpFunction(Name = "lvexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2257,9 +2257,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleExits = await locate.AsContainer.Content(Mediator!)
+				var visibleExits = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.Select(x => x.Object().DBRef.ToString())
 					.ToListAsync();
 
@@ -2270,9 +2270,9 @@ LOCATE()
 	[SharpFunction(Name = "lvplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2284,9 +2284,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visiblePlayers = await locate.AsContainer.Content(Mediator!)
+				var visiblePlayers = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.Select(x => x.Object().DBRef.ToString())
 					.ToListAsync();
 
@@ -2297,9 +2297,9 @@ LOCATE()
 	[SharpFunction(Name = "lvthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2311,9 +2311,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var visibleThings = await locate.AsContainer.Content(Mediator!)
+				var visibleThings = await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.Select(x => x.Object().DBRef.ToString())
 					.ToListAsync();
 
@@ -2325,11 +2325,11 @@ LOCATE()
 	public async ValueTask<CallState> OrFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// orflags() checks if object has ANY of the specified flags
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
@@ -2349,7 +2349,7 @@ LOCATE()
 	public async ValueTask<CallState> OrListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// orlflags() checks a list of objects to see if ANY have ANY of the flags
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
@@ -2358,7 +2358,7 @@ LOCATE()
 
 		foreach (var objRef in objList)
 		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			var maybeObj = await _locateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 			if (maybeObj.IsValid())
 			{
 				var found = maybeObj.AsAnyObject;
@@ -2378,7 +2378,7 @@ LOCATE()
 	public async ValueTask<CallState> OrListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// orlpowers() checks a list of objects to see if ANY have ANY of the powers
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var powersArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
@@ -2387,7 +2387,7 @@ LOCATE()
 
 		foreach (var objRef in objList)
 		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			var maybeObj = await _locateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 			if (maybeObj.IsValid())
 			{
 				var found = maybeObj.AsAnyObject;
@@ -2407,11 +2407,11 @@ LOCATE()
 	public async ValueTask<CallState> AndFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// andflags() checks if object has ALL of the specified flags
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
@@ -2431,7 +2431,7 @@ LOCATE()
 	public async ValueTask<CallState> AndListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// andlflags() checks if ALL objects in list have ALL of the flags
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
@@ -2445,7 +2445,7 @@ LOCATE()
 
 		foreach (var objRef in objList)
 		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			var maybeObj = await _locateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 			if (!maybeObj.IsValid())
 			{
 				return new CallState(false);
@@ -2466,7 +2466,7 @@ LOCATE()
 	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
 	public async ValueTask<CallState> AndListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var powersArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
@@ -2480,7 +2480,7 @@ LOCATE()
 
 		foreach (var objRef in objList)
 		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+			var maybeObj = await _locateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 			if (!maybeObj.IsValid())
 			{
 				return new CallState(false);
@@ -2501,9 +2501,9 @@ LOCATE()
 	[SharpFunction(Name = "ncon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2515,16 +2515,16 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await locate.AsContainer.Content(Mediator!).CountAsync();
+				return await locate.AsContainer.Content(_mediator!).CountAsync();
 			});
 	}
 
 	[SharpFunction(Name = "nexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2536,7 +2536,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await locate.AsContainer.Content(Mediator!)
+				return await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsExit)
 					.CountAsync();
 			});
@@ -2545,9 +2545,9 @@ LOCATE()
 	[SharpFunction(Name = "nplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2559,7 +2559,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await locate.AsContainer.Content(Mediator!)
+				return await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsPlayer)
 					.CountAsync();
 			});
@@ -2568,9 +2568,9 @@ LOCATE()
 	[SharpFunction(Name = "nthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2582,7 +2582,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await locate.AsContainer.Content(Mediator!)
+				return await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsThing)
 					.CountAsync();
 			});
@@ -2591,9 +2591,9 @@ LOCATE()
 	[SharpFunction(Name = "nvcon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfVisualContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2605,8 +2605,8 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await locate.AsContainer.Content(Mediator!)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+				return await locate.AsContainer.Content(_mediator!)
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.CountAsync();
 			});
 	}
@@ -2614,9 +2614,9 @@ LOCATE()
 	[SharpFunction(Name = "nvexits", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfVisualExits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2628,9 +2628,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await locate.AsContainer.Content(Mediator!)
+				return await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsExit)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.CountAsync();
 			});
 	}
@@ -2638,9 +2638,9 @@ LOCATE()
 	[SharpFunction(Name = "nvplayers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfVisualPlayers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2652,9 +2652,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await locate.AsContainer.Content(Mediator!)
+				return await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsPlayer)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.CountAsync();
 			});
 	}
@@ -2662,9 +2662,9 @@ LOCATE()
 	[SharpFunction(Name = "nvthings", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfVisualThings(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
@@ -2676,9 +2676,9 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return await locate.AsContainer.Content(Mediator!)
+				return await locate.AsContainer.Content(_mediator!)
 					.Where(x => x.IsThing)
-					.Where(async (x, _) => await PermissionService!.CanSee(executor, x.Object()))
+					.Where(async (x, _) => await _permissionService!.CanSee(executor, x.Object()))
 					.CountAsync();
 			});
 	}

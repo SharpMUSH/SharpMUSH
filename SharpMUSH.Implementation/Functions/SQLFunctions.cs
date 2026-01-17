@@ -18,14 +18,14 @@ public partial class Functions
 	[SharpFunction(Name = "sql", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["query", "delim"])]
 	public async ValueTask<CallState> SQL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownEnactorObject(_mediator!);
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK") || executor.IsGod()))
 		{
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		if (SqlService is not { IsAvailable: true })
+		if (_sqlService is not { IsAvailable: true })
 		{
 			return new CallState("#-1 SQL IS NOT ENABLED");
 		}
@@ -51,7 +51,7 @@ public partial class Functions
 
 		try
 		{
-			var results = await SqlService.ExecuteQueryAsync(query);
+			var results = await _sqlService.ExecuteQueryAsync(query);
 			var resultList = results.ToList();
 
 			if (!string.IsNullOrEmpty(registerName))
@@ -76,7 +76,7 @@ public partial class Functions
 	[SharpFunction(Name = "sqlescape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> SqlEscape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (SqlService is not { IsAvailable: true })
+		if (_sqlService is not { IsAvailable: true })
 		{
 			return ValueTask.FromResult(new CallState("#-1 SQL IS NOT ENABLED"));
 		}
@@ -84,7 +84,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var input = args["0"].Message?.ToPlainText() ?? string.Empty;
 
-		var escaped = SqlService.Escape(input);
+		var escaped = _sqlService.Escape(input);
 
 		return ValueTask.FromResult(new CallState(escaped));
 	}
@@ -92,14 +92,14 @@ public partial class Functions
 	[SharpFunction(Name = "mapsql", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["query", "attribute", "delimiter"])]
 	public async ValueTask<CallState> MapSql(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownEnactorObject(_mediator!);
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK") || executor.IsGod()))
 		{
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		if (SqlService is not { IsAvailable: true })
+		if (_sqlService is not { IsAvailable: true })
 		{
 			return new CallState("#-1 SQL IS NOT ENABLED");
 		}
@@ -131,11 +131,11 @@ public partial class Functions
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
 			async found =>
 			{
-				var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, found, attrName,
+				var maybeAttribute = await _attributeService!.GetAttributeAsync(executor, found, attrName,
 					IAttributeService.AttributeMode.Execute);
 
 				if (!maybeAttribute.IsAttribute)
@@ -150,7 +150,7 @@ public partial class Functions
 					var firstRow = true;
 					var rowNumber = 1;
 
-					foreach (var row in await SqlService.ExecuteQueryAsync(query))
+					foreach (var row in await _sqlService.ExecuteQueryAsync(query))
 					{
 						// If field names requested and this is the first row, process column names
 						if (doFieldNames && firstRow)
@@ -164,7 +164,7 @@ public partial class Functions
 
 							remainder.TryAdd("0", MModule.single("0"));
 
-							var headerResult = await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found,
+							var headerResult = await _attributeService.EvaluateAttributeFunctionAsync(parser, executor, found,
 								attrName,
 								remainder);
 
@@ -183,7 +183,7 @@ public partial class Functions
 							.ToDictionary();
 						dict.TryAdd("0", MModule.single(currentRow.ToString()));
 
-						var result = await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found, attrName,
+						var result = await _attributeService.EvaluateAttributeFunctionAsync(parser, executor, found, attrName,
 							dict);
 
 						results.Add(result);

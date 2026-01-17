@@ -68,7 +68,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IPrometheusQueryService prometheusQueryService,
 		IWarningService warningService,
 		ITextFileService textFileService,
-		LibraryService<string, FunctionDefinition> functionLibrary)
+		ILibraryProvider<FunctionDefinition> functionLibraryProvider)
 	{
 		_mediator = mediator;
 		_locateService = locateService;
@@ -94,7 +94,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		_prometheusQueryService = prometheusQueryService;
 		_warningService = warningService;
 		_textFileService = textFileService;
-		_functionLibrary = functionLibrary;
+		_functionLibrary = functionLibraryProvider.Get();
 
 		// Get command definitions bound to this instance
 		foreach (var command in SharpMUSH.Implementation.Generated.CommandLibrary.GetCommands(this))

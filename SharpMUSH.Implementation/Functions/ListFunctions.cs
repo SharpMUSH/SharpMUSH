@@ -100,8 +100,8 @@ public partial class Functions
 		// Arg3: Output separator (optional)
 		// Arg4+: Additional arguments passed as v(1) through v(30)
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -112,7 +112,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -126,7 +126,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -181,8 +181,8 @@ public partial class Functions
 	[SharpFunction(Name = "filterbool", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public async ValueTask<CallState> FilterBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -193,7 +193,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -207,7 +207,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -294,8 +294,8 @@ public partial class Functions
 		// Arg2: Base case (optional)
 		// Arg3: Delimiter (optional)
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -306,7 +306,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -320,7 +320,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -652,8 +652,8 @@ public partial class Functions
 		// Arg2: Delim
 		// Arg3: Sep
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -664,7 +664,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -678,7 +678,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -765,8 +765,8 @@ public partial class Functions
 		// Arg1-Arg30: Up to 30 lists
 		// Last arg (if > 2 lists): delimiter
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -777,7 +777,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -791,7 +791,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -871,8 +871,8 @@ public partial class Functions
 		// Arg3: Delimiter (optional)
 		// Arg4: Output separator (optional)
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -883,7 +883,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -897,7 +897,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -977,7 +977,7 @@ public partial class Functions
 		
 		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
-			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
+			var item = await _mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
 			return (dbref.AsT0, item.Object()!.Name);
 		});
 
@@ -1019,7 +1019,7 @@ public partial class Functions
 		
 		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
-			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
+			var item = await _mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
 			return (dbref.AsT0, item.Object()!.Name);
 		});
 
@@ -1198,8 +1198,8 @@ public partial class Functions
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
 		var listItems = MModule.split2(delimiter, list);
 
-		var sorted = await SortService!.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
-			SortService!.StringToSortType(sortType));
+		var sorted = await _sortService!.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
+			_sortService!.StringToSortType(sortType));
 
 		return MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync());
 	}
@@ -1207,8 +1207,8 @@ public partial class Functions
 	[SharpFunction(Name = "sortby", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public async ValueTask<CallState> SortBy(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -1219,7 +1219,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -1233,7 +1233,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -1304,8 +1304,8 @@ public partial class Functions
 	{
 		// sortkey([<obj>/]<attrib>, <list>[, <sort type>[, <delimiter>[, <osep>]]])
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -1316,7 +1316,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -1330,7 +1330,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -1418,8 +1418,8 @@ public partial class Functions
 	{
 		// step([<obj>/]<attr>, <list>, <step>[, <delim>[, <osep>]])
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(_mediator!)).Known();
 		var objAttr =
 			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
 		if (objAttr is { IsT1: true, AsT1: false })
@@ -1430,7 +1430,7 @@ public partial class Functions
 		var (dbref, attrName) = objAttr.AsT0;
 		dbref ??= executor.ToString();
 
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+		var locate = await _locateService!.LocateAndNotifyIfInvalid(
 			parser,
 			enactor,
 			executor,
@@ -1444,7 +1444,7 @@ public partial class Functions
 
 		var located = locate.WithoutError().WithoutNone();
 
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
+		var maybeAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			attrName,
@@ -1766,8 +1766,8 @@ public partial class Functions
 		var aList1 = MModule.split2(delimiter, list1);
 		var aList2 = MModule.split2(delimiter, list2);
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = await SortService.Sort(Enumerable.DistinctBy(aList1
+		var sortTypeType = _sortService!.StringToSortType(sortType.ToPlainText());
+		var sorted = await _sortService.Sort(Enumerable.DistinctBy(aList1
 			.Concat(aList2), MModule.plainText), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -1790,8 +1790,8 @@ public partial class Functions
 		// Elements in list1 that aren't in list2
 		var difference = aList1.Where(x => !set2.Contains(MModule.plainText(x)));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = await SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText),
+		var sortTypeType = _sortService!.StringToSortType(sortType.ToPlainText());
+		var sorted = await _sortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -1814,8 +1814,8 @@ public partial class Functions
 		// Elements that appear in both lists
 		var intersection = aList1.Where(x => set2.Contains(MModule.plainText(x)));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = await SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText),
+		var sortTypeType = _sortService!.StringToSortType(sortType.ToPlainText());
+		var sorted = await _sortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -1840,8 +1840,8 @@ public partial class Functions
 		var symdiff = aList1.Where(x => !set2.Contains(MModule.plainText(x)))
 			.Concat(aList2.Where(x => !set1.Contains(MModule.plainText(x))));
 
-		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = await SortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText),
+		var sortTypeType = _sortService!.StringToSortType(sortType.ToPlainText());
+		var sorted = await _sortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));

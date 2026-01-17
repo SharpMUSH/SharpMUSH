@@ -29,11 +29,11 @@ public partial class Functions
 	[SharpFunction(Name = "ctime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds"])]
 	public async ValueTask<CallState> CreationTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var utc = parser.CurrentState.Arguments.ContainsKey("1") && parser.CurrentState.Arguments["1"].Message!.Truthy();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			found => utc
 				? found.Object().CreationTime.ToString()
@@ -68,11 +68,11 @@ public partial class Functions
 	[SharpFunction(Name = "mtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ModifiedTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var utc = parser.CurrentState.Arguments.ContainsKey("1") && parser.CurrentState.Arguments["1"].Message!.Truthy();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			found => utc
 				? found.Object().CreationTime.ToString()
@@ -230,7 +230,7 @@ public partial class Functions
 	[SharpFunction(Name = "starttime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public async ValueTask<CallState> StartTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var data = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
+		var data = await _objectDataService!.GetExpandedServerDataAsync<UptimeData>();
 		return data!.StartTime.ToString();
 	}
 
@@ -278,7 +278,7 @@ public partial class Functions
 	[SharpFunction(Name = "time", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public async ValueTask<CallState> Time(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0Value)
 			? arg0Value.Message!.ToPlainText()
 			: null;
@@ -293,11 +293,11 @@ public partial class Functions
 			return DateTimeOffset.Now.ToOffset(timeZone.BaseUtcOffset).ToString();
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg0, LocateFlags.All,
 			async found =>
 			{
-				var attr = await AttributeService!.GetAttributeAsync(executor, found, "TZ",
+				var attr = await _attributeService!.GetAttributeAsync(executor, found, "TZ",
 					IAttributeService.AttributeMode.Read, false);
 				if (!attr.IsAttribute)
 				{
@@ -551,7 +551,7 @@ public partial class Functions
 			? arg0Value.Message!.ToPlainText()
 			: null;
 
-		var data = (await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>())!;
+		var data = (await _objectDataService!.GetExpandedServerDataAsync<UptimeData>())!;
 
 		if (arg0 is null)
 		{
@@ -577,11 +577,11 @@ public partial class Functions
 	[SharpFunction(Name = "csecs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public async ValueTask<CallState> CSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var utc = parser.CurrentState.Arguments.ContainsKey("1") && parser.CurrentState.Arguments["1"].Message!.Truthy();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			found => utc
 				? found.Object().CreationTime.ToString()
@@ -595,11 +595,11 @@ public partial class Functions
 	[SharpFunction(Name = "msecs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public async ValueTask<CallState> ModifiedSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var utc = parser.CurrentState.Arguments.ContainsKey("1") && parser.CurrentState.Arguments["1"].Message!.Truthy();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
 			found => utc
 				? found.Object().CreationTime.ToString()

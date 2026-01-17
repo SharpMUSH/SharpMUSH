@@ -19,7 +19,7 @@ public partial class Functions
 	[SharpFunction(Name = "addrlog", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public async ValueTask<CallState> AddressLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
 		if (!await executor.HasFlag("WIZARD") &&
 		    !await executor.HasFlag("ROYALTY") &&
@@ -28,7 +28,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		if (!Configuration!.CurrentValue.Log.UseConnLog)
+		if (!_configuration!.CurrentValue.Log.UseConnLog)
 		{
 			return new CallState("#-1");
 		}
@@ -57,7 +57,7 @@ public partial class Functions
 			return new CallState("#-1 INVALID SEARCH TYPE");
 		}
 
-		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
+		var logs = _mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
 
 		var results = new List<string>();
 		var uniqueAddresses = new HashSet<string>();
@@ -94,7 +94,7 @@ public partial class Functions
 	[SharpFunction(Name = "cmds", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		Restrict = ["admin", "power:see_all"], ParameterNames = ["object"])]
 	public async ValueTask<CallState> Commands(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await ArgHelpers.ForHandleOrPlayer(parser, Mediator!, ConnectionService!, LocateService!,
+		=> await ArgHelpers.ForHandleOrPlayer(parser, _mediator!, _connectionService!, _locateService!,
 			parser.CurrentState.Arguments["0"],
 			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata["CMDS"]),
 			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata["CMDS"])
@@ -103,20 +103,20 @@ public partial class Functions
 	[SharpFunction(Name = "conn", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectedSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (int.TryParse(arg0, out var port))
 		{
-			var data2 = ConnectionService!.Get(port);
+			var data2 = _connectionService!.Get(port);
 			if (data2 is null || data2.Ref is null)
 			{
 				return new CallState("-1");
 			}
 
 			// Check visibility of the connected player
-			var connectedPlayer = await Mediator!.Send(new GetObjectNodeQuery(data2.Ref.Value));
-			if (!await PermissionService!.CanSee(executor, connectedPlayer.Known))
+			var connectedPlayer = await _mediator!.Send(new GetObjectNodeQuery(data2.Ref.Value));
+			if (!await _permissionService!.CanSee(executor, connectedPlayer.Known))
 			{
 				return new CallState("-1");
 			}
@@ -124,7 +124,7 @@ public partial class Functions
 			return new CallState(data2.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
 			arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
@@ -134,12 +134,12 @@ public partial class Functions
 		var located = maybeLocate.AsPlayer;
 
 		// Check visibility before returning connection information
-		if (!await PermissionService!.CanSee(executor, located.Object))
+		if (!await _permissionService!.CanSee(executor, located.Object))
 		{
 			return new CallState("-1");
 		}
 
-		var data = await ConnectionService!.Get(located.Object.DBRef).FirstAsync();
+		var data = await _connectionService!.Get(located.Object.DBRef).FirstAsync();
 		return new CallState(data.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
@@ -147,7 +147,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectionLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Log.UseConnLog)
+		if (!_configuration!.CurrentValue.Log.UseConnLog)
 		{
 			return new CallState("#-1");
 		}
@@ -191,7 +191,7 @@ public partial class Functions
 
 		var isCount = specs.Any(s => s.type == "count");
 
-		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
+		var logs = _mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
 
 		var results = new List<string>();
 
@@ -281,7 +281,7 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectionRecord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Log.UseConnLog)
+		if (!_configuration!.CurrentValue.Log.UseConnLog)
 		{
 			return new CallState("#-1");
 		}
@@ -296,7 +296,7 @@ public partial class Functions
 			return new CallState("#-1 INVALID CONNECTION ID");
 		}
 
-		var logs = Mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
+		var logs = _mediator!.CreateStream(new GetConnectionLogsQuery("Connection", 0, 1000));
 
 		try
 		{
@@ -335,20 +335,20 @@ public partial class Functions
 	[SharpFunction(Name = "doing", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Doing(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (long.TryParse(arg0, out var port))
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null || data.Ref is null)
 			{
 				return new CallState(string.Empty);
 			}
 
-			var player = await Mediator!.Send(new GetObjectNodeQuery(data.Ref.Value));
+			var player = await _mediator!.Send(new GetObjectNodeQuery(data.Ref.Value));
 
-			var maybeAttr = await AttributeService!.GetAttributeAsync(
+			var maybeAttr = await _attributeService!.GetAttributeAsync(
 				executor,
 				player.Known,
 				"DOING",
@@ -362,7 +362,7 @@ public partial class Functions
 			};
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(string.Empty);
@@ -370,7 +370,7 @@ public partial class Functions
 
 		var located = maybeLocate.AsPlayer;
 
-		var doingAttr = await AttributeService!.GetAttributeAsync(
+		var doingAttr = await _attributeService!.GetAttributeAsync(
 			executor,
 			located,
 			"DOING",
@@ -387,12 +387,12 @@ public partial class Functions
 	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> HostName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (long.TryParse(arg0, out var port))
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null)
 			{
 				return new CallState("#-1");
@@ -406,7 +406,7 @@ public partial class Functions
 			return new CallState(data.HostName);
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -419,7 +419,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await _connectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
 		if (connectionData is null)
 		{
 			return new CallState("#-1");
@@ -431,20 +431,20 @@ public partial class Functions
 	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> IdleSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (int.TryParse(arg0, out var port))
 		{
-			var data2 = ConnectionService!.Get(port);
+			var data2 = _connectionService!.Get(port);
 			if (data2 is null || data2.Ref is null)
 			{
 				return new CallState("-1");
 			}
 
 			// Check visibility of the connected player
-			var connectedPlayer = await Mediator!.Send(new GetObjectNodeQuery(data2.Ref.Value));
-			if (!await PermissionService!.CanSee(executor, connectedPlayer.Known))
+			var connectedPlayer = await _mediator!.Send(new GetObjectNodeQuery(data2.Ref.Value));
+			if (!await _permissionService!.CanSee(executor, connectedPlayer.Known))
 			{
 				return new CallState("-1");
 			}
@@ -452,7 +452,7 @@ public partial class Functions
 			return new CallState(data2.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
 			arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
@@ -462,12 +462,12 @@ public partial class Functions
 		var locate = maybeLocate.AsPlayer;
 
 		// Check visibility before returning connection information
-		if (!await PermissionService!.CanSee(executor, locate.Object))
+		if (!await _permissionService!.CanSee(executor, locate.Object))
 		{
 			return new CallState("-1");
 		}
 
-		var data = ConnectionService!.Get(locate.Object.DBRef);
+		var data = _connectionService!.Get(locate.Object.DBRef);
 		return new CallState(await data
 			.Select(x => x.Idle?.TotalSeconds ?? -1)
 			.MinAsync());
@@ -476,12 +476,12 @@ public partial class Functions
 	[SharpFunction(Name = "ipaddr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> IpAddress(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (long.TryParse(arg0, out var port))
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null)
 			{
 				return new CallState("#-1");
@@ -495,7 +495,7 @@ public partial class Functions
 			return new CallState(data.InternetProtocolAddress);
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -508,7 +508,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await _connectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
 		
 		return connectionData is null 
 			? new CallState("#-1") 
@@ -519,7 +519,7 @@ public partial class Functions
 	public async ValueTask<CallState> ListPorts(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
 		if (!await executor.HasPower("SEE_ALL"))
 		{
@@ -534,7 +534,7 @@ public partial class Functions
 			var arg0 = args["0"].Message!.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(arg0))
 			{
-				var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+				var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 				if (maybeLocate.IsNone || maybeLocate.IsError)
 				{
 					return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -553,7 +553,7 @@ public partial class Functions
 			}
 		}
 
-		var allConnections = ConnectionService!.GetAll()
+		var allConnections = _connectionService!.GetAll()
 			.Where(x => status == "all" ||
 			            (status == "online" && x.State == IConnectionService.ConnectionState.LoggedIn) ||
 			            (status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn));
@@ -571,8 +571,8 @@ public partial class Functions
 			}
 			else
 			{
-				var connectedPlayer = await Mediator!.Send(new GetObjectNodeQuery(conn.Ref.Value));
-				if (await PermissionService!.CanSee(viewer, connectedPlayer.Known))
+				var connectedPlayer = await _mediator!.Send(new GetObjectNodeQuery(conn.Ref.Value));
+				if (await _permissionService!.CanSee(viewer, connectedPlayer.Known))
 				{
 					visibleConnections.Add(conn.Handle);
 				}
@@ -591,13 +591,13 @@ public partial class Functions
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
 			: ["online"];
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var looker = executor;
 
 		if (arg0 != null)
 		{
 			var maybeLocate =
-				await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+				await _locateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
 			if (maybeLocate.IsError)
 			{
 				return maybeLocate.AsError;
@@ -625,7 +625,7 @@ public partial class Functions
 		}
 
 		// Get connected player DBRefs
-		var connectedRefs = ConnectionService!
+		var connectedRefs = _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null)
 			.Select(x => x.Ref!.Value);
@@ -634,7 +634,7 @@ public partial class Functions
 		var result = new List<string>();
 
 		// Get all players from database
-		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
+		var allPlayers = _mediator!.CreateStream(new GetAllPlayersQuery())!;
 		await foreach (var player in allPlayers)
 		{
 			var dbref = player.Object.DBRef;
@@ -656,7 +656,7 @@ public partial class Functions
 
 			// Apply permission check
 			AnySharpObject playerObj = player;
-			if (await PermissionService!.CanSee(looker, playerObj))
+			if (await _permissionService!.CanSee(looker, playerObj))
 			{
 				result.Add($"#{dbref.Number}");
 			}
@@ -674,13 +674,13 @@ public partial class Functions
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
 			: ["online"];
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var looker = executor;
 
 		if (arg0 != null)
 		{
 			var maybeLocate =
-				await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+				await _locateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
 			if (maybeLocate.IsError)
 			{
 				return maybeLocate.AsError;
@@ -708,7 +708,7 @@ public partial class Functions
 		}
 
 		// Get connected player DBRefs
-		var connectedRefsId = ConnectionService!
+		var connectedRefsId = _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null)
 			.Select(x => x.Ref!.Value);
@@ -717,7 +717,7 @@ public partial class Functions
 		var resultId = new List<string>();
 
 		// Get all players from database
-		var allPlayersId = Mediator!.CreateStream(new GetAllPlayersQuery())!;
+		var allPlayersId = _mediator!.CreateStream(new GetAllPlayersQuery())!;
 		await foreach (var player in allPlayersId)
 		{
 			var dbref = player.Object.DBRef;
@@ -739,7 +739,7 @@ public partial class Functions
 
 			// Apply permission check
 			AnySharpObject playerObj = player;
-			if (await PermissionService!.CanSee(looker, playerObj))
+			if (await _permissionService!.CanSee(looker, playerObj))
 			{
 				resultId.Add(dbref.ToString());
 			}
@@ -752,13 +752,13 @@ public partial class Functions
 	public async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var isWizard = await executor.IsWizard();
 
-		var nonHiddenConnections = ConnectionService!
+		var nonHiddenConnections = _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Select(async (x, ct) => (await _mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
 			.Select(player => $"#{player.Object().DBRef.Number}");
 		
@@ -769,13 +769,13 @@ public partial class Functions
 	public async ValueTask<CallState> MortalWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var isWizard = await executor.IsWizard();
 		
-		var nonHiddenConnectionsObjIds = ConnectionService!
+		var nonHiddenConnectionsObjIds = _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Select(async (x, ct) => (await _mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
 			.Select(x => x.Object().DBRef);
 
@@ -786,10 +786,10 @@ public partial class Functions
 	public async ValueTask<CallState> NumberMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Count all connected players that are not hidden
-		var count = await ConnectionService!
+		var count = await _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Select(async (x, ct) => (await _mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => !await x.HasFlag("DARK"))
 			.CountAsync();
 
@@ -800,7 +800,7 @@ public partial class Functions
 	public async ValueTask<CallState> NumberWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var looker = executor;
 
 		if (args.TryGetValue("0", out var arg0))
@@ -809,7 +809,7 @@ public partial class Functions
 			if (!string.IsNullOrWhiteSpace(arg0Text))
 			{
 				var maybeLocate =
-					await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0Text);
+					await _locateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0Text);
 
 				if (maybeLocate.IsError)
 				{
@@ -820,11 +820,11 @@ public partial class Functions
 			}
 		}
 
-		var count = await ConnectionService!
+		var count = await _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
+			.Select(async (x, ct) => (await _mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => await _permissionService!.CanSee(looker, x))
 			.CountAsync();
 
 		return new CallState(count.ToString(CultureInfo.InvariantCulture));
@@ -832,7 +832,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "pueblo", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Pueblo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await ArgHelpers.ForHandleOrPlayer(parser, Mediator!, ConnectionService!, LocateService!,
+		=> await ArgHelpers.ForHandleOrPlayer(parser, _mediator!, _connectionService!, _locateService!,
 			parser.CurrentState.Arguments["0"],
 			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata.GetValueOrDefault("PUEBLO", "0")),
 			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata.GetValueOrDefault("PUEBLO", "0"))
@@ -841,12 +841,12 @@ public partial class Functions
 	[SharpFunction(Name = "recv", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Received(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (long.TryParse(arg0, out var port))
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null)
 			{
 				return new CallState("#-1");
@@ -860,7 +860,7 @@ public partial class Functions
 			return new CallState(data.Metadata.GetValueOrDefault("RECV", "0"));
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -873,7 +873,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await _connectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
 		return connectionData is null
 			? new CallState("#-1")
 			: new CallState(connectionData.Metadata.GetValueOrDefault("RECV", "0"));
@@ -882,12 +882,12 @@ public partial class Functions
 	[SharpFunction(Name = "sent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Sent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (long.TryParse(arg0, out var port))
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null)
 			{
 				return new CallState("#-1");
@@ -901,7 +901,7 @@ public partial class Functions
 			return new CallState(data.Metadata.GetValueOrDefault("SENT", "0"));
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -914,7 +914,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await _connectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
 		return connectionData is null
 			? new CallState("#-1")
 			: new CallState(connectionData.Metadata.GetValueOrDefault("SENT", "0"));
@@ -923,12 +923,12 @@ public partial class Functions
 	[SharpFunction(Name = "ssl", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> SecureSocketLayer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (long.TryParse(arg0, out var port))
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null)
 			{
 				return new CallState("0");
@@ -946,7 +946,7 @@ public partial class Functions
 			return new CallState(ssl);
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "0" : maybeLocate.AsError.Value);
@@ -959,7 +959,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorPerm);
 		}
 
-		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await _connectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
 		return connectionData is null
 			? new CallState("0")
 			: new CallState(connectionData.Metadata.GetValueOrDefault("SSL", "0"));
@@ -969,13 +969,13 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "capability"])]
 	public async ValueTask<CallState> TerminalInformation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var hasSeeAll = await executor.HasPower("SEE_ALL");
 
 		if (long.TryParse(arg0, out var port))
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null)
 			{
 				return new CallState("unknown");
@@ -991,7 +991,7 @@ public partial class Functions
 			return new CallState(BuildTermInfo(data.Metadata, hasSeeAll || isSelf));
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState("unknown");
@@ -1005,7 +1005,7 @@ public partial class Functions
 			return new CallState("unknown");
 		}
 
-		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await _connectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
 		return connectionData is null
 			? new CallState("unknown")
 			: new CallState(BuildTermInfo(connectionData.Metadata, hasSeeAll || isSelfPlayer));
@@ -1016,13 +1016,13 @@ public partial class Functions
 	{
 		var playerOrDescriptor = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var defaultArg = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "78");
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
 		var isHandle = long.TryParse(playerOrDescriptor, out var port);
 
 		if (isHandle)
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null)
 			{
 				return new CallState("#-1");
@@ -1033,11 +1033,11 @@ public partial class Functions
 				: defaultArg;
 		}
 
-		return await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
+		return await _locateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
 			playerOrDescriptor,
 			async found =>
 			{
-				var fod = await ConnectionService!.Get(found.Object.DBRef).FirstOrDefaultAsync();
+				var fod = await _connectionService!.Get(found.Object.DBRef).FirstOrDefaultAsync();
 				return fod?.Metadata["WIDTH"] ?? defaultArg.ToPlainText();
 			});
 	}
@@ -1059,10 +1059,10 @@ public partial class Functions
 			return new CallState(Errors.ErrorArgRange);
 		}
 
-		var allObjIds = ConnectionService!
+		var allObjIds = _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Select(async (x, ct) => (await _mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => !await x.HasFlag("DARK"))
 			.Select(x => x.Object().DBRef);
 
@@ -1074,7 +1074,7 @@ public partial class Functions
 	public async ValueTask<CallState> NumberRangeWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var looker = executor;
 
 		int start, count;
@@ -1086,7 +1086,7 @@ public partial class Functions
 			if (!string.IsNullOrWhiteSpace(arg0))
 			{
 				var maybeLocate =
-					await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+					await _locateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
 				if (maybeLocate.IsError)
 				{
 					return maybeLocate.AsError;
@@ -1116,11 +1116,11 @@ public partial class Functions
 			return new CallState(Errors.ErrorArgRange);
 		}
 
-		var allDbrefs = ConnectionService!
+		var allDbrefs = _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
+			.Select(async (x, ct) => (await _mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => await _permissionService!.CanSee(looker, x))
 			.Select(x => $"#{x.Object().DBRef.Number}");
 
 		var result = allDbrefs.Skip(start - 1).Take(count);
@@ -1131,7 +1131,7 @@ public partial class Functions
 	public async ValueTask<CallState> NumberRangeWhoObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var looker = executor;
 
 		int start, count;
@@ -1143,7 +1143,7 @@ public partial class Functions
 			if (!string.IsNullOrWhiteSpace(arg0))
 			{
 				var maybeLocate =
-					await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+					await _locateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
 				if (maybeLocate.IsError)
 				{
 					return maybeLocate.AsError;
@@ -1173,11 +1173,11 @@ public partial class Functions
 			return new CallState(Errors.ErrorArgRange);
 		}
 
-		var allObjIds = ConnectionService!
+		var allObjIds = _connectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
-			.Where(async (x, _) => await PermissionService!.CanSee(looker, x))
+			.Select(async (x, ct) => (await _mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => await _permissionService!.CanSee(looker, x))
 			.Select(x => x.Object().DBRef);
 
 		var result = allObjIds.Skip(start - 1).Take(count);
@@ -1187,10 +1187,10 @@ public partial class Functions
 	[SharpFunction(Name = "zmwho", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["zone"])]
 	public async ValueTask<CallState> ZoneMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		var maybeZone = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
+		var maybeZone = await _locateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
 		if (maybeZone.IsNone || maybeZone.IsError)
 		{
 			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
@@ -1202,7 +1202,7 @@ public partial class Functions
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
-			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
+			if (!_lockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(Errors.ErrorPerm);
 			}
@@ -1210,7 +1210,7 @@ public partial class Functions
 
 		// Get all players in rooms that are in this zone (excluding dark/hidden players)
 		var playersInZone = new List<string>();
-		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
+		var allPlayers = _mediator!.CreateStream(new GetAllPlayersQuery())!;
 		
 		await foreach (var player in allPlayers)
 		{
@@ -1249,10 +1249,10 @@ public partial class Functions
 	public async ValueTask<CallState> ZoneWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = args["0"].Message!.ToPlainText();
 
-		var maybeZone = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
+		var maybeZone = await _locateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
 		if (maybeZone.IsNone || maybeZone.IsError)
 		{
 			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
@@ -1264,7 +1264,7 @@ public partial class Functions
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
-			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
+			if (!_lockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(Errors.ErrorPerm);
 			}
@@ -1272,7 +1272,7 @@ public partial class Functions
 
 		// Get all players in rooms that are in this zone
 		var playersInZone = new List<string>();
-		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
+		var allPlayers = _mediator!.CreateStream(new GetAllPlayersQuery())!;
 		
 		await foreach (var player in allPlayers)
 		{
@@ -1311,10 +1311,10 @@ public partial class Functions
 	public async ValueTask<CallState> ZoneFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = args["0"].Message!.ToPlainText();
 
-		var maybeZone = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
+		var maybeZone = await _locateService!.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
 		if (maybeZone.IsNone || maybeZone.IsError)
 		{
 			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
@@ -1326,27 +1326,27 @@ public partial class Functions
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
-			if (!LockService!.Evaluate(LockType.Zone, zone, executor))
+			if (!_lockService!.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(Errors.ErrorPerm);
 			}
 		}
 
 		// Get all objects in the zone
-		var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
+		var zoneObjects = _mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
 		var objectList = new List<string>();
 		
 		await foreach (var obj in zoneObjects)
 		{
 			// Get the full object to check permissions
-			var fullObj = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(obj.Key)));
+			var fullObj = await _mediator!.Send(new GetObjectNodeQuery(new DBRef(obj.Key)));
 			if (fullObj.IsNone)
 			{
 				continue;
 			}
 			
 			// Check if executor can see this object
-			if (hasSeeAll || await PermissionService!.CanExamine(executor, fullObj.Known))
+			if (hasSeeAll || await _permissionService!.CanExamine(executor, fullObj.Known))
 			{
 				objectList.Add($"#{obj.Key}");
 			}
@@ -1371,17 +1371,17 @@ public partial class Functions
 	public async ValueTask<CallState> Poll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Get the current @poll value from expanded server data
-		var pollData = await ObjectDataService!.GetExpandedServerDataAsync<PollData>();
+		var pollData = await _objectDataService!.GetExpandedServerDataAsync<PollData>();
 		return new CallState(pollData?.Message ?? string.Empty);
 	}
 
 	[SharpFunction(Name = "ports", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Ports(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -1397,7 +1397,7 @@ public partial class Functions
 			}
 		}
 
-		var handles = ConnectionService!
+		var handles = _connectionService!
 			.Get(target.Object.DBRef)
 			.Select(x => x.Handle);
 
@@ -1407,7 +1407,7 @@ public partial class Functions
 	[SharpFunction(Name = "player", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["descriptor"])]
 	public async ValueTask<CallState> Player(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var portString = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
 		if (!long.TryParse(portString, out var port))
@@ -1415,7 +1415,7 @@ public partial class Functions
 			return new CallState("#-1 INVALID PORT");
 		}
 
-		var data = ConnectionService!.Get(port);
+		var data = _connectionService!.Get(port);
 
 		if (data?.Ref == executor.Object().DBRef)
 		{
@@ -1437,22 +1437,22 @@ public partial class Functions
 	{
 		var playerOrDescriptor = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var defaultArg = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "78");
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
 		var isHandle = long.TryParse(playerOrDescriptor, out var port);
 
 		if (!isHandle)
 		{
-			return await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
+			return await _locateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
 				playerOrDescriptor,
 				async found =>
 				{
-					var fod = await ConnectionService!.Get(found.Object.DBRef).FirstOrDefaultAsync();
+					var fod = await _connectionService!.Get(found.Object.DBRef).FirstOrDefaultAsync();
 					return fod?.Metadata["HEIGHT"] ?? defaultArg.ToPlainText();
 				});
 		}
 
-		var data = ConnectionService!.Get(port);
+		var data = _connectionService!.Get(port);
 		if (data is null)
 		{
 			return new CallState("#-1");
@@ -1466,7 +1466,7 @@ public partial class Functions
 	[SharpFunction(Name = "hidden", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Hidden(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		var canSeeHidden = await executor.HasFlag("WIZARD") || await executor.HasFlag("ROYALTY") ||
@@ -1479,18 +1479,18 @@ public partial class Functions
 
 		if (long.TryParse(arg0, out var port))
 		{
-			var data = ConnectionService!.Get(port);
+			var data = _connectionService!.Get(port);
 			if (data is null || data.Ref is null)
 			{
 				return new CallState("#-1");
 			}
 
-			var player = await Mediator!.Send(new GetObjectNodeQuery(data.Ref.Value));
+			var player = await _mediator!.Send(new GetObjectNodeQuery(data.Ref.Value));
 			var isHidden = await player.Known.HasFlag("DARK");
 			return new CallState(isHidden ? "1" : "0");
 		}
 
-		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await _locateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState("#-1");
@@ -1578,10 +1578,10 @@ public partial class Functions
 		// If no argument, return idle time for executor
 		if (!parser.CurrentState.Arguments.ContainsKey("0"))
 		{
-			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+			var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 			
 			// Find executor's connection
-			var data = ConnectionService!.Get(executor.Object().DBRef);
+			var data = _connectionService!.Get(executor.Object().DBRef);
 			var idleSeconds = await data
 				.Select(x => x.Idle?.TotalSeconds ?? -1)
 				.MinAsync();

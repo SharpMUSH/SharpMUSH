@@ -100,7 +100,7 @@ public partial class Functions
 			_ => speakString
 		};
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var speakerIsLiteral = speaker.ToPlainText().StartsWith('&');
 		var hasTransform = !string.IsNullOrWhiteSpace(transformObjAttr.ToPlainText());
 		var hasNull = !string.IsNullOrWhiteSpace(isNullObjAttr.ToPlainText());
@@ -109,7 +109,7 @@ public partial class Functions
 
 		if (!speakerIsLiteral)
 		{
-			var maybeFound = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
+			var maybeFound = await _locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				speaker.ToPlainText(), LocateFlags.All);
 			if (maybeFound.IsError)
 			{
@@ -118,7 +118,7 @@ public partial class Functions
 
 			var found = maybeFound.AsSharpObject;
 
-			if (await PermissionService!.Controls(executor, found))
+			if (await _permissionService!.Controls(executor, found))
 			{
 				speakerObject = found;
 			}
@@ -183,7 +183,7 @@ public partial class Functions
 			}
 
 			var transformationObject = await
-				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+				_locateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
 					splitTransform.AsT0.db,
@@ -210,7 +210,7 @@ public partial class Functions
 			actualNullAttribute = splitNull.AsT0.Attribute;
 
 			var nullObject = await
-				LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+				_locateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
 					splitNull.AsT0.db,
@@ -240,7 +240,7 @@ public partial class Functions
 
 				if (actualNullAttribute is not null)
 				{
-					var nullEvaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
+					var nullEvaluated = await _attributeService!.EvaluateAttributeFunctionAsync(
 						parser, executor, actualNullObject!, actualNullAttribute,
 						new Dictionary<string, CallState>
 						{
@@ -252,7 +252,7 @@ public partial class Functions
 					if (nullEvaluated.Truthy()) continue;
 				}
 
-				var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
+				var evaluated = await _attributeService!.EvaluateAttributeFunctionAsync(
 					parser, executor, actualTransformationObject!, actualTransformAttribute ?? string.Empty,
 					new Dictionary<string, CallState>
 					{
@@ -998,7 +998,7 @@ public partial class Functions
 	{
 		//  foreach([<object>/]<attribute>, <string>[, <start>[, <end>]])
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var objAttr = args["0"].Message;
 		var str = args["1"].Message!;
@@ -1880,14 +1880,14 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var arg1 = parser.CurrentState.Arguments.TryGetValue(
-			Configuration!.CurrentValue.Compatibility.TinyTrimFun
+			_configuration!.CurrentValue.Compatibility.TinyTrimFun
 				? "1"
 				: "2", out var arg1Value)
 			? arg1Value.Message
 			: MModule.single(" ");
 
 		var arg2 = parser.CurrentState.Arguments.TryGetValue(
-			Configuration.CurrentValue.Compatibility.TinyTrimFun
+			_configuration.CurrentValue.Compatibility.TinyTrimFun
 				? "2"
 				: "1", out var arg2Value)
 			? arg2Value.Message!.ToPlainText()

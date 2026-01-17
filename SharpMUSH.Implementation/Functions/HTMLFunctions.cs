@@ -69,7 +69,7 @@ public partial class Functions
 		// Second optional argument is the player/target (defaults to enactor)
 
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
 		AnySharpObject target;
 
@@ -77,7 +77,7 @@ public partial class Functions
 		{
 			// Target specified - locate the player
 			var targetRef = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -100,7 +100,7 @@ public partial class Functions
 		// For now, this is a placeholder that sends the JSON as a regular notification
 		//
 		// Full implementation requirements:
-		// 1. Add websocket support to ConnectionService (ws:// and wss:// protocols)
+		// 1. Add websocket support to _connectionService (ws:// and wss:// protocols)
 		// 2. Implement GMCP (Generic MUD Communication Protocol) support
 		// 3. Add connection capability negotiation (detect websocket/GMCP support)
 		// 4. Modify ConnectionData to include supported protocols/capabilities
@@ -114,7 +114,7 @@ public partial class Functions
 		// - Return empty string (since OOB data doesn't display in-band)
 
 		// Placeholder: Send as notification for now
-		// await NotifyService!.Notify(target, jsonContent, executor, INotifyService.NotificationType.Announce);
+		// await _notifyService!.Notify(target, jsonContent, executor, INotifyService.NotificationType.Announce);
 
 		// Return empty string - OOB data doesn't produce visible output
 		return CallState.Empty;
@@ -128,7 +128,7 @@ public partial class Functions
 		// Second optional argument is the player/target (defaults to enactor)
 
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 
 		AnySharpObject target;
 
@@ -136,7 +136,7 @@ public partial class Functions
 		{
 			// Target specified - locate the player
 			var targetRef = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -159,7 +159,7 @@ public partial class Functions
 		// For now, this is a placeholder that sends the HTML as a regular notification
 		//
 		// Full implementation requirements:
-		// 1. Add websocket support to ConnectionService (ws:// and wss:// protocols)
+		// 1. Add websocket support to _connectionService (ws:// and wss:// protocols)
 		// 2. Implement HTML-over-websocket or MXP (MUD eXtension Protocol)
 		// 3. Add connection capability negotiation (detect HTML support)
 		// 4. Sanitize HTML to prevent XSS attacks (whitelist safe tags)
@@ -172,7 +172,7 @@ public partial class Functions
 		// - Return empty string (since OOB data doesn't display in-band)
 
 		// Placeholder: Send as notification for now
-		// await NotifyService!.Notify(target, htmlContent, executor, INotifyService.NotificationType.Announce);
+		// await _notifyService!.Notify(target, htmlContent, executor, INotifyService.NotificationType.Announce);
 
 		// Return empty string - OOB data doesn't produce visible output
 		return CallState.Empty;
@@ -184,13 +184,13 @@ public partial class Functions
 	{
 		// Send HTML data via websocket - similar to wshtml()
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		AnySharpObject target;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
 		{
 			var targetRef = targetArg.Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -212,7 +212,7 @@ public partial class Functions
 		// TODO: Actual websocket/out-of-band HTML communication is planned for future release.
 		// 
 		// Full implementation requirements:
-		// 1. Add websocket support to ConnectionService
+		// 1. Add websocket support to _connectionService
 		// 2. Implement HTML rendering capability detection
 		// 3. Add HTML sanitization to prevent security issues
 		// 4. Support rich HTML features for web-based MUSH clients
