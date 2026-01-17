@@ -266,9 +266,9 @@ public static partial class HelperFunctions
 	/// </summary>
 	/// <param name="start">The object that will have a new relationship set</param>
 	/// <param name="newRelated">The object being set as parent or zone</param>
-	/// <param name="isParent">True if setting parent, false if setting zone</param>
+	/// <param name="cancellationToken">Cancellation token</param>
 	/// <returns>True if safe to add (no cycle), false if it would create a cycle</returns>
-	public static async ValueTask<bool> SafeToAddRelationship(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newRelated, bool isParent)
+	public static async ValueTask<bool> SafeToAddRelationship(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
 	{
 		var startDbRef = start.Object().DBRef;
 		var newRelatedDbRef = newRelated.Object().DBRef;
@@ -282,7 +282,7 @@ public static partial class HelperFunctions
 		// Use ArangoDB graph traversal to check if adding the relationship would create a cycle.
 		// If start is reachable FROM newRelated via parent/zone edges, then adding the relationship
 		// would complete a cycle: start -> newRelated -> ... -> start
-		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: CancellationToken.None);
+		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: cancellationToken);
 		
 		return !isReachable;
 	}
@@ -290,14 +290,14 @@ public static partial class HelperFunctions
 	/// <summary>
 	/// Detects cycles in the parent chain.
 	/// </summary>
-	public static async ValueTask<bool> SafeToAddParent(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newParent)
-		=> await SafeToAddRelationship(mediator, database, start, newParent, isParent: true);
+	public static async ValueTask<bool> SafeToAddParent(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newParent, CancellationToken cancellationToken = default)
+		=> await SafeToAddRelationship(mediator, database, start, newParent, cancellationToken);
 
 	/// <summary>
 	/// Detects cycles in the zone chain.
 	/// </summary>
-	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone)
-		=> await SafeToAddRelationship(mediator, database, start, newZone, isParent: false);
+	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
+		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken);
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{
