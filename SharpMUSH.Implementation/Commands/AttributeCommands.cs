@@ -13,15 +13,15 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object/attribute", "on-off"])]
-	public static async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(_mediator);
 
 		if (!args.TryGetValue("0", out var objAttrArg))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @atrlock.");
+			await _notifyService.Notify(executor, "Invalid arguments to @atrlock.");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -31,14 +31,14 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.Notify(executor, "Invalid format. Use: object/attribute[=on|off]");
+			await _notifyService.Notify(executor, "Invalid format. Use: object/attribute[=on|off]");
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
 		var (dbref, attrName) = details;
 
 		// Locate object
-		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locate = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		enactor, executor, dbref, LocateFlags.All);
 
 		if (locate.IsError)
@@ -49,12 +49,12 @@ public partial class Commands
 		var targetObject = locate.AsSharpObject;
 
 		// Check if attribute exists
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
+		var attribute = await _attributeService.GetAttributeAsync(executor, targetObject, attrName,
 		IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {attrName} not found.");
+			await _notifyService.Notify(executor, $"Attribute {attrName} not found.");
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -62,7 +62,7 @@ public partial class Commands
 		{
 			// Query mode - show lock status
 			var isLocked = attribute.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
-			await NotifyService!.Notify(executor, $"Attribute {attrName} is {(isLocked ? "locked" : "unlocked")}.");
+			await _notifyService.Notify(executor, $"Attribute {attrName} is {(isLocked ? "locked" : "unlocked")}.");
 			return new CallState(string.Empty);
 		}
 
@@ -80,38 +80,38 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Invalid lock value. Use: on or off");
+			await _notifyService.Notify(executor, "Invalid lock value. Use: on or off");
 			return new CallState("#-1 INVALID VALUE");
 		}
 
 		// Check permissions
-		var canSet = await PermissionService!.CanSet(executor, targetObject);
+		var canSet = await _permissionService.CanSet(executor, targetObject);
 		if (!canSet)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await _notifyService.Notify(executor, "Permission denied.");
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
 		if (shouldLock)
 		{
 			// Lock the attribute and change ownership to executor
-			await AttributeService!.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
+			await _attributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
 
 			// Change ownership to executor (if executor is a player)
 			if (executor.IsPlayer)
 			{
 				// Re-set the attribute with new owner to change ownership
 				var currentValue = attribute.AsAttribute.Last().Value;
-				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
+				await _attributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 			}
 
-			await NotifyService!.Notify(executor, $"Attribute {attrName} locked.");
+			await _notifyService.Notify(executor, $"Attribute {attrName} locked.");
 		}
 		else
 		{
 			// Unlock the attribute
-			await AttributeService!.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-			await NotifyService!.Notify(executor, $"Attribute {attrName} unlocked.");
+			await _attributeService.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
+			await _notifyService.Notify(executor, $"Attribute {attrName} unlocked.");
 		}
 
 		return new CallState(string.Empty);
@@ -119,16 +119,16 @@ public partial class Commands
 
 	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = 2, ParameterNames = ["source/attribute", "destination/attribute"])]
-	public static async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(_mediator);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out var destArg))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @cpattr.");
+			await _notifyService.Notify(executor, "Invalid arguments to @cpattr.");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -138,14 +138,14 @@ public partial class Commands
 
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
-			await NotifyService!.Notify(executor, "Invalid source format. Use: object/attribute");
+			await _notifyService.Notify(executor, "Invalid source format. Use: object/attribute");
 			return new CallState("#-1 INVALID SOURCE");
 		}
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
 
 		// Locate source object
-		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var sourceLocate = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		enactor, executor, sourceDbref, LocateFlags.All);
 
 		if (sourceLocate.IsError)
@@ -156,12 +156,12 @@ public partial class Commands
 		var sourceObject = sourceLocate.AsSharpObject;
 
 		// Get the source attribute
-		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr,
+		var sourceAttribute = await _attributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
 		IAttributeService.AttributeMode.Read);
 
 		if (!sourceAttribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {sourceAttr} not found on source object.");
+			await _notifyService.Notify(executor, $"Attribute {sourceAttr} not found on source object.");
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -180,7 +180,7 @@ public partial class Commands
 
 			if (!destSplit.TryPickT0(out var destDetails, out _))
 			{
-				await NotifyService!.Notify(executor, $"Invalid destination format: {dest}");
+				await _notifyService.Notify(executor, $"Invalid destination format: {dest}");
 				continue;
 			}
 
@@ -189,31 +189,31 @@ public partial class Commands
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
 			// Locate destination object
-			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			var destLocate = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			enactor, executor, destDbref, LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.Notify(executor, $"Could not find destination: {destDbref}");
+				await _notifyService.Notify(executor, $"Could not find destination: {destDbref}");
 				continue;
 			}
 
 			var destObject = destLocate.AsSharpObject;
 
 			// Check permissions to set attribute on destination
-			var canSet = await PermissionService!.CanSet(executor, destObject);
+			var canSet = await _permissionService.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.Notify(executor, $"Permission denied to set attribute on {destDbref}.");
+				await _notifyService.Notify(executor, $"Permission denied to set attribute on {destDbref}.");
 				continue;
 			}
 
 			// Set the attribute value
-			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
+			var setResult = await _attributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
 			if (setResult.IsT1)
 			{
-				await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}");
+				await _notifyService.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}");
 				continue;
 			}
 
@@ -222,7 +222,7 @@ public partial class Commands
 			{
 				foreach (var flag in attrFlags)
 				{
-					await AttributeService!.SetAttributeFlagAsync(executor, destObject, targetAttrName, flag.Name);
+					await _attributeService.SetAttributeFlagAsync(executor, destObject, targetAttrName, flag.Name);
 				}
 			}
 
@@ -232,11 +232,11 @@ public partial class Commands
 		if (copiedCount > 0)
 		{
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
-			await NotifyService!.Notify(executor, $"Attribute copied to {copiedCount} {destWord}.");
+			await _notifyService.Notify(executor, $"Attribute copied to {copiedCount} {destWord}.");
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Failed to copy attribute to any destinations.");
+			await _notifyService.Notify(executor, "Failed to copy attribute to any destinations.");
 			return new CallState("#-1 COPY FAILED");
 		}
 
@@ -245,16 +245,16 @@ public partial class Commands
 
 	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = 2, ParameterNames = ["source/attribute", "destination/attribute"])]
-	public static async ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(_mediator);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out var destArg))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @mvattr.");
+			await _notifyService.Notify(executor, "Invalid arguments to @mvattr.");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -264,14 +264,14 @@ public partial class Commands
 
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
-			await NotifyService!.Notify(executor, "Invalid source format. Use: object/attribute");
+			await _notifyService.Notify(executor, "Invalid source format. Use: object/attribute");
 			return new CallState("#-1 INVALID SOURCE");
 		}
 
 		var (sourceDbref, sourceAttr) = sourceDetails;
 
 		// Locate source object
-		var sourceLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var sourceLocate = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		enactor, executor, sourceDbref, LocateFlags.All);
 
 		if (sourceLocate.IsError)
@@ -282,12 +282,12 @@ public partial class Commands
 		var sourceObject = sourceLocate.AsSharpObject;
 
 		// Get the source attribute
-		var sourceAttribute = await AttributeService!.GetAttributeAsync(executor, sourceObject, sourceAttr,
+		var sourceAttribute = await _attributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
 		IAttributeService.AttributeMode.Read);
 
 		if (!sourceAttribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {sourceAttr} not found on source object.");
+			await _notifyService.Notify(executor, $"Attribute {sourceAttr} not found on source object.");
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -306,7 +306,7 @@ public partial class Commands
 
 			if (!destSplit.TryPickT0(out var destDetails, out _))
 			{
-				await NotifyService!.Notify(executor, $"Invalid destination format: {dest}");
+				await _notifyService.Notify(executor, $"Invalid destination format: {dest}");
 				continue;
 			}
 
@@ -315,31 +315,31 @@ public partial class Commands
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
 			// Locate destination object
-			var destLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+			var destLocate = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			enactor, executor, destDbref, LocateFlags.All);
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.Notify(executor, $"Could not find destination: {destDbref}");
+				await _notifyService.Notify(executor, $"Could not find destination: {destDbref}");
 				continue;
 			}
 
 			var destObject = destLocate.AsSharpObject;
 
 			// Check permissions to set attribute on destination
-			var canSet = await PermissionService!.CanSet(executor, destObject);
+			var canSet = await _permissionService.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.Notify(executor, $"Permission denied to set attribute on {destDbref}.");
+				await _notifyService.Notify(executor, $"Permission denied to set attribute on {destDbref}.");
 				continue;
 			}
 
 			// Set the attribute value
-			var setResult = await AttributeService!.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
+			var setResult = await _attributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
 			if (setResult.IsT1)
 			{
-				await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}");
+				await _notifyService.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}");
 				continue;
 			}
 
@@ -348,7 +348,7 @@ public partial class Commands
 			{
 				foreach (var flag in attrFlags)
 				{
-					await AttributeService!.SetAttributeFlagAsync(executor, destObject, targetAttrName, flag.Name);
+					await _attributeService.SetAttributeFlagAsync(executor, destObject, targetAttrName, flag.Name);
 				}
 			}
 
@@ -358,23 +358,23 @@ public partial class Commands
 		if (copiedCount > 0)
 		{
 			// Remove the source attribute after successful copy
-			var clearResult = await AttributeService!.ClearAttributeAsync(executor, sourceObject, sourceAttr,
+			var clearResult = await _attributeService.ClearAttributeAsync(executor, sourceObject, sourceAttr,
 			IAttributeService.AttributePatternMode.Exact,
 			IAttributeService.AttributeClearMode.Safe);
 
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
 			if (clearResult.IsT1)
 			{
-				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} {destWord} but failed to remove source: {clearResult.AsT1.Value}");
+				await _notifyService.Notify(executor, $"Attribute moved to {copiedCount} {destWord} but failed to remove source: {clearResult.AsT1.Value}");
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} {destWord}.");
+				await _notifyService.Notify(executor, $"Attribute moved to {copiedCount} {destWord}.");
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Failed to move attribute to any destinations.");
+			await _notifyService.Notify(executor, "Failed to move attribute to any destinations.");
 			return new CallState("#-1 MOVE FAILED");
 		}
 
@@ -382,15 +382,15 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@ATRCHOWN", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object/attribute", "player"])]
-	public static async ValueTask<Option<CallState>> ChangeAttributeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChangeAttributeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(_mediator);
 
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var ownerArg))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @atrchown.");
+			await _notifyService.Notify(executor, "Invalid arguments to @atrchown.");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -400,14 +400,14 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.Notify(executor, "Invalid format. Use: object/attribute=new_owner");
+			await _notifyService.Notify(executor, "Invalid format. Use: object/attribute=new_owner");
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
 		var (dbref, attrName) = details;
 
 		// Locate object
-		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locate = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		enactor, executor, dbref, LocateFlags.All);
 
 		if (locate.IsError)
@@ -418,23 +418,23 @@ public partial class Commands
 		var targetObject = locate.AsSharpObject;
 
 		// Check if attribute exists
-		var attribute = await AttributeService!.GetAttributeAsync(executor, targetObject, attrName,
+		var attribute = await _attributeService.GetAttributeAsync(executor, targetObject, attrName,
 		IAttributeService.AttributeMode.Read);
 
 		if (!attribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {attrName} not found.");
+			await _notifyService.Notify(executor, $"Attribute {attrName} not found.");
 			return new CallState("#-1 NO MATCH");
 		}
 
 		// Locate new owner
 		var newOwnerText = MModule.plainText(ownerArg.Message!);
-		var ownerLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var ownerLocate = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		enactor, executor, newOwnerText, LocateFlags.All);
 
 		if (ownerLocate.IsError)
 		{
-			await NotifyService!.Notify(executor, "Could not find new owner.");
+			await _notifyService.Notify(executor, "Could not find new owner.");
 			return ownerLocate.AsError;
 		}
 
@@ -456,11 +456,11 @@ public partial class Commands
 		// Mortals can only chown to themselves
 		// Wizards can chown to anyone
 		var isWizard = await executor.HasPower("WIZARD") || await executor.HasFlag("WIZARD");
-		var canSet = await PermissionService!.CanSet(executor, targetObject);
+		var canSet = await _permissionService.CanSet(executor, targetObject);
 
 		if (!canSet)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await _notifyService.Notify(executor, "Permission denied.");
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
@@ -469,7 +469,7 @@ public partial class Commands
 			// Mortals can only chown to themselves
 			if (executor.IsPlayer && newOwnerPlayer.Object.DBRef != executor.AsPlayer.Object.DBRef)
 			{
-				await NotifyService!.Notify(executor, "You can only change attribute ownership to yourself.");
+				await _notifyService.Notify(executor, "You can only change attribute ownership to yourself.");
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 			else if (!executor.IsPlayer)
@@ -477,7 +477,7 @@ public partial class Commands
 				var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 				if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
 				{
-					await NotifyService!.Notify(executor, "You can only change attribute ownership to yourself.");
+					await _notifyService.Notify(executor, "You can only change attribute ownership to yourself.");
 					return new CallState("#-1 PERMISSION DENIED");
 				}
 			}
@@ -485,28 +485,28 @@ public partial class Commands
 
 		// Change ownership by re-setting the attribute with new owner
 		var currentValue = attribute.AsAttribute.Last().Value;
-		var setResult = await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
+		var setResult = await _attributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 
 		if (setResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"Failed to change ownership: {setResult.AsT1.Value}");
+			await _notifyService.Notify(executor, $"Failed to change ownership: {setResult.AsT1.Value}");
 			return new CallState("#-1 FAILED");
 		}
 
-		await NotifyService!.Notify(executor, $"Attribute {attrName} owner changed.");
+		await _notifyService.Notify(executor, $"Attribute {attrName} owner changed.");
 		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@WIPE", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public static async ValueTask<Option<CallState>> Wipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Wipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(_mediator);
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.Notify(executor, "Wipe what?");
+			await _notifyService.Notify(executor, "Wipe what?");
 			return new CallState("#-1 INVALID ARGUMENT");
 		}
 
@@ -515,14 +515,14 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await _notifyService.Notify(executor, "I don't see that here.");
 			return new CallState("#-1 INVALID OBJECT");
 		}
 
 		var (dbref, maybeAttribute) = details;
 
 		// Locate the object
-		var locate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
+		var locate = await _locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		enactor,
 		executor,
 		dbref,
@@ -536,10 +536,10 @@ public partial class Commands
 		var targetObject = locate.AsSharpObject;
 
 		// Check if executor can modify the object
-		var canModify = await PermissionService!.Controls(executor, targetObject);
+		var canModify = await _permissionService.Controls(executor, targetObject);
 		if (!canModify)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await _notifyService.Notify(executor, "Permission denied.");
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
@@ -547,7 +547,7 @@ public partial class Commands
 		var isSafe = await targetObject.HasFlag("SAFE");
 		if (isSafe)
 		{
-			await NotifyService!.Notify(executor, "That object is protected (SAFE).");
+			await _notifyService.Notify(executor, "That object is protected (SAFE).");
 			return new CallState("#-1 SAFE");
 		}
 
@@ -555,19 +555,19 @@ public partial class Commands
 		if (string.IsNullOrEmpty(maybeAttribute))
 		{
 			// Wipe all attributes - use ClearAttributeAsync with wildcard pattern
-			await AttributeService!.ClearAttributeAsync(executor, targetObject, "**",
+			await _attributeService.ClearAttributeAsync(executor, targetObject, "**",
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
-			await NotifyService!.Notify(executor, "Attributes wiped.");
+			await _notifyService.Notify(executor, "Attributes wiped.");
 			return new CallState(string.Empty);
 		}
 		else
 		{
 			// Wipe matching attributes
-			await AttributeService!.ClearAttributeAsync(executor, targetObject, maybeAttribute,
+			await _attributeService.ClearAttributeAsync(executor, targetObject, maybeAttribute,
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
-			await NotifyService!.Notify(executor, $"Wiped attributes matching {maybeAttribute}.");
+			await _notifyService.Notify(executor, $"Wiped attributes matching {maybeAttribute}.");
 			return new CallState(string.Empty);
 		}
 	}

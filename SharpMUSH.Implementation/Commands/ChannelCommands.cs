@@ -15,15 +15,15 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@CEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public static async ValueTask<Option<CallState>> ChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
+			await _notifyService.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -31,7 +31,7 @@ public partial class Commands
 		var message = arg1CallState!.Message!;
 
 		// Get channel using standardized helper method
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService, _permissionService, _mediator, _notifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -44,13 +44,13 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
+			await _notifyService.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
 		var (_, status) = maybeMemberStatus;
 
-		await Mediator!.Publish(new ChannelMessageNotification(
+		await _mediator.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
@@ -65,15 +65,15 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public static async ValueTask<Option<CallState>> Chat(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Chat(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
+			await _notifyService.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -81,7 +81,7 @@ public partial class Commands
 		var message = arg1CallState!.Message!;
 
 		// Get channel using standardized helper method
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService, _permissionService, _mediator, _notifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -94,14 +94,14 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
+			await _notifyService.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
 		var (_, status) = maybeMemberStatus;
 
 		// Notification type is determined from message prefix in ChannelMessageRequestHandler
-		await Mediator!.Publish(new ChannelMessageNotification(
+		await _mediator.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
@@ -117,15 +117,15 @@ public partial class Commands
 
 	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public static async ValueTask<Option<CallState>> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
+			await _notifyService.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -133,7 +133,7 @@ public partial class Commands
 		var message = arg1CallState!.Message!;
 
 		// Get channel using standardized helper method
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService, _permissionService, _mediator, _notifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
@@ -146,7 +146,7 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
+			await _notifyService.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
@@ -154,7 +154,7 @@ public partial class Commands
 
 		var canNoSpoof = await executor.HasPower("CAN_SPOOF") || await executor.IsPriv();
 
-		await Mediator!.Publish(new ChannelMessageNotification(
+		await _mediator.Publish(new ChannelMessageNotification(
 			channel,
 			executor.WithNoneOption(),
 			canNoSpoof
@@ -172,15 +172,15 @@ public partial class Commands
 	
 	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["channel", "alias"])]
-	public static async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(executor, "Usage: addcom <alias>=<channel>");
+			await _notifyService.Notify(executor, "Usage: addcom <alias>=<channel>");
 			return new CallState("#-1 Usage: addcom <alias>=<channel>");
 		}
 
@@ -189,12 +189,12 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, "Alias name cannot be empty.");
+			await _notifyService.Notify(executor, "Alias name cannot be empty.");
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
 		// Get the channel
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService, _permissionService, _mediator, _notifyService, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -206,32 +206,32 @@ public partial class Commands
 		var isMember = await ChannelHelper.IsMemberOfChannel(executor, channel);
 		if (!isMember)
 		{
-			await Mediator!.Send(new AddUserToChannelCommand(channel, executor));
+			await _mediator.Send(new AddUserToChannelCommand(channel, executor));
 		}
 
 		// Store the alias as an attribute
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
-		var result = await AttributeService!.SetAttributeAsync(executor, executor, attributeName, channel.Name);
+		var result = await _attributeService.SetAttributeAsync(executor, executor, attributeName, channel.Name);
 
 		if (result.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"Error setting alias: {result.AsT1.Value}");
+			await _notifyService.Notify(executor, $"Error setting alias: {result.AsT1.Value}");
 			return new CallState($"#-1 Error setting alias: {result.AsT1.Value}");
 		}
 
-		await NotifyService!.Notify(executor, $"Alias '{alias}' added for channel {channel.Name.ToPlainText()}.");
+		await _notifyService.Notify(executor, $"Alias '{alias}' added for channel {channel.Name.ToPlainText()}.");
 		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "DELCOM", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["alias"])]
-	public static async ValueTask<Option<CallState>> DeleteCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> DeleteCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
 		if (!arg0Check)
 		{
-			await NotifyService!.Notify(executor, "Usage: delcom <alias>");
+			await _notifyService.Notify(executor, "Usage: delcom <alias>");
 			return new CallState("#-1 Usage: delcom <alias>");
 		}
 
@@ -239,39 +239,39 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, "Alias name cannot be empty.");
+			await _notifyService.Notify(executor, "Alias name cannot be empty.");
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
 		// Get the alias attribute
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
-		var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
+		var maybeAttribute = await _attributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
 
 		if (maybeAttribute.IsNone)
 		{
-			await NotifyService!.Notify(executor, $"Alias '{alias}' not found.");
+			await _notifyService.Notify(executor, $"Alias '{alias}' not found.");
 			return new CallState($"#-1 Alias '{alias}' not found.");
 		}
 
 		if (maybeAttribute.IsError)
 		{
-			await NotifyService!.Notify(executor, $"Error reading alias: {maybeAttribute.AsError.Value}");
+			await _notifyService.Notify(executor, $"Error reading alias: {maybeAttribute.AsError.Value}");
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
 		var channelName = maybeAttribute.AsAttribute.First().Value;
 
 		// Delete the alias attribute
-		var clearResult = await AttributeService!.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+		var clearResult = await _attributeService.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 
 		if (clearResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"Error deleting alias: {clearResult.AsT1.Value}");
+			await _notifyService.Notify(executor, $"Error deleting alias: {clearResult.AsT1.Value}");
 			return new CallState($"#-1 Error deleting alias: {clearResult.AsT1.Value}");
 		}
 
 		// Check if this was the last alias for this channel
-		var allAliases = await AttributeService!.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
+		var allAliases = await _attributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
 
 		if (!allAliases.IsError)
 		{
@@ -280,20 +280,20 @@ public partial class Commands
 			if (!hasOtherAlias)
 			{
 				// Leave the channel if this was the last alias
-				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, false);
+				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService, _permissionService, _mediator, _notifyService, channelName, false);
 				if (!maybeChannel.IsError)
 				{
-					await Mediator!.Send(new RemoveUserFromChannelCommand(maybeChannel.AsChannel, executor));
+					await _mediator.Send(new RemoveUserFromChannelCommand(maybeChannel.AsChannel, executor));
 				}
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Alias '{alias}' deleted.");
+		await _notifyService.Notify(executor, $"Alias '{alias}' deleted.");
 		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "@CLIST", Switches = ["FULL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel"])]
-	public static async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @clist is an alias for @channel/list, with /full switch being ignored
 		var switches = parser.CurrentState.Switches.Contains("FULL") 
@@ -302,10 +302,10 @@ public partial class Commands
 		
 		return await ChannelCommand.ChannelList.Handle(
 			parser, 
-			LocateService!, 
-			PermissionService!, 
-			Mediator!, 
-			NotifyService!, 
+			_locateService, 
+			_permissionService, 
+			_mediator, 
+			_notifyService, 
 			MModule.empty(), 
 			MModule.empty(), 
 			switches);
@@ -313,15 +313,15 @@ public partial class Commands
 
 	[SharpCommand(Name = "COMTITLE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["alias", "title"])]
-	public static async ValueTask<Option<CallState>> ComTitle(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ComTitle(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(executor, "Usage: comtitle <alias>=<title>");
+			await _notifyService.Notify(executor, "Usage: comtitle <alias>=<title>");
 			return new CallState("#-1 Usage: comtitle <alias>=<title>");
 		}
 
@@ -330,30 +330,30 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, "Alias name cannot be empty.");
+			await _notifyService.Notify(executor, "Alias name cannot be empty.");
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
 		// Get the channel name from the alias
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
-		var maybeAttribute = await AttributeService!.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
+		var maybeAttribute = await _attributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
 
 		if (maybeAttribute.IsNone)
 		{
-			await NotifyService!.Notify(executor, $"Alias '{alias}' not found.");
+			await _notifyService.Notify(executor, $"Alias '{alias}' not found.");
 			return new CallState($"#-1 Alias '{alias}' not found.");
 		}
 
 		if (maybeAttribute.IsError)
 		{
-			await NotifyService!.Notify(executor, $"Error reading alias: {maybeAttribute.AsError.Value}");
+			await _notifyService.Notify(executor, $"Error reading alias: {maybeAttribute.AsError.Value}");
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
 		var channelName = maybeAttribute.AsAttribute.First().Value;
 
 		// Get the channel to validate it exists
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);
+		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, _locateService, _permissionService, _mediator, _notifyService, channelName, true);
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
@@ -362,28 +362,28 @@ public partial class Commands
 		var channel = maybeChannel.AsChannel;
 
 		// Use the ChannelTitle handler to set the title
-		var result = await ChannelTitle.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, title);
+		var result = await ChannelTitle.Handle(parser, _locateService, _permissionService, _mediator, _notifyService, channelName, title);
 
 		// Send custom notification that includes the alias name
 		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
 		{
-			await NotifyService!.Notify(executor, $"Title set to '{title.ToPlainText()}' for alias '{alias}' (channel {channel.Name.ToPlainText()}).");
+			await _notifyService.Notify(executor, $"Title set to '{title.ToPlainText()}' for alias '{alias}' (channel {channel.Name.ToPlainText()}).");
 		}
 
 		return result;
 	}
 
 	[SharpCommand(Name = "COMLIST", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> ComList(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ComList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
 		// Get all CHANALIAS attributes
-		var allAliases = await AttributeService!.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
+		var allAliases = await _attributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
 
 		if (allAliases.IsError)
 		{
-			await NotifyService!.Notify(executor, $"Error reading aliases: {allAliases.AsError.Value}");
+			await _notifyService.Notify(executor, $"Error reading aliases: {allAliases.AsError.Value}");
 			return new CallState($"#-1 Error reading aliases: {allAliases.AsError.Value}");
 		}
 
@@ -391,7 +391,7 @@ public partial class Commands
 
 		if (aliases.Count == 0)
 		{
-			await NotifyService!.Notify(executor, "You have no channel aliases.");
+			await _notifyService.Notify(executor, "You have no channel aliases.");
 			return new CallState(string.Empty);
 		}
 
@@ -410,7 +410,7 @@ public partial class Commands
 			));
 		}
 
-		await NotifyService!.Notify(executor, MModule.multiple(outputLines.ToArray()));
+		await _notifyService.Notify(executor, MModule.multiple(outputLines.ToArray()));
 		return new CallState(string.Empty);
 	}
 }
