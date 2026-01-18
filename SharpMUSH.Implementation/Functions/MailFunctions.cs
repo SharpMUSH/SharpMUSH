@@ -18,7 +18,7 @@ public partial class Functions
 	/// <summary>
 	/// Parse message specification (e.g. "123" or "INBOX:5") into folder and message index
 	/// </summary>
-	private static async ValueTask<(string folder, int messageIndex)> ParseMessageSpec(
+	private async ValueTask<(string folder, int messageIndex)> ParseMessageSpec(
 		IMUSHCodeParser parser,
 		AnySharpObject player,
 		string messageSpec)
@@ -39,7 +39,7 @@ public partial class Functions
 		else
 		{
 			// Format: just "number" - use current folder
-			folder = await MessageListHelper.CurrentMailFolder(parser, ObjectDataService!, player);
+			folder = await MessageListHelper.CurrentMailFolder(parser, _objectDataService!, player);
 			if (!int.TryParse(messageSpec.Trim(), out messageIndex) || messageIndex < 1)
 			{
 				return (folder, -1);
@@ -53,12 +53,12 @@ public partial class Functions
 	/// <summary>
 	/// Retrieve mail message by folder and index
 	/// </summary>
-	private static async ValueTask<SharpMail?> GetMailMessage(
+	private async ValueTask<SharpMail?> GetMailMessage(
 		AnySharpObject player,
 		string folder,
 		int messageIndex)
 	{
-		return await Mediator!.Send(new GetMailQuery(player.AsPlayer, messageIndex, folder));
+		return await _mediator!.Send(new GetMailQuery(player.AsPlayer, messageIndex, folder));
 	}
 
 	/// <summary>
@@ -82,7 +82,7 @@ public partial class Functions
 	/// Helper to parse target player and message spec from function arguments.
 	/// Uses same methodology as commands - returns proper error types.
 	/// </summary>
-	private static async ValueTask<PlayerMessageResult> ParsePlayerAndMessageArgs(
+	private async ValueTask<PlayerMessageResult> ParsePlayerAndMessageArgs(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		Dictionary<string, CallState> args)
@@ -100,7 +100,7 @@ public partial class Functions
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText()!;
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+		var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 			parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 
 		if (locateResult.IsError)
@@ -119,21 +119,21 @@ public partial class Functions
 	/// <summary>
 	/// Helper to check if executor can view another player's mail (must be wizard)
 	/// </summary>
-	private static async ValueTask<bool> CanViewOtherPlayerMail(AnySharpObject executor)
+	private async ValueTask<bool> CanViewOtherPlayerMail(AnySharpObject executor)
 	{
 		return executor.IsGod() || await executor.IsWizard();
 	}
 
 	[SharpFunction(Name = "mail", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "status"])]
-	public static async ValueTask<CallState> mail(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> mail(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		// Case 1: mail() - return total count of messages in all folders
 		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText())))
 		{
-			var allMail = Mediator!.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
+			var allMail = _mediator!.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
 			var count = await allMail.CountAsync();
 			return new CallState(count.ToString());
 		}
@@ -151,11 +151,11 @@ public partial class Functions
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
-			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 				async target =>
 				{
-					var allMail = Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer));
+					var allMail = _mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer));
 					var mailArray = await allMail.ToArrayAsync();
 					var read = mailArray.Count(m => m.Read);
 					var unread = mailArray.Count(m => !m.Read);
@@ -190,7 +190,7 @@ public partial class Functions
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+		return await _locateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 			async target =>
 			{
@@ -234,10 +234,10 @@ public partial class Functions
 		return false;
 	}
 	[SharpFunction(Name = "maillist", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["folder", "flags"])]
-	public static async ValueTask<CallState> maillist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> maillist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		AnySharpObject targetPlayer = executor;
 		string? messageListSpec = null;
@@ -256,7 +256,7 @@ public partial class Functions
 			}
 
 			var playerArg = args["0"].Message!.ToPlainText()!;
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 			
 			if (locateResult.IsError || locateResult.IsNone)
@@ -271,7 +271,7 @@ public partial class Functions
 		// Use MessageListHelper to filter mail
 		var msgListArg = messageListSpec != null ? MModule.single(messageListSpec) : null;
 		var filteredList = await MessageListHelper.Handle(
-			parser, ObjectDataService!, Mediator, NotifyService, msgListArg, targetPlayer);
+			parser, _objectDataService!, _mediator, _notifyService, msgListArg, targetPlayer);
 
 		if (filteredList.IsError)
 		{
@@ -284,7 +284,7 @@ public partial class Functions
 		var results = new List<string>();
 		await foreach (var mail in mailList)
 		{
-			var folderMail = Mediator!.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, mail.Folder));
+			var folderMail = _mediator!.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, mail.Folder));
 			var index = 0;
 			await foreach (var m in folderMail)
 			{
@@ -300,10 +300,10 @@ public partial class Functions
 		return new CallState(string.Join(" ", results));
 	}
 	[SharpFunction(Name = "mailfrom", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
-	public static async ValueTask<CallState> mailfrom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> mailfrom(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
 		if (parseResult.IsError)
@@ -327,21 +327,21 @@ public partial class Functions
 		return new CallState(from.Object()?.DBRef.ToString() ?? "#-1");
 	}
 	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["player", "subject", "message"])]
-	public static async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+		if (!_configuration!.CurrentValue.Function.FunctionSideEffects)
 		{
 			return new CallState(Errors.ErrorNoSideFx);
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var sender = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var sender = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		var recipientArg = args["0"].Message!.ToPlainText()!;
 		var messageArg = args["1"].Message!;
 
 		// Locate recipient
-		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+		var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 			parser, sender, sender, recipientArg, LocateFlags.PlayersPreference);
 		
 		if (locateResult.IsError)
@@ -357,7 +357,7 @@ public partial class Functions
 		var recipient = locateResult.AsPlayer;
 
 		// Check mail lock
-		if (!PermissionService!.PassesLock(sender, recipient, LockType.Mail))
+		if (!_permissionService!.PassesLock(sender, recipient, LockType.Mail))
 		{
 			return new CallState("#-1 RECIPIENT DOES NOT ACCEPT MAIL FROM YOU");
 		}
@@ -393,15 +393,15 @@ public partial class Functions
 		};
 
 		// Send the mail
-		await Mediator!.Send(new Library.Commands.Database.SendMailCommand(sender.Object(), recipient, mail));
+		await _mediator!.Send(new Library.Commands.Database.SendMailCommand(sender.Object(), recipient, mail));
 
 		return new CallState(string.Empty);
 	}
 	[SharpFunction(Name = "mailstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
-	public static async ValueTask<CallState> mailstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> mailstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		var playerArg = args["0"].Message!.ToPlainText()!;
 		
@@ -419,7 +419,7 @@ public partial class Functions
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 			
 			if (locateResult.IsError || locateResult.IsNone)
@@ -430,8 +430,8 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()));
-		var allReceivedMail = Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer));
+		var allSentMail = _mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()));
+		var allReceivedMail = _mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer));
 
 		var sentCount = await allSentMail.CountAsync();
 		var receivedCount = await allReceivedMail.CountAsync();
@@ -439,10 +439,10 @@ public partial class Functions
 		return new CallState($"{sentCount} {receivedCount}");
 	}
 	[SharpFunction(Name = "maildstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
-	public static async ValueTask<CallState> maildstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> maildstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		var playerArg = args["0"].Message!.ToPlainText()!;
 		
@@ -460,7 +460,7 @@ public partial class Functions
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 			
 			if (locateResult.IsError || locateResult.IsNone)
@@ -471,8 +471,8 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await (Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
-		var allReceivedMail = await (Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
+		var allSentMail = await (_mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
+		var allReceivedMail = await (_mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
 
 		var sentCount = allSentMail.Length;
 		var sentUnread = allSentMail.Count(m => !m.Read);
@@ -485,10 +485,10 @@ public partial class Functions
 		return new CallState($"{sentCount} {sentUnread} {sentCleared} {receivedCount} {receivedUnread} {receivedCleared}");
 	}
 	[SharpFunction(Name = "mailfstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["folder"])]
-	public static async ValueTask<CallState> mailfstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> mailfstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		var playerArg = args["0"].Message!.ToPlainText()!;
 		
@@ -506,7 +506,7 @@ public partial class Functions
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await _locateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 			
 			if (locateResult.IsError || locateResult.IsNone)
@@ -517,8 +517,8 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await (Mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
-		var allReceivedMail = await (Mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
+		var allSentMail = await (_mediator!.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
+		var allReceivedMail = await (_mediator!.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
 
 		var sentCount = allSentMail.Length;
 		var sentUnread = allSentMail.Count(m => !m.Read);
@@ -533,10 +533,10 @@ public partial class Functions
 		return new CallState($"{sentCount} {sentUnread} {sentCleared} {sentBytes} {receivedCount} {receivedUnread} {receivedCleared} {receivedBytes}");
 	}
 	[SharpFunction(Name = "mailstatus", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
-	public static async ValueTask<CallState> mailstatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> mailstatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
 		if (parseResult.IsError)
@@ -566,10 +566,10 @@ public partial class Functions
 		return new CallState($"{read}{cleared}{urgent}{forwarded}{tagged}");
 	}
 	[SharpFunction(Name = "mailsubject", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
-	public static async ValueTask<CallState> mailsubject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> mailsubject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
 		if (parseResult.IsError)
@@ -592,10 +592,10 @@ public partial class Functions
 		return new CallState(mail.Subject.ToString());
 	}
 	[SharpFunction(Name = "mailtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
-	public static async ValueTask<CallState> mailtime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> mailtime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator!);
 		
 		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
 		if (parseResult.IsError)
@@ -618,7 +618,7 @@ public partial class Functions
 		return new CallState(mail.DateSent.ToUnixTimeSeconds().ToString());
 	}
 	[SharpFunction(Name = "malias", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["alias"])]
-	public static async ValueTask<CallState> malias(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> malias(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Mail aliases are not yet implemented in the system
 		// Return empty result as per documentation behavior when no aliases exist

@@ -201,7 +201,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
-	public static ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
 
 	[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["expression"])]
@@ -1902,7 +1902,7 @@ public partial class Commands
 
 		if (switches.Contains("GLOBAL"))
 		{
-			var masterRoom = new DBRef(Convert.ToInt32(_configuration.CurrentValue._database.MasterRoom));
+			var masterRoom = new DBRef(Convert.ToInt32(_configuration.CurrentValue.Database.MasterRoom));
 			var masterRoomContents = _mediator.CreateStream(new GetContentsQuery(masterRoom))
 			                         ?? AsyncEnumerable.Empty<AnySharpContent>();
 
@@ -3391,7 +3391,7 @@ public partial class Commands
 		// No arguments - list all user-defined functions
 		if (args.Count == 0)
 		{
-			if (FunctionLibrary == null)
+			if (_functionLibrary == null)
 			{
 				await _notifyService.Notify(executor, "Function library unavailable.");
 				return new CallState("#-1 LIBRARY UNAVAILABLE");
@@ -3527,7 +3527,7 @@ public partial class Commands
 		}
 		
 		// Single argument - show function information
-		if (FunctionLibrary == null)
+		if (_functionLibrary == null)
 		{
 			await _notifyService.Notify(executor, "Function library unavailable.");
 			return new CallState("#-1 LIBRARY UNAVAILABLE");
@@ -4583,15 +4583,15 @@ public partial class Commands
 	/// <summary>
 	/// Checks if a flag is a default flag for the object type
 	/// </summary>
-	private static bool IsDefaultFlag(string type, string flagName)
+	private bool IsDefaultFlag(string type, string flagName)
 	{
 		// Get default flags from configuration
 		var defaultFlags = type.ToUpperInvariant() switch
 		{
-			"PLAYER" => Configuration?.CurrentValue.Flag.PlayerFlags ?? [],
-			"ROOM" => Configuration?.CurrentValue.Flag.RoomFlags ?? [],
-			"THING" => Configuration?.CurrentValue.Flag.ThingFlags ?? [],
-			"EXIT" => Configuration?.CurrentValue.Flag.ExitFlags ?? [],
+			"PLAYER" => _configuration?.CurrentValue.Flag.PlayerFlags ?? [],
+			"ROOM" => _configuration?.CurrentValue.Flag.RoomFlags ?? [],
+			"THING" => _configuration?.CurrentValue.Flag.ThingFlags ?? [],
+			"EXIT" => _configuration?.CurrentValue.Flag.ExitFlags ?? [],
 			_ => Array.Empty<string>()
 		};
 		
@@ -5966,7 +5966,7 @@ public partial class Commands
 
 		return CallState.Empty;
 
-		static async Task<bool> IsConnectedOrPuppetConnected(AnySharpObject obj)
+		async Task<bool> IsConnectedOrPuppetConnected(AnySharpObject obj)
 		{
 			if (await _connectionService.IsConnected(obj)) return true;
 

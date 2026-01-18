@@ -22,7 +22,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
 		// Check if SQL is available
-		if (SqlService == null || !_sqlService.IsAvailable)
+		if (_sqlService == null || !_sqlService.IsAvailable)
 		{
 			await _notifyService.Notify(executor, "#-1 SQL IS NOT ENABLED");
 			return new CallState("#-1 SQL IS NOT ENABLED");
@@ -76,7 +76,7 @@ public partial class Commands
 		var spoofSwitch = switches.Contains("SPOOF");
 		
 		// Check if SQL is available
-		if (SqlService == null || !_sqlService.IsAvailable)
+		if (_sqlService == null || !_sqlService.IsAvailable)
 		{
 			await _notifyService.Notify(executor, "#-1 SQL IS NOT ENABLED");
 			return new CallState("#-1 SQL IS NOT ENABLED");

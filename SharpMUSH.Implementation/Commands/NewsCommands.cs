@@ -18,7 +18,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		if (TextFileService == null)
+		if (_textFileService == null)
 		{
 			await _notifyService.Notify(executor, "News system not initialized.");
 			return new CallState("#-1 NEWS SYSTEM NOT INITIALIZED");
@@ -126,7 +126,7 @@ public partial class Commands
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
-		if (TextFileService == null)
+		if (_textFileService == null)
 		{
 			await _notifyService.Notify(executor, "Admin help system not initialized.");
 			return new CallState("#-1 AHELP SYSTEM NOT INITIALIZED");

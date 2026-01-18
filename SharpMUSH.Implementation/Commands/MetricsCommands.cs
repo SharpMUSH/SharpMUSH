@@ -30,7 +30,7 @@ public partial class Commands
 		ParameterNames = ["time-range", "limit"])]
 	public async ValueTask<Option<CallState>> Metrics(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		if (PrometheusQueryService == null)
+		if (_prometheusQueryService == null)
 		{
 			await _notifyService.Notify(parser.CurrentState.Executor!.Value,
 				MModule.single("Prometheus query service is not available."));
@@ -228,7 +228,7 @@ Examples:
 		}
 		catch (Exception ex)
 		{
-			Logger?.LogError(ex, "Error executing @metrics command");
+			_logger?.LogError(ex, "Error executing @metrics command");
 			await _notifyService.Notify(executor,
 				MModule.single($"Error querying metrics: {ex.Message}"));
 			return new None();

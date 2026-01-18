@@ -577,7 +577,7 @@ public partial class Commands
 		var logMessage = logCallState!.Message!;
 		
 		// Log the message with the appropriate category
-		using (Logger!.BeginScope(new Dictionary<string, string>
+		using (_logger!.BeginScope(new Dictionary<string, string>
 		{
 			["Category"] = category,
 			["ExecutorDBRef"] = executor.Object().DBRef.ToString(),
@@ -2031,7 +2031,7 @@ public partial class Commands
 	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default, MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
 	public async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var defaultHome = _configuration.CurrentValue._database.DefaultHome;
+		var defaultHome = _configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var startingQuota = (int)_configuration.CurrentValue.Limit.StartingQuota;
 		var args = parser.CurrentState.Arguments;
@@ -2459,7 +2459,7 @@ public partial class Commands
 									var anyObj = fullObj.Known;
 									
 									// Check for cycles before setting the zone
-									if (!await HelperFunctions.SafeToAddZone(Mediator, _database, anyObj, zoneObj))
+									if (!await HelperFunctions.SafeToAddZone(_mediator, _database, anyObj, zoneObj))
 									{
 										// Skip this object if it would create a cycle
 										continue;
@@ -2612,7 +2612,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 
-		if (TextFileService == null)
+		if (_textFileService == null)
 		{
 			await _notifyService.Notify(executor, "Text file service not available.");
 			return CallState.Empty;

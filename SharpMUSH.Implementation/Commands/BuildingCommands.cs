@@ -35,7 +35,7 @@ public partial class Commands
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 		
-		var defaultHome = _configuration.CurrentValue._database.DefaultHome;
+		var defaultHome = _configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var location = await _mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
 		
@@ -69,7 +69,7 @@ public partial class Commands
 			if (!newThing.IsNone)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, _database, newThing.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(_mediator, _database, newThing.Known, creatorZone.Known))
 				{
 					await _mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
 				}
@@ -772,7 +772,7 @@ public partial class Commands
 			if (!newRoom.IsNone)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, _database, newRoom.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(_mediator, _database, newRoom.Known, creatorZone.Known))
 				{
 					await _mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
 				}
@@ -1069,7 +1069,7 @@ public partial class Commands
 			if (!newExit.IsNone)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, _database, newExit.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(_mediator, _database, newExit.Known, creatorZone.Known))
 				{
 					await _mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
 				}
@@ -1105,7 +1105,7 @@ public partial class Commands
 		var targetName = args["0"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 		
-		var defaultHome = _configuration.CurrentValue._database.DefaultHome;
+		var defaultHome = _configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var location = await _mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
 		

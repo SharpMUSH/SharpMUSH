@@ -17,7 +17,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		if (TextFileService == null)
+		if (_textFileService == null)
 		{
 			await _notifyService.Notify(executor, "Help system not initialized.");
 			return new CallState("#-1 HELP SYSTEM NOT INITIALIZED");
