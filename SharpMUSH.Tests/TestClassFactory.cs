@@ -206,9 +206,10 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		// CRITICAL FIX: Set up ArangoDB connection BEFORE creating WebApplicationFactory
 		// This prevents Program.Main() from creating a new ArangoDB container via ArangoTestContainerStartupStrategy
 		// Without this, EVERY test class would create its own ArangoDB container (129 containers!)
+		// Using ARANGO_TEST_CONNECTION_STRING (separate from production ARANGO_CONNECTION_STRING)
 		var arangoConnectionString = $"Server={ArangoDbTestServer.Instance.GetTransportAddress()};User=root;Realm=;Password=password;";
-		Environment.SetEnvironmentVariable("ARANGO_CONNECTION_STRING", arangoConnectionString);
-		Console.WriteLine($"[TestClassFactory] Set ARANGO_CONNECTION_STRING: {arangoConnectionString}");
+		Environment.SetEnvironmentVariable("ARANGO_TEST_CONNECTION_STRING", arangoConnectionString);
+		Console.WriteLine($"[TestClassFactory] Set ARANGO_TEST_CONNECTION_STRING: {arangoConnectionString}");
 
 		// Set up Redis connection
 		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
