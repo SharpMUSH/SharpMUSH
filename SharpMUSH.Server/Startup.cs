@@ -29,6 +29,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using SharpMUSH.Messaging.Kafka;
 using SharpMUSH.Server.Strategy.ArangoDB;
+using SharpMUSH.Server.Strategy.MessageQueue;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 using ZiggyCreatures.Caching.Fusion;
@@ -36,7 +37,12 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy, RedisStrategy redisStrategy)
+public class Startup(
+	ArangoConfiguration arangoConfig, 
+	string colorFile, 
+	PrometheusStrategy prometheusStrategy, 
+	RedisStrategy redisStrategy,
+	MessageQueueStrategy messageQueueStrategy)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -167,13 +173,11 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddMediator();
 
 		// Configure MassTransit with Kafka/RedPanda for message queue integration
-		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
-
 		services.AddMainProcessMessaging(
 			options =>
 			{
-				options.Host = kafkaHost;
-				options.Port = 9092;
+				options.Host = messageQueueStrategy.Host;
+				options.Port = messageQueueStrategy.Port;
 				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
 			},
 			x =>

@@ -216,12 +216,14 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		var redisConnection = $"localhost:{redisPort}";
 		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
 
-		// Set up Kafka connection
-		var kafkaHost = RedPandaTestServer.Instance.GetBootstrapAddress();
-		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
+		// Set up Kafka connection - extract host and port separately
+		var kafkaBootstrapAddress = RedPandaTestServer.Instance.GetBootstrapAddress();
+		var kafkaPort = RedPandaTestServer.Instance.GetMappedPublicPort(9092);
+		Environment.SetEnvironmentVariable("KAFKA_HOST", "localhost");
+		Environment.SetEnvironmentVariable("KAFKA_PORT", kafkaPort.ToString());
 
-		// Create Kafka topics
-		await CreateKafkaTopicsAsync(kafkaHost);
+		// Create Kafka topics using the full bootstrap address
+		await CreateKafkaTopicsAsync(kafkaBootstrapAddress);
 
 		// Create class-specific NotifyService mock
 		_notifyServiceMock = Substitute.For<INotifyService>();

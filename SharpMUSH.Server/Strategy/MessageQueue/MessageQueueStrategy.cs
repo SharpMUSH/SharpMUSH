@@ -2,7 +2,7 @@ namespace SharpMUSH.Server.Strategy.MessageQueue;
 
 /// <summary>
 /// Base class for message queue configuration strategies.
-/// Reserved for future use to support different Kafka cluster configurations,
+/// Supports different Kafka cluster configurations,
 /// testing environments (real Kafka vs RedPanda), and production vs development setups.
 /// </summary>
 /// <remarks>
@@ -11,5 +11,13 @@ namespace SharpMUSH.Server.Strategy.MessageQueue;
 /// </remarks>
 public abstract class MessageQueueStrategy
 {
-	// Reserved for future Kafka configuration options specific to deployment strategy
+	/// <summary>
+	/// Gets the Kafka/RedPanda host address.
+	/// </summary>
+	public abstract string Host { get; }
+	
+	/// <summary>
+	/// Gets the Kafka/RedPanda port.
+	/// </summary>
+	public abstract int Port { get; }
 }

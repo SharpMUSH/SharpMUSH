@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using SharpMUSH.Server.Strategy.ArangoDB;
+using SharpMUSH.Server.Strategy.MessageQueue;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 
@@ -21,6 +22,9 @@ public class Program
 		var redisStrategy = RedisStrategyProvider.GetStrategy();
 		await redisStrategy.InitializeAsync();
 
+		// Initialize MessageQueue strategy
+		var messageQueueStrategy = MessageQueueStrategyProvider.GetStrategy();
+
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
 		if (!File.Exists(colorFile))
@@ -28,7 +32,7 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(arangoConfig, colorFile, prometheusStrategy, redisStrategy);
+		var startup = new Startup(arangoConfig, colorFile, prometheusStrategy, redisStrategy, messageQueueStrategy);
 		
 		startup.ConfigureServices(builder.Services);
 		

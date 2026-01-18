@@ -11,6 +11,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
+using SharpMUSH.Server.Strategy.MessageQueue;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 
@@ -40,7 +41,10 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		var redisStrategy = RedisStrategyProvider.GetStrategy();
 		redisStrategy.InitializeAsync().AsTask().Wait();
 
-		var startup = new Startup(acnf, colorFile, prometheusStrategy, redisStrategy);
+		// Initialize MessageQueue strategy for benchmarks
+		var messageQueueStrategy = MessageQueueStrategyProvider.GetStrategy();
+
+		var startup = new Startup(acnf, colorFile, prometheusStrategy, redisStrategy, messageQueueStrategy);
 
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
