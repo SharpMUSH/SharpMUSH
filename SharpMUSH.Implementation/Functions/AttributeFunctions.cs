@@ -28,7 +28,7 @@ public partial class Functions
 			LocateFlags.All,
 			async onObject => await AttributeHelpers.GetPronoun(_attributeService!, _mediator!, parser, onObject,
 				_configuration!.CurrentValue.Attribute.GenderAttribute,
-				Configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
+				_configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
 				x => x switch
 				{
 					"M" or "Male" => "his",
@@ -762,7 +762,7 @@ public partial class Functions
 			executor, executor, arg0, LocateFlags.All,
 			async onObject => await AttributeHelpers.GetPronoun(_attributeService!, _mediator!, parser, onObject,
 				_configuration!.CurrentValue.Attribute.GenderAttribute,
-				Configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
+				_configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
 				x => x switch
 				{
 					"M" or "Male" => "him",
@@ -871,7 +871,7 @@ public partial class Functions
 			executor, executor, arg0, LocateFlags.All,
 			async onObject => await AttributeHelpers.GetPronoun(_attributeService!, _mediator!, parser, onObject,
 				_configuration!.CurrentValue.Attribute.GenderAttribute,
-				Configuration.CurrentValue.Attribute.PossessivePronounAttribute,
+				_configuration.CurrentValue.Attribute.PossessivePronounAttribute,
 				x => x switch
 				{
 					"M" or "Male" => "his",
@@ -1408,7 +1408,7 @@ public partial class Functions
 			LocateFlags.All,
 			async onObject => await AttributeHelpers.GetPronoun(_attributeService!, _mediator!, parser, onObject,
 				_configuration!.CurrentValue.Attribute.GenderAttribute,
-				Configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
+				_configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
 				x => x switch
 				{
 					"M" or "Male" => "he",

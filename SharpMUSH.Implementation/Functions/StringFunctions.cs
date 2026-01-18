@@ -1887,7 +1887,7 @@ public partial class Functions
 			: MModule.single(" ");
 
 		var arg2 = parser.CurrentState.Arguments.TryGetValue(
-			Configuration.CurrentValue.Compatibility.TinyTrimFun
+			_configuration.CurrentValue.Compatibility.TinyTrimFun
 				? "2"
 				: "1", out var arg2Value)
 			? arg2Value.Message!.ToPlainText()
