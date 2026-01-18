@@ -9,6 +9,7 @@ public class RedPandaTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithPortBinding(9092, true) // Use dynamic port to avoid conflicts
 		// Configure 6MB message size limit for production compatibility
 		.WithCommand("--set", "kafka_batch_max_bytes=6291456") // 6MB
+		.WithReuse(true)
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();
