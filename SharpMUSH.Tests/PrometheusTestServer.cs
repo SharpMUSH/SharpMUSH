@@ -22,17 +22,31 @@ scrape_configs:
       - targets: ['host.docker.internal:9092']
 ";
 
-	public IContainer Instance { get; } = new ContainerBuilder("prom/prometheus:latest")
-		.WithName("sharpmush-test-prometheus")
-		.WithPortBinding(9090, 9090)
-		.WithCommand("--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus")
-		.WithResourceMapping(
-			Encoding.UTF8.GetBytes(PrometheusConfig),
-			"/etc/prometheus/prometheus.yml")
-		.WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPort(9090).ForPath("/-/ready")))
-		.WithReuse(true)
-		.Build();
+	private IContainer? _instance;
 
-	public async Task InitializeAsync() => await Instance.StartAsync();
-	public async ValueTask DisposeAsync() => await Instance.DisposeAsync();
+	public IContainer Instance => _instance ?? throw new InvalidOperationException("Container not initialized. Call InitializeAsync first.");
+
+	public async Task InitializeAsync()
+	{
+		_instance = new ContainerBuilder("prom/prometheus:latest")
+			.WithName("sharpmush-test-prometheus")
+			.WithLabel("reuse-hash", "sharpmush-prometheus-v1")
+			.WithPortBinding(9090, 9090)
+			.WithCommand("--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus")
+			.WithResourceMapping(
+				Encoding.UTF8.GetBytes(PrometheusConfig),
+				"/etc/prometheus/prometheus.yml")
+			.WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPort(9090).ForPath("/-/ready")))
+			.WithReuse(true)
+			.Build();
+		await _instance.StartAsync();
+	}
+	
+	public async ValueTask DisposeAsync()
+	{
+		if (_instance != null)
+		{
+			await _instance.DisposeAsync();
+		}
+	}
 }
