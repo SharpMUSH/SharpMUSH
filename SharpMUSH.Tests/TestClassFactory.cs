@@ -203,6 +203,13 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		// Get Prometheus URL
 		var prometheusUrl = $"http://localhost:{PrometheusTestServer.Instance.GetMappedPublicPort(9090)}";
 
+		// CRITICAL FIX: Set up ArangoDB connection BEFORE creating WebApplicationFactory
+		// This prevents Program.Main() from creating a new ArangoDB container via ArangoTestContainerStartupStrategy
+		// Without this, EVERY test class would create its own ArangoDB container (129 containers!)
+		var arangoConnectionString = $"Server={ArangoDbTestServer.Instance.GetTransportAddress()};User=root;Realm=;Password=password;";
+		Environment.SetEnvironmentVariable("ARANGO_CONNECTION_STRING", arangoConnectionString);
+		Console.WriteLine($"[TestClassFactory] Set ARANGO_CONNECTION_STRING: {arangoConnectionString}");
+
 		// Set up Redis connection
 		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
 		var redisConnection = $"localhost:{redisPort}";
@@ -219,6 +226,8 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		_notifyServiceMock = Substitute.For<INotifyService>();
 
 		// Create TestWebApplicationBuilderFactory with class-specific database
+		// Now that ARANGO_CONNECTION_STRING is set, Program.Main() will use ArangoKubernetesStartupStrategy
+		// instead of creating a new TestContainer, ensuring all test classes share the same ArangoDB container
 		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
