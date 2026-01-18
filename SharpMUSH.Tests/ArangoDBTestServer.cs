@@ -6,6 +6,7 @@ namespace SharpMUSH.Tests;
 public class ArangoDbTestServer : IAsyncInitializer, IAsyncDisposable
 {
 	public ArangoDbContainer Instance { get; } =  new ArangoDbBuilder("arangodb:latest")
+		.WithLabel("reuse-id", "SharpMUSH")
 		.WithPassword("password")
 		.WithReuse(true)
 		.Build();
