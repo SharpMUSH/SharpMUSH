@@ -22,6 +22,16 @@ public class BuildingCommandTests
 	private IMUSHCodeParser Parser => Factory.CommandParser;
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
+	/// <summary>
+	/// Resets mock state before each test to prevent call pollution between tests.
+	/// Without this, NotifyService mock accumulates calls from all previous tests in the class.
+	/// </summary>
+	[Before(Test)]
+	public void ResetMocks()
+	{
+		Factory.ResetMocks();
+	}
+
 	[Test]
 	[DependsOn<GeneralCommandTests>]
 	public async ValueTask CreateObject()

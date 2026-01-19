@@ -293,6 +293,15 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 	}
 
 	/// <summary>
+	/// Resets the NotifyService mock state to prevent call pollution between tests.
+	/// Call this method in a [Before(Test)] method to ensure each test starts with a clean mock.
+	/// </summary>
+	public void ResetMocks()
+	{
+		_notifyServiceMock?.ClearReceivedCalls();
+	}
+
+	/// <summary>
 	/// Creates Kafka topics for the test session.
 	/// This is safe to call multiple times (idempotent).
 	/// </summary>
