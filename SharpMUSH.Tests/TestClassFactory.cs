@@ -313,12 +313,19 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 
 		var topics = new List<string>
 		{
-			"telnet-input",
+			// Output topics (MainProcess → ConnectionServer)
 			"telnet-output",
 			"telnet-prompt",
-			"websocket-input",
 			"websocket-output",
-			"websocket-prompt"
+			"websocket-prompt",
+			// Input topics (ConnectionServer → MainProcess)
+			"telnet-input",
+			"websocket-input",
+			"g-m-c-p-signal",        // GMCPSignalMessage
+			"m-s-d-p-update",        // MSDPUpdateMessage
+			"n-a-w-s-update",        // NAWSUpdateMessage
+			"connection-established", // ConnectionEstablishedMessage
+			"connection-closed"       // ConnectionClosedMessage
 		};
 
 		var topicSpecifications = topics.Select(topic => new TopicSpecification
