@@ -61,13 +61,11 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 	private static int _databaseCounter = 0;
 	private static int _handleCounter = 0;
 	private long _connectionHandle;
-	private IServiceScope? _scope;
 
 	/// <summary>
 	/// Service provider for this test class. Use this to get services like IMediator, IConnectionService, etc.
-	/// This is a SCOPED service provider so that Commands/Functions get the correct (mocked) dependencies.
 	/// </summary>
-	public IServiceProvider Services => _scope!.ServiceProvider;
+	public IServiceProvider Services => _server!.Services;
 
 	/// <summary>
 	/// </summary>
@@ -244,12 +242,7 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 			prometheusUrl,
 			DatabaseName); // Pass the unique database name
 
-		// CRITICAL: Create a scope for this test class so Commands/Functions get the mocked NotifyService
-		// Commands and Functions are registered as Scoped, so they need to be resolved from a scope
-		// This ensures each test class gets its own Commands/Functions instances with the correct dependencies
-		_scope = _server.Services.CreateScope();
-		var provider = _scope.ServiceProvider;
-
+		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();
 		var databaseService = provider.GetRequiredService<ISharpDatabase>();
 
@@ -414,9 +407,6 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 				}
 			}
 		}
-
-		// Dispose the scope to clean up Commands/Functions instances
-		_scope?.Dispose();
 
 		// Note: We intentionally do NOT delete the test database here
 		// This allows for debugging failed tests by inspecting the database state

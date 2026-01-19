@@ -149,13 +149,10 @@ public class Startup(
 		// Initialize TextFileService
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
 		
-		// Commands and Functions must be Scoped (not Singleton) to support test isolation
-		// Each scope (e.g., test class) needs its own instance with the correct services (e.g., mocked NotifyService)
-		// The generated command/function libraries are built in the constructor and bind to that specific instance
-		services.AddScoped<ILibraryProvider<FunctionDefinition>, Functions>();
-		services.AddScoped<ILibraryProvider<CommandDefinition>, Commands>();
-		services.AddScoped(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
-		services.AddScoped(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
+		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
+		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
+		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
+		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 		
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
