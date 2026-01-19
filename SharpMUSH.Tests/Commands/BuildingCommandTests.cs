@@ -50,57 +50,38 @@ public class BuildingCommandTests
 	[DependsOn(nameof(CreateObjectWithCost))]
 	public async ValueTask DoDigForCommandListCheck()
 	{
-		// DIAGNOSTIC: Log test start and NotifyService info
-		var notifyTypeName = NotifyService?.GetType().FullName ?? "NULL";
-		var notifyHashCode = NotifyService?.GetHashCode().ToString("X8") ?? "NULL";
-		Console.WriteLine($"DIAGNOSTIC [Test DoDigForCommandListCheck Start]: NotifyService type={notifyTypeName}, hashCode={notifyHashCode}, instance={NotifyService}");
-
 		// Clear any previous calls to the mock
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
 		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
 		
-		Console.WriteLine($"DIAGNOSTIC [Test DoDigForCommandListCheck]: About to execute @dig command");
 		var newRoom = await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dig DoDigTestRoom=DoDigTestExit;DoDigTestExitAlias,DoDigTestExitBack;DoDigTestExitAliasBack"));
 
 		var newDb = DBRef.Parse(newRoom.Message!.ToPlainText()!);
 		
-		Console.WriteLine($"DIAGNOSTIC [Test DoDigForCommandListCheck]: Command completed, newDb={newDb}, checking Notify calls...");
-		
-		// Log all calls received by the mock
-		var receivedCalls = NotifyService!.ReceivedCalls().ToList();
-		Console.WriteLine($"DIAGNOSTIC [Test DoDigForCommandListCheck]: Total Notify calls received: {receivedCalls.Count}");
-		foreach (var call in receivedCalls)
-		{
-			var args = call.GetArguments();
-			Console.WriteLine($"DIAGNOSTIC [Test DoDigForCommandListCheck]: Received call - Method: {call.GetMethodInfo().Name}, Args: {string.Join(", ", args.Select(a => a?.ToString() ?? "null"))}");
-		}
-
 		// Use unique room name in assertions to avoid pollution from other tests
-		await NotifyService!
+		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
 				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number #{newDb.Number}")));
-		await NotifyService!
+		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number+1}") && mstr.ToString().Contains($"#{newDb.Number}"),
 					str => str.Contains($"Linked exit #{newDb.Number+1}") && str.Contains($"#{newDb.Number}")
 				)));
-		await NotifyService!
+		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
-		await NotifyService!
+		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number+2}") && mstr.ToString().Contains($"#{currentLocationDbRef.Number}"),
 					str => str.Contains($"Linked exit #{newDb.Number+2}") && str.Contains($"#{currentLocationDbRef.Number}")
 				)));
-		
-		Console.WriteLine($"DIAGNOSTIC [Test DoDigForCommandListCheck]: All assertions passed");
 	}
 
 	// Something is getting created before this one can trigger...
