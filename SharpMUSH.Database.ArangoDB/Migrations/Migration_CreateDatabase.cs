@@ -17,6 +17,33 @@ public class Migration_CreateDatabase : IArangoMigration
 
 	public string Name => "create_database";
 
+	// Helper to determine if we're in test mode for performance optimizations
+	private static bool IsTestMode => Environment.GetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION") == "true";
+
+	// Helper method to batch insert documents for better performance
+	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> BatchCreateDocuments<T>(
+		IArangoMigrator migrator,
+		ArangoHandle handle,
+		string collection,
+		List<T> documents)
+	{
+		if (IsTestMode && documents.Count > 1)
+		{
+			// Use batch insert for test mode
+			return await migrator.Context.Document.CreateManyAsync(handle, collection, documents);
+		}
+		else
+		{
+			// Fall back to individual inserts for production to maintain exact compatibility
+			var results = new List<ArangoUpdateResult<ArangoVoid>>();
+			foreach (var doc in documents)
+			{
+				results.Add(await migrator.Context.Document.CreateAsync(handle, collection, doc));
+			}
+			return results;
+		}
+	}
+
 	public async Task Up(IArangoMigrator migrator, ArangoHandle handle)
 	{
 		await migrator.ApplyStructureAsync(handle, new ArangoStructure()
@@ -50,7 +77,7 @@ public class Migration_CreateDatabase : IArangoMigration
 									additionalProperties = true
 								}
 							},
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						},
 						Indices =
 						[
@@ -66,7 +93,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Things,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -94,7 +121,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Rooms,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -103,7 +130,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ServerData,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -112,7 +139,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ObjectData,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -121,7 +148,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Exits,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -141,7 +168,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Players,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -170,7 +197,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ObjectFlags,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -200,7 +227,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.AttributeFlags,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -226,7 +253,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ObjectPowers,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -254,7 +281,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Attributes,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -288,7 +315,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.AttributeEntries,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -318,7 +345,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Functions,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new
@@ -357,7 +384,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Commands,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
@@ -385,7 +412,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Mails,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
@@ -430,7 +457,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Channels,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
@@ -462,7 +489,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.AtLocation,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -471,7 +498,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasObjectData,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -480,7 +507,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasHome,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -489,7 +516,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasExit,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -498,7 +525,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasFlags,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -507,7 +534,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasAttribute,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -516,7 +543,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasAttributeFlag,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -525,7 +552,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasAttributeEntry,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -534,7 +561,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasObjectOwner,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -543,7 +570,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasAttributeOwner,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					}, 
 					new()
@@ -552,7 +579,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.OnChannel,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new
@@ -575,7 +602,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.SenderOfMail,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 						}
 					},
 					new()
@@ -584,7 +611,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.OwnerOfChannel,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 						}
 					},
 					new()
@@ -593,7 +620,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ReceivedMail,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 						}
 					},
 					new()
@@ -602,7 +629,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasHook,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -943,15 +970,40 @@ public class Migration_CreateDatabase : IArangoMigration
 		var attributeEntries = await CreateInitialSharpAttributeEntries(migrator, handle);
 		var wizard = flags[0];
 
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = roomTwoObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = roomZeroObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
+		// Batch edge creation for better performance
+		var isObjectEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id },
+			new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id },
+			new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.IsObject, isObjectEdges);
+
+		var locationEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.AtLocation, locationEdges);
+
+		var homeEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.HasHome, homeEdges);
+
+		var ownerEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = roomTwoObj.Id, To = playerOnePlayer.Id },
+			new SharpEdge { From = roomZeroObj.Id, To = playerOnePlayer.Id },
+			new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.HasObjectOwner, ownerEdges);
+
+		var flagEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = playerOneObj.Id, To = wizard.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.HasFlags, flagEdges);
 	}
 
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialSharpAttributeEntries(

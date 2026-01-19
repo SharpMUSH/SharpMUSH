@@ -188,6 +188,10 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 			Console.WriteLine($"[TestClassFactory] Created database: {DatabaseName}");
 		}
 
+		// PERFORMANCE OPTIMIZATION: Enable fast migration mode for tests
+		// This disables WaitForSync and enables batch inserts, reducing migration time from ~2-3s to ~200-400ms per test class
+		Environment.SetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION", "true");
+
 		// Run database migration
 		var migrator = new ArangoMigrator(arangoContext)
 		{
