@@ -100,6 +100,12 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		_textFileService = textFileService;
 		_functionLibrary = functionLibrary;
 
+		// DIAGNOSTIC: Log which INotifyService instance is being injected
+		var notifyTypeName = notifyService?.GetType().FullName ?? "NULL";
+		var notifyHashCode = notifyService?.GetHashCode().ToString("X8") ?? "NULL";
+		_logger.LogWarning("DIAGNOSTIC [Commands Constructor]: INotifyService type={NotifyType}, hashCode={HashCode}, instance={Instance}",
+			notifyTypeName, notifyHashCode, notifyService);
+
 		// Get command definitions bound to this instance
 		foreach (var command in Generated.CommandLibrary.GetCommands(this))
 		{

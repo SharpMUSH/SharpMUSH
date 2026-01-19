@@ -1,4 +1,5 @@
-﻿using OneOf.Types;
+﻿using Microsoft.Extensions.Logging;
+using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -31,6 +32,12 @@ public partial class Commands
 	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
 	public async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// DIAGNOSTIC: Log command invocation
+		var notifyTypeName = _notifyService?.GetType().FullName ?? "NULL";
+		var notifyHashCode = _notifyService?.GetHashCode().ToString("X8") ?? "NULL";
+		_logger?.LogWarning("DIAGNOSTIC [@CREATE Start]: _notifyService type={NotifyType}, hashCode={HashCode}, instance={Instance}",
+			notifyTypeName, notifyHashCode, _notifyService);
+
 		var args = parser.CurrentState.Arguments;
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
@@ -41,16 +48,16 @@ public partial class Commands
 		
 		if (location.IsNone || location.IsExit)
 		{
-		return await _notifyService.NotifyAndReturn(
-			executor.Object().DBRef,
-			errorReturn: ErrorMessages.Returns.NotARoom,
-			notifyMessage: "Default home location is invalid.",
-			shouldNotify: true);
+			return await _notifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.NotARoom,
+				notifyMessage: "Default home location is invalid.",
+				shouldNotify: true);
 		}
 
 		if (!await _validateService.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
-			return await _notifyService.NotifyAndReturn(
+			return await _notifyService!.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.BadObjectName,
 				notifyMessage: ErrorMessages.Notifications.InvalidNameThing,
@@ -76,7 +83,14 @@ public partial class Commands
 			}
 		}
 		
-		await _notifyService.Notify(executor, $"Created {name} ({thing}).");
+		// DIAGNOSTIC: Log before calling Notify
+		_logger?.LogWarning("DIAGNOSTIC [@CREATE Before Notify]: Calling _notifyService.Notify({Executor}, 'Created {Name} ({Thing}).')",
+			executor.Object().DBRef, name, thing);
+		
+		await _notifyService!.Notify(executor, $"Created {name} ({thing}).");
+
+		// DIAGNOSTIC: Log after calling Notify
+		_logger?.LogWarning("DIAGNOSTIC [@CREATE After Notify]: Called _notifyService.Notify successfully");
 
 		await _eventService.TriggerEventAsync(
 			parser,
@@ -740,6 +754,12 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 6, ParameterNames = ["name", "exits"])]
 	public async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// DIAGNOSTIC: Log command invocation
+		var notifyTypeName = _notifyService?.GetType().FullName ?? "NULL";
+		var notifyHashCode = _notifyService?.GetHashCode().ToString("X8") ?? "NULL";
+		_logger?.LogWarning("DIAGNOSTIC [@DIG Start]: _notifyService type={NotifyType}, hashCode={HashCode}, instance={Instance}",
+			notifyTypeName, notifyHashCode, _notifyService);
+
 		// NOTE: We discard arguments 4-6.
 		var executorBase = await parser.CurrentState.KnownExecutorObject(_mediator);
 		var executor = executorBase.Object();
@@ -751,7 +771,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
 		{
-			await _notifyService.Notify(executor.DBRef, "Dig what?");
+			await _notifyService!.Notify(executor.DBRef, "Dig what?");
 			return new CallState("#-1 NO ROOM NAME SPECIFIED");
 		}
 
@@ -762,7 +782,11 @@ public partial class Commands
 		// CREATE ROOM
 		var response = await _mediator.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
-		await _notifyService.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
+		
+		// DIAGNOSTIC: Log Notify call #1
+		_logger?.LogWarning("DIAGNOSTIC [@DIG Notify #1]: About to call Notify with message: '{Message}'", $"{roomName} created with room number #{response.Number}.");
+		await _notifyService!.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
+		_logger?.LogWarning("DIAGNOSTIC [@DIG Notify #1]: Completed Notify call");
 
 		// Inherit zone from creator
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
@@ -788,7 +812,11 @@ public partial class Commands
 			var toExitResponse = await _mediator.Send(new CreateExitCommand(exitToName.First(),
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
+			
+			// DIAGNOSTIC: Log Notify calls for exit creation
+			_logger?.LogWarning("DIAGNOSTIC [@DIG Notify #2]: About to call Notify with message: 'Opened exit #{ExitNum}'", toExitResponse.Number);
 			await _notifyService.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
+			_logger?.LogWarning("DIAGNOSTIC [@DIG Notify #3]: About to call Notify with message: 'Trying to link...'");
 			await _notifyService.Notify(executor.DBRef, "Trying to link...");
 
 			var newRoomObject = await _mediator.Send(new GetObjectNodeQuery(response));
@@ -796,6 +824,7 @@ public partial class Commands
 
 			await _mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
+			_logger?.LogWarning("DIAGNOSTIC [@DIG Notify #4]: About to call Notify with message: 'Linked exit #{ExitNum} to #{RoomNum}'", toExitResponse.Number, response.Number);
 			await _notifyService.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
 		}
 
@@ -812,16 +841,20 @@ public partial class Commands
 				await executor.Owner.WithCancellation(CancellationToken.None)));
 			var newExitObject = await _mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
+			_logger?.LogWarning("DIAGNOSTIC [@DIG Notify #5]: About to call Notify with message: 'Opened exit #{ExitNum}'", fromExitResponse.Number);
 			await _notifyService.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
+			_logger?.LogWarning("DIAGNOSTIC [@DIG Notify #6]: About to call Notify with message: 'Trying to link...'");
 			await _notifyService.Notify(executor.DBRef, "Trying to link...");
 
 			var where = await executorBase.Where();
 			await _mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
+			_logger?.LogWarning("DIAGNOSTIC [@DIG Notify #7]: About to call Notify with message: 'Linked exit #{ExitNum} to #{RoomNum}'", fromExitResponse.Number, where.Object().DBRef.Number);
 			await _notifyService.Notify(executor.DBRef,
 				$"Linked exit #{fromExitResponse.Number} to #{where.Object().DBRef.Number}");
 		}
 
+		_logger?.LogWarning("DIAGNOSTIC [@DIG End]: Command completed successfully");
 		return new CallState(response.ToString());
 	}
 
