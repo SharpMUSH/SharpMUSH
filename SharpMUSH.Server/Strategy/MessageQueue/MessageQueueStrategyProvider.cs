@@ -4,14 +4,23 @@ public static class MessageQueueStrategyProvider
 {
 	public static MessageQueueStrategy GetStrategy()
 	{
-		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST");
-
-		if (string.IsNullOrWhiteSpace(kafkaHost))
+		// Check for test-specific environment variables first (set by TestClassFactory)
+		var kafkaTestHost = Environment.GetEnvironmentVariable("KAFKA_TEST_HOST");
+		
+		if (!string.IsNullOrWhiteSpace(kafkaTestHost))
 		{
 			return new RedPandaTestContainerStrategy();
 		}
-		else {
+		
+		// Check for production environment variables
+		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST");
+		
+		if (!string.IsNullOrWhiteSpace(kafkaHost))
+		{
 			return new RedPandaContainerStrategy();
 		}
+		
+		// Fallback to test container strategy for local development
+		return new RedPandaTestContainerStrategy();
 	}
 }

@@ -220,11 +220,13 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		var redisConnection = $"localhost:{redisPort}";
 		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
 
-		// Set up Kafka connection - extract host and port separately
+		// Set up Kafka connection using test-specific environment variables
+		// This ensures MessageQueueStrategyProvider.GetStrategy() returns RedPandaTestContainerStrategy
 		var kafkaBootstrapAddress = RedPandaTestServer.Instance.GetBootstrapAddress();
 		var kafkaPort = RedPandaTestServer.Instance.GetMappedPublicPort(9092);
-		Environment.SetEnvironmentVariable("KAFKA_HOST", "localhost");
-		Environment.SetEnvironmentVariable("KAFKA_PORT", kafkaPort.ToString());
+		Environment.SetEnvironmentVariable("KAFKA_TEST_HOST", "localhost");
+		Environment.SetEnvironmentVariable("KAFKA_TEST_PORT", kafkaPort.ToString());
+		Console.WriteLine($"[TestClassFactory] Set KAFKA_TEST_HOST=localhost, KAFKA_TEST_PORT={kafkaPort}");
 
 		// Create Kafka topics using the full bootstrap address
 		await CreateKafkaTopicsAsync(kafkaBootstrapAddress);
