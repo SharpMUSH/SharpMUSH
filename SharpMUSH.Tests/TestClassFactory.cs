@@ -255,37 +255,11 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		// This ensures the correct scoped instance is used on the execution thread
 
 		// Migrate the database (this will use the class-specific database)
-		Console.WriteLine($"[TestClassFactory] Starting database migration for: {DatabaseName}");
 		await databaseService.Migrate();
-		Console.WriteLine($"[TestClassFactory] Database migration completed for: {DatabaseName}");
 
 		// Get the #1 object to bind to
-		Console.WriteLine($"[TestClassFactory] Attempting to retrieve God object (#1)...");
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
-		if (realOne.IsT0)
-		{
-			Console.WriteLine($"[TestClassFactory] Successfully retrieved God object (#1): Name='{realOne.Object()!.Name}'");
-			_one = realOne.Object()!.DBRef;
-		}
-		else
-		{
-			Console.WriteLine($"[TestClassFactory] ERROR: Failed to retrieve God object (#1)! Error: {realOne.AsT1}");
-			throw new InvalidOperationException($"God object (#1) not found after migration: {realOne.AsT1}");
-		}
-		
-		// Also verify Room Zero (#0) exists
-		Console.WriteLine($"[TestClassFactory] Verifying Room Zero (#0) exists...");
-		var roomZero = await databaseService.GetObjectNodeAsync(new DBRef(0));
-		Console.WriteLine($"[TestClassFactory] Room Zero retrieval result - IsPlayer: {roomZero.IsPlayer}, IsRoom: {roomZero.IsRoom}, IsNone: {roomZero.IsNone}");
-		if (roomZero.IsRoom)
-		{
-			Console.WriteLine($"[TestClassFactory] Successfully verified Room Zero (#0): Name='{roomZero.Object()!.Name}', Type: {roomZero.GetType().Name}");
-		}
-		else
-		{
-			Console.WriteLine($"[TestClassFactory] ERROR: Room Zero (#0) not found or is not a room!");
-			throw new InvalidOperationException("Room Zero (#0) not found after migration or is not a room!");
-		}
+		_one = realOne.Object()!.DBRef;
 
 		// Generate unique connection handle for this test class to avoid conflicts
 		_connectionHandle = Interlocked.Increment(ref _handleCounter);
