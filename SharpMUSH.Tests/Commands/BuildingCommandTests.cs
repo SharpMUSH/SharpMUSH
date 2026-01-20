@@ -29,29 +29,47 @@ public class BuildingCommandTests
 		// Database state check: Verify God object (#1) exists from migration
 		Console.WriteLine($"[CreateObject] Checking database state before test...");
 		var godObject = await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse("1")));
-		Console.WriteLine($"[CreateObject] God object (#1) exists: {godObject.IsT0}");
+		Console.WriteLine($"[CreateObject] God object (#1) - IsT0: {godObject.IsT0}, IsT1: {godObject.IsT1}, IsNone: {godObject.IsNone}");
 		if (godObject.IsT0)
 		{
 			Console.WriteLine($"[CreateObject] God object name: {godObject.Object()!.Name}");
 		}
-		else
+		else if (godObject.IsT1)
 		{
-			Console.WriteLine($"[CreateObject] ERROR: God object not found! Error: {godObject.AsT1}");
+			Console.WriteLine($"[CreateObject] ERROR: God object returned T1 (error): {godObject.AsT1}");
 		}
 		
 		// Check Room Zero (#0)
 		var roomZero = await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse("0")));
-		Console.WriteLine($"[CreateObject] Room Zero (#0) exists: {roomZero.IsT0}");
+		Console.WriteLine($"[CreateObject] Room Zero (#0) - IsT0: {roomZero.IsT0}, IsT1: {roomZero.IsT1}, IsNone: {roomZero.IsNone}, IsRoom: {roomZero.IsRoom}");
 		if (roomZero.IsT0)
 		{
 			Console.WriteLine($"[CreateObject] Room Zero name: {roomZero.Object()!.Name}");
 		}
+		else if (roomZero.IsT1)
+		{
+			Console.WriteLine($"[CreateObject] ERROR: Room Zero returned T1 (error): {roomZero.AsT1}");
+		}
 		
+		Console.WriteLine($"[CreateObject] Executing @create command...");
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObject - Test Object"));
-
-		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
-		Console.WriteLine($"[CreateObject] New object created with DBRef: #{newDb.Number}");
-		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
+		Console.WriteLine($"[CreateObject] Command result message: {result.Message?.ToPlainText()}");
+		
+		try
+		{
+			var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+			Console.WriteLine($"[CreateObject] New object created with DBRef: #{newDb.Number}");
+			var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
+			
+			await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[CreateObject] EXCEPTION: {ex.Message}");
+			Console.WriteLine($"[CreateObject] Stack trace: {ex.StackTrace}");
+			throw;
+		}
+	}
 		
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
 	}

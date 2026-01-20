@@ -37,7 +37,15 @@ public partial class Commands
 		
 		var defaultHome = _configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
+		
+		Console.WriteLine($"[@CREATE] Attempting to get default home location: #{defaultHomeDbref.Number}");
 		var location = await _mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
+		Console.WriteLine($"[@CREATE] GetObjectNodeQuery result - IsT0: {location.IsT0}, IsT1: {location.IsT1}, IsNone: {location.IsNone}, IsExit: {location.IsExit}");
+		
+		if (location.IsT1)
+		{
+			Console.WriteLine($"[@CREATE] ERROR: GetObjectNodeQuery returned T1 (error): {location.AsT1}");
+		}
 		
 		if (location.IsNone || location.IsExit)
 		{
