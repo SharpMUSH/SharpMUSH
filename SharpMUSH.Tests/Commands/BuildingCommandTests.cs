@@ -26,9 +26,31 @@ public class BuildingCommandTests
 	[DependsOn<GeneralCommandTests>]
 	public async ValueTask CreateObject()
 	{
+		// Database state check: Verify God object (#1) exists from migration
+		Console.WriteLine($"[CreateObject] Checking database state before test...");
+		var godObject = await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse("1")));
+		Console.WriteLine($"[CreateObject] God object (#1) exists: {godObject.IsT0}");
+		if (godObject.IsT0)
+		{
+			Console.WriteLine($"[CreateObject] God object name: {godObject.Object()!.Name}");
+		}
+		else
+		{
+			Console.WriteLine($"[CreateObject] ERROR: God object not found! Error: {godObject.AsT1}");
+		}
+		
+		// Check Room Zero (#0)
+		var roomZero = await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse("0")));
+		Console.WriteLine($"[CreateObject] Room Zero (#0) exists: {roomZero.IsT0}");
+		if (roomZero.IsT0)
+		{
+			Console.WriteLine($"[CreateObject] Room Zero name: {roomZero.Object()!.Name}");
+		}
+		
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObject - Test Object"));
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		Console.WriteLine($"[CreateObject] New object created with DBRef: #{newDb.Number}");
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 		
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
@@ -38,9 +60,15 @@ public class BuildingCommandTests
 	[DependsOn(nameof(CreateObject))]
 	public async ValueTask CreateObjectWithCost()
 	{
+		// Database state check
+		Console.WriteLine($"[CreateObjectWithCost] Checking database state...");
+		var godObject = await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse("1")));
+		Console.WriteLine($"[CreateObjectWithCost] God object (#1) exists: {godObject.IsT0}");
+		
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObjectWithCost - Test Object=10"));
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
+		Console.WriteLine($"[CreateObjectWithCost] New object created: #{newDb.Number}");
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 		
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
@@ -50,15 +78,21 @@ public class BuildingCommandTests
 	[DependsOn(nameof(CreateObjectWithCost))]
 	public async ValueTask DoDigForCommandListCheck()
 	{
-		// Clear any previous calls to the mock
+		// Database state check
+		Console.WriteLine($"[DoDigForCommandListCheck] Checking database state...");
+		var godObject = await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse("1")));
+		Console.WriteLine($"[DoDigForCommandListCheck] God object (#1) exists: {godObject.IsT0}");
+		
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
 		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
+		Console.WriteLine($"[DoDigForCommandListCheck] Current location: #{currentLocationDbRef.Number}");
 		
 		var newRoom = await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dig DoDigTestRoom=DoDigTestExit;DoDigTestExitAlias,DoDigTestExitBack;DoDigTestExitAliasBack"));
 
 		var newDb = DBRef.Parse(newRoom.Message!.ToPlainText()!);
+		Console.WriteLine($"[DoDigForCommandListCheck] New room created: #{newDb.Number}");
 		
 		// Use unique room name in assertions to avoid pollution from other tests
 		await NotifyService
