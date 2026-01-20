@@ -276,13 +276,15 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 		// Also verify Room Zero (#0) exists
 		Console.WriteLine($"[TestClassFactory] Verifying Room Zero (#0) exists...");
 		var roomZero = await databaseService.GetObjectNodeAsync(new DBRef(0));
-		if (roomZero.IsT0)
+		Console.WriteLine($"[TestClassFactory] Room Zero retrieval result - IsPlayer: {roomZero.IsPlayer}, IsRoom: {roomZero.IsRoom}, IsNone: {roomZero.IsNone}");
+		if (!roomZero.IsNone)
 		{
-			Console.WriteLine($"[TestClassFactory] Successfully verified Room Zero (#0): Name='{roomZero.Object()!.Name}'");
+			Console.WriteLine($"[TestClassFactory] Successfully verified Room Zero (#0): Name='{roomZero.Object()!.Name}', Type: {roomZero.GetType().Name}");
 		}
 		else
 		{
-			Console.WriteLine($"[TestClassFactory] ERROR: Room Zero (#0) not found! Error: {roomZero.AsT1}");
+			Console.WriteLine($"[TestClassFactory] ERROR: Room Zero (#0) not found!");
+			throw new InvalidOperationException("Room Zero (#0) not found after migration!");
 		}
 
 		// Generate unique connection handle for this test class to avoid conflicts
