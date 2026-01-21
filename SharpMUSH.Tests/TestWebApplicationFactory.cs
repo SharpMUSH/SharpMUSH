@@ -1,10 +1,13 @@
+using Core.Arango;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.ClassDataSources;
@@ -15,6 +18,8 @@ namespace SharpMUSH.Tests;
 
 public class TestWebApplicationFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>
 {
+	private string? _testDatabaseName;
+	
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public ArangoDbTestServer ArangoDbTestServer { get; init; } = null!;
 	
@@ -32,6 +37,12 @@ public class TestWebApplicationFactory : TestWebApplicationFactory<SharpMUSH.Ser
 	
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
+		// Generate unique database name per test class  
+		// Use the factory type's name (which is the test class)
+		var testClassName = GetType().Name;
+		var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		_testDatabaseName = $"Test_{testClassName}_{timestamp}";
+		
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 		if (!File.Exists(colorFile))
@@ -56,9 +67,33 @@ public class TestWebApplicationFactory : TestWebApplicationFactory<SharpMUSH.Ser
 			substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
 
 			sc.ReplaceService(substitute);
+			// Replace ArangoHandle with unique database name per test class
+			sc.ReplaceService(new ArangoHandle(_testDatabaseName!));
 			// Use wrapper that delegates to per-test NotifyService instances
 			sc.ReplaceService<INotifyService>(new TestNotifyServiceWrapper());
 			sc.ReplaceService(new SqlService(MySqlTestServer.Instance.GetConnectionString()));
 		});
+	}
+	
+	public override async ValueTask DisposeAsync()
+	{
+		// Clean up test database
+		if (_testDatabaseName != null)
+		{
+			try
+			{
+				var arangoContext = Services.GetService(typeof(IArangoContext)) as IArangoContext;
+				if (arangoContext != null)
+				{
+					await arangoContext.Database.DropAsync(new ArangoHandle(_testDatabaseName));
+				}
+			}
+			catch
+			{
+				// Ignore cleanup errors - database may not exist or connection may be closed
+			}
+		}
+		
+		await base.DisposeAsync();
 	}
 }
