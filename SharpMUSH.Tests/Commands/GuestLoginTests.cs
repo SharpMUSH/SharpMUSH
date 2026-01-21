@@ -68,7 +68,7 @@ var player = await Mediator.CreateStream(new GetPlayerQuery("Guest1")).FirstOrDe
 await Assert.That(player).IsNotNull();
 
 // Get Guest power
-var guestPower = await Mediator.Send(new GetPowerQuery("GUEST"));
+var guestPower = await Mediator.Send(new GetPowerQuery("Guest"));
 await Assert.That(guestPower).IsNotNull();
 
 // Set Guest power on the player
@@ -116,7 +116,7 @@ startingQuota
 
 // Get player and set Guest power
 var player = await Mediator.CreateStream(new GetPlayerQuery("Guest2")).FirstOrDefaultAsync();
-var guestPower = await Mediator.Send(new GetPowerQuery("GUEST"));
+var guestPower = await Mediator.Send(new GetPowerQuery("Guest"));
 await Mediator.Send(new SetObjectPowerCommand(new AnySharpObject(player!), guestPower!));
 
 await Task.Delay(200);
@@ -153,7 +153,7 @@ await Mediator.Send(new CreatePlayerCommand("Guest4", "testpass", defaultHome, d
 // Get players and set Guest power on both
 var player3 = await Mediator.CreateStream(new GetPlayerQuery("Guest3")).FirstOrDefaultAsync();
 var player4 = await Mediator.CreateStream(new GetPlayerQuery("Guest4")).FirstOrDefaultAsync();
-var guestPower = await Mediator.Send(new GetPowerQuery("GUEST"));
+var guestPower = await Mediator.Send(new GetPowerQuery("Guest"));
 
 await Mediator.Send(new SetObjectPowerCommand(new AnySharpObject(player3!), guestPower!));
 await Mediator.Send(new SetObjectPowerCommand(new AnySharpObject(player4!), guestPower!));
