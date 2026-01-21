@@ -70,7 +70,7 @@ public partial class Commands
 		// Early HUH if already logged in.
 		if (_connectionService.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
+			await _notifyService.Notify(parser.CurrentState.Handle!.Value, "Huh?  (Type \"help\" for help.)");
 			return new CallState("#-1 ALREADY CONNECTED");
 		}
 
@@ -105,7 +105,7 @@ public partial class Commands
 				"#-1", // no valid player
 				username);
 			
-			await NotifyService!.Notify(handle, "Could not find that player.");
+			await _notifyService.Notify(handle, "Could not find that player.");
 			return new CallState("#-1 PLAYER NOT FOUND");
 		}
 
@@ -132,7 +132,7 @@ public partial class Commands
 				"#-1", // no valid player
 				username);
 			
-			await NotifyService!.Notify(handle, "Could not find that player.");
+			await _notifyService.Notify(handle, "Could not find that player.");
 			return new CallState("#-1 PLAYER NOT FOUND");
 		}
 
@@ -154,7 +154,7 @@ public partial class Commands
 				$"#{foundDB.Object.Key}", // valid player objid
 				foundDB.Object.Name);
 			
-			await NotifyService!.Notify(handle, "Invalid Password.");
+			await _notifyService.Notify(handle, "Invalid Password.");
 			return new CallState("#-1 INVALID PASSWORD");
 		}
 
@@ -180,29 +180,29 @@ public partial class Commands
 			connectionCount.ToString(),
 			parser.CurrentState.Handle!.Value.ToString());
 
-		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
-		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
+		await _notifyService.Notify(parser.CurrentState.Handle!.Value, "Connected!");
+		_logger!.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new CallState(playerDbRef);
 	}
 
-	private static async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
+	private async ValueTask<Option<CallState>> HandleGuestLogin(IMUSHCodeParser parser, long handle, string ipAddress)
 	{
 		// Check if guest logins are enabled
-		if (!Configuration!.CurrentValue.Net.Guests)
+		if (!_configuration.CurrentValue.Net.Guests)
 		{
-			await NotifyService!.Notify(handle, "Guest logins are not enabled.");
+			await _notifyService.Notify(handle, "Guest logins are not enabled.");
 			return new CallState("#-1 GUEST LOGINS DISABLED");
 		}
 
 		// Get all players and filter for those with Guest power
-		var guestPlayers = await Mediator!.CreateStream(new GetAllPlayersQuery())
+		var guestPlayers = await _mediator.CreateStream(new GetAllPlayersQuery())
 			.Where(async (player, _) => await player.Object.HasPower("Guest"))
 			.ToListAsync();
 
 		if (guestPlayers.Count == 0)
 		{
 			// Trigger SOCKET`LOGINFAIL for no guest characters
-			await EventService!.TriggerEventAsync(
+			await _eventService.TriggerEventAsync(
 				parser,
 				"SOCKET`LOGINFAIL",
 				null,
@@ -213,12 +213,12 @@ public partial class Commands
 				"#-1",
 				"guest");
 
-			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
+			await _notifyService.Notify(handle, "Sorry, there are no guest characters available.");
 			return new CallState("#-1 NO GUEST CHARACTERS");
 		}
 
 		// Get max_guests configuration
-		var maxGuests = Configuration!.CurrentValue.Limit.MaxGuests;
+		var maxGuests = _configuration.CurrentValue.Limit.MaxGuests;
 
 		// Find an appropriate guest character based on max_guests policy
 		SharpPlayer? selectedGuest = null;
@@ -229,7 +229,7 @@ public partial class Commands
 			foreach (var guest in guestPlayers)
 			{
 				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-				var guestConnectionCount = await ConnectionService!.Get(guestDbRef).CountAsync();
+				var guestConnectionCount = await _connectionService.Get(guestDbRef).CountAsync();
 				
 				if (guestConnectionCount == 0)
 				{
@@ -241,7 +241,7 @@ public partial class Commands
 			if (selectedGuest == null)
 			{
 				// Trigger SOCKET`LOGINFAIL for max guests reached
-				await EventService!.TriggerEventAsync(
+				await _eventService.TriggerEventAsync(
 					parser,
 					"SOCKET`LOGINFAIL",
 					null,
@@ -252,7 +252,7 @@ public partial class Commands
 					"#-1",
 					"guest");
 
-				await NotifyService!.Notify(handle, "Sorry, all guest characters are currently in use.");
+				await _notifyService.Notify(handle, "Sorry, all guest characters are currently in use.");
 				return new CallState("#-1 ALL GUESTS IN USE");
 			}
 		}
@@ -269,13 +269,13 @@ public partial class Commands
 			foreach (var guest in guestPlayers)
 			{
 				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-				totalGuestConnections += await ConnectionService!.Get(guestDbRef).CountAsync();
+				totalGuestConnections += await _connectionService.Get(guestDbRef).CountAsync();
 			}
 
 			if (totalGuestConnections >= maxGuests)
 			{
 				// Trigger SOCKET`LOGINFAIL for max guests reached
-				await EventService!.TriggerEventAsync(
+				await _eventService.TriggerEventAsync(
 					parser,
 					"SOCKET`LOGINFAIL",
 					null,
@@ -286,7 +286,7 @@ public partial class Commands
 					"#-1",
 					"guest");
 
-				await NotifyService!.Notify(handle, "Sorry, the maximum number of guest connections has been reached.");
+				await _notifyService.Notify(handle, "Sorry, the maximum number of guest connections has been reached.");
 				return new CallState("#-1 MAX GUESTS REACHED");
 			}
 
@@ -297,7 +297,7 @@ public partial class Commands
 			foreach (var guest in guestPlayers)
 			{
 				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-				var guestConnections = await ConnectionService!.Get(guestDbRef).CountAsync();
+				var guestConnections = await _connectionService.Get(guestDbRef).CountAsync();
 				
 				if (guestConnections < minConnections)
 				{
@@ -313,7 +313,7 @@ public partial class Commands
 		{
 			// This shouldn't happen, but handle it just in case
 			// Trigger SOCKET`LOGINFAIL for unexpected guest selection failure
-			await EventService!.TriggerEventAsync(
+			await _eventService.TriggerEventAsync(
 				parser,
 				"SOCKET`LOGINFAIL",
 				null,
@@ -324,17 +324,17 @@ public partial class Commands
 				"#-1",
 				"guest");
 
-			await NotifyService!.Notify(handle, "Sorry, there are no guest characters available.");
+			await _notifyService.Notify(handle, "Sorry, there are no guest characters available.");
 			return new CallState("#-1 GUEST SELECTION FAILED");
 		}
 
 		// Bind the connection to the selected guest
 		var playerDbRef = new DBRef(selectedGuest.Object.Key, selectedGuest.Object.CreationTime);
-		await ConnectionService!.Bind(handle, playerDbRef);
+		await _connectionService.Bind(handle, playerDbRef);
 
 		// Trigger PLAYER`CONNECT event
-		var connectionCount = await ConnectionService.Get(playerDbRef).CountAsync();
-		await EventService!.TriggerEventAsync(
+		var connectionCount = await _connectionService.Get(playerDbRef).CountAsync();
+		await _eventService.TriggerEventAsync(
 			parser,
 			"PLAYER`CONNECT",
 			playerDbRef,
@@ -342,8 +342,8 @@ public partial class Commands
 			connectionCount.ToString(),
 			handle.ToString());
 
-		await NotifyService!.Notify(handle, "Connected!");
-		Logger?.LogDebug("Successful guest login for {@guest}", selectedGuest.Object);
+		await _notifyService.Notify(handle, "Connected!");
+		_logger!.LogDebug("Successful guest login for {@guest}", selectedGuest.Object);
 		return new CallState(playerDbRef);
 	}
 
