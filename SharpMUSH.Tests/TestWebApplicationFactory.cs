@@ -2,6 +2,7 @@ using Core.Arango;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -34,6 +35,9 @@ public class TestWebApplicationFactory : TestWebApplicationFactory<SharpMUSH.Ser
 
 	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
 	public RedisTestServer RedisTestServer { get; init; } = null!;
+	
+	[ClassDataSource<TestLoggerFactoryDataSource>(Shared = SharedType.PerTestSession)]
+	public TestLoggerFactoryDataSource TestLoggerFactory { get; init; } = null!;
 	
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
@@ -72,6 +76,10 @@ public class TestWebApplicationFactory : TestWebApplicationFactory<SharpMUSH.Ser
 			// Use wrapper that delegates to per-test NotifyService instances
 			sc.ReplaceService<INotifyService>(new TestNotifyServiceWrapper());
 			sc.ReplaceService(new SqlService(MySqlTestServer.Instance.GetConnectionString()));
+			
+			// Replace LoggerFactory with test-session-scoped instance to prevent ObjectDisposedException
+			// when services like Quartz try to create loggers after WebApplication disposal
+			sc.ReplaceService<ILoggerFactory>(TestLoggerFactory.Instance);
 		});
 	}
 	
