@@ -66,7 +66,7 @@
   </ItemGroup>
 	
   <ItemGroup>
-    <PackageReference Update="TelnetNegotiationCore" Version="1.1.1" />
+    <PackageReference Update="TelnetNegotiationCore" Version="2.1.0" />
   </ItemGroup>
 
 </Project>
