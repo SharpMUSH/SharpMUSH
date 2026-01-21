@@ -32,14 +32,6 @@ public class TestWebApplicationFactory : TestWebApplicationFactory<SharpMUSH.Ser
 	
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
-		var log = new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.MinimumLevel.Debug()
-			.CreateLogger();
-
-		Log.Logger = log;
-
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 		if (!File.Exists(colorFile))

@@ -1,3 +1,5 @@
+using Testcontainers.Redpanda;
+
 namespace SharpMUSH.Server.Strategy.MessageQueue;
 
 /// <summary>
@@ -7,14 +9,24 @@ namespace SharpMUSH.Server.Strategy.MessageQueue;
 /// </summary>
 public class RedPandaTestContainerStrategy : MessageQueueStrategy
 {
-	public override string Host => Environment.GetEnvironmentVariable("KAFKA_TEST_HOST") ?? "localhost";
-	
-	public override int Port
+	public RedPandaTestContainerStrategy()
 	{
-		get
-		{
-			var portStr = Environment.GetEnvironmentVariable("KAFKA_TEST_PORT");
-			return int.TryParse(portStr, out var port) ? port : 9092;
-		}
+		var instance = new RedpandaBuilder("docker.redpanda.com/redpandadata/redpanda:latest")
+			.WithName("sharpmush-test-redpanda")
+			.WithLabel("reuse-hash", "sharpmush-redpanda-v1")
+			.WithPortBinding(9092, true) // Use dynamic port to avoid conflicts
+			// Configure 6MB message size limit for production compatibility
+			.WithCommand("--set", "kafka_batch_max_bytes=6291456") // 6MB
+			.WithReuse(true)
+			.Build();
+		
+		instance.StartAsync().GetAwaiter().GetResult();
+
+		Port =  instance.GetMappedPublicPort(9092);
+		Host = instance.Hostname;
 	}
+	
+	public override string Host { get; }
+
+	public override int Port { get; }
 }

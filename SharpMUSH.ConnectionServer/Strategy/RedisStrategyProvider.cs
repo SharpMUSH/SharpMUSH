@@ -8,16 +8,19 @@ public static class RedisStrategyProvider
 	public static RedisStrategy GetStrategy()
 	{
 		var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION");
-
+		var redisTestConnection = Environment.GetEnvironmentVariable("REDIS_TEST_CONNECTION_STRING");
+		
 		if (string.IsNullOrWhiteSpace(redisConnection))
 		{
-			// No Redis connection configured, use TestContainer for local development
-			return new RedisTestContainerStrategy();
+			return new RedisExternalStrategy(redisConnection!);
 		}
-		else
+
+		if (string.IsNullOrWhiteSpace(redisTestConnection))
 		{
-			// Redis connection is configured (e.g., in Kubernetes or Docker Compose)
-			return new RedisExternalStrategy(redisConnection);
+			return new RedisExternalStrategy(redisTestConnection!);
 		}
+		
+		// No Redis connection configured, use TestContainer for local development
+		return new RedisTestContainerStrategy();
 	}
 }

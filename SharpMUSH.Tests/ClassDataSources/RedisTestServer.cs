@@ -24,6 +24,7 @@ public class RedisTestServer : IAsyncInitializer, IAsyncDisposable
 	public async Task InitializeAsync()
 	{
 		await Instance.StartAsync();
+		Environment.SetEnvironmentVariable("REDIS_TEST_CONNECTION_STRING", $"localhost:{Instance.GetMappedPublicPort(RedisPort)}");
 	}
 
 	public async ValueTask DisposeAsync()
