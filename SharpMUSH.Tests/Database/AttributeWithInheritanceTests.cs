@@ -42,7 +42,6 @@ public class AttributeWithInheritanceTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(GetAttributeWithInheritance_DirectAttribute_ReturnsFromSelf))]
 	public async Task GetAttributeWithInheritance_ParentAttribute_ReturnsFromParent()
 	{
 		// Create a parent object with an attribute
@@ -84,7 +83,6 @@ public class AttributeWithInheritanceTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(GetAttributeWithInheritance_ParentAttribute_ReturnsFromParent))]
 	public async Task GetAttributeWithInheritance_ZoneAttribute_ReturnsFromZone()
 	{
 		// Create a zone master with an attribute
@@ -126,7 +124,6 @@ public class AttributeWithInheritanceTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(GetAttributeWithInheritance_ZoneAttribute_ReturnsFromZone))]
 	public async Task GetAttributeWithInheritance_CheckParentFalse_OnlyChecksObject()
 	{
 		// Create a parent with attribute
@@ -164,7 +161,6 @@ public class AttributeWithInheritanceTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(GetAttributeWithInheritance_CheckParentFalse_OnlyChecksObject))]
 	public async Task GetAttributeWithInheritance_ParentTakesPrecedenceOverZone()
 	{
 		// Create zone with attribute
@@ -221,7 +217,6 @@ public class AttributeWithInheritanceTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(GetAttributeWithInheritance_ParentTakesPrecedenceOverZone))]
 	public async Task GetAttributeWithInheritance_NestedAttributes_WorksCorrectly()
 	{
 		// Test nested attributes like FOO`BAR
@@ -251,7 +246,6 @@ public class AttributeWithInheritanceTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(GetAttributeWithInheritance_NestedAttributes_WorksCorrectly))]
 	public async Task GetAttributeWithInheritance_ComplexHierarchy_CorrectPrecedence()
 	{
 		// Test complex hierarchy: Child <- Parent <- Grandparent
@@ -307,7 +301,6 @@ public class AttributeWithInheritanceTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(GetAttributeWithInheritance_ComplexHierarchy_CorrectPrecedence))]
 	public async Task GetAttributeWithInheritance_NonExistentAttribute_ReturnsNull()
 	{
 		// Test that non-existent attributes return null

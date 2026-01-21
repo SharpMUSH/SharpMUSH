@@ -32,7 +32,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneGetNoZone))]
 	public async Task ZoneGetWithZone()
 	{
 		// Create a zone master object
@@ -54,7 +53,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneGetWithZone))]
 	public async Task ZoneSetWithFunction()
 	{
 		// Ensure player has no zone
@@ -82,7 +80,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneSetWithFunction))]
 	public async Task ZoneClearWithFunction()
 	{
 		// Create a zone master object
@@ -106,7 +103,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneClearWithFunction))]
 	public async Task ZoneInvalidObject()
 	{
 		// Try to get zone of invalid object
@@ -117,7 +113,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneInvalidObject))]
 	public async Task ZoneNoPermissionToExamine()
 	{
 		// Ensure player has no zone
@@ -135,7 +130,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneNoPermissionToExamine))]
 	public async Task ZoneOnPlayer()
 	{
 		// Test getting zone of current player
@@ -146,7 +140,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneOnPlayer))]
 	public async Task ZoneOnRoom()
 	{
 		// Test getting zone of current room
@@ -157,7 +150,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneOnRoom))]
 	public async Task ZoneChainTest()
 	{
 		// Ensure player has no zone
@@ -184,7 +176,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneChainTest))]
 	public async Task ZfindListsObjectsInZone()
 	{
 		// Clear player zone
@@ -214,7 +205,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZfindListsObjectsInZone))]
 	public async Task ZoneHierarchyTraversal()
 	{
 		// Create a zone hierarchy: ZoneA <- ZoneB <- Object
@@ -253,7 +243,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneHierarchyTraversal))]
 	public async Task ZoneAttributeInheritance()
 	{
 		// Create a zone master with an attribute
@@ -289,7 +278,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneAttributeInheritance))]
 	public async Task ZoneAttributeInheritanceWithParent()
 	{
 		// Test that parent attributes take precedence over zone attributes
@@ -341,7 +329,6 @@ public class ZoneFunctionTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneAttributeInheritanceWithParent))]
 	public async Task ZoneAttributeInheritanceParentHasDifferentZone()
 	{
 		// Test that each parent can have a different zone

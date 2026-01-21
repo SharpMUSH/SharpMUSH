@@ -36,7 +36,6 @@ public class AttributeFunctionUnitTests : TestsBase
 	}
 	
 	[Test]
-	[DependsOn(nameof(GenderTest1))]
 	[Arguments("%s", "she")]
 	[Arguments("%a", "hers")]
 	[Arguments("%p", "her")]
@@ -54,7 +53,6 @@ public class AttributeFunctionUnitTests : TestsBase
 	}
 	
 	[Test]
-	[DependsOn(nameof(GenderTest2))]
 	[Arguments("%s", "he")]
 	[Arguments("%a", "his")]
 	[Arguments("%p", "his")]

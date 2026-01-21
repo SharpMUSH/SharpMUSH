@@ -39,7 +39,6 @@ TestHelpers.MessageContains(s, "find")));
 }
 
 [Test]
-[DependsOn(nameof(ConnectGuest_NoGuestCharacters_FailsWithError))]
 public async ValueTask ConnectGuest_BasicLogin_Succeeds()
 {
 // Get default home from configuration
@@ -90,7 +89,6 @@ await CommandParser.CommandParse(1, Services.GetRequiredService<IConnectionServi
 }
 
 [Test]
-[DependsOn(nameof(ConnectGuest_BasicLogin_Succeeds))]
 public async ValueTask ConnectGuest_CaseInsensitive_Succeeds()
 {
 // Get default home from configuration
@@ -131,7 +129,6 @@ await CommandParser.CommandParse(1, Services.GetRequiredService<IConnectionServi
 }
 
 [Test]
-[DependsOn(nameof(ConnectGuest_CaseInsensitive_Succeeds))]
 public async ValueTask ConnectGuest_MultipleGuests_SelectsAppropriateOne()
 {
 // Get default home from configuration
@@ -172,7 +169,6 @@ await CommandParser.CommandParse(1, Services.GetRequiredService<IConnectionServi
 
 [Test]
 [Skip("Requires guest configuration testing infrastructure")]
-[DependsOn(nameof(ConnectGuest_MultipleGuests_SelectsAppropriateOne))]
 public async ValueTask ConnectGuest_GuestsDisabled_FailsWithError()
 {
 // This test would require modifying the configuration to disable guests
@@ -182,7 +178,6 @@ await ValueTask.CompletedTask;
 
 [Test]
 [Skip("Requires advanced connection management")]
-[DependsOn(nameof(ConnectGuest_GuestsDisabled_FailsWithError))]
 public async ValueTask ConnectGuest_MaxGuestsReached_FailsWithError()
 {
 // This test would require:

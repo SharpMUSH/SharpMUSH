@@ -44,7 +44,6 @@ public class ZoneDatabaseTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(SetObjectZone))]
 	public async ValueTask UnsetObjectZone()
 	{
 		// Clear player zone first to ensure clean state
@@ -78,7 +77,6 @@ public class ZoneDatabaseTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(UnsetObjectZone))]
 	public async ValueTask UpdateObjectZone()
 	{
 		// Clear player zone first to ensure clean state
@@ -115,7 +113,6 @@ public class ZoneDatabaseTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(UpdateObjectZone))]
 	public async ValueTask SetObjectZoneToNull()
 	{
 		// Clear player zone first to ensure clean state
@@ -138,7 +135,6 @@ public class ZoneDatabaseTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(SetObjectZoneToNull))]
 	public async ValueTask MultipleObjectsSameZone()
 	{
 		// Clear player zone first to ensure clean state
@@ -173,7 +169,6 @@ public class ZoneDatabaseTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(MultipleObjectsSameZone))]
 	public async ValueTask ObjectCanBeZone()
 	{
 		// Clear player zone first to ensure clean state

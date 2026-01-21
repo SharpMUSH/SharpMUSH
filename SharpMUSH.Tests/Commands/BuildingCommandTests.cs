@@ -19,7 +19,6 @@ public class BuildingCommandTests : TestsBase
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
-	[DependsOn<GeneralCommandTests>]
 	public async ValueTask CreateObject()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObject - Test Object"));
@@ -31,7 +30,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(CreateObject))]
 	public async ValueTask CreateObjectWithCost()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CreateObjectWithCost - Test Object=10"));
@@ -43,7 +41,6 @@ public class BuildingCommandTests : TestsBase
 	}
 	
 	[Test]
-	[DependsOn(nameof(CreateObjectWithCost))]
 	public async ValueTask DoDigForCommandListCheck()
 	{
 		// Clear any previous calls to the mock
@@ -80,8 +77,8 @@ public class BuildingCommandTests : TestsBase
 				)));
 	}
 
-	// Something is getting created before this one can trigger...
-	[Test, DependsOn(nameof(DoDigForCommandListCheck))]
+	// Tests are now properly isolated with unique databases per run - no DependsOn needed
+	[Test]
 	public async ValueTask DoDigForCommandListCheck2()
 	{
 		// Clear any previous calls to the mock
@@ -111,7 +108,6 @@ public class BuildingCommandTests : TestsBase
 
 
 	[Test]
-	[DependsOn(nameof(DoDigForCommandListCheck2))]
 	public async Task DigAndMoveTest()
 	{
 		if (Parser is null) throw new Exception("Parser is null");
@@ -129,7 +125,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(DigAndMoveTest))]
 	[Skip("Failing Test - Needs Investigation")]
 	// 	"#-2 I DON'T KNOW WHICH ONE YOU MEAN"
 	public async ValueTask NameObject()
@@ -146,7 +141,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(NameObject))]
 	public async ValueTask DigRoom()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig DigRoom - Test Room"));
@@ -158,7 +152,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(DigRoom))]
 	public async ValueTask DigRoomWithExits()
 	{
 		// Clear any previous calls to the mock
@@ -173,7 +166,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(DigRoomWithExits))]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LinkExit()
 	{
@@ -198,7 +190,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(LinkExit))]
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask CloneObject()
 	{
@@ -250,7 +241,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ParentSetAndGet))]
 	public async ValueTask ParentUnset()
 	{
 		// Create two objects
@@ -278,7 +268,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ParentUnset))]
 	public async ValueTask ParentCycleDetection_DirectCycle()
 	{
 		// Clear any previous calls to the mock
@@ -313,7 +302,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ParentCycleDetection_DirectCycle))]
 	public async ValueTask ParentCycleDetection_IndirectCycle()
 	{
 		// Clear any previous calls to the mock
@@ -357,7 +345,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ParentCycleDetection_IndirectCycle))]
 	public async ValueTask ParentCycleDetection_SelfParent()
 	{
 		// Clear any previous calls to the mock
@@ -380,7 +367,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ParentCycleDetection_SelfParent))]
 	public async ValueTask ParentCycleDetection_LongChain()
 	{
 		// Clear any previous calls to the mock
@@ -422,7 +408,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(CloneObject))]
 	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
 	public async ValueTask SetParent()
 	{
@@ -440,7 +425,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(SetParent))]
 	public async ValueTask ChownObject()
 	{
 		// Create an object
@@ -457,7 +441,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ChownObject))]
 	public async ValueTask ChzoneObject()
 	{
 		// Clear any previous calls to the mock
@@ -478,7 +461,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ChzoneObject))]
 	public async ValueTask RecycleObject()
 	{
 		// Clear any previous calls to the mock
@@ -495,7 +477,6 @@ public class BuildingCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(RecycleObject))]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{

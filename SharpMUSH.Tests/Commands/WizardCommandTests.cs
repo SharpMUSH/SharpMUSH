@@ -221,7 +221,6 @@ public class WizardCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(ReadCacheCommand))]
 	public async ValueTask PollCommand()
 	{
 		// Clear any previous calls to the mock
@@ -430,7 +429,6 @@ public class WizardCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(AllhaltCommand))]
 	public async ValueTask ChownallCommand()
 	{
 		// Clear any previous calls to the mock
@@ -443,7 +441,6 @@ public class WizardCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(PollCommand))]
 	public async ValueTask SuggestListCommand()
 	{
 		// Clear any previous calls to the mock
@@ -455,7 +452,6 @@ public class WizardCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(SuggestListCommand))]
 	public async ValueTask SuggestAddCommand()
 	{
 		// Clear any previous calls to the mock
@@ -467,7 +463,6 @@ public class WizardCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(SuggestAddCommand))]
 	public async ValueTask PollSetCommand()
 	{
 		// Clear any previous calls to the mock
@@ -479,7 +474,6 @@ public class WizardCommandTests : TestsBase
 	}
 
 	[Test]
-	[DependsOn(nameof(PollSetCommand))]
 	public async ValueTask PollClearCommand()
 	{
 		// Clear any previous calls to the mock
