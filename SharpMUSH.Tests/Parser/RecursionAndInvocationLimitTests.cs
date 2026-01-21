@@ -10,14 +10,9 @@ namespace SharpMUSH.Tests.Parser;
 /// Tests to verify that recursion and invocation limits are tracked accurately.
 /// These tests prove assumptions about how the limits work and ensure they are enforced correctly.
 /// </summary>
-public class RecursionAndInvocationLimitTests
+public class RecursionAndInvocationLimitTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser CommandParser => Factory.CommandParser;
-	private IMUSHCodeParser FunctionParser => Factory.FunctionParser;
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	/// <summary>
 	/// Test that basic recursion (same function calling itself) is detected and limited.

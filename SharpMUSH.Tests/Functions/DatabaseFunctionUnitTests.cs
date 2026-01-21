@@ -6,15 +6,12 @@ using SharpMUSH.Tests.ClassDataSources;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class DatabaseFunctionUnitTests
+public class DatabaseFunctionUnitTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
 	

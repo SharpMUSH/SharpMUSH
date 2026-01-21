@@ -10,14 +10,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class DebugVerboseTests
+public class DebugVerboseTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.NotifyService;
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()

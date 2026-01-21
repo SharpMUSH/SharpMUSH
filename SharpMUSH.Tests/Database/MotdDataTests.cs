@@ -5,13 +5,10 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
 
-public class MotdDataTests
+public class MotdDataTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private ISharpDatabase _database => Factory.Services.GetRequiredService<ISharpDatabase>();
-	private IExpandedObjectDataService _dataService => Factory.Services.GetRequiredService<IExpandedObjectDataService>();
+	private ISharpDatabase _database => Services.GetRequiredService<ISharpDatabase>();
+	private IExpandedObjectDataService _dataService => Services.GetRequiredService<IExpandedObjectDataService>();
 
 	[Test]
 	public async Task SetAndGetMotdData()

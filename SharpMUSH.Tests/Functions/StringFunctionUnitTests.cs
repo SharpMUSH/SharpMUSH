@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using MarkupString;
 using Serilog;
 using SharpMUSH.Library.ParserInterfaces;
@@ -7,12 +7,9 @@ using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class StringFunctionUnitTests 
+public class StringFunctionUnitTests : TestsBase 
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	[Arguments("ansi(r,red)", "red", (byte)31, null)]
@@ -309,7 +306,7 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("accent(e,')", "é")]
+	[Arguments("accent(e,')", "�")]
 	public async Task Accent(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

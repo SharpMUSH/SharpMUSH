@@ -1,16 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ExpandedDataTests
+public class ExpandedDataTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private ISharpDatabase _database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private ISharpDatabase _database => Services.GetRequiredService<ISharpDatabase>();
 
 	private record ExpandedDataExample(string Word);
 	

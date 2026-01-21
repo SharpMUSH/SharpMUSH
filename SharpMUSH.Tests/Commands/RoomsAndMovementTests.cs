@@ -1,14 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class RoomsAndMovementTests
+public class RoomsAndMovementTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>();
+	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();
 	
 	// TODO: Add Tests
 }

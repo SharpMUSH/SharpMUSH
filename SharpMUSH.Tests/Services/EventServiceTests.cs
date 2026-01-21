@@ -15,7 +15,7 @@ public class EventServiceTests: TestsBase
 	{
 		// When no event_handler is configured, TriggerEventAsync should return without error
 		await EventService.TriggerEventAsync(
-			Factory.CommandParser,
+			CommandParser,
 			"TEST`EVENT",
 			null,
 			"arg0", "arg1");

@@ -5,12 +5,9 @@ namespace SharpMUSH.Tests.Functions;
 /// <summary>
 /// Tests for newly implemented PennMUSH functions
 /// </summary>
-public class NewPennMUSHFunctionTests
+public class NewPennMUSHFunctionTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	#region DELETE/INSERT Tests (Aliases for ldelete/linsert)
 

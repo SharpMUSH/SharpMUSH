@@ -2,12 +2,9 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MiscFunctionUnitTests
+public class MiscFunctionUnitTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
  [Test]
  [Arguments("list(functions)", "list")] // should include the 'list' function name

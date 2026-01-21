@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿﻿using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -6,16 +6,13 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class SubstitutionUnitTests
+public class SubstitutionUnitTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
+	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();
 
-	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>(); 
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>(); 
 
 	[Test]
 	[Arguments("think %t", "\t")]

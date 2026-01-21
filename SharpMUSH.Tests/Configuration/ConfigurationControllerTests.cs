@@ -12,18 +12,15 @@ using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Tests.Configuration;
 
-public class ConfigurationControllerTests
+public class ConfigurationControllerTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
 	[Test]
 	public async Task ImportConfiguration_ValidConfig_ReturnsCorrectValues()
 	{
-		var database = Factory.Services.GetRequiredService<ISharpDatabase>();
-		var optionsWrapper = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var configReloadService = Factory.Services.GetRequiredService<ConfigurationReloadService>();
-		var logger = Factory.Services.GetRequiredService<ILogger<ConfigurationController>>();
+		var database = Services.GetRequiredService<ISharpDatabase>();
+		var optionsWrapper = Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var configReloadService = Services.GetRequiredService<ConfigurationReloadService>();
+		var logger = Services.GetRequiredService<ILogger<ConfigurationController>>();
 		
 		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
@@ -49,10 +46,10 @@ public class ConfigurationControllerTests
 	[Test]
 	public async Task ImportConfiguration_EmptyConfig_ReturnsOk()
 	{
-		var database = Factory.Services.GetRequiredService<ISharpDatabase>();
-		var optionsWrapper = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var configReloadService = Factory.Services.GetRequiredService<ConfigurationReloadService>();
-		var logger = Factory.Services.GetRequiredService<ILogger<ConfigurationController>>();
+		var database = Services.GetRequiredService<ISharpDatabase>();
+		var optionsWrapper = Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var configReloadService = Services.GetRequiredService<ConfigurationReloadService>();
+		var logger = Services.GetRequiredService<ILogger<ConfigurationController>>();
 		
 		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
@@ -67,10 +64,10 @@ public class ConfigurationControllerTests
 	[Test]
 	public async Task GetConfiguration_ReturnsCurrentConfiguration()
 	{
-		var database = Factory.Services.GetRequiredService<ISharpDatabase>();
-		var optionsWrapper = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var configReloadService = Factory.Services.GetRequiredService<ConfigurationReloadService>();
-		var logger = Factory.Services.GetRequiredService<ILogger<ConfigurationController>>();
+		var database = Services.GetRequiredService<ISharpDatabase>();
+		var optionsWrapper = Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var configReloadService = Services.GetRequiredService<ConfigurationReloadService>();
+		var logger = Services.GetRequiredService<ILogger<ConfigurationController>>();
 		
 		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
@@ -88,10 +85,10 @@ public class ConfigurationControllerTests
 	[Test]
 	public async Task ImportConfiguration_UpdatesOptionsMonitor()
 	{
-		var database = Factory.Services.GetRequiredService<ISharpDatabase>();
-		var configReloadService = Factory.Services.GetRequiredService<ConfigurationReloadService>();
+		var database = Services.GetRequiredService<ISharpDatabase>();
+		var configReloadService = Services.GetRequiredService<ConfigurationReloadService>();
 		
-		var optionsMonitor = Factory.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
+		var optionsMonitor = Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
 		
 		bool changeDetected = false;
 		string? newMudName = null;

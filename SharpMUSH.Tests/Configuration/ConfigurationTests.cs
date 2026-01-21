@@ -1,15 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Configuration;
 
-public class ConfigurationTests
+public class ConfigurationTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-	private IOptionsWrapper<SharpMUSHOptions> Configuration => Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+	private IOptionsWrapper<SharpMUSHOptions> Configuration => Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
 	[Test]
 	public async Task ParseConfigurationFile()

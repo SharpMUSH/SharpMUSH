@@ -13,17 +13,14 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class WarningCommandTests
+public class WarningCommandTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private INotifyService NotifyService => Factory.NotifyService;
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
-	private IWarningService WarningService => Factory.Services.GetRequiredService<IWarningService>();
-	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private IWarningService WarningService => Services.GetRequiredService<IWarningService>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async Task WarningsCommand_SetToNormal()

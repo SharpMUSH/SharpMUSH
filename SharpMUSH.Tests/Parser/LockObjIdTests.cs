@@ -11,14 +11,11 @@ namespace SharpMUSH.Tests.Parser;
 /// Tests verify that locks properly handle DBRefs with creation timestamps to prevent
 /// issues when objects are destroyed and their dbrefs are recycled.
 /// </summary>
-public class LockObjIdTests
+public class LockObjIdTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IBooleanExpressionParser BooleanParser => Factory.Services.GetRequiredService<IBooleanExpressionParser>();	
-	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IBooleanExpressionParser BooleanParser => Services.GetRequiredService<IBooleanExpressionParser>();	
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	public async Task ExactObjectLock_BareDbRef_MatchesAnyObjectWithSameNumber()

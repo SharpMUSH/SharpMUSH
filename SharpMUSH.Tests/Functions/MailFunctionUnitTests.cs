@@ -11,12 +11,9 @@ using System.Threading;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MailFunctionUnitTests
+public class MailFunctionUnitTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 	
 	// Unique test identifier to ensure we don't conflict with other test runs

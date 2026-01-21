@@ -14,15 +14,12 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Tests for newly implemented PennMUSH lock commands
 /// </summary>
-public class NewLockCommandTests
+public class NewLockCommandTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private INotifyService NotifyService => Factory.NotifyService;
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask ELOCK_CommandExecutes()

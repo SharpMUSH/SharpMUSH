@@ -10,17 +10,14 @@ using SharpMUSH.Tests.ClassDataSources;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class DatabaseCommandTests
+public class DatabaseCommandTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory SqlFactory { get; init; }
-
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
-	private INotifyService NotifyService => SqlFactory.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => SqlFactory.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => SqlFactory.Services.GetRequiredService<IMUSHCodeParser>();
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Before(Test)]
 	public async Task InitializeAsync()
@@ -246,15 +243,6 @@ public class DatabaseCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30"))));
-
-		// TODO: There is a bug here. It keeps reading and loops around somehow. I don't get how.
-		/*
-		await NotifyService
-			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().StartsWith("Test_MapSql_WithMultipleRows: 4")) ||
-				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 4"))));
-				*/
 	}
 
 	[Test]

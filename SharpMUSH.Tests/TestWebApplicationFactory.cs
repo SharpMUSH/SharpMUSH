@@ -64,7 +64,7 @@ public class TestWebApplicationFactory : TestWebApplicationFactory<SharpMUSH.Ser
 			substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
 
 			sc.ReplaceService(substitute);
-			sc.ReplaceService(Substitute.For<INotifyService>);
+			sc.ReplaceService(Substitute.For<INotifyService>());
 			sc.ReplaceService(new SqlService(MySqlTestServer.Instance.GetConnectionString()));
 		});
 	}

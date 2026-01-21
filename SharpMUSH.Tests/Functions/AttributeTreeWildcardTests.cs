@@ -4,12 +4,9 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class AttributeTreeWildcardTests
+public class AttributeTreeWildcardTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	// Setup helper to create a comprehensive attribute tree for testing
 	private async Task SetupAttributeTree()

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
@@ -8,14 +8,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class UserDefinedCommandsTests
+public class UserDefinedCommandsTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private INotifyService NotifyService => Factory.NotifyService; 
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>();
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>(); 
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Test]
 	[Skip("Test needs investigation - unrelated to communication commands")]

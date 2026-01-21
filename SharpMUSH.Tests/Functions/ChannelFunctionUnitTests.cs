@@ -10,16 +10,13 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class ChannelFunctionUnitTests
+public class ChannelFunctionUnitTests : TestsBase
 {
 	private const string TestChannelName = "TestChannel";
 	private const string TestChannelPrivilege = "Open";
 	private const int TestPlayerDbRef = 1;
 
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 

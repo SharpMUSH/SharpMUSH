@@ -15,16 +15,13 @@ using static SharpMUSH.Library.Services.Interfaces.INotifyService;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class ZoneCommandTests
+public class ZoneCommandTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private INotifyService NotifyService => Factory.NotifyService;
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	private string GenerateUniqueName(string prefix) =>
 		$"{prefix}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{Random.Shared.Next(1000, 9999)}";

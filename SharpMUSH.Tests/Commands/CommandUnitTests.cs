@@ -7,16 +7,13 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class CommandUnitTests
+public class CommandUnitTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 
-	private INotifyService NotifyService => Factory.NotifyService;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-
-	private IMUSHCodeParser Parser => Factory.CommandParser;
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test]
 	[Arguments("think add(1,2)1",

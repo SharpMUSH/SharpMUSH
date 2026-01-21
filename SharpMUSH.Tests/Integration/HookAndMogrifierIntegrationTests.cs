@@ -13,17 +13,14 @@ namespace SharpMUSH.Tests.Integration;
 /// These tests validate the complete hook workflow including command execution,
 /// hook triggering, and $-command matching.
 /// </summary>
-public class HookIntegrationTests
+public class HookIntegrationTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private IHookService HookService => Factory.Services.GetRequiredService<IHookService>();
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
-	private IAttributeService AttributeService => Factory.Services.GetRequiredService<IAttributeService>();
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IHookService HookService => Services.GetRequiredService<IHookService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private IAttributeService AttributeService => Services.GetRequiredService<IAttributeService>();
 
 	[Test]
 	public async ValueTask Hook_BeforeHook_ExecutesBeforeCommand()
@@ -210,16 +207,13 @@ public class HookIntegrationTests
 /// These tests validate the complete mogrification pipeline including
 /// channel message processing and all MOGRIFY` attributes.
 /// </summary>
-public class MogrifierIntegrationTests
+public class MogrifierIntegrationTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
-	private IAttributeService AttributeService => Factory.Services.GetRequiredService<IAttributeService>();
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private IAttributeService AttributeService => Services.GetRequiredService<IAttributeService>();
 
 	[Test]
 	public async ValueTask Mogrifier_BlockAttribute_BlocksMessage()

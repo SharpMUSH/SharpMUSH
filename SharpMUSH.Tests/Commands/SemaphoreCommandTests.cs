@@ -10,17 +10,14 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class SemaphoreCommandTests
+public class SemaphoreCommandTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.NotifyService;
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
-	private ITaskScheduler Scheduler => Factory.Services.GetRequiredService<ITaskScheduler>();
-	private IAttributeService AttributeService => Factory.Services.GetRequiredService<IAttributeService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private ITaskScheduler Scheduler => Services.GetRequiredService<ITaskScheduler>();
+	private IAttributeService AttributeService => Services.GetRequiredService<IAttributeService>();
 
 	[Test]
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()

@@ -12,17 +12,14 @@ using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class AttributeCommandTests
+public class AttributeCommandTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private INotifyService NotifyService => Factory.NotifyService;
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
-	private IAttributeService AttributeService => Factory.Services.GetRequiredService<IAttributeService>();
-	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private IAttributeService AttributeService => Services.GetRequiredService<IAttributeService>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	[Explicit("Command is implemented but test is failing")]

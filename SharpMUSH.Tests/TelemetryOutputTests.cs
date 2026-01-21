@@ -7,15 +7,12 @@ namespace SharpMUSH.Tests;
 /// Test that outputs telemetry summary.
 /// This test should be run last to provide a summary of metrics collected during the test session.
 /// </summary>
-public class TelemetryOutputTests
+public class TelemetryOutputTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
 	[Test]
 	public async Task OutputTelemetrySummary()
 	{
-		var prometheusService = Factory.Services.GetService<IPrometheusQueryService>();
+		var prometheusService = Services.GetService<IPrometheusQueryService>();
 		if (prometheusService == null)
 		{
 			Console.Error.WriteLine("PrometheusQueryService not available");

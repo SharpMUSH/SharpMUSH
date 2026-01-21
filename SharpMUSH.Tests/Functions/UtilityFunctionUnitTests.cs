@@ -7,12 +7,9 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class UtilityFunctionUnitTests
+public class UtilityFunctionUnitTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 	private IPasswordService PasswordService => Factory.Services.GetRequiredService<IPasswordService>(); 
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 

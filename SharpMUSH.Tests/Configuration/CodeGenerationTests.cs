@@ -9,13 +9,10 @@ namespace SharpMUSH.Tests.Configuration;
 /// Tests to verify that code generation correctly replaces reflection usage
 /// for configuration metadata and property access.
 /// </summary>
-public class CodeGenerationTests
+public class CodeGenerationTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
 	private IOptionsWrapper<SharpMUSHOptions> Configuration => 
-		Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
 	#region ConfigMetadata Tests
 

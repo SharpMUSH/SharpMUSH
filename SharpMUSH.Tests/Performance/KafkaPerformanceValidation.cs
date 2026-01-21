@@ -9,12 +9,9 @@ namespace SharpMUSH.Tests.Performance;
 /// <summary>
 /// Validates that the Kafka migration maintains or improves messaging performance
 /// </summary>
-public class KafkaPerformanceValidation
+public class KafkaPerformanceValidation : TestsBase
 {
-[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-public required TestClassFactory Factory { get; init; }
-
-private IMessageBus MessageBus => Factory.Services.GetRequiredService<IMessageBus>();
+private IMessageBus MessageBus => Services.GetRequiredService<IMessageBus>();
 
 [Test, Explicit]  // Explicit - only run when specifically requested
 public async Task Kafka_ProducerThroughput_ShouldHandleHighVolume()

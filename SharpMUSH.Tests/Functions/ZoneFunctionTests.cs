@@ -10,16 +10,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class ZoneFunctionTests
+public class ZoneFunctionTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser FunctionParser => Factory.FunctionParser;
-	private IMUSHCodeParser CommandParser => Factory.CommandParser;
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async Task ZoneGetNoZone()

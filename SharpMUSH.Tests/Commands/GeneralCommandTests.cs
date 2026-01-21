@@ -1,4 +1,4 @@
-﻿using Mediator;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -11,17 +11,14 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class GeneralCommandTests
+public class GeneralCommandTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
+	private IMUSHCodeParser Parser => CommandParser;
+	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 
-	private IMUSHCodeParser Parser => Factory.CommandParser;
-	private INotifyService NotifyService => Factory.NotifyService;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
-
-	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]

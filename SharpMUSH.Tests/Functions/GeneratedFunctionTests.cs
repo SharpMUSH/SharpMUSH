@@ -7,12 +7,9 @@ namespace SharpMUSH.Tests.Functions;
 /// Tests to verify that version() and config() functions work correctly
 /// with code-generated accessors instead of reflection.
 /// </summary>
-public class GeneratedFunctionTests
+public class GeneratedFunctionTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	#region version() Function Tests
 
@@ -150,7 +147,7 @@ public class GeneratedFunctionTests
 		var resultText = result.ToPlainText();
 		
 		// The result should match what we get from ConfigAccessor directly
-		var options = Factory.Services.GetRequiredService<
+		var options = Services.GetRequiredService<
 			SharpMUSH.Library.Services.Interfaces.IOptionsWrapper<
 				SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
 		

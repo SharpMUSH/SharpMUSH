@@ -8,13 +8,10 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class CommunicationFunctionUnitTests
+public class CommunicationFunctionUnitTests : TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
-	private IMUSHCodeParser Parser => Factory.FunctionParser;
-	private INotifyService NotifyService => Factory.NotifyService;
+	private IMUSHCodeParser Parser => FunctionParser;
+	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
