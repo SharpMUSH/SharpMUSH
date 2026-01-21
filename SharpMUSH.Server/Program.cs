@@ -32,7 +32,14 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(arangoConfig, colorFile, prometheusStrategy, redisStrategy, messageQueueStrategy);
+		// Determine database name based on environment
+		// If ARANGO_TEST_CONNECTION_STRING is set, we're running in test mode - use unique database name
+		// Otherwise, use production default "SharpMUSH"
+		var databaseName = Environment.GetEnvironmentVariable("ARANGO_TEST_CONNECTION_STRING") != null
+			? $"Test_{Guid.NewGuid():N}" // Random unique name for tests
+			: "SharpMUSH"; // Production default
+
+		var startup = new Startup(arangoConfig, colorFile, prometheusStrategy, redisStrategy, messageQueueStrategy, databaseName);
 		
 		startup.ConfigureServices(builder.Services);
 		

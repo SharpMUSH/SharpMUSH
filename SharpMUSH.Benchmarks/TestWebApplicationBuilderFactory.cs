@@ -44,7 +44,10 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		// Initialize MessageQueue strategy for benchmarks
 		var messageQueueStrategy = MessageQueueStrategyProvider.GetStrategy();
 
-		var startup = new Startup(acnf, colorFile, prometheusStrategy, redisStrategy, messageQueueStrategy);
+		// Use a fixed database name for benchmarks
+		var databaseName = "SharpMUSH_Benchmarks";
+
+		var startup = new Startup(acnf, colorFile, prometheusStrategy, redisStrategy, messageQueueStrategy, databaseName);
 
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));

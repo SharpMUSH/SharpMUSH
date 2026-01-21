@@ -42,7 +42,8 @@ public class Startup(
 	string colorFile, 
 	PrometheusStrategy prometheusStrategy, 
 	RedisStrategy redisStrategy,
-	MessageQueueStrategy messageQueueStrategy)
+	MessageQueueStrategy messageQueueStrategy,
+	string databaseName)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -160,7 +161,7 @@ public class Startup(
 		services.AddSingleton<IOptionsChangeTokenSource<SharpMUSHOptions>>(sp => sp.GetRequiredService<ConfigurationReloadService>());
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
-		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
+		services.AddSingleton(new ArangoHandle(databaseName));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddKeyedSingleton(nameof(colorFile), colorFile);
