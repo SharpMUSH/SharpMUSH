@@ -19,6 +19,21 @@ public abstract class TestsBase : WebApplicationTest<TestWebApplicationFactory,S
 	/// </summary>
 	protected INotifyService NotifyService { get; private set; } = null!;
 	
+	private IMUSHCodeParser? _commandParser;
+	private IMUSHCodeParser? _functionParser;
+	
+	/// <summary>
+	/// Per-test CommandParser. Lazily created on first access to avoid Factory initialization issues.
+	/// Cached for the duration of the test.
+	/// </summary>
+	protected IMUSHCodeParser CommandParser => _commandParser ??= CreateComamndParser();
+	
+	/// <summary>
+	/// Per-test FunctionParser. Lazily created on first access to avoid Factory initialization issues.
+	/// Cached for the duration of the test.
+	/// </summary>
+	protected IMUSHCodeParser FunctionParser => _functionParser ??= CreateFunctionParser();
+	
 	protected override async Task SetupAsync()
 	{
 		// Create a fresh NotifyService mock for this test
@@ -27,12 +42,11 @@ public abstract class TestsBase : WebApplicationTest<TestWebApplicationFactory,S
 		// Register it with the wrapper so all DI-injected code uses this test's mock
 		TestNotifyServiceWrapper.SetCurrentNotifyService(NotifyService);
 		
+		// Note: CommandParser and FunctionParser are created lazily on first access
+		// This avoids "Factory not initialized" errors during SetupAsync
+		
 		await Task.CompletedTask;
 	}
-	
-	protected IMUSHCodeParser CommandParser => CreateComamndParser();
-	
-	protected IMUSHCodeParser FunctionParser =>  CreateFunctionParser();
 
 	private IMUSHCodeParser CreateComamndParser()
 	{
