@@ -10,11 +10,11 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNext" Version="5.26.1" />
-    <PackageReference Include="DotNext.Threading" Version="5.26.1" />
+    <PackageReference Include="DotNext" Version="5.26.3" />
+    <PackageReference Include="DotNext.Threading" Version="5.26.3" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.2" />
     <PackageReference Include="morelinq" Version="4.4.0" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
     <PackageReference Include="NaturalSort.Extension" Version="4.4.1" />
