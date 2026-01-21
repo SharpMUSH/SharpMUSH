@@ -7,10 +7,14 @@ public class RedPandaTestServer : IAsyncInitializer, IAsyncDisposable
 {
 	public RedpandaContainer Instance { get; } = new RedpandaBuilder("docker.redpanda.com/redpandadata/redpanda:latest")
 		.WithName("sharpmush-test-redpanda")
-		.WithLabel("reuse-hash", "sharpmush-redpanda-v1")
+		.WithLabel("reuse-hash", "sharpmush-redpanda-v2") // v2 to force recreation with new settings
 		.WithPortBinding(9092, true) // Use dynamic port to avoid conflicts
-		// Configure 6MB message size limit for production compatibility
-		.WithCommand("--set", "kafka_batch_max_bytes=6291456") // 6MB
+		// Configure 6MB message size limit and enable auto-creation of topics
+		.WithCommand(
+			"--set", "kafka_batch_max_bytes=6291456", // 6MB
+			"--set", "auto_create_topics_enabled=true", // Enable auto-creation of topics
+			"--set", "default_topic_partitions=3" // Default 3 partitions for new topics
+		)
 		.WithReuse(true)
 		.Build();
 
