@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.ClassDataSources;
 
 namespace SharpMUSH.Tests.Functions;
 

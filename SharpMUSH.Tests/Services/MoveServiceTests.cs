@@ -8,10 +8,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class MoveServiceTests
+public class MoveServiceTests: TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
 
 	private IMoveService MoveService => Factory.Services.GetRequiredService<IMoveService>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();

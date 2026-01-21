@@ -6,6 +6,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.ClassDataSources;
 
 namespace SharpMUSH.Tests.Commands;
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.ClassDataSources;
 using StackExchange.Redis;
 
 namespace SharpMUSH.Tests.Services;
@@ -12,14 +13,12 @@ namespace SharpMUSH.Tests.Services;
 /// Tests for Redis shared state store functionality.
 /// Verifies that connection state is properly stored, retrieved, and shared across processes.
 /// </summary>
-public class RedisConnectionStateTests
+public class RedisConnectionStateTests: TestsBase
 {
-	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
-	public required RedisTestServer RedisTestServer { get; init; }
 
 	private IConnectionStateStore CreateStateStore()
 	{
-		var port = RedisTestServer.Instance.GetMappedPublicPort(6379);
+		var port = GlobalFactory.RedisTestServer.Instance.GetMappedPublicPort(6379);
 		var connectionString = $"localhost:{port}";
 		var configuration = ConfigurationOptions.Parse(connectionString);
 		configuration.AbortOnConnectFail = false;

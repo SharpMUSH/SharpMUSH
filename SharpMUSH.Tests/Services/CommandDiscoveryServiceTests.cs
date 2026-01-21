@@ -3,11 +3,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class CommandDiscoveryServiceTests
+public class CommandDiscoveryServiceTests: TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
 	private ICommandDiscoveryService CommandDiscoveryService => 
 		Factory.Services.GetRequiredService<ICommandDiscoveryService>();
 

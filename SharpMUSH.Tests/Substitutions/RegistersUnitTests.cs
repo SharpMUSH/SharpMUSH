@@ -7,11 +7,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Substitutions;
 
-public class RegistersUnitTests
+public class RegistersUnitTests: TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
 	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>(); 
 	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();

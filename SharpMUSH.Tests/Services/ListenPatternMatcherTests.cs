@@ -4,11 +4,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class ListenPatternMatcherTests
+public class ListenPatternMatcherTests: TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
 	private IListenPatternMatcher ListenPatternMatcher => 
 		Factory.Services.GetRequiredService<IListenPatternMatcher>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();

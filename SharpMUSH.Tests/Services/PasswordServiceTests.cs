@@ -8,11 +8,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class PasswordServiceTests
+public class PasswordServiceTests: TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
-
 	private IPasswordService PasswordService =>
 		Factory.Services.GetRequiredService<IPasswordService>();
 

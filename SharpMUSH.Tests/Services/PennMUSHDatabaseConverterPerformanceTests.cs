@@ -8,10 +8,8 @@ namespace SharpMUSH.Tests.Services;
 /// Performance tests for PennMUSH database converter.
 /// These tests measure import performance with large databases.
 /// </summary>
-public class PennMUSHDatabaseConverterPerformanceTests
+public class PennMUSHDatabaseConverterPerformanceTests: TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
 
 	private IPennMUSHDatabaseConverter GetConverter()
 	{

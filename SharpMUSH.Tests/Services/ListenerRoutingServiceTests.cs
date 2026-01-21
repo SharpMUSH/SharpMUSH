@@ -6,10 +6,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class ListenerRoutingServiceTests
+public class ListenerRoutingServiceTests: TestsBase
 {
-	[ClassDataSource<TestClassFactory>(Shared = SharedType.PerClass)]
-	public required TestClassFactory Factory { get; init; }
 
 	private IListenerRoutingService ListenerRoutingService => 
 		Factory.Services.GetRequiredService<IListenerRoutingService>();
