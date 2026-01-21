@@ -12,14 +12,14 @@
   <ItemGroup>
     <PackageReference Include="Core.Arango" Version="3.12.2" />
     <PackageReference Include="Core.Arango.Migration" Version="3.12.3" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNext" Version="5.26.1" />
+    <PackageReference Include="DotNext" Version="5.26.3" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
   </ItemGroup>
 
