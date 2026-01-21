@@ -9,9 +9,9 @@ namespace SharpMUSH.Tests.Substitutions;
 
 public class RegistersUnitTests: TestsBase
 {
-	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>(); 
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>(); 
+	// NotifyService is inherited from TestsBase
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	
 	[Test]
 	[Arguments("think [setq(0,foo)]%q0", "foo")]

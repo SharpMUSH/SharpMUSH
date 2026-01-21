@@ -11,7 +11,6 @@ namespace SharpMUSH.Tests.Commands;
 public class NewsCommandTests : TestsBase
 {
 	private IMUSHCodeParser Parser => CommandParser;
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
@@ -77,7 +76,6 @@ public class NewsCommandTests : TestsBase
 public class AhelpCommandTests : TestsBase
 {
 	private IMUSHCodeParser Parser => CommandParser;
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 

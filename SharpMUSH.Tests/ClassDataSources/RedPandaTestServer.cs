@@ -17,6 +17,11 @@ public class RedPandaTestServer : IAsyncInitializer, IAsyncDisposable
 	public async Task InitializeAsync()
 	{
 		await Instance.StartAsync();
+		
+		// Set test-specific environment variables for Kafka/RedPanda connection
+		var kafkaPort = Instance.GetMappedPublicPort(9092);
+		Environment.SetEnvironmentVariable("KAFKA_TEST_HOST", "localhost");
+		Environment.SetEnvironmentVariable("KAFKA_TEST_PORT", kafkaPort.ToString());
 	}
 
 	public async ValueTask DisposeAsync()

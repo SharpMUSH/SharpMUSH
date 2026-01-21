@@ -13,7 +13,6 @@ namespace SharpMUSH.Tests.Commands;
 public class DebugVerboseTests : TestsBase
 {
 	private IMUSHCodeParser Parser => CommandParser;
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	[Test]

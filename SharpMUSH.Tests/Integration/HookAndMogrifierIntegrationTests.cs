@@ -15,7 +15,6 @@ namespace SharpMUSH.Tests.Integration;
 /// </summary>
 public class HookIntegrationTests : TestsBase
 {
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;
 	private IHookService HookService => Services.GetRequiredService<IHookService>();
@@ -209,7 +208,6 @@ public class HookIntegrationTests : TestsBase
 /// </summary>
 public class MogrifierIntegrationTests : TestsBase
 {
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();

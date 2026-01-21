@@ -1,20 +1,34 @@
 using Mediator;
+using NSubstitute;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using TUnit.AspNetCore;
+using TUnit.Core;
 using TUnit.Core.Services;
 
 namespace SharpMUSH.Tests;
 
 public abstract class TestsBase : WebApplicationTest<TestWebApplicationFactory,SharpMUSH.Server.Program>
 {
-	protected override Task SetupAsync()
+	/// <summary>
+	/// Per-test NotifyService mock. Each test gets a fresh mock with no accumulated state.
+	/// </summary>
+	protected INotifyService NotifyService { get; private set; } = null!;
+	
+	protected override async Task SetupAsync()
 	{
-		return Task.CompletedTask;
-	}	
+		// Create a fresh NotifyService mock for this test
+		NotifyService = Substitute.For<INotifyService>();
+		
+		// Register it with the wrapper so all DI-injected code uses this test's mock
+		TestNotifyServiceWrapper.SetCurrentNotifyService(NotifyService);
+		
+		await Task.CompletedTask;
+	}
 	
 	protected IMUSHCodeParser CommandParser => CreateComamndParser();
 	

@@ -11,7 +11,6 @@ namespace SharpMUSH.Tests.Commands;
 
 public class HttpCommandTests : TestsBase
 {
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;
 

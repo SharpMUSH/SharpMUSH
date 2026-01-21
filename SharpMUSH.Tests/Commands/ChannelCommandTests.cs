@@ -18,7 +18,6 @@ public class ChannelCommandTests : TestsBase
 	private const string TestChannelPrivilege = "Open";
 	private const int TestPlayerDbRef = 1;
 	
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();

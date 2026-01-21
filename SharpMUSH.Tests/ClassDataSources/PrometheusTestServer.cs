@@ -39,6 +39,9 @@ public class PrometheusTestServer : IAsyncInitializer, IAsyncDisposable
 	public async Task InitializeAsync()
 	{
 		await Instance.StartAsync();
+		
+		// Set test-specific environment variable for Prometheus URL
+		Environment.SetEnvironmentVariable("PROMETHEUS_TEST_URL", $"http://localhost:{Instance.GetMappedPublicPort(9090)}");
 	}
 
 	public async ValueTask DisposeAsync()

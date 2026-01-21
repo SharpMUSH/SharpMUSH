@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Commands;
 
 public class WarningCommandTests : TestsBase
 {
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
+	// NotifyService is now inherited from TestsBase and is per-test
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();

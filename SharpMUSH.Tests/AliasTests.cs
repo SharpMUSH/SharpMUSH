@@ -11,7 +11,6 @@ namespace SharpMUSH.Tests;
 /// </summary>
 public class AliasTests : TestsBase
 {
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	/// <summary>

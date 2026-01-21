@@ -12,7 +12,6 @@ public class SubstitutionUnitTests : TestsBase
 
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>(); 
 
 	[Test]
 	[Arguments("think %t", "\t")]

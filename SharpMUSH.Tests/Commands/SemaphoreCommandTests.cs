@@ -13,7 +13,6 @@ namespace SharpMUSH.Tests.Commands;
 public class SemaphoreCommandTests : TestsBase
 {
 	private IMUSHCodeParser Parser => CommandParser;
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 	private ITaskScheduler Scheduler => Services.GetRequiredService<ITaskScheduler>();

@@ -11,8 +11,8 @@ namespace SharpMUSH.Tests.Functions;
 public class CommunicationFunctionUnitTests : TestsBase
 {
 	private IMUSHCodeParser Parser => FunctionParser;
-	private INotifyService NotifyService => Factory.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	// NotifyService is inherited from TestsBase
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task PrivateEmit()

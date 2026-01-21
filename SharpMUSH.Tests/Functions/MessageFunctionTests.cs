@@ -11,7 +11,6 @@ namespace SharpMUSH.Tests.Functions;
 public class MessageFunctionTests : TestsBase
 {
 	private IMUSHCodeParser Parser => FunctionParser;
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	[Test]

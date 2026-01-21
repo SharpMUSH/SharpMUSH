@@ -8,7 +8,6 @@ namespace SharpMUSH.Tests.Commands;
 
 public class HookCommandTests : TestsBase
 {
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;
 	private IHookService HookService => Services.GetRequiredService<IHookService>();

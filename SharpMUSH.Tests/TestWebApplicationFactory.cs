@@ -56,7 +56,8 @@ public class TestWebApplicationFactory : TestWebApplicationFactory<SharpMUSH.Ser
 			substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
 
 			sc.ReplaceService(substitute);
-			sc.ReplaceService(Substitute.For<INotifyService>());
+			// Use wrapper that delegates to per-test NotifyService instances
+			sc.ReplaceService<INotifyService>(new TestNotifyServiceWrapper());
 			sc.ReplaceService(new SqlService(MySqlTestServer.Instance.GetConnectionString()));
 		});
 	}

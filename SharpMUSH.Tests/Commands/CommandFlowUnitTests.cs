@@ -10,7 +10,6 @@ namespace SharpMUSH.Tests.Commands;
 
 public class CommandFlowUnitTests : TestsBase
 {
-	private INotifyService NotifyService => Services.GetRequiredService<INotifyService>();
 
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
