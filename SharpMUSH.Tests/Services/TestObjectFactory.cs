@@ -93,6 +93,7 @@ public class TestObjectFactory
 			Location = new(async ct => { await ValueTask.CompletedTask; return playerLocation; }),
 			Home = new(async ct => { await ValueTask.CompletedTask; return playerLocation; }),
 			PasswordHash = string.Empty,
+			PasswordSalt = null,
 			Quota = 20 // Default test quota
 		};
 		

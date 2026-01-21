@@ -16,22 +16,24 @@ public interface ISharpDatabase
 	/// Create a new player.
 	/// </summary>
 	/// <param name="name">Player name</param>
-	/// <param name="password">Player password</param>
+	/// <param name="password">Player password (plaintext for new players, or pre-hashed for imports)</param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="home"></param>
 	/// <param name="quota">Initial quota for the player</param>
+	/// <param name="salt">Optional salt for imported passwords (null for new players)</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-		CancellationToken cancellationToken = default);
+		string? salt = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets a hashed password for a player.
 	/// </summary>
 	/// <param name="player">Player</param>
 	/// <param name="password">plaintext password</param>
+	/// <param name="salt">Optional salt for imported passwords (null for new passwords)</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken cancellationToken = default);
+	ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets the quota for a player.
@@ -713,4 +715,15 @@ public interface ISharpDatabase
 	ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default);
 	
 	ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status, CancellationToken cancellationToken = default);
+	
+	/// <summary>
+	/// Checks if there is a path from startObject to targetObject following parent and/or zone edges.
+	/// Uses graph traversal to detect potential cycles in combined parent/zone chains.
+	/// </summary>
+	/// <param name="startObject">Starting object for traversal</param>
+	/// <param name="targetObject">Target object to find</param>
+	/// <param name="maxDepth">Maximum depth for traversal (default 100)</param>
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>True if a path exists from start to target, false otherwise</returns>
+	ValueTask<bool> IsReachableViaParentOrZoneAsync(AnySharpObject startObject, AnySharpObject targetObject, int maxDepth = 100, CancellationToken cancellationToken = default);
 }

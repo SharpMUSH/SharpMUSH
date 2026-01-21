@@ -5,10 +5,13 @@ using SharpMUSH.Messaging.Abstractions;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Messages;
+using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
+using TelnetNegotiationCore.Protocols;
 
 namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 
@@ -42,71 +45,19 @@ public class TelnetServer : ConnectionHandler
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
 
-		var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar =>
-		{
-			// Publish MSDP update to MainProcess
-			// resetVar is a string representing the variable name that was reset
-			// Create a dictionary with the reset variable
-			var msdpData = new Dictionary<string, string> { { "RESET", resetVar } };
-			await _publishEndpoint.Publish(new MSDPUpdateMessage(nextPort, msdpData), ct);
-		}));
-
-		var telnet = await new TelnetInterpreter(TelnetInterpreter.TelnetMode.Server, _logger)
-		{
-			CallbackOnSubmitAsync = async (byteArray, encoding, _) =>
-			{
-				// Publish user input to MainProcess
-				await _publishEndpoint.Publish(
-					new TelnetInputMessage(nextPort, encoding.GetString(byteArray)), ct);
-			},
-			SignalOnGMCPAsync = async moduleAndInfo =>
-			{
-				// Publish GMCP signal to MainProcess
-				await _publishEndpoint.Publish(
-					new GMCPSignalMessage(nextPort, moduleAndInfo.Package, moduleAndInfo.Info), ct);
-			},
-			SignalOnMSSPAsync = async msspConfig =>
-			{
-				// Publish MSSP update to MainProcess
-				var configDict = new Dictionary<string, string>();
-				// Convert MSSP config to dictionary if needed
-				await _publishEndpoint.Publish(
-					new MSSPUpdateMessage(nextPort, configDict), ct);
-			},
-			SignalOnNAWSAsync = async (newHeight, newWidth) =>
-			{
-				// Publish NAWS update to MainProcess
-				await _publishEndpoint.Publish(
-					new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct);
-			},
-			SignalOnMSDPAsync = MSDPHandler.HandleAsync,
-			CallbackNegotiationAsync = async byteArray =>
-			{
-				try
-				{
-					await _semaphoreSlimForWriter.WaitAsync(ct);
-					try
-					{
-						await connection.Transport.Output.WriteAsync(byteArray.AsMemory(), ct);
-					}
-					finally
-					{
-						_semaphoreSlimForWriter.Release();
-					}
-				}
-				catch (ObjectDisposedException ode)
-				{
-					_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
-				}
-				catch (Exception ex)
-				{
-					_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
-				}
-			},
-			CharsetOrder = [Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1")]
-		}
-		.RegisterMSSPConfig(() => _msspConfig)
-		.BuildAsync();
+		var telnet = await new TelnetInterpreterBuilder().OnSubmit(async (byteArray, encoding, _) =>
+				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, encoding.GetString(byteArray)), ct))
+			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
+				await _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct))
+			.AddPlugin<MSSPProtocol>().WithMSSPConfig(() => _msspConfig).OnMSSP(async _ =>
+				// Not Yet Implemented. Need to turn config into a dictionary
+				await _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct))
+			.AddPlugin<NAWSProtocol>().OnNAWS(async (newHeight, newWidth) =>
+				await _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct))
+			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection, ct))
+			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
+			.AddPlugin<MCCPProtocol>()
+			.BuildAsync();
 
 		var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 			? "unknown"
@@ -154,6 +105,44 @@ public class TelnetServer : ConnectionHandler
 
 		// Disconnect and notify MainProcess
 		await _connectionService.DisconnectAsync(nextPort);
+	}
+
+	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection, CancellationToken ct)
+	{
+		/*
+		var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar =>
+		{
+			// Publish MSDP update to MainProcess
+			// resetVar is a string representing the variable name that was reset
+			// Create a dictionary with the reset variable
+			var msdpData = new Dictionary<string, string> { { "RESET", resetVar } };
+			await _publishEndpoint.Publish(new MSDPUpdateMessage(nextPort, msdpData), ct);
+		}));
+		*/
+
+		return async (ti, str) =>
+		{
+			try
+			{
+				await _semaphoreSlimForWriter.WaitAsync(ct);
+				try
+				{
+					await connection.Transport.Output.WriteAsync(ti.TelnetSafeString(str), ct);
+				}
+				finally
+				{
+					_semaphoreSlimForWriter.Release();
+				}
+			}
+			catch (ObjectDisposedException ode)
+			{
+				_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+			}
+		};
 	}
 }
 
