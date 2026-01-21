@@ -24,7 +24,7 @@
     <PackageReference Include="Quartz.Lambda" Version="1.0.5" />
     <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
-    <PackageReference Include="TelnetNegotiationCore" Version="1.1.1" />
+    <PackageReference Include="TelnetNegotiationCore" Version="2.1.0" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.5.0" />
 		<PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>
