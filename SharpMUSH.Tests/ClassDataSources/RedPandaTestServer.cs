@@ -7,6 +7,7 @@ public class RedPandaTestServer : IAsyncInitializer, IAsyncDisposable
 {
 	public RedpandaContainer Instance { get; } = new RedpandaBuilder("docker.redpanda.com/redpandadata/redpanda:latest")
 		.WithName("sharpmush-test-redpanda")
+		.WithLabel("reuse-id", "SharpMUSH") // Group with other SharpMUSH containers
 		.WithLabel("reuse-hash", "sharpmush-redpanda-v2") // v2 to force recreation with new settings
 		.WithPortBinding(9092, true) // Use dynamic port to avoid conflicts
 		// Configure 6MB message size limit and enable auto-creation of topics
