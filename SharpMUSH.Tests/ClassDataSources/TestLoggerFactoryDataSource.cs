@@ -18,6 +18,16 @@ public class TestLoggerFactoryDataSource : IAsyncInitializer, IAsyncDisposable
 		Instance = LoggerFactory.Create(builder =>
 		{
 			builder.SetMinimumLevel(LogLevel.Warning); // Reduce test noise
+			
+			// Suppress excessive migration logging that floods test output
+			// (58K+ "Migration Change:" entries when running 32 parallel tests)
+			builder.AddFilter("SharpMUSH.Database.ArangoDB.Migrations", LogLevel.Error);
+			builder.AddFilter("SharpMUSH.Database", LogLevel.Warning);
+			
+			// Suppress Kafka consumer retry noise (transient topic creation race conditions)
+			builder.AddFilter("SharpMUSH.Messaging.Kafka", LogLevel.Error);
+			builder.AddFilter("Confluent.Kafka", LogLevel.Error);
+			
 			builder.AddConsole();
 			builder.AddDebug();
 		});

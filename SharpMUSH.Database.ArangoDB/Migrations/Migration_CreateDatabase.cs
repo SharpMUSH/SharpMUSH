@@ -917,7 +917,9 @@ public class Migration_CreateDatabase : IArangoMigration
 			new ArangoMigrationOptions
 			{
 				DryRun = false,
-				Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State)
+				// Suppress migration logging in test mode to prevent massive log spam
+				// (58K+ entries when running 32 parallel tests, each creating unique database)
+				Notify = IsTestMode ? null : x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State)
 			});
 
 

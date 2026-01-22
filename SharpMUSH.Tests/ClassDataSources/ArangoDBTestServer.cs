@@ -33,5 +33,8 @@ public class ArangoDbTestServer : IAsyncInitializer
 		// Set test-specific environment variable for ArangoDB connection
 		var connectionString = $"Server=http://localhost:{Instance.GetMappedPublicPort(8529)};Database=_system;User=root;Password=password";
 		Environment.SetEnvironmentVariable("ARANGO_TEST_CONNECTION_STRING", connectionString);
+		
+		// Enable fast migration mode (disables WaitForSync, enables batching, suppresses migration logging)
+		Environment.SetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION", "true");
 	}
 }
