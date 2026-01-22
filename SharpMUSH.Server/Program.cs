@@ -76,8 +76,12 @@ public class Program
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
 
-		// Prometheus metrics endpoint
-		app.MapPrometheusScrapingEndpoint();
+		// Prometheus metrics endpoint (only in production mode to avoid test failures when console exporter is disabled)
+		var isTestMode = Environment.GetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION") != null;
+		if (!isTestMode)
+		{
+			app.MapPrometheusScrapingEndpoint();
+		}
 
 		return app;
 	}

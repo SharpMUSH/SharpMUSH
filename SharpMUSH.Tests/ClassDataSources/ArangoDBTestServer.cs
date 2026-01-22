@@ -36,5 +36,9 @@ public class ArangoDbTestServer : IAsyncInitializer
 		
 		// Enable fast migration mode (disables WaitForSync, enables batching, suppresses migration logging)
 		Environment.SetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION", "true");
+		
+		// Disable configuration file reloading to avoid inotify file descriptor exhaustion
+		// With 32 parallel tests, each WebApplication creates file watchers that exhaust the system limit (1280)
+		Environment.SetEnvironmentVariable("DOTNET_hostBuilder:reloadConfigOnChange", "false");
 	}
 }

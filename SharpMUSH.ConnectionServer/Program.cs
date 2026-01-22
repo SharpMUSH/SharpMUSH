@@ -173,8 +173,11 @@ try
 	app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
 	app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
 
-	// Prometheus metrics endpoint
-	app.MapPrometheusScrapingEndpoint();
+	// Prometheus metrics endpoint (only in production mode to avoid test failures when console exporter is disabled)
+	if (!isTestMode)
+	{
+		app.MapPrometheusScrapingEndpoint();
+	}
 
 	await app.RunAsync();
 }
