@@ -14,6 +14,7 @@ public class RedisTestServer : IAsyncInitializer, IAsyncDisposable
 
 	public IContainer Instance { get; } = new ContainerBuilder("redis:7-alpine")
 		.WithName("sharpmush-test-redis")
+		.WithLabel("reuse-id", "SharpMUSH")
 		.WithLabel("reuse-hash", "sharpmush-redis-v1")
 		.WithPortBinding(RedisPort, true) // Random host port
 		.WithCommand("redis-server", "--appendonly", "yes")

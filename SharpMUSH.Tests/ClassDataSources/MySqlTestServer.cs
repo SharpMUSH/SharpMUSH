@@ -7,6 +7,7 @@ public class MySqlTestServer : IAsyncInitializer, IAsyncDisposable
 {
 	public MySqlContainer Instance { get; } = new MySqlBuilder("mysql:latest")
 		.WithName("sharpmush-test-mysql")
+		.WithLabel("reuse-id", "SharpMUSH")
 		.WithLabel("reuse-hash", "sharpmush-mysql-v1")
 		.WithDatabase("sharpmush_test")
 		.WithUsername("testuser")

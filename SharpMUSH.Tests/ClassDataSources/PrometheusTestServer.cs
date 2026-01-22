@@ -26,6 +26,7 @@ public class PrometheusTestServer : IAsyncInitializer, IAsyncDisposable
 
 	public IContainer Instance { get; } = new ContainerBuilder("prom/prometheus:latest")
 		.WithName("sharpmush-test-prometheus")
+		.WithLabel("reuse-id", "SharpMUSH")
 		.WithLabel("reuse-hash", "sharpmush-prometheus-v1")
 		.WithPortBinding(9090, 9090)
 		.WithCommand("--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus")
