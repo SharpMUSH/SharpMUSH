@@ -242,13 +242,20 @@ public class Startup(
 		});
 
 		// Configure OpenTelemetry Metrics for Prometheus
+		var isTestMode = Environment.GetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION") != null;
+		
 		services.AddOpenTelemetry()
 			.ConfigureResource(resource => resource
 				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
-			.WithMetrics(metrics => metrics
-				.AddMeter("SharpMUSH")
-				.AddRuntimeInstrumentation()
-				.AddConsoleExporter()
-				.AddPrometheusExporter());
+			.WithMetrics(metrics =>
+			{
+				metrics.AddMeter("SharpMUSH").AddRuntimeInstrumentation();
+				
+				// Only add exporters in production mode (reduces log spam in tests)
+				if (!isTestMode)
+				{
+					metrics.AddConsoleExporter().AddPrometheusExporter();
+				}
+			});
 	}
 }
