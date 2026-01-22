@@ -28,7 +28,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
+      run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 32 --parallelism-strategy fixed
     - name: Display Telemetry Summary
       if: always()
       run: |
