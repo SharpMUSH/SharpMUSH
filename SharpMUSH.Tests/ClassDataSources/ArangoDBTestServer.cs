@@ -3,27 +3,35 @@ using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests.ClassDataSources;
 
-public class ArangoDbTestServer : IAsyncInitializer, IAsyncDisposable
+public class ArangoDbTestServer : IAsyncInitializer
 {
-	public ArangoDbContainer Instance { get; } = new ArangoDbBuilder("arangodb:latest")
-		.WithName("sharpmush-test-arangodb")
-		.WithLabel("reuse-id", "SharpMUSH")
-		.WithLabel("reuse-hash", "sharpmush-arangodb-v1")
-		.WithPassword("password")
-		.WithReuse(true)
-		.Build();
+	private static readonly Lazy<ArangoDbContainer> _container = new(() => 
+		new ArangoDbBuilder("arangodb:latest")
+			.WithName("sharpmush-test-arangodb")
+			.WithLabel("reuse-id", "SharpMUSH")
+			.WithLabel("reuse-hash", "sharpmush-arangodb-v1")
+			.WithPassword("password")
+			.WithReuse(true)
+			.Build());
+	
+	private static bool _initialized;
+	private static readonly object _lock = new();
+
+	public ArangoDbContainer Instance => _container.Value;
 
 	public async Task InitializeAsync()
 	{
+		// Ensure container is only started once across all test sessions
+		lock (_lock)
+		{
+			if (_initialized) return;
+			_initialized = true;
+		}
+		
 		await Instance.StartAsync();
 		
 		// Set test-specific environment variable for ArangoDB connection
 		var connectionString = $"Server=http://localhost:{Instance.GetMappedPublicPort(8529)};Database=_system;User=root;Password=password";
 		Environment.SetEnvironmentVariable("ARANGO_TEST_CONNECTION_STRING", connectionString);
-	}
-
-	public async ValueTask DisposeAsync()
-	{
-		await Instance.DisposeAsync();
 	}
 }
