@@ -1,3 +1,5 @@
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using Testcontainers.Redpanda;
 using TUnit.Core.Interfaces;
 
@@ -40,5 +42,39 @@ public class RedPandaTestServer : IAsyncInitializer
 		var kafkaPort = Instance.GetMappedPublicPort(9092);
 		Environment.SetEnvironmentVariable("KAFKA_TEST_HOST", "localhost");
 		Environment.SetEnvironmentVariable("KAFKA_TEST_PORT", kafkaPort.ToString());
+		
+		// Pre-create all required Kafka topics to avoid "Unknown topic or partition" errors
+		// that cause tests to hang while waiting for auto-creation
+		await CreateTopicsAsync(Instance.GetBootstrapAddress());
+	}
+	
+	private static async Task CreateTopicsAsync(string bootstrapServers)
+	{
+		var config = new AdminClientConfig { BootstrapServers = bootstrapServers };
+		
+		using var adminClient = new AdminClientBuilder(config).Build();
+		
+		// Define all topics used by the SharpMUSH application
+		var topics = new List<TopicSpecification>
+		{
+			new() { Name = "telnet-input", NumPartitions = 3, ReplicationFactor = 1 },
+			new() { Name = "connection-closed", NumPartitions = 3, ReplicationFactor = 1 },
+			new() { Name = "connection-established", NumPartitions = 3, ReplicationFactor = 1 },
+			new() { Name = "g-m-c-p-signal", NumPartitions = 3, ReplicationFactor = 1 },
+			new() { Name = "m-s-d-p-update", NumPartitions = 3, ReplicationFactor = 1 },
+			new() { Name = "n-a-w-s-update", NumPartitions = 3, ReplicationFactor = 1 }
+		};
+		
+		try
+		{
+			await adminClient.CreateTopicsAsync(topics);
+			
+			// Wait briefly to ensure topics are fully created before tests start
+			await Task.Delay(500);
+		}
+		catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
+		{
+			// Topics already exist (container reused from previous run) - this is fine
+		}
 	}
 }
