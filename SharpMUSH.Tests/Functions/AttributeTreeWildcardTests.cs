@@ -4,7 +4,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class AttributeTreeWildcardTests : TestsBase
+public class AttributeTreeWildcardTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

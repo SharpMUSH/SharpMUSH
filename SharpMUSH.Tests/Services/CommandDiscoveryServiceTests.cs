@@ -3,7 +3,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class CommandDiscoveryServiceTests: TestsBase
+public class CommandDiscoveryServiceTests: TestClassFactory
 {
 	private ICommandDiscoveryService CommandDiscoveryService => 
 		Factory.Services.GetRequiredService<ICommandDiscoveryService>();

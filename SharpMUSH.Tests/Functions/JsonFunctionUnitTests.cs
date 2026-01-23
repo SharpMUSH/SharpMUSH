@@ -4,7 +4,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
-public class JsonFunctionUnitTests : TestsBase
+public class JsonFunctionUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();

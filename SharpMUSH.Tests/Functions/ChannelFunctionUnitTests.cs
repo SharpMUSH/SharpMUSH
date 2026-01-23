@@ -10,7 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class ChannelFunctionUnitTests : TestsBase
+public class ChannelFunctionUnitTests : TestClassFactory
 {
 	private const string TestChannelName = "TestChannel";
 	private const string TestChannelPrivilege = "Open";

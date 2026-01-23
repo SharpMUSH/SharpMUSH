@@ -15,7 +15,7 @@ using static SharpMUSH.Library.Services.Interfaces.INotifyService;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class ZoneCommandTests : TestsBase
+public class ZoneCommandTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;

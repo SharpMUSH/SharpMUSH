@@ -9,7 +9,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class HttpCommandTests : TestsBase
+public class HttpCommandTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;

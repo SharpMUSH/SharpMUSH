@@ -7,7 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Substitutions;
 
-public class RegistersUnitTests: TestsBase
+public class RegistersUnitTests: TestClassFactory
 {
 	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>(); 
 	// NotifyService is inherited from TestsBase

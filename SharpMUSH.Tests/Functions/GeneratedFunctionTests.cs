@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Functions;
 /// Tests to verify that version() and config() functions work correctly
 /// with code-generated accessors instead of reflection.
 /// </summary>
-public class GeneratedFunctionTests : TestsBase
+public class GeneratedFunctionTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

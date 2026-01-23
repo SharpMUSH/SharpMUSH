@@ -4,7 +4,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class EventServiceTests: TestsBase
+public class EventServiceTests: TestClassFactory
 {
 	private IEventService EventService => Factory.Services.GetRequiredService<IEventService>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();

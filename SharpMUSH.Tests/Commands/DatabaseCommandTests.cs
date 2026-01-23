@@ -10,16 +10,13 @@ using SharpMUSH.Tests.ClassDataSources;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class DatabaseCommandTests : TestsBase
+public class DatabaseCommandTests : TestClassFactory
 {
-	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
-	public required MySqlTestServer MySqlTestServer { get; init; }
-
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Before(Test)]
-	public async Task InitializeAsync()
+	public new async Task InitializeAsync()
 	{
 		// Create test database and populate with test data
 		var connectionString = MySqlTestServer.Instance.GetConnectionString();

@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class CommunicationFunctionUnitTests : TestsBase
+public class CommunicationFunctionUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 	// NotifyService is inherited from TestsBase

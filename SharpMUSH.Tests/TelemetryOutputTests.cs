@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests;
 /// Test that outputs telemetry summary.
 /// This test should be run last to provide a summary of metrics collected during the test session.
 /// </summary>
-public class TelemetryOutputTests : TestsBase
+public class TelemetryOutputTests : TestClassFactory
 {
 	[Test]
 	public async Task OutputTelemetrySummary()

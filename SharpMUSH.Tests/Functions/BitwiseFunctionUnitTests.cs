@@ -2,7 +2,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class BitwiseFunctionUnitTests : TestsBase
+public class BitwiseFunctionUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

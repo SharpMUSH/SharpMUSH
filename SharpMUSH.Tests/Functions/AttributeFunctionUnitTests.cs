@@ -4,7 +4,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class AttributeFunctionUnitTests : TestsBase
+public class AttributeFunctionUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();

@@ -1,3 +1,4 @@
+#pragma warning disable TUnit0023 // Intentionally keep resources alive for test session lifecycle
 using System.Collections.Concurrent;
 using System.Text;
 using Confluent.Kafka;
@@ -62,6 +63,11 @@ public class TestClassFactory : IAsyncInitializer, IAsyncDisposable
 	private static int _databaseCounter = 0;
 	private static int _handleCounter = 0;
 	private long _connectionHandle;
+
+	/// <summary>
+	/// The web application factory for this test class. Provides access to Services and app configuration.
+	/// </summary>
+	public TestWebApplicationBuilderFactory<SharpMUSH.Server.Program> Factory => _server!;
 
 	/// <summary>
 	/// Service provider for this test class. Use this to get services like IMediator, IConnectionService, etc.

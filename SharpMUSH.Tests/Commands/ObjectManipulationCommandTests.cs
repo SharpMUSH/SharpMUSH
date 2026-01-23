@@ -12,7 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class ObjectManipulationCommandTests : TestsBase
+public class ObjectManipulationCommandTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;

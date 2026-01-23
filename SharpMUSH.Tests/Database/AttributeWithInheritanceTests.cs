@@ -6,7 +6,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Tests.Database;
 
-public class AttributeWithInheritanceTests : TestsBase
+public class AttributeWithInheritanceTests : TestClassFactory
 {
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();

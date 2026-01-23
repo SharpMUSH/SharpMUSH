@@ -3,7 +3,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class SemanticHighlightingTests : TestsBase
+public class SemanticHighlightingTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

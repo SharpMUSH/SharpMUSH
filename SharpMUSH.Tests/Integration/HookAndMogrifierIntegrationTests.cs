@@ -13,7 +13,7 @@ namespace SharpMUSH.Tests.Integration;
 /// These tests validate the complete hook workflow including command execution,
 /// hook triggering, and $-command matching.
 /// </summary>
-public class HookIntegrationTests : TestsBase
+public class HookIntegrationTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;
@@ -206,7 +206,7 @@ public class HookIntegrationTests : TestsBase
 /// These tests validate the complete mogrification pipeline including
 /// channel message processing and all MOGRIFY` attributes.
 /// </summary>
-public class MogrifierIntegrationTests : TestsBase
+public class MogrifierIntegrationTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;

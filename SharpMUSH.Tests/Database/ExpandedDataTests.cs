@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ExpandedDataTests : TestsBase
+public class ExpandedDataTests : TestClassFactory
 {
 	private ISharpDatabase _database => Services.GetRequiredService<ISharpDatabase>();
 

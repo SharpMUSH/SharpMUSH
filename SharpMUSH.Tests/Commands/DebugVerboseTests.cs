@@ -10,7 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class DebugVerboseTests : TestsBase
+public class DebugVerboseTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => CommandParser;
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();

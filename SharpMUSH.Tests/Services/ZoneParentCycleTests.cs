@@ -12,7 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Services;
 
 [NotInParallel]
-public class ZoneParentCycleTests: TestsBase
+public class ZoneParentCycleTests: TestClassFactory
 {
 	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();

@@ -6,7 +6,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class SubstitutionUnitTests : TestsBase
+public class SubstitutionUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();
 

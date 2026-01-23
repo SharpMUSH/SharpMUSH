@@ -11,7 +11,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class GeneralCommandTests : TestsBase
+public class GeneralCommandTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => CommandParser;
 

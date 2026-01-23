@@ -17,7 +17,7 @@ using System.Collections.Concurrent;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class FunctionPermissionTests : TestsBase
+public class FunctionPermissionTests : TestClassFactory
 {
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 

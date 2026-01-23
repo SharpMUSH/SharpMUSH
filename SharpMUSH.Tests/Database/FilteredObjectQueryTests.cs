@@ -10,7 +10,7 @@ using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Tests.Database;
 
-public class FilteredObjectQueryTests : TestsBase
+public class FilteredObjectQueryTests : TestClassFactory
 {
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();

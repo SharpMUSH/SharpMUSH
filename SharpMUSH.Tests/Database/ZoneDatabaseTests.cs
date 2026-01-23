@@ -11,7 +11,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ZoneDatabaseTests : TestsBase
+public class ZoneDatabaseTests : TestClassFactory
 {
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();

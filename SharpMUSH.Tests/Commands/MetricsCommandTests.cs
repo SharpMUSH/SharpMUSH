@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class MetricsCommandTests : TestsBase
+public class MetricsCommandTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => CommandParser;
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();

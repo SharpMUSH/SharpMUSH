@@ -4,7 +4,7 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
 
-public class PennMUSHDatabaseParserTests: TestsBase
+public class PennMUSHDatabaseParserTests: TestClassFactory
 {
 
 	private PennMUSHDatabaseParser GetParser()

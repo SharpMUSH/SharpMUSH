@@ -9,7 +9,7 @@ using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ArangoDBTests : TestsBase
+public class ArangoDBTests : TestClassFactory
 {
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 	

@@ -13,12 +13,12 @@ namespace SharpMUSH.Tests.Services;
 /// Tests for Redis shared state store functionality.
 /// Verifies that connection state is properly stored, retrieved, and shared across processes.
 /// </summary>
-public class RedisConnectionStateTests: TestsBase
+public class RedisConnectionStateTests: TestClassFactory
 {
 
 	private IConnectionStateStore CreateStateStore()
 	{
-		var port = GlobalFactory.RedisTestServer.Instance.GetMappedPublicPort(6379);
+		var port = RedisTestServer.Instance.GetMappedPublicPort(6379);
 		var connectionString = $"localhost:{port}";
 		var configuration = ConfigurationOptions.Parse(connectionString);
 		configuration.AbortOnConnectFail = false;

@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Tests for newly implemented PennMUSH lock commands
 /// </summary>
-public class NewLockCommandTests : TestsBase
+public class NewLockCommandTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;

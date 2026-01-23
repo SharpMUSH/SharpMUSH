@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class UserDefinedCommandsTests : TestsBase
+public class UserDefinedCommandsTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();

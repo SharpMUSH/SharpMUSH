@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests.Performance;
 /// <summary>
 /// Validates that the Kafka migration maintains or improves messaging performance
 /// </summary>
-public class KafkaPerformanceValidation : TestsBase
+public class KafkaPerformanceValidation : TestClassFactory
 {
 private IMessageBus MessageBus => Services.GetRequiredService<IMessageBus>();
 

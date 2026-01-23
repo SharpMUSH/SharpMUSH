@@ -5,7 +5,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
 
-public class MotdDataTests : TestsBase
+public class MotdDataTests : TestClassFactory
 {
 	private ISharpDatabase _database => Services.GetRequiredService<ISharpDatabase>();
 	private IExpandedObjectDataService _dataService => Services.GetRequiredService<IExpandedObjectDataService>();

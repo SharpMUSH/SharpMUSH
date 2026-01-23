@@ -11,7 +11,7 @@ namespace SharpMUSH.Tests.Parser;
 /// Tests verify that locks properly handle DBRefs with creation timestamps to prevent
 /// issues when objects are destroyed and their dbrefs are recycled.
 /// </summary>
-public class LockObjIdTests : TestsBase
+public class LockObjIdTests : TestClassFactory
 {
 	private IBooleanExpressionParser BooleanParser => Services.GetRequiredService<IBooleanExpressionParser>();	
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();

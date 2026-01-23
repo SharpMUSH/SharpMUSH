@@ -13,7 +13,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class WarningCommandTests : TestsBase
+public class WarningCommandTests : TestClassFactory
 {
 	// NotifyService is now inherited from TestsBase and is per-test
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();

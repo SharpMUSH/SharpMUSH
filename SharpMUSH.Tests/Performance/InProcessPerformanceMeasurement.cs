@@ -10,7 +10,7 @@ namespace SharpMUSH.Tests.Performance;
 /// Measures actual performance of @dolist vs iter() to identify the bottleneck.
 /// This runs in-process with real services to get accurate measurements.
 /// </summary>
-public class InProcessPerformanceMeasurement : TestsBase
+public class InProcessPerformanceMeasurement : TestClassFactory
 {
 	private IMUSHCodeParser Parser => CommandParser;
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();

@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests;
 /// Tests to verify that function and command aliases work correctly.
 /// This ensures that the alias mappings from Configurable are properly loaded and functional.
 /// </summary>
-public class AliasTests : TestsBase
+public class AliasTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 

@@ -12,7 +12,7 @@ using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class AttributeCommandTests : TestsBase
+public class AttributeCommandTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => CommandParser;

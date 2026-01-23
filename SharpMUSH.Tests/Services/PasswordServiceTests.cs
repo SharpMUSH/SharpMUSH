@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class PasswordServiceTests: TestsBase
+public class PasswordServiceTests: TestClassFactory
 {
 	private IPasswordService PasswordService =>
 		Factory.Services.GetRequiredService<IPasswordService>();

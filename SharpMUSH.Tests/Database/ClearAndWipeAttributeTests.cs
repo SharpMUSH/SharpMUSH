@@ -6,7 +6,7 @@ using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ClearAndWipeAttributeTests : TestsBase
+public class ClearAndWipeAttributeTests : TestClassFactory
 {
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 

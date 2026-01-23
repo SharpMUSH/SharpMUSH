@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MessageFunctionTests : TestsBase
+public class MessageFunctionTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();

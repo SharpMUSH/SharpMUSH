@@ -3,7 +3,7 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
 
-public class PennMUSHDatabaseConverterTests: TestsBase
+public class PennMUSHDatabaseConverterTests: TestClassFactory
 {
 
 	private IPennMUSHDatabaseConverter GetConverter()

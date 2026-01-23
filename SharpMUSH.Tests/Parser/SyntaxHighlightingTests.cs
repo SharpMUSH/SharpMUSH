@@ -2,7 +2,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class SyntaxHighlightingTests : TestsBase
+public class SyntaxHighlightingTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

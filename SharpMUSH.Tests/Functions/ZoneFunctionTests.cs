@@ -10,7 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class ZoneFunctionTests : TestsBase
+public class ZoneFunctionTests : TestClassFactory
 {
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => Services.GetRequiredService<IMediator>();

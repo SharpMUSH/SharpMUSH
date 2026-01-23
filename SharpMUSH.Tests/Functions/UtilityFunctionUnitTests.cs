@@ -7,7 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class UtilityFunctionUnitTests : TestsBase
+public class UtilityFunctionUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 	private IPasswordService PasswordService => Factory.Services.GetRequiredService<IPasswordService>(); 

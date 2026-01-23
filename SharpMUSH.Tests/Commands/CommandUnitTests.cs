@@ -7,7 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class CommandUnitTests : TestsBase
+public class CommandUnitTests : TestClassFactory
 {
 
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();

@@ -2,7 +2,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class UnusualUnitTests : TestsBase
+public class UnusualUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

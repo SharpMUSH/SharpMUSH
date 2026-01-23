@@ -12,7 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class ChannelCommandTests : TestsBase
+public class ChannelCommandTests : TestClassFactory
 {
 	private const string TestChannelName = "TestCommandChannel";
 	private const string TestChannelPrivilege = "Open";

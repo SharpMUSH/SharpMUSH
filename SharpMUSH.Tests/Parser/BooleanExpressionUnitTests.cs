@@ -6,7 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class BooleanExpressionUnitTests : TestsBase
+public class BooleanExpressionUnitTests : TestClassFactory
 {
 	private IBooleanExpressionParser BooleanParser => Services.GetRequiredService<IBooleanExpressionParser>();	
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();

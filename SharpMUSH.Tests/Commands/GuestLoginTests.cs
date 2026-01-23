@@ -13,7 +13,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class GuestLoginTests : TestsBase
+public class GuestLoginTests : TestClassFactory
 {
 
 [Test]

@@ -3,7 +3,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class ParserErrorTests : TestsBase
+public class ParserErrorTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

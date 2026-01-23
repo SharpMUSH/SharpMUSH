@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MailFunctionUnitTests : TestsBase
+public class MailFunctionUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();

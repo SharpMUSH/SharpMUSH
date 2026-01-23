@@ -3,7 +3,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class RoomsAndMovementTests : TestsBase
+public class RoomsAndMovementTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();
 	

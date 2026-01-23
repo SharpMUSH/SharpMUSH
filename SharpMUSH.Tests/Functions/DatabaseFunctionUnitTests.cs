@@ -6,17 +6,14 @@ using SharpMUSH.Tests.ClassDataSources;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class DatabaseFunctionUnitTests : TestsBase
+public class DatabaseFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
-	public required MySqlTestServer MySqlTestServer { get; init; }
-
 	private IMUSHCodeParser Parser => FunctionParser;
 	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
 	
 	[Before(Test)]
-	public async Task InitializeAsync()
+	public new async Task InitializeAsync()
 	{
 		// Reuse the same tables as command tests to avoid conflicts
 		// The command tests already create test_sql_data and test_mapsql_data

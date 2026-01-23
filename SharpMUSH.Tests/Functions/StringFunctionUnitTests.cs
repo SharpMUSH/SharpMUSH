@@ -7,7 +7,7 @@ using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class StringFunctionUnitTests : TestsBase 
+public class StringFunctionUnitTests : TestClassFactory 
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

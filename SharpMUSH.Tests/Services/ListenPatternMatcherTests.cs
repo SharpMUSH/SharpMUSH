@@ -4,7 +4,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class ListenPatternMatcherTests: TestsBase
+public class ListenPatternMatcherTests: TestClassFactory
 {
 	private IListenPatternMatcher ListenPatternMatcher => 
 		Factory.Services.GetRequiredService<IListenPatternMatcher>();

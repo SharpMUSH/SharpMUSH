@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Parser;
 /// Manual testing examples for parser error explanations and syntax highlighting.
 /// Run these interactively to see the features in action.
 /// </summary>
-public class ParserExamples : TestsBase
+public class ParserExamples : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

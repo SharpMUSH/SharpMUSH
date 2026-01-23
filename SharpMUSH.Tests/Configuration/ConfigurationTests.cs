@@ -5,7 +5,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Configuration;
 
-public class ConfigurationTests : TestsBase
+public class ConfigurationTests : TestClassFactory
 {
 	private IOptionsWrapper<SharpMUSHOptions> Configuration => Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 

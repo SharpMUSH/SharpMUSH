@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests.Parser;
 /// <summary>
 /// Tests for lock string normalization - converting bare dbrefs to objids.
 /// </summary>
-public class LockNormalizationTests : TestsBase
+public class LockNormalizationTests : TestClassFactory
 {
 	private IBooleanExpressionParser BooleanParser => Services.GetRequiredService<IBooleanExpressionParser>();	
 	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();

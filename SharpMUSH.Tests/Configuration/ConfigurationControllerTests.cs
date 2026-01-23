@@ -12,7 +12,7 @@ using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Tests.Configuration;
 
-public class ConfigurationControllerTests : TestsBase
+public class ConfigurationControllerTests : TestClassFactory
 {
 	[Test]
 	public async Task ImportConfiguration_ValidConfig_ReturnsCorrectValues()

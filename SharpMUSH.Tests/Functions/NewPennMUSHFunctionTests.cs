@@ -5,7 +5,7 @@ namespace SharpMUSH.Tests.Functions;
 /// <summary>
 /// Tests for newly implemented PennMUSH functions
 /// </summary>
-public class NewPennMUSHFunctionTests : TestsBase
+public class NewPennMUSHFunctionTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 

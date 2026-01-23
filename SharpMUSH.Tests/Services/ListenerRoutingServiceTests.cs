@@ -6,7 +6,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class ListenerRoutingServiceTests: TestsBase
+public class ListenerRoutingServiceTests: TestClassFactory
 {
 
 	private IListenerRoutingService ListenerRoutingService => 

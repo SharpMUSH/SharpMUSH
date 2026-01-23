@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class MoveServiceTests: TestsBase
+public class MoveServiceTests: TestClassFactory
 {
 
 	private IMoveService MoveService => Factory.Services.GetRequiredService<IMoveService>();

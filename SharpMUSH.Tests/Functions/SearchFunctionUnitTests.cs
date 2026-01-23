@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class SearchFunctionUnitTests : TestsBase
+public class SearchFunctionUnitTests : TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();

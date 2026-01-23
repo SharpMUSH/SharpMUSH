@@ -3,7 +3,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MemoryTest: TestsBase
+public class MemoryTest: TestClassFactory
 {
 	private IMUSHCodeParser Parser => FunctionParser;
 
