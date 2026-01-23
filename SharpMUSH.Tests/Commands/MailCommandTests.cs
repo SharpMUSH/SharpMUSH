@@ -7,19 +7,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class MailCommandTests
+public class MailCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MailCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mail #1=Test subject/Test message"));
 
 		await NotifyService
@@ -31,6 +28,7 @@ public class MailCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MaliasCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@malias add all=*"));
 
 		await NotifyService

@@ -9,16 +9,9 @@ namespace SharpMUSH.Tests;
 /// Tests to verify that function and command aliases work correctly.
 /// This ensures that the alias mappings from Configurable are properly loaded and functional.
 /// </summary>
-[NotInParallel]
-public class AliasTests
+public class AliasTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	/// <summary>
 	/// Test that the function alias 'u' works as an alias for 'ufun'.

@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
@@ -9,12 +9,9 @@ using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ArangoDBTests
+public class ArangoDBTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 	
 	[Test]
 	public async Task TestRoomZero()
@@ -108,7 +105,7 @@ public class ArangoDBTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Repeat(2)]
 	public async Task SetAndGetAnAttribute()
 	{

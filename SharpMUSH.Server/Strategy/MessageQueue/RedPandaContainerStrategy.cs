@@ -1,10 +1,14 @@
+using Microsoft.Extensions.Hosting;
+
 namespace SharpMUSH.Server.Strategy.MessageQueue;
 
 /// <summary>
-/// Strategy for RedPanda container configuration.
-/// Reserved for future use to configure RedPanda-specific Kafka settings for production environments.
+/// Strategy for RedPanda container configuration in production/Kubernetes environments.
+/// Reads Kafka connection settings from environment variables.
 /// </summary>
-public class RedPandaContainerStrategy : MessageQueueStrategy
+public class RedPandaContainerStrategy(string host, string port) : MessageQueueStrategy
 {
-	// Reserved for future RedPanda-specific configuration
+	public override string Host => host;
+	
+	public override int Port => int.TryParse(port, out var portInt) ? portInt : 9092;
 }

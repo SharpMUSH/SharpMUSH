@@ -7,18 +7,15 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class ConfigCommandTests
+public class ConfigCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test, Skip("TODO")]
 	public async ValueTask ConfigCommand_NoArgs_ListsCategories()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config"));
 
 		// Should notify with "Configuration Categories:"
@@ -34,6 +31,7 @@ public class ConfigCommandTests
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask ConfigCommand_CategoryArg_ShowsCategoryOptions()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));
 
 		// Should notify with "Options in Net:"
@@ -48,6 +46,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask ConfigCommand_OptionArg_ShowsOptionValue()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config mud_name"));
 
 		// Should receive at least one notification about mud_name
@@ -61,6 +60,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask ConfigCommand_InvalidOption_ReturnsNotFound()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config test_string_CONFIG_invalid_option"));
 
 		// Should notify that option was not found
@@ -76,6 +76,7 @@ public class ConfigCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MonikerCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@moniker #1=Test"));
 
 		await NotifyService
@@ -87,6 +88,7 @@ public class ConfigCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MotdCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@motd"));
 
 		await NotifyService
@@ -97,6 +99,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask ListmotdCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@listmotd"));
 
 		// Should notify with MOTD settings
@@ -111,6 +114,7 @@ public class ConfigCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WizmotdCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wizmotd"));
 
 		await NotifyService
@@ -122,6 +126,7 @@ public class ConfigCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RejectmotdCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@rejectmotd"));
 
 		await NotifyService
@@ -133,6 +138,7 @@ public class ConfigCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DoingCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@doing #1=Test activity"));
 
 		await NotifyService
@@ -143,6 +149,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask DoingPollCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("doing"));
 
 		// Should notify with player list - verify we got a notification
@@ -154,6 +161,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask DoingPollCommand_WithPattern()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("doing Wiz*"));
 
 		// Should notify with filtered player list
@@ -165,6 +173,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask Enable_BooleanOption_ShowsImplementationMessage()
 	{
+		// Clear any previous calls to the mock
 		// Test @enable with a known boolean option
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable noisy_whisper"));
 
@@ -183,6 +192,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask Disable_BooleanOption_ShowsImplementationMessage()
 	{
+		// Clear any previous calls to the mock
 		// Test @disable with a known boolean option
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable noisy_whisper"));
 
@@ -201,6 +211,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask Enable_InvalidOption_ReturnsNotFound()
 	{
+		// Clear any previous calls to the mock
 		// Test @enable with a non-existent option
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable test_string_ENABLE_invalid_option_xyz"));
 
@@ -217,6 +228,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask Disable_InvalidOption_ReturnsNotFound()
 	{
+		// Clear any previous calls to the mock
 		// Test @disable with a non-existent option
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable test_string_DISABLE_invalid_option_xyz"));
 
@@ -233,6 +245,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask Enable_NonBooleanOption_ReturnsInvalidType()
 	{
+		// Clear any previous calls to the mock
 		// Test @enable with a non-boolean option (e.g., mud_name)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable mud_name"));
 
@@ -249,6 +262,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask Disable_NonBooleanOption_ReturnsInvalidType()
 	{
+		// Clear any previous calls to the mock
 		// Test @disable with a non-boolean option (e.g., probate_judge)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable probate_judge"));
 
@@ -265,6 +279,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask Enable_NoArguments_ShowsUsage()
 	{
+		// Clear any previous calls to the mock
 		// Test @enable without arguments
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable"));
 
@@ -282,6 +297,7 @@ public class ConfigCommandTests
 	[Test]
 	public async ValueTask Disable_NoArguments_ShowsUsage()
 	{
+		// Clear any previous calls to the mock
 		// Test @disable without arguments
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable"));
 

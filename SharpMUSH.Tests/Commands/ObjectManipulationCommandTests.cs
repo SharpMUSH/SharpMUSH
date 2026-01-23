@@ -12,16 +12,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class ObjectManipulationCommandTests
+public class ObjectManipulationCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask GetCommand()
@@ -103,6 +98,7 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UseCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("use test object"));
 
 		await NotifyService
@@ -174,6 +170,7 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DestroyCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy #100"));
 
 		await NotifyService
@@ -185,6 +182,7 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask NukeCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nuke #100"));
 
 		await NotifyService
@@ -196,6 +194,7 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UndestroyCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@undestroy #100"));
 
 		await NotifyService

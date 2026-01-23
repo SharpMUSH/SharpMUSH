@@ -8,16 +8,18 @@ public static class PrometheusStrategyProvider
 	public static PrometheusStrategy GetStrategy()
 	{
 		var prometheusUrl = Environment.GetEnvironmentVariable("PROMETHEUS_URL");
+		var prometheusTestUrl = Environment.GetEnvironmentVariable("PROMETHEUS_TEST_URL");
 
-		if (string.IsNullOrWhiteSpace(prometheusUrl))
+		if (!string.IsNullOrWhiteSpace(prometheusUrl))
 		{
-			// No Prometheus URL configured, use TestContainer for local development
-			return new PrometheusTestContainerStrategy();
-		}
-		else
-		{
-			// Prometheus URL is configured (e.g., in Kubernetes or Docker Compose)
 			return new PrometheusExternalStrategy(prometheusUrl);
 		}
+		
+		if (!string.IsNullOrWhiteSpace(prometheusTestUrl))
+		{
+			return new PrometheusExternalStrategy(prometheusTestUrl);
+		}
+
+		return new PrometheusTestContainerStrategy();
 	}
 }

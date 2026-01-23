@@ -8,20 +8,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class NewsCommandTests
+public class NewsCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask NewsCommandWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test that news command runs and returns the main news page
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news"));
 
@@ -36,6 +32,7 @@ public class NewsCommandTests
 	[Test]
 	public async ValueTask NewsWithTopicWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test news with the "welcome" topic
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news welcome"));
 
@@ -50,6 +47,7 @@ public class NewsCommandTests
 	[Test]
 	public async ValueTask NewsWithWildcardWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test news with wildcard pattern - should list matching topics
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news *news*"));
 
@@ -62,6 +60,7 @@ public class NewsCommandTests
 	[Test]
 	public async ValueTask NewsNonExistentTopic()
 	{
+		// Clear any previous calls to the mock
 		// Test news with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news nonexistenttopicxyz123"));
 
@@ -74,20 +73,16 @@ public class NewsCommandTests
 	}
 }
 
-[NotInParallel]
-public class AhelpCommandTests
+public class AhelpCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask AhelpCommandWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test that ahelp command runs for God (player 1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp"));
 
@@ -102,6 +97,7 @@ public class AhelpCommandTests
 	[Test]
 	public async ValueTask AhelpWithTopicWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test ahelp with the "security" topic
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp security"));
 
@@ -116,6 +112,7 @@ public class AhelpCommandTests
 	[Test]
 	public async ValueTask AnewsAliasWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test that anews is an alias for ahelp
 		await Parser.CommandParse(1, ConnectionService, MModule.single("anews"));
 
@@ -130,6 +127,7 @@ public class AhelpCommandTests
 	[Test]
 	public async ValueTask AhelpNonExistentTopic()
 	{
+		// Clear any previous calls to the mock
 		// Test ahelp with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp nonexistenttopicxyz123"));
 

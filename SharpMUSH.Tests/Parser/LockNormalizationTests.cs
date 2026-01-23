@@ -9,14 +9,11 @@ namespace SharpMUSH.Tests.Parser;
 /// <summary>
 /// Tests for lock string normalization - converting bare dbrefs to objids.
 /// </summary>
-public class LockNormalizationTests
+public class LockNormalizationTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IBooleanExpressionParser BooleanParser => WebAppFactoryArg.Services.GetRequiredService<IBooleanExpressionParser>();	
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IBooleanExpressionParser BooleanParser => Services.GetRequiredService<IBooleanExpressionParser>();	
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	public async Task Normalize_ExactObjectLock_BareDbRef_ConvertsToObjId()

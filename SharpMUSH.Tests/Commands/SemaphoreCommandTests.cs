@@ -10,22 +10,19 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class SemaphoreCommandTests
+public class SemaphoreCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
-	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private ITaskScheduler Scheduler => Services.GetRequiredService<ITaskScheduler>();
+	private IAttributeService AttributeService => Services.GetRequiredService<IAttributeService>();
 
 	[Test]
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
+		// Clear any previous calls to the mock
+
 		// Arrange - create a unique semaphore and test message with underscore separator
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
@@ -56,6 +53,8 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask DolistInline_ShouldExecuteImmediately()
 	{
+		// Clear any previous calls to the mock
+
 		// Arrange
 		var uniqueId = Guid.NewGuid().ToString("N");
 		
@@ -74,6 +73,8 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask DolistDefault_ShouldQueueCommands()
 	{
+		// Clear any previous calls to the mock
+
 		// Arrange
 		var uniqueId = Guid.NewGuid().ToString("N");
 		
@@ -109,6 +110,8 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
+		// Clear any previous calls to the mock
+
 		// This test verifies that @notify/setq accepts qreg parameters
 		// Fixed bug where CB.RSArgs was interfering with comma parsing
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -131,6 +134,8 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
+		// Clear any previous calls to the mock
+
 		// Arrange - create a unique semaphore with a unique test value
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";

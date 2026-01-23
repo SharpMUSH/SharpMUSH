@@ -9,18 +9,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class HttpCommandTests
+public class HttpCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test]
 	public async ValueTask Test_Respond_StatusCode()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond 200 OK"));
 
 		await NotifyService
@@ -31,6 +29,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_StatusCode_404()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond 404 Not Found"));
 
 		await NotifyService
@@ -41,6 +41,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_StatusCode_WithoutText()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond 500"));
 
 		await NotifyService
@@ -51,6 +53,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_InvalidStatusCode()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond abc"));
 
 		await NotifyService
@@ -61,6 +65,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_StatusCode_OutOfRange()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond 99 test_string_RESPOND_out_of_range"));
 
 		await NotifyService
@@ -71,6 +77,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_StatusLine_TooLong()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@respond 200 test_string_RESPOND_status_line_that_is_way_too_long_and_exceeds_40_chars"));
 
@@ -82,6 +90,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_Type_ApplicationJson()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/type application/json"));
 
 		await NotifyService
@@ -92,6 +102,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_Type_TextHtml()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/type text/html"));
 
 		await NotifyService
@@ -102,6 +114,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_Type_Empty()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/type"));
 
 		await NotifyService
@@ -112,6 +126,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_Header_CustomHeader()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/header X-Powered-By=MUSHCode"));
 
 		await NotifyService
@@ -122,6 +138,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_Header_SetCookie()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@respond/header Set-Cookie=name=Bob; Max-Age=3600; Version=1"));
 
@@ -134,6 +152,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_Header_ContentLength_Forbidden()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/header Content-Length=1234"));
 
 		await NotifyService
@@ -144,6 +164,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_Header_EmptyName()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/header =value"));
 
 		await NotifyService
@@ -154,6 +176,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_Header_WithoutEquals()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/header X-Custom-Header"));
 
 		await NotifyService
@@ -164,6 +188,8 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_NoArguments()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond"));
 
 		// With MinArgs = 1, the parser will reject the command before it executes

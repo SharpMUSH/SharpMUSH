@@ -6,12 +6,8 @@ namespace SharpMUSH.Tests.Performance;
 /// <summary>
 /// Benchmarks batching service metrics to understand why batching isn't effective.
 /// </summary>
-[NotInParallel]
-public class TcpWriteBenchmark
+public class TcpWriteBenchmark : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
 	[Test]
 	public async Task MeasureBatchingServiceMetrics()
 	{
@@ -26,7 +22,7 @@ public class TcpWriteBenchmark
 			return;
 		}
 		
-		var batchingService = WebAppFactoryArg.Services.GetService(batchingServiceType);
+		var batchingService = Services.GetService(batchingServiceType);
 		
 		if (batchingService == null)
 		{

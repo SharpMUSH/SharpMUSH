@@ -3,12 +3,9 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class SemanticHighlightingTests
+public class SemanticHighlightingTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	public async Task GetSemanticTokens_SimpleFunction_ReturnsTokens()

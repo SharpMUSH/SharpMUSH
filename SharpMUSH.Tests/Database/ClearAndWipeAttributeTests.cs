@@ -6,12 +6,9 @@ using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ClearAndWipeAttributeTests
+public class ClearAndWipeAttributeTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async Task ClearAttributeAsync_LeafAttribute_RemovesAttribute()

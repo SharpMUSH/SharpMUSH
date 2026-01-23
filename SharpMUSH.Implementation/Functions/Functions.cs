@@ -14,30 +14,30 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
-	private static IMediator? Mediator { get; set; }
-	private static ISharpDatabase? Database { get; set; }
-	private static ILocateService? LocateService { get; set; }
-	private static IAttributeService? AttributeService { get; set; }
-	private static INotifyService? NotifyService { get; set; }
-	private static IPermissionService? PermissionService { get; set; }
-	private static ICommandDiscoveryService? CommandDiscoveryService { get; set; }
-	private static IOptionsWrapper<SharpMUSHOptions>? Configuration { get; set; }
-	private static IOptionsWrapper<ColorsOptions>? ColorConfiguration { get; set; }
-	private static IPasswordService? PasswordService { get; set; }
-	private static IConnectionService? ConnectionService { get; set; }
-	private static IExpandedObjectDataService? ObjectDataService { get; set; }
-	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
-	private static ICommunicationService? CommunicationService { get; set; }
-	private static IValidateService? ValidateService { get; set; }
-	private static ISortService? SortService { get; set; }
-	private static ILockService? LockService { get; set; }
-	private static ISqlService? SqlService { get; set; }
-	private static ITelemetryService? TelemetryService { get; set; }
-	private static IMoveService? MoveService { get; set; }
-	private static IEventService? EventService { get; set; }
-	private static IBooleanExpressionParser? BooleanExpressionParser { get; set; }
-	private static ITextFileService? TextFileService { get; set; }
-	private static ILogger<Functions>? Logger { get; set; }
+	private readonly IMediator _mediator;
+	private readonly ISharpDatabase _database;
+	private readonly ILocateService _locateService;
+	private readonly IAttributeService _attributeService;
+	private readonly INotifyService _notifyService;
+	private readonly IPermissionService _permissionService;
+	private readonly ICommandDiscoveryService _commandDiscoveryService;
+	private readonly IOptionsWrapper<SharpMUSHOptions> _configuration;
+	private readonly IOptionsWrapper<ColorsOptions> _colorConfiguration;
+	private readonly IPasswordService _passwordService;
+	private readonly IConnectionService _connectionService;
+	private readonly IExpandedObjectDataService _objectDataService;
+	private readonly IManipulateSharpObjectService _manipulateSharpObjectService;
+	private readonly ICommunicationService _communicationService;
+	private readonly IValidateService _validateService;
+	private readonly ISortService _sortService;
+	private readonly ILockService _lockService;
+	private readonly ISqlService _sqlService;
+	private readonly ITelemetryService _telemetryService;
+	private readonly IMoveService _moveService;
+	private readonly IEventService _eventService;
+	private readonly IBooleanExpressionParser _booleanExpressionParser;
+	private readonly ITextFileService _textFileService;
+	private readonly ILogger<Functions> _logger;
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 
@@ -69,32 +69,32 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IBooleanExpressionParser booleanExpressionParser,
 		ITextFileService textFileService)
 	{
-		Logger = logger;
-		Mediator = mediator;
-		Database = database;
-		LocateService = locateService;
-		AttributeService = attributeService;
-		NotifyService = notifyService;
-		PermissionService = permissionService;
-		CommandDiscoveryService = commandDiscoveryService;
-		Configuration = configuration;
-		ColorConfiguration = colorOptions;
-		PasswordService = passwordService;
-		ConnectionService = connectionService;
-		ManipulateSharpObjectService = manipulateSharpObjectService;
-		ObjectDataService = objectDataService;
-		SortService = sortService;
-		ValidateService = validateService;
-		CommunicationService = communicationService;
-		LockService = lockService;
-		SqlService = sqlService;
-		TelemetryService = telemetryService;
-		MoveService = moveService;
-		EventService = eventService;
-		BooleanExpressionParser = booleanExpressionParser;
-		TextFileService = textFileService;
+		_logger = logger;
+		_mediator = mediator;
+		_database = database;
+		_locateService = locateService;
+		_attributeService = attributeService;
+		_notifyService = notifyService;
+		_permissionService = permissionService;
+		_commandDiscoveryService = commandDiscoveryService;
+		_configuration = configuration;
+		_colorConfiguration = colorOptions;
+		_passwordService = passwordService;
+		_connectionService = connectionService;
+		_manipulateSharpObjectService = manipulateSharpObjectService;
+		_objectDataService = objectDataService;
+		_sortService = sortService;
+		_validateService = validateService;
+		_communicationService = communicationService;
+		_lockService = lockService;
+		_sqlService = sqlService;
+		_telemetryService = telemetryService;
+		_moveService = moveService;
+		_eventService = eventService;
+		_booleanExpressionParser = booleanExpressionParser;
+		_textFileService = textFileService;
 
-		foreach (var command in Generated.FunctionLibrary.Functions)
+		foreach (var command in Generated.FunctionLibrary.GetFunctions(this))
 		{
 			_functionLibrary.Add(command.Key, (command.Value, true));
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -6,13 +6,10 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class BooleanExpressionUnitTests
+public class BooleanExpressionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IBooleanExpressionParser BooleanParser => WebAppFactoryArg.Services.GetRequiredService<IBooleanExpressionParser>();	
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IBooleanExpressionParser BooleanParser => Services.GetRequiredService<IBooleanExpressionParser>();	
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	[Arguments("!#FALSE", true)]
 	[Arguments("#TRUE", true)]

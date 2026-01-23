@@ -11,16 +11,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
 
-[NotInParallel]
-public class ZoneDatabaseTests
+public class ZoneDatabaseTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async ValueTask SetObjectZone()
@@ -49,7 +44,6 @@ public class ZoneDatabaseTests
 	}
 
 	[Test]
-	[DependsOn(nameof(SetObjectZone))]
 	public async ValueTask UnsetObjectZone()
 	{
 		// Clear player zone first to ensure clean state
@@ -83,7 +77,6 @@ public class ZoneDatabaseTests
 	}
 
 	[Test]
-	[DependsOn(nameof(UnsetObjectZone))]
 	public async ValueTask UpdateObjectZone()
 	{
 		// Clear player zone first to ensure clean state
@@ -120,7 +113,6 @@ public class ZoneDatabaseTests
 	}
 
 	[Test]
-	[DependsOn(nameof(UpdateObjectZone))]
 	public async ValueTask SetObjectZoneToNull()
 	{
 		// Clear player zone first to ensure clean state
@@ -143,7 +135,6 @@ public class ZoneDatabaseTests
 	}
 
 	[Test]
-	[DependsOn(nameof(SetObjectZoneToNull))]
 	public async ValueTask MultipleObjectsSameZone()
 	{
 		// Clear player zone first to ensure clean state
@@ -178,7 +169,6 @@ public class ZoneDatabaseTests
 	}
 
 	[Test]
-	[DependsOn(nameof(MultipleObjectsSameZone))]
 	public async ValueTask ObjectCanBeZone()
 	{
 		// Clear player zone first to ensure clean state

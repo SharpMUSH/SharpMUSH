@@ -3,12 +3,9 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MemoryTest
+public class MemoryTest: TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	public async Task Depth()
@@ -66,7 +63,7 @@ public class MemoryTest
 			.IsEqualTo("11");
 	}
 
-	[Test, Timeout(30 * 1000), NotInParallel]
+	[Test, Timeout(30 * 1000)]
 	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]
@@ -101,7 +98,7 @@ public class MemoryTest
 		}).ThrowsNothing();
 	}
 
-	[Test, Timeout(30 * 1000), NotInParallel]
+	[Test, Timeout(30 * 1000)]
 	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]

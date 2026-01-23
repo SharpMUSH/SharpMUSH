@@ -7,19 +7,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class WizardCommandTests
+public class WizardCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HaltCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt #1"));
 
 		await NotifyService
@@ -30,6 +27,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask AllhaltCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allhalt"));
 
 		await NotifyService
@@ -41,6 +39,7 @@ public class WizardCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask DrainCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@drain #1"));
 
 		await NotifyService
@@ -52,6 +51,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PsCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
 		await NotifyService
@@ -63,6 +63,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PsWithTarget()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps #1"));
 
 		await NotifyService
@@ -74,6 +75,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask TriggerCommand()
 	{
+		// Clear any previous calls to the mock
 		// Set an attribute first
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TRIGGER_TEST #1=think Triggered!"));
 		
@@ -89,6 +91,7 @@ public class WizardCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask ForceCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force #1=think Forced!"));
 
 		await NotifyService
@@ -100,6 +103,7 @@ public class WizardCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask NotifyCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@notify #1"));
 
 		await NotifyService
@@ -111,6 +115,7 @@ public class WizardCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask WaitCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wait 1=think Waited"));
 
 		// Note: This test doesn't verify the wait actually happened, just that the command executed
@@ -123,6 +128,7 @@ public class WizardCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask UptimeCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@uptime"));
 
 		await NotifyService
@@ -134,6 +140,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DbckCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dbck"));
 
 		await NotifyService
@@ -145,6 +152,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DumpCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dump"));
 
 		await NotifyService
@@ -156,6 +164,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask QuotaCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@quota #1"));
 
 		await NotifyService
@@ -167,6 +176,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AllquotaCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allquota"));
 
 		await NotifyService
@@ -178,6 +188,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask BootCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@boot #1"));
 
 		await NotifyService
@@ -189,6 +200,7 @@ public class WizardCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask WallCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wall Test wall message"));
 
 		await NotifyService
@@ -200,6 +212,7 @@ public class WizardCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask WizwallCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wizwall Test wizwall message"));
 
 		await NotifyService
@@ -208,9 +221,9 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ReadCacheCommand))]
 	public async ValueTask PollCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
 
 		await NotifyService
@@ -222,6 +235,7 @@ public class WizardCommandTests
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_NoSwitch_TogglesHidden()
 	{
+		// Clear any previous calls to the mock
 		// Test that @hide without switches toggles the DARK flag
 		
 		
@@ -251,6 +265,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask Hide_YesSwitch_SetsHidden()
 	{
+		// Clear any previous calls to the mock
 		// Test that @hide/yes sets the DARK flag
 		
 		
@@ -270,6 +285,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask Hide_OnSwitch_SetsHidden()
 	{
+		// Clear any previous calls to the mock
 		// Test that @hide/on sets the DARK flag
 		
 		
@@ -289,6 +305,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask Hide_NoSwitch_UnsetsHidden()
 	{
+		// Clear any previous calls to the mock
 		// Test that @hide/no unsets the DARK flag
 		
 		
@@ -309,6 +326,7 @@ public class WizardCommandTests
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_OffSwitch_UnsetsHidden()
 	{
+		// Clear any previous calls to the mock
 		// Test that @hide/off unsets the DARK flag
 		
 		
@@ -328,6 +346,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask Hide_AlreadyHidden_ShowsAppropriateMessage()
 	{
+		// Clear any previous calls to the mock
 		// Test that @hide/on when already hidden shows appropriate message
 		
 		
@@ -348,6 +367,7 @@ public class WizardCommandTests
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
 	{
+		// Clear any previous calls to the mock
 		// Test that @hide/off when already visible shows appropriate message
 		
 		
@@ -367,6 +387,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask PurgeCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
 
 		await NotifyService
@@ -377,6 +398,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask ReadCacheCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
 
 		await NotifyService
@@ -387,6 +409,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask ShutdownCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
 
 		await NotifyService
@@ -397,6 +420,7 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask ShutdownRebootCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown/reboot"));
 
 		await NotifyService
@@ -405,9 +429,9 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(AllhaltCommand))]
 	public async ValueTask ChownallCommand()
 	{
+		// Clear any previous calls to the mock
 		// This test may need adjustment based on actual player setup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1"));
 
@@ -417,9 +441,9 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(PollCommand))]
 	public async ValueTask SuggestListCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/list"));
 
 		await NotifyService
@@ -428,9 +452,9 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(SuggestListCommand))]
 	public async ValueTask SuggestAddCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/add testcat547=testword923"));
 
 		await NotifyService
@@ -439,9 +463,9 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(SuggestAddCommand))]
 	public async ValueTask PollSetCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll TestPollMessage897"));
 
 		await NotifyService
@@ -450,9 +474,9 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[DependsOn(nameof(PollSetCommand))]
 	public async ValueTask PollClearCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll/clear"));
 
 		await NotifyService

@@ -2,12 +2,9 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class EncryptionFunctionUnitTests
+public class EncryptionFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	[Arguments("encode64(test_string_encode64_case1)", "dGVzdF9zdHJpbmdfZW5jb2RlNjRfY2FzZTE=")]

@@ -7,15 +7,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class ListFunctionUnitTests
+public class ListFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => FunctionParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	private static bool _testObjectsCreated = false;
 	private static DBRef _testObjectDbRef;
@@ -62,7 +58,7 @@ public class ListFunctionUnitTests
 		_testObjectsCreated = true;
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("iter(1 2 3,%i0)", "1 2 3")]
 	[Arguments("iter(1,%i1)", "#-1 REGISTER OUT OF RANGE")]
 	[Arguments("iter(1 2 3,add(%i0,1))", "2 3 4")]
@@ -80,7 +76,7 @@ public class ListFunctionUnitTests
 
 	// TODO: Fix: %$0 is for switches.
 	// TODO: This should be #@, which is not yet implemented.
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("iter(5 6 7,%$0)", "1 2 3")]
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%$0,%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
 	public async Task IterationNumber(string function, string expected)
@@ -89,7 +85,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak()],|,-)", "2")]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak(0)],|,-)", "2")]
 	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak()]),|,-)", "2 3 4")]
@@ -104,7 +100,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SimpleAnsiTest()
 	{
 		// Simple test to check if ansi works at all
@@ -114,7 +110,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).Contains("\u001b[");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task IterationWithAnsiMarkup()
 	{
 		// Test case from issue: iter should preserve ANSI markup

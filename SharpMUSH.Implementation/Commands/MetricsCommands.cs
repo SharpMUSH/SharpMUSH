@@ -28,16 +28,16 @@ public partial class Commands
 		MinArgs = 0,
 		MaxArgs = 2,
 		ParameterNames = ["time-range", "limit"])]
-	public static async ValueTask<Option<CallState>> Metrics(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Metrics(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		if (PrometheusQueryService == null)
+		if (_prometheusQueryService == null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value,
+			await _notifyService.Notify(parser.CurrentState.Executor!.Value,
 				MModule.single("Prometheus query service is not available."));
 			return new None();
 		}
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(_mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 
@@ -63,7 +63,7 @@ public partial class Commands
 
 				if (targetFunctions)
 				{
-					var slowestFunctions = await PrometheusQueryService.GetSlowestFunctionsAsync(timeRange, limit);
+					var slowestFunctions = await _prometheusQueryService.GetSlowestFunctionsAsync(timeRange, limit);
 					output.AppendLine($"\nSlowest Functions (over {timeRange}):");
 					
 					if (slowestFunctions.Count == 0)
@@ -81,7 +81,7 @@ public partial class Commands
 
 				if (targetCommands)
 				{
-					var slowestCommands = await PrometheusQueryService.GetSlowestCommandsAsync(timeRange, limit);
+					var slowestCommands = await _prometheusQueryService.GetSlowestCommandsAsync(timeRange, limit);
 					output.AppendLine($"\nSlowest Commands (over {timeRange}):");
 					
 					if (slowestCommands.Count == 0)
@@ -97,7 +97,7 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService!.Notify(executor, MModule.single(output.ToString()));
+				await _notifyService.Notify(executor, MModule.single(output.ToString()));
 				return new None();
 			}
 
@@ -112,7 +112,7 @@ public partial class Commands
 
 				if (targetFunctions)
 				{
-					var popularFunctions = await PrometheusQueryService.GetMostCalledFunctionsAsync(timeRange, limit);
+					var popularFunctions = await _prometheusQueryService.GetMostCalledFunctionsAsync(timeRange, limit);
 					output.AppendLine($"\nMost Called Functions (over {timeRange}):");
 					
 					if (popularFunctions.Count == 0)
@@ -130,7 +130,7 @@ public partial class Commands
 
 				if (targetCommands)
 				{
-					var popularCommands = await PrometheusQueryService.GetMostCalledCommandsAsync(timeRange, limit);
+					var popularCommands = await _prometheusQueryService.GetMostCalledCommandsAsync(timeRange, limit);
 					output.AppendLine($"\nMost Called Commands (over {timeRange}):");
 					
 					if (popularCommands.Count == 0)
@@ -146,7 +146,7 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService!.Notify(executor, MModule.single(output.ToString()));
+				await _notifyService.Notify(executor, MModule.single(output.ToString()));
 				return new None();
 			}
 
@@ -155,22 +155,22 @@ public partial class Commands
 			{
 				if (args.Count == 0)
 				{
-					await NotifyService!.Notify(executor,
+					await _notifyService.Notify(executor,
 						MModule.single("Usage: @metrics/query <promql-query>"));
 					return new None();
 				}
 
 				var query = args["0"].Message?.ToString() ?? "";
-				var result = await PrometheusQueryService.ExecuteQueryAsync(query);
+				var result = await _prometheusQueryService.ExecuteQueryAsync(query);
 
-				await NotifyService!.Notify(executor, MModule.single($"Query Result:\n{result}"));
+				await _notifyService.Notify(executor, MModule.single($"Query Result:\n{result}"));
 				return new None();
 			}
 
 			// /health switch - show service health status
 			if (switches.Contains("HEALTH"))
 			{
-				var healthStatus = await PrometheusQueryService.GetHealthStatusAsync();
+				var healthStatus = await _prometheusQueryService.GetHealthStatusAsync();
 				var output = new StringBuilder();
 				output.AppendLine("=== Service Health Status ===");
 
@@ -187,25 +187,25 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService!.Notify(executor, MModule.single(output.ToString()));
+				await _notifyService.Notify(executor, MModule.single(output.ToString()));
 				return new None();
 			}
 
 			// /connections switch - show connection metrics
 			if (switches.Contains("CONNECTIONS"))
 			{
-				var (activeConnections, loggedInPlayers) = await PrometheusQueryService.GetConnectionMetricsAsync();
+				var (activeConnections, loggedInPlayers) = await _prometheusQueryService.GetConnectionMetricsAsync();
 				var output = new StringBuilder();
 				output.AppendLine("=== Connection Metrics ===");
 				output.AppendLine($"Active Connections: {activeConnections}");
 				output.AppendLine($"Logged In Players: {loggedInPlayers}");
 
-				await NotifyService!.Notify(executor, MModule.single(output.ToString()));
+				await _notifyService.Notify(executor, MModule.single(output.ToString()));
 				return new None();
 			}
 
 			// No switches - show usage
-			await NotifyService!.Notify(executor, MModule.single(@"
+			await _notifyService.Notify(executor, MModule.single(@"
 Usage: @metrics/<switch> [<time-range>] [<limit>]
 
 Switches:
@@ -228,8 +228,8 @@ Examples:
 		}
 		catch (Exception ex)
 		{
-			Logger?.LogError(ex, "Error executing @metrics command");
-			await NotifyService!.Notify(executor,
+			_logger?.LogError(ex, "Error executing @metrics command");
+			await _notifyService.Notify(executor,
 				MModule.single($"Error querying metrics: {ex.Message}"));
 			return new None();
 		}

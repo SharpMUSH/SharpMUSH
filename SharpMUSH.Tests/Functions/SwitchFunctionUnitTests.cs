@@ -2,12 +2,9 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class SwitchFunctionUnitTests
+public class SwitchFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	[Arguments("switch(a,a,1,b,2,0)", "1")]

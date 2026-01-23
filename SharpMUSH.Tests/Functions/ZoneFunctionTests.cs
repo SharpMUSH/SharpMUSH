@@ -10,17 +10,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-[NotInParallel]
-public class ZoneFunctionTests
+public class ZoneFunctionTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async Task ZoneGetNoZone()
@@ -38,7 +32,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneGetNoZone))]
 	public async Task ZoneGetWithZone()
 	{
 		// Create a zone master object
@@ -60,7 +53,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneGetWithZone))]
 	public async Task ZoneSetWithFunction()
 	{
 		// Ensure player has no zone
@@ -88,7 +80,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneSetWithFunction))]
 	public async Task ZoneClearWithFunction()
 	{
 		// Create a zone master object
@@ -112,7 +103,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneClearWithFunction))]
 	public async Task ZoneInvalidObject()
 	{
 		// Try to get zone of invalid object
@@ -123,7 +113,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneInvalidObject))]
 	public async Task ZoneNoPermissionToExamine()
 	{
 		// Ensure player has no zone
@@ -141,7 +130,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneNoPermissionToExamine))]
 	public async Task ZoneOnPlayer()
 	{
 		// Test getting zone of current player
@@ -152,7 +140,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneOnPlayer))]
 	public async Task ZoneOnRoom()
 	{
 		// Test getting zone of current room
@@ -163,7 +150,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneOnRoom))]
 	public async Task ZoneChainTest()
 	{
 		// Ensure player has no zone
@@ -190,7 +176,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneChainTest))]
 	public async Task ZfindListsObjectsInZone()
 	{
 		// Clear player zone
@@ -220,7 +205,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZfindListsObjectsInZone))]
 	public async Task ZoneHierarchyTraversal()
 	{
 		// Create a zone hierarchy: ZoneA <- ZoneB <- Object
@@ -259,7 +243,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneHierarchyTraversal))]
 	public async Task ZoneAttributeInheritance()
 	{
 		// Create a zone master with an attribute
@@ -281,7 +264,7 @@ public class ZoneFunctionTests
 		// Directly test AttributeService to verify zone attribute inheritance
 		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var attributeService = Factory.Services.GetRequiredService<IAttributeService>();
 		
 		var maybeAttr = await attributeService.GetAttributeAsync(
 			executor.Known,
@@ -295,7 +278,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneAttributeInheritance))]
 	public async Task ZoneAttributeInheritanceWithParent()
 	{
 		// Test that parent attributes take precedence over zone attributes
@@ -347,7 +329,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneAttributeInheritanceWithParent))]
 	public async Task ZoneAttributeInheritanceParentHasDifferentZone()
 	{
 		// Test that each parent can have a different zone
@@ -377,7 +358,7 @@ public class ZoneFunctionTests
 		// Test with AttributeService directly
 		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var attributeService = Factory.Services.GetRequiredService<IAttributeService>();
 		
 		// Should inherit from child's zone
 		var childZoneAttr = await attributeService.GetAttributeAsync(

@@ -11,13 +11,10 @@ using System.Threading;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MailFunctionUnitTests
+public class MailFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => FunctionParser;
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 	
 	// Unique test identifier to ensure we don't conflict with other test runs
 	private static readonly string TestRunId = Guid.NewGuid().ToString("N")[..8];

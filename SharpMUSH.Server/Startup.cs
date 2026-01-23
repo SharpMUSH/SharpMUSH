@@ -29,6 +29,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using SharpMUSH.Messaging.Kafka;
 using SharpMUSH.Server.Strategy.ArangoDB;
+using SharpMUSH.Server.Strategy.MessageQueue;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 using ZiggyCreatures.Caching.Fusion;
@@ -36,7 +37,13 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy, RedisStrategy redisStrategy)
+public class Startup(
+	ArangoConfiguration arangoConfig, 
+	string colorFile, 
+	PrometheusStrategy prometheusStrategy, 
+	RedisStrategy redisStrategy,
+	MessageQueueStrategy messageQueueStrategy,
+	string databaseName)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -154,7 +161,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<IOptionsChangeTokenSource<SharpMUSHOptions>>(sp => sp.GetRequiredService<ConfigurationReloadService>());
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
-		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
+		services.AddSingleton(new ArangoHandle(databaseName));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		services.AddSingleton<IValidateService, ValidateService>();
 		services.AddKeyedSingleton(nameof(colorFile), colorFile);
@@ -167,13 +174,11 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddMediator();
 
 		// Configure MassTransit with Kafka/RedPanda for message queue integration
-		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
-
 		services.AddMainProcessMessaging(
 			options =>
 			{
-				options.Host = kafkaHost;
-				options.Port = 9092;
+				options.Host = messageQueueStrategy.Host;
+				options.Port = messageQueueStrategy.Port;
 				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
 			},
 			x =>
@@ -237,13 +242,20 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		});
 
 		// Configure OpenTelemetry Metrics for Prometheus
+		var isTestMode = Environment.GetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION") != null;
+		
 		services.AddOpenTelemetry()
 			.ConfigureResource(resource => resource
 				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
-			.WithMetrics(metrics => metrics
-				.AddMeter("SharpMUSH")
-				.AddRuntimeInstrumentation()
-				.AddConsoleExporter()
-				.AddPrometheusExporter());
+			.WithMetrics(metrics =>
+			{
+				metrics.AddMeter("SharpMUSH").AddRuntimeInstrumentation();
+				
+				// Only add exporters in production mode (reduces log spam in tests)
+				if (!isTestMode)
+				{
+					metrics.AddConsoleExporter().AddPrometheusExporter();
+				}
+			});
 	}
 }

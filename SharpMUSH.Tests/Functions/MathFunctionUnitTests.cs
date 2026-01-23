@@ -1,13 +1,10 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class MathFunctionUnitTests
+public class MathFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	[Arguments("add(1,2)", "3")]

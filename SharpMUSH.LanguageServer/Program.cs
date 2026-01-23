@@ -56,7 +56,7 @@ try
 					var options = new MinimalOptionsWrapper();
 					
 					// Create the parser with minimal dependencies
-					return new MUSHCodeParser(logger, functionLibrary, commandLibrary, options, sp);
+					return new MUSHCodeParser(logger, options, sp);
 				});
 
 				// Register the stateless LSP-specific parser wrapper

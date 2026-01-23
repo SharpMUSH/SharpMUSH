@@ -10,18 +10,15 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class ChannelFunctionUnitTests
+public class ChannelFunctionUnitTests : TestClassFactory
 {
 	private const string TestChannelName = "TestChannel";
 	private const string TestChannelPrivilege = "Open";
 	private const int TestPlayerDbRef = 1;
 
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IMUSHCodeParser Parser => FunctionParser;
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 
 	private SharpChannel? _testChannel;
 	private SharpPlayer? _testPlayer;
@@ -130,7 +127,7 @@ public class ChannelFunctionUnitTests
 	}
 
 	[Test]
-	[NotInParallel]
+	
 	[Skip("TODO: Failing test - needs investigation")]
 	public async Task Cstatus_WithNonMember_ReturnsOff()
 	{

@@ -10,16 +10,11 @@ using System.Linq;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class MetricsCommandTests
+public class MetricsCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IPrometheusQueryService PrometheusQueryService => WebAppFactoryArg.Services.GetRequiredService<IPrometheusQueryService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IPrometheusQueryService PrometheusQueryService => Services.GetRequiredService<IPrometheusQueryService>();
 
 	[Test]
 	public async Task MetricsCommand_Health_ReturnsHealthStatus()
@@ -227,7 +222,7 @@ public class MetricsCommandTests
 	public async Task PrometheusQueryService_IsAvailable()
 	{
 		// Arrange & Act
-		var service = WebAppFactoryArg.Services.GetService<IPrometheusQueryService>();
+		var service = Services.GetService<IPrometheusQueryService>();
 
 		// Assert
 		await Assert.That(service).IsNotNull();
@@ -259,7 +254,7 @@ public class MetricsCommandTests
 	public async Task PrometheusQueryService_GetMostCalledFunctions_ReturnsInDescendingOrder()
 	{
 		// Arrange - Record some function invocations to generate metrics
-		var telemetryService = WebAppFactoryArg.Services.GetRequiredService<ITelemetryService>();
+		var telemetryService = Services.GetRequiredService<ITelemetryService>();
 		
 		// Simulate multiple function calls with different frequencies
 		// Function1: 100 calls at 1ms each

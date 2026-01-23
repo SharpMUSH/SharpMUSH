@@ -1,20 +1,17 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Database;
 
-public class ExpandedDataTests
+public class ExpandedDataTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private ISharpDatabase _database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private ISharpDatabase _database => Services.GetRequiredService<ISharpDatabase>();
 
 	private record ExpandedDataExample(string Word);
 	
-	[Test, NotInParallel]
+	[Test]
 	public async Task SetAndGetExpandedData()
 	{
 		var obj = new ExpandedDataExample("Dog");
@@ -30,7 +27,7 @@ public class ExpandedDataTests
 	/// <summary>
 	/// This tests exists to illustrate that SetExpandedObjectData overwrites only the values set.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task OverwritePartialAndGetExpandedData()
 	{
 		var one = await _database.GetObjectNodeAsync(new DBRef(1));
@@ -46,7 +43,7 @@ public class ExpandedDataTests
 	/// <summary>
 	/// This tests exists to illustrate that SetExpandedObjectData overwrites values when null is explicitly given.
 	/// </summary>
-	[Test, NotInParallel, Skip("TODO: Failing Behavior. Needs Investigation.")]
+	[Test, Skip("TODO: Failing Behavior. Needs Investigation.")]
 	public async Task OverwritePartialNullAndGetExpandedData()
 	{
 		var one = await _database.GetObjectNodeAsync(new DBRef(1));
@@ -64,7 +61,7 @@ public class ExpandedDataTests
 	/// <summary>
 	/// This tests exists to illustrate that SetExpandedObjectData safely sets unrelated Keys without wiping the other.
 	/// </summary>
-	[Test, NotInParallel]
+	[Test]
 	public async Task OverwriteUnrelatedTypesAndGetExpandedData()
 	{
 		var one = await _database.GetObjectNodeAsync(new DBRef(1));

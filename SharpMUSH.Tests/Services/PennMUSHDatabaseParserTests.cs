@@ -4,14 +4,12 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
 
-public class PennMUSHDatabaseParserTests
+public class PennMUSHDatabaseParserTests: TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private PennMUSHDatabaseParser GetParser()
 	{
-		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<PennMUSHDatabaseParser>>();
+		var logger = Factory.Services.GetRequiredService<ILogger<PennMUSHDatabaseParser>>();
 		return new PennMUSHDatabaseParser(logger);
 	}
 

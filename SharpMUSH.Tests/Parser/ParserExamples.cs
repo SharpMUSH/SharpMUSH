@@ -7,12 +7,9 @@ namespace SharpMUSH.Tests.Parser;
 /// Manual testing examples for parser error explanations and syntax highlighting.
 /// Run these interactively to see the features in action.
 /// </summary>
-public class ParserExamples
+public class ParserExamples : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	public async Task Example_ValidateInput_WithErrors()

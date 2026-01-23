@@ -10,15 +10,10 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class DebugVerboseTests
+public class DebugVerboseTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()

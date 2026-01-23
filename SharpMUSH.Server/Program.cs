@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using SharpMUSH.Server.Strategy.ArangoDB;
+using SharpMUSH.Server.Strategy.MessageQueue;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 
@@ -21,6 +22,9 @@ public class Program
 		var redisStrategy = RedisStrategyProvider.GetStrategy();
 		await redisStrategy.InitializeAsync();
 
+		// Initialize MessageQueue strategy
+		var messageQueueStrategy = MessageQueueStrategyProvider.GetStrategy();
+
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
 		if (!File.Exists(colorFile))
@@ -28,7 +32,14 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(arangoConfig, colorFile, prometheusStrategy, redisStrategy);
+		// Determine database name based on environment
+		// If ARANGO_TEST_CONNECTION_STRING is set, we're running in test mode - use unique database name
+		// Otherwise, use production default "SharpMUSH"
+		var databaseName = Environment.GetEnvironmentVariable("ARANGO_TEST_CONNECTION_STRING") != null
+			? $"Test_{Guid.NewGuid():N}" // Random unique name for tests
+			: "SharpMUSH"; // Production default
+
+		var startup = new Startup(arangoConfig, colorFile, prometheusStrategy, redisStrategy, messageQueueStrategy, databaseName);
 		
 		startup.ConfigureServices(builder.Services);
 		
@@ -65,8 +76,12 @@ public class Program
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
 
-		// Prometheus metrics endpoint
-		app.MapPrometheusScrapingEndpoint();
+		// Prometheus metrics endpoint (only in production mode to avoid test failures when console exporter is disabled)
+		var isTestMode = Environment.GetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION") != null;
+		if (!isTestMode)
+		{
+			app.MapPrometheusScrapingEndpoint();
+		}
 
 		return app;
 	}

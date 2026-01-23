@@ -9,21 +9,17 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class MovementCommandTests
+public class MovementCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask GotoCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("goto #0"));
 
 		await NotifyService
@@ -85,6 +81,7 @@ public class MovementCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EnterCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("enter #1"));
 
 		await NotifyService

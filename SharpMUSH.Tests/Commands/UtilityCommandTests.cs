@@ -7,18 +7,15 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class UtilityCommandTests
+public class UtilityCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test]
 	public async ValueTask ThinkBasic()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkBasic Test output"));
 
 		await NotifyService
@@ -30,6 +27,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ThinkWithFunction()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkWithFunction [add(2,3)]"));
 
 		await NotifyService
@@ -56,6 +54,7 @@ public class UtilityCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookBasic()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look"));
 
 		await NotifyService
@@ -67,6 +66,7 @@ public class UtilityCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookAtObject()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look #1"));
 
 		await NotifyService
@@ -77,6 +77,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		// Verify notify was called (exact count may vary based on object attributes)
@@ -88,6 +89,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObjectBriefSwitch()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
 
 		// /brief should show header info but skip attributes
@@ -99,6 +101,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObjectOpaqueSwitch()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/opaque #1"));
 
 		// /opaque should skip contents display
@@ -110,6 +113,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineWithAttributePattern()
 	{
+		// Clear any previous calls to the mock
 		// Test examining with attribute pattern (e.g., examine #1/DESC*)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1/DESC*"));
 
@@ -122,6 +126,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineCurrentLocation()
 	{
+		// Clear any previous calls to the mock
 		// Test examining with no argument (examines current location)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine"));
 
@@ -135,6 +140,7 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FindCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find #0"));
 
 		await NotifyService
@@ -146,6 +152,7 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SearchCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
 
 		await NotifyService
@@ -157,6 +164,7 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EntrancesCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances #0"));
 
 		await NotifyService
@@ -168,6 +176,7 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask StatsCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
 
 		await NotifyService
@@ -179,6 +188,7 @@ public class UtilityCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask VersionCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@version"));
 
 		await NotifyService
@@ -190,6 +200,7 @@ public class UtilityCommandTests
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask ScanCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@scan"));
 
 		await NotifyService
@@ -200,6 +211,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask DecompileCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@decompile #1"));
 
 		// Should receive notifications for decompiled output
@@ -215,6 +227,7 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhereisCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
 
 		await NotifyService

@@ -1,15 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Configuration;
 
-public class ColorTests
+public class ColorTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-	private IOptionsWrapper<ColorsOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<ColorsOptions>>();
+	private IOptionsWrapper<ColorsOptions> Configuration => Services.GetRequiredService<IOptionsWrapper<ColorsOptions>>();
 
 	[Test]
 	public async Task BasicLookupSuccess()

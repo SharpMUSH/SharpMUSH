@@ -10,15 +10,9 @@ namespace SharpMUSH.Tests.Parser;
 /// Tests to verify that recursion and invocation limits are tracked accurately.
 /// These tests prove assumptions about how the limits work and ensure they are enforced correctly.
 /// </summary>
-[NotInParallel]
-public class RecursionAndInvocationLimitTests
+public class RecursionAndInvocationLimitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	/// <summary>
 	/// Test that basic recursion (same function calling itself) is detected and limited.
@@ -173,7 +167,7 @@ public class RecursionAndInvocationLimitTests
 	public async Task FunctionInvocationLimit_ConfigurationExists()
 	{
 		// Arrange & Act: Get the configuration
-		var config = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		var config = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 		
 		// Assert: Verify the configuration has the limit
 		await Assert.That(config.CurrentValue.Limit.FunctionInvocationLimit).IsGreaterThan(0u);
@@ -228,7 +222,7 @@ public class RecursionAndInvocationLimitTests
 	public async Task DefaultLimitValues_AreAsExpected()
 	{
 		// Arrange & Act
-		var config = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		var config = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 		var limits = config.CurrentValue.Limit;
 		
 		// Assert: Document the test configuration values

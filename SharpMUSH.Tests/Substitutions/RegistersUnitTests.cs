@@ -7,14 +7,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Substitutions;
 
-public class RegistersUnitTests
+public class RegistersUnitTests: TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>(); 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>(); 
+	// NotifyService is inherited from TestsBase
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 	
 	[Test]
 	[Arguments("think [setq(0,foo)]%q0", "foo")]

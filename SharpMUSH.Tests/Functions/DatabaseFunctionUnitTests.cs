@@ -2,23 +2,18 @@ using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.ClassDataSources;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class DatabaseFunctionUnitTests
+public class DatabaseFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	private IMUSHCodeParser Parser => FunctionParser;
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
 
-	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
-	public required MySqlTestServer MySqlTestServer { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-
-	[NotInParallel]
+	
 	[Before(Test)]
-	public async Task InitializeAsync()
+	public new async Task InitializeAsync()
 	{
 		// Reuse the same tables as command tests to avoid conflicts
 		// The command tests already create test_sql_data and test_mapsql_data

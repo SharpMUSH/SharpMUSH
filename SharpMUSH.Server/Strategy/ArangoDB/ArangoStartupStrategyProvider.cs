@@ -5,16 +5,21 @@ public static class ArangoStartupStrategyProvider
 	public static ArangoStartupStrategy GetStrategy()
 	{
 		var arangoConnStr = Environment.GetEnvironmentVariable("ARANGO_CONNECTION_STRING");
-		if (string.IsNullOrWhiteSpace(arangoConnStr))
+
+		if (!string.IsNullOrWhiteSpace(arangoConnStr))
 		{
-			return new ArangoTestContainerStartupStrategy();
+			return arangoConnStr.Contains(".sock")
+				? new ArangoSocketStartupStrategy()
+				: new ArangoKubernetesStartupStrategy(arangoConnStr);
 		}
-		else if (arangoConnStr.Contains(".sock"))
+		
+		var arangoTestConnStr = Environment.GetEnvironmentVariable("ARANGO_TEST_CONNECTION_STRING");
+		
+		if (!string.IsNullOrWhiteSpace(arangoTestConnStr))
 		{
-			return new ArangoSocketStartupStrategy();
+			return new ArangoKubernetesStartupStrategy(arangoTestConnStr);
 		}
-		else {
-			return new ArangoKubernetesStartupStrategy(arangoConnStr);
-		}
+
+		return new ArangoTestContainerStartupStrategy();
 	}
 }

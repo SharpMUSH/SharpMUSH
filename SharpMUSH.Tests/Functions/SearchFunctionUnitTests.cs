@@ -4,13 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class SearchFunctionUnitTests
+public class SearchFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => FunctionParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task Lsearch_TypeFilter_ReturnsMatchingObjects()
@@ -30,7 +27,7 @@ public class SearchFunctionUnitTests
 	{
 		// Create a test object with unique name
 		var uniqueName = $"LSearchTest_{Guid.NewGuid():N}";
-		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var createResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
 		var createOutput = createResult?.Message?.ToPlainText() ?? "";
 		
 		// Extract the dbref from the create output
@@ -96,7 +93,7 @@ public class SearchFunctionUnitTests
 		var attrName = $"CMD_{commandWord.ToUpperInvariant()}";
 		
 		// Create a test object in the same location as executor (room #0)
-		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var createResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
 		var createOutput = createResult?.Message?.ToPlainText() ?? "";
 		
 		// Extract the dbref from the create output (format: "Created" or contains "#<number>")
@@ -106,7 +103,7 @@ public class SearchFunctionUnitTests
 		
 		// Set a $-command attribute on the created object
 		// Format: $pattern:code
-		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, 
+		await CommandParser.CommandParse(1, ConnectionService, 
 			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:@emit Test command triggered!"));
 		
 		// scan() searches for $-commands that would match the given command

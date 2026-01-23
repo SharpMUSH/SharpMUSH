@@ -7,19 +7,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class NotificationCommandTests
+public class NotificationCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MessageCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Test message"));
 
 		await NotifyService
@@ -31,6 +28,7 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RespondCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond #1=Response"));
 
 		await NotifyService
@@ -42,6 +40,7 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RwallCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@rwall Test message"));
 
 		await NotifyService
@@ -53,6 +52,7 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WarningsCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings"));
 
 		await NotifyService
@@ -64,6 +64,7 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WcheckCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck #1"));
 
 		await NotifyService
@@ -75,6 +76,7 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SuggestCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest Test suggestion"));
 
 		await NotifyService

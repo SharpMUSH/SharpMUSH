@@ -8,19 +8,15 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class CommandFlowUnitTests
+public class CommandFlowUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test]
-	[NotInParallel]
+	
 	[Arguments("@ifelse 1=@pemit #1=1 True,@pemit #1=1 False", "1 True")]
 	[Arguments("@ifelse 0=@pemit #1=2 True,@pemit #1=2 False", "2 False")]
 	[Arguments("@ifelse 1=@pemit #1=3 True", "3 True")]
@@ -29,6 +25,8 @@ public class CommandFlowUnitTests
 	[Arguments("@ifelse 1={@pemit #1=6 True}", "6 True")]
 	public async ValueTask IfElse(string str, string expected)
 	{
+		// Clear any previous calls to the mock
+
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MModule.single(str));
 
@@ -42,6 +40,8 @@ public class CommandFlowUnitTests
 	[Explicit] // Currently failing. Needs investigation.
 	public async ValueTask Retry()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
 		await NotifyService.Received(Quantity.Exactly(1))

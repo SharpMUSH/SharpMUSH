@@ -35,8 +35,6 @@ namespace SharpMUSH.Implementation;
 /// <para>For detailed optimization analysis, see PARSER_OPTIMIZATION_ANALYSIS.md</para>
 /// </summary>
 public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
-	LibraryService<string, FunctionDefinition> FunctionLibrary,
-	LibraryService<string, CommandDefinition> CommandLibrary,
 	IOptionsWrapper<SharpMUSHOptions> Configuration,
 	IServiceProvider ServiceProvider) : IMUSHCodeParser
 {
@@ -49,13 +47,20 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private readonly IAttributeService _attributeService = ServiceProvider.GetRequiredService<IAttributeService>();
 	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
 	
-	// Command trie for efficient prefix-based command lookup
-	private readonly CommandTrie _commandTrie = BuildCommandTrie(CommandLibrary);
+	// Libraries are retrieved from scoped services on-demand to avoid DI lifetime issues
+	public LibraryService<string, FunctionDefinition> FunctionLibrary => 
+		ServiceProvider.GetRequiredService<LibraryService<string, FunctionDefinition>>();
+	
+	public LibraryService<string, CommandDefinition> CommandLibrary => 
+		ServiceProvider.GetRequiredService<LibraryService<string, CommandDefinition>>();
+	
+	// Command trie is built lazily on first access since it depends on scoped CommandLibrary
+	private CommandTrie? _commandTrie;
 	
 	/// <summary>
 	/// Gets the command trie for efficient prefix-based command lookups.
 	/// </summary>
-	public CommandTrie CommandTrie => _commandTrie;
+	public CommandTrie CommandTrie => _commandTrie ??= BuildCommandTrie(CommandLibrary);
 	
 	/// <summary>
 	/// Builds a trie from the command library for efficient prefix matching.
@@ -87,7 +92,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
-	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, FunctionLibrary, CommandLibrary, Configuration, ServiceProvider, state);
+	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, Configuration, ServiceProvider, state);
 	
 	public Option<ParserState> StateHistory(uint index)
 	{
@@ -107,11 +112,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 
 	public MUSHCodeParser(ILogger<MUSHCodeParser> logger, 
-		LibraryService<string, FunctionDefinition> functionLibrary,
-		LibraryService<string, CommandDefinition> commandLibrary,
 		IOptionsWrapper<SharpMUSHOptions> config,
 		IServiceProvider serviceProvider,
-		ParserState state) : this(logger, functionLibrary, commandLibrary, config, serviceProvider)
+		ParserState state) : this(logger, config, serviceProvider)
 		=> State = [state];
 
 	/// <summary>

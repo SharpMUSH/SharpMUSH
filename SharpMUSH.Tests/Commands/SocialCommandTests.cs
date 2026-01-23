@@ -7,19 +7,15 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class SocialCommandTests
+public class SocialCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
 
 	[Test]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 
-public async ValueTask SayCommand()
+	public async ValueTask SayCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("say Hello world"));
 
@@ -32,6 +28,7 @@ public async ValueTask SayCommand()
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PoseCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
 
 		await NotifyService
@@ -43,6 +40,7 @@ public async ValueTask SayCommand()
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SemiposeCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
 
 		await NotifyService
@@ -54,6 +52,7 @@ public async ValueTask SayCommand()
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhisperCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
 
 		await NotifyService
@@ -65,6 +64,7 @@ public async ValueTask SayCommand()
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PageCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));
 
 		await NotifyService

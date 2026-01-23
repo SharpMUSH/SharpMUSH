@@ -6,23 +6,17 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.ClassDataSources;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class DatabaseCommandTests
+public class DatabaseCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory SqlWebAppFactoryArg { get; init; }
-
-	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
-	public required MySqlTestServer MySqlTestServer { get; init; }
-
-	private INotifyService NotifyService => SqlWebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => SqlWebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => SqlWebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Before(Test)]
-	public async Task InitializeAsync()
+	public new async Task InitializeAsync()
 	{
 		// Create test database and populate with test data
 		var connectionString = MySqlTestServer.Instance.GetConnectionString();
@@ -79,6 +73,7 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ListCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list commands"));
 
 		await NotifyService
@@ -90,6 +85,7 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnrecycleCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@unrecycle #100"));
 
 		await NotifyService
@@ -101,6 +97,7 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DisableCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable TestCommand"));
 
 		await NotifyService
@@ -112,6 +109,7 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EnableCommand()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable TestCommand"));
 
 		await NotifyService
@@ -135,6 +133,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectSingleRow()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name, value FROM test_sql_data WHERE id = 1"));
 
 		await NotifyService
@@ -147,6 +146,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectMultipleRows()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name FROM test_sql_data ORDER BY id"));
 
 		await NotifyService
@@ -159,6 +159,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectWithWhere()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT value FROM test_sql_data WHERE name = 'test_sql_row2'"));
 
 		await NotifyService
@@ -171,6 +172,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_Count()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT COUNT(*) as total FROM test_sql_data"));
 
 		await NotifyService
@@ -183,6 +185,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_NoResults()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test_sql_data WHERE id = 999"));
 
 		await NotifyService
@@ -193,9 +196,9 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask Test_MapSql_Basic()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_basic #1=think Test_MapSql_Basic: %0 - %1 - %2"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data WHERE id = 1"));
 
@@ -207,9 +210,9 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask Test_MapSql_WithMultipleRows()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_mr #1=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data ORDER BY id"));
 
@@ -236,21 +239,12 @@ public class DatabaseCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30"))));
-
-		// TODO: There is a bug here. It keeps reading and loops around somehow. I don't get how.
-		/*
-		await NotifyService
-			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().StartsWith("Test_MapSql_WithMultipleRows: 4")) ||
-				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 4"))));
-				*/
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask Test_MapSql_WithColnamesSwitch()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_cn #1=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/colnames #1/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data WHERE id = 1"));
 
@@ -268,9 +262,9 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask Test_MapSql_InvalidObjectAttribute()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr #1=think %0 - %1 - %2"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql invalid=SELECT * FROM test_mapsql_data"));
 
@@ -284,6 +278,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_InvalidQuery()
 	{
+		// Clear any previous calls to the mock
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM nonexistent_table"));
 
 		await NotifyService

@@ -11,19 +11,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class AtListCommandTests
+public class AtListCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask List_NoSwitch_DisplaysHelpMessage()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list without switches
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list"));
 
@@ -39,6 +36,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_Flags_DisplaysFlagList()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list/flags
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/flags"));
 
@@ -55,6 +53,7 @@ public class AtListCommandTests
 	[Skip("Switch parsing issue with multiple switches - needs investigation")]
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list/lowercase/flags (note: switch order matters)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/lowercase/flags"));
 
@@ -70,6 +69,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_Powers_DisplaysPowerList()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list/powers
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/powers"));
 
@@ -85,6 +85,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_Locks_DisplaysLockTypes()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list/locks
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/locks"));
 
@@ -100,6 +101,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_Attribs_DisplaysStandardAttributes()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list/attribs
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/attribs"));
 
@@ -115,6 +117,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_Commands_DisplaysCommandList()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list/commands
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/commands"));
 
@@ -130,6 +133,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_Functions_DisplaysFunctionList()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list/functions
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/functions"));
 
@@ -145,6 +149,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_Motd_DisplaysMotdSettings()
 	{
+		// Clear any previous calls to the mock
 		// Execute @list/motd
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/motd"));
 

@@ -10,16 +10,11 @@ namespace SharpMUSH.Tests.Performance;
 /// Measures actual performance of @dolist vs iter() to identify the bottleneck.
 /// This runs in-process with real services to get accurate measurements.
 /// </summary>
-[NotInParallel]
-public class InProcessPerformanceMeasurement
+public class InProcessPerformanceMeasurement : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test, Explicit]
 	public async Task MeasureDoListVsIterPerformance()
@@ -116,7 +111,7 @@ public class InProcessPerformanceMeasurement
 		var batchingServiceType = Type.GetType("SharpMUSH.ConnectionServer.Services.TelnetOutputBatchingService, SharpMUSH.ConnectionServer");
 		if (batchingServiceType != null)
 		{
-			var batchingService = WebAppFactoryArg.Services.GetService(batchingServiceType);
+			var batchingService = Factory.Services.GetService(batchingServiceType);
 			if (batchingService != null)
 			{
 				var getMetricsMethod = batchingServiceType.GetMethod("GetMetrics");

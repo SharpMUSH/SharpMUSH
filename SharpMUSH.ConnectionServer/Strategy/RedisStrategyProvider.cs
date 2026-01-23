@@ -7,17 +7,22 @@ public static class RedisStrategyProvider
 {
 	public static RedisStrategy GetStrategy()
 	{
+		var redisTestConnection = Environment.GetEnvironmentVariable("REDIS_TEST_CONNECTION_STRING");
 		var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION");
-
-		if (string.IsNullOrWhiteSpace(redisConnection))
+		
+		// Priority 1: Use test connection if available (from RedisTestServer)
+		if (!string.IsNullOrWhiteSpace(redisTestConnection))
 		{
-			// No Redis connection configured, use TestContainer for local development
-			return new RedisTestContainerStrategy();
+			return new RedisExternalStrategy(redisTestConnection);
 		}
-		else
+
+		// Priority 2: Use production connection if configured (e.g., in Kubernetes or Docker Compose)
+		if (!string.IsNullOrWhiteSpace(redisConnection))
 		{
-			// Redis connection is configured (e.g., in Kubernetes or Docker Compose)
 			return new RedisExternalStrategy(redisConnection);
 		}
+		
+		// Priority 3: Fallback to TestContainer for local development (not recommended for tests)
+		return new RedisTestContainerStrategy();
 	}
 }

@@ -8,13 +8,10 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
-public class PasswordServiceTests
+public class PasswordServiceTests: TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
 	private IPasswordService PasswordService =>
-		WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();
+		Factory.Services.GetRequiredService<IPasswordService>();
 
 	[Test]
 	public async ValueTask ModernPassword_ValidPassword_ReturnsTrue()

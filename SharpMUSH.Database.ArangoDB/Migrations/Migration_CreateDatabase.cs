@@ -17,6 +17,33 @@ public class Migration_CreateDatabase : IArangoMigration
 
 	public string Name => "create_database";
 
+	// Helper to determine if we're in test mode for performance optimizations
+	private static bool IsTestMode => Environment.GetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION") == "true";
+
+	// Helper method to batch insert documents for better performance
+	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> BatchCreateDocuments<T>(
+		IArangoMigrator migrator,
+		ArangoHandle handle,
+		string collection,
+		List<T> documents)
+	{
+		if (IsTestMode && documents.Count > 1)
+		{
+			// Use batch insert for test mode
+			return await migrator.Context.Document.CreateManyAsync(handle, collection, documents);
+		}
+		else
+		{
+			// Fall back to individual inserts for production to maintain exact compatibility
+			var results = new List<ArangoUpdateResult<ArangoVoid>>();
+			foreach (var doc in documents)
+			{
+				results.Add(await migrator.Context.Document.CreateAsync(handle, collection, doc));
+			}
+			return results;
+		}
+	}
+
 	public async Task Up(IArangoMigrator migrator, ArangoHandle handle)
 	{
 		await migrator.ApplyStructureAsync(handle, new ArangoStructure()
@@ -50,7 +77,7 @@ public class Migration_CreateDatabase : IArangoMigration
 									additionalProperties = true
 								}
 							},
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						},
 						Indices =
 						[
@@ -66,7 +93,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Things,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -94,7 +121,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Rooms,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -103,7 +130,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ServerData,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -112,7 +139,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ObjectData,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -121,7 +148,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Exits,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -141,7 +168,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Players,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -170,7 +197,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ObjectFlags,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -200,7 +227,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.AttributeFlags,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -226,7 +253,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ObjectPowers,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -254,7 +281,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Attributes,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -288,7 +315,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.AttributeEntries,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -318,7 +345,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Functions,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new
@@ -357,7 +384,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Commands,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
@@ -385,7 +412,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Mails,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
@@ -430,7 +457,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.Channels,
 							Type = ArangoCollectionType.Document,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema
 							{
 								Rule = new {
@@ -462,7 +489,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.AtLocation,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -471,7 +498,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasObjectData,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -480,7 +507,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasHome,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -489,7 +516,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasExit,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -498,7 +525,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasFlags,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -507,7 +534,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasAttribute,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -516,7 +543,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasAttributeFlag,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -525,7 +552,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasAttributeEntry,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -534,7 +561,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasObjectOwner,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					},
 					new()
@@ -543,7 +570,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasAttributeOwner,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true
+							WaitForSync = !IsTestMode
 						}
 					}, 
 					new()
@@ -552,7 +579,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.OnChannel,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new
@@ -575,7 +602,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.SenderOfMail,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 						}
 					},
 					new()
@@ -584,7 +611,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.OwnerOfChannel,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 						}
 					},
 					new()
@@ -593,7 +620,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.ReceivedMail,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 						}
 					},
 					new()
@@ -602,7 +629,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						{
 							Name = DatabaseConstants.HasHook,
 							Type = ArangoCollectionType.Edge,
-							WaitForSync = true,
+							WaitForSync = !IsTestMode,
 							Schema = new ArangoSchema()
 							{
 								Rule = new {
@@ -890,7 +917,9 @@ public class Migration_CreateDatabase : IArangoMigration
 			new ArangoMigrationOptions
 			{
 				DryRun = false,
-				Notify = x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State)
+				// Suppress migration logging in test mode to prevent massive log spam
+				// (58K+ entries when running 32 parallel tests, each creating unique database)
+				Notify = IsTestMode ? null : x => Console.WriteLine("Migration Change: {0}: {1} - {2}", x.Name, x.Object, x.State)
 			});
 
 
@@ -943,1862 +972,1546 @@ public class Migration_CreateDatabase : IArangoMigration
 		var attributeEntries = await CreateInitialSharpAttributeEntries(migrator, handle);
 		var wizard = flags[0];
 
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.IsObject, new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AtLocation, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasHome, new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = roomTwoObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = roomZeroObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasObjectOwner, new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id });
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.HasFlags, new SharpEdge { From = playerOneObj.Id, To = wizard.Id });
+		// Batch edge creation for better performance
+		var isObjectEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = roomTwoRoom.Id, To = roomTwoObj.Id },
+			new SharpEdge { From = roomZeroRoom.Id, To = roomZeroObj.Id },
+			new SharpEdge { From = playerOnePlayer.Id, To = playerOneObj.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.IsObject, isObjectEdges);
+
+		var locationEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.AtLocation, locationEdges);
+
+		var homeEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = playerOnePlayer.Id, To = roomZeroRoom.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.HasHome, homeEdges);
+
+		var ownerEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = roomTwoObj.Id, To = playerOnePlayer.Id },
+			new SharpEdge { From = roomZeroObj.Id, To = playerOnePlayer.Id },
+			new SharpEdge { From = playerOneObj.Id, To = playerOnePlayer.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.HasObjectOwner, ownerEdges);
+
+		var flagEdges = new List<SharpEdge>
+		{
+			new SharpEdge { From = playerOneObj.Id, To = wizard.Id }
+		};
+		await migrator.Context.Document.CreateManyAsync(handle, DatabaseConstants.HasFlags, flagEdges);
 	}
 
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialSharpAttributeEntries(
-		IArangoMigrator migrator, ArangoHandle handle) =>
-	[
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
-			new
-			{
-				Name = "AAHEAR",
-				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+IArangoMigrator migrator, ArangoHandle handle)
+{
+// Batch create all attribute entries for better performance
+var attributeEntries = new object[]
+{
 			new
 			{
 				Name = "ABUY",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ACLONE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ACONNECT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ADEATH",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ADESCRIBE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ADESTROY",
 				DefaultFlags = (string[])["no_inherit","no_clone","wizard","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ADISCONNECT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ADROP",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AEFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AENTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AFAILURE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AFOLLOW",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AGIVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AHEAR",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AIDESCRIBE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ALEAVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ALFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ALIAS",
 				DefaultFlags = (string[])["no_command","visual","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AMAIL",
 				DefaultFlags = (string[])["wizard","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AMHEAR",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AMOVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ANAME",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "APAYMENT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ARECEIVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ASUCCESS",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ATPORT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AUFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AUNFOLLOW",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AUSE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AWAY",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AZENTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "AZLEAVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "BUY",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "CHANALIAS",
 				DefaultFlags = (string[])["no_command"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "CHARGES",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "CHATFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "COMMENT",
 				DefaultFlags = (string[])["no_command","no_clone","wizard","mortal_dark","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "CONFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "COST",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "DEATH",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "DEBUGFORWARDLIST",
 				DefaultFlags = (string[])["no_command","no_inherit","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "DESCFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "DESCRIBE",
 				DefaultFlags = (string[])["no_command","visual","prefixmatch","public","nearby"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "DESTINATION",
 				DefaultFlags = (string[])["no_command"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "DOING",
 				DefaultFlags = (string[])["no_command","no_inherit","visual","public"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "DROP",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "EALIAS",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "EFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ENTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "EXITFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "EXITTO",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "FAILURE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "FILTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "FOLLOW",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "FOLLOWERS",
 				DefaultFlags = (string[])["no_command","no_inherit","no_clone","wizard","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "FOLLOWING",
 				DefaultFlags = (string[])["no_command","no_inherit","no_clone","wizard","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "FORWARDLIST",
 				DefaultFlags = (string[])["no_command","no_inherit","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "GIVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "HAVEN",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "IDESCFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "IDESCRIBE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "IDLE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "INFILTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "INPREFIX",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "INVFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LALIAS",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LAST",
 				DefaultFlags = (string[])["no_clone","wizard","visual","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LASTFAILED",
 				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LASTIP",
 				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LASTLOGOUT",
 				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LASTPAGED",
 				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LASTSITE",
 				DefaultFlags = (string[])["no_clone","wizard","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LEAVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "LISTEN",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MAILCURF",
 				DefaultFlags = (string[])["no_command","no_clone","wizard","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MAILFILTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MAILFILTERS",
 				DefaultFlags = (string[])["no_command","no_clone","wizard","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MAILFOLDERS",
 				DefaultFlags = (string[])["no_command","no_clone","wizard","locked","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MAILFORWARDLIST",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MAILQUOTA",
 				DefaultFlags = (string[])["no_command","no_clone","wizard","locked"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MAILSIGNATURE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MONIKER",
 				DefaultFlags = (string[])["no_command","wizard","visual","locked"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "MOVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "NAMEACCENT",
 				DefaultFlags = (string[])["no_command","visual","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "NAMEFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OBUY",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ODEATH",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ODESCRIBE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ODROP",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OEFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OENTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OFAILURE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OFOLLOW",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OGIVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OIDESCRIBE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OLEAVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OLFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OMOVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ONAME",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OPAYMENT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ORECEIVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OSUCCESS",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OTPORT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OUFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OUNFOLLOW",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OUSE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OUTPAGEFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OXENTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OXLEAVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OXMOVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OXTPORT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OZENTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "OZLEAVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "PAGEFORMAT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "PAYMENT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "PREFIX",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "PRICELIST",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "QUEUE",
 				DefaultFlags = (string[])["no_inherit","no_clone","wizard"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "RECEIVE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "REGISTERED_EMAIL",
 				DefaultFlags = (string[])["no_inherit","no_clone","wizard","locked"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "RQUOTA",
 				DefaultFlags = (string[])["mortal_dark","locked"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "RUNOUT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "SEMAPHORE",
 				DefaultFlags = (string[])["no_inherit","no_clone","locked"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "SEX",
 				DefaultFlags = (string[])["no_command","visual","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "SPEECHMOD",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "STARTUP",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "SUCCESS",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "TFPREFIX",
 				DefaultFlags = (string[])["no_command","no_inherit","no_clone","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "TPORT",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "TZ",
 				DefaultFlags = (string[])["no_command","visual"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "UFAIL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "UNFOLLOW",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "USE",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VA",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VB",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VC",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VD",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VE",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VF",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VG",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VH",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VI",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VJ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VK",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VL",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VM",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VN",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VO",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VP",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VQ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VR",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VRML_URL",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VS",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VT",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VU",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VV",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VW",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VX",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VY",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "VZ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WA",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WB",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WC",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WD",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WE",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WF",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WG",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WH",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WI",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WJ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WK",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WL",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WM",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WN",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WO",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WP",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WQ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WR",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WS",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WT",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WU",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WV",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WW",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WX",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WY",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "WZ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XA",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XB",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XC",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XD",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XE",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XF",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XG",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XH",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XI",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XJ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XK",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XL",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XM",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XN",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XO",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XP",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XQ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XR",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XS",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XT",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XU",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XV",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XW",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XX",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XY",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "XZ",
 				DefaultFlags = (string[])[]
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeEntries,
+			},
 			new
 			{
 				Name = "ZENTER",
 				DefaultFlags = (string[])["no_command","prefixmatch"]
-			}),
-	];
+			}
+};
+
+var results = await migrator.Context.Document.CreateManyAsync(
+handle, DatabaseConstants.AttributeEntries, attributeEntries);
+return results.ToList();
+}
 	
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialPowers(IArangoMigrator migrator,
-		ArangoHandle handle) =>
-	[
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+ArangoHandle handle)
+{
+// Batch create all powers for better performance
+var powers = new object[]
+{
 			new
-			{
-				Name = "Announce",
+			{Name = "Announce",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Boot",
+			{Name = "Boot",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Builder",
+			{Name = "Builder",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Can_Dark",
+			{Name = "Can_Dark",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesPlayer,
 				SetPermissions = DatabaseConstants.permissionsWizard
-					.Union(DatabaseConstants.permissionsLog)
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+					.Union(DatabaseConstants.permissionsLog)},
 			new
-			{
-				Name = "Can_HTTP",
+			{Name = "Can_HTTP",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
-					.Union(DatabaseConstants.permissionsLog)
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+					.Union(DatabaseConstants.permissionsLog)},
 			new
-			{
-				Name = "Can_Spoof",
+			{Name = "Can_Spoof",
 				System = true,
 				Aliases = (string[])["Can_nspemit"],
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Chat_Privs",
+			{Name = "Chat_Privs",
 				System = true,
 				Aliases = (string[])["Can_nspemit"],
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Debit",
+			{Name = "Debit",
 				System = true,
 				Aliases = (string[])["Steal_Money"],
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
-					.Union(DatabaseConstants.permissionsLog),
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+					.Union(DatabaseConstants.permissionsLog),},
 			new
-			{
-				Name = "Functions",
+			{Name = "Functions",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Guest",
+			{Name = "Guest",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Halt",
+			{Name = "Halt",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Hide",
+			{Name = "Hide",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Hook",
+			{Name = "Hook",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
-					.Union(DatabaseConstants.permissionsLog)
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+					.Union(DatabaseConstants.permissionsLog)},
 			new
-			{
-				Name = "Idle",
+			{Name = "Idle",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Immortal",
+			{Name = "Immortal",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Link_Anywhere",
+			{Name = "Link_Anywhere",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Login",
+			{Name = "Login",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Long_Fingers",
+			{Name = "Long_Fingers",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Many_Attribs",
+			{Name = "Many_Attribs",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
-					.Union(DatabaseConstants.permissionsLog)
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+					.Union(DatabaseConstants.permissionsLog)},
 			new
-			{
-				Name = "No_Pay",
+			{Name = "No_Pay",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "No_Quota",
+			{Name = "No_Quota",
 				System = true,
 				Aliases = (string[])["Free_Quota"],
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Open_Anywhere",
+			{Name = "Open_Anywhere",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Pemit_All",
+			{Name = "Pemit_All",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Pick_DBRefs",
+			{Name = "Pick_DBRefs",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Player_Create",
+			{Name = "Player_Create",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Poll",
+			{Name = "Poll",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Pueblo_Send",
+			{Name = "Pueblo_Send",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Queue",
+			{Name = "Queue",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Search",
+			{Name = "Search",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "See_All",
+			{Name = "See_All",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "See_Queue",
+			{Name = "See_Queue",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "See_OOB",
+			{Name = "See_OOB",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "SQL_OK",
+			{Name = "SQL_OK",
 				System = true,
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Tport_Anything",
+			{Name = "Tport_Anything",
 				System = true,
 				Aliases = (string[])["tel_anything"],
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
+				UnsetPermissions = DatabaseConstants.permissionsWizard},
 			new
-			{
-				Name = "Tport_Anywhere",
+			{Name = "Tport_Anywhere",
 				System = true,
 				Aliases = (string[])["tel_anywhere"],
 				TypeRestrictions = DatabaseConstants.typesAll,
 				SetPermissions = DatabaseConstants.permissionsWizard
 					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectPowers,
-			new
-			{
-				Name = "Unkillable",
-				System = true,
-				TypeRestrictions = DatabaseConstants.typesAll,
-				SetPermissions = DatabaseConstants.permissionsWizard
-					.Union(DatabaseConstants.permissionsLog),
-				UnsetPermissions = DatabaseConstants.permissionsWizard
-			})
-	];
+				UnsetPermissions = DatabaseConstants.permissionsWizard}
+};
 
-	private async static Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialAttributeFlags(IArangoMigrator migrator,
-		ArangoHandle handle) =>
-	[
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+var results = await migrator.Context.Document.CreateManyAsync(
+handle, DatabaseConstants.ObjectPowers, powers);
+return results.ToList();
+}
+
+		private async static Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialAttributeFlags(IArangoMigrator migrator,
+ArangoHandle handle)
+{
+// Batch create all attribute flags for better performance
+var attributeFlags = new object[]
+{
 			new
 			{
 				Name = "no_command",
 				Symbol = "$",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "no_inherit",
 				Symbol = "i",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "no_clone",
 				Symbol = "c",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "mortal_dark",
 				Symbol = "m",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "wizard",
 				Symbol = "w",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "veiled",
 				Symbol = "V",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "nearby",
 				Symbol = "n",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "locked",
 				Symbol = "+",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "safe",
 				Symbol = "S",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "visual",
 				Symbol = "v",
 				System = true,
 				Inheritable = false
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "public",
 				Symbol = "p",
 				System = true,
 				Inheritable = false
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "debug",
 				Symbol = "b",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "no_debug",
 				Symbol = "B",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "regexp",
 				Symbol = "R",
 				System = true,
 				Inheritable = false
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "case",
 				Symbol = "C",
 				System = true,
 				Inheritable = false
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "nospace",
 				Symbol = "s",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "noname",
 				Symbol = "N",
 				System = true,
 				Inheritable = true
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "aahear",
 				Symbol = "A",
 				System = true,
 				Inheritable = false
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "amhear",
 				Symbol = "M",
 				System = true,
 				Inheritable = false
-			}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
+			},
 			new
 			{
 				Name = "quiet",
 				Symbol = "Q",
 				System = true,
 				Inheritable = false
-			}),
-		// NOTE: The "branch" attribute flag (symbol `) is defined here for PennMUSH compatibility
-		// but is not currently used in SharpMUSH code. Backtick is used as a separator in attribute
-		// paths (e.g., MAIL`1`SUBJECT), but there is no corresponding flag functionality.
-		// This flag can likely be removed in a future major version that breaks database compatibility.
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.AttributeFlags,
-			new
-			{
-				Name = "branch",
-				Symbol = "`",
-				System = true,
-				Inheritable = false
-			})
-	];
+			}
+};
 
-	// Todo: Find a better way of doing this, so we can keep a proper async flow.
+var results = await migrator.Context.Document.CreateManyAsync(
+handle, DatabaseConstants.AttributeFlags, attributeFlags);
+return results.ToList();
+}
+
+		// Todo: Find a better way of doing this, so we can keep a proper async flow.
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialFlags(IArangoMigrator migrator,
-		ArangoHandle handle) =>
-	[
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
+		ArangoHandle handle)
+	{
+		// Batch create all flags for better performance
+		var flags = new object[]
 		{
-			Name = "WIZARD",
+			new
+			{Name = "WIZARD",
 			Symbol = "W",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
@@ -2806,325 +2519,243 @@ public class Migration_CreateDatabase : IArangoMigration
 				.Union(DatabaseConstants.permissionsWizard)
 				.Union(DatabaseConstants.permissionsLog),
 			UnsetPermissions = DatabaseConstants.permissionsTrusted
-				.Union(DatabaseConstants.permissionsWizard),
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "ABODE",
+				.Union(DatabaseConstants.permissionsWizard),},
+			new
+			{Name = "ABODE",
 			Symbol = "A",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesRoom
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "ANSI",
+			TypeRestrictions = DatabaseConstants.typesRoom},
+			new
+			{Name = "ANSI",
 			Symbol = "A",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesPlayer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "CHOWN_OK",
+			TypeRestrictions = DatabaseConstants.typesPlayer},
+			new
+			{Name = "CHOWN_OK",
 			Symbol = "C",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesContainer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "DARK",
+			TypeRestrictions = DatabaseConstants.typesContainer},
+			new
+			{Name = "DARK",
 			Symbol = "D",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "FIXED",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "FIXED",
 			Symbol = "F",
 			System = true,
 			SetPermissions = DatabaseConstants.permissionsWizard,
 			UnsetPermissions = DatabaseConstants.permissionsWizard,
-			TypeRestrictions = DatabaseConstants.typesPlayer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "FLOATING",
+			TypeRestrictions = DatabaseConstants.typesPlayer},
+			new
+			{Name = "FLOATING",
 			Symbol = "F",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesRoom
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "HAVEN",
+			TypeRestrictions = DatabaseConstants.typesRoom},
+			new
+			{Name = "HAVEN",
 			Symbol = "H",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesPlayer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "TRUST",
+			TypeRestrictions = DatabaseConstants.typesPlayer},
+			new
+			{Name = "TRUST",
 			Symbol = "I",
 			System = true,
 			Aliases = (string[])["INHERIT"],
 			SetPermissions = DatabaseConstants.permissionsTrusted,
 			UnsetPermissions = DatabaseConstants.permissionsTrusted,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "JUDGE",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "JUDGE",
 			Symbol = "J",
 			System = true,
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
 			UnsetPermissions = DatabaseConstants.permissionsRoyalty,
-			TypeRestrictions = DatabaseConstants.typesPlayer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "JUMP_OK",
+			TypeRestrictions = DatabaseConstants.typesPlayer},
+			new
+			{Name = "JUMP_OK",
 			Symbol = "J",
 			System = true,
 			Aliases = (string[])["TEL-OK", "TEL_OK", "TELOK"],
-			TypeRestrictions = DatabaseConstants.typesRoom
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "LINK_OK",
+			TypeRestrictions = DatabaseConstants.typesRoom},
+			new
+			{Name = "LINK_OK",
 			Symbol = "L",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "MONITOR",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "MONITOR",
 			Symbol = "M",
 			System = true,
 			Aliases = (string[])["LISTENER", "WATCHER"],
-			TypeRestrictions = DatabaseConstants.typesContainer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "NO_LEAVE",
+			TypeRestrictions = DatabaseConstants.typesContainer},
+			new
+			{Name = "NO_LEAVE",
 			Symbol = "N",
 			System = true,
 			Aliases = (string[])["NOLEAVE"],
-			TypeRestrictions = DatabaseConstants.typesThing
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "NO_TEL",
+			TypeRestrictions = DatabaseConstants.typesThing},
+			new
+			{Name = "NO_TEL",
 			Symbol = "N",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesRoom
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "OPAQUE",
+			TypeRestrictions = DatabaseConstants.typesRoom},
+			new
+			{Name = "OPAQUE",
 			Symbol = "O",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "QUIET",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "QUIET",
 			Symbol = "Q",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "UNFINDABLE",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "UNFINDABLE",
 			Symbol = "U",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "VISUAL",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "VISUAL",
 			Symbol = "V",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "SAFE",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "SAFE",
 			Symbol = "X",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "SHARED",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "SHARED",
 			Symbol = "Z",
 			System = true,
 			Aliases = (string[])["ZONE"],
-			TypeRestrictions = DatabaseConstants.typesPlayer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "Z_TEL",
+			TypeRestrictions = DatabaseConstants.typesPlayer},
+			new
+			{Name = "Z_TEL",
 			Symbol = "Z",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesRoom
-				.Union(DatabaseConstants.typesThing)
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "LISTEN_PARENT",
+				.Union(DatabaseConstants.typesThing)},
+			new
+			{Name = "LISTEN_PARENT",
 			Symbol = "^",
 			Aliases = (string[])["^"],
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer
-				.Union(DatabaseConstants.typesThing).Union(DatabaseConstants.typesRoom)
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "NOACCENTS",
+				.Union(DatabaseConstants.typesThing).Union(DatabaseConstants.typesRoom)},
+			new
+			{Name = "NOACCENTS",
 			Symbol = "~",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer
-				.Union(DatabaseConstants.typesThing).Union(DatabaseConstants.typesRoom)
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "UNREGISTERED",
+				.Union(DatabaseConstants.typesThing).Union(DatabaseConstants.typesRoom)},
+			new
+			{Name = "UNREGISTERED",
 			Symbol = "?",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
-			UnsetPermissions = DatabaseConstants.permissionsRoyalty
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "NOSPOOF",
+			UnsetPermissions = DatabaseConstants.permissionsRoyalty},
+			new
+			{Name = "NOSPOOF",
 			Symbol = "\"",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsODark,
-			UnSetPermissions = DatabaseConstants.permissionsODark
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "AUDIBLE",
+			UnSetPermissions = DatabaseConstants.permissionsODark},
+			new
+			{Name = "AUDIBLE",
 			Symbol = "a",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "DEBUG",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "DEBUG",
 			Aliases = (string[])["TRACE"],
 			Symbol = "b",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "DESTROY_OK",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "DESTROY_OK",
 			Aliases = (string[])["DEST_OK"],
 			Symbol = "d",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesThing
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "ENTER_OK",
+			TypeRestrictions = DatabaseConstants.typesThing},
+			new
+			{Name = "ENTER_OK",
 			Symbol = "e",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "GAGGED",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "GAGGED",
 			Symbol = "g",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsWizard,
-			UnSetPermissions = DatabaseConstants.permissionsWizard
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "HALT",
+			UnSetPermissions = DatabaseConstants.permissionsWizard},
+			new
+			{Name = "HALT",
 			Symbol = "h",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "ORPHAN",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "ORPHAN",
 			Symbol = "i",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "JURY_OK",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "JURY_OK",
 			Aliases = (string[])["JURYOK"],
 			Symbol = "j",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
-			UnSetPermissions = DatabaseConstants.permissionsRoyalty
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "KEEPALIVE",
+			UnSetPermissions = DatabaseConstants.permissionsRoyalty},
+			new
+			{Name = "KEEPALIVE",
 			Symbol = "k",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesPlayer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "LIGHT",
+			TypeRestrictions = DatabaseConstants.typesPlayer},
+			new
+			{Name = "LIGHT",
 			Symbol = "l",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "MISTRUST",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "MISTRUST",
 			Symbol = "m",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesContent,
 			SetPermissions = DatabaseConstants.permissionsTrusted,
-			UnSetPermissions = DatabaseConstants.permissionsTrusted
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "MISTRUST",
+			UnSetPermissions = DatabaseConstants.permissionsTrusted},
+			new
+			{Name = "MISTRUST",
 			Aliases = (string[])["MYOPIC"],
 			Symbol = "m",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesContent,
 			SetPermissions = DatabaseConstants.permissionsTrusted,
-			UnSetPermissions = DatabaseConstants.permissionsTrusted
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "NO_COMMAND",
+			UnSetPermissions = DatabaseConstants.permissionsTrusted},
+			new
+			{Name = "NO_COMMAND",
 			Aliases = (string[])["NOCOMMAND"],
 			Symbol = "n",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "ON_VACATION",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "ON_VACATION",
 			Aliases = (string[])["ONVACATION","ON-VACATION"],
 			Symbol = "o",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesPlayer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "PUPPET",
+			TypeRestrictions = DatabaseConstants.typesPlayer},
+			new
+			{Name = "PUPPET",
 			Symbol = "P",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesThing
-				.Union(DatabaseConstants.typesRoom)
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "ROYALTY",
+				.Union(DatabaseConstants.typesRoom)},
+			new
+			{Name = "ROYALTY",
 			Symbol = "r",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
@@ -3132,11 +2763,9 @@ public class Migration_CreateDatabase : IArangoMigration
 				.Union(DatabaseConstants.permissionsRoyalty)
 				.Union(DatabaseConstants.permissionsLog),
 			UnSetPermissions = DatabaseConstants.permissionsTrusted
-				.Union(DatabaseConstants.permissionsRoyalty)
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "SUSPECT",
+				.Union(DatabaseConstants.permissionsRoyalty)},
+			new
+			{Name = "SUSPECT",
 			Symbol = "s",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
@@ -3144,117 +2773,93 @@ public class Migration_CreateDatabase : IArangoMigration
 				.Union(DatabaseConstants.permissionsMDark)
 				.Union(DatabaseConstants.permissionsLog),
 			UnSetPermissions = DatabaseConstants.permissionsWizard
-				.Union(DatabaseConstants.permissionsMDark)
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "TRANSPARENT",
+				.Union(DatabaseConstants.permissionsMDark)},
+			new
+			{Name = "TRANSPARENT",
 			Symbol = "t",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "VERBOSE",
+			TypeRestrictions = DatabaseConstants.typesAll},
+			new
+			{Name = "VERBOSE",
 			Symbol = "v",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll,
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "NO_WARN",
+			TypeRestrictions = DatabaseConstants.typesAll,},
+			new
+			{Name = "NO_WARN",
 			Aliases = (string[])["NOWARN"],
 			Symbol = "w",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesAll,
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "CLOUDY",
+			TypeRestrictions = DatabaseConstants.typesAll,},
+			new
+			{Name = "CLOUDY",
 			Aliases = (string[])["TERSE"],
 			Symbol = "x",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesExit,
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "CHAN_USEFIRSTMATCH",
+			TypeRestrictions = DatabaseConstants.typesExit,},
+			new
+			{Name = "CHAN_USEFIRSTMATCH",
 			Aliases = (string[])["CHAN_FIRSTMATCH","CHAN_MATCHFIRST"],
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsTrusted,
-			UnSetPermissions = DatabaseConstants.permissionsTrusted
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "HEAR_CONNECT",
+			UnSetPermissions = DatabaseConstants.permissionsTrusted},
+			new
+			{Name = "HEAR_CONNECT",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
-			SetPermissions = DatabaseConstants.permissionsRoyalty
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "HEAVY",
+			SetPermissions = DatabaseConstants.permissionsRoyalty},
+			new
+			{Name = "HEAVY",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
-			SetPermissions = DatabaseConstants.permissionsRoyalty
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "LOUD",
+			SetPermissions = DatabaseConstants.permissionsRoyalty},
+			new
+			{Name = "LOUD",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
-			SetPermissions = DatabaseConstants.permissionsRoyalty
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "NO_LOG",
+			SetPermissions = DatabaseConstants.permissionsRoyalty},
+			new
+			{Name = "NO_LOG",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsWizard
 				.Union(DatabaseConstants.permissionsMDark)
 				.Union(DatabaseConstants.permissionsLog),
 			UnSetPermissions = DatabaseConstants.permissionsWizard
-				.Union(DatabaseConstants.permissionsMDark)
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "PARANOID",
+				.Union(DatabaseConstants.permissionsMDark)},
+			new
+			{Name = "PARANOID",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesPlayer,
 			SetPermissions = DatabaseConstants.permissionsODark,
-			UnSetPermissions = DatabaseConstants.permissionsODark
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "TRACK_MONEY",
+			UnSetPermissions = DatabaseConstants.permissionsODark},
+			new
+			{Name = "TRACK_MONEY",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesPlayer,
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "XTERM256",
+			TypeRestrictions = DatabaseConstants.typesPlayer,},
+			new
+			{Name = "XTERM256",
 			Aliases = (string[])["XTERM","COLOR256"],
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesPlayer
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "MONIKER",
+			TypeRestrictions = DatabaseConstants.typesPlayer},
+			new
+			{Name = "MONIKER",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesAll,
 			SetPermissions = DatabaseConstants.permissionsRoyalty,
-			UnSetPermissions = DatabaseConstants.permissionsRoyalty
-		}),
-		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
-		{
-			Name = "OPEN_OK",
+			UnSetPermissions = DatabaseConstants.permissionsRoyalty},
+			new
+			{Name = "OPEN_OK",
 			System = true,
-			TypeRestrictions = DatabaseConstants.typesRoom
-		}),
-	];
+			TypeRestrictions = DatabaseConstants.typesRoom}
+		};
+		
+		var results = await migrator.Context.Document.CreateManyAsync(
+			handle, DatabaseConstants.ObjectFlags, flags);
+		return results.ToList();
+	}
 
-	public Task Down(IArangoMigrator migrator, ArangoHandle handle)
+		public Task Down(IArangoMigrator migrator, ArangoHandle handle)
 	{
 		throw new NotSupportedException();
 	}

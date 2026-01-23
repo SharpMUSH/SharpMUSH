@@ -12,16 +12,12 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Services;
 
 [NotInParallel]
-public class ZoneParentCycleTests
+public class ZoneParentCycleTests: TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IManipulateSharpObjectService ManipulateService => WebAppFactoryArg.Services.GetRequiredService<IManipulateSharpObjectService>();
+	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
+	private IConnectionService ConnectionService => Factory.Services.GetRequiredService<IConnectionService>();
+	private IManipulateSharpObjectService ManipulateService => Factory.Services.GetRequiredService<IManipulateSharpObjectService>();
 
 	[Test]
 	public async ValueTask DirectParentCycle_ShouldFail()

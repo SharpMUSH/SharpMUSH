@@ -2,12 +2,9 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
 
-public class FunctionUnitTests
+public class FunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser Parser => FunctionParser;
 
 	[Test]
 	[Arguments("strcat(strcat(),wi`th a[strcat(strcat(strcat(depth of 5)))])", "wi`th adepth of 5")]

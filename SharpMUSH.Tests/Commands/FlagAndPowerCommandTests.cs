@@ -12,20 +12,18 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-public class FlagAndPowerCommandTests
+public class FlagAndPowerCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
+		// Clear any previous calls to the mock
+
 		// Execute @flag/list
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
 
@@ -41,6 +39,8 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_CreatesNewFlag()
 	{
+		// Clear any previous calls to the mock
+
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
@@ -70,6 +70,8 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_PreventsSystemFlagCreation()
 	{
+		// Clear any previous calls to the mock
+
 		// Create a unique flag name
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";

@@ -8,20 +8,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class HelpCommandTests
+public class HelpCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async ValueTask HelpCommandWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test that help command runs and returns the main help page
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help"));
 
@@ -36,6 +32,7 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpWithTopicWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test help with the "newbie" topic
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help newbie"));
 
@@ -50,6 +47,7 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpWithWildcardWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test help with wildcard pattern - should list matching topics
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help help*"));
 
@@ -64,6 +62,7 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpSearchWorks()
 	{
+		// Clear any previous calls to the mock
 		// Test help/search switch - should find topics containing the search term
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help/search newbie"));
 
@@ -78,6 +77,7 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpNonExistentTopic()
 	{
+		// Clear any previous calls to the mock
 		// Test help with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help nonexistenttopicxyz123"));
 

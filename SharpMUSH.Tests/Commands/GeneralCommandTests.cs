@@ -1,4 +1,4 @@
-﻿using Mediator;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -11,24 +11,21 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class GeneralCommandTests
+public class GeneralCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	private IMUSHCodeParser Parser => CommandParser;
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]
 	[Arguments("@pemit #1=2 This is a test;", "2 This is a test;")]
 	public async ValueTask SimpleCommandParse(string str, string expected)
 	{
+		// Clear any previous calls to the mock
+
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
@@ -48,6 +45,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=3 This is a test"));
 
 		await NotifyService
@@ -59,6 +58,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple2()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1={4 This is, a test};"));
 
 		await NotifyService
@@ -79,9 +80,10 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dolist/inline 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
 
@@ -96,9 +98,10 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex2()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
@@ -118,9 +121,10 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListComplex3()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1={@dolist/inline 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
@@ -138,6 +142,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex4()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
@@ -155,6 +161,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex5()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline a b={@dolist/inline 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
@@ -184,6 +192,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex6()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline a b={@dolist/inline 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
@@ -205,6 +215,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleCommandList()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
 		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
 
@@ -219,6 +231,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleTruthyCommandList()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
 		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
 
@@ -233,6 +247,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleFalsyCommandList()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
 		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
 
@@ -247,6 +263,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakCommandList()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandListParse(
 			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
@@ -259,6 +277,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakCommandList2()
 	{
+		// Clear any previous calls to the mock
+
 		await Parser.CommandListParse(
 			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
@@ -284,6 +304,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask WhereIs_ValidPlayer_ReportsLocation()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @whereis with a valid player
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
 
@@ -298,6 +320,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask WhereIs_NonPlayer_ReturnsError()
 	{
+		// Clear any previous calls to the mock
+
 		// First create a thing (non-player object)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create test_object_whereis"));
 
@@ -315,6 +339,8 @@ public class GeneralCommandTests
 	[Test, Skip("TODO")]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @restart with a valid object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
 
@@ -329,6 +355,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Find_SearchesForObjects()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @find command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
 
@@ -343,6 +371,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Stats_ShowsDatabaseStatistics()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @stats command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
 
@@ -357,6 +387,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Search_PerformsDatabaseSearch()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @search command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
 
@@ -371,6 +403,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Entrances_ShowsLinkedObjects()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @entrances command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
 
@@ -385,6 +419,8 @@ public class GeneralCommandTests
 	[Skip("TODO: Failing")]
 	public async ValueTask Command_ShowsCommandInfo()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @command with a command name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@command @emit"));
 
@@ -399,6 +435,8 @@ public class GeneralCommandTests
 	[Test, Skip("TODO")]
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @function with no arguments to list functions
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
@@ -413,6 +451,8 @@ public class GeneralCommandTests
 	[Test, Skip("TODO")]
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @function with a function name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
 
@@ -427,6 +467,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Map_ExecutesAttributeOverList()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @map command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@map me/test=foo bar baz"));
 
@@ -441,6 +483,8 @@ public class GeneralCommandTests
 	[Test, Skip("TODO")]
 	public async ValueTask Trigger_QueuesAttribute()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @trigger command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger me/test=arg1,arg2"));
 
@@ -454,6 +498,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Include_InsertsAttributeInPlace()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @include command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@include me/test=arg1,arg2"));
 
@@ -468,6 +514,8 @@ public class GeneralCommandTests
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask Halt_ClearsQueue()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @halt command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt me"));
 
@@ -482,6 +530,8 @@ public class GeneralCommandTests
 	[Test, Skip("TODO")]
 	public async ValueTask PS_ShowsQueueStatus()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @ps command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
@@ -495,6 +545,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Select_MatchesFirstExpression()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @select command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
 
@@ -510,6 +562,8 @@ public class GeneralCommandTests
 	[Skip("TODO: Failing")]
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @attribute command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute DESCRIPTION"));
 
@@ -587,7 +641,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithDBRefNotificationBatching()
 	{
 		// This test validates that DBRef-based notifications respect batching scopes.
@@ -595,8 +648,6 @@ public class GeneralCommandTests
 		// After the fix, messages should be accumulated and sent as a batch.
 		// We use the same pattern as DoListSimple - a simple message without iteration markers.
 		
-		// Clear previous mock calls to avoid interference from other tests
-		NotifyService.ClearReceivedCalls();
 		
 		// Use @pemit which uses Notify(AnySharpObject) -> Notify(DBRef)
 		// This should call Notify three times with the same message
@@ -611,14 +662,12 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
 		// This test validates that context-based batching batches notifications to ANY target,
 		// not just the enactor. Before context-based batching, notifications to other players
 		// would not be batched.
 		
-		NotifyService.ClearReceivedCalls();
 		
 		// Send to player #2 (different from enactor #1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
@@ -631,13 +680,11 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask NestedDoListBatching()
 	{
 		// This test validates that nested @dolists properly use ref-counting for batching context.
 		// Messages from both outer and inner loops should be batched together.
 		
-		NotifyService.ClearReceivedCalls();
 		
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
@@ -650,12 +697,10 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
 		// Negative test: Without @break, all loop iterations should send messages
 		
-		NotifyService.ClearReceivedCalls();
 		
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Message"));
 
@@ -667,13 +712,11 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithBreakAfterFirst_OnlyFirstMessageReceived()
 	{
 		// Positive test: @break should stop the loop after first iteration
 		// Use @break as a conditional command to stop after first iteration
 		
-		NotifyService.ClearReceivedCalls();
 		
 		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message ##;@break}"));
@@ -687,14 +730,12 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask DoListWithBreakFlushesMessages()
 	{
 		// This test validates that @break properly flushes batched messages.
 		// Even with @break in the command list, the using statement should
 		// ensure messages are flushed via disposal.
 		
-		NotifyService.ClearReceivedCalls();
 		
 		// Loop with @break - both @pemit and @break execute in each iteration
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
@@ -708,7 +749,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[NotInParallel]
 	public async ValueTask NestedDoListWithBreakFlushesMessages()
 	{
 		// This test validates that @break in a nested @dolist/inline properly handles
@@ -716,7 +756,6 @@ public class GeneralCommandTests
 		// Note: With the command structure {@pemit; @break}, both commands execute
 		// in each iteration, so @break happens after the @pemit.
 		
-		NotifyService.ClearReceivedCalls();
 		
 		// Outer loop runs twice, inner loop has 3 items
 		// With {@pemit; @break}, the @pemit runs in each inner iteration
@@ -734,6 +773,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListWithDelimiter()
 	{
+		// Clear any previous calls to the mock
+
 		// Test @dolist with /delimit switch
 		// Format: @dolist/delimit <delimiter> <list>=<action>
 		// Delimiter is separated by space from list

@@ -7,14 +7,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class UtilityFunctionUnitTests
+public class UtilityFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private IPasswordService PasswordService => WebAppFactoryArg.Services.GetRequiredService<IPasswordService>(); 
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => FunctionParser;
+	private IPasswordService PasswordService => Factory.Services.GetRequiredService<IPasswordService>(); 
+	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 
 	// , DependsOn<SharpMUSH.Tests.Commands.RoomsAndMovementTests>
@@ -199,10 +196,10 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task SuggestFunction()
 	{
-		var dataService = WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
+		var dataService = Factory.Services.GetRequiredService<IExpandedObjectDataService>();
 		
 		// Set up suggestion data with a test category
 		var suggestionData = new Library.ExpandedObjectData.SuggestionData(new Dictionary<string, HashSet<string>>

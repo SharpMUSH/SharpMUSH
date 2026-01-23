@@ -15,17 +15,12 @@ using static SharpMUSH.Library.Services.Interfaces.INotifyService;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
-public class ZoneCommandTests
+public class ZoneCommandTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => CommandParser;
+	private IMediator Mediator => Services.GetRequiredService<IMediator>();
+	private ISharpDatabase Database => Services.GetRequiredService<ISharpDatabase>();
 
 	private string GenerateUniqueName(string prefix) =>
 		$"{prefix}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{Random.Shared.Next(1000, 9999)}";
@@ -33,6 +28,7 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneSetZone()
 	{
+		// Clear any previous calls to the mock
 		// Create a unique zone master object
 		var zoneName = GenerateUniqueName("ZoneMaster");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zoneName}"));
@@ -73,6 +69,7 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneClearZone()
 	{
+		// Clear any previous calls to the mock
 		// Create unique zone master object
 		var zoneName = GenerateUniqueName("ZoneMasterClear");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zoneName}"));
@@ -114,6 +111,7 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzonePermissionSuccess()
 	{
+		// Clear any previous calls to the mock
 		// Create unique zone master object that player controls
 		var zoneName = GenerateUniqueName("PermTestZone");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zoneName}"));
@@ -146,6 +144,7 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneInvalidObject()
 	{
+		// Clear any previous calls to the mock
 		// Try to set zone on non-existent object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #99999=#1"));
 		
@@ -159,6 +158,7 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneInvalidZone()
 	{
+		// Clear any previous calls to the mock
 		// Create unique object
 		var objName = GenerateUniqueName("InvalidZoneTest");
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
@@ -222,6 +222,7 @@ public class ZoneCommandTests
 	[Test, Skip("Failing and needs to be fixed.")]
 	public async ValueTask ZMRUserDefinedCommandTest()
 	{
+		// Clear any previous calls to the mock
 		// Clear player zone to avoid inheritance issues
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
 		
@@ -283,6 +284,7 @@ public class ZoneCommandTests
 	[Test, Skip("Failing and needs to be fixed.")]
 	public async ValueTask PersonalZoneUserDefinedCommandTest()
 	{
+		// Clear any previous calls to the mock
 		// Create a unique personal Zone Master Room (ZMR)
 		var personalZMRName = GenerateUniqueName("PersonalZMR");
 		var personalZMRResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {personalZMRName}"));

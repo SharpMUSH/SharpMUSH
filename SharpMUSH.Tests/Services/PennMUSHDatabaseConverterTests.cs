@@ -3,14 +3,12 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
 
-public class PennMUSHDatabaseConverterTests
+public class PennMUSHDatabaseConverterTests: TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
 
 	private IPennMUSHDatabaseConverter GetConverter()
 	{
-		return WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
+		return Factory.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
 	}
 
 	[Test]
@@ -93,7 +91,7 @@ public class PennMUSHDatabaseConverterTests
 	public async ValueTask ConverterUpdatesGodPlayerNameAndPassword()
 	{
 		var converter = GetConverter();
-		var database = WebAppFactoryArg.Services.GetRequiredService<Library.ISharpDatabase>();
+		var database = Factory.Services.GetRequiredService<Library.ISharpDatabase>();
 		
 		var database1 = new PennMUSHDatabase
 		{
@@ -131,7 +129,7 @@ public class PennMUSHDatabaseConverterTests
 	public async ValueTask ConverterUpdatesRoom0Name()
 	{
 		var converter = GetConverter();
-		var database = WebAppFactoryArg.Services.GetRequiredService<Library.ISharpDatabase>();
+		var database = Factory.Services.GetRequiredService<Library.ISharpDatabase>();
 		
 		var database1 = new PennMUSHDatabase
 		{
@@ -169,7 +167,6 @@ public class PennMUSHDatabaseConverterTests
 	public async ValueTask ConverterSetsParentRelationships()
 	{
 		var converter = GetConverter();
-		var database = WebAppFactoryArg.Services.GetRequiredService<Library.ISharpDatabase>();
 		
 		var database1 = new PennMUSHDatabase
 		{
@@ -220,7 +217,6 @@ public class PennMUSHDatabaseConverterTests
 	public async ValueTask ConverterSetsZoneRelationships()
 	{
 		var converter = GetConverter();
-		var database = WebAppFactoryArg.Services.GetRequiredService<Library.ISharpDatabase>();
 		
 		var database1 = new PennMUSHDatabase
 		{

@@ -8,18 +8,16 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class CommunicationFunctionUnitTests
+public class CommunicationFunctionUnitTests : TestClassFactory
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
-
-	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => FunctionParser;
+	// NotifyService is inherited from TestsBase
+	private IConnectionService ConnectionService => Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	public async Task PrivateEmit()
 	{
+		// Clear any previous calls to the mock
 		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
 		
 		// Execute the function with unique message
@@ -94,6 +92,7 @@ public class CommunicationFunctionUnitTests
 	[Test]
 	public async Task Nspemit()
 	{
+		// Clear any previous calls to the mock
 		const string uniqueMessage = "Nspemit_test_unique_message_for_verification";
 		
 		// Execute the function with unique message

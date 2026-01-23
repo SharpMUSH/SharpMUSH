@@ -135,14 +135,21 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 builder.Services.AddControllers();
 
 // Configure OpenTelemetry Metrics for Prometheus
+var isTestMode = Environment.GetEnvironmentVariable("SHARPMUSH_FAST_MIGRATION") != null;
+
 builder.Services.AddOpenTelemetry()
 	.ConfigureResource(resource => resource
 		.AddService("SharpMUSH.ConnectionServer", serviceVersion: "1.0.0"))
-	.WithMetrics(metrics => metrics
-		.AddMeter("SharpMUSH")
-		.AddRuntimeInstrumentation()
-		.AddConsoleExporter()
-		.AddPrometheusExporter());
+	.WithMetrics(metrics =>
+	{
+		metrics.AddMeter("SharpMUSH").AddRuntimeInstrumentation();
+		
+		// Only add exporters in production mode (reduces log spam in tests)
+		if (!isTestMode)
+		{
+			metrics.AddConsoleExporter().AddPrometheusExporter();
+		}
+	});
 
 var app = builder.Build();
 
@@ -166,8 +173,11 @@ try
 	app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
 	app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
 
-	// Prometheus metrics endpoint
-	app.MapPrometheusScrapingEndpoint();
+	// Prometheus metrics endpoint (only in production mode to avoid test failures when console exporter is disabled)
+	if (!isTestMode)
+	{
+		app.MapPrometheusScrapingEndpoint();
+	}
 
 	await app.RunAsync();
 }
