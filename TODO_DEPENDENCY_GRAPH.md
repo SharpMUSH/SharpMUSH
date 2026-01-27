@@ -7,36 +7,36 @@ This document provides visual dependency graphs for TODO item resolution using M
 ```mermaid
 graph TB
     subgraph Foundation["🔧 Foundation Layer (No Dependencies)"]
-        DB[Database Abstraction<br/>2-3 weeks]
-        TFS[Text File System<br/>2-4 weeks]
-        PUEBLO[Pueblo Escape<br/>2-3 days]
-        CHANNEL[Channel Matching<br/>3-5 days]
-        CRON[CRON Service<br/>1 week]
-        ECONOMY[Economy System<br/>1-2 weeks]
-        SPEAK[SPEAK Integration<br/>1-2 days]
-        PCREATE[pcreate Enhancement<br/>1-2 days]
-        API[API Design<br/>1 week]
-        MARKUP[Markup System<br/>2-3 weeks]
+        DB[Database Abstraction]
+        TFS[Text File System]
+        PUEBLO[Pueblo Escape]
+        CHANNEL[Channel Matching]
+        CRON[CRON Service]
+        ECONOMY[Economy System]
+        SPEAK[SPEAK Integration]
+        PCREATE[pcreate Enhancement]
+        API[API Design]
+        MARKUP[Markup System]
     end
 
     subgraph Parser["⚡ Parser Layer"]
-        FRS[Function Resolution Service<br/>1 week]
-        PERF[Parser Performance<br/>2 weeks]
-        PFEATURES[Parser Features<br/>2 weeks]
-        CMDIDX[Command Indexing<br/>3-5 days]
+        FRS[Function Resolution Service]
+        PERF[Parser Performance]
+        PFEATURES[Parser Features]
+        CMDIDX[Command Indexing]
     end
 
     subgraph Commands["🎯 Command/Function Layer"]
-        ATTR[Attribute Management<br/>2 weeks]
-        WS[Websocket Subsystem<br/>4-6 weeks]
-        STRINGS[String Functions<br/>1 week]
-        ANSI[ANSI Integration<br/>3-5 days]
+        ATTR[Attribute Management]
+        WS[Websocket Subsystem]
+        STRINGS[String Functions]
+        ANSI[ANSI Integration]
     end
 
     subgraph Tests["✅ Test Layer"]
-        TINFRA[Test Infrastructure<br/>1 week]
-        TFIX[Test Fixes<br/>4-6 weeks]
-        TCREATE[Test Creation<br/>2-3 weeks]
+        TINFRA[Test Infrastructure]
+        TFIX[Test Fixes]
+        TCREATE[Test Creation]
     end
 
     %% Dependencies
@@ -65,18 +65,18 @@ graph TB
     class TINFRA,TFIX,TCREATE tests
 ```
 
-## Critical Path Analysis
+## Critical Path
 
 The critical path for maximum impact:
 
 ```mermaid
 graph LR
-    START([Start]) --> FRS[1. Function Resolution Service<br/>1 week]
-    FRS --> PERF[2. Parser Performance<br/>2 weeks]
+    START([Start]) --> FRS[1. Function Resolution Service]
+    FRS --> PERF[2. Parser Performance]
     PERF --> CACHE[3. Function Caching<br/>Enabled]
-    CACHE --> ATTR[4. Attribute Management<br/>2 weeks]
-    ATTR --> TINFRA[5. Test Infrastructure<br/>1 week]
-    TINFRA --> COMPLETE([Phase 1 Complete<br/>6-7 weeks])
+    CACHE --> ATTR[4. Attribute Management]
+    ATTR --> TINFRA[5. Test Infrastructure]
+    TINFRA --> COMPLETE([Phase 1 Complete])
     
     style START fill:#4caf50,stroke:#2e7d32,color:#fff
     style COMPLETE fill:#4caf50,stroke:#2e7d32,color:#fff
@@ -85,38 +85,6 @@ graph LR
     style CACHE fill:#ff9800,stroke:#e65100,color:#fff
     style ATTR fill:#ff9800,stroke:#e65100,color:#fff
     style TINFRA fill:#e91e63,stroke:#880e4f,color:#fff
-```
-
-## Phase-Based Implementation Flow
-
-```mermaid
-gantt
-    title TODO Resolution Timeline (22-32 weeks)
-    dateFormat YYYY-MM-DD
-    
-    section Phase 1: Foundation
-    Function Resolution Service     :p1a, 2026-02-01, 1w
-    Parser Performance             :p1b, after p1a, 2w
-    CRON Service                   :p1c, 2026-02-01, 1w
-    Test Infrastructure            :p1d, after p1b, 1w
-    
-    section Phase 2: Performance
-    Command Indexing               :p2a, after p1d, 5d
-    Attribute Management           :p2b, after p1d, 2w
-    Parser Features                :p2c, after p2a, 2w
-    Fix High-Priority Tests        :p2d, after p1d, 1w
-    
-    section Phase 3: Enhancements
-    ANSI/Markup System             :p3a, after p2c, 2w
-    Database Abstraction           :p3b, after p2c, 3w
-    Channel Improvements           :p3c, after p2d, 1w
-    Fix Remaining Tests            :p3d, after p2b, 2w
-    
-    section Phase 4: Advanced
-    Websocket Subsystem            :p4a, after p3a, 6w
-    Text File System               :p4b, after p3b, 4w
-    Economy System                 :p4c, after p3c, 2w
-    Final Enhancements             :p4d, after p3d, 2w
 ```
 
 ## Category Dependency Map
@@ -193,38 +161,38 @@ graph TD
 ```mermaid
 graph TB
     subgraph "Stream 1: Core Architecture"
-        S1A[Function Resolution<br/>Week 1]
-        S1B[Parser Performance<br/>Weeks 2-3]
-        S1C[Command Indexing<br/>Week 4]
+        S1A[Function Resolution]
+        S1B[Parser Performance]
+        S1C[Command Indexing]
         S1A --> S1B --> S1C
     end
     
     subgraph "Stream 2: Services"
-        S2A[CRON Service<br/>Week 1]
-        S2B[Channel Matching<br/>Week 2]
-        S2C[Database Abstraction<br/>Weeks 3-5]
+        S2A[CRON Service]
+        S2B[Channel Matching]
+        S2C[Database Abstraction]
         S2A --> S2B --> S2C
     end
     
     subgraph "Stream 3: Features"
-        S3A[Attribute Management<br/>Weeks 2-3]
-        S3B[Parser Features<br/>Weeks 4-5]
-        S3C[String Functions<br/>Week 6]
+        S3A[Attribute Management]
+        S3B[Parser Features]
+        S3C[String Functions]
         S3A --> S3B --> S3C
     end
     
     subgraph "Stream 4: Tests"
-        S4A[Test Infrastructure<br/>Week 1]
-        S4B[Fix Database Tests<br/>Week 2]
-        S4C[Fix Function Tests<br/>Weeks 3-4]
-        S4D[Create Missing Tests<br/>Weeks 5-6]
+        S4A[Test Infrastructure]
+        S4B[Fix Database Tests]
+        S4C[Fix Function Tests]
+        S4D[Create Missing Tests]
         S4A --> S4B --> S4C --> S4D
     end
     
     subgraph "Stream 5: ANSI/Markup"
-        S5A[ANSI Integration<br/>Week 2]
-        S5B[Performance Opts<br/>Week 3]
-        S5C[Feature Complete<br/>Week 4]
+        S5A[ANSI Integration]
+        S5B[Performance Opts]
+        S5C[Feature Complete]
         S5A --> S5B --> S5C
     end
     
@@ -269,51 +237,58 @@ quadrantChart
     Parser Features: [0.55, 0.40]
 ```
 
-## Effort Distribution
+## Category Distribution
 
 ```mermaid
-pie title Total Effort by Category (40-60 weeks)
-    "Infrastructure (10 items)" : 25
-    "Parser (8 items)" : 15
-    "Commands (6 items)" : 13
-    "Functions (9 items)" : 12
-    "ANSI/Markup (10 items)" : 10
-    "Test Fixes (28 items)" : 20
-    "Test Creation (15 items)" : 5
+pie title TODO Items by Category (80 total)
+    "Infrastructure (10)" : 10
+    "Parser (8)" : 8
+    "Commands (6)" : 6
+    "Functions (9)" : 9
+    "ANSI/Markup (10)" : 10
+    "Test Fixes (28)" : 28
+    "Test Creation (15)" : 15
 ```
 
-## Priority-Based Timeline
+## Priority Distribution
+
+```mermaid
+pie title TODO Items by Priority (80 total)
+    "High Priority (15)" : 15
+    "Medium Priority (30)" : 30
+    "Low Priority (20)" : 20
+    "Defer/Long-term (15)" : 15
+```
+
+## Implementation Phases
 
 ```mermaid
 timeline
-    title TODO Resolution by Priority
+    title TODO Resolution by Phase
     
-    section High Priority (15 items)
-        Weeks 1-7 : Function Resolution
-                  : Parser Performance
-                  : Test Infrastructure
-                  : Command Indexing
-                  : Attribute Management
+    section Phase 1: Foundation
+        Function Resolution : Architectural foundation
+        Parser Performance : Performance improvements
+        CRON Service       : Clean architecture
+        Test Infrastructure : Enable test fixes
     
-    section Medium Priority (30 items)
-        Weeks 8-15 : Parser Features
-                   : ANSI/Markup System
-                   : Database Tests
-                   : Channel Matching
-                   : CRON Service
+    section Phase 2: Performance & Features
+        Command Indexing     : Faster lookup
+        Attribute Management : Complete feature
+        Parser Features      : Enhanced capabilities
+        Fix High-Pri Tests   : Reduce failures
     
-    section Low Priority (20 items)
-        Weeks 16-22 : SPEAK Integration
-                    : Economy System
-                    : pcreate Enhancement
-                    : String Functions
-                    : Markup Improvements
+    section Phase 3: Enhancements
+        ANSI/Markup System  : Integration
+        Database Abstraction : Multi-DB support
+        Channel Improvements : Better UX
+        Fix Remaining Tests  : 100% pass rate
     
-    section Defer (15 items)
-        Weeks 23-32 : Websocket Subsystem
-                    : Text File System
-                    : Multi-Database Support
-                    : API Changes
+    section Phase 4: Advanced Features
+        Websocket Subsystem : Modern clients
+        Text File System    : File-based content
+        Economy System      : Transactions
+        Final Polish        : 100% resolution
 ```
 
 ## Dependency Matrix
@@ -330,33 +305,6 @@ timeline
 | Database Abstraction | None | None | Medium | 3 |
 | Websocket Subsystem | None | None | Defer | 4 |
 | Text File System | None | None | Defer | 4 |
-
-## Success Path
-
-```mermaid
-journey
-    title Path to Zero TODOs
-    section Phase 1 (Weeks 1-6)
-        Function Resolution Service: 5: Infrastructure
-        Parser Performance: 5: Performance
-        CRON Service: 4: Services
-        Test Infrastructure: 5: Testing
-    section Phase 2 (Weeks 7-12)
-        Command Indexing: 5: Performance
-        Attribute Management: 5: Features
-        Parser Features: 4: Features
-        Fix High-Priority Tests: 4: Testing
-    section Phase 3 (Weeks 13-20)
-        ANSI/Markup System: 4: Features
-        Database Abstraction: 5: Infrastructure
-        Channel Improvements: 3: Features
-        Fix Remaining Tests: 5: Testing
-    section Phase 4 (Weeks 21-32)
-        Websocket Subsystem: 5: Features
-        Text File System: 4: Features
-        Economy System: 3: Features
-        Final Polish: 5: Complete
-```
 
 ## Blockers and Enablers
 
@@ -414,12 +362,6 @@ graph LR
 - **Dotted arrows**: Soft dependencies (beneficial but not required)
 - **Dashed arrows**: Critical path items
 
-### Timeline Assumptions
-- Single developer, full-time work
-- Includes testing and documentation time
-- Assumes no major blockers or architectural surprises
-- Conservative estimates with buffer
-
 ### Parallel Execution
 The graph shows 5 parallel work streams that can proceed simultaneously with a team:
 1. **Core Architecture** (Function Resolution, Parser)
@@ -428,7 +370,7 @@ The graph shows 5 parallel work streams that can proceed simultaneously with a t
 4. **Tests** (Infrastructure, fixes, creation)
 5. **ANSI/Markup** (Independent improvements)
 
-With a team of 3-5 developers, the total timeline could be reduced from 22-32 weeks to 8-12 weeks.
+With a team of 3-5 developers, the work can be parallelized significantly.
 
 ---
 

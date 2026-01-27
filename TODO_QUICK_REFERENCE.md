@@ -6,20 +6,19 @@
 
 ## TL;DR - Start Here
 
-### Immediate Actions (Week 1)
+### Immediate Actions
 1. ✅ **Function Resolution Service** - Extract to dedicated service (enables caching)
 2. ✅ **Test Infrastructure** - Add attribute setting and connection mocking
 3. ✅ **CRON Service** - Move from StartupHandler to dedicated service
 
-### Next Steps (Weeks 2-6)
+### Next Steps
 4. ✅ **Parser Performance** - Reduce allocations, optimize context passing
 5. ✅ **Command Indexing** - Cache single-token commands
 6. ✅ **Attribute Management** - Retroactive updates, regex validation
 
 ### Critical Path
 ```
-Function Resolution → Parser Performance → Attribute Management → Test Infrastructure → DONE
-     (1 week)              (2 weeks)            (2 weeks)            (1 week)
+Function Resolution → Parser Performance → Attribute Management → Test Infrastructure
 ```
 
 ---
@@ -31,9 +30,7 @@ Function Resolution → Parser Performance → Attribute Management → Test Inf
 | Total TODOs | 80 |
 | Production Code | 37 |
 | Test-Related | 43 |
-| Total Effort | 40-60 weeks (single dev) |
 | Phases | 4 |
-| Critical Path | 6-7 weeks |
 
 ---
 
@@ -41,44 +38,44 @@ Function Resolution → Parser Performance → Attribute Management → Test Inf
 
 ### Production Code (37)
 
-| Category | Count | Effort | Priority |
-|----------|-------|--------|----------|
-| Infrastructure & Services | 10 | 10-15w | High/Med |
-| Parser & Execution | 8 | 6-9w | High |
-| Command Features | 6 | 5-8w | Medium |
-| Function Features | 9 | 5-7w | Low |
-| ANSI/Markup System | 6 | 4-6w | Low |
+| Category | Count | Priority |
+|----------|-------|----------|
+| Infrastructure & Services | 10 | High/Med |
+| Parser & Execution | 8 | High |
+| Command Features | 6 | Medium |
+| Function Features | 9 | Low |
+| ANSI/Markup System | 6 | Low |
 
 ### Test-Related (43)
 
-| Category | Count | Effort | Priority |
-|----------|-------|--------|----------|
-| Skipped/Failing Tests | 28 | 8-12w | High |
-| Test Creation | 15 | 2-3w | Medium |
+| Category | Count | Priority |
+|----------|-------|----------|
+| Skipped/Failing Tests | 28 | High |
+| Test Creation | 15 | Medium |
 
 ---
 
 ## Top 10 Priority Items
 
 ### Must Do First (High Impact, Enables Others)
-1. **Function Resolution Service** (1w) - Architectural foundation
-2. **Parser Performance Optimizations** (2w) - 10-20% speed improvement
-3. **Test Infrastructure** (1w) - Enables test fixes
-4. **Command Indexing** (5d) - Faster command lookup
-5. **Attribute Management** (2w) - Complete feature set
+1. **Function Resolution Service** - Architectural foundation
+2. **Parser Performance Optimizations** - Significant speed improvement
+3. **Test Infrastructure** - Enables test fixes
+4. **Command Indexing** - Faster command lookup
+5. **Attribute Management** - Complete feature set
 
 ### Should Do Second (Good ROI)
-6. **Parser Features** (2w) - lsargs, Q-registers, stack rewinding
-7. **Fix Database Tests** (1w) - Reduce test failures
-8. **CRON Service** (1w) - Clean architecture
-9. **Channel Matching** (5d) - Better UX
-10. **ANSI Integration** (5d) - Code organization
+6. **Parser Features** - lsargs, Q-registers, stack rewinding
+7. **Fix Database Tests** - Reduce test failures
+8. **CRON Service** - Clean architecture
+9. **Channel Matching** - Better UX
+10. **ANSI Integration** - Code organization
 
 ---
 
 ## 4 Phases Overview
 
-### Phase 1: Foundation (4-6 weeks)
+### Phase 1: Foundation
 **Goal**: Establish architectural improvements
 
 - Function Resolution Service
@@ -86,9 +83,9 @@ Function Resolution → Parser Performance → Attribute Management → Test Inf
 - CRON Service Extraction
 - Test Infrastructure
 
-**Deliverables**: 10-20% performance gain, better architecture
+**Deliverables**: Performance gains, better architecture
 
-### Phase 2: Performance & Features (4-6 weeks)
+### Phase 2: Performance & Features
 **Goal**: Add caching and complete high-value features
 
 - Command Indexing
@@ -98,7 +95,7 @@ Function Resolution → Parser Performance → Attribute Management → Test Inf
 
 **Deliverables**: Complete attribute system, enhanced parser
 
-### Phase 3: Enhancements (6-8 weeks)
+### Phase 3: Enhancements
 **Goal**: Add remaining features and fix all tests
 
 - ANSI/Markup System improvements
@@ -108,7 +105,7 @@ Function Resolution → Parser Performance → Attribute Management → Test Inf
 
 **Deliverables**: 100% test pass rate, multi-DB support
 
-### Phase 4: Advanced Features (8-12 weeks)
+### Phase 4: Advanced Features
 **Goal**: Implement complex subsystems
 
 - Websocket/OOB Subsystem (4 TODOs)
@@ -167,14 +164,14 @@ Function Resolution → Parser Performance → Attribute Management → Test Inf
 
 ---
 
-## Effort by Priority
+## Priority Distribution
 
-| Priority | TODO Count | Weeks | % of Total |
-|----------|-----------|-------|------------|
-| **High** | 15 | 10-15 | 19% |
-| **Medium** | 30 | 15-22 | 38% |
-| **Low** | 20 | 8-12 | 25% |
-| **Defer** | 15 | 12-18 | 19% |
+| Priority | TODO Count | % of Total |
+|----------|-----------|------------|
+| **High** | 15 | 19% |
+| **Medium** | 30 | 38% |
+| **Low** | 20 | 25% |
+| **Defer** | 15 | 19% |
 
 ---
 
@@ -182,7 +179,7 @@ Function Resolution → Parser Performance → Attribute Management → Test Inf
 
 ### Phase 1 Complete
 - [ ] Function Resolution Service extracted
-- [ ] Parser 10-20% faster
+- [ ] Parser performance improved
 - [ ] Test infrastructure supports mocking
 - [ ] CRON service separated
 
@@ -225,8 +222,6 @@ Developer focused on test infrastructure and fixes
 ### Stream 5: ANSI/Markup
 Developer focused on markup system improvements
 
-**Team Timeline**: 8-12 weeks (vs 22-32 weeks solo)
-
 ---
 
 ## Quick Decision Tree
@@ -248,43 +243,31 @@ Developer focused on markup system improvements
    - Medium → Standard approach, good test coverage
    - Low → Can implement quickly
 
-4. **What's the effort?**
-   - <1 week → Can fit in current phase
-   - 1-2 weeks → Plan as dedicated item
-   - >2 weeks → Consider breaking into sub-tasks
-
 ---
 
 ## One-Page Action Plan
 
-### Week 1
+### Phase 1: Foundation
 - [ ] Extract Function Resolution Service
 - [ ] Set up Test Infrastructure
 - [ ] Extract CRON Service
-
-### Weeks 2-3
 - [ ] Optimize Parser Performance
 - [ ] Begin Attribute Management
 
-### Week 4
+### Phase 2: Performance & Features
 - [ ] Implement Command Indexing
 - [ ] Complete Attribute Management
-
-### Weeks 5-6
 - [ ] Implement Parser Features
 - [ ] Fix High-Priority Tests
 
-### Weeks 7-12
+### Phase 3: Enhancements
 - [ ] ANSI/Markup improvements
 - [ ] Database Abstraction
 - [ ] Fix remaining tests
-
-### Weeks 13-20
 - [ ] Channel improvements
 - [ ] Create missing tests
-- [ ] Code cleanup
 
-### Weeks 21-32
+### Phase 4: Advanced Features
 - [ ] Websocket subsystem
 - [ ] Text file system
 - [ ] Economy system
