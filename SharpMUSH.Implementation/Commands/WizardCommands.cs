@@ -681,7 +681,7 @@ public partial class Commands
 		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Future enhancement: Could pipe message through SPEAK() function for text processing
+		// TODO: Could pipe message through SPEAK() function for text processing
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
@@ -702,7 +702,7 @@ public partial class Commands
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Future enhancement: Could pipe message through SPEAK() function for text processing
+		// TODO: Could pipe message through SPEAK() function for text processing
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
@@ -1526,10 +1526,15 @@ public partial class Commands
 			}
 			var playerObj = maybePlayer.AsSharpObject.AsPlayer;
 			var targetDbRef = playerObj.Object.DBRef;
-			// TODO: This should only boot the last active connection, to match Penn behavior.
+			// Boot only the last active connection to match PennMUSH behavior
+			IConnectionService.ConnectionData? lastConnection = null;
 			await foreach (var cd in ConnectionService!.Get(targetDbRef))
 			{
-				targetHandles.Add(cd.Handle);
+				lastConnection = cd;
+			}
+			if (lastConnection is not null)
+			{
+				targetHandles.Add(lastConnection.Handle);
 			}
 			if (targetHandles.Count == 0)
 			{
@@ -2000,7 +2005,8 @@ public partial class Commands
 				// Set HALT flag
 				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, objAny, "HALT", false);
 				
-				// TODO: Clear powers - requires power clearing implementation
+				// Clear all powers from the object
+				await ManipulateSharpObjectService!.ClearAllPowers(executor, objAny, false);
 			}
 		}
 		
@@ -2025,7 +2031,6 @@ public partial class Commands
 	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default, MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
 	public static async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// TODO: Validate Name and Passwords
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var startingQuota = (int)Configuration!.CurrentValue.Limit.StartingQuota;
@@ -2033,6 +2038,30 @@ public partial class Commands
 		var name = MModule.plainText(args["0"].Message!);
 		var password = MModule.plainText(args["1"].Message!);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		
+		// Validate the player name format
+		// Note: We use ValidationType.Name instead of PlayerName because PlayerName requires
+		// an existing AnySharpObject target (for rename operations), which we don't have yet
+		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, MModule.single(name), new None()))
+		{
+			await NotifyService!.Notify(executor, "That is not a valid player name.");
+			return CallState.Empty;
+		}
+		
+		// Check if player name already exists
+		// This is necessary because ValidationType.Name only checks format, not uniqueness
+		if (await Mediator!.CreateStream(new GetPlayerQuery(name)).AnyAsync())
+		{
+			await NotifyService!.Notify(executor, "That player name already exists.");
+			return CallState.Empty;
+		}
+		
+		// Validate the password
+		if (!await ValidateService!.Valid(IValidateService.ValidationType.Password, MModule.single(password), new None()))
+		{
+			await NotifyService!.Notify(executor, "That is not a valid password.");
+			return CallState.Empty;
+		}
 
 		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
@@ -2339,7 +2368,7 @@ public partial class Commands
 		CommandLock = "FLAG^WIZARD ROYALTY|POWER^ANNOUNCE", MinArgs = 0, ParameterNames = ["message"])]
 	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Future enhancement: Could pipe message through SPEAK() function for text processing
+		// TODO: Could pipe message through SPEAK() function for text processing
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
@@ -2429,6 +2458,13 @@ public partial class Commands
 								{
 									var anyObj = fullObj.Known;
 									
+									// Check for cycles before setting the zone
+									if (!await HelperFunctions.SafeToAddZone(Mediator, Database!, anyObj, zoneObj))
+									{
+										// Skip this object if it would create a cycle
+										continue;
+									}
+									
 									// Set the zone
 									await Mediator!.Send(new SetObjectZoneCommand(anyObj, zoneObj));
 
@@ -2447,7 +2483,9 @@ public partial class Commands
 										{
 											await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, anyObj, "!TRUST", false);
 										}
-										// TODO: Strip powers
+										
+										// Clear all powers from the object
+										await ManipulateSharpObjectService!.ClearAllPowers(executor, anyObj, false);
 									}
 
 									count++;

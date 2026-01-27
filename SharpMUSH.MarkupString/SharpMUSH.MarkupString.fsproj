@@ -16,11 +16,11 @@
     <ItemGroup>
         <PackageReference Include="FSharp.SystemTextJson" Version="1.4.36"/>
         <PackageReference Include="FSharp.Text.RegexProvider" Version="2.1.0"/>
-        <PackageReference Include="FSharpPlus" Version="1.8.0" />
+        <PackageReference Include="FSharpPlus" Version="1.9.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Update="FSharp.Core" Version="10.0.101" />
+        <PackageReference Update="FSharp.Core" Version="10.0.102" />
     </ItemGroup>
 </Project>
 

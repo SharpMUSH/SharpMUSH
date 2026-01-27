@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
@@ -15,22 +16,24 @@ public interface ISharpDatabase
 	/// Create a new player.
 	/// </summary>
 	/// <param name="name">Player name</param>
-	/// <param name="password">Player password</param>
+	/// <param name="password">Player password (plaintext for new players, or pre-hashed for imports)</param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="home"></param>
 	/// <param name="quota">Initial quota for the player</param>
+	/// <param name="salt">Optional salt for imported passwords (null for new players)</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-		CancellationToken cancellationToken = default);
+		string? salt = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets a hashed password for a player.
 	/// </summary>
 	/// <param name="player">Player</param>
 	/// <param name="password">plaintext password</param>
+	/// <param name="salt">Optional salt for imported passwords (null for new passwords)</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken cancellationToken = default);
+	ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets the quota for a player.
@@ -139,8 +142,9 @@ public interface ISharpDatabase
 	/// <returns>The <see cref="SharpAttribute"/> hierarchy, with the last attribute being the final leaf.</returns>
 	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 
-	// TODO: Consider the return value, as an attribute pattern returns multiple attributes.
-	// These should return full attribute paths, so likely IEnumerable<IEnumerable<SharpAttribute>>.
+	// TODO: Return type for attribute pattern queries needs reconsideration.
+	// Attribute patterns return multiple attribute paths, so return type should ideally be
+	// IEnumerable<IEnumerable<SharpAttribute>> to represent full paths for each match.
 	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 	
@@ -154,6 +158,28 @@ public interface ISharpDatabase
 	
 	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Get an attribute with full inheritance chain resolution in a single database call.
+	/// Follows the inheritance order: object → parent chain (parent, grandparent, etc.) → object's zones → parent's zones → grandparent's zones, etc.
+	/// This means PARENTS TAKE PRECEDENCE OVER ZONES at all levels.
+	/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
+	/// Streams each attribute in the path with inherited flags merged from deeper inheritance levels.
+	/// </summary>
+	/// <param name="dbref">DBRef of the object to start the search from</param>
+	/// <param name="attribute">Attribute path to search for (e.g., ["FOO", "BAR", "BAZ"])</param>
+	/// <param name="checkParent">Whether to check parent and zone inheritance chains</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>Stream of AttributeWithInheritance for each segment in the attribute path, or empty if not found</returns>
+	IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
+		bool checkParent = true, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Lazy version of GetAttributeWithInheritanceAsync for efficient retrieval.
+	/// Returns the complete attribute path (FOO → BAR → BAZ) from the first object in the inheritance chain where the attribute is found.
+	/// </summary>
+	IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
+		bool checkParent = true, CancellationToken cancellationToken = default);
 	
 	/// <summary>
 	/// Get all attribute entries from the attribute table.
@@ -391,6 +417,14 @@ public interface ISharpDatabase
 	ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Sets the warning type flags for an object.
+	/// </summary>
+	/// <param name="obj">Object</param>
+	/// <param name="warnings">Warning type flags</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	ValueTask SetObjectWarnings(AnySharpObject obj, WarningType warnings, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Unset an Object flag.
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
@@ -610,6 +644,12 @@ public interface ISharpDatabase
 	ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder, CancellationToken cancellationToken = default);
 	
 	ValueTask MoveMailFolderAsync(string mailId, string newFolder, CancellationToken cancellationToken = default);
+	
+	/// <summary>
+	/// Gets ALL mail in the system regardless of owner or folder.
+	/// WARNING: This bypasses all access controls and should only be used in God-level administrative operations.
+	/// </summary>
+	IAsyncEnumerable<SharpMail> GetAllSystemMailAsync(CancellationToken cancellationToken = default);
 		
 	/// <summary>
 	/// Sets expanded data for a SharpObject, that does not fit on the light-weight nature of a SharpObject or Attributes.
@@ -675,4 +715,15 @@ public interface ISharpDatabase
 	ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default);
 	
 	ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status, CancellationToken cancellationToken = default);
+	
+	/// <summary>
+	/// Checks if there is a path from startObject to targetObject following parent and/or zone edges.
+	/// Uses graph traversal to detect potential cycles in combined parent/zone chains.
+	/// </summary>
+	/// <param name="startObject">Starting object for traversal</param>
+	/// <param name="targetObject">Target object to find</param>
+	/// <param name="maxDepth">Maximum depth for traversal (default 100)</param>
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>True if a path exists from start to target, false otherwise</returns>
+	ValueTask<bool> IsReachableViaParentOrZoneAsync(AnySharpObject startObject, AnySharpObject targetObject, int maxDepth = 100, CancellationToken cancellationToken = default);
 }

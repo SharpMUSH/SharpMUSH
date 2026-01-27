@@ -1,11 +1,10 @@
-using MassTransit;
-
 namespace SharpMUSH.Server.Strategy.MessageQueue;
 
+/// <summary>
+/// Strategy for RedPanda test container configuration.
+/// Reserved for future use to configure RedPanda-specific Kafka settings for test environments.
+/// </summary>
 public class RedPandaTestContainerStrategy : MessageQueueStrategy
 {
-	public override void ConfigureKafka(IBusRegistrationContext context, IKafkaFactoryConfigurator cfg)
-	{
-		cfg.Host("localhost:9092");
-	}
+	// Reserved for future test environment configuration
 }

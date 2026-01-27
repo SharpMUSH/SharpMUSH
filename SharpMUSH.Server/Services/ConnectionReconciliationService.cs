@@ -1,4 +1,4 @@
-using MassTransit;
+using SharpMUSH.Messaging.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services.Interfaces;
@@ -13,12 +13,12 @@ namespace SharpMUSH.Server.Services;
 public class ConnectionReconciliationService : IHostedService
 {
 	private readonly IConnectionService _connectionService;
-	private readonly IBus _bus;
+	private readonly IMessageBus _bus;
 	private readonly ILogger<ConnectionReconciliationService> _logger;
 
 	public ConnectionReconciliationService(
 		IConnectionService connectionService,
-		IBus bus,
+		IMessageBus bus,
 		ILogger<ConnectionReconciliationService> logger)
 	{
 		_connectionService = connectionService;

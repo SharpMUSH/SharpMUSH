@@ -14,6 +14,7 @@ namespace SharpMUSH.Library.Services;
 
 public class ManipulateSharpObjectService(
 	IMediator mediator,
+	ISharpDatabase database,
 	IPermissionService permissionService,
 	IPasswordService passwordService,
 	IValidateService validateService,
@@ -373,6 +374,51 @@ public class ManipulateSharpObjectService(
 		return true;
 	}
 
+	public async ValueTask<CallState> ClearAllPowers(AnySharpObject executor, AnySharpObject obj, bool notify)
+	{
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "You do not control that object.");
+			}
+			return Errors.ErrorPerm;
+		}
+
+		// Early return if object has no powers
+		if (!await obj.Object().Powers.Value.AnyAsync())
+		{
+			return true;
+		}
+
+		// Materialize the powers collection to avoid modification during iteration
+		var objectPowers = await obj.Object().Powers.Value.ToArrayAsync();
+		var powersCleared = 0;
+
+		foreach (var power in objectPowers)
+		{
+			// Unset each power
+			await mediator.Send(new UnsetObjectPowerCommand(obj, power));
+			
+			// Publish notification for each power cleared
+			await publisher.Publish(new ObjectFlagChangedNotification(
+				obj,
+				power.Name,
+				"POWER",
+				false, // IsSet = false (clearing)
+				executor.Object().DBRef));
+			
+			powersCleared++;
+		}
+
+		if (notify && powersCleared > 0)
+		{
+			await notifyService.Notify(executor, $"Cleared {powersCleared} power(s) from {obj.Object().Name}.");
+		}
+
+		return true;
+	}
+
 	public async ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify)
 	{
 		if (!await permissionService.Controls(executor, obj) 
@@ -414,7 +460,7 @@ public class ManipulateSharpObjectService(
 			return Errors.ErrorPerm;
 		}
 
-		var safeToAdd = await HelperFunctions.SafeToAddParent(obj, newParent);
+		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
 		
 		if (!safeToAdd)
 		{
@@ -445,6 +491,63 @@ public class ManipulateSharpObjectService(
 		}
 		
 		await mediator.Send(new UnsetObjectParentCommand(obj));
+		
+		return true;
+	}
+
+	public async ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone,
+		bool notify)
+	{
+		// Check if executor controls the object
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Permission denied.");
+			}
+
+			return Errors.ErrorPerm;
+		}
+
+		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, database, obj, newZone);
+		
+		if (!safeToAdd)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Cannot add zone: would create a cycle.");
+			}
+
+			return Errors.ZoneLoop;
+		}
+
+		await mediator.Send(new SetObjectZoneCommand(obj, newZone));
+
+		if (notify)
+		{
+			await notifyService.Notify(executor, $"Zone set.");
+		}
+
+		return true;
+	}
+
+	public async ValueTask<CallState> UnsetZone(AnySharpObject executor, AnySharpObject obj, bool notify)
+	{
+		if (!await permissionService.Controls(executor, obj))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Permission denied.");
+			}
+			return Errors.ErrorPerm;
+		}
+		
+		await mediator.Send(new UnsetObjectZoneCommand(obj));
+		
+		if (notify)
+		{
+			await notifyService.Notify(executor, "Zone cleared.");
+		}
 		
 		return true;
 	}

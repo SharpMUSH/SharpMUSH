@@ -12,6 +12,7 @@ using OneOf.Types;
 using SharpMUSH.Database.Models;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -59,7 +60,7 @@ public partial class ArangoDatabase(
 	}
 
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-		CancellationToken ct = default)
+		string? salt = null, CancellationToken ct = default)
 	{
 		var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var objectLocation = await GetObjectNodeAsync(location, ct);
@@ -95,12 +96,16 @@ public partial class ArangoDatabase(
 				time
 			), returnNew: true, cancellationToken: ct);
 
-		var hashedPassword = passwordService.HashPassword($"#{obj.New.Key}:{obj.New.CreationTime}", password);
+		// If salt is provided (imported password), use the password as-is (it's already hashed)
+		// Otherwise, hash the password for new players
+		var hashedPassword = salt != null 
+			? password 
+			: passwordService.HashPassword($"#{obj.New.Key}:{obj.New.CreationTime}", password);
 
 		var playerResult = await arangoDb.Document.CreateAsync<SharpPlayerCreateRequest, SharpPlayerQueryResult>(
 			transactionHandle,
 			DatabaseConstants.Players,
-			new SharpPlayerCreateRequest([], hashedPassword, quota), cancellationToken: ct);
+			new SharpPlayerCreateRequest([], hashedPassword, salt, quota), cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphObjects, DatabaseConstants.IsObject,
 			new SharpEdgeCreateRequest(playerResult.Id, obj.New.Id), cancellationToken: ct);
@@ -475,6 +480,30 @@ public partial class ArangoDatabase(
 	public async ValueTask UnsetObjectZone(AnySharpObject obj, CancellationToken ct = default)
 		=> await SetObjectZone(obj, null, ct);
 
+	public async ValueTask<bool> IsReachableViaParentOrZoneAsync(AnySharpObject startObject, AnySharpObject targetObject, int maxDepth = 100, CancellationToken ct = default)
+	{
+		// Use ArangoDB graph traversal to check if targetObject is reachable from startObject
+		// following both parent and zone edges in a combined traversal
+		// We traverse using the edge collections directly instead of named graphs
+		var query = $@"
+			FOR v IN 1..@maxDepth OUTBOUND @startVertex {DatabaseConstants.HasParent}, {DatabaseConstants.HasZone}
+				OPTIONS {{uniqueVertices: 'global', order: 'bfs'}}
+				FILTER v._id == @targetVertex
+				LIMIT 1
+				RETURN true
+		";
+
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "startVertex", startObject.Object().Id! },
+			{ "targetVertex", targetObject.Object().Id! },
+			{ "maxDepth", maxDepth }
+		};
+
+		var result = await arangoDb.Query.ExecuteAsync<bool>(handle, query, bindVars, cancellationToken: ct);
+		return result.FirstOrDefault(); // Returns true if found, false if not
+	}
+
 	public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, CancellationToken ct = default)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
@@ -486,6 +515,14 @@ public partial class ArangoDatabase(
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 			contentEdge, new { To = owner.Id }, cancellationToken: ct);
 	}
+
+	public async ValueTask SetObjectWarnings(AnySharpObject obj, WarningType warnings, CancellationToken ct = default)
+		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
+			new
+			{
+				obj.Object().Key,
+				Warnings = warnings
+			}, cancellationToken: ct);
 
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag,
 		CancellationToken ct = default)
@@ -585,6 +622,15 @@ public partial class ArangoDatabase(
 		CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpMailQueryResult>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id.Id} GRAPH {DatabaseConstants.GraphMail} FILTER v.Folder == {folder} RETURN v",
+			cancellationToken: ct).Select(ConvertMailQueryResult);
+
+	/// <summary>
+	/// Gets ALL mail in the system regardless of owner.
+	/// WARNING: This bypasses all access controls and should only be used in administrative operations.
+	/// </summary>
+	public IAsyncEnumerable<SharpMail> GetAllSystemMailAsync(CancellationToken ct = default)
+		=> arangoDb.Query.ExecuteStreamAsync<SharpMailQueryResult>(handle,
+			$"FOR v IN {DatabaseConstants.Mails} RETURN v",
 			cancellationToken: ct).Select(ConvertMailQueryResult);
 
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id, CancellationToken ct = default)
@@ -1311,15 +1357,16 @@ public partial class ArangoDatabase(
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.TypePlayer => new SharpPlayer
-			{
-				Id = id, 
-				Object = convertObject,
-				Aliases = res.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)),
-				PasswordHash = res.PasswordHash,
-				Quota = res.Quota
-			},
+					{
+						Id = id, 
+						Object = convertObject,
+						Aliases = res.Aliases,
+						Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+						Home = new(async ct => await GetHomeAsync(id, ct)),
+						PasswordHash = res.PasswordHash,
+						PasswordSalt = res.PasswordSalt,
+						Quota = res.Quota
+					},
 			DatabaseConstants.TypeRoom => new SharpRoom 
 			{ 
 				Id = id, 
@@ -1373,13 +1420,14 @@ public partial class ArangoDatabase(
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
-			{
-				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)), 
-				PasswordHash = res.GetProperty("PasswordHash").GetString()!,
-				Quota = res.GetProperty("Quota").GetInt32()
-			},
+				{
+					Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
+					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+					Home = new(async ct => await GetHomeAsync(id, ct)), 
+					PasswordHash = res.GetProperty("PasswordHash").GetString()!,
+					PasswordSalt = res.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
+					Quota = res.GetProperty("Quota").GetInt32()
+				},
 			DatabaseConstants.Rooms => new SharpRoom 
 			{ 
 				Id = id, 
@@ -1685,13 +1733,12 @@ public partial class ArangoDatabase(
 		// - Question mark (?) matches a single character
 		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
 		//
-		// Note: Results may not be sorted hierarchically (parent before children).
-		// Future enhancement: Add SORT clause for hierarchical ordering.
+		// Results are sorted hierarchically (parent before children) by LongName.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		const string query =
-			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN v";
 
 		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
@@ -1725,14 +1772,13 @@ public partial class ArangoDatabase(
 		// - Question mark (?) matches a single character
 		// The WildcardToRegex() conversion properly escapes backticks in single wildcards.
 		//
-		// Note: Results may not be sorted hierarchically (parent before children).
-		// Future enhancement: Add SORT clause for hierarchical ordering.
+		// Results are sorted hierarchically (parent before children) by LongName.
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
 		// This doesn't seem like it can be done on a GRAPH query?
 		var pattern = $"(?i){attributePattern}"; // Add case-insensitive flag
 		const string query =
-			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
+			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN v";
 
 		return arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 				new Dictionary<string, object>
@@ -2601,14 +2647,19 @@ public partial class ArangoDatabase(
 				{ "count", count }
 			});
 
-	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, CancellationToken ct = default)
+	public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken ct = default)
 	{
-		var hashed = passwordService.HashPassword(player.Object.DBRef.ToString(), password);
+		// If salt is provided (imported password), use the password as-is (it's already hashed)
+		// Otherwise, hash the password for new passwords
+		var hashed = salt != null 
+			? password 
+			: passwordService.HashPassword(player.Object.DBRef.ToString(), password);
 
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Players, new
 		{
 			player.Id,
-			PasswordHash = hashed
+			PasswordHash = hashed,
+			PasswordSalt = salt
 		}, mergeObjects: true, cancellationToken: ct);
 	}
 
@@ -2963,6 +3014,302 @@ public partial class ArangoDatabase(
 				}
 			}
 		}
+	}
+
+	public async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(
+		DBRef dbref,
+		string[] attribute,
+		bool checkParent = true,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		attribute = attribute.Select(x => x.ToUpper()).ToArray();
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
+		
+		var query = $@"
+			LET startObj = DOCUMENT(@startVertex)
+			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
+			LET attrPath = @attr
+			LET maxDepth = @max
+			
+			LET selfAttrs = (
+				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
+					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+					FILTER !condition
+					RETURN v
+			)
+			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
+				attributes: selfAttrs,
+				sourceId: startObjKey,
+				source: 'Self',
+				filterFlags: false
+			}} : null
+			
+			LET parentResults = @checkParent && selfResult == null ? (
+				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentObjId = parent._key
+					LET parentAttrs = (
+						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
+							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+							FILTER !condition
+							RETURN v
+					)
+					FILTER LENGTH(parentAttrs) == maxDepth
+					LIMIT 1
+					RETURN {{
+						attributes: parentAttrs,
+						sourceId: parentObjId,
+						source: 'Parent',
+						filterFlags: true
+					}}
+			) : []
+			
+			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
+				LET inheritanceChain = APPEND([startObj], (
+					FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+						RETURN parent
+				))
+				
+				FOR obj IN inheritanceChain
+					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
+						LET zoneThing = FIRST(FOR v IN 1..1 INBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+						LET zoneObjId = zone._key
+						LET zoneAttrs = (
+							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
+								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+								FILTER !condition
+								RETURN v
+						)
+						FILTER LENGTH(zoneAttrs) == maxDepth
+						LIMIT 1
+						RETURN {{
+							attributes: zoneAttrs,
+							sourceId: zoneObjId,
+							source: 'Zone',
+							filterFlags: true
+						}}
+			) : []
+			
+			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
+			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
+			RETURN FIRST(filtered)
+		";
+		
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "attr", attribute },
+			{ StartVertex, startVertex },
+			{ "max", attribute.Length },
+			{ "checkParent", checkParent }
+		};
+		
+		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var result = results.FirstOrDefault();
+		
+		if (result == null || result.attributes == null)
+		{
+			yield break;
+		}
+		
+		var sourceDbRef = ParseDbRefFromId(result.sourceId);
+		
+		var sourceType = result.source switch
+		{
+			"Self" => AttributeSource.Self,
+			"Parent" => AttributeSource.Parent,
+			"Zone" => AttributeSource.Zone,
+			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
+		};
+		
+		var attrs = new SharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
+		}
+		
+		var lastAttr = attrs.Last();
+		var flags = result.filterFlags 
+			? lastAttr.Flags.Where(f => f.Inheritable)
+			: lastAttr.Flags;
+		
+		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
+	}
+	
+	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttributeSimple(SharpAttributeQueryResult x,
+		CancellationToken cancellationToken = default)
+	{
+		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
+		
+		return new SharpAttribute(
+			x.Id,
+			x.Key,
+			x.Name,
+			flags,
+			null,
+			x.LongName,
+			new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(ct => Task.FromResult(GetTopLevelAttributesAsync(x.Id, ct))),
+			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
+			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
+		{
+			Value = MarkupStringModule.deserialize(x.Value)
+		};
+	}
+	
+	private record QueryResult(
+		List<SharpAttributeQueryResult>? attributes,
+		string sourceId,
+		string source,
+		bool filterFlags
+	);
+	
+	private static DBRef ParseDbRefFromId(string key)
+	{
+		if (int.TryParse(key, out var number))
+		{
+			return new DBRef(number);
+		}
+		throw new InvalidOperationException($"Cannot parse DBRef from key: {key}");
+	}
+
+	public async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(
+		DBRef dbref,
+		string[] attribute,
+		bool checkParent = true,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		attribute = attribute.Select(x => x.ToUpper()).ToArray();
+		
+		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
+		
+		var query = $@"
+			LET startObj = DOCUMENT(@startVertex)
+			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+			LET startObjKey = PARSE_IDENTIFIER(@startVertex).key
+			LET attrPath = @attr
+			LET maxDepth = @max
+			
+			LET selfAttrs = (
+				FOR v,e,p IN 1..maxDepth OUTBOUND startThing GRAPH {DatabaseConstants.GraphAttributes}
+					PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+					FILTER !condition
+					RETURN v
+			)
+			LET selfResult = LENGTH(selfAttrs) == maxDepth ? {{
+				attributes: selfAttrs,
+				sourceId: startObjKey,
+				source: 'Self',
+				filterFlags: false
+			}} : null
+			
+			LET parentResults = @checkParent && selfResult == null ? (
+				FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+					LET parentThing = FIRST(FOR v IN 1..1 INBOUND parent GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+					LET parentObjId = parent._key
+					LET parentAttrs = (
+						FOR v,e,p IN 1..maxDepth OUTBOUND parentThing GRAPH {DatabaseConstants.GraphAttributes}
+							PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+							FILTER !condition
+							RETURN v
+					)
+					FILTER LENGTH(parentAttrs) == maxDepth
+					LIMIT 1
+					RETURN {{
+						attributes: parentAttrs,
+						sourceId: parentObjId,
+						source: 'Parent',
+						filterFlags: true
+					}}
+			) : []
+			
+			LET zoneResults = @checkParent && selfResult == null && LENGTH(parentResults) == 0 ? (
+				LET inheritanceChain = APPEND([startObj], (
+					FOR parent IN 1..100 OUTBOUND startObj GRAPH {DatabaseConstants.GraphParents}
+						RETURN parent
+				))
+				
+				FOR obj IN inheritanceChain
+					FOR zone IN 1..100 OUTBOUND obj GRAPH {DatabaseConstants.GraphZones}
+						LET zoneThing = FIRST(FOR v IN 1..1 INBOUND zone GRAPH {DatabaseConstants.GraphObjects} RETURN v)
+						LET zoneObjId = zone._key
+						LET zoneAttrs = (
+							FOR v,e,p IN 1..maxDepth OUTBOUND zoneThing GRAPH {DatabaseConstants.GraphAttributes}
+								PRUNE condition = NTH(attrPath, LENGTH(p.edges)-1) != v.Name
+								FILTER !condition
+								RETURN v
+						)
+						FILTER LENGTH(zoneAttrs) == maxDepth
+						LIMIT 1
+						RETURN {{
+							attributes: zoneAttrs,
+							sourceId: zoneObjId,
+							source: 'Zone',
+							filterFlags: true
+						}}
+			) : []
+			
+			LET allResults = APPEND([selfResult], APPEND(parentResults, zoneResults))
+			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
+			RETURN FIRST(filtered)
+		";
+		
+		var bindVars = new Dictionary<string, object>
+		{
+			{ "attr", attribute },
+			{ StartVertex, startVertex },
+			{ "max", attribute.Length },
+			{ "checkParent", checkParent }
+		};
+		
+		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
+		var result = results.FirstOrDefault();
+		
+		if (result == null || result.attributes == null)
+		{
+			yield break;
+		}
+		
+		var sourceDbRef = ParseDbRefFromId(result.sourceId);
+		
+		var sourceType = result.source switch
+		{
+			"Self" => AttributeSource.Self,
+			"Parent" => AttributeSource.Parent,
+			"Zone" => AttributeSource.Zone,
+			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
+		};
+		
+		var attrs = new LazySharpAttribute[result.attributes.Count];
+		for (int i = 0; i < result.attributes.Count; i++)
+		{
+			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
+		}
+		
+		var lastAttr = attrs.Last();
+		var flags = result.filterFlags 
+			? lastAttr.Flags.Where(f => f.Inheritable)
+			: lastAttr.Flags;
+		
+		yield return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
+	}
+	
+	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttributeSimple(SharpAttributeQueryResult x,
+		CancellationToken cancellationToken = default)
+	{
+		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
+		
+		return new LazySharpAttribute(
+			x.Id,
+			x.Key,
+			x.Name,
+			flags,
+			null,
+			x.LongName,
+			new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(ct => Task.FromResult(GetTopLevelLazyAttributesAsync(x.Id, ct))),
+			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
+			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
+			new AsyncLazy<MarkupStringModule.MarkupString>(ct =>
+				Task.FromResult(MarkupStringModule.deserialize(x.Value))));
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]

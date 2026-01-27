@@ -1304,44 +1304,143 @@ LOCATE()
 		return await ListSearchInternal(parser, _2, useRegex: true);
 	}
 
-	[SharpFunction(Name = "namelist", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
+	[SharpFunction(Name = "namelist", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute"])]
 	public static async ValueTask<CallState> NameList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var namelist = ArgHelpers.NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
-		var (almostDbrefList, almostStrList) = namelist.Partition(x => x.IsT0);
-		var dbrefList = Enumerable.ToHashSet(almostDbrefList.Select(x => x.AsT0));
-		var strList = Enumerable.ToHashSet(almostStrList.Select(x => x.AsT1));
-
-		var dbrefListExisting = await dbrefList
-			.ToAsyncEnumerable()
-			.Where(async (x, ct) => await Mediator!.Send(new GetBaseObjectNodeQuery(x), ct) is not null)
-			.ToHashSetAsync();
-
-		// var dbrefListNotExisting = dbrefList.Except(dbrefListExisting); 
-
-		var strListExisting = await strList
-			.ToAsyncEnumerable()
-			.Select<string, (string x, AnyOptionalSharpObjectOrError)>(async (x, _) => (x, await LocateService!.Locate(
-				parser,
-				executor,
-				executor,
-				parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-				LocateFlags.All)))
-			.Where(x => x.Item2.IsValid())
-			.ToHashSetAsync();
-
-		// var strListNotExisting = strList.Except(strListExisting.Select(x => x.x));
-
-		var strListAsDbrefs = strListExisting.Select(x => x.Item2.AsAnyObject.Object().DBRef);
-
-		var theGoodOnes = dbrefListExisting.Union(strListAsDbrefs);
-		// Future enhancement: Support obj/attr syntax for evaluation of bad results
-		// When a name doesn't resolve to an object, check if it's in "object/attribute" format
-		// and evaluate that attribute instead. This requires parsing the format and retrieving
-		// the attribute value from the specified object.
-
-		return string.Join(" ", theGoodOnes);
+		var hasErrorCallback = parser.CurrentState.Arguments.Count > 1 
+			&& !string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["1"].Message?.ToPlainText());
+		
+		// Parse optional object/attribute parameter for error callback
+		AnySharpObject? callbackObject = null;
+		string[]? callbackAttribute = null;
+		
+		if (hasErrorCallback)
+		{
+			var callbackSpec = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			var slashIndex = callbackSpec.LastIndexOf('/');
+			
+			if (slashIndex > 0)
+			{
+				// Format: object/attribute
+				var objPart = callbackSpec.Substring(0, slashIndex);
+				var attrPart = callbackSpec.Substring(slashIndex + 1);
+				
+				var objResult = await LocateService!.Locate(parser, executor, executor, objPart, LocateFlags.All);
+				if (objResult.IsValid())
+				{
+					callbackObject = objResult.WithoutError().WithoutNone();
+					callbackAttribute = attrPart.Split('`');
+				}
+			}
+			else
+			{
+				// Format: just attribute (use executor as object)
+				callbackObject = executor;
+				callbackAttribute = callbackSpec.Split('`');
+			}
+		}
+		
+		var resultList = new List<string>();
+		
+		// Process each name in the list
+		foreach (var item in namelist)
+		{
+			DBRef? resolvedDbref = null;
+			int errorCode = 0; // 0 = success, -1 = not found, -2 = ambiguous
+			string originalName = string.Empty;
+			
+			if (item.IsT0)
+			{
+				// Already a dbref - validate it exists
+				var dbref = item.AsT0;
+				var exists = await Mediator!.Send(new GetBaseObjectNodeQuery(dbref));
+				
+				if (exists != null)
+				{
+					resolvedDbref = dbref;
+				}
+				else
+				{
+					errorCode = -1;
+					originalName = $"#{dbref.Number}";
+				}
+			}
+			else
+			{
+				// String name - need to locate
+				var name = item.AsT1;
+				originalName = name;
+				
+				var locateResult = await LocateService!.Locate(parser, executor, executor, name, LocateFlags.All);
+				
+				if (locateResult.IsValid())
+				{
+					// Found valid object
+					resolvedDbref = locateResult.AsAnyObject.Object().DBRef;
+				}
+				else if (locateResult.IsT4)
+				{
+					// None - not found
+					errorCode = -1;
+				}
+				else if (locateResult.IsT5)
+				{
+					// Error occurred - check if ambiguous or not found
+					var error = locateResult.AsT5;
+					if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
+					    error.Value.Contains("#-2"))
+					{
+						errorCode = -2;
+					}
+					else
+					{
+						errorCode = -1;
+					}
+				}
+				else
+				{
+					// Unknown error
+					errorCode = -1;
+				}
+			}
+			
+			if (resolvedDbref.HasValue)
+			{
+				// Successfully resolved - add the dbref
+				resultList.Add($"#{resolvedDbref.Value.Number}");
+			}
+			else
+			{
+				// Failed to resolve - add error code
+				resultList.Add($"#{errorCode}");
+				
+				// Call error callback if provided
+				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
+				{
+					var attrResult = await AttributeService!.GetAttributeAsync(
+						executor, callbackObject, string.Join("`", callbackAttribute),
+						IAttributeService.AttributeMode.Read, true);
+					
+					if (!attrResult.IsNone && !attrResult.IsError)
+					{
+						var attribute = attrResult.AsAttribute.Last();
+						var attrValue = attribute.Value;
+						
+						// Replace %0 with the original name and %1 with the error code
+						var substitutedCommand = attrValue.ToString()
+							.Replace("%0", originalName)
+							.Replace("%1", $"#{errorCode}");
+						
+						// Parse and execute the command
+						await parser.CommandParse(MModule.single(substitutedCommand));
+					}
+				}
+			}
+		}
+		
+		return string.Join(" ", resultList);
 	}
 
 	[SharpFunction(Name = "nchildren", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -1532,7 +1631,7 @@ LOCATE()
 									return Errors.ErrorPerm;
 								}
 
-								if (!await HelperFunctions.SafeToAddParent(target, newParent))
+								if (!await HelperFunctions.SafeToAddParent(Mediator!, Database!, target, newParent))
 								{
 									return "#-1 CYCLE DETECTED";
 								}
@@ -1701,6 +1800,12 @@ LOCATE()
 					if (!canZone && !LockService!.Evaluate(LockType.ChZone, zone, executor))
 					{
 						return Errors.ErrorPerm;
+					}
+					
+					// Check for cycles before setting the zone
+					if (!await HelperFunctions.SafeToAddZone(Mediator!, Database!, target, zone))
+					{
+						return Errors.ZoneLoop;
 					}
 					
 					// Handle flag/power stripping (simplified - no /preserve in function)

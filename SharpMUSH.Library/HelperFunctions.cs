@@ -260,56 +260,44 @@ public static partial class HelperFunctions
 	}
 
 	/// <summary>
-	/// This function detects any chance of a loop in the parent chain.
+	/// Detects cycles when combining parent and zone chains.
+	/// Checks if adding a relationship would create a cycle by following
+	/// both parent and zone links from the new relationship target.
 	/// </summary>
-	/// <param name="start"></param>
-	/// <param name="newParent"></param>
-	/// <returns>Whether there's a loop or not</returns>
-	public static async ValueTask<bool> SafeToAddParent(AnySharpObject start, AnySharpObject newParent)
+	/// <param name="start">The object that will have a new relationship set</param>
+	/// <param name="newRelated">The object being set as parent or zone</param>
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>True if safe to add (no cycle), false if it would create a cycle</returns>
+	public static async ValueTask<bool> SafeToAddRelationship(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newRelated, CancellationToken cancellationToken = default)
 	{
 		var startDbRef = start.Object().DBRef;
-		var newParentDbRef = newParent.Object().DBRef;
+		var newRelatedDbRef = newRelated.Object().DBRef;
 
-		// Check for self-parent (object trying to be its own parent)
-		if (startDbRef == newParentDbRef)
+		// Check for self-reference
+		if (startDbRef.Number == newRelatedDbRef.Number)
 		{
 			return false;
 		}
 
-		// Check if newParent is already the parent - that's OK (no-op)
-		var currentParent = await start.Object().Parent.WithCancellation(CancellationToken.None); 
-		if (!currentParent.IsNone && currentParent.Object()!.DBRef == newParentDbRef)
-		{
-			return true;
-		}
-
-		// Check if start is in newParent's parent chain (would create a loop)
-		var checkObj = newParent;
-		var depth = 0;
-		const int maxDepth = 100; // Prevent infinite loops
+		// Use ArangoDB graph traversal to check if adding the relationship would create a cycle.
+		// If start is reachable FROM newRelated via parent/zone edges, then adding the relationship
+		// would complete a cycle: start -> newRelated -> ... -> start
+		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: cancellationToken);
 		
-		while (depth < maxDepth)
-		{
-			var checkParent = await checkObj.Object().Parent.WithCancellation(CancellationToken.None);
-			if (checkParent.IsNone)
-			{
-				// Reached end of parent chain without finding start - safe!
-				return true;
-			}
-			
-			if (checkParent.Object()!.DBRef == startDbRef)
-			{
-				// Found start in newParent's parent chain - would create loop!
-				return false;
-			}
-			
-			checkObj = checkParent.Known;
-			depth++;
-		}
-		
-		// Reached max depth - assume unsafe to prevent potential issues
-		return false;
+		return !isReachable;
 	}
+
+	/// <summary>
+	/// Detects cycles in the parent chain.
+	/// </summary>
+	public static async ValueTask<bool> SafeToAddParent(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newParent, CancellationToken cancellationToken = default)
+		=> await SafeToAddRelationship(mediator, database, start, newParent, cancellationToken);
+
+	/// <summary>
+	/// Detects cycles in the zone chain.
+	/// </summary>
+	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, ISharpDatabase database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
+		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken);
 
 	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{
@@ -351,10 +339,30 @@ public static partial class HelperFunctions
 	[GeneratedRegex(@"#$(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
-	// TODO: Make split versions for Patterns and Regex Patterns, which are different from normal attributes.
+	/// <summary>
+	/// A regular expression for literal attribute names (no wildcards).
+	/// Only allows alphanumeric, @, _, -, ., and ` (for tree navigation).
+	/// </summary>
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`]+)$")]
+	private static partial Regex ObjectWithLiteralAttribute();
+
+	/// <summary>
+	/// A regular expression for wildcard attribute patterns.
+	/// Allows * and ? for pattern matching in addition to literal characters.
+	/// </summary>
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\*\?]+)$")]
+	private static partial Regex ObjectWithWildcardAttribute();
+
+	/// <summary>
+	/// A regular expression for regex attribute patterns.
+	/// Allows full regex syntax for advanced pattern matching.
+	/// </summary>
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
+	private static partial Regex ObjectWithRegexAttribute();
 	
 	/// <summary>
 	/// A regular expression that takes the form of 'Object/attributeName'.
+	/// Legacy method - use ObjectWithLiteralAttribute, ObjectWithWildcardAttribute, or ObjectWithRegexAttribute instead.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]

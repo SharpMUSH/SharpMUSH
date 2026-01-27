@@ -1,6 +1,6 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
-using MassTransit;
+using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +27,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
+using SharpMUSH.Messaging.Kafka;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
@@ -63,28 +64,25 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		});
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
 			/*
-			 * TODO: PasswordHasher may not be compatible with PennMUSH Passwords.
-			 * PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations.
+			 * PennMUSH Password Compatibility - IMPLEMENTED
+			 * 
+			 * SharpMUSH uses PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations
+			 * for new passwords.
 			 *
-			 * PennMUSH uses SHA1 in password_hash.
-			 * It is stored as: V:ALGO:HASH:TIMESTAMP
+			 * PennMUSH uses SHA1 in password_hash, stored as: V:ALGO:HASH:TIMESTAMP
+			 * - V: Version number (Currently 2)
+			 * - ALGO: Digest algorithm (Default is SHA1)
+			 * - HASH: Salted hash (first 2 chars are salt prepended to plaintext before hashing)
+			 * - TIMESTAMP: Unix timestamp when password was set
 			 *
-			 * V is the version number (Currently 2), ALGO is the digest algorithm
-			 * used (Default is SHA1), HASH is the hashed password. TIMESTAMP is
-			 * when it was set. If fields are added, the version gets bumped.
+			 * Salt characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
 			 *
-			 * HASH is salted; the first two characters of the hashed password are
-			 * randomly chosen characters that are added to the start of the
-			 * plaintext password before it's hashed. This way two characters with
-			 * the same password will have different hashed ones.
-			 *
-			 * Salt: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
-			 * [0-61][0-61]
-			 *
-			 * This is not considered secure enough for SharpMUSH purposes, so should
-			 * be reset after import. But this is not something that can be done in an
-			 * automated way, so SHA1 and 512 should both be supported for Check_Password.
-			 * Only 512 should be used for Set.
+			 * The PasswordService now supports both formats:
+			 * - Verification: Detects PennMUSH format and uses SHA1/SHA256 verification as needed
+			 * - New passwords: Always use modern PBKDF2 (more secure)
+			 * 
+			 * Users with imported PennMUSH passwords should reset their passwords for better security,
+			 * but can still log in with their old passwords until they do.
 			 */
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();

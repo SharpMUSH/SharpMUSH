@@ -227,6 +227,16 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
+		// Output telemetry summary before disposing
+		try
+		{
+			await OutputTelemetrySummaryAsync();
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"Error outputting telemetry summary: {ex.Message}");
+		}
+		
 		// Shutdown the Quartz scheduler gracefully with a timeout
 		if (_server?.Services != null)
 		{
@@ -251,5 +261,21 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		}
 		
 		GC.SuppressFinalize(this);
+	}
+
+	private async Task OutputTelemetrySummaryAsync()
+	{
+		if (_server?.Services == null)
+		{
+			return;
+		}
+
+		var prometheusService = _server.Services.GetService<IPrometheusQueryService>();
+		if (prometheusService == null)
+		{
+			return;
+		}
+
+		await TelemetryOutputHelper.OutputTelemetrySummaryAsync(prometheusService);
 	}
 }

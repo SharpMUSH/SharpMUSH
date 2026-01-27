@@ -61,13 +61,15 @@ public static class StatusMail
 		};
 
 		List<string> idList = [];
+		var index = 1;
 		await foreach (var mail in actualList)
 		{
 			await mediator.Send(new UpdateMailCommand(mail, mailUpdate));
-			// TODO: Consider how IDs are displayed for Mail on output.
-			// This ID isn't useful to anyone. It should be the mail number in their inbox. But what does that mean?
-			await notifyService.Notify(executor, $"Mail {id} updated.");
-			idList.Add(mail.Id ?? string.Empty);
+			// Use per-player inbox numbers (1-based index) instead of database IDs
+			// The index is calculated in-memory based on mail position in the filtered list
+			await notifyService.Notify(executor, $"Mail {index} updated.");
+			idList.Add(index.ToString());
+			index++;
 		}
 
 		return MModule.single(string.Join(" ", idList));

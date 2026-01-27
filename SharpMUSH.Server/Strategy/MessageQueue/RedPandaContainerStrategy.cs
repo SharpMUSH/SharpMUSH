@@ -1,15 +1,10 @@
-using MassTransit;
-
 namespace SharpMUSH.Server.Strategy.MessageQueue;
 
+/// <summary>
+/// Strategy for RedPanda container configuration.
+/// Reserved for future use to configure RedPanda-specific Kafka settings for production environments.
+/// </summary>
 public class RedPandaContainerStrategy : MessageQueueStrategy
 {
-	public override void ConfigureKafka(IBusRegistrationContext context, IKafkaFactoryConfigurator cfg)
-	{
-		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") 
-			?? throw new InvalidOperationException("KAFKA_HOST environment variable is required");
-		var kafkaPort = Environment.GetEnvironmentVariable("KAFKA_PORT") ?? "9092";
-		
-		cfg.Host($"{kafkaHost}:{kafkaPort}");
-	}
+	// Reserved for future RedPanda-specific configuration
 }

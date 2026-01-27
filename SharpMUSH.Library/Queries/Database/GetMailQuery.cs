@@ -14,3 +14,5 @@ public record GetSentMailListQuery(SharpObject Sender, SharpPlayer Recipient) : 
 public record GetAllSentMailListQuery(SharpObject Sender) : IStreamQuery<SharpMail>;
 
 public record GetSentMailQuery(SharpObject Sender, int Mail, SharpPlayer Recipient) : IQuery<SharpMail?>;
+
+public record GetAllSystemMailQuery() : IStreamQuery<SharpMail>;

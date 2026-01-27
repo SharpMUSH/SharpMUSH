@@ -16,9 +16,15 @@ public interface IManipulateSharpObjectService
 	
 	ValueTask<CallState> UnsetPower(AnySharpObject executor, AnySharpObject obj, string powerOrPowerAlias, bool notify);
 	
+	ValueTask<CallState> ClearAllPowers(AnySharpObject executor, AnySharpObject obj, bool notify);
+	
 	ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify);
 	
 	ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent, bool notify);
 	
 	ValueTask<CallState> UnsetParent(AnySharpObject executor, AnySharpObject obj, bool notify);
+	
+	ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone, bool notify);
+	
+	ValueTask<CallState> UnsetZone(AnySharpObject executor, AnySharpObject obj, bool notify);
 }

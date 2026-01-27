@@ -18,7 +18,8 @@ public class SqlService : ISqlService
 	
 	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
 	{
-		// TODO: Support multiple database types.
+		// TODO: Support multiple SQL database types (PostgreSQL, SQLite, etc.).
+		// Currently only MySQL/MariaDB is supported.
 		var cvn = config.CurrentValue.Net;
 		var connectionString = $"Server={cvn.SqlHost};Uid={cvn.SqlUsername};Pwd={cvn.SqlPassword};Database={cvn.SqlDatabase}";
 
