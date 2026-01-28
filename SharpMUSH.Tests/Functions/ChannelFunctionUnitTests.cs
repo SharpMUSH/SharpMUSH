@@ -125,7 +125,6 @@ public class ChannelFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Skip("TODO: Test still failing after fixing edge direction. The Remove operation appears to work but cstatus still returns ON. Needs further investigation of lazy evaluation and caching in SharpChannel.Members.")]
 	public async Task Cstatus_WithNonMember_ReturnsOff()
 	{
 		if (_testChannel == null)

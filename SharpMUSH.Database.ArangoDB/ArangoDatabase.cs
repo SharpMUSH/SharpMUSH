@@ -942,9 +942,9 @@ public partial class ArangoDatabase(
 
 			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels,
 				DatabaseConstants.OwnerOfChannel,
-				new SharpEdgeCreateRequest(createdChannel.New.Id, owner.Id!), cancellationToken: ct);
+				new SharpEdgeCreateRequest(createdChannel.New.Id, owner.Object.Id!), cancellationToken: ct);
 			await arangoDb.Graph.Edge.CreateAsync(transaction, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
-				new SharpEdgeCreateRequest(owner.Id!, createdChannel.New.Id), cancellationToken: ct);
+				new SharpEdgeCreateRequest(owner.Object.Id!, createdChannel.New.Id), cancellationToken: ct);
 
 			await arangoDb.Transaction.CommitAsync(transaction, ct);
 		}
