@@ -75,19 +75,6 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 
-		// Validate JSON
-		if (!string.IsNullOrWhiteSpace(jsonContent))
-		{
-			try
-			{
-				using var _ = System.Text.Json.JsonDocument.Parse(jsonContent);
-			}
-			catch (System.Text.Json.JsonException)
-			{
-				return new CallState("#-1 INVALID JSON");
-			}
-		}
-
 		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
 			: "me";
@@ -108,7 +95,7 @@ public partial class Functions
 
 		if (!located.IsPlayer)
 		{
-			return new CallState("#-1 NOT A PLAYER");
+			return CallState.Empty;
 		}
 
 		// Check permissions
@@ -117,10 +104,8 @@ public partial class Functions
 
 		if (!isWizard && !isSelf)
 		{
-			return new CallState("#-1 PERMISSION DENIED");
+			return CallState.Empty;
 		}
-
-		int sentCount = 0;
 
 		// Send to all WebSocket connections for the target player
 		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
@@ -131,21 +116,30 @@ public partial class Functions
 			}
 
 			// Format as JSON object with type indicator
+			// Try to parse as JSON, but if it fails, send as-is
+			object? dataObj;
+			try
+			{
+				dataObj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonContent);
+			}
+			catch
+			{
+				dataObj = jsonContent;
+			}
+
 			var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
 			{
 				type = "json",
-				data = System.Text.Json.JsonSerializer.Deserialize<object>(jsonContent)
+				data = dataObj
 			});
 
 			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
 				connection.Handle,
 				wsMessage));
-
-			sentCount++;
 		}
 
-		// Return count of connections that received the message
-		return new CallState(sentCount.ToString());
+		// Return empty string - OOB data doesn't produce visible output
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html"])]
@@ -179,7 +173,7 @@ public partial class Functions
 
 		if (!located.IsPlayer)
 		{
-			return new CallState("#-1 NOT A PLAYER");
+			return CallState.Empty;
 		}
 
 		// Check permissions
@@ -188,10 +182,8 @@ public partial class Functions
 
 		if (!isWizard && !isSelf)
 		{
-			return new CallState("#-1 PERMISSION DENIED");
+			return CallState.Empty;
 		}
-
-		int sentCount = 0;
 
 		// Send to all WebSocket connections for the target player
 		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
@@ -211,12 +203,10 @@ public partial class Functions
 			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
 				connection.Handle,
 				wsMessage));
-
-			sentCount++;
 		}
 
-		// Return count of connections that received the message
-		return new CallState(sentCount.ToString());
+		// Return empty string - OOB data doesn't produce visible output
+		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
