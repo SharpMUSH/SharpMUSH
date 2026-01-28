@@ -68,7 +68,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 				sc.AddSingleton(notifier);
 
 				sc.RemoveAll<ISqlService>();
-				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString));
+				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString, "mysql"));
 				
 				if (!string.IsNullOrEmpty(databaseName))
 				{

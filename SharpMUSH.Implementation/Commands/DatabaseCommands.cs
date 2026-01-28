@@ -4,7 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
-using MySqlConnector;
+using System.Data.Common;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
@@ -49,7 +49,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, result);
 			return new CallState(MModule.single(result));
 		}
-		catch (MySqlException ex)
+		catch (DbException ex)
 		{
 			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
 			await NotifyService!.Notify(executor, errorMsg);
@@ -203,7 +203,7 @@ public partial class Commands
 					await NotifyService!.Notify(executor, message);
 					return new CallState(MModule.single(message));
 				}
-				catch (MySqlException ex)
+				catch (DbException ex)
 				{
 					var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
 					await NotifyService!.Notify(executor, errorMsg);
