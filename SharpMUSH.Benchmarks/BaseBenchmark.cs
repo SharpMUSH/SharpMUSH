@@ -77,6 +77,7 @@ public class BaseBenchmark
 			Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
 			IterationRegisters: new ConcurrentStack<IterationWrapper<MString>>(),
 			RegexRegisters: new ConcurrentStack<Dictionary<string, MString>>(),
+			SwitchStack: new ConcurrentStack<MString>(),
 			ExecutionStack: new ConcurrentStack<Execution>(),
 			EnvironmentRegisters: [],
 			CurrentEvaluation: null,

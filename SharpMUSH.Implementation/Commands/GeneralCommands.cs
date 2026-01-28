@@ -1950,25 +1950,36 @@ public partial class Commands
 			defaultArg = args.Last().Value.Message!;
 		}
 
-		foreach (var (expr, action) in pairs)
-		{
-			if (expr is null) break;
+		// Push the switch string onto the context stack
+		parser.CurrentState.SwitchStack.Push(strArg.Message!);
 
-			// Use wildcard/glob pattern matching
-			if (MModule.isWildcardMatch(strArg.Message!, expr.Message!))
+		try
+		{
+			foreach (var (expr, action) in pairs)
 			{
-				matched = true;
-				// This is Inline.
-				await parser.CommandListParseVisitor(action.Message!)();
+				if (expr is null) break;
+
+				// Use wildcard/glob pattern matching
+				if (MModule.isWildcardMatch(strArg.Message!, expr.Message!))
+				{
+					matched = true;
+					// This is Inline.
+					await parser.CommandListParseVisitor(action.Message!)();
+				}
 			}
-		}
 
-		if (defaultArg.IsSome() && !matched)
+			if (defaultArg.IsSome() && !matched)
+			{
+				await parser.CommandListParseVisitor(defaultArg.AsValue())();
+			}
+
+			return new CallState(matched);
+		}
+		finally
 		{
-			await parser.CommandListParseVisitor(defaultArg.AsValue())();
+			// Pop the switch string from the context stack
+			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
-
-		return new CallState(matched);
 	}
 
 	[SharpCommand(Name = "@WAIT", Switches = ["PID", "UNTIL"],
@@ -3865,153 +3876,164 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "You must specify a test string.");
 			return new CallState("#-1 NO TEST STRING");
 		}
-		
-		await NotifyService!.Notify(executor, $"@select: Testing string '{testString}'");
-		
-		// Count expression/action pairs (args are: 0=test string, then pairs of expr,action)
-		int pairCount = (args.Count - 1) / 2;
-		bool hasDefault = (args.Count - 1) % 2 == 1;
-		
-		await NotifyService.Notify(executor, $"  Expression/action pairs: {pairCount}");
-		if (hasDefault)
+
+		// Push the switch string onto the context stack
+		parser.CurrentState.SwitchStack.Push(args["0"].Message!);
+
+		try
 		{
-			await NotifyService.Notify(executor, "  Has default action");
-		}
-		
-		// Check switches
-		if (switches.Contains("REGEXP"))
-		{
-			await NotifyService.Notify(executor, "  Mode: Regular expression matching");
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "  Mode: Wildcard pattern matching");
-		}
-		
-		if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
-		{
-			await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
+			await NotifyService!.Notify(executor, $"@select: Testing string '{testString}'");
 			
-			if (switches.Contains("NOBREAK"))
+			// Count expression/action pairs (args are: 0=test string, then pairs of expr,action)
+			int pairCount = (args.Count - 1) / 2;
+			bool hasDefault = (args.Count - 1) % 2 == 1;
+			
+			await NotifyService.Notify(executor, $"  Expression/action pairs: {pairCount}");
+			if (hasDefault)
 			{
-				await NotifyService.Notify(executor, "  @break won't propagate to caller");
+				await NotifyService.Notify(executor, "  Has default action");
 			}
 			
-			if (switches.Contains("LOCALIZE"))
+			// Check switches
+			if (switches.Contains("REGEXP"))
 			{
-				await NotifyService.Notify(executor, "  Q-registers will be localized");
+				await NotifyService.Notify(executor, "  Mode: Regular expression matching");
+			}
+			else
+			{
+				await NotifyService.Notify(executor, "  Mode: Wildcard pattern matching");
 			}
 			
-			if (switches.Contains("CLEARREGS"))
+			if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
 			{
-				await NotifyService.Notify(executor, "  Q-registers will be cleared");
-			}
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "  Execution: Queued");
-		}
-		
-		if (switches.Contains("NOTIFY"))
-		{
-			await NotifyService.Notify(executor, "  Will queue @notify after completion");
-		}
-		
-		// Pattern matching implementation
-		bool isRegexp = switches.Contains("REGEXP");
-		bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
-		bool localizeRegs = switches.Contains("LOCALIZE");
-		bool clearRegs = switches.Contains("CLEARREGS");
-		
-		// Process expression/action pairs
-		bool matchFound = false;
-		for (int i = 0; i < pairCount; i++)
-		{
-			var exprIndex = (i * 2) + 1;
-			var actionIndex = (i * 2) + 2;
-			
-			var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
-			var action = args[actionIndex.ToString()].Message;
-			
-			// Perform pattern matching
-			bool matches = false;
-			if (isRegexp)
-			{
-				// Regular expression matching
-				try
+				await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
+				
+				if (switches.Contains("NOBREAK"))
 				{
-					var regex = new Regex(pattern, RegexOptions.None);
-					matches = regex.IsMatch(testString);
+					await NotifyService.Notify(executor, "  @break won't propagate to caller");
 				}
-				catch (ArgumentException)
+				
+				if (switches.Contains("LOCALIZE"))
 				{
-					await NotifyService.Notify(executor, $"Invalid regex pattern: {pattern}");
-					continue;
+					await NotifyService.Notify(executor, "  Q-registers will be localized");
+				}
+				
+				if (switches.Contains("CLEARREGS"))
+				{
+					await NotifyService.Notify(executor, "  Q-registers will be cleared");
 				}
 			}
 			else
 			{
-				// Wildcard pattern matching
-				var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-				var regex = new Regex(regexPattern, RegexOptions.None);
-				matches = regex.IsMatch(testString);
+				await NotifyService.Notify(executor, "  Execution: Queued");
 			}
 			
-			if (matches && action != null)
+			if (switches.Contains("NOTIFY"))
 			{
-				matchFound = true;
+				await NotifyService.Notify(executor, "  Will queue @notify after completion");
+			}
+			
+			// Pattern matching implementation
+			bool isRegexp = switches.Contains("REGEXP");
+			bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
+			bool localizeRegs = switches.Contains("LOCALIZE");
+			bool clearRegs = switches.Contains("CLEARREGS");
+			
+			// Process expression/action pairs
+			bool matchFound = false;
+			for (int i = 0; i < pairCount; i++)
+			{
+				var exprIndex = (i * 2) + 1;
+				var actionIndex = (i * 2) + 2;
 				
-				// Substitute #$ with test string in action
-				var actionText = action.ToPlainText().Replace("#$", testString);
-				var actionMString = MModule.single(actionText);
+				var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
+				var action = args[actionIndex.ToString()].Message;
 				
-				// Execute action (inline for now, queue support can be added later)
-				if (isInline)
+				// Perform pattern matching
+				bool matches = false;
+				if (isRegexp)
 				{
-					await parser.CommandListParse(actionMString);
+					// Regular expression matching
+					try
+					{
+						var regex = new Regex(pattern, RegexOptions.None);
+						matches = regex.IsMatch(testString);
+					}
+					catch (ArgumentException)
+					{
+						await NotifyService.Notify(executor, $"Invalid regex pattern: {pattern}");
+						continue;
+					}
 				}
 				else
 				{
-					// Queue the action
-					await Mediator!.Send(new QueueCommandListRequest(
-						actionMString,
-						parser.CurrentState,
-						new DbRefAttribute(executor.Object().DBRef, []),
-						0));
+					// Wildcard pattern matching
+					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+					var regex = new Regex(regexPattern, RegexOptions.None);
+					matches = regex.IsMatch(testString);
 				}
 				
-				// @select only executes first match
-				break;
+				if (matches && action != null)
+				{
+					matchFound = true;
+					
+					// Substitute #$ with test string in action
+					var actionText = action.ToPlainText().Replace("#$", testString);
+					var actionMString = MModule.single(actionText);
+					
+					// Execute action (inline for now, queue support can be added later)
+					if (isInline)
+					{
+						await parser.CommandListParse(actionMString);
+					}
+					else
+					{
+						// Queue the action
+						await Mediator!.Send(new QueueCommandListRequest(
+							actionMString,
+							parser.CurrentState,
+							new DbRefAttribute(executor.Object().DBRef, []),
+							0));
+					}
+					
+					// @select only executes first match
+					break;
+				}
 			}
+			
+			// Execute default action if no match and default exists
+			if (!matchFound && hasDefault)
+			{
+				var defaultIndex = args.Count - 1;
+				var defaultAction = args[defaultIndex.ToString()].Message;
+				
+				if (defaultAction != null)
+				{
+					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
+					var actionMString = MModule.single(actionText);
+					
+					if (isInline)
+					{
+						await parser.CommandListParse(actionMString);
+					}
+					else
+					{
+						await Mediator!.Send(new QueueCommandListRequest(
+							actionMString,
+							parser.CurrentState,
+							new DbRefAttribute(executor.Object().DBRef, []),
+							0));
+					}
+				}
+			}
+			
+			return CallState.Empty;
 		}
-		
-		// Execute default action if no match and default exists
-		if (!matchFound && hasDefault)
+		finally
 		{
-			var defaultIndex = args.Count - 1;
-			var defaultAction = args[defaultIndex.ToString()].Message;
-			
-			if (defaultAction != null)
-			{
-				var actionText = defaultAction.ToPlainText().Replace("#$", testString);
-				var actionMString = MModule.single(actionText);
-				
-				if (isInline)
-				{
-					await parser.CommandListParse(actionMString);
-				}
-				else
-				{
-					await Mediator!.Send(new QueueCommandListRequest(
-						actionMString,
-						parser.CurrentState,
-						new DbRefAttribute(executor.Object().DBRef, []),
-						0));
-				}
-			}
+			// Pop the switch string from the context stack
+			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
-		
-		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@TRIGGER",

@@ -533,6 +533,7 @@ public class SharpMUSHParserVisitor(
 				Registers: currentState.Registers,
 				IterationRegisters: currentState.IterationRegisters,
 				RegexRegisters: currentState.RegexRegisters,
+				SwitchStack: currentState.SwitchStack,
 				ExecutionStack: currentState.ExecutionStack,
 				CurrentEvaluation: currentState.CurrentEvaluation,
 				EnvironmentRegisters: currentState.EnvironmentRegisters,

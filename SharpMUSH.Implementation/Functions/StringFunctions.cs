@@ -1729,37 +1729,48 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
 
-		foreach (var (expressionKv, listKv) in args)
+		// Push the switch string onto the context stack
+		parser.CurrentState.SwitchStack.Push(arg0!);
+
+		try
 		{
-			var expression = await expressionKv.Value.ParsedMessage();
-
-			if (MModule.isWildcardMatch(arg0, expression))
+			foreach (var (expressionKv, listKv) in args)
 			{
-				return await listKv.Value.ParsedMessage();
+				var expression = await expressionKv.Value.ParsedMessage();
+
+				if (MModule.isWildcardMatch(arg0, expression))
+				{
+					return await listKv.Value.ParsedMessage();
+				}
+
+				if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
+				{
+					continue;
+				}
+
+				var gt = expression.ToPlainText()[0] == '>';
+
+				if (!decimal.TryParse(expression.ToPlainText()[1..], out var decimalExpression)
+					|| !decimal.TryParse(arg0!.ToPlainText(), out var arg0AsDecimal))
+				{
+					continue;
+				}
+
+				if (gt
+					? decimalExpression > arg0AsDecimal
+					: decimalExpression < arg0AsDecimal)
+				{
+					return await listKv.Value.ParsedMessage();
+				}
 			}
 
-			if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
-			{
-				continue;
-			}
-
-			var gt = expression.ToPlainText()[0] == '>';
-
-			if (!decimal.TryParse(expression.ToPlainText()[1..], out var decimalExpression)
-			    || !decimal.TryParse(arg0!.ToPlainText(), out var arg0AsDecimal))
-			{
-				continue;
-			}
-
-			if (gt
-				    ? decimalExpression > arg0AsDecimal
-				    : decimalExpression < arg0AsDecimal)
-			{
-				return await listKv.Value.ParsedMessage();
-			}
+			return await defaultValue.Value.ParsedMessage();
 		}
-
-		return await defaultValue.Value.ParsedMessage();
+		finally
+		{
+			// Pop the switch string from the context stack
+			parser.CurrentState.SwitchStack.TryPop(out _);
+		}
 	}
 
 	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue,
@@ -1771,40 +1782,51 @@ public partial class Functions
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
 		var resultList = new List<MString?>();
 
-		foreach (var (expressionKv, listKv) in args)
+		// Push the switch string onto the context stack
+		parser.CurrentState.SwitchStack.Push(arg0!);
+
+		try
 		{
-			var expression = await expressionKv.Value.ParsedMessage();
-
-			if (MModule.isWildcardMatch(arg0, expression))
+			foreach (var (expressionKv, listKv) in args)
 			{
-				resultList.Add(await listKv.Value.ParsedMessage());
-				continue;
+				var expression = await expressionKv.Value.ParsedMessage();
+
+				if (MModule.isWildcardMatch(arg0, expression))
+				{
+					resultList.Add(await listKv.Value.ParsedMessage());
+					continue;
+				}
+
+				if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
+				{
+					continue;
+				}
+
+				var gt = expression.ToPlainText()[0] == '>';
+
+				if (!decimal.TryParse(expression.ToPlainText()[1..], out var decimalExpression)
+					|| !decimal.TryParse(arg0!.ToPlainText(), out var arg0AsDecimal))
+				{
+					continue;
+				}
+
+				if (gt
+					? decimalExpression > arg0AsDecimal
+					: decimalExpression < arg0AsDecimal)
+				{
+					resultList.Add(await listKv.Value.ParsedMessage());
+				}
 			}
 
-			if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
-			{
-				continue;
-			}
-
-			var gt = expression.ToPlainText()[0] == '>';
-
-			if (!decimal.TryParse(expression.ToPlainText()[1..], out var decimalExpression)
-			    || !decimal.TryParse(arg0!.ToPlainText(), out var arg0AsDecimal))
-			{
-				continue;
-			}
-
-			if (gt
-				    ? decimalExpression > arg0AsDecimal
-				    : decimalExpression < arg0AsDecimal)
-			{
-				resultList.Add(await listKv.Value.ParsedMessage());
-			}
+			return resultList.Count != 0
+				? MModule.multiple(resultList)
+				: await defaultValue.Value.ParsedMessage();
 		}
-
-		return resultList.Count != 0
-			? MModule.multiple(resultList)
-			: await defaultValue.Value.ParsedMessage();
+		finally
+		{
+			// Pop the switch string from the context stack
+			parser.CurrentState.SwitchStack.TryPop(out _);
+		}
 	}
 
 	[SharpFunction(Name = "tr", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "from", "to"])]

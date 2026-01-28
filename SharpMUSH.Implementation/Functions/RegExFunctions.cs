@@ -310,76 +310,87 @@ public partial class Functions
 		{
 			options |= RegexOptions.IgnoreCase;
 		}
-		
-		// Process pattern/list pairs manually (every 2 elements)
-		for (int i = 0; i < patternListPairs.Count - 1; i += 2)
+
+		// Push the switch string onto the context stack
+		parser.CurrentState.SwitchStack.Push(arg0!);
+
+		try
 		{
-			var patternKv = patternListPairs[i];
-			var listKv = patternListPairs[i + 1];
-			
-			var pattern = await patternKv.Value.ParsedMessage();
-			var patternStr = pattern!.ToPlainText();
-			
-			try
+			// Process pattern/list pairs manually (every 2 elements)
+			for (int i = 0; i < patternListPairs.Count - 1; i += 2)
 			{
-				var regex = new Regex(patternStr, options);
-				var match = regex.Match(str!);
+				var patternKv = patternListPairs[i];
+				var listKv = patternListPairs[i + 1];
 				
-				if (match.Success)
+				var pattern = await patternKv.Value.ParsedMessage();
+				var patternStr = pattern!.ToPlainText();
+				
+				try
 				{
-					// Replace #$ with the original string and $N with captures
-					var list = listKv.Value.Message!.ToPlainText();
-					list = list.Replace("#$", str);
+					var regex = new Regex(patternStr, options);
+					var match = regex.Match(str!);
 					
-					// Replace numbered captures ($0, $1, etc.)
-					for (int j = 0; j < match.Groups.Count; j++)
+					if (match.Success)
 					{
-						list = list.Replace($"${j}", match.Groups[j].Value);
-					}
-					
-					// Replace named captures ($<name>)
-					foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
-					{
-						var group = match.Groups[groupName];
-						if (group.Success)
+						// Replace #$ with the original string and $N with captures
+						var list = listKv.Value.Message!.ToPlainText();
+						list = list.Replace("#$", str);
+						
+						// Replace numbered captures ($0, $1, etc.)
+						for (int j = 0; j < match.Groups.Count; j++)
 						{
-							list = list.Replace($"$<{groupName}>", group.Value);
+							list = list.Replace($"${j}", match.Groups[j].Value);
+						}
+						
+						// Replace named captures ($<name>)
+						foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
+						{
+							var group = match.Groups[groupName];
+							if (group.Success)
+							{
+								list = list.Replace($"$<{groupName}>", group.Value);
+							}
+						}
+						
+						// Parse and evaluate the list
+						var evaluated = (await parser.FunctionParse(MModule.single(list))) ?? new CallState(MModule.empty());
+						var evaluatedMsg = evaluated.Message ?? MModule.empty();
+						results.Add(evaluatedMsg);
+						
+						if (!all)
+						{
+							// Return first match for reswitch/reswitchi
+							return new CallState(evaluatedMsg);
 						}
 					}
-					
-					// Parse and evaluate the list
-					var evaluated = (await parser.FunctionParse(MModule.single(list))) ?? new CallState(MModule.empty());
-					var evaluatedMsg = evaluated.Message ?? MModule.empty();
-					results.Add(evaluatedMsg);
-					
-					if (!all)
-					{
-						// Return first match for reswitch/reswitchi
-						return new CallState(evaluatedMsg);
-					}
+				}
+				catch (ArgumentException)
+				{
+					// Invalid regex - skip this pattern
+					continue;
 				}
 			}
-			catch (ArgumentException)
+			
+			// If we got here and have results (for reswitchall/reswitchalli), return them
+			if (results.Any())
 			{
-				// Invalid regex - skip this pattern
-				continue;
+				return new CallState(MModule.multipleWithDelimiter(MModule.single(" "), results));
 			}
+			
+			// No matches - return default if available
+			if (defaultValue != null)
+			{
+				var defaultEvaluated = await defaultValue.Value.Value.ParsedMessage();
+				return new CallState(defaultEvaluated!);
+			}
+			
+			return new CallState(MModule.empty());
 		}
-		
-		// If we got here and have results (for reswitchall/reswitchalli), return them
-		if (results.Any())
+		finally
 		{
-			return new CallState(MModule.multipleWithDelimiter(MModule.single(" "), results));
+			// Pop the switch string from the context stack
+			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
-		
-		// No matches - return default if available
-		if (defaultValue != null)
-		{
-			var defaultEvaluated = await defaultValue.Value.Value.ParsedMessage();
-			return new CallState(defaultEvaluated!);
-		}
-		
-		return new CallState(MModule.empty());
 	}
 
 	[SharpFunction(Name = "REGREPLACE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 

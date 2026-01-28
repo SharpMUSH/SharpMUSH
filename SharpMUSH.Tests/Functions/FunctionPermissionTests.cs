@@ -40,6 +40,7 @@ public class FunctionPermissionTests
 				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
 				IterationRegisters: [],
 				RegexRegisters: [],
+				SwitchStack: [],
 				ExecutionStack: [],
 				EnvironmentRegisters: [],
 				CurrentEvaluation: null,
