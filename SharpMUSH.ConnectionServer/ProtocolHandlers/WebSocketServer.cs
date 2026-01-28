@@ -190,7 +190,17 @@ public class WebSocketServer
 			// Get data (optional)
 			if (root.TryGetProperty("data", out var dataElement))
 			{
-				data = dataElement.GetRawText();
+				// Data can be either a string (JSON-encoded) or an object
+				// If it's a string, use GetString() to get the decoded value
+				// If it's an object, use GetRawText() to get the JSON representation
+				if (dataElement.ValueKind == JsonValueKind.String)
+				{
+					data = dataElement.GetString() ?? string.Empty;
+				}
+				else
+				{
+					data = dataElement.GetRawText();
+				}
 			}
 
 			return !string.IsNullOrEmpty(package);

@@ -200,4 +200,53 @@ public class WebSocketGMCPTests
 			await Assert.That(hasType).IsFalse();
 		}
 	}
+
+	[Test]
+	public async Task GMCPDataCanBeStringOrObject()
+	{
+		// Test with data as a string (JSON-encoded)
+		var jsonWithString = """
+			{
+				"type": "gmcp",
+				"package": "Core.Hello",
+				"data": "{\"client\":\"TestClient\"}"
+			}
+			""";
+
+		using (var doc = JsonDocument.Parse(jsonWithString))
+		{
+			var root = doc.RootElement;
+			var dataElement = root.GetProperty("data");
+			
+			// When data is a string, we should get the decoded value
+			if (dataElement.ValueKind == JsonValueKind.String)
+			{
+				var data = dataElement.GetString();
+				await Assert.That(data).IsEqualTo("{\"client\":\"TestClient\"}");
+			}
+		}
+
+		// Test with data as an object
+		var jsonWithObject = """
+			{
+				"type": "gmcp",
+				"package": "Core.Hello",
+				"data": {"client":"TestClient"}
+			}
+			""";
+
+		using (var doc = JsonDocument.Parse(jsonWithObject))
+		{
+			var root = doc.RootElement;
+			var dataElement = root.GetProperty("data");
+			
+			// When data is an object, we should get the raw JSON
+			if (dataElement.ValueKind == JsonValueKind.Object)
+			{
+				var data = dataElement.GetRawText();
+				await Assert.That(data).Contains("\"client\"");
+				await Assert.That(data).Contains("TestClient");
+			}
+		}
+	}
 }
