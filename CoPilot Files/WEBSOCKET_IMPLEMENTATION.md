@@ -2,7 +2,9 @@
 
 ## Overview
 
-SharpMUSH now supports WebSocket connections in addition to traditional Telnet connections. This allows modern web-based clients to connect directly to the MUSH server using the WebSocket protocol.
+SharpMUSH supports WebSocket connections in addition to traditional Telnet connections. This allows modern web-based clients to connect directly to the MUSH server using the WebSocket protocol.
+
+**Important**: WebSocket connections use a different protocol than Telnet. Telnet protocol extensions (GMCP, MSDP, MSSP, NAWS) do not apply to WebSocket connections. For WebSocket out-of-band communication, use the `wsjson()` and `wshtml()` functions.
 
 ## Server Configuration
 
@@ -66,6 +68,15 @@ The WebSocket server is available at:
   - `Handle`: Connection identifier
   - `Data`: String prompt to send to the client
 
+## Out-of-Band Communication
+
+WebSocket connections use `wsjson()` and `wshtml()` functions for out-of-band data:
+
+- **wsjson(json, [player])**: Send JSON data to WebSocket client
+- **wshtml(html, [player])**: Send HTML data to WebSocket client
+
+These functions are WebSocket-specific and separate from Telnet's GMCP protocol.
+
 ## Client Implementation
 
 ### WebSocketClientService
@@ -126,81 +137,9 @@ WebSocket connections are registered with the same `IConnectionServerService` as
 
 1. **Protocol**: WebSocket instead of Telnet
 2. **Encoding**: Always UTF-8 (no Telnet negotiation)
-3. **GMCP Support**: WebSocket uses JSON-based GMCP messages (see GMCP section below)
-4. **Message Format**: Text-based with optional JSON for GMCP
-
-## GMCP Support
-
-WebSocket connections support GMCP (Generic MUD Communication Protocol) using a JSON message format:
-
-### Sending GMCP from Client to Server
-
-Send a JSON message with the following structure:
-```json
-{
-  "type": "gmcp",
-  "package": "Core.Hello",
-  "data": "{\"client\":\"MyClient\",\"version\":\"1.0\"}"
-}
-```
-
-- **type**: Must be "gmcp" to identify this as a GMCP message
-- **package**: The GMCP package name (e.g., "Core.Hello", "Char.Vitals")
-- **data**: JSON string containing the GMCP data (optional)
-
-### Receiving GMCP from Server to Client
-
-The server sends GMCP messages in the same format:
-```json
-{
-  "type": "gmcp",
-  "package": "Room.Info",
-  "data": "{\"name\":\"A Dark Room\",\"exits\":[\"north\",\"south\"]}"
-}
-```
-
-### Using OOB() Function
-
-Once a WebSocket client sends a GMCP message, the connection is marked as GMCP-capable and can receive OOB messages:
-
-```javascript
-// In MUSH code
-think oob(me, Room.Info, json(name, "A Dark Room", exits, json_array(north, south)))
-
-// Client receives:
-{
-  "type": "gmcp",
-  "package": "Room.Info", 
-  "data": {"name": "A Dark Room", "exits": ["north", "south"]}
-}
-```
-
-Note: The `data` field is sent as a JSON object, not a stringified JSON string. This makes it easier for WebSocket clients to work with the data directly without double-parsing.
-
-### Standard GMCP Packages
-
-WebSocket clients can use any standard GMCP packages:
-- **Core.Hello**: Client identification
-- **Core.Supports.Set**: Declare supported packages
-- **Char.Vitals**: Character health/stats
-- **Char.Status**: Character status updates
-- **Room.Info**: Room information
-- **Comm.Channel**: Communication channels
-
-Example client initialization:
-```javascript
-ws.send(JSON.stringify({
-  type: "gmcp",
-  package: "Core.Hello",
-  data: {client: "WebClient", version: "1.0"}
-}));
-
-ws.send(JSON.stringify({
-  type: "gmcp",
-  package: "Core.Supports.Set",
-  data: ["Core 1", "Char 1", "Room 1", "Comm 1"]
-}));
-```
+3. **No Telnet Extensions**: GMCP, MSDP, MSSP, NAWS are Telnet-only protocols
+4. **Message Format**: Text-based (UTF-8 strings)
+5. **OOB Communication**: Use `wsjson()` and `wshtml()` functions instead of GMCP
 
 ## Security Considerations
 
@@ -208,7 +147,7 @@ ws.send(JSON.stringify({
 2. **Authentication**: Implement authentication before sending game commands
 3. **Rate Limiting**: Consider rate limiting WebSocket connections
 4. **WSS**: Use `wss://` (WebSocket Secure) in production with TLS/SSL
-5. **JSON Validation**: GMCP messages are validated before processing
+5. **Input Validation**: All client input should be validated
 
 ## Future Enhancements
 
@@ -217,6 +156,7 @@ Potential improvements:
 - Heartbeat/ping-pong for connection health
 - Reconnection with session resumption
 - Binary message support
+- Full implementation of `wsjson()` and `wshtml()` OOB functions
 
 ## Example Usage
 
@@ -227,30 +167,13 @@ const ws = new WebSocket('ws://localhost:4202/ws');
 ws.onopen = () => {
     console.log('Connected to SharpMUSH');
     
-    // Send GMCP Hello
-    ws.send(JSON.stringify({
-        type: "gmcp",
-        package: "Core.Hello",
-        data: {client: "WebClient", version: "1.0"}
-    }));
-    
-    // Or send regular commands
+    // Send regular commands
     ws.send('connect player password');
 };
 
 ws.onmessage = (event) => {
-    try {
-        // Try to parse as JSON (GMCP message)
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'gmcp') {
-            // Data is already an object, no need to parse again
-            console.log('GMCP:', msg.package, msg.data);
-            return;
-        }
-    } catch {
-        // Not JSON, treat as regular text
-        console.log('Server:', event.data);
-    }
+    // Receive text messages from server
+    console.log('Server:', event.data);
 };
 
 ws.onerror = (error) => {
@@ -267,16 +190,6 @@ ws.onclose = () => {
 using var client = new ClientWebSocket();
 await client.ConnectAsync(new Uri("ws://localhost:4202/ws"), CancellationToken.None);
 
-// Send GMCP Hello
-var gmcpHello = new
-{
-    type = "gmcp",
-    package = "Core.Hello",
-    data = new { client = "DotNetClient", version = "1.0" }
-};
-var helloBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(gmcpHello));
-await client.SendAsync(helloBytes, WebSocketMessageType.Text, true, CancellationToken.None);
-
 // Send a regular command
 var bytes = Encoding.UTF8.GetBytes("look");
 await client.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
@@ -289,24 +202,6 @@ while (client.State == WebSocketState.Open)
     if (result.MessageType == WebSocketMessageType.Text)
     {
         var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-        
-        // Try to parse as GMCP
-        try
-        {
-            using var doc = JsonDocument.Parse(message);
-            if (doc.RootElement.TryGetProperty("type", out var type) && 
-                type.GetString() == "gmcp")
-            {
-                var package = doc.RootElement.GetProperty("package").GetString();
-                // Data is already an object in the JSON, no need to parse again
-                var data = doc.RootElement.GetProperty("data");
-                Console.WriteLine($"GMCP {package}: {data}");
-                continue;
-            }
-        }
-        catch { }
-        
-        // Regular text message
         Console.WriteLine($"Received: {message}");
     }
 }

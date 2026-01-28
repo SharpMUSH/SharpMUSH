@@ -1,6 +1,5 @@
 using System.Net.WebSockets;
 using System.Text;
-using System.Text.Json;
 using SharpMUSH.Messaging.Abstractions;
 using Microsoft.AspNetCore.Http;
 using SharpMUSH.ConnectionServer.Services;
@@ -80,41 +79,6 @@ public class WebSocketServer
 				{
 					_ = webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
 				}
-			},
-			async (module, message) =>
-			{
-				// Send GMCP message via WebSocket as JSON
-				if (webSocket.State == WebSocketState.Open)
-				{
-					// Parse the message string as JSON to embed it as an object
-					// This avoids double-encoding for WebSocket clients
-					object? dataObject = null;
-					if (!string.IsNullOrEmpty(message))
-					{
-						try
-						{
-							dataObject = JsonSerializer.Deserialize<JsonElement>(message);
-						}
-						catch (JsonException)
-						{
-							// If parsing fails, send as string
-							dataObject = message;
-						}
-					}
-					
-					var gmcpMessage = new
-					{
-						type = "gmcp",
-						package = module,
-						data = dataObject
-					};
-					var jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(gmcpMessage));
-					await webSocket.SendAsync(
-						new ArraySegment<byte>(jsonBytes),
-						WebSocketMessageType.Text,
-						true,
-						ct);
-				}
 			});
 
 		try
@@ -139,21 +103,9 @@ public class WebSocketServer
 				{
 					var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
 					
-					// Try to parse as GMCP JSON message
-					if (TryParseGMCPMessage(message, out var package, out var data))
-					{
-						_logger.LogDebug("Received GMCP message from WebSocket {Handle}: {Package}", nextPort, package);
-						
-						// Publish GMCP signal to MainProcess
-						await _publishEndpoint.Publish(
-							new GMCPSignalMessage(nextPort, package, data), ct);
-					}
-					else
-					{
-						// Regular text input - publish to MainProcess
-						await _publishEndpoint.Publish(
-							new WebSocketInputMessage(nextPort, message), ct);
-					}
+					// Publish user input to MainProcess
+					await _publishEndpoint.Publish(
+						new WebSocketInputMessage(nextPort, message), ct);
 				}
 			}
 		}
@@ -169,61 +121,6 @@ public class WebSocketServer
 		{
 			// Disconnect and notify MainProcess
 			await _connectionService.DisconnectAsync(nextPort);
-		}
-	}
-
-	/// <summary>
-	/// Tries to parse a WebSocket message as a GMCP JSON message
-	/// </summary>
-	/// <param name="message">The raw message string</param>
-	/// <param name="package">The GMCP package name</param>
-	/// <param name="data">The GMCP data as JSON string</param>
-	/// <returns>True if the message is a valid GMCP message</returns>
-	private bool TryParseGMCPMessage(string message, out string package, out string data)
-	{
-		package = string.Empty;
-		data = string.Empty;
-
-		try
-		{
-			using var doc = JsonDocument.Parse(message);
-			var root = doc.RootElement;
-
-			// Check if it's a GMCP message
-			if (!root.TryGetProperty("type", out var typeElement) || 
-			    typeElement.GetString() != "gmcp")
-			{
-				return false;
-			}
-
-			// Get package name
-			if (!root.TryGetProperty("package", out var packageElement))
-			{
-				return false;
-			}
-			package = packageElement.GetString() ?? string.Empty;
-
-			// Get data (optional)
-			if (root.TryGetProperty("data", out var dataElement))
-			{
-				// Data can be either a string (JSON-encoded) or an object
-				// If it's a string, use GetString() to get the decoded value
-				// If it's an object, use GetRawText() to get the JSON representation
-				if (dataElement.ValueKind == JsonValueKind.String)
-				{
-					data = dataElement.GetString() ?? string.Empty;
-				}
-				else
-				{
-					data = dataElement.GetRawText();
-				}
-			}
-
-			return !string.IsNullOrEmpty(package);
-		}
-		catch (JsonException)
-		{
-			return false;
 		}
 	}
 }
