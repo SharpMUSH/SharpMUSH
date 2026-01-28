@@ -103,15 +103,25 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	private static string ExtractSqlHost(string connectionString)
 	{
 		var parts = connectionString.Split(';');
+		string? host = null;
+		string? port = null;
+		
 		foreach (var part in parts)
 		{
 			var trimmedPart = part.Trim();
 			if (trimmedPart.StartsWith("Server=", StringComparison.OrdinalIgnoreCase))
-				return trimmedPart.Substring(7);
-			if (trimmedPart.StartsWith("Host=", StringComparison.OrdinalIgnoreCase))
-				return trimmedPart.Substring(5);
+				host = trimmedPart.Substring(7);
+			else if (trimmedPart.StartsWith("Host=", StringComparison.OrdinalIgnoreCase))
+				host = trimmedPart.Substring(5);
+			else if (trimmedPart.StartsWith("Port=", StringComparison.OrdinalIgnoreCase))
+				port = trimmedPart.Substring(5);
 		}
-		return "localhost";
+		
+		// Combine host and port if both present
+		if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(port))
+			return $"{host}:{port}";
+		
+		return host ?? "localhost";
 	}
 	
 	private static string ExtractSqlDatabase(string connectionString)

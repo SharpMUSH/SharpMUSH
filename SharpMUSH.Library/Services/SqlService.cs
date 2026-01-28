@@ -107,8 +107,24 @@ public class SqlService : ISqlService, IAsyncDisposable
 	private static string BuildMySqlConnectionString(string? host, string? username, string? password, string? database)
 	{
 		var parts = new List<string>();
+		
+		// Handle host:port format - MySQL needs separate Server and Port parameters
 		if (!string.IsNullOrWhiteSpace(host))
-			parts.Add($"Server={host}");
+		{
+			var colonIndex = host.IndexOf(':');
+			if (colonIndex > 0)
+			{
+				var serverPart = host.Substring(0, colonIndex);
+				var portPart = host.Substring(colonIndex + 1);
+				parts.Add($"Server={serverPart}");
+				parts.Add($"Port={portPart}");
+			}
+			else
+			{
+				parts.Add($"Server={host}");
+			}
+		}
+		
 		if (!string.IsNullOrWhiteSpace(username))
 			parts.Add($"User Id={username}");
 		if (!string.IsNullOrWhiteSpace(password))
@@ -128,8 +144,24 @@ public class SqlService : ISqlService, IAsyncDisposable
 	private static string BuildPostgreSqlConnectionString(string? host, string? username, string? password, string? database)
 	{
 		var parts = new List<string>();
+		
+		// Handle host:port format - PostgreSQL needs separate Host and Port parameters
 		if (!string.IsNullOrWhiteSpace(host))
-			parts.Add($"Host={host}");
+		{
+			var colonIndex = host.IndexOf(':');
+			if (colonIndex > 0)
+			{
+				var serverPart = host.Substring(0, colonIndex);
+				var portPart = host.Substring(colonIndex + 1);
+				parts.Add($"Host={serverPart}");
+				parts.Add($"Port={portPart}");
+			}
+			else
+			{
+				parts.Add($"Host={host}");
+			}
+		}
+		
 		if (!string.IsNullOrWhiteSpace(username))
 			parts.Add($"Username={username}");
 		if (!string.IsNullOrWhiteSpace(password))
