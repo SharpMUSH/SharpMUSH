@@ -234,10 +234,13 @@ public partial class Functions
 				return new CallState("#-1 PATH MUST BE SINGULAR");
 			}
 			
+			var match = pathResult.Matches[0];
+			
 			// Extract the JsonPointer from the evaluated match's location.
-			// The Location property is already a JsonPath representing the canonical location,
+			// The Location property is a JsonPath representing the canonical location in bracket notation,
 			// which we convert to a JsonPointer string for use with JsonPatch operations.
-			var jsonPointer = JsonPointer.Parse(pathResult.Matches[0].Location!.AsJsonPointer());
+			// Location is guaranteed to be non-null for valid matches from JsonPath.Evaluate().
+			var jsonPointer = JsonPointer.Parse(match.Location!.AsJsonPointer());
 			var jsonDoc2 = json2 is null ? null : JsonNode.Parse(json2);
 
 			if (action is "insert" or "replace" or "set" or "patch" && string.IsNullOrWhiteSpace(json2))
@@ -247,7 +250,9 @@ public partial class Functions
 
 			if (action == "patch")
 			{
-				var target = pathResult.Matches[0].Value;
+				// Get the target node value from the match.
+				// Note: Value can be a JSON null, which is a valid JsonNode, not a C# null.
+				var target = match.Value;
 				if (target == null)
 				{
 					return new CallState("#-1 PATH NOT FOUND");
