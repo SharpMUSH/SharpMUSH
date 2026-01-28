@@ -14,9 +14,11 @@ namespace SharpMUSH.Library.Services;
 /// SQL service implementation using the Strategy pattern to support multiple database providers.
 /// Supports runtime configuration changes by creating providers on-demand.
 /// </summary>
-public class SqlService : ISqlService
+public class SqlService : ISqlService, IAsyncDisposable
 {
 	private readonly IOptionsMonitor<SharpMUSHOptions> _config;
+	private ISqlProvider? _currentProvider;
+	private string? _currentConnectionString;
 	
 	/// <summary>
 	/// Constructor that accepts configuration monitor for runtime configuration changes.
@@ -31,6 +33,7 @@ public class SqlService : ISqlService
 	/// <summary>
 	/// Gets the current provider, creating it from current configuration if needed.
 	/// This allows the service to respond to runtime configuration changes.
+	/// Caches the provider and only recreates it if the connection string changes.
 	/// </summary>
 	private ISqlProvider? GetCurrentProvider()
 	{
@@ -44,16 +47,35 @@ public class SqlService : ISqlService
 
 		var platform = cvn.SqlPlatform?.ToLowerInvariant() ?? "mysql";
 		
-		return platform switch
+		// Build connection string to check if it has changed
+		var connectionString = platform switch
 		{
-			"mysql" or "mariadb" => new MySqlProvider(
-				$"Server={cvn.SqlHost};User Id={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}"),
-			"postgresql" or "postgres" => new PostgreSqlProvider(
-				$"Host={cvn.SqlHost};Username={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}"),
-			"sqlite" => new SqliteProvider(
-				$"Data Source={cvn.SqlDatabase}"),
+			"mysql" or "mariadb" => 
+				$"Server={cvn.SqlHost};User Id={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}",
+			"postgresql" or "postgres" => 
+				$"Host={cvn.SqlHost};Username={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}",
+			"sqlite" => 
+				$"Data Source={cvn.SqlDatabase}",
 			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
 		};
+		
+		// If connection string changed, dispose old provider and create new one
+		if (_currentProvider == null || _currentConnectionString != connectionString)
+		{
+			_currentProvider?.DisposeAsync().AsTask().Wait();
+			
+			_currentProvider = platform switch
+			{
+				"mysql" or "mariadb" => new MySqlProvider(connectionString),
+				"postgresql" or "postgres" => new PostgreSqlProvider(connectionString),
+				"sqlite" => new SqliteProvider(connectionString),
+				_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
+			};
+			
+			_currentConnectionString = connectionString;
+		}
+		
+		return _currentProvider;
 	}
 	
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
@@ -129,5 +151,15 @@ public class SqlService : ISqlService
 		}
 		
 		return provider.Escape(value);
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		if (_currentProvider != null)
+		{
+			await _currentProvider.DisposeAsync();
+			_currentProvider = null;
+		}
+		GC.SuppressFinalize(this);
 	}
 }
