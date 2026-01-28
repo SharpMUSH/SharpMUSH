@@ -59,9 +59,9 @@ public class SqlService : ISqlService, IAsyncDisposable
 		var connectionString = platform switch
 		{
 			"mysql" or "mariadb" => 
-				$"Server={cvn.SqlHost};User Id={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}",
+				BuildMySqlConnectionString(cvn.SqlHost, cvn.SqlUsername, cvn.SqlPassword, cvn.SqlDatabase),
 			"postgresql" or "postgres" => 
-				$"Host={cvn.SqlHost};Username={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}",
+				BuildPostgreSqlConnectionString(cvn.SqlHost, cvn.SqlUsername, cvn.SqlPassword, cvn.SqlDatabase),
 			"sqlite" => 
 				$"Data Source={cvn.SqlDatabase}",
 			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
@@ -102,6 +102,41 @@ public class SqlService : ISqlService, IAsyncDisposable
 		}
 		
 		return _currentProvider;
+	}
+	
+	private static string BuildMySqlConnectionString(string? host, string? username, string? password, string? database)
+	{
+		var parts = new List<string>();
+		if (!string.IsNullOrWhiteSpace(host))
+			parts.Add($"Server={host}");
+		if (!string.IsNullOrWhiteSpace(username))
+			parts.Add($"User Id={username}");
+		if (!string.IsNullOrWhiteSpace(password))
+			parts.Add($"Password={password}");
+		if (!string.IsNullOrWhiteSpace(database))
+			parts.Add($"Database={database}");
+			
+		// Ensure we have at least a server to connect to
+		if (parts.Count == 0 || string.IsNullOrWhiteSpace(host))
+		{
+			throw new InvalidOperationException("MySQL connection string must include at minimum a server/host");
+		}
+			
+		return string.Join(";", parts);
+	}
+	
+	private static string BuildPostgreSqlConnectionString(string? host, string? username, string? password, string? database)
+	{
+		var parts = new List<string>();
+		if (!string.IsNullOrWhiteSpace(host))
+			parts.Add($"Host={host}");
+		if (!string.IsNullOrWhiteSpace(username))
+			parts.Add($"Username={username}");
+		if (!string.IsNullOrWhiteSpace(password))
+			parts.Add($"Password={password}");
+		if (!string.IsNullOrWhiteSpace(database))
+			parts.Add($"Database={database}");
+		return string.Join(";", parts);
 	}
 	
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
