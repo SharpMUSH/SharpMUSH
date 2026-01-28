@@ -23,7 +23,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	string configFile,
 	INotifyService notifier,
 	string prometheusUrl,
-	string? databaseName = null) :
+	string? databaseName = null,
+	string sqlPlatform = "mysql") :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -68,7 +69,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 				sc.AddSingleton(notifier);
 
 				sc.RemoveAll<ISqlService>();
-				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString, "mysql"));
+				sc.AddSingleton<ISqlService>(new SqlService(sqlConnectionString, sqlPlatform));
 				
 				if (!string.IsNullOrEmpty(databaseName))
 				{

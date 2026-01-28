@@ -47,6 +47,22 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
+	// Optional parameters for custom SQL connection
+	private readonly string? _customSqlConnectionString;
+	private readonly string _sqlPlatform;
+	private readonly string? _customDatabaseName;
+
+	public WebAppFactory() : this(null, null, "mysql")
+	{
+	}
+
+	public WebAppFactory(string? sqlConnectionString, string? databaseName, string sqlPlatform = "mysql")
+	{
+		_customSqlConnectionString = sqlConnectionString;
+		_customDatabaseName = databaseName;
+		_sqlPlatform = sqlPlatform;
+	}
+
 	public IMUSHCodeParser FunctionParser
 	{
 		get
@@ -149,10 +165,12 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		await CreateKafkaTopicsAsync(kafkaHost);
 
 		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
-			MySqlTestServer.Instance.GetConnectionString(), 
+			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
 			Substitute.For<INotifyService>(),
-			prometheusUrl);
+			prometheusUrl,
+			_customDatabaseName,
+			_sqlPlatform);
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();
