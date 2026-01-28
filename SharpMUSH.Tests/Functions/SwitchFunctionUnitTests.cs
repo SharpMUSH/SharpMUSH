@@ -126,4 +126,23 @@ public class SwitchFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Arguments("switch(hello,hello,%$0,0)", "hello")]
+	[Arguments("switch(world,world,%$0,0)", "world")]
+	public async Task PercentDollarRegisterSwitch(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("switch(outer,outer,switch(inner,inner,%$0,0),0)", "inner")]
+	[Arguments("switch(outer,outer,switch(inner,inner,%$1,0),0)", "outer")]
+	[Arguments("switch(outer,outer,switch(inner,inner,%$L,0),0)", "outer")]
+	public async Task PercentDollarNestedSwitch(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }

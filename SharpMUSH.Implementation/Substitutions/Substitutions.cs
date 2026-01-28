@@ -107,6 +107,7 @@ public static partial class Substitutions
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
 		if (context.ITEXT_LAST() is not null) return HandleITextTop(symbol, parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);
+		if (context.STEXT_LAST() is not null) return HandleSTextLast(parser);
 		if (context.VWX() is not null) return await HandleVWX(symbol, parser, mediator, attributeService);
 		return HandleRegistrySymbol(symbol, parser);
 	}
@@ -147,17 +148,46 @@ public static partial class Substitutions
 	private static CallState HandleSTextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
 		var symbolValue = symbol.Message!.ToString();
-		var symbolNumber = int.Parse(symbolValue);
-		var maxCount = parser.CurrentState.IterationRegisters.Count;
+		var stack = parser.CurrentState.SwitchStack;
 
-		if (maxCount <= symbolNumber)
+		// Check if we're in a switch context
+		if (stack.Count == 0)
 		{
-			return new CallState(Errors.ErrorRegisterRange); 
+			return new CallState(string.Empty);
 		}
 
-		var val = parser.CurrentState.IterationRegisters.ToArray().ElementAt(maxCount - symbolNumber - 1).Iteration;
+		// Parse the symbol number
+		if (!int.TryParse(symbolValue, out var symbolNumber) || symbolNumber < 0)
+		{
+			return new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER");
+		}
 
-		return new CallState(val.ToString());
+		// Check if the requested depth exists
+		if (symbolNumber >= stack.Count)
+		{
+			return new CallState(string.Empty);
+		}
+
+		// Get the nth item from the stack (0 is top/current)
+		var item = stack.ElementAtOrDefault(symbolNumber);
+		return new CallState(item ?? MModule.empty());
+	}
+
+	// Symbol: %$L --> Last/outermost switch string
+	private static CallState HandleSTextLast(IMUSHCodeParser parser)
+	{
+		var stack = parser.CurrentState.SwitchStack;
+
+		// Check if we're in a switch context
+		if (stack.Count == 0)
+		{
+			return new CallState(string.Empty);
+		}
+
+		// Get the outermost (last) item from the stack
+		var depth = stack.Count - 1;
+		var item = stack.ElementAtOrDefault(depth);
+		return new CallState(item ?? MModule.empty());
 	}
 
 	// Symbol Example: %i0 --> 0
