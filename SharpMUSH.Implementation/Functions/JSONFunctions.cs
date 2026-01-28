@@ -217,7 +217,27 @@ public partial class Functions
 		{
 			var jsonDoc = JsonNode.Parse(json);
 			var jsonPath = JsonPath.Parse(path);
-			var jsonPointer = JsonPointer.Parse(jsonPath.AsJsonPointer());
+			
+			// Evaluate the JSON Path against the document to find matching locations.
+			// This is the proper way to use JsonPath.Net library instead of directly
+			// converting a path string to a pointer, which can be ambiguous.
+			// The evaluation validates the path and returns actual matches with their locations.
+			var pathResult = jsonPath.Evaluate(jsonDoc);
+			if (pathResult.Matches == null || pathResult.Matches.Count == 0)
+			{
+				return new CallState("#-1 PATH NOT FOUND");
+			}
+			
+			// For modification operations, we need a singular path (single result)
+			if (pathResult.Matches.Count > 1)
+			{
+				return new CallState("#-1 PATH MUST BE SINGULAR");
+			}
+			
+			// Extract the JsonPointer from the evaluated match's location.
+			// The Location property is already a JsonPath representing the canonical location,
+			// which we convert to a JsonPointer string for use with JsonPatch operations.
+			var jsonPointer = JsonPointer.Parse(pathResult.Matches[0].Location!.AsJsonPointer());
 			var jsonDoc2 = json2 is null ? null : JsonNode.Parse(json2);
 
 			if (action is "insert" or "replace" or "set" or "patch" && string.IsNullOrWhiteSpace(json2))
@@ -227,7 +247,7 @@ public partial class Functions
 
 			if (action == "patch")
 			{
-				var target = jsonPointer.TryEvaluate(jsonDoc, out var targetNode) ? targetNode : null;
+				var target = pathResult.Matches[0].Value;
 				if (target == null)
 				{
 					return new CallState("#-1 PATH NOT FOUND");
