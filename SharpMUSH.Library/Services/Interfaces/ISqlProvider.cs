@@ -7,7 +7,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <summary>
 /// Strategy interface for SQL database providers
 /// </summary>
-public interface ISqlProvider
+public interface ISqlProvider : IAsyncDisposable
 {
 	/// <summary>
 	/// Creates a database connection
@@ -16,7 +16,9 @@ public interface ISqlProvider
 	ValueTask<DbConnection> CreateConnectionAsync();
 	
 	/// <summary>
-	/// Escapes a string for safe use in SQL queries
+	/// Escapes a string for safe use in SQL queries.
+	/// Note: This method provides basic escaping for specific use cases.
+	/// Parameterized queries should be preferred for SQL injection prevention.
 	/// </summary>
 	/// <param name="value">The value to escape</param>
 	/// <returns>The escaped value</returns>

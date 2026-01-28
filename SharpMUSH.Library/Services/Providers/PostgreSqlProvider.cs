@@ -23,10 +23,20 @@ public class PostgreSqlProvider : ISqlProvider
 	public async ValueTask<DbConnection> CreateConnectionAsync()
 		=> await _dataSource.OpenConnectionAsync();
 
+	/// <summary>
+	/// Escapes a string for PostgreSQL. Single quotes are escaped by doubling them.
+	/// Note: This provides basic escaping. Parameterized queries are preferred for SQL injection prevention.
+	/// </summary>
 	public string Escape(string value)
 	{
 		// PostgreSQL uses a different escaping mechanism
 		// Single quotes are escaped by doubling them
 		return value.Replace("'", "''");
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		await _dataSource.DisposeAsync();
+		GC.SuppressFinalize(this);
 	}
 }

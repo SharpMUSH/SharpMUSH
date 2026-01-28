@@ -20,13 +20,22 @@ public class SqliteTestServer : IAsyncInitializer, IAsyncDisposable
 		return Task.CompletedTask;
 	}
 
-	public ValueTask DisposeAsync()
+	public async ValueTask DisposeAsync()
 	{
 		// Clean up the database file
-		if (File.Exists(_databasePath))
+		try
 		{
-			File.Delete(_databasePath);
+			if (File.Exists(_databasePath))
+			{
+				// Add a small delay to allow any locked connections to close
+				await Task.Delay(100);
+				File.Delete(_databasePath);
+			}
 		}
-		return ValueTask.CompletedTask;
+		catch (IOException)
+		{
+			// Ignore errors if file is still locked
+		}
+		GC.SuppressFinalize(this);
 	}
 }

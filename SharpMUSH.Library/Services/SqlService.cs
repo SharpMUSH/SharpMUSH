@@ -37,7 +37,7 @@ public class SqlService : ISqlService
 				$"Host={cvn.SqlHost};Username={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}"),
 			"sqlite" => new SqliteProvider(
 				$"Data Source={cvn.SqlDatabase}"),
-			_ => throw new NotSupportedException($"SQL platform '{cvn.SqlPlatform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
+			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
 		};
 	}
 	
@@ -63,7 +63,6 @@ public class SqlService : ISqlService
 			throw new InvalidOperationException("SQL provider is not configured");
 		}
 
-		var guid = Guid.NewGuid();
 		var results = new List<Dictionary<string, object?>>();
 
 		await using var connection = await _provider.CreateConnectionAsync();
@@ -79,7 +78,6 @@ public class SqlService : ISqlService
 				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
 			}
 			results.Add(row);
-			Console.WriteLine($"{guid}: {JsonSerializer.Serialize(row)}");
 		}
 
 		return results;

@@ -25,4 +25,10 @@ public class MySqlProvider : ISqlProvider
 
 	public string Escape(string value)
 		=> MySqlHelper.EscapeString(value);
+
+	public async ValueTask DisposeAsync()
+	{
+		await _dataSource.DisposeAsync();
+		GC.SuppressFinalize(this);
+	}
 }
