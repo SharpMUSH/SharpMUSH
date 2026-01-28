@@ -148,12 +148,12 @@ public class WebSocketGMCPTests
 			data = new { name = "A Dark Room", exits = new[] { "north", "south" } }
 		};
 
-		var json2 = JsonSerializer.Serialize(gmcpMessageObject);
-		var deserialized2 = JsonSerializer.Deserialize<JsonElement>(json2);
+		var jsonWithObjectData = JsonSerializer.Serialize(gmcpMessageObject);
+		var deserializedObject = JsonSerializer.Deserialize<JsonElement>(jsonWithObjectData);
 
-		await Assert.That(deserialized2.GetProperty("type").GetString()).IsEqualTo("gmcp");
-		await Assert.That(deserialized2.GetProperty("package").GetString()).IsEqualTo("Room.Info");
-		var dataObj = deserialized2.GetProperty("data");
+		await Assert.That(deserializedObject.GetProperty("type").GetString()).IsEqualTo("gmcp");
+		await Assert.That(deserializedObject.GetProperty("package").GetString()).IsEqualTo("Room.Info");
+		var dataObj = deserializedObject.GetProperty("data");
 		await Assert.That(dataObj.GetProperty("name").GetString()).IsEqualTo("A Dark Room");
 	}
 

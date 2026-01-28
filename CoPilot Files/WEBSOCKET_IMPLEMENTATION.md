@@ -260,7 +260,6 @@ ws.onerror = (error) => {
 ws.onclose = () => {
     console.log('Disconnected from SharpMUSH');
 };
-};
 ```
 
 ### .NET Client
