@@ -1533,13 +1533,9 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var stack = parser.CurrentState.SwitchStack;
 		
-		if (stack.Count == 0)
-		{
-			return ValueTask.FromResult(new CallState(string.Empty));
-		}
-		
 		int depth = 0;
 		
+		// Validate arguments first, before checking stack count
 		if (args.TryGetValue("0", out var depthArg) && depthArg.Message != null)
 		{
 			var depthStr = depthArg.Message!.ToPlainText().Trim();
@@ -1547,7 +1543,7 @@ public partial class Functions
 			// Skip processing if the argument is empty (defaults to 0)
 			if (!string.IsNullOrEmpty(depthStr))
 			{
-				// Handle "L" for outermost (last) switch
+				// Handle "L" or "l" for outermost (last) switch
 				if (depthStr.Equals("L", StringComparison.OrdinalIgnoreCase))
 				{
 					depth = stack.Count - 1;
@@ -1557,6 +1553,12 @@ public partial class Functions
 					return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER"));
 				}
 			}
+		}
+		
+		// Now check if we're in a switch context
+		if (stack.Count == 0)
+		{
+			return ValueTask.FromResult(new CallState(string.Empty));
 		}
 		
 		// Convert depth to index from top of stack

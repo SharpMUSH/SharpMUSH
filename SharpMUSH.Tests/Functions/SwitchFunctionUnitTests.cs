@@ -101,4 +101,29 @@ public class SwitchFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[Arguments("stext(invalid)", "#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER")]
+	[Arguments("stext(-1)", "#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER")]
+	public async Task StextWithInvalidArguments(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("switch(test,test,stext(10),0)", "")]
+	public async Task StextBeyondDepth(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("switch(test,test,stext(l),0)", "test")]
+	public async Task StextLowercaseL(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
