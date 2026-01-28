@@ -125,22 +125,36 @@ public class WebSocketGMCPTests
 	[Test]
 	public async Task CanSerializeGMCPMessageToJSON()
 	{
-		// Arrange
-		var gmcpMessage = new
+		// Test with data as string (old format, for backward compatibility)
+		var gmcpMessageString = new
 		{
 			type = "gmcp",
 			package = "Room.Info",
 			data = "{\"name\":\"A Dark Room\",\"exits\":[\"north\",\"south\"]}"
 		};
 
-		// Act
-		var json = JsonSerializer.Serialize(gmcpMessage);
+		var json = JsonSerializer.Serialize(gmcpMessageString);
 		var deserialized = JsonSerializer.Deserialize<JsonElement>(json);
 
-		// Assert
 		await Assert.That(deserialized.GetProperty("type").GetString()).IsEqualTo("gmcp");
 		await Assert.That(deserialized.GetProperty("package").GetString()).IsEqualTo("Room.Info");
 		await Assert.That(deserialized.GetProperty("data").GetString()).Contains("A Dark Room");
+
+		// Test with data as object (new preferred format)
+		var gmcpMessageObject = new
+		{
+			type = "gmcp",
+			package = "Room.Info",
+			data = new { name = "A Dark Room", exits = new[] { "north", "south" } }
+		};
+
+		var json2 = JsonSerializer.Serialize(gmcpMessageObject);
+		var deserialized2 = JsonSerializer.Deserialize<JsonElement>(json2);
+
+		await Assert.That(deserialized2.GetProperty("type").GetString()).IsEqualTo("gmcp");
+		await Assert.That(deserialized2.GetProperty("package").GetString()).IsEqualTo("Room.Info");
+		var dataObj = deserialized2.GetProperty("data");
+		await Assert.That(dataObj.GetProperty("name").GetString()).IsEqualTo("A Dark Room");
 	}
 
 	[Test]

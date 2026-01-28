@@ -86,11 +86,27 @@ public class WebSocketServer
 				// Send GMCP message via WebSocket as JSON
 				if (webSocket.State == WebSocketState.Open)
 				{
+					// Parse the message string as JSON to embed it as an object
+					// This avoids double-encoding for WebSocket clients
+					object? dataObject = null;
+					if (!string.IsNullOrEmpty(message))
+					{
+						try
+						{
+							dataObject = JsonSerializer.Deserialize<JsonElement>(message);
+						}
+						catch (JsonException)
+						{
+							// If parsing fails, send as string
+							dataObject = message;
+						}
+					}
+					
 					var gmcpMessage = new
 					{
 						type = "gmcp",
 						package = module,
-						data = message
+						data = dataObject
 					};
 					var jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(gmcpMessage));
 					await webSocket.SendAsync(

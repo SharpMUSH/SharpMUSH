@@ -62,7 +62,7 @@ WebSocket clients send GMCP messages as JSON:
 {
   "type": "gmcp",
   "package": "Core.Hello",
-  "data": "{\"client\":\"MyClient\",\"version\":\"1.0\"}"
+  "data": {"client": "MyClient", "version": "1.0"}
 }
 ```
 
@@ -73,14 +73,16 @@ The server:
 4. Sets `GMCP = "1"` metadata on first GMCP message
 
 ### Server to Client (Outgoing)
-The server sends GMCP messages via the same JSON format:
+The server sends GMCP messages with data as a JSON object (not a string):
 ```json
 {
   "type": "gmcp",
   "package": "Room.Info",
-  "data": "{\"name\":\"A Dark Room\",\"exits\":[\"north\",\"south\"]}"
+  "data": {"name": "A Dark Room", "exits": ["north", "south"]}
 }
 ```
+
+Note: The server automatically parses the JSON string from `oob()` and embeds it as an object. This eliminates the need for clients to double-parse the data.
 
 This is triggered by:
 1. The `oob()` function in MUSH code
@@ -99,7 +101,7 @@ ws.onopen = () => {
   ws.send(JSON.stringify({
     type: "gmcp",
     package: "Core.Hello",
-    data: JSON.stringify({client: "WebClient", version: "1.0"})
+    data: {client: "WebClient", version: "1.0"}
   }));
 };
 
@@ -107,7 +109,8 @@ ws.onmessage = (event) => {
   try {
     const msg = JSON.parse(event.data);
     if (msg.type === 'gmcp') {
-      console.log('GMCP:', msg.package, JSON.parse(msg.data));
+      // Data is already an object, no need to parse again
+      console.log('GMCP:', msg.package, msg.data);
     }
   } catch {
     console.log('Text:', event.data);

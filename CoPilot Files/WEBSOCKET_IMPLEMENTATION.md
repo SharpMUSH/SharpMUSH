@@ -171,9 +171,11 @@ think oob(me, Room.Info, json(name, "A Dark Room", exits, json_array(north, sout
 {
   "type": "gmcp",
   "package": "Room.Info", 
-  "data": "{\"name\":\"A Dark Room\",\"exits\":[\"north\",\"south\"]}"
+  "data": {"name": "A Dark Room", "exits": ["north", "south"]}
 }
 ```
+
+Note: The `data` field is sent as a JSON object, not a stringified JSON string. This makes it easier for WebSocket clients to work with the data directly without double-parsing.
 
 ### Standard GMCP Packages
 
@@ -190,13 +192,13 @@ Example client initialization:
 ws.send(JSON.stringify({
   type: "gmcp",
   package: "Core.Hello",
-  data: JSON.stringify({client: "WebClient", version: "1.0"})
+  data: {client: "WebClient", version: "1.0"}
 }));
 
 ws.send(JSON.stringify({
   type: "gmcp",
   package: "Core.Supports.Set",
-  data: JSON.stringify(["Core 1", "Char 1", "Room 1", "Comm 1"])
+  data: ["Core 1", "Char 1", "Room 1", "Comm 1"]
 }));
 ```
 
@@ -229,7 +231,7 @@ ws.onopen = () => {
     ws.send(JSON.stringify({
         type: "gmcp",
         package: "Core.Hello",
-        data: JSON.stringify({client: "WebClient", version: "1.0"})
+        data: {client: "WebClient", version: "1.0"}
     }));
     
     // Or send regular commands
@@ -241,7 +243,8 @@ ws.onmessage = (event) => {
         // Try to parse as JSON (GMCP message)
         const msg = JSON.parse(event.data);
         if (msg.type === 'gmcp') {
-            console.log('GMCP:', msg.package, JSON.parse(msg.data));
+            // Data is already an object, no need to parse again
+            console.log('GMCP:', msg.package, msg.data);
             return;
         }
     } catch {
@@ -257,6 +260,7 @@ ws.onerror = (error) => {
 ws.onclose = () => {
     console.log('Disconnected from SharpMUSH');
 };
+};
 ```
 
 ### .NET Client
@@ -269,7 +273,7 @@ var gmcpHello = new
 {
     type = "gmcp",
     package = "Core.Hello",
-    data = JsonSerializer.Serialize(new { client = "DotNetClient", version = "1.0" })
+    data = new { client = "DotNetClient", version = "1.0" }
 };
 var helloBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(gmcpHello));
 await client.SendAsync(helloBytes, WebSocketMessageType.Text, true, CancellationToken.None);
@@ -295,7 +299,9 @@ while (client.State == WebSocketState.Open)
                 type.GetString() == "gmcp")
             {
                 var package = doc.RootElement.GetProperty("package").GetString();
-                Console.WriteLine($"GMCP {package}: {message}");
+                // Data is already an object in the JSON, no need to parse again
+                var data = doc.RootElement.GetProperty("data");
+                Console.WriteLine($"GMCP {package}: {data}");
                 continue;
             }
         }
