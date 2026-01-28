@@ -2,7 +2,9 @@
 
 ## Overview
 
-SharpMUSH now supports WebSocket connections in addition to traditional Telnet connections. This allows modern web-based clients to connect directly to the MUSH server using the WebSocket protocol.
+SharpMUSH supports WebSocket connections in addition to traditional Telnet connections. This allows modern web-based clients to connect directly to the MUSH server using the WebSocket protocol.
+
+**Important**: WebSocket connections use a different protocol than Telnet. Telnet protocol extensions (GMCP, MSDP, MSSP, NAWS) do not apply to WebSocket connections. For WebSocket out-of-band communication, use the `wsjson()` and `wshtml()` functions.
 
 ## Server Configuration
 
@@ -66,6 +68,15 @@ The WebSocket server is available at:
   - `Handle`: Connection identifier
   - `Data`: String prompt to send to the client
 
+## Out-of-Band Communication
+
+WebSocket connections use `wsjson()` and `wshtml()` functions for out-of-band data:
+
+- **wsjson(json, [player])**: Send JSON data to WebSocket client
+- **wshtml(html, [player])**: Send HTML data to WebSocket client
+
+These functions are WebSocket-specific and separate from Telnet's GMCP protocol.
+
 ## Client Implementation
 
 ### WebSocketClientService
@@ -126,8 +137,9 @@ WebSocket connections are registered with the same `IConnectionServerService` as
 
 1. **Protocol**: WebSocket instead of Telnet
 2. **Encoding**: Always UTF-8 (no Telnet negotiation)
-3. **Features**: No GMCP, MSDP, MSSP, or NAWS (window size negotiation)
-4. **Message Format**: Text-based (no binary negotiation)
+3. **No Telnet Extensions**: GMCP, MSDP, MSSP, NAWS are Telnet-only protocols
+4. **Message Format**: Text-based (UTF-8 strings)
+5. **OOB Communication**: Use `wsjson()` and `wshtml()` functions instead of GMCP
 
 ## Security Considerations
 
@@ -135,15 +147,16 @@ WebSocket connections are registered with the same `IConnectionServerService` as
 2. **Authentication**: Implement authentication before sending game commands
 3. **Rate Limiting**: Consider rate limiting WebSocket connections
 4. **WSS**: Use `wss://` (WebSocket Secure) in production with TLS/SSL
+5. **Input Validation**: All client input should be validated
 
 ## Future Enhancements
 
 Potential improvements:
-- JSON-based message protocol for structured data
-- Support for WebSocket subprotocols (e.g., GMCP over WebSocket)
 - Compression support
 - Heartbeat/ping-pong for connection health
 - Reconnection with session resumption
+- Binary message support
+- Full implementation of `wsjson()` and `wshtml()` OOB functions
 
 ## Example Usage
 
@@ -153,10 +166,13 @@ const ws = new WebSocket('ws://localhost:4202/ws');
 
 ws.onopen = () => {
     console.log('Connected to SharpMUSH');
+    
+    // Send regular commands
     ws.send('connect player password');
 };
 
 ws.onmessage = (event) => {
+    // Receive text messages from server
     console.log('Server:', event.data);
 };
 
@@ -174,7 +190,7 @@ ws.onclose = () => {
 using var client = new ClientWebSocket();
 await client.ConnectAsync(new Uri("ws://localhost:4202/ws"), CancellationToken.None);
 
-// Send a message
+// Send a regular command
 var bytes = Encoding.UTF8.GetBytes("look");
 await client.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
 

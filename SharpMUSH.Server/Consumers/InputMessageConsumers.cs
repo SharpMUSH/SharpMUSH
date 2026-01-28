@@ -47,6 +47,9 @@ public Task HandleAsync(GMCPSignalMessage message, CancellationToken cancellatio
 logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}",
 message.Handle, message.Package, message.Info);
 
+// Set GMCP capability flag on first GMCP message
+connectionService.Update(message.Handle, "GMCP", "1");
+
 // Store GMCP package and info in connection metadata
 connectionService.Update(message.Handle, $"GMCP_{message.Package}", message.Info);
 
