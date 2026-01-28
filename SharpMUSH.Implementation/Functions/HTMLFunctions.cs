@@ -159,8 +159,13 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-			enactor,
-			executor,
+		if (!parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
+		{
+			arg1 = null;
+		}
+
+		var playerStr = arg1 != null
+			? arg1.Message!.ToPlainText()
 			playerStr,
 			PlayersPreference | AbsoluteMatch);
 
