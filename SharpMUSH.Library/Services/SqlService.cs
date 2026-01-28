@@ -11,25 +11,70 @@ using SharpMUSH.Library.Services.Providers;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// SQL service implementation using the Strategy pattern to support multiple database providers
+/// SQL service implementation using the Strategy pattern to support multiple database providers.
+/// Supports runtime configuration changes by creating providers on-demand.
 /// </summary>
 public class SqlService : ISqlService
 {
-	private readonly ISqlProvider? _provider = null;
+	private readonly IOptionsMonitor<SharpMUSHOptions>? _config;
+	private readonly ISqlProvider? _staticProvider;
 	
+	/// <summary>
+	/// Primary constructor for production use. Supports runtime configuration changes.
+	/// </summary>
 	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
 	{
-		var cvn = config.CurrentValue.Net;
+		_config = config;
+	}
+	
+	/// <summary>
+	/// Testing constructor that creates a static provider with fixed connection string.
+	/// Used for unit tests to avoid dependency on configuration system.
+	/// </summary>
+	public SqlService(string connectionString, string platform = "mysql")
+	{
+		var platformLower = platform.ToLowerInvariant();
 		
-		// Return early if no SQL configuration
+		_staticProvider = platformLower switch
+		{
+			"mysql" or "mariadb" => new MySqlProvider(connectionString),
+			"postgresql" or "postgres" => new PostgreSqlProvider(connectionString),
+			"sqlite" => new SqliteProvider(connectionString),
+			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
+		};
+	}
+
+	public bool IsAvailable => GetCurrentProvider()?.IsAvailable ?? false;
+	
+	/// <summary>
+	/// Gets the current provider, creating it from current configuration if needed.
+	/// This allows the service to respond to runtime configuration changes.
+	/// </summary>
+	private ISqlProvider? GetCurrentProvider()
+	{
+		// If using static provider (testing), return it
+		if (_staticProvider != null)
+		{
+			return _staticProvider;
+		}
+		
+		// Create provider from current configuration
+		if (_config == null)
+		{
+			return null;
+		}
+		
+		var cvn = _config.CurrentValue.Net;
+		
+		// Return null if no SQL configuration
 		if (string.IsNullOrWhiteSpace(cvn.SqlHost) && string.IsNullOrWhiteSpace(cvn.SqlDatabase))
 		{
-			return;
+			return null;
 		}
 
 		var platform = cvn.SqlPlatform?.ToLowerInvariant() ?? "mysql";
 		
-		_provider = platform switch
+		return platform switch
 		{
 			"mysql" or "mariadb" => new MySqlProvider(
 				$"Server={cvn.SqlHost};Uid={cvn.SqlUsername};Pwd={cvn.SqlPassword};Database={cvn.SqlDatabase}"),
@@ -41,31 +86,17 @@ public class SqlService : ISqlService
 		};
 	}
 	
-	public SqlService(string connectionString, string platform = "mysql")
-	{
-		var platformLower = platform.ToLowerInvariant();
-		
-		_provider = platformLower switch
-		{
-			"mysql" or "mariadb" => new MySqlProvider(connectionString),
-			"postgresql" or "postgres" => new PostgreSqlProvider(connectionString),
-			"sqlite" => new SqliteProvider(connectionString),
-			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
-		};
-	}
-
-	public bool IsAvailable => _provider?.IsAvailable ?? false;
-	
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 	{
-		if (_provider == null)
+		var provider = GetCurrentProvider();
+		if (provider == null)
 		{
 			throw new InvalidOperationException("SQL provider is not configured");
 		}
 
 		var results = new List<Dictionary<string, object?>>();
 
-		await using var connection = await _provider.CreateConnectionAsync();
+		await using var connection = await provider.CreateConnectionAsync();
 		await using var command = connection.CreateCommand();
 		command.CommandText = query;
 		await using var reader = await command.ExecuteReaderAsync();
@@ -85,12 +116,13 @@ public class SqlService : ISqlService
 
 	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamQueryAsync(string query)
 	{
-		if (_provider == null)
+		var provider = GetCurrentProvider();
+		if (provider == null)
 		{
 			throw new InvalidOperationException("SQL provider is not configured");
 		}
 
-		await using var connection = await _provider.CreateConnectionAsync();
+		await using var connection = await provider.CreateConnectionAsync();
 		await using var command = connection.CreateCommand();
 		command.CommandText = query;
 		await using var reader = await command.ExecuteReaderAsync();
@@ -120,11 +152,12 @@ public class SqlService : ISqlService
 
 	public string Escape(string value)
 	{
-		if (_provider == null)
+		var provider = GetCurrentProvider();
+		if (provider == null)
 		{
 			throw new InvalidOperationException("SQL provider is not configured");
 		}
 		
-		return _provider.Escape(value);
+		return provider.Escape(value);
 	}
 }

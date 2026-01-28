@@ -24,13 +24,16 @@ public class PostgreSqlProvider : ISqlProvider
 		=> await _dataSource.OpenConnectionAsync();
 
 	/// <summary>
-	/// Escapes a string for PostgreSQL. Single quotes are escaped by doubling them.
-	/// Note: This provides basic escaping. Parameterized queries are preferred for SQL injection prevention.
+	/// Escapes a string for PostgreSQL by doubling single quotes.
+	/// Note: Npgsql does not provide a built-in string literal escape function like MySqlHelper.EscapeString().
+	/// The recommended approach is to use parameterized queries (NpgsqlParameter).
+	/// This method provides basic escaping for legacy compatibility where parameterized queries cannot be used.
 	/// </summary>
 	public string Escape(string value)
 	{
-		// PostgreSQL uses a different escaping mechanism
-		// Single quotes are escaped by doubling them
+		// PostgreSQL standard escaping: single quotes are escaped by doubling them
+		// This is equivalent to MySQL's quote escaping but PostgreSQL doesn't provide
+		// a library function for this as it strongly encourages parameterized queries
 		return value.Replace("'", "''");
 	}
 

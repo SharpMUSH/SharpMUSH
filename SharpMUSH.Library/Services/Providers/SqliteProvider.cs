@@ -28,12 +28,16 @@ public class SqliteProvider : ISqlProvider
 	}
 
 	/// <summary>
-	/// Escapes a string for SQLite. Single quotes are escaped by doubling them.
-	/// Note: This provides basic escaping. Parameterized queries are preferred for SQL injection prevention.
+	/// Escapes a string for SQLite by doubling single quotes.
+	/// Note: Microsoft.Data.Sqlite does not provide a built-in string literal escape function.
+	/// The recommended approach is to use parameterized queries (SqliteParameter).
+	/// This method provides basic escaping for legacy compatibility where parameterized queries cannot be used.
 	/// </summary>
 	public string Escape(string value)
 	{
-		// SQLite uses single quote escaping by doubling
+		// SQLite standard escaping: single quotes are escaped by doubling them
+		// Microsoft.Data.Sqlite doesn't provide a library function for this
+		// as it strongly encourages parameterized queries
 		return value.Replace("'", "''");
 	}
 
