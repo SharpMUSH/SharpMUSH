@@ -17,8 +17,10 @@ namespace SharpMUSH.Library.Services;
 public class SqlService : ISqlService, IAsyncDisposable
 {
 	private readonly IOptionsMonitor<SharpMUSHOptions> _config;
+	private readonly SemaphoreSlim _providerLock = new(1, 1);
 	private ISqlProvider? _currentProvider;
 	private string? _currentConnectionString;
+	private bool _disposed;
 	
 	/// <summary>
 	/// Constructor that accepts configuration monitor for runtime configuration changes.
@@ -28,15 +30,21 @@ public class SqlService : ISqlService, IAsyncDisposable
 		_config = config;
 	}
 
-	public bool IsAvailable => GetCurrentProvider()?.IsAvailable ?? false;
+	public bool IsAvailable => GetCurrentProviderAsync().GetAwaiter().GetResult()?.IsAvailable ?? false;
 	
 	/// <summary>
 	/// Gets the current provider, creating it from current configuration if needed.
 	/// This allows the service to respond to runtime configuration changes.
 	/// Caches the provider and only recreates it if the connection string changes.
+	/// Thread-safe implementation using semaphore.
 	/// </summary>
-	private ISqlProvider? GetCurrentProvider()
+	private async ValueTask<ISqlProvider?> GetCurrentProviderAsync()
 	{
+		if (_disposed)
+		{
+			throw new ObjectDisposedException(nameof(SqlService));
+		}
+
 		var cvn = _config.CurrentValue.Net;
 		
 		// Return null if no SQL configuration
@@ -62,17 +70,35 @@ public class SqlService : ISqlService, IAsyncDisposable
 		// If connection string changed, dispose old provider and create new one
 		if (_currentProvider == null || _currentConnectionString != connectionString)
 		{
-			_currentProvider?.DisposeAsync().AsTask().Wait();
-			
-			_currentProvider = platform switch
+			await _providerLock.WaitAsync();
+			try
 			{
-				"mysql" or "mariadb" => new MySqlProvider(connectionString),
-				"postgresql" or "postgres" => new PostgreSqlProvider(connectionString),
-				"sqlite" => new SqliteProvider(connectionString),
-				_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
-			};
-			
-			_currentConnectionString = connectionString;
+				// Double-check after acquiring lock
+				if (_currentProvider == null || _currentConnectionString != connectionString)
+				{
+					var oldProvider = _currentProvider;
+					
+					_currentProvider = platform switch
+					{
+						"mysql" or "mariadb" => new MySqlProvider(connectionString),
+						"postgresql" or "postgres" => new PostgreSqlProvider(connectionString),
+						"sqlite" => new SqliteProvider(connectionString),
+						_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
+					};
+					
+					_currentConnectionString = connectionString;
+					
+					// Dispose old provider after setting new one
+					if (oldProvider != null)
+					{
+						await oldProvider.DisposeAsync();
+					}
+				}
+			}
+			finally
+			{
+				_providerLock.Release();
+			}
 		}
 		
 		return _currentProvider;
@@ -80,7 +106,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 	
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 	{
-		var provider = GetCurrentProvider();
+		var provider = await GetCurrentProviderAsync();
 		if (provider == null)
 		{
 			throw new InvalidOperationException("SQL provider is not configured");
@@ -108,7 +134,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamQueryAsync(string query)
 	{
-		var provider = GetCurrentProvider();
+		var provider = await GetCurrentProviderAsync();
 		if (provider == null)
 		{
 			throw new InvalidOperationException("SQL provider is not configured");
@@ -144,7 +170,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 	public string Escape(string value)
 	{
-		var provider = GetCurrentProvider();
+		var provider = GetCurrentProviderAsync().GetAwaiter().GetResult();
 		if (provider == null)
 		{
 			throw new InvalidOperationException("SQL provider is not configured");
@@ -155,11 +181,20 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
+		if (_disposed)
+		{
+			return;
+		}
+
+		_disposed = true;
+		
 		if (_currentProvider != null)
 		{
 			await _currentProvider.DisposeAsync();
 			_currentProvider = null;
 		}
+		
+		_providerLock.Dispose();
 		GC.SuppressFinalize(this);
 	}
 }
