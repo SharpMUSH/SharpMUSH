@@ -1540,18 +1540,22 @@ public partial class Functions
 		
 		int depth = 0;
 		
-		if (args.TryGetValue("0", out var depthArg))
+		if (args.TryGetValue("0", out var depthArg) && depthArg.Message != null)
 		{
 			var depthStr = depthArg.Message!.ToPlainText().Trim();
 			
-			// Handle "L" for outermost (last) switch
-			if (depthStr.Equals("L", StringComparison.OrdinalIgnoreCase))
+			// Skip processing if the argument is empty (defaults to 0)
+			if (!string.IsNullOrEmpty(depthStr))
 			{
-				depth = stack.Count - 1;
-			}
-			else if (!int.TryParse(depthStr, out depth) || depth < 0)
-			{
-				return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER"));
+				// Handle "L" for outermost (last) switch
+				if (depthStr.Equals("L", StringComparison.OrdinalIgnoreCase))
+				{
+					depth = stack.Count - 1;
+				}
+				else if (!int.TryParse(depthStr, out depth) || depth < 0)
+				{
+					return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER"));
+				}
 			}
 		}
 		
