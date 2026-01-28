@@ -16,32 +16,14 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public class SqlService : ISqlService
 {
-	private readonly IOptionsMonitor<SharpMUSHOptions>? _config;
-	private readonly ISqlProvider? _staticProvider;
+	private readonly IOptionsMonitor<SharpMUSHOptions> _config;
 	
 	/// <summary>
-	/// Primary constructor for production use. Supports runtime configuration changes.
+	/// Constructor that accepts configuration monitor for runtime configuration changes.
 	/// </summary>
 	public SqlService(IOptionsMonitor<SharpMUSHOptions> config)
 	{
 		_config = config;
-	}
-	
-	/// <summary>
-	/// Testing constructor that creates a static provider with fixed connection string.
-	/// Used for unit tests to avoid dependency on configuration system.
-	/// </summary>
-	public SqlService(string connectionString, string platform = "mysql")
-	{
-		var platformLower = platform.ToLowerInvariant();
-		
-		_staticProvider = platformLower switch
-		{
-			"mysql" or "mariadb" => new MySqlProvider(connectionString),
-			"postgresql" or "postgres" => new PostgreSqlProvider(connectionString),
-			"sqlite" => new SqliteProvider(connectionString),
-			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
-		};
 	}
 
 	public bool IsAvailable => GetCurrentProvider()?.IsAvailable ?? false;
@@ -52,18 +34,6 @@ public class SqlService : ISqlService
 	/// </summary>
 	private ISqlProvider? GetCurrentProvider()
 	{
-		// If using static provider (testing), return it
-		if (_staticProvider != null)
-		{
-			return _staticProvider;
-		}
-		
-		// Create provider from current configuration
-		if (_config == null)
-		{
-			return null;
-		}
-		
 		var cvn = _config.CurrentValue.Net;
 		
 		// Return null if no SQL configuration
@@ -77,7 +47,7 @@ public class SqlService : ISqlService
 		return platform switch
 		{
 			"mysql" or "mariadb" => new MySqlProvider(
-				$"Server={cvn.SqlHost};Uid={cvn.SqlUsername};Pwd={cvn.SqlPassword};Database={cvn.SqlDatabase}"),
+				$"Server={cvn.SqlHost};User Id={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}"),
 			"postgresql" or "postgres" => new PostgreSqlProvider(
 				$"Host={cvn.SqlHost};Username={cvn.SqlUsername};Password={cvn.SqlPassword};Database={cvn.SqlDatabase}"),
 			"sqlite" => new SqliteProvider(

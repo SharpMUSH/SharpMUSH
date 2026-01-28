@@ -1,3 +1,7 @@
+using Microsoft.Extensions.Options;
+using NSubstitute;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -5,11 +9,35 @@ namespace SharpMUSH.Tests.Services;
 
 public class SqlProviderSelectionTests
 {
+	private static IOptionsMonitor<SharpMUSHOptions> CreateTestConfig(string? sqlHost, string? sqlDatabase, string? sqlUsername, string? sqlPassword, string sqlPlatform)
+	{
+		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
+		
+		// Start with default config from test file
+		var baseConfig = ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst");
+		
+		// Override with test SQL settings
+		var config = baseConfig with
+		{
+			Net = baseConfig.Net with
+			{
+				SqlHost = sqlHost,
+				SqlDatabase = sqlDatabase,
+				SqlUsername = sqlUsername,
+				SqlPassword = sqlPassword,
+				SqlPlatform = sqlPlatform
+			}
+		};
+		
+		options.CurrentValue.Returns(config);
+		return options;
+	}
+
 	[Test]
 	public async Task Test_MySqlProvider_Selection()
 	{
-		var connectionString = "Server=localhost;Uid=test;Pwd=test;Database=test";
-		var service = new SqlService(connectionString, "mysql");
+		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "mysql");
+		var service = new SqlService(optionsMonitor);
 		
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
@@ -17,8 +45,8 @@ public class SqlProviderSelectionTests
 	[Test]
 	public async Task Test_MariaDbProvider_Selection()
 	{
-		var connectionString = "Server=localhost;Uid=test;Pwd=test;Database=test";
-		var service = new SqlService(connectionString, "mariadb");
+		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "mariadb");
+		var service = new SqlService(optionsMonitor);
 		
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
@@ -26,8 +54,8 @@ public class SqlProviderSelectionTests
 	[Test]
 	public async Task Test_PostgreSqlProvider_Selection()
 	{
-		var connectionString = "Host=localhost;Username=test;Password=test;Database=test";
-		var service = new SqlService(connectionString, "postgresql");
+		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "postgresql");
+		var service = new SqlService(optionsMonitor);
 		
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
@@ -35,8 +63,8 @@ public class SqlProviderSelectionTests
 	[Test]
 	public async Task Test_PostgresProvider_Selection()
 	{
-		var connectionString = "Host=localhost;Username=test;Password=test;Database=test";
-		var service = new SqlService(connectionString, "postgres");
+		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "postgres");
+		var service = new SqlService(optionsMonitor);
 		
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
@@ -44,8 +72,8 @@ public class SqlProviderSelectionTests
 	[Test]
 	public async Task Test_SqliteProvider_Selection()
 	{
-		var connectionString = "Data Source=test.db";
-		var service = new SqlService(connectionString, "sqlite");
+		var optionsMonitor = CreateTestConfig("", "test.db", "", "", "sqlite");
+		var service = new SqlService(optionsMonitor);
 		
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
@@ -53,9 +81,9 @@ public class SqlProviderSelectionTests
 	[Test]
 	public async Task Test_UnsupportedProvider_ThrowsException()
 	{
-		var connectionString = "test";
+		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "unsupported");
 		
-		await Assert.That(() => new SqlService(connectionString, "unsupported"))
+		await Assert.That(() => new SqlService(optionsMonitor).IsAvailable)
 			.Throws<NotSupportedException>()
 			.WithMessage("SQL platform 'unsupported' is not supported. Supported platforms: mysql, postgresql, sqlite");
 	}
@@ -63,8 +91,8 @@ public class SqlProviderSelectionTests
 	[Test]
 	public async Task Test_MySqlProvider_Escape()
 	{
-		var connectionString = "Server=localhost;Uid=test;Pwd=test;Database=test";
-		var service = new SqlService(connectionString, "mysql");
+		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "mysql");
+		var service = new SqlService(optionsMonitor);
 		
 		var escaped = service.Escape("test'string");
 		
@@ -74,8 +102,8 @@ public class SqlProviderSelectionTests
 	[Test]
 	public async Task Test_PostgreSqlProvider_Escape()
 	{
-		var connectionString = "Host=localhost;Username=test;Password=test;Database=test";
-		var service = new SqlService(connectionString, "postgresql");
+		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "postgresql");
+		var service = new SqlService(optionsMonitor);
 		
 		var escaped = service.Escape("test'string");
 		
@@ -85,8 +113,8 @@ public class SqlProviderSelectionTests
 	[Test]
 	public async Task Test_SqliteProvider_Escape()
 	{
-		var connectionString = "Data Source=test.db";
-		var service = new SqlService(connectionString, "sqlite");
+		var optionsMonitor = CreateTestConfig("", "test.db", "", "", "sqlite");
+		var service = new SqlService(optionsMonitor);
 		
 		var escaped = service.Escape("test'string");
 		
