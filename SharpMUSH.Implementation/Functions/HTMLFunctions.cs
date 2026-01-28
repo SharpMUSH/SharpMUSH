@@ -1,7 +1,10 @@
-﻿using SharpMUSH.Library.Attributes;
+﻿using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 using static MarkupString.MarkupImplementation;
 
@@ -64,118 +67,156 @@ public partial class Functions
 	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
 	public static async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// wsjson() sends JSON data out-of-band (via websocket/GMCP/etc)
+		// wsjson() sends JSON data out-of-band to WebSocket connections
 		// First argument is the JSON content to send
 		// Second optional argument is the player/target (defaults to enactor)
 
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 
-		AnySharpObject target;
-
-		if (parser.CurrentState.Arguments.ContainsKey("1"))
+		// Validate JSON
+		if (!string.IsNullOrWhiteSpace(jsonContent))
 		{
-			// Target specified - locate the player
-			var targetRef = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				targetRef,
-				PlayersPreference | AbsoluteMatch);
-
-			if (locateResult.IsError)
+			try
 			{
-				return new CallState(locateResult.AsError);
+				using var _ = System.Text.Json.JsonDocument.Parse(jsonContent);
+			}
+			catch (System.Text.Json.JsonException)
+			{
+				return new CallState("#-1 INVALID JSON");
+			}
+		}
+
+		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
+			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
+			: "me";
+
+		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+			parser,
+			enactor,
+			executor,
+			playerStr,
+			PlayersPreference | AbsoluteMatch);
+
+		if (!locate.IsValid())
+		{
+			return CallState.Empty;
+		}
+
+		var located = locate.WithoutError().WithoutNone();
+
+		if (!located.IsPlayer)
+		{
+			return new CallState("#-1 NOT A PLAYER");
+		}
+
+		// Check permissions
+		var isWizard = executor.IsGod() || await executor.IsWizard();
+		var isSelf = executor.Object().DBRef == located.Object().DBRef;
+
+		if (!isWizard && !isSelf)
+		{
+			return new CallState("#-1 PERMISSION DENIED");
+		}
+
+		int sentCount = 0;
+
+		// Send to all WebSocket connections for the target player
+		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+		{
+			if (connection.ConnectionType != "websocket")
+			{
+				continue;
 			}
 
-			target = locateResult.AsAnyObject;
+			// Format as JSON object with type indicator
+			var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
+			{
+				type = "json",
+				data = System.Text.Json.JsonSerializer.Deserialize<object>(jsonContent)
+			});
+
+			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
+				connection.Handle,
+				wsMessage));
+
+			sentCount++;
 		}
-		else
-		{
-			target = executor;
-		}
 
-		// TODO: Actual websocket/out-of-band communication is planned for future release.
-		// For now, this is a placeholder that sends the JSON as a regular notification
-		//
-		// Full implementation requirements:
-		// 1. Add websocket support to ConnectionService (ws:// and wss:// protocols)
-		// 2. Implement GMCP (Generic MUD Communication Protocol) support
-		// 3. Add connection capability negotiation (detect websocket/GMCP support)
-		// 4. Modify ConnectionData to include supported protocols/capabilities
-		// 5. Route OOB data through appropriate channel based on connection type
-		// 6. Support GMCP packages: Client.Media, Client.GUI, etc.
-		// 7. Implement MXP (MUD eXtension Protocol) as alternative to GMCP
-		//
-		// When implemented:
-		// - Check if target connection supports websockets/GMCP
-		// - Send the JSON data through the appropriate out-of-band channel
-		// - Return empty string (since OOB data doesn't display in-band)
-
-		// Placeholder: Send as notification for now
-		// await NotifyService!.Notify(target, jsonContent, executor, INotifyService.NotificationType.Announce);
-
-		// Return empty string - OOB data doesn't produce visible output
-		return CallState.Empty;
+		// Return count of connections that received the message
+		return new CallState(sentCount.ToString());
 	}
 
 	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html"])]
 	public static async ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// wshtml() sends HTML data out-of-band (via websocket/GMCP/etc)
+		// wshtml() sends HTML data out-of-band to WebSocket connections
 		// First argument is the HTML content to send
 		// Second optional argument is the player/target (defaults to enactor)
 
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
 
-		AnySharpObject target;
+		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
+			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
+			: "me";
 
-		if (parser.CurrentState.Arguments.ContainsKey("1"))
+		var locate = await LocateService!.LocateAndNotifyIfInvalid(
+			parser,
+			enactor,
+			executor,
+			playerStr,
+			PlayersPreference | AbsoluteMatch);
+
+		if (!locate.IsValid())
 		{
-			// Target specified - locate the player
-			var targetRef = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				targetRef,
-				PlayersPreference | AbsoluteMatch);
+			return CallState.Empty;
+		}
 
-			if (locateResult.IsError)
+		var located = locate.WithoutError().WithoutNone();
+
+		if (!located.IsPlayer)
+		{
+			return new CallState("#-1 NOT A PLAYER");
+		}
+
+		// Check permissions
+		var isWizard = executor.IsGod() || await executor.IsWizard();
+		var isSelf = executor.Object().DBRef == located.Object().DBRef;
+
+		if (!isWizard && !isSelf)
+		{
+			return new CallState("#-1 PERMISSION DENIED");
+		}
+
+		int sentCount = 0;
+
+		// Send to all WebSocket connections for the target player
+		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+		{
+			if (connection.ConnectionType != "websocket")
 			{
-				return new CallState(locateResult.AsError);
+				continue;
 			}
 
-			target = locateResult.AsAnyObject;
+			// Format as JSON object with type indicator
+			var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
+			{
+				type = "html",
+				data = htmlContent
+			});
+
+			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
+				connection.Handle,
+				wsMessage));
+
+			sentCount++;
 		}
-		else
-		{
-			target = executor;
-		}
 
-		// TODO: Actual websocket/out-of-band communication is planned for future release.
-		// For now, this is a placeholder that sends the HTML as a regular notification
-		//
-		// Full implementation requirements:
-		// 1. Add websocket support to ConnectionService (ws:// and wss:// protocols)
-		// 2. Implement HTML-over-websocket or MXP (MUD eXtension Protocol)
-		// 3. Add connection capability negotiation (detect HTML support)
-		// 4. Sanitize HTML to prevent XSS attacks (whitelist safe tags)
-		// 5. Support HTML features: colors, links, images, formatting
-		// 6. Implement CSP (Content Security Policy) for safety
-		//
-		// When implemented:
-		// - Check if target connection supports websockets/HTML
-		// - Sanitize and send the HTML data through the appropriate channel
-		// - Return empty string (since OOB data doesn't display in-band)
-
-		// Placeholder: Send as notification for now
-		// await NotifyService!.Notify(target, htmlContent, executor, INotifyService.NotificationType.Announce);
-
-		// Return empty string - OOB data doesn't produce visible output
-		return CallState.Empty;
+		// Return count of connections that received the message
+		return new CallState(sentCount.ToString());
 	}
 
 	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
