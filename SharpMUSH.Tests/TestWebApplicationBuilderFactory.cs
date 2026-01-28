@@ -16,6 +16,7 @@ using SharpMUSH.Server;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
+using System.Linq;
 
 namespace SharpMUSH.Tests;
 
@@ -106,9 +107,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		string? host = null;
 		string? port = null;
 		
-		foreach (var part in parts)
+		foreach (var trimmedPart in parts.Select(part => part.Trim()))
 		{
-			var trimmedPart = part.Trim();
 			if (trimmedPart.StartsWith("Server=", StringComparison.OrdinalIgnoreCase))
 				host = trimmedPart.Substring(7);
 			else if (trimmedPart.StartsWith("Host=", StringComparison.OrdinalIgnoreCase))
@@ -127,9 +127,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	private static string ExtractSqlDatabase(string connectionString)
 	{
 		var parts = connectionString.Split(';');
-		foreach (var part in parts)
+		foreach (var trimmedPart in parts.Select(part => part.Trim()))
 		{
-			var trimmedPart = part.Trim();
 			if (trimmedPart.StartsWith("Database=", StringComparison.OrdinalIgnoreCase))
 				return trimmedPart.Substring(9);
 			if (trimmedPart.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
@@ -141,9 +140,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	private static string ExtractSqlUsername(string connectionString)
 	{
 		var parts = connectionString.Split(';');
-		foreach (var part in parts)
+		foreach (var trimmedPart in parts.Select(part => part.Trim()))
 		{
-			var trimmedPart = part.Trim();
 			if (trimmedPart.StartsWith("Uid=", StringComparison.OrdinalIgnoreCase))
 				return trimmedPart.Substring(4);
 			if (trimmedPart.StartsWith("User Id=", StringComparison.OrdinalIgnoreCase))
@@ -159,9 +157,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	private static string ExtractSqlPassword(string connectionString)
 	{
 		var parts = connectionString.Split(';');
-		foreach (var part in parts)
+		foreach (var trimmedPart in parts.Select(part => part.Trim()))
 		{
-			var trimmedPart = part.Trim();
 			if (trimmedPart.StartsWith("Pwd=", StringComparison.OrdinalIgnoreCase))
 				return trimmedPart.Substring(4);
 			if (trimmedPart.StartsWith("Password=", StringComparison.OrdinalIgnoreCase))
