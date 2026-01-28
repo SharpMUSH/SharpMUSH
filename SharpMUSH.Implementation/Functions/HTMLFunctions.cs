@@ -114,7 +114,11 @@ public partial class Functions
 		{
 			dataObj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonContent);
 		}
-		catch
+		catch (System.Text.Json.JsonException)
+		{
+			dataObj = jsonContent;
+		}
+		catch (System.NotSupportedException)
 		{
 			dataObj = jsonContent;
 		}
