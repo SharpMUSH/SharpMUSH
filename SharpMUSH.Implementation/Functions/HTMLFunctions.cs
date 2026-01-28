@@ -107,6 +107,24 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
+		// Format as JSON object with type indicator
+		// Try to parse as JSON, but if it fails, send as-is
+		object? dataObj;
+		try
+		{
+			dataObj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonContent);
+		}
+		catch
+		{
+			dataObj = jsonContent;
+		}
+
+		var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
+		{
+			type = "json",
+			data = dataObj
+		});
+
 		// Send to all WebSocket connections for the target player
 		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
 		{
@@ -114,24 +132,6 @@ public partial class Functions
 			{
 				continue;
 			}
-
-			// Format as JSON object with type indicator
-			// Try to parse as JSON, but if it fails, send as-is
-			object? dataObj;
-			try
-			{
-				dataObj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonContent);
-			}
-			catch
-			{
-				dataObj = jsonContent;
-			}
-
-			var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
-			{
-				type = "json",
-				data = dataObj
-			});
 
 			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
 				connection.Handle,
@@ -159,13 +159,8 @@ public partial class Functions
 
 		var locate = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
-		if (!parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
-		{
-			arg1 = null;
-		}
-
-		var playerStr = arg1 != null
-			? arg1.Message!.ToPlainText()
+			enactor,
+			executor,
 			playerStr,
 			PlayersPreference | AbsoluteMatch);
 
@@ -190,6 +185,13 @@ public partial class Functions
 			return CallState.Empty;
 		}
 
+		// Format as JSON object with type indicator
+		var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
+		{
+			type = "html",
+			data = htmlContent
+		});
+
 		// Send to all WebSocket connections for the target player
 		await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
 		{
@@ -197,13 +199,6 @@ public partial class Functions
 			{
 				continue;
 			}
-
-			// Format as JSON object with type indicator
-			var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
-			{
-				type = "html",
-				data = htmlContent
-			});
 
 			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
 				connection.Handle,
