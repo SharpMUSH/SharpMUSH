@@ -909,7 +909,7 @@ public partial class ArangoDatabase(
 	public IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj,
 		CancellationToken ct = default) =>
 		arangoDb.Query.ExecuteStreamAsync<SharpChannelQueryResult>(handle,
-				$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OnChannel} RETURN v",
+				$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN v",
 				new Dictionary<string, object>
 				{
 					{ StartVertex, obj.Object().Id! }
@@ -1001,36 +1001,45 @@ public partial class ArangoDatabase(
 			handle,
 			DatabaseConstants.GraphChannels,
 			DatabaseConstants.OnChannel,
-			new SharpEdgeCreateRequest(channel.Id!, obj.Object().Id!),
+			new SharpEdgeCreateRequest(obj.Object().Id!, channel.Id!),
 			cancellationToken: ct);
 
 	public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj,
 		CancellationToken ct = default)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e._key",
+		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
 			new Dictionary<string, object>
 			{
 				{ StartVertex, obj.Object().Id! }
 			}, cancellationToken: ct);
 
-		var singleResult = result?.FirstOrDefault();
-		if (singleResult is null) return;
+		// Find all edges connecting to the specific channel (there might be duplicates)
+		var edges = result?.Where(x => x.To == channel.Id).ToList();
+		if (edges is null || edges.Count == 0) return;
 
-		await arangoDb.Graph.Edge.RemoveAsync<ArangoVoid>(handle,
-			DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
-			singleResult, cancellationToken: ct);
+		// Remove all matching edges
+		foreach (var edge in edges)
+		{
+			await arangoDb.Graph.Edge.RemoveAsync<ArangoVoid>(handle,
+				DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
+				edge.Key, cancellationToken: ct);
+		}
 	}
 
 	public async ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj,
 		SharpChannelStatus status, CancellationToken ct = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
-			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
-			new Dictionary<string, object> { { StartVertex, obj.Object().Id! } }, cancellationToken: ct);
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
+			new Dictionary<string, object> 
+			{ 
+				{ StartVertex, obj.Object().Id! }
+			}, cancellationToken: ct);
 
-		var singleResult = result?.FirstOrDefault();
-		if (singleResult is null) return;
+		// Find the edge connecting to the specific channel
+		var edge = result?.FirstOrDefault(x => x.To == channel.Id);
+		if (edge is null) return;
 
 		var updates = new List<KeyValuePair<string, object>>();
 		if (status.Combine is { } combine)
@@ -1059,7 +1068,7 @@ public partial class ArangoDatabase(
 		}
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,
-			singleResult.Key, updates, cancellationToken: ct);
+			edge.Key, updates, cancellationToken: ct);
 	}
 
 	private SharpObjectFlag SharpObjectFlagQueryToSharpFlag(SharpObjectFlagQueryResult x) =>
