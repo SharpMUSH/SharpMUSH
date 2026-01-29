@@ -105,40 +105,10 @@ module MarkupImplementation =
 
       override this.Prefix: string = System.String.Empty
 
-      // TODO: Move to ANSI.fs somehow - this doesn't belong here.
+      // ANSI optimization moved to ANSILibrary.Optimization module
       [<TailCall>]
       override this.Optimize (text: string) : string =
-        let pattern = @"(?<Pattern>(?:\u001b[^m]*m)+)(?<Body1>[^\u001b]+)\u001b\[0m\1(?<Body2>[^\u001b]+)\u001b\[0m"
-        let rec optimizeRepeatedPattern (acc: string) : string =
-            if not(Regex.Match(acc, pattern).Success)
-            then acc
-            else optimizeRepeatedPattern (Regex.Replace(acc, pattern, "${Pattern}${Body1}${Body2}\u001b[0m"))
-        let optimizeRepeatedClear (acc: string) : string =
-            acc.Replace("]0m]0m","]0m") 
-        let rec optimizeImpl (acc: string) (currentIndex: int) (currentEscapeCode: string) : string =
-            if currentIndex >= acc.Length - 1 then
-                acc
-            else
-                match acc.IndexOf("\u001b[", currentIndex, System.StringComparison.Ordinal) with
-                | -1 -> acc
-                | escapeCodeStartIndex ->
-                    // TODO: Implement a case that turns:
-                    // this: `[38;2;255;0;0mre[0m[38;2;255;0;0ma[0m[38;2;255;0;0md[0m`
-                    // into: [38;2;255;0;0mread[0m
-                    // By recognizing that a pattern is the same as a previous pattern, and removing the duplicate in-between 'poles'.
-                    let escapeCodeEndIndex = acc.IndexOf("m", escapeCodeStartIndex, System.StringComparison.Ordinal)
-                    if escapeCodeEndIndex = -1 then
-                        acc
-                    else
-                        let escapeCode = acc.Substring(escapeCodeStartIndex, escapeCodeEndIndex - escapeCodeStartIndex + 1)
-                        if escapeCode = currentEscapeCode then
-                            let updatedText = acc.Remove(escapeCodeStartIndex, escapeCodeEndIndex - escapeCodeStartIndex + 1)
-                            optimizeImpl updatedText escapeCodeStartIndex currentEscapeCode
-                        else
-                            optimizeImpl acc (escapeCodeEndIndex + 1) escapeCode
-        optimizeImpl text 0 System.String.Empty
-        |> optimizeRepeatedPattern
-        |> optimizeRepeatedClear
+        ANSILibrary.Optimization.optimize text
 
       override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
         let restoreDetailsF (restoreDetails: Markup) =

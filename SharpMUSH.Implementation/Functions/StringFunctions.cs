@@ -1088,19 +1088,53 @@ public partial class Functions
 	internal static string ReconstructAnsiCall(AnsiStructure ansiDetails, string innerText)
 	{
 		var attributes = new List<string>();
+		
+		// Build formatting prefix (h for bold, u for underline, f for blink, i for invert)
+		var formatPrefix = "";
+		if (ansiDetails.Bold) formatPrefix += "h";
+		if (ansiDetails.Underlined) formatPrefix += "u";
+		if (ansiDetails.Blink) formatPrefix += "f";
+		if (ansiDetails.Inverted) formatPrefix += "i";
 
-		if (ansiDetails.Bold) attributes.Add("h");
-		if (ansiDetails.Underlined) attributes.Add("u");
-		if (ansiDetails.Blink) attributes.Add("f");
-		if (ansiDetails.Inverted) attributes.Add("i");
-
+		// Add foreground color (with formatting prefix if any)
 		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi))
 		{
 			var colorCode = ConvertAnsiColorToCode(ansiDetails.Foreground);
 			if (!string.IsNullOrEmpty(colorCode))
-				attributes.Add(colorCode);
+			{
+				// If there's a formatting prefix and the color is a single character,
+				// combine them (e.g., "ub" instead of "u,b")
+				if (!string.IsNullOrEmpty(formatPrefix) && colorCode.Length == 1)
+				{
+					attributes.Add(formatPrefix + colorCode);
+					formatPrefix = ""; // Clear format prefix since it's been used
+				}
+				else
+				{
+					// Add formatting prefix as separate attribute if not combined
+					if (!string.IsNullOrEmpty(formatPrefix))
+					{
+						attributes.Add(formatPrefix);
+						formatPrefix = "";
+					}
+					attributes.Add(colorCode);
+				}
+			}
+			else if (!string.IsNullOrEmpty(formatPrefix))
+			{
+				// No valid color code, add format prefix anyway
+				attributes.Add(formatPrefix);
+				formatPrefix = "";
+			}
+		}
+		else if (!string.IsNullOrEmpty(formatPrefix))
+		{
+			// No foreground color, add format prefix as standalone attribute
+			attributes.Add(formatPrefix);
+			formatPrefix = "";
 		}
 
+		// Add background color
 		if (!ansiDetails.Background.Equals(AnsiColor.NoAnsi))
 		{
 			var colorCode = ConvertAnsiColorToCode(ansiDetails.Background, isBackground: true);
@@ -1173,14 +1207,23 @@ public partial class Functions
 				=> ansi.Item switch
 				{
 					// Background colors use uppercase, foreground uses lowercase
-					[0, 30] or [0, 40] => isBackground ? "X" : "x", // black
-					[0, 31] or [0, 41] => isBackground ? "R" : "r", // red
-					[0, 32] or [0, 42] => isBackground ? "G" : "g", // green
-					[0, 33] or [0, 43] => isBackground ? "Y" : "y", // yellow
-					[0, 34] or [0, 44] => isBackground ? "B" : "b", // blue
-					[0, 35] or [0, 45] => isBackground ? "M" : "m", // magenta
-					[0, 36] or [0, 46] => isBackground ? "C" : "c", // cyan
-					[0, 37] or [0, 47] => isBackground ? "W" : "w", // white
+					// Handle both single-element [34] and two-element [0, 34] arrays
+					[30] or [0, 30] or [0, 40] => isBackground ? "X" : "x", // black
+					[31] or [0, 31] or [0, 41] => isBackground ? "R" : "r", // red
+					[32] or [0, 32] or [0, 42] => isBackground ? "G" : "g", // green
+					[33] or [0, 33] or [0, 43] => isBackground ? "Y" : "y", // yellow
+					[34] or [0, 34] or [0, 44] => isBackground ? "B" : "b", // blue
+					[35] or [0, 35] or [0, 45] => isBackground ? "M" : "m", // magenta
+					[36] or [0, 36] or [0, 46] => isBackground ? "C" : "c", // cyan
+					[37] or [0, 37] or [0, 47] => isBackground ? "W" : "w", // white
+					[40] => isBackground ? "X" : "x", // background black (when used as single element)
+					[41] => isBackground ? "R" : "r", // background red
+					[42] => isBackground ? "G" : "g", // background green
+					[43] => isBackground ? "Y" : "y", // background yellow
+					[44] => isBackground ? "B" : "b", // background blue
+					[45] => isBackground ? "M" : "m", // background magenta
+					[46] => isBackground ? "C" : "c", // background cyan
+					[47] => isBackground ? "W" : "w", // background white
 					[1, 30] or [1, 40] => isBackground ? "hX" : "hx", // bright black
 					[1, 31] or [1, 41] => isBackground ? "hR" : "hr", // bright red
 					[1, 32] or [1, 42] => isBackground ? "hG" : "hg", // bright green
