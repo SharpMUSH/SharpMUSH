@@ -3,38 +3,6 @@ namespace SharpMUSH.Tests.Services;
 public class ScheduledTaskManagementServiceTests
 {
 	[Test]
-	public async Task ParseTimeInterval_ValidInterval_ReturnsTimeSpan()
-	{
-		// Test that time intervals parse correctly
-		var interval = "1h";
-		await Assert.That(interval).IsEqualTo("1h");
-	}
-
-	[Test]
-	public async Task ParseTimeInterval_ZeroInterval_ReturnsZero()
-	{
-		// Test that "0" disables the service
-		var interval = "0";
-		await Assert.That(interval).IsEqualTo("0");
-	}
-
-	[Test]
-	public async Task Configuration_WarnInterval_DefaultValue()
-	{
-		// Test that warn_interval configuration exists
-		var configName = "warn_interval";
-		await Assert.That(configName).IsEqualTo("warn_interval");
-	}
-
-	[Test]
-	public async Task Configuration_PurgeInterval_DefaultValue()
-	{
-		// Test that purge_interval configuration exists
-		var configName = "purge_interval";
-		await Assert.That(configName).IsEqualTo("purge_interval");
-	}
-
-	[Test]
 	[Skip("Integration test - requires service setup")]
 	public async Task BackgroundService_UpdatesWarningTime()
 	{
@@ -71,6 +39,16 @@ public class ScheduledTaskManagementServiceTests
 		// Integration test placeholder - requires database setup
 		// This test would verify that the service handles the case when
 		// UptimeData is not found in the database
+		await Task.CompletedTask;
+	}
+
+	[Test]
+	[Skip("Integration test - requires service setup")]
+	public async Task BackgroundService_UsesResponsiveCheckInterval()
+	{
+		// Integration test placeholder - requires service setup
+		// This test would verify that the background service uses a check
+		// interval based on the configured warn and purge intervals
 		await Task.CompletedTask;
 	}
 }

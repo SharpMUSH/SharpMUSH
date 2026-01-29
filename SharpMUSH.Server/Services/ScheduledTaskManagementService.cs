@@ -64,8 +64,8 @@ public partial class ScheduledTaskManagementService(
 			"Scheduled task management service started - warn_interval: {WarnInterval}, purge_interval: {PurgeInterval}",
 			_warnInterval, _purgeInterval);
 
-		// Wait a bit before first update to let the system start up
-		await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+		// Wait a bit before first update to let StartupHandler complete initialization
+		await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
 
 		while (!stoppingToken.IsCancellationRequested)
 		{
@@ -107,8 +107,29 @@ public partial class ScheduledTaskManagementService(
 					await dataService.SetExpandedServerDataAsync(data);
 				}
 
-				// Check every minute to see if times need updating
-				await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+				// Calculate next check time based on configured intervals
+				// Use the shorter of the two intervals, with a minimum of 10 seconds
+				var checkInterval = TimeSpan.FromMinutes(1); // Default to 1 minute
+				
+				if (_warnInterval > TimeSpan.Zero && _purgeInterval > TimeSpan.Zero)
+				{
+					checkInterval = _warnInterval < _purgeInterval ? _warnInterval : _purgeInterval;
+				}
+				else if (_warnInterval > TimeSpan.Zero)
+				{
+					checkInterval = _warnInterval;
+				}
+				else if (_purgeInterval > TimeSpan.Zero)
+				{
+					checkInterval = _purgeInterval;
+				}
+
+				// Ensure minimum check interval of 10 seconds, maximum of 1 minute
+				checkInterval = checkInterval < TimeSpan.FromSeconds(10) 
+					? TimeSpan.FromSeconds(10) 
+					: (checkInterval > TimeSpan.FromMinutes(1) ? TimeSpan.FromMinutes(1) : checkInterval);
+
+				await Task.Delay(checkInterval, stoppingToken);
 			}
 			catch (OperationCanceledException)
 			{
@@ -136,6 +157,13 @@ public partial class ScheduledTaskManagementService(
 
 	private static bool IsCatchableExceptionType(Exception ex)
 	{
-		return ex is not (OutOfMemoryException or StackOverflowException);
+		return ex switch
+		{
+			OutOfMemoryException => false,
+			StackOverflowException => false,
+			ThreadAbortException => false,
+			null => false,
+			_ => true
+		};
 	}
 }
