@@ -19,6 +19,8 @@ public class PostgreSqlProvider : ISqlProvider
 	public bool IsAvailable => !string.IsNullOrEmpty(_dataSource.ConnectionString);
 
 	public string ProviderName => "PostgreSQL";
+	
+	public string ParameterPlaceholderFormat => "$";
 
 	public async ValueTask<DbConnection> CreateConnectionAsync()
 		=> await _dataSource.OpenConnectionAsync();
