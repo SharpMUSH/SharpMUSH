@@ -287,10 +287,11 @@ public class ChannelMessageRequestHandler(
 			["7"] = new CallState(MModule.single(string.Join(" ", options)))
 		};
 		
+		var sourceObj = source.IsNone ? player : source.Known();
 		return await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService,
 			null, // parser - not needed for attribute evaluation
-			player,
+			sourceObj,
 			player,
 			chatFormatAttrName,
 			formatArgs,

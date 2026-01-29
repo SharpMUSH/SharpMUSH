@@ -728,8 +728,13 @@ public partial class Commands
 			if (visibleExits.Count > 0 && realViewing.IsRoom)
 			{
 				var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
-				var isTransparent = await realViewing.IsTransparent();
+				var exitFormatArgs = new Dictionary<string, CallState>
+				{
+					["0"] = new CallState(exitDbrefs)
+				};
 				
+				// Build default exit display
+				var isTransparent = await realViewing.IsTransparent();
 				MString defaultExits;
 				if (isTransparent)
 				{
@@ -757,16 +762,35 @@ public partial class Commands
 					defaultExits = MModule.single($"Obvious exits:\n{exitNames}");
 				}
 				
-				var exitFormatArgs = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(exitDbrefs)
-				};
-				
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
 					AttributeService, parser, executor, realViewing, "EXITFORMAT", 
 					exitFormatArgs, defaultExits, checkParents: false);
 				
-				await NotifyService.Notify(executor, formattedExits);
+				// If a custom format was applied, send it as a single notification
+				// If using default format in transparent rooms, send one notification per exit to match original behavior
+				if (formattedExits == defaultExits && isTransparent)
+				{
+					// Original behavior: one notification per exit in transparent rooms
+					foreach (var exit in visibleExits)
+					{
+						var exitObj = exit.WithRoomOption().Object();
+						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
+						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						
+						if (await exit.WithRoomOption().IsOpaque())
+						{
+							await NotifyService.Notify(executor, exitObj.Name);
+						}
+						else
+						{
+							await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
+						}
+					}
+				}
+				else
+				{
+					await NotifyService.Notify(executor, formattedExits);
+				}
 			}
 		}
 
