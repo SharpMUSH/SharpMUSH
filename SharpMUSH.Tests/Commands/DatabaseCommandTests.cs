@@ -11,8 +11,8 @@ namespace SharpMUSH.Tests.Commands;
 
 public class DatabaseCommandTests
 {
-	[ClassDataSource<CommandTestWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required CommandTestWebAppFactory SqlWebAppFactoryArg { get; init; }
+	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required WebAppFactory SqlWebAppFactoryArg { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
@@ -24,28 +24,15 @@ public class DatabaseCommandTests
 	[Before(Test)]
 	public async Task InitializeAsync()
 	{
-		// Use unique database for command tests to avoid interference with function tests
-		var databaseName = "sharpmush_test_commands";
-		var connectionString = MySqlTestServer.GetConnectionString(databaseName);
+		// Use unique table names for command tests to avoid interference with function tests
+		var connectionString = MySqlTestServer.Instance.GetConnectionString();
 		
 		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
-		// Create the database if it doesn't exist
-		await using (var cmd = new MySqlCommand($"CREATE DATABASE IF NOT EXISTS `{databaseName}`", connection))
-		{
-			await cmd.ExecuteNonQueryAsync();
-		}
-
-		// Switch to the database
-		await using (var cmd = new MySqlCommand($"USE `{databaseName}`", connection))
-		{
-			await cmd.ExecuteNonQueryAsync();
-		}
-
-		// Create test tables
+		// Create test tables with unique names for command tests
 		await using (var cmd = new MySqlCommand("""
-		                                        			CREATE TABLE IF NOT EXISTS test_sql_data (
+		                                        			CREATE TABLE IF NOT EXISTS test_sql_data_cmd (
 		                                        				id INT PRIMARY KEY AUTO_INCREMENT,
 		                                        				name VARCHAR(255),
 		                                        				value INT
@@ -56,7 +43,7 @@ public class DatabaseCommandTests
 		}
 
 		await using (var cmd = new MySqlCommand("""
-		                                        			CREATE TABLE IF NOT EXISTS test_mapsql_data (
+		                                        			CREATE TABLE IF NOT EXISTS test_mapsql_data_cmd (
 		                                        				id INT PRIMARY KEY AUTO_INCREMENT,
 		                                        				col1 VARCHAR(50),
 		                                        				col2 VARCHAR(50),
@@ -68,19 +55,19 @@ public class DatabaseCommandTests
 		}
 
 		// Truncate tables to ensure clean state
-		await using (var cmd = new MySqlCommand("TRUNCATE TABLE test_sql_data", connection))
+		await using (var cmd = new MySqlCommand("TRUNCATE TABLE test_sql_data_cmd", connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
 		
-		await using (var cmd = new MySqlCommand("TRUNCATE TABLE test_mapsql_data", connection))
+		await using (var cmd = new MySqlCommand("TRUNCATE TABLE test_mapsql_data_cmd", connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
 
 		// Insert test data
 		await using (var cmd = new MySqlCommand("""
-		                                        			INSERT INTO test_sql_data (name, value) VALUES 
+		                                        			INSERT INTO test_sql_data_cmd (name, value) VALUES 
 		                                        			('test_sql_row1', 100),
 		                                        			('test_sql_row2', 200),
 		                                        			('test_sql_row3', 300)
@@ -90,7 +77,7 @@ public class DatabaseCommandTests
 		}
 
 		await using (var cmd = new MySqlCommand("""
-		                                        			INSERT INTO test_mapsql_data (col1, col2, col3) VALUES 
+		                                        			INSERT INTO test_mapsql_data_cmd (col1, col2, col3) VALUES 
 		                                        			('data1_col1', 'data1_col2', 10),
 		                                        			('data2_col1', 'data2_col2', 20),
 		                                        			('data3_col1', 'data3_col2', 30)
@@ -160,7 +147,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectSingleRow()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name, value FROM test_sql_data WHERE id = 1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name, value FROM test_sql_data_cmd WHERE id = 1"));
 
 		await NotifyService
 			.Received()
@@ -172,7 +159,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectMultipleRows()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name FROM test_sql_data ORDER BY id"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name FROM test_sql_data_cmd ORDER BY id"));
 
 		await NotifyService
 			.Received()
@@ -184,7 +171,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectWithWhere()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT value FROM test_sql_data WHERE name = 'test_sql_row2'"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT value FROM test_sql_data_cmd WHERE name = 'test_sql_row2'"));
 
 		await NotifyService
 			.Received()
@@ -208,7 +195,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_NoResults()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test_sql_data WHERE id = 999"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test_sql_data_cmd WHERE id = 999"));
 
 		await NotifyService
 			.Received()
@@ -222,7 +209,7 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_Basic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_basic #1=think Test_MapSql_Basic: %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data WHERE id = 1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		await NotifyService
 			.Received()
@@ -236,7 +223,7 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_WithMultipleRows()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_mr #1=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data ORDER BY id"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -277,7 +264,7 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_WithColnamesSwitch()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_cn #1=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/colnames #1/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data WHERE id = 1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/colnames #1/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -297,7 +284,7 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_InvalidObjectAttribute()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr #1=think %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql invalid=SELECT * FROM test_mapsql_data"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql invalid=SELECT * FROM test_mapsql_data_cmd"));
 
 		await NotifyService
 			.Received()
@@ -325,7 +312,7 @@ public class DatabaseCommandTests
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithParameter()
 	{
 		// Test using lit() to protect the query
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data WHERE id = ?),1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id = ?),1"));
 
 		await NotifyService
 			.Received()
@@ -338,7 +325,7 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithMultipleParameters()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data WHERE id >= ? AND id <= ? ORDER BY id),1,2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id >= ? AND id <= ? ORDER BY id),1,2"));
 
 		await NotifyService
 			.Received()
@@ -351,7 +338,7 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_WhereClauseWithStringParameter()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT value FROM test_sql_data WHERE name = ?),test_sql_row2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT value FROM test_sql_data_cmd WHERE name = ?),test_sql_row2"));
 
 		await NotifyService
 			.Received()
@@ -364,7 +351,7 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_NoResults()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT * FROM test_sql_data WHERE id = ?),999"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT * FROM test_sql_data_cmd WHERE id = ?),999"));
 
 		await NotifyService
 			.Received()
@@ -378,7 +365,7 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_PrepareSwitch_Basic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr_basic #1=think Test_MapSql_PrepareSwitch_Basic: %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data WHERE id = ?),1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
 		await NotifyService
 			.Received()
@@ -392,7 +379,7 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_PrepareSwitch_WithMultipleRows()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr_mr #1=think Test_MapSql_PrepareSwitch_WithMultipleRows: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data WHERE id <= ? ORDER BY id),2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -412,7 +399,7 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_PrepareSwitch_InvalidObjectAttribute()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr #1=think %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE invalid=SELECT * FROM test_mapsql_data"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE invalid=SELECT * FROM test_mapsql_data_cmd"));
 
 		await NotifyService
 			.Received()
