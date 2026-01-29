@@ -329,4 +329,56 @@ public class AnsiStringUnitTests
 		// Verify plain text is correct
 		await Assert.That(combined.ToPlainText()).IsEqualTo("abc");
 	}
+
+	[Test]
+	public async Task AnsiColorInterpolation()
+	{
+		// Test Phase 4 TODO #2: ANSI color interpolation with opacity
+		// This tests that ANSI standard colors can be interpolated when opacity is set
+		
+		// Create an ANSIString with ANSI red color, ANSI blue background, and 50% opacity
+		// This should interpolate red and blue to create a purple color
+		var redFg = StringExtensions.ansiBytes([0, 31]);  // Red foreground (170, 0, 0)
+		var blueBg = StringExtensions.ansiBytes([0, 44]); // Blue background (0, 0, 170)
+		
+		var ansiString = new ANSIString("test")
+			.SetForegroundColor(redFg)
+			.SetBackgroundColor(blueBg)
+			.SetOpacity(0.5);
+		
+		var result = ansiString.ToString();
+		
+		// Verify the text is present
+		await Assert.That(result).Contains("test");
+		
+		// The result should contain ANSI RGB color codes (38;2;R;G;B format)
+		// After interpolation: (170*0.5 + 0*0.5, 0*0.5 + 0*0.5, 0*0.5 + 170*0.5) = (85, 0, 85)
+		await Assert.That(result).Contains("38;2;85;0;85");
+		
+		// Log the result for debugging
+		Log.Logger.Information("ANSI interpolation result: {Result}", result);
+	}
+
+	[Test]
+	public async Task MixedRgbAnsiColorInterpolation()
+	{
+		// Test interpolation between RGB and ANSI colors
+		var rgbRed = StringExtensions.rgb(Color.FromArgb(255, 0, 0));     // RGB red
+		var ansiBlue = StringExtensions.ansiBytes([0, 34]); // ANSI blue (0, 0, 170)
+		
+		var ansiString = new ANSIString("test")
+			.SetForegroundColor(rgbRed)
+			.SetBackgroundColor(ansiBlue)
+			.SetOpacity(0.5);
+		
+		var result = ansiString.ToString();
+		
+		// Verify the text is present
+		await Assert.That(result).Contains("test");
+		
+		// After interpolation: (255*0.5 + 0*0.5, 0*0.5 + 0*0.5, 0*0.5 + 170*0.5) = (127, 0, 85)
+		await Assert.That(result).Contains("38;2;127;0;85");
+		
+		Log.Logger.Information("Mixed RGB/ANSI interpolation result: {Result}", result);
+	}
 }

@@ -43,6 +43,64 @@ module ANSI =
 
   let Hyperlink (text: string, link: string) = $"\u001b]8;;%s{link}\a%s{text}\u001b]8;;\a"
 
+  /// <summary>
+  /// Converts standard ANSI color codes to RGB equivalents.
+  /// Uses standard VGA color palette for terminal emulators.
+  /// </summary>
+  let AnsiToRgb (ansiBytes: byte array) : Color =
+    // Extract the actual color code from the ANSI byte array
+    // Formats can be: [code], [0, code], [1, code], etc.
+    let colorCode = 
+      match ansiBytes with
+      | [| code |] -> int code
+      | [| _; code |] -> int code
+      | _ -> 0  // Default to black if format is unexpected
+    
+    // Map ANSI codes to standard VGA RGB values
+    match colorCode with
+    // Standard foreground colors (30-37)
+    | 30 -> Color.FromArgb(0, 0, 0)         // Black
+    | 31 -> Color.FromArgb(170, 0, 0)       // Red
+    | 32 -> Color.FromArgb(0, 170, 0)       // Green
+    | 33 -> Color.FromArgb(170, 85, 0)      // Yellow
+    | 34 -> Color.FromArgb(0, 0, 170)       // Blue
+    | 35 -> Color.FromArgb(170, 0, 170)     // Magenta
+    | 36 -> Color.FromArgb(0, 170, 170)     // Cyan
+    | 37 -> Color.FromArgb(170, 170, 170)   // White
+    
+    // Standard background colors (40-47) - same RGB as foreground
+    | 40 -> Color.FromArgb(0, 0, 0)         // Black
+    | 41 -> Color.FromArgb(170, 0, 0)       // Red
+    | 42 -> Color.FromArgb(0, 170, 0)       // Green
+    | 43 -> Color.FromArgb(170, 85, 0)      // Yellow
+    | 44 -> Color.FromArgb(0, 0, 170)       // Blue
+    | 45 -> Color.FromArgb(170, 0, 170)     // Magenta
+    | 46 -> Color.FromArgb(0, 170, 170)     // Cyan
+    | 47 -> Color.FromArgb(170, 170, 170)   // White
+    
+    // Bright/intense foreground colors (90-97)
+    | 90 -> Color.FromArgb(85, 85, 85)      // Bright Black (Gray)
+    | 91 -> Color.FromArgb(255, 85, 85)     // Bright Red
+    | 92 -> Color.FromArgb(85, 255, 85)     // Bright Green
+    | 93 -> Color.FromArgb(255, 255, 85)    // Bright Yellow
+    | 94 -> Color.FromArgb(85, 85, 255)     // Bright Blue
+    | 95 -> Color.FromArgb(255, 85, 255)    // Bright Magenta
+    | 96 -> Color.FromArgb(85, 255, 255)    // Bright Cyan
+    | 97 -> Color.FromArgb(255, 255, 255)   // Bright White
+    
+    // Bright/intense background colors (100-107)
+    | 100 -> Color.FromArgb(85, 85, 85)     // Bright Black (Gray)
+    | 101 -> Color.FromArgb(255, 85, 85)    // Bright Red
+    | 102 -> Color.FromArgb(85, 255, 85)    // Bright Green
+    | 103 -> Color.FromArgb(255, 255, 85)   // Bright Yellow
+    | 104 -> Color.FromArgb(85, 85, 255)    // Bright Blue
+    | 105 -> Color.FromArgb(255, 85, 255)   // Bright Magenta
+    | 106 -> Color.FromArgb(85, 255, 255)   // Bright Cyan
+    | 107 -> Color.FromArgb(255, 255, 255)  // Bright White
+    
+    // Default to black for unknown codes
+    | _ -> Color.FromArgb(0, 0, 0)
+
 open ANSI
 
 [<Flags>]
@@ -114,8 +172,21 @@ type ANSIString(text: string, hyperlink: string option, colorForeground: AnsiCol
         match opacity, colorForeground, colorBackground with
         | Some o, Some bg, Some fg -> 
           match bg, fg with
-            | RGB b, RGB f -> colorFunc(ANSIString.Interpolate(b, f, o)) + result
-            | _, _ -> result // TODO: Handle ANSI colors
+            | RGB b, RGB f -> 
+                // Both colors are RGB - use direct interpolation
+                colorFunc(ANSIString.Interpolate(b, f, o)) + result
+            | ANSI a, ANSI b -> 
+                // Both colors are ANSI - convert to RGB, interpolate, then use as RGB
+                let rgbA = ANSI.AnsiToRgb(a)
+                let rgbB = ANSI.AnsiToRgb(b)
+                colorFunc(ANSIString.Interpolate(rgbA, rgbB, o)) + result
+            | RGB r, ANSI a | ANSI a, RGB r ->
+                // Mixed RGB and ANSI - convert ANSI to RGB and interpolate
+                let rgbA = ANSI.AnsiToRgb(a)
+                colorFunc(ANSIString.Interpolate(rgbA, r, o)) + result
+            | _, _ -> 
+                // NoAnsi or other cases - no interpolation
+                result
         | _, Some cf, _ -> colorFunc(cf) + result
         | _ -> result
 
