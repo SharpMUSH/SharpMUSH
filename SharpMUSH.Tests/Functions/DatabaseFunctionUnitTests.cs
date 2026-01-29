@@ -297,4 +297,132 @@ public class DatabaseFunctionUnitTests
 				MModule.single("mapsql(#1/Test_Mapsql_TableDoesNotExist,lit(SELECT * FROM nonexistent_table))")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
+
+	// ===== Prepared Statement Tests =====
+
+	[Test]
+	public async Task Test_SqlPrepare_SelectWithParameter()
+	{
+		var result =
+			(await Parser.FunctionParse(MModule.single("sqlprepare(lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = ?),1)")))
+			?.Message!;
+		var plainText = result.ToPlainText();
+
+		await Assert.That(plainText).Contains("test_sql_row1");
+		await Assert.That(plainText).Contains("100");
+	}
+
+	[Test]
+	public async Task Test_SqlPrepare_SelectWithMultipleParameters()
+	{
+		var result =
+			(await Parser.FunctionParse(MModule.single("sqlprepare(lit(SELECT `name` FROM `test_sql_data` WHERE id >= ? AND id <= ? ORDER BY id),1,2)")))
+			?.Message!;
+		var plainText = result.ToPlainText();
+
+		await Assert.That(plainText).Contains("test_sql_row1");
+		await Assert.That(plainText).Contains("test_sql_row2");
+	}
+
+	[Test]
+	public async Task Test_SqlPrepare_WhereClauseWithStringParameter()
+	{
+		var result =
+			(await Parser.FunctionParse(MModule.single("sqlprepare(lit(SELECT `value` FROM `test_sql_data` WHERE name = ? LIMIT 1),test_sql_row2)")))
+			?.Message!;
+		var plainText = result.ToPlainText();
+
+		await Assert.That(plainText).IsEqualTo("200");
+	}
+
+	[Test]
+	public async Task Test_SqlPrepare_NoResults()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("sqlprepare(lit(SELECT * FROM `test_sql_data` WHERE id = ?),999)")))
+			?.Message!;
+		var plainText = result.ToPlainText();
+
+		await Assert.That(plainText).IsEmpty();
+	}
+
+	[Test]
+	public async Task Test_SqlPrepare_PreventsSqlInjection()
+	{
+		// Try to inject SQL via a string parameter - prepared statements should prevent this
+		// Use a string that would normally cause issues if directly concatenated
+		var result = (await Parser.FunctionParse(MModule.single("sqlprepare(lit(SELECT * FROM `test_sql_data` WHERE name = ?),test' OR '1'='1)")))
+			?.Message!;
+		var plainText = result.ToPlainText();
+
+		// The parameter "test' OR '1'='1" should be treated as a literal string value
+		// This should fail to find a match since there's no row with that exact name
+		await Assert.That(plainText).IsEmpty();
+	}
+
+	[Test]
+	public async Task Test_MapsqlPrepare_BasicExecution()
+	{
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&Test_MapsqlPrepare_BasicExecution #1=Test_MapsqlPrepare_BasicExecution: Row %0 has value %2"));
+
+		await Task.Delay(100);
+
+		var result =
+			(await Parser.FunctionParse(MModule.single(
+				"mapsqlprepare(#1/Test_MapsqlPrepare_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id = ?),1)")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("Test_MapsqlPrepare_BasicExecution: Row 1 has value 100");
+	}
+
+	[Test]
+	public async Task Test_MapsqlPrepare_MultipleRows()
+	{
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&Test_MapsqlPrepare_MultipleRows #1=Test_MapsqlPrepare_MultipleRows: Row %0 has value %2"));
+
+		await Task.Delay(100);
+
+		var result =
+			(await Parser.FunctionParse(
+				MModule.single("mapsqlprepare(#1/Test_MapsqlPrepare_MultipleRows,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE id <= ? ORDER BY id),2)")))
+			?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("Test_MapsqlPrepare_MultipleRows: Row 1 has value 100 Test_MapsqlPrepare_MultipleRows: Row 2 has value 200");
+	}
+
+	[Test]
+	public async Task Test_MapsqlPrepare_WithStringParameter()
+	{
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&Test_MapsqlPrepare_StringParam #1=Test_MapsqlPrepare_StringParam: %1=%2"));
+
+		await Task.Delay(100);
+
+		var result =
+			(await Parser.FunctionParse(
+				MModule.single("mapsqlprepare(#1/Test_MapsqlPrepare_StringParam,lit(SELECT `name`,`value` FROM `test_sql_data` WHERE name = ?),test_sql_row3)")))
+			?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("Test_MapsqlPrepare_StringParam: test_sql_row3=300");
+	}
+
+	[Test]
+	public async Task Test_MapsqlPrepare_InvalidObjectAttribute()
+	{
+		var result = (await Parser.FunctionParse(MModule.single("mapsqlprepare(invalid_format,SELECT 1)")))?.Message!;
+		await Assert.That(result.ToPlainText()).Contains("#-1");
+	}
+
+	[Test]
+	public async Task Test_MapsqlPrepare_TableDoesNotExist()
+	{
+		// Set up an attribute first
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&Test_MapsqlPrepare_TableDoesNotExist #1=think %0"));
+		await Task.Delay(100);
+
+		var result =
+			(await Parser.FunctionParse(
+				MModule.single("mapsqlprepare(#1/Test_MapsqlPrepare_TableDoesNotExist,lit(SELECT * FROM nonexistent_table))")))?.Message!;
+		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
+	}
 }
