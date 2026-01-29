@@ -73,41 +73,86 @@ public partial class Functions
 
 		var ansiCodes = args["0"].Message!.ToString().Split(' ');
 		Func<bool, byte, byte[]> highlightFunc = (highlight, b) => highlight ? [1, b] : [b];
+		var colorsConfig = ColorConfiguration?.CurrentValue;
 
 		foreach (var cde in ansiCodes)
 		{
 			var code = cde.AsSpan();
 			var curHilight = false;
-			if (code.StartsWith("/#"))
+			var isBackground = false;
+			
+			// Check if this is a background color (starts with /)
+			if (code.StartsWith("/"))
 			{
-				// Handle background RGB color
-				background = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[2..].ToString()));
+				isBackground = true;
+				code = code[1..];
+			}
+			
+			if (code.StartsWith("#"))
+			{
+				// Handle RGB color (hex code)
+				var color = AnsiColor.NewRGB(ColorTranslator.FromHtml(code.ToString()));
+				if (isBackground)
+					background = color;
+				else
+					foreground = color;
 				continue;
 			}
-			if (code.StartsWith(['#']))
-			{
-				// Handle foreground RGB color
-				foreground = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[1..].ToString()));
-				continue;
-			}
+			
 			if (code.StartsWith(['+']) && !code.StartsWith("+xterm"))
 			{
-				// colorname
+				// Handle named color from colors.json
+				var colorName = code[1..].ToString();
+				if (colorsConfig != null && colorsConfig.ColorsByName.TryGetValue(colorName, out var colorIdentity))
+				{
+					var hexColor = colorIdentity.rgb;
+					var color = AnsiColor.NewRGB(ColorTranslator.FromHtml(hexColor));
+					if (isBackground)
+						background = color;
+					else
+						foreground = color;
+				}
 				continue;
 			}
+			
 			var xterm = 0;
 			if (
-				(int.TryParse(code, out xterm) && xterm > -1 && xterm < 256) ||
-				(code.StartsWith("+xterm") && int.TryParse(code[5..], out xterm) && xterm > -1 && xterm < 256))
+				(int.TryParse(code, out xterm) && xterm >= 0 && xterm < 256) ||
+				(code.StartsWith("+xterm") && int.TryParse(code[6..], out xterm) && xterm >= 0 && xterm < 256))
 			{
-				// xterm color
+				// Handle xterm color (0-255)
+				if (colorsConfig != null && colorsConfig.ColorsByXterm.TryGetValue(xterm.ToString(), out var xtermColors) && xtermColors.Length > 0)
+				{
+					var hexColor = xtermColors[0].rgb;
+					var color = AnsiColor.NewRGB(ColorTranslator.FromHtml(hexColor));
+					if (isBackground)
+						background = color;
+					else
+						foreground = color;
+				}
 				continue;
 			}
+			
 			if (code.StartsWith(['<']) && code.EndsWith(['>']))
 			{
-				// Check for triple RGB values
+				// Handle RGB color as <r g b> format
+				var rgbValues = code[1..^1].ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				if (rgbValues.Length == 3 &&
+					int.TryParse(rgbValues[0], out var r) && r >= 0 && r <= 255 &&
+					int.TryParse(rgbValues[1], out var g) && g >= 0 && g <= 255 &&
+					int.TryParse(rgbValues[2], out var b) && b >= 0 && b <= 255)
+				{
+					var color = AnsiColor.NewRGB(Color.FromArgb(r, g, b));
+					if (isBackground)
+						background = color;
+					else
+						foreground = color;
+				}
 				continue;
 			}
+			
+			// Reset isBackground for character-by-character processing
+			isBackground = false;
 			// ansi code. each gets evaluated individually.
 			foreach (var chr in code)
 			{
