@@ -620,49 +620,33 @@ public partial class Commands
 			baseDesc = MModule.single("You see nothing special.");
 		}
 
-		var formatArgs = new Dictionary<string, CallState>();
+		var flags = await viewingObject.Flags.Value.ToArrayAsync();
+		var defaultFormattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
+			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
 		
-		var formattedName = MModule.single(baseName);
+		var formattedName = defaultFormattedName;
 		if (realViewing.IsRoom && viewingFromInside)
 		{
-			var nameFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "NAMEFORMAT",
-				IAttributeService.AttributeMode.Read, false);
+			var nameFormatArgs = new Dictionary<string, CallState>
+			{
+				["0"] = new CallState(viewingObject.DBRef.ToString()),
+				["1"] = new CallState(defaultFormattedName)
+			};
 			
-			if (nameFormatResult.IsAttribute)
-			{
-				var flags = await viewingObject.Flags.Value.ToArrayAsync();
-				formatArgs["0"] = new CallState(viewingObject.DBRef.ToString());
-				formatArgs["1"] = new CallState($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
-					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
-				
-				formattedName = await AttributeService.EvaluateAttributeFunctionAsync(
-					parser, executor, realViewing, "NAMEFORMAT", formatArgs);
-			}
-			else
-			{
-				var flags = await viewingObject.Flags.Value.ToArrayAsync();
-				formattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
-					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
-			}
-		}
-		else
-		{
-			var flags = await viewingObject.Flags.Value.ToArrayAsync();
-			formattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
-				$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+			formattedName = await AttributeHelpers.EvaluateFormatAttribute(
+				AttributeService, parser, executor, realViewing, "NAMEFORMAT", 
+				nameFormatArgs, defaultFormattedName, checkParents: false);
 		}
 
 		var formatAttrName = useIdesc ? "IDESCFORMAT" : "DESCFORMAT";
-		var descFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, formatAttrName,
-			IAttributeService.AttributeMode.Read, false);
-		
-		var formattedDesc = baseDesc;
-		if (descFormatResult.IsAttribute)
+		var descFormatArgs = new Dictionary<string, CallState>
 		{
-			formatArgs["0"] = new CallState(baseDesc);
-			formattedDesc = await AttributeService.EvaluateAttributeFunctionAsync(
-				parser, executor, realViewing, formatAttrName, formatArgs);
-		}
+			["0"] = new CallState(baseDesc)
+		};
+		
+		var formattedDesc = await AttributeHelpers.EvaluateFormatAttribute(
+			AttributeService, parser, executor, realViewing, formatAttrName, 
+			descFormatArgs, baseDesc, checkParents: false);
 
 		await NotifyService!.Notify(executor, formattedName);
 		if (MModule.getLength(formattedDesc) > 0)
@@ -723,72 +707,89 @@ public partial class Commands
 
 			if (visibleContents.Count > 0)
 			{
-				var conFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "CONFORMAT",
-					IAttributeService.AttributeMode.Read, false);
+				var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
+				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
+				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
+				var defaultContents = MModule.single($"{contentsLabel}\n{string.Join("\n", visibleContents.Select(x => x.Object().Name))}");
 				
-				if (conFormatResult.IsAttribute)
+				var conFormatArgs = new Dictionary<string, CallState>
 				{
-					var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
-					var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
-					
-					formatArgs["0"] = new CallState(contentDbrefs);
-					formatArgs["1"] = new CallState(contentNames);
-					
-					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
-						parser, executor, realViewing, "CONFORMAT", formatArgs);
-					
-					await NotifyService.Notify(executor, formattedContents);
-				}
-				else
-				{
-					var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
-					var contentsList = string.Join("\n", visibleContents.Select(x => x.Object().Name));
-					await NotifyService.Notify(executor, $"{contentsLabel}\n{contentsList}");
-				}
+					["0"] = new CallState(contentDbrefs),
+					["1"] = new CallState(contentNames)
+				};
+				
+				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
+					AttributeService, parser, executor, realViewing, "CONFORMAT", 
+					conFormatArgs, defaultContents, checkParents: false);
+				
+				await NotifyService.Notify(executor, formattedContents);
 			}
 
 			if (visibleExits.Count > 0 && realViewing.IsRoom)
 			{
-				var exitFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "EXITFORMAT",
-					IAttributeService.AttributeMode.Read, false);
-				
-				if (exitFormatResult.IsAttribute)
+				var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
+				var exitFormatArgs = new Dictionary<string, CallState>
 				{
-					var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
-					
-					formatArgs["0"] = new CallState(exitDbrefs);
-					
-					var formattedExits = await AttributeService.EvaluateAttributeFunctionAsync(
-						parser, executor, realViewing, "EXITFORMAT", formatArgs);
-					
-					await NotifyService.Notify(executor, formattedExits);
+					["0"] = new CallState(exitDbrefs)
+				};
+				
+				// Build default exit display
+				var isTransparent = await realViewing.IsTransparent();
+				MString defaultExits;
+				if (isTransparent)
+				{
+					var exitDisplays = new List<string>();
+					foreach (var exit in visibleExits)
+					{
+						var exitObj = exit.WithRoomOption().Object();
+						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
+						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						
+						if (await exit.WithRoomOption().IsOpaque())
+						{
+							exitDisplays.Add(exitObj.Name);
+						}
+						else
+						{
+							exitDisplays.Add($"{exitObj.Name} to {destName}");
+						}
+					}
+					defaultExits = MModule.single(string.Join("\n", exitDisplays));
 				}
 				else
 				{
-					var isTransparent = await realViewing.IsTransparent();
-					if (isTransparent)
+					var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
+					defaultExits = MModule.single($"Obvious exits:\n{exitNames}");
+				}
+				
+				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
+					AttributeService, parser, executor, realViewing, "EXITFORMAT", 
+					exitFormatArgs, defaultExits, checkParents: false);
+				
+				// If a custom format was applied, send it as a single notification
+				// If using default format in transparent rooms, send one notification per exit to match original behavior
+				if (formattedExits == defaultExits && isTransparent)
+				{
+					// Original behavior: one notification per exit in transparent rooms
+					foreach (var exit in visibleExits)
 					{
-						foreach (var exit in visibleExits)
+						var exitObj = exit.WithRoomOption().Object();
+						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
+						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						
+						if (await exit.WithRoomOption().IsOpaque())
 						{
-							var exitObj = exit.WithRoomOption().Object();
-							var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
-							var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
-							
-							if (await exit.WithRoomOption().IsOpaque())
-							{
-								await NotifyService.Notify(executor, exitObj.Name);
-							}
-							else
-							{
-								await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
-							}
+							await NotifyService.Notify(executor, exitObj.Name);
+						}
+						else
+						{
+							await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
 						}
 					}
-					else
-					{
-						var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
-						await NotifyService.Notify(executor, $"Obvious exits:\n{exitNames}");
-					}
+				}
+				else
+				{
+					await NotifyService.Notify(executor, formattedExits);
 				}
 			}
 		}
