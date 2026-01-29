@@ -33,4 +33,10 @@ public interface ISqlProvider : IAsyncDisposable
 	/// Gets the name of the provider
 	/// </summary>
 	string ProviderName { get; }
+	
+	/// <summary>
+	/// Gets the parameter placeholder format for this provider
+	/// (e.g., "?" for MySQL, "$" for PostgreSQL, "@p" for SQL Server)
+	/// </summary>
+	string ParameterPlaceholderFormat { get; }
 }

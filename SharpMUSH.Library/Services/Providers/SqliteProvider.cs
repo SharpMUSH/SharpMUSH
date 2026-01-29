@@ -19,6 +19,8 @@ public class SqliteProvider : ISqlProvider
 	public bool IsAvailable => !string.IsNullOrEmpty(_connectionString);
 
 	public string ProviderName => "SQLite";
+	
+	public string ParameterPlaceholderFormat => "?";
 
 	public async ValueTask<DbConnection> CreateConnectionAsync()
 	{
