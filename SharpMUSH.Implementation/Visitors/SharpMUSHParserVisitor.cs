@@ -673,16 +673,58 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 2a: Check for the channel single-token command.
-
-			// TODO: Improve channel name matching with fuzzy/partial matching.
-			// Current implementation uses simple StartsWith matching which may not handle all cases.
 			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
 				var channels = Mediator.CreateStream(new GetChannelListQuery());
 				var check = command[1..];
 
-				var channel = await channels.FirstOrDefaultAsync(x =>
-					x.Name.ToPlainText().StartsWith(check, StringComparison.CurrentCultureIgnoreCase));
+				// Collect potential channel matches
+				var exactMatches = new List<SharpChannel>();
+				var partialMatches = new List<SharpChannel>();
+
+				await foreach (var ch in channels)
+				{
+					var channelName = ch.Name.ToPlainText();
+					if (channelName.Equals(check, StringComparison.CurrentCultureIgnoreCase))
+					{
+						exactMatches.Add(ch);
+					}
+					else if (channelName.StartsWith(check, StringComparison.CurrentCultureIgnoreCase))
+					{
+						partialMatches.Add(ch);
+					}
+				}
+
+				// Prefer exact matches over partial matches
+				SharpChannel? channel = null;
+				if (exactMatches.Count == 1)
+				{
+					channel = exactMatches[0];
+				}
+				else if (exactMatches.Count == 0 && partialMatches.Count == 1)
+				{
+					channel = partialMatches[0];
+				}
+				else if (exactMatches.Count > 1)
+				{
+					// Multiple exact matches - ambiguous
+					if (parser.CurrentState.Handle is not null)
+					{
+						await NotifyService.Notify(parser.CurrentState.Handle.Value, 
+							$"Ambiguous channel name '{check}'. Please be more specific.");
+					}
+					return new None();
+				}
+				else if (partialMatches.Count > 1)
+				{
+					// Multiple partial matches - ambiguous
+					if (parser.CurrentState.Handle is not null)
+					{
+						await NotifyService.Notify(parser.CurrentState.Handle.Value, 
+							$"Ambiguous channel name '{check}'. Matches: {string.Join(", ", partialMatches.Select(c => c.Name.ToPlainText()))}");
+					}
+					return new None();
+				}
 
 				if (channel is not null && !context.evaluationString().IsEmpty)
 				{
