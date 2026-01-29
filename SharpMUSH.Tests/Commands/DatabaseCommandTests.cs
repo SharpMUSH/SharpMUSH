@@ -296,9 +296,9 @@ public class DatabaseCommandTests
 	// ===== Prepared Statement Command Tests =====
 
 	[Test]
-	public async ValueTask Test_SqlPrepare_SelectWithParameter()
+	public async ValueTask Test_Sql_PrepareSwitch_SelectWithParameter()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sqlprepare SELECT name, value FROM test_sql_data WHERE id = ?,1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT name\\, value FROM test_sql_data WHERE id = ?,1"));
 
 		await NotifyService
 			.Received()
@@ -308,9 +308,9 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	public async ValueTask Test_SqlPrepare_SelectWithMultipleParameters()
+	public async ValueTask Test_Sql_PrepareSwitch_SelectWithMultipleParameters()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sqlprepare SELECT name FROM test_sql_data WHERE id >= ? AND id <= ? ORDER BY id,1,2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT name FROM test_sql_data WHERE id >= ? AND id <= ? ORDER BY id,1,2"));
 
 		await NotifyService
 			.Received()
@@ -320,9 +320,9 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	public async ValueTask Test_SqlPrepare_WhereClauseWithStringParameter()
+	public async ValueTask Test_Sql_PrepareSwitch_WhereClauseWithStringParameter()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sqlprepare SELECT value FROM test_sql_data WHERE name = ?,test_sql_row2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT value FROM test_sql_data WHERE name = ?,test_sql_row2"));
 
 		await NotifyService
 			.Received()
@@ -332,9 +332,9 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	public async ValueTask Test_SqlPrepare_NoResults()
+	public async ValueTask Test_Sql_PrepareSwitch_NoResults()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sqlprepare SELECT * FROM test_sql_data WHERE id = ?,999"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT * FROM test_sql_data WHERE id = ?,999"));
 
 		await NotifyService
 			.Received()
@@ -345,44 +345,44 @@ public class DatabaseCommandTests
 
 	[Test]
 	[NotInParallel]
-	public async ValueTask Test_MapSqlPrepare_Basic()
+	public async ValueTask Test_MapSql_PrepareSwitch_Basic()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsqlprepare_test_attr_basic #1=think Test_MapSqlPrepare_Basic: %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsqlprepare #1/mapsqlprepare_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data WHERE id = ?,1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr_basic #1=think Test_MapSql_PrepareSwitch_Basic: %0 - %1 - %2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_basic=SELECT col1\\, col2 FROM test_mapsql_data WHERE id = ?,1"));
 
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSqlPrepare_Basic")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSqlPrepare_Basic"))));
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_Basic")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_Basic"))));
 	}
 
 	[Test]
 	[NotInParallel]
-	public async ValueTask Test_MapSqlPrepare_WithMultipleRows()
+	public async ValueTask Test_MapSql_PrepareSwitch_WithMultipleRows()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsqlprepare_test_attr_mr #1=think Test_MapSqlPrepare_WithMultipleRows: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsqlprepare #1/mapsqlprepare_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data WHERE id <= ? ORDER BY id,2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr_mr #1=think Test_MapSql_PrepareSwitch_WithMultipleRows: %0 - %1 - %2 - %3"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_mr=SELECT col1\\, col2\\, col3 FROM test_mapsql_data WHERE id <= ? ORDER BY id,2"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSqlPrepare_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSqlPrepare_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10"))));
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10"))));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSqlPrepare_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Test_MapSqlPrepare_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20"))));
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20"))));
 	}
 
 	[Test]
 	[NotInParallel]
-	public async ValueTask Test_MapSqlPrepare_InvalidObjectAttribute()
+	public async ValueTask Test_MapSql_PrepareSwitch_InvalidObjectAttribute()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsqlprepare_test_attr #1=think %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsqlprepare invalid=SELECT * FROM test_mapsql_data"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr #1=think %0 - %1 - %2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE invalid=SELECT * FROM test_mapsql_data"));
 
 		await NotifyService
 			.Received()
@@ -392,9 +392,9 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	public async ValueTask Test_SqlPrepare_InvalidQuery()
+	public async ValueTask Test_Sql_PrepareSwitch_InvalidQuery()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sqlprepare SELECT * FROM nonexistent_table"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT * FROM nonexistent_table"));
 
 		await NotifyService
 			.Received()
