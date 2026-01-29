@@ -1,7 +1,7 @@
 ﻿using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
-using MySqlConnector;
+using System.Data.Common;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
@@ -67,7 +67,7 @@ public partial class Functions
 			var result = string.Join(rowSeparator, formattedRows);
 			return new CallState(result);
 		}
-		catch (Exception ex) when (ex is MySqlException or InvalidOperationException)
+		catch (Exception ex) when (ex is DbException or InvalidOperationException)
 		{
 			return new CallState($"#-1 SQL ERROR: {ex.Message}");
 		}
@@ -191,7 +191,7 @@ public partial class Functions
 						rowNumber++;
 					}
 				}
-				catch (Exception ex) when (ex is MySqlException or InvalidOperationException)
+				catch (Exception ex) when (ex is DbException or InvalidOperationException)
 				{
 					return new CallState($"#-1 SQL ERROR: {ex.Message}");
 				}
