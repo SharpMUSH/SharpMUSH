@@ -37,9 +37,9 @@ public partial class Commands
 			return new CallState("#-1 NO QUERY SPECIFIED");
 		}
 
-		var query = queryArg.Message?.ToPlainText() ?? string.Empty;
+		var rawInput = queryArg.Message?.ToPlainText() ?? string.Empty;
 
-		if (string.IsNullOrWhiteSpace(query))
+		if (string.IsNullOrWhiteSpace(rawInput))
 		{
 			await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
 			return new CallState("#-1 NO QUERY SPECIFIED");
@@ -51,22 +51,50 @@ public partial class Commands
 
 			if (prepareSwitch)
 			{
-				// Collect all parameters after the query (starting from argument 1)
-				var parameters = new List<object?>();
-				for (var i = 1; i < parser.CurrentState.Arguments.Count; i++)
+				// For prepared statements, we need to split the input on commas
+				// The first part is the query, remaining parts are parameters
+				var parts = new List<string>();
+				var currentPart = new System.Text.StringBuilder();
+				var escaped = false;
+
+				for (var i = 0; i < rawInput.Length; i++)
 				{
-					if (parser.CurrentState.Arguments.TryGetValue(i.ToString(), out var paramArg))
+					var ch = rawInput[i];
+					if (escaped)
 					{
-						var paramValue = paramArg.Message?.ToPlainText() ?? string.Empty;
-						parameters.Add(paramValue);
+						currentPart.Append(ch);
+						escaped = false;
+					}
+					else if (ch == '\\')
+					{
+						escaped = true;
+					}
+					else if (ch == ',')
+					{
+						parts.Add(currentPart.ToString());
+						currentPart.Clear();
+					}
+					else
+					{
+						currentPart.Append(ch);
 					}
 				}
+				parts.Add(currentPart.ToString());
 
-				result = await SqlService.ExecutePreparedQueryAsStringAsync(query, " ", [.. parameters]);
+				if (parts.Count == 0)
+				{
+					await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
+					return new CallState("#-1 NO QUERY SPECIFIED");
+				}
+
+				var query = parts[0];
+				var parameters = parts.Skip(1).Cast<object?>().ToArray();
+
+				result = await SqlService.ExecutePreparedQueryAsStringAsync(query, " ", parameters);
 			}
 			else
 			{
-				result = await SqlService.ExecuteQueryAsStringAsync(query);
+				result = await SqlService.ExecuteQueryAsStringAsync(rawInput);
 			}
 
 			await NotifyService!.Notify(executor, result);
@@ -116,9 +144,9 @@ public partial class Commands
 		}
 
 		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
-		var query = queryArg.Message?.ToPlainText() ?? string.Empty;
+		var rawQueryInput = queryArg.Message?.ToPlainText() ?? string.Empty;
 
-		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(query))
+		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(rawQueryInput))
 		{
 			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
 			return new CallState("#-1 INVALID ARGUMENTS");
@@ -157,22 +185,44 @@ public partial class Commands
 
 					if (prepareSwitch)
 					{
-						// Collect all parameters after the query (starting from argument 2)
-						var parameters = new List<object?>();
-						for (var i = 2; i < parser.CurrentState.Arguments.Count; i++)
+						// For prepared statements, we need to split the query input on commas
+						// The first part is the query, remaining parts are parameters
+						var parts = new List<string>();
+						var currentPart = new System.Text.StringBuilder();
+						var escaped = false;
+
+						for (var i = 0; i < rawQueryInput.Length; i++)
 						{
-							if (parser.CurrentState.Arguments.TryGetValue(i.ToString(), out var paramArg))
+							var ch = rawQueryInput[i];
+							if (escaped)
 							{
-								var paramValue = paramArg.Message?.ToPlainText() ?? string.Empty;
-								parameters.Add(paramValue);
+								currentPart.Append(ch);
+								escaped = false;
+							}
+							else if (ch == '\\')
+							{
+								escaped = true;
+							}
+							else if (ch == ',')
+							{
+								parts.Add(currentPart.ToString());
+								currentPart.Clear();
+							}
+							else
+							{
+								currentPart.Append(ch);
 							}
 						}
+						parts.Add(currentPart.ToString());
 
-						queryResults = SqlService.ExecuteStreamPreparedQueryAsync(query, [.. parameters]);
+						var query = parts.Count > 0 ? parts[0] : rawQueryInput;
+						var parameters = parts.Skip(1).Cast<object?>().ToArray();
+
+						queryResults = SqlService.ExecuteStreamPreparedQueryAsync(query, parameters);
 					}
 					else
 					{
-						queryResults = SqlService.ExecuteStreamQueryAsync(query);
+						queryResults = SqlService.ExecuteStreamQueryAsync(rawQueryInput);
 					}
 
 					await foreach (var row in queryResults)
