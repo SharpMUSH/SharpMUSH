@@ -251,11 +251,8 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	// TODO: Fix decompose, and then fix this test.
 	[Arguments("decompose(ansi(hr,red))", @"ansi\(hr\,red\)")]
-	//[Arguments("decompose(ansi(ub,red))", @"ansi\(ub\,red\)")]
-	// TODO: returns	"ansi\(u\,red\)". Something wrong with 'b'?
-	// [Skip("Decompose function not functioning as expected. Needs investigation.")]
+	[Arguments("decompose(ansi(ub,red))", @"ansi\(ub\,red\)")]
 	public async Task Decompose(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
