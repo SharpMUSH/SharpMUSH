@@ -298,7 +298,9 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithParameter()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT name\\, value FROM test_sql_data WHERE id = ?,1"));
+		// Store query in attribute to avoid comma escaping issues
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&SQL_QUERY #1=SELECT name, value FROM test_sql_data WHERE id = ?"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE v(SQL_QUERY),1"));
 
 		await NotifyService
 			.Received()
@@ -310,7 +312,8 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithMultipleParameters()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT name FROM test_sql_data WHERE id >= ? AND id <= ? ORDER BY id,1,2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&SQL_QUERY #1=SELECT name FROM test_sql_data WHERE id >= ? AND id <= ? ORDER BY id"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE v(SQL_QUERY),1,2"));
 
 		await NotifyService
 			.Received()
@@ -322,7 +325,8 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_PrepareSwitch_WhereClauseWithStringParameter()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT value FROM test_sql_data WHERE name = ?,test_sql_row2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&SQL_QUERY #1=SELECT value FROM test_sql_data WHERE name = ?"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE v(SQL_QUERY),test_sql_row2"));
 
 		await NotifyService
 			.Received()
@@ -334,7 +338,8 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_PrepareSwitch_NoResults()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT * FROM test_sql_data WHERE id = ?,999"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&SQL_QUERY #1=SELECT * FROM test_sql_data WHERE id = ?"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE v(SQL_QUERY),999"));
 
 		await NotifyService
 			.Received()
@@ -348,7 +353,8 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_PrepareSwitch_Basic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr_basic #1=think Test_MapSql_PrepareSwitch_Basic: %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_basic=SELECT col1\\, col2 FROM test_mapsql_data WHERE id = ?,1"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&SQL_QUERY #1=SELECT col1, col2 FROM test_mapsql_data WHERE id = ?"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_basic=v(SQL_QUERY),1"));
 
 		await NotifyService
 			.Received()
@@ -362,7 +368,8 @@ public class DatabaseCommandTests
 	public async ValueTask Test_MapSql_PrepareSwitch_WithMultipleRows()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr_mr #1=think Test_MapSql_PrepareSwitch_WithMultipleRows: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_mr=SELECT col1\\, col2\\, col3 FROM test_mapsql_data WHERE id <= ? ORDER BY id,2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&SQL_QUERY #1=SELECT col1, col2, col3 FROM test_mapsql_data WHERE id <= ? ORDER BY id"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_mr=v(SQL_QUERY),2"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
