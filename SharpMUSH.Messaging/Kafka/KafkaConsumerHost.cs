@@ -17,17 +17,20 @@ public class KafkaConsumerHost : BackgroundService
 	private readonly IServiceProvider _serviceProvider;
 	private readonly ILogger<KafkaConsumerHost> _logger;
 	private readonly MessageQueueOptions _options;
+	private readonly KafkaTopicManager _topicManager;
 	private readonly List<ConsumerRegistration> _consumerRegistrations = [];
 	private readonly List<Task> _consumerTasks = [];
 
 	public KafkaConsumerHost(
 		IServiceProvider serviceProvider,
 		ILogger<KafkaConsumerHost> logger,
-		MessageQueueOptions options)
+		MessageQueueOptions options,
+		KafkaTopicManager topicManager)
 	{
 		_serviceProvider = serviceProvider;
 		_logger = logger;
 		_options = options;
+		_topicManager = topicManager;
 	}
 
 	/// <summary>
@@ -38,6 +41,19 @@ public class KafkaConsumerHost : BackgroundService
 		_consumerRegistrations.Add(new ConsumerRegistration
 		{
 			MessageType = typeof(TMessage),
+			Topic = topic,
+			EnableBatching = enableBatching
+		});
+	}
+
+	/// <summary>
+	/// Registers a consumer for a specific message type (non-generic version)
+	/// </summary>
+	public void RegisterConsumer(Type messageType, string topic, bool enableBatching = false)
+	{
+		_consumerRegistrations.Add(new ConsumerRegistration
+		{
+			MessageType = messageType,
 			Topic = topic,
 			EnableBatching = enableBatching
 		});
@@ -60,6 +76,9 @@ public class KafkaConsumerHost : BackgroundService
 	{
 		return Task.Run(async () =>
 		{
+			// Ensure topic exists before subscribing
+			await _topicManager.EnsureTopicExistsAsync(registration.Topic, stoppingToken);
+
 			var config = new ConsumerConfig
 			{
 				BootstrapServers = $"{_options.Host}:{_options.Port}",
@@ -70,9 +89,10 @@ public class KafkaConsumerHost : BackgroundService
 				SessionTimeoutMs = 30000,
 				MaxPollIntervalMs = 300000,
 				FetchMaxBytes = _options.MaxMessageBytes,
+				AllowAutoCreateTopics = true,
 				// Performance optimizations
 				FetchMinBytes = 1,
-				FetchWaitMaxMs = 100,
+				FetchWaitMaxMs = 100
 			};
 
 			using var consumer = new ConsumerBuilder<Ignore, string>(config)

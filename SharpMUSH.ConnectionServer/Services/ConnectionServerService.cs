@@ -41,7 +41,7 @@ public class ConnectionServerService(
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
-
+		logger.LogInformation("Registered connection handle {Handle} from {IpAddress} ({Type})", handle, ipAddress, connectionType);
 			// Store in Redis if available
 			if (stateStore != null)
 			{
@@ -84,8 +84,10 @@ public class ConnectionServerService(
 
 	public async Task DisconnectAsync(long handle)
 	{
+		logger.LogInformation("Disconnecting handle {Handle}", handle);
 		if (_sessionState.TryRemove(handle, out var data))
 		{
+			logger.LogInformation("Removed connection handle {Handle} from session state", handle);
 			// Remove from Redis if available
 			if (stateStore != null)
 			{

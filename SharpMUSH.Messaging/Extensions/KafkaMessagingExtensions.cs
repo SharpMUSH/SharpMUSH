@@ -11,61 +11,87 @@ namespace SharpMUSH.Messaging.Extensions;
 /// </summary>
 public static class KafkaMessagingExtensions
 {
-/// <summary>
-/// Adds Kafka messaging for ConnectionServer
-/// </summary>
-public static IServiceCollection AddConnectionServerMessaging(
-this IServiceCollection services,
-Action<MessageQueueOptions> configureOptions,
-Action<IKafkaConsumerConfigurator> configureConsumers)
-{
-var options = new MessageQueueOptions();
-configureOptions(options);
+	/// <summary>
+	/// Adds Kafka messaging for ConnectionServer
+	/// </summary>
+	public static IServiceCollection AddConnectionServerMessaging(
+	this IServiceCollection services,
+	Action<MessageQueueOptions> configureOptions,
+	Action<IKafkaConsumerConfigurator> configureConsumers)
+	{
+		var options = new MessageQueueOptions();
+		configureOptions(options);
 
-services.AddSingleton(options);
-services.AddSingleton<IMessageBus, KafkaMessageBus>();
+		services.AddSingleton(options);
+		services.AddSingleton<KafkaTopicManager>();
+		services.AddSingleton<IMessageBus, KafkaMessageBus>();
 
-// Create and configure the consumer host
-var consumerHost = new KafkaConsumerHost(
-services.BuildServiceProvider(),
-services.BuildServiceProvider().GetRequiredService<Microsoft.Extensions.Logging.ILogger<KafkaConsumerHost>>(),
-options);
+		// Store consumer registrations to be applied later
+		var consumerRegistrations = new List<(Type MessageType, Type ConsumerType, string Topic, bool EnableBatching)>();
+		var configurator = new DeferredKafkaConsumerConfigurator(services, consumerRegistrations);
+		configureConsumers(configurator);
 
-var configurator = new KafkaConsumerConfigurator(consumerHost, services);
-configureConsumers(configurator);
+		// Add hosted service that will create KafkaConsumerHost with proper service provider
+		services.AddSingleton<IHostedService>(sp =>
+		{
+			var consumerHost = new KafkaConsumerHost(
+				sp,
+				sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<KafkaConsumerHost>>(),
+				sp.GetRequiredService<MessageQueueOptions>(),
+				sp.GetRequiredService<KafkaTopicManager>());
 
-services.AddSingleton<IHostedService>(consumerHost);
+			// Register all consumers with the host
+			foreach (var (messageType, _, topic, enableBatching) in consumerRegistrations)
+			{
+				consumerHost.RegisterConsumer(messageType, topic, enableBatching);
+			}
 
-return services;
-}
+			return consumerHost;
+		});
 
-/// <summary>
-/// Adds Kafka messaging for MainProcess
-/// </summary>
-public static IServiceCollection AddMainProcessMessaging(
-this IServiceCollection services,
-Action<MessageQueueOptions> configureOptions,
-Action<IKafkaConsumerConfigurator> configureConsumers)
-{
-var options = new MessageQueueOptions();
-configureOptions(options);
+		return services;
+	}
 
-services.AddSingleton(options);
-services.AddSingleton<IMessageBus, KafkaMessageBus>();
+	/// <summary>
+	/// Adds Kafka messaging for MainProcess
+	/// </summary>
+	public static IServiceCollection AddMainProcessMessaging(
+	this IServiceCollection services,
+	Action<MessageQueueOptions> configureOptions,
+	Action<IKafkaConsumerConfigurator> configureConsumers)
+	{
+		var options = new MessageQueueOptions();
+		configureOptions(options);
 
-// Create and configure the consumer host
-var consumerHost = new KafkaConsumerHost(
-services.BuildServiceProvider(),
-services.BuildServiceProvider().GetRequiredService<Microsoft.Extensions.Logging.ILogger<KafkaConsumerHost>>(),
-options);
+		services.AddSingleton(options);
+		services.AddSingleton<KafkaTopicManager>();
+		services.AddSingleton<IMessageBus, KafkaMessageBus>();
 
-var configurator = new KafkaConsumerConfigurator(consumerHost, services);
-configureConsumers(configurator);
+		// Store consumer registrations to be applied later
+		var consumerRegistrations = new List<(Type MessageType, Type ConsumerType, string Topic, bool EnableBatching)>();
+		var configurator = new DeferredKafkaConsumerConfigurator(services, consumerRegistrations);
+		configureConsumers(configurator);
 
-services.AddSingleton<IHostedService>(consumerHost);
+		// Add hosted service that will create KafkaConsumerHost with proper service provider
+		services.AddSingleton<IHostedService>(sp =>
+		{
+			var consumerHost = new KafkaConsumerHost(
+				sp,
+				sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<KafkaConsumerHost>>(),
+				sp.GetRequiredService<MessageQueueOptions>(),
+				sp.GetRequiredService<KafkaTopicManager>());
 
-return services;
-}
+			// Register all consumers with the host
+			foreach (var (messageType, _, topic, enableBatching) in consumerRegistrations)
+			{
+				consumerHost.RegisterConsumer(messageType, topic, enableBatching);
+			}
+
+			return consumerHost;
+		});
+
+		return services;
+	}
 }
 
 /// <summary>
@@ -73,17 +99,17 @@ return services;
 /// </summary>
 public interface IKafkaConsumerConfigurator
 {
-/// <summary>
-/// Registers a consumer for a specific message type and Kafka topic
-/// </summary>
-void AddConsumer<TMessage, TConsumer>(string topic, bool enableBatching = false)
-where TMessage : class
-where TConsumer : class, IMessageConsumer<TMessage>;
+	/// <summary>
+	/// Registers a consumer for a specific message type and Kafka topic
+	/// </summary>
+	void AddConsumer<TMessage, TConsumer>(string topic, bool enableBatching = false)
+	where TMessage : class
+	where TConsumer : class, IMessageConsumer<TMessage>;
 
-/// <summary>
-/// Registers a batch consumer for a specific message type and Kafka topic
-/// </summary>
-void AddBatchConsumer<TMessage, TConsumer>(string topic)
-where TMessage : class
-where TConsumer : class, IBatchMessageConsumer<TMessage>;
+	/// <summary>
+	/// Registers a batch consumer for a specific message type and Kafka topic
+	/// </summary>
+	void AddBatchConsumer<TMessage, TConsumer>(string topic)
+	where TMessage : class
+	where TConsumer : class, IBatchMessageConsumer<TMessage>;
 }
