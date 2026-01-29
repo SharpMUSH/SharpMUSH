@@ -216,4 +216,59 @@ module StringExtensions =
 
   let link (text: string) (url: string) = toANSI text |> _.SetHyperlink(url)
   let linkANSI (text: ANSIString) (url: string) = text.SetHyperlink(url)
-  let linkSimple (text: string) = toANSI text |> _.SetHyperlink(text)
+
+/// <summary>
+/// ANSI optimization functions for reducing redundant escape sequences.
+/// Moved from Markup.fs to improve separation of concerns.
+/// </summary>
+module Optimization =
+  open System.Text.RegularExpressions
+  
+  /// <summary>
+  /// Optimizes repeated patterns like: [31mtext[0m[31mmore[0m → [31mtextmore[0m
+  /// </summary>
+  let rec optimizeRepeatedPattern (text: string) : string =
+    let pattern = @"(?<Pattern>(?:\u001b[^m]*m)+)(?<Body1>[^\u001b]+)\u001b\[0m\1(?<Body2>[^\u001b]+)\u001b\[0m"
+    if not(Regex.Match(text, pattern).Success)
+    then text
+    else optimizeRepeatedPattern (Regex.Replace(text, pattern, "${Pattern}${Body1}${Body2}\u001b[0m"))
+  
+  /// <summary>
+  /// Optimizes repeated clear codes: ]0m]0m → ]0m
+  /// </summary>
+  let optimizeRepeatedClear (text: string) : string =
+    text.Replace("]0m]0m", "]0m")
+  
+  /// <summary>
+  /// Removes duplicate consecutive escape codes.
+  /// Example: [31m[31m → [31m
+  /// </summary>
+  let rec optimizeImpl (text: string) (currentIndex: int) (currentEscapeCode: string) : string =
+    if currentIndex >= text.Length - 1 then
+      text
+    else
+      match text.IndexOf("\u001b[", currentIndex, System.StringComparison.Ordinal) with
+      | -1 -> text
+      | escapeCodeStartIndex ->
+        // TODO: Implement a case that turns:
+        // this: `[38;2;255;0;0mre[0m[38;2;255;0;0ma[0m[38;2;255;0;0md[0m`
+        // into: [38;2;255;0;0mread[0m
+        // By recognizing that a pattern is the same as a previous pattern, and removing the duplicate in-between 'poles'.
+        let escapeCodeEndIndex = text.IndexOf("m", escapeCodeStartIndex, System.StringComparison.Ordinal)
+        if escapeCodeEndIndex = -1 then
+          text
+        else
+          let escapeCode = text.Substring(escapeCodeStartIndex, escapeCodeEndIndex - escapeCodeStartIndex + 1)
+          if escapeCode = currentEscapeCode then
+            let updatedText = text.Remove(escapeCodeStartIndex, escapeCodeEndIndex - escapeCodeStartIndex + 1)
+            optimizeImpl updatedText escapeCodeStartIndex currentEscapeCode
+          else
+            optimizeImpl text (escapeCodeEndIndex + 1) escapeCode
+  
+  /// <summary>
+  /// Main optimization function that applies all optimizations to ANSI text.
+  /// </summary>
+  let optimize (text: string) : string =
+    optimizeImpl text 0 System.String.Empty
+    |> optimizeRepeatedPattern
+    |> optimizeRepeatedClear
