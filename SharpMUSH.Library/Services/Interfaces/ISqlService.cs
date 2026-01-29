@@ -31,6 +31,31 @@ public interface ISqlService
 	ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ");
 
 	/// <summary>
+	/// Executes a parameterized SQL query with prepared statement parameters
+	/// </summary>
+	/// <param name="query">The SQL query to execute with parameter placeholders</param>
+	/// <param name="parameters">The parameters to bind to the query</param>
+	/// <returns>A list of rows, where each row is a dictionary of column names to values</returns>
+	ValueTask<IEnumerable<Dictionary<string, object?>>> ExecutePreparedQueryAsync(string query, params object?[] parameters);
+
+	/// <summary>
+	/// Executes a parameterized SQL query with prepared statement parameters and returns a stream
+	/// </summary>
+	/// <param name="query">The SQL query to execute with parameter placeholders</param>
+	/// <param name="parameters">The parameters to bind to the query</param>
+	/// <returns>An async enumerable of rows, where each row is a dictionary of column names to values</returns>
+	IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamPreparedQueryAsync(string query, params object?[] parameters);
+
+	/// <summary>
+	/// Executes a parameterized SQL query with prepared statement parameters and returns a formatted string
+	/// </summary>
+	/// <param name="query">The SQL query to execute with parameter placeholders</param>
+	/// <param name="delimiter">The delimiter to use between values (default: space)</param>
+	/// <param name="parameters">The parameters to bind to the query</param>
+	/// <returns>A formatted string of results</returns>
+	ValueTask<string> ExecutePreparedQueryAsStringAsync(string query, string delimiter = " ", params object?[] parameters);
+
+	/// <summary>
 	/// Escapes a string for safe use in SQL queries
 	/// </summary>
 	/// <param name="value">The value to escape</param>
