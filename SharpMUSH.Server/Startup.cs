@@ -206,6 +206,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddHostedService<Services.ConnectionReconciliationService>();
 		services.AddHostedService<Services.ConnectionLoggingService>();
 		services.AddHostedService<Services.HealthMonitoringService>();
+		services.AddHostedService<Services.ScheduledTaskManagementService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
