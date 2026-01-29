@@ -1,7 +1,7 @@
 # ANSI Improvements - Implementation Status
 
 **Last Updated:** 2026-01-29  
-**Status:** Phase 1 Complete
+**Status:** Phase 1 Complete, Phase 3 TODO #1 Complete
 
 ---
 
@@ -75,14 +75,40 @@ Fixed as part of TODO #4 implementation. The single-element array support resolv
 ### Phase 3: Architecture Improvements (MEDIUM PRIORITY)
 
 #### TODO #1: Move ANSI Optimization to ANSI.fs
-**Status:** ⏳ NOT STARTED  
-**Estimated Effort:** 4-6 hours  
-**File:** `SharpMUSH.MarkupString/Markup/Markup.fs:108`
+**Status:** ✅ COMPLETED  
+**Completion Date:** 2026-01-29  
+**Effort:** ~2 hours  
+**File:** `SharpMUSH.MarkupString/Markup/Markup.fs:108` → `SharpMUSH.MarkupString/Markup/ANSILibrary/ANSI.fs`
 
 **Goal:** Better code organization by moving ANSI-specific optimization logic to the ANSI module.
 
-**Approach:**
-- Create `Optimization` module in `ANSI.fs`
+**Changes Made:**
+1. Created new `Optimization` module in ANSI.fs
+2. Moved optimization functions from Markup.fs:
+   - `optimizeRepeatedPattern` - Combines repeated patterns
+   - `optimizeRepeatedClear` - Removes duplicate clear codes
+   - `optimizeImpl` - Removes consecutive duplicate escape codes
+   - `optimize` - Main entry point
+3. Updated `AnsiMarkup.Optimize` to call `ANSILibrary.Optimization.optimize`
+4. Removed ~30 lines from Markup.fs
+
+**Test Results:**
+- ✅ All tests passing (2/2)
+- ✅ No functional changes (pure refactoring)
+- ✅ Build successful
+
+**Benefits:**
+- Better separation of concerns
+- ANSI optimization logic in appropriate module
+- Easier to test and maintain
+- Clearer code organization
+
+---
+
+#### TODO #5: Move ANSI Processing to F# Module
+**Status:** ⏳ NOT STARTED  
+**Estimated Effort:** 6-8 hours  
+**File:** `SharpMUSH.Implementation/Functions/UtilityFunctions.cs:64`
 - Move `optimizeRepeatedPattern`, `optimizeRepeatedClear`, `optimizeImpl` functions
 - Update `Ansi.Optimize` to call new module functions
 
