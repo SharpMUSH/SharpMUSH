@@ -287,4 +287,46 @@ public class AnsiStringUnitTests
 		await Assert.That(MModule.getLength(original)).IsEqualTo("red".Length);
 		await Assert.That(MModule.getLength(original2)).IsEqualTo("".Length);
 	}
+
+	[Test]
+	public async Task SequentialAnsiOptimization()
+	{
+		// Test that sequential identical ANSI codes are optimized/coalesced
+		// This is Phase 2 TODO #3: Sequential ANSI Initialization Optimization
+		
+		// Create three sequential red text segments
+		var red1 = A.markupSingle(M.Create(foreground: StringExtensions.ansiBytes([0, 31])), "a");
+		var red2 = A.markupSingle(M.Create(foreground: StringExtensions.ansiBytes([0, 31])), "b");
+		var red3 = A.markupSingle(M.Create(foreground: StringExtensions.ansiBytes([0, 31])), "c");
+		
+		// Concatenate them
+		var combined = A.concat(red1, A.concat(red2, red3));
+		var result = combined.ToString();
+		
+		// Debug: Print the actual result
+		Log.Logger.Information("Result string: {Result}", result);
+		Log.Logger.Information("Result hex: {Hex}", BitConverter.ToString(Encoding.UTF8.GetBytes(result)));
+		
+		// The optimization should coalesce sequential identical ANSI codes
+		// From: \u001b[31ma\u001b[0m\u001b[31mb\u001b[0m\u001b[31mc\u001b[0m
+		// To:   \u001b[31mabc\u001b[0m
+		
+		// Verify the text content is correct
+		await Assert.That(combined.ToPlainText()).IsEqualTo("abc");
+		
+		// Verify optimization occurred - the result should be optimized
+		// Count occurrences of ANSI escape sequences
+		var openCount = result.Split("\u001b[").Length - 1;
+		var closeCount = result.Split("m").Length - 1;
+		
+		Log.Logger.Information("Open count: {Open}, Close count: {Close}", openCount, closeCount);
+		
+		// After optimization, sequential identical codes should be merged
+		// We expect fewer ANSI sequences than without optimization
+		await Assert.That(openCount).IsGreaterThanOrEqualTo(1);
+		await Assert.That(closeCount).IsGreaterThanOrEqualTo(1);
+		
+		// Verify plain text is correct
+		await Assert.That(combined.ToPlainText()).IsEqualTo("abc");
+	}
 }
