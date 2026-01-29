@@ -123,6 +123,7 @@ public class IterationWrapper<T>
 /// <param name="Registers">The current standard registers (%0, %1, named arguments)</param>
 /// <param name="IterationRegisters">The current iteration registers: %i0, #@, etc</param>
 /// <param name="RegexRegisters">The current regex registers, %$0 and named ones.</param>
+/// <param name="SwitchStack">The switch context stack for stext() and slev() functions. Tracks the string being matched in nested switch statements.</param>
 /// <param name="CurrentEvaluation">The current evaluation context</param>
 /// <param name="ParserFunctionDepth">The function depth.</param>
 /// <param name="Function">Function name being evaluated</param>
@@ -144,6 +145,7 @@ public record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
 	ConcurrentStack<Dictionary<string, MString>> RegexRegisters,
+	ConcurrentStack<MString> SwitchStack,
 	ConcurrentStack<Execution> ExecutionStack,
 	Dictionary<string, CallState> EnvironmentRegisters,
 	DBAttribute? CurrentEvaluation,
@@ -199,6 +201,7 @@ public record ParserState(
 		new ConcurrentStack<Dictionary<string, MString>>(),
 		new ConcurrentStack<IterationWrapper<MString>>(),
 		new ConcurrentStack<Dictionary<string, MString>>(),
+		new ConcurrentStack<MString>(),
 		new ConcurrentStack<Execution>(),
 		[],
 		null,
