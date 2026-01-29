@@ -9,6 +9,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class DatabaseCommandTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -183,7 +184,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_Count()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT COUNT(*) as total FROM test_sql_data"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT COUNT(*) as total FROM test_sql_data_cmd"));
 
 		await NotifyService
 			.Received()

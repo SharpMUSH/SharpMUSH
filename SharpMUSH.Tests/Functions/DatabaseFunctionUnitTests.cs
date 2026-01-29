@@ -5,6 +5,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
+[NotInParallel]
 public class DatabaseFunctionUnitTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -16,7 +17,6 @@ public class DatabaseFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	[NotInParallel]
 	[Before(Test)]
 	public async Task InitializeAsync()
 	{
