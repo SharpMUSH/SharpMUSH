@@ -15,11 +15,13 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "@SQL", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^SQL_OK",
+	[SharpCommand(Name = "@SQL", Switches = ["PREPARE"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^SQL_OK",
 		MinArgs = 0, ParameterNames = ["query"])]
 	public static async ValueTask<Option<CallState>> Sql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches.ToHashSet();
+		var prepareSwitch = switches.Contains("PREPARE");
 
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
@@ -35,9 +37,9 @@ public partial class Commands
 			return new CallState("#-1 NO QUERY SPECIFIED");
 		}
 
-		var query = queryArg.Message?.ToPlainText() ?? string.Empty;
+		var rawInput = queryArg.Message?.ToPlainText() ?? string.Empty;
 
-		if (string.IsNullOrWhiteSpace(query))
+		if (string.IsNullOrWhiteSpace(rawInput))
 		{
 			await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
 			return new CallState("#-1 NO QUERY SPECIFIED");
@@ -45,7 +47,56 @@ public partial class Commands
 
 		try
 		{
-			var result = await SqlService.ExecuteQueryAsStringAsync(query);
+			string result;
+
+			if (prepareSwitch)
+			{
+				// For prepared statements, we need to split the input on commas
+				// The first part is the query, remaining parts are parameters
+				var parts = new List<string>();
+				var currentPart = new System.Text.StringBuilder();
+				var escaped = false;
+
+				for (var i = 0; i < rawInput.Length; i++)
+				{
+					var ch = rawInput[i];
+					if (escaped)
+					{
+						currentPart.Append(ch);
+						escaped = false;
+					}
+					else if (ch == '\\')
+					{
+						escaped = true;
+					}
+					else if (ch == ',')
+					{
+						parts.Add(currentPart.ToString().Trim());
+						currentPart.Clear();
+					}
+					else
+					{
+						currentPart.Append(ch);
+					}
+				}
+				parts.Add(currentPart.ToString().Trim());
+
+				if (parts.Count == 0)
+				{
+					await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
+					return new CallState("#-1 NO QUERY SPECIFIED");
+				}
+
+				var query = parts[0];
+				var parameters = parts.Skip(1).Cast<object?>().ToArray();
+
+				result = await SqlService.ExecutePreparedQueryAsStringAsync(query, " ", parameters);
+			}
+			else
+			{
+				result = await SqlService.ExecuteQueryAsStringAsync(rawInput);
+			}
+
 			await NotifyService!.Notify(executor, result);
 			return new CallState(MModule.single(result));
 		}
@@ -63,8 +114,8 @@ public partial class Commands
 		}
 	}
 
-	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = ["query", "code"])]
+	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF", "PREPARE"], Behavior = CB.Default | CB.EqSplit,
+		MinArgs = 0, MaxArgs = 0, ParameterNames = ["obj/attr", "query"])]
 	public static async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -74,6 +125,7 @@ public partial class Commands
 		var notifySwitch = switches.Contains("NOTIFY");
 		var colnamesSwitch = switches.Contains("COLNAMES");
 		var spoofSwitch = switches.Contains("SPOOF");
+		var prepareSwitch = switches.Contains("PREPARE");
 		
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
@@ -92,9 +144,9 @@ public partial class Commands
 		}
 
 		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
-		var query = queryArg.Message?.ToPlainText() ?? string.Empty;
+		var rawQueryInput = queryArg.Message?.ToPlainText() ?? string.Empty;
 
-		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(query))
+		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(rawQueryInput))
 		{
 			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
 			return new CallState("#-1 INVALID ARGUMENTS");
@@ -129,7 +181,51 @@ public partial class Commands
 					var firstRow = true;
 					var rowNumber = 1;
 
-					foreach (var row in await SqlService.ExecuteQueryAsync(query))
+					IAsyncEnumerable<Dictionary<string, object?>> queryResults;
+
+					if (prepareSwitch)
+					{
+						// For prepared statements, we need to split the query input on commas
+						// The first part is the query, remaining parts are parameters
+						var parts = new List<string>();
+						var currentPart = new System.Text.StringBuilder();
+						var escaped = false;
+
+						for (var i = 0; i < rawQueryInput.Length; i++)
+						{
+							var ch = rawQueryInput[i];
+							if (escaped)
+							{
+								currentPart.Append(ch);
+								escaped = false;
+							}
+							else if (ch == '\\')
+							{
+								escaped = true;
+							}
+							else if (ch == ',')
+							{
+								parts.Add(currentPart.ToString().Trim());
+								currentPart.Clear();
+							}
+							else
+							{
+								currentPart.Append(ch);
+							}
+						}
+						parts.Add(currentPart.ToString().Trim());
+
+						var query = parts.Count > 0 ? parts[0] : rawQueryInput;
+						var parameters = parts.Skip(1).Cast<object?>().ToArray();
+
+						queryResults = SqlService.ExecuteStreamPreparedQueryAsync(query, parameters);
+					}
+					else
+					{
+						queryResults = SqlService.ExecuteStreamQueryAsync(rawQueryInput);
+					}
+
+					await foreach (var row in queryResults)
 					{
 						if (colnamesSwitch && firstRow)
 						{

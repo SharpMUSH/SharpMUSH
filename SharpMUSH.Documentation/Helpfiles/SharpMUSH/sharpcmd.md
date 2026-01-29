@@ -3677,7 +3677,7 @@ Test
 - [@chatformat]
 - [@pageformat]
 # @mapsql
-`@mapsql[/notify][/colnames][/spoof] <obj>/<attr>=<query>`
+`@mapsql[/notify][/colnames][/spoof][/prepare] <obj>/<attr>=<query>[, <param1>[, <param2>[, ...]]]`
 
 This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
 
@@ -3688,6 +3688,8 @@ The `/notify` switch causes the executor to do queue "@notify me" after all the 
 The `/colnames` switch causes @mapsql to first queue the obj/attr with row number (%0) set to 0 and args %1 to v(29) being the column names.
 
 By default, the object using @mapsql will be the enactor (%#) for the triggered attribute. However, if you control `<object>`, the `/spoof` switch can be used to preserve the current enactor.
+
+The `/prepare` switch enables prepared statement mode. When used, additional comma-separated parameters after the query are treated as values that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe. When using `/prepare` with queries containing commas, store the query in an attribute and use v() to retrieve it, or escape commas with backslash.
 
 Examples:
 ```
@@ -3700,6 +3702,13 @@ Examples:
 > @mapsql me/showresult=SELECT `name`, `age` FROM `people`
 ```
 
+Prepared statement example:
+```
+> &showresult me=@pemit %#=%0. %1 (%2)
+> &QUERY me=SELECT `name`, `age` FROM `people` WHERE status = ?
+> @mapsql/prepare me/showresult=v(QUERY),active
+```
+
 
 **See Also:**
 - [@sql]
@@ -3707,15 +3716,28 @@ Examples:
 - [sqlescape()]
 - [mapsql()]
 # @sql
-`@sql <query>`
+`@sql[/prepare] <query>[, <param1>[, <param2>[, ...]]]`
 
 This command issues an SQL query if the MUSH supports SQL and can connect to an SQL server. You must be WIZARD or have the Sql_Ok power to use @sql.
 
 Generally, the sql() function is more useful for coding, as it delimits its return values, but @sql is handy for INSERT-type queries and quick checks. If you pass arbitrary data to @sql, be sure you call sqlescape() on it; see the example in help sql().
 
+The `/prepare` switch enables prepared statement mode. When used, additional comma-separated parameters after the query are treated as values that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe. When using `/prepare` with queries containing commas, store the query in an attribute and use v() to retrieve it, or escape commas with backslash.
+
 Example:
 ```
 > @sql SHOW TABLES
+```
+
+Prepared statement examples:
+```
+> &QUERY me=INSERT INTO users (name, email) VALUES (?, ?)
+> @sql/prepare v(QUERY),John Doe,john@example.com
+```
+
+```
+> &QUERY me=UPDATE users SET status = ? WHERE id = ?
+> @sql/prepare v(QUERY),active,123
 ```
 
 
