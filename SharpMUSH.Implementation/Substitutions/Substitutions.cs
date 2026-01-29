@@ -150,22 +150,16 @@ public static partial class Substitutions
 		var symbolValue = symbol.Message!.ToString();
 		var stack = parser.CurrentState.SwitchStack;
 
-		// Check if we're in a switch context
-		if (stack.Count == 0)
-		{
-			return new CallState(string.Empty);
-		}
-
 		// Parse the symbol number
 		if (!int.TryParse(symbolValue, out var symbolNumber) || symbolNumber < 0)
 		{
 			return new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER");
 		}
 
-		// Check if the requested depth exists
-		if (symbolNumber >= stack.Count)
+		// Check if we're in a switch context or if the depth is out of range
+		if (stack.Count == 0 || symbolNumber >= stack.Count)
 		{
-			return new CallState(string.Empty);
+			return new CallState(Errors.ErrorRegisterRange);
 		}
 
 		// Get the nth item from the stack (0 is top/current)
@@ -181,7 +175,7 @@ public static partial class Substitutions
 		// Check if we're in a switch context
 		if (stack.Count == 0)
 		{
-			return new CallState(string.Empty);
+			return new CallState(Errors.ErrorRegisterRange);
 		}
 
 		// Get the outermost (last) item from the stack
