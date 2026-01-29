@@ -48,7 +48,7 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 	private DBRef _one;
 
 	// Optional parameters for custom SQL connection
-	private readonly string? _customSqlConnectionString;
+	protected string? _customSqlConnectionString;
 	private readonly string _sqlPlatform;
 	private readonly string? _customDatabaseName;
 
@@ -135,7 +135,7 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		}
 	}
 	
-	public async Task InitializeAsync()
+	public virtual async Task InitializeAsync()
 	{
 		var log = new LoggerConfiguration()
 			.Enrich.FromLogContext()

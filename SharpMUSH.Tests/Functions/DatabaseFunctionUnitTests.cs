@@ -7,8 +7,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class DatabaseFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<FunctionTestWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required FunctionTestWebAppFactory WebAppFactoryArg { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
@@ -20,14 +20,26 @@ public class DatabaseFunctionUnitTests
 	[Before(Test)]
 	public async Task InitializeAsync()
 	{
-		// Reuse the same tables as command tests to avoid conflicts
-		// The command tests already create test_sql_data and test_mapsql_data
-		// We just need to ensure data exists
-		var connectionString = MySqlTestServer.Instance.GetConnectionString();
+		// Use unique database for function tests to avoid interference with command tests
+		var databaseName = "sharpmush_test_functions";
+		var connectionString = MySqlTestServer.GetConnectionString(databaseName);
+		
 		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
-		// Verify test_sql_data exists and has data
+		// Create the database if it doesn't exist
+		await using (var cmd = new MySqlCommand($"CREATE DATABASE IF NOT EXISTS `{databaseName}`", connection))
+		{
+			await cmd.ExecuteNonQueryAsync();
+		}
+
+		// Switch to the database
+		await using (var cmd = new MySqlCommand($"USE `{databaseName}`", connection))
+		{
+			await cmd.ExecuteNonQueryAsync();
+		}
+
+		// Verify test_sql_data exists
 		await using (var cmd = new MySqlCommand("""
 		                                        	CREATE TABLE IF NOT EXISTS test_sql_data (
 		                                        		id INT PRIMARY KEY AUTO_INCREMENT,
@@ -39,8 +51,8 @@ public class DatabaseFunctionUnitTests
 			await cmd.ExecuteNonQueryAsync();
 		}
 
-		// Delete any existing duplicate data with same name
-		await using (var cmd = new MySqlCommand("DELETE FROM test_sql_data WHERE name IN ('test_sql_row1', 'test_sql_row2', 'test_sql_row3')", connection))
+		// Truncate to ensure clean state
+		await using (var cmd = new MySqlCommand("TRUNCATE TABLE test_sql_data", connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}

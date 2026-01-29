@@ -11,8 +11,8 @@ namespace SharpMUSH.Tests.Commands;
 
 public class DatabaseCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory SqlWebAppFactoryArg { get; init; }
+	[ClassDataSource<CommandTestWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required CommandTestWebAppFactory SqlWebAppFactoryArg { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
@@ -24,10 +24,24 @@ public class DatabaseCommandTests
 	[Before(Test)]
 	public async Task InitializeAsync()
 	{
-		// Create test database and populate with test data
-		var connectionString = MySqlTestServer.Instance.GetConnectionString();
+		// Use unique database for command tests to avoid interference with function tests
+		var databaseName = "sharpmush_test_commands";
+		var connectionString = MySqlTestServer.GetConnectionString(databaseName);
+		
 		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
+
+		// Create the database if it doesn't exist
+		await using (var cmd = new MySqlCommand($"CREATE DATABASE IF NOT EXISTS `{databaseName}`", connection))
+		{
+			await cmd.ExecuteNonQueryAsync();
+		}
+
+		// Switch to the database
+		await using (var cmd = new MySqlCommand($"USE `{databaseName}`", connection))
+		{
+			await cmd.ExecuteNonQueryAsync();
+		}
 
 		// Create test tables
 		await using (var cmd = new MySqlCommand("""
