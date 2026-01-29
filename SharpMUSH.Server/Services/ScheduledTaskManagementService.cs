@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Quartz;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Services.Interfaces;
@@ -9,16 +10,17 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// Background service that manages scheduled task timings for warnings and purges.
-/// Updates NextWarningTime and NextPurgeTime in the UptimeData based on configuration intervals.
+/// Hosted service that manages scheduled task timings for warnings and purges using Quartz.NET.
+/// Schedules recurring jobs to update NextWarningTime and NextPurgeTime in the UptimeData based on configuration intervals.
 /// </summary>
 public partial class ScheduledTaskManagementService(
-	IExpandedObjectDataService dataService,
+	ISchedulerFactory schedulerFactory,
 	IOptions<SharpMUSHOptions> options,
-	ILogger<ScheduledTaskManagementService> logger) : BackgroundService
+	ILogger<ScheduledTaskManagementService> logger) : IHostedService
 {
 	private readonly TimeSpan _warnInterval = ParseTimeInterval(options.Value.Warning.WarnInterval);
 	private readonly TimeSpan _purgeInterval = ParseTimeInterval(options.Value.Dump.PurgeInterval);
+	private IScheduler? _scheduler;
 
 	/// <summary>
 	/// Parses a PennMUSH time interval string like "1h", "10m1s", "5d" into a TimeSpan.
@@ -58,112 +60,148 @@ public partial class ScheduledTaskManagementService(
 	[GeneratedRegex(@"(\d+(?:\.\d+)?)(d|h|m|s)", RegexOptions.IgnoreCase)]
 	private static partial Regex TimeIntervalRegex();
 
-	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+	public async Task StartAsync(CancellationToken cancellationToken)
 	{
 		logger.LogInformation(
 			"Scheduled task management service started - warn_interval: {WarnInterval}, purge_interval: {PurgeInterval}",
 			_warnInterval, _purgeInterval);
 
-		// Wait a bit before first update to let StartupHandler complete initialization
-		await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+		_scheduler = await schedulerFactory.GetScheduler(cancellationToken);
 
-		while (!stoppingToken.IsCancellationRequested)
+		// Schedule warning time update job if interval is configured
+		if (_warnInterval > TimeSpan.Zero)
+		{
+			var warningJob = JobBuilder.Create<UpdateWarningTimeJob>()
+				.WithIdentity("UpdateWarningTime", "ScheduledTaskManagement")
+				.UsingJobData("interval", _warnInterval.TotalSeconds)
+				.Build();
+
+			// Calculate check interval - shorter intervals need more frequent checks, but cap at 1 minute
+			var checkInterval = _warnInterval < TimeSpan.FromMinutes(1) ? _warnInterval : TimeSpan.FromMinutes(1);
+			if (checkInterval < TimeSpan.FromSeconds(10))
+			{
+				checkInterval = TimeSpan.FromSeconds(10);
+			}
+
+			var warningTrigger = TriggerBuilder.Create()
+				.WithIdentity("UpdateWarningTimeTrigger", "ScheduledTaskManagement")
+				.StartAt(DateTimeOffset.UtcNow.AddSeconds(10)) // Wait for StartupHandler
+				.WithSimpleSchedule(x => x
+					.WithInterval(checkInterval)
+					.RepeatForever())
+				.Build();
+
+			await _scheduler.ScheduleJob(warningJob, warningTrigger, cancellationToken);
+			logger.LogInformation("Scheduled warning time update job with interval: {Interval}", checkInterval);
+		}
+
+		// Schedule purge time update job if interval is configured
+		if (_purgeInterval > TimeSpan.Zero)
+		{
+			var purgeJob = JobBuilder.Create<UpdatePurgeTimeJob>()
+				.WithIdentity("UpdatePurgeTime", "ScheduledTaskManagement")
+				.UsingJobData("interval", _purgeInterval.TotalSeconds)
+				.Build();
+
+			// Calculate check interval - shorter intervals need more frequent checks, but cap at 1 minute
+			var checkInterval = _purgeInterval < TimeSpan.FromMinutes(1) ? _purgeInterval : TimeSpan.FromMinutes(1);
+			if (checkInterval < TimeSpan.FromSeconds(10))
+			{
+				checkInterval = TimeSpan.FromSeconds(10);
+			}
+
+			var purgeTrigger = TriggerBuilder.Create()
+				.WithIdentity("UpdatePurgeTimeTrigger", "ScheduledTaskManagement")
+				.StartAt(DateTimeOffset.UtcNow.AddSeconds(10)) // Wait for StartupHandler
+				.WithSimpleSchedule(x => x
+					.WithInterval(checkInterval)
+					.RepeatForever())
+				.Build();
+
+			await _scheduler.ScheduleJob(purgeJob, purgeTrigger, cancellationToken);
+			logger.LogInformation("Scheduled purge time update job with interval: {Interval}", checkInterval);
+		}
+	}
+
+	public async Task StopAsync(CancellationToken cancellationToken)
+	{
+		if (_scheduler != null)
+		{
+			logger.LogInformation("Scheduled task management service stopping");
+			// Jobs will be cleaned up by Quartz shutdown
+		}
+		await Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// Quartz job that updates the NextWarningTime in UptimeData.
+	/// </summary>
+	public class UpdateWarningTimeJob(
+		IExpandedObjectDataService dataService,
+		ILogger<UpdateWarningTimeJob> logger) : IJob
+	{
+		public async Task Execute(IJobExecutionContext context)
 		{
 			try
 			{
-				// Get current uptime data
+				var interval = TimeSpan.FromSeconds(context.JobDetail.JobDataMap.GetDouble("interval"));
 				var data = await dataService.GetExpandedServerDataAsync<UptimeData>();
+				
 				if (data == null)
 				{
-					logger.LogWarning("UptimeData not found - will retry later");
-					await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
-					continue;
+					logger.LogWarning("UptimeData not found - skipping warning time update");
+					return;
 				}
 
 				var now = DateTimeOffset.UtcNow;
-				var updated = false;
-
-				// Update warning time if interval is configured and time has passed
-				if (_warnInterval > TimeSpan.Zero && data.NextWarningTime <= now)
+				if (data.NextWarningTime <= now)
 				{
-					var newWarningTime = now + _warnInterval;
+					var newWarningTime = now + interval;
 					data = data with { NextWarningTime = newWarningTime };
-					updated = true;
+					await dataService.SetExpandedServerDataAsync(data);
 					logger.LogInformation("Updated NextWarningTime to {Time}", newWarningTime);
 				}
-
-				// Update purge time if interval is configured and time has passed
-				if (_purgeInterval > TimeSpan.Zero && data.NextPurgeTime <= now)
-				{
-					var newPurgeTime = now + _purgeInterval;
-					data = data with { NextPurgeTime = newPurgeTime };
-					updated = true;
-					logger.LogInformation("Updated NextPurgeTime to {Time}", newPurgeTime);
-				}
-
-				// Save updated data if any changes were made
-				if (updated)
-				{
-					await dataService.SetExpandedServerDataAsync(data);
-				}
-
-				// Calculate next check time based on configured intervals
-				// Use the shorter of the two intervals, with a minimum of 10 seconds
-				var checkInterval = TimeSpan.FromMinutes(1); // Default to 1 minute
-				
-				if (_warnInterval > TimeSpan.Zero && _purgeInterval > TimeSpan.Zero)
-				{
-					checkInterval = _warnInterval < _purgeInterval ? _warnInterval : _purgeInterval;
-				}
-				else if (_warnInterval > TimeSpan.Zero)
-				{
-					checkInterval = _warnInterval;
-				}
-				else if (_purgeInterval > TimeSpan.Zero)
-				{
-					checkInterval = _purgeInterval;
-				}
-
-				// Ensure minimum check interval of 10 seconds, maximum of 1 minute
-				checkInterval = checkInterval < TimeSpan.FromSeconds(10) 
-					? TimeSpan.FromSeconds(10) 
-					: (checkInterval > TimeSpan.FromMinutes(1) ? TimeSpan.FromMinutes(1) : checkInterval);
-
-				await Task.Delay(checkInterval, stoppingToken);
 			}
-			catch (OperationCanceledException)
+			catch (Exception ex)
 			{
-				// Normal shutdown
-				break;
-			}
-			catch (Exception ex) when (IsCatchableExceptionType(ex))
-			{
-				logger.LogError(ex, "Error in scheduled task management service");
-
-				try
-				{
-					// Wait a bit before retrying on error
-					await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
-				}
-				catch (OperationCanceledException)
-				{
-					break;
-				}
+				logger.LogError(ex, "Error updating warning time");
 			}
 		}
-
-		logger.LogInformation("Scheduled task management service stopped");
 	}
 
-	private static bool IsCatchableExceptionType(Exception ex)
+	/// <summary>
+	/// Quartz job that updates the NextPurgeTime in UptimeData.
+	/// </summary>
+	public class UpdatePurgeTimeJob(
+		IExpandedObjectDataService dataService,
+		ILogger<UpdatePurgeTimeJob> logger) : IJob
 	{
-		return ex switch
+		public async Task Execute(IJobExecutionContext context)
 		{
-			OutOfMemoryException => false,
-			StackOverflowException => false,
-			ThreadAbortException => false,
-			null => false,
-			_ => true
-		};
+			try
+			{
+				var interval = TimeSpan.FromSeconds(context.JobDetail.JobDataMap.GetDouble("interval"));
+				var data = await dataService.GetExpandedServerDataAsync<UptimeData>();
+				
+				if (data == null)
+				{
+					logger.LogWarning("UptimeData not found - skipping purge time update");
+					return;
+				}
+
+				var now = DateTimeOffset.UtcNow;
+				if (data.NextPurgeTime <= now)
+				{
+					var newPurgeTime = now + interval;
+					data = data with { NextPurgeTime = newPurgeTime };
+					await dataService.SetExpandedServerDataAsync(data);
+					logger.LogInformation("Updated NextPurgeTime to {Time}", newPurgeTime);
+				}
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "Error updating purge time");
+			}
+		}
 	}
 }
