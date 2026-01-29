@@ -17,6 +17,34 @@ public static class AttributeHelpers
 	/// This method checks if a format attribute exists, and if so, evaluates it with the provided arguments.
 	/// If the attribute doesn't exist or evaluation fails, returns the default value.
 	/// </summary>
+	/// <remarks>
+	/// Format attributes are used throughout SharpMUSH to customize the display of various game elements.
+	/// Common format attributes include:
+	/// - @nameformat: Formats object name display when viewed from inside a room
+	/// - @descformat: Formats @describe output when looking at objects  
+	/// - @idescformat: Formats @idescribe output when looking inside objects
+	/// - @conformat: Formats contents/inventory list display
+	/// - @exitformat: Formats exits display in rooms
+	/// - @chatformat: Formats channel messages (per-channel, per-player)
+	/// - @pageformat: Formats incoming pages
+	/// - @outpageformat: Formats outgoing pages
+	/// 
+	/// Each format attribute receives arguments via the %0, %1, etc. substitutions, which are passed
+	/// in via the formatArgs dictionary. The specific arguments vary by format type - consult the
+	/// documentation for each format attribute to understand what arguments it expects.
+	/// 
+	/// Example usage:
+	/// <code>
+	/// var formatArgs = new Dictionary&lt;string, CallState&gt;
+	/// {
+	///     ["0"] = new CallState(baseDescription)
+	/// };
+	/// 
+	/// var formattedDesc = await AttributeHelpers.EvaluateFormatAttribute(
+	///     attributeService, parser, executor, target, "DESCFORMAT", 
+	///     formatArgs, baseDescription, checkParents: false);
+	/// </code>
+	/// </remarks>
 	/// <param name="attributeService">The attribute service</param>
 	/// <param name="parser">Parser with current state (can be null for non-parser contexts)</param>
 	/// <param name="executor">The object executing the evaluation</param>
