@@ -39,20 +39,21 @@ public class DatabaseFunctionUnitTests
 			await cmd.ExecuteNonQueryAsync();
 		}
 
-		// Check if data exists, if not insert it
-		await using (var checkCmd = new MySqlCommand("SELECT COUNT(*) FROM test_sql_data", connection))
+		// Delete any existing duplicate data with same name
+		await using (var cmd = new MySqlCommand("DELETE FROM test_sql_data WHERE name IN ('test_sql_row1', 'test_sql_row2', 'test_sql_row3')", connection))
 		{
-			var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
-			if (count == 0)
-			{
-				await using var cmd = new MySqlCommand("""
-				                                       	INSERT INTO test_sql_data (name, value) VALUES 
-				                                       	('test_sql_row1', 100),
-				                                       	('test_sql_row2', 200),
-				                                       	('test_sql_row3', 300)
-				                                       """, connection);
-				await cmd.ExecuteNonQueryAsync();
-			}
+			await cmd.ExecuteNonQueryAsync();
+		}
+
+		// Insert test data
+		await using (var cmd = new MySqlCommand("""
+		                                       	INSERT INTO test_sql_data (name, value) VALUES 
+		                                       	('test_sql_row1', 100),
+		                                       	('test_sql_row2', 200),
+		                                       	('test_sql_row3', 300)
+		                                       """, connection))
+		{
+			await cmd.ExecuteNonQueryAsync();
 		}
 	}
 
@@ -400,7 +401,7 @@ public class DatabaseFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&Test_Mapsql_PreparedStatement_StringParam #1=Test_Mapsql_PreparedStatement_StringParam: %1=%2"));
 
-		await Task.Delay(100);
+		await Task.Delay(500); // Increased delay to ensure attribute is fully set
 
 		var result =
 			(await Parser.FunctionParse(

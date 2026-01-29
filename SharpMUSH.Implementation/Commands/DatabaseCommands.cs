@@ -71,7 +71,7 @@ public partial class Commands
 					}
 					else if (ch == ',')
 					{
-						parts.Add(currentPart.ToString());
+						parts.Add(currentPart.ToString().Trim());
 						currentPart.Clear();
 					}
 					else
@@ -79,7 +79,7 @@ public partial class Commands
 						currentPart.Append(ch);
 					}
 				}
-				parts.Add(currentPart.ToString());
+				parts.Add(currentPart.ToString().Trim());
 
 				if (parts.Count == 0)
 				{
@@ -205,7 +205,7 @@ public partial class Commands
 							}
 							else if (ch == ',')
 							{
-								parts.Add(currentPart.ToString());
+								parts.Add(currentPart.ToString().Trim());
 								currentPart.Clear();
 							}
 							else
@@ -213,7 +213,7 @@ public partial class Commands
 								currentPart.Append(ch);
 							}
 						}
-						parts.Add(currentPart.ToString());
+						parts.Add(currentPart.ToString().Trim());
 
 						var query = parts.Count > 0 ? parts[0] : rawQueryInput;
 						var parameters = parts.Skip(1).Cast<object?>().ToArray();
