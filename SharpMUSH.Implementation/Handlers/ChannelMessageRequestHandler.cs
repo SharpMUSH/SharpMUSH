@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -262,69 +263,39 @@ public class ChannelMessageRequestHandler(
 		MString says,
 		string[] options)
 	{
-		try
+		// Look for CHATFORMAT`<channel> attribute on the player
+		var chatFormatAttrName = $"CHATFORMAT`{channelName.ToPlainText().ToUpper()}";
+		
+		// Evaluate the chatformat attribute with standard arguments:
+		// %0 = chat type character (", :, ;, @)
+		// %1 = channel name
+		// %2 = message
+		// %3 = player name
+		// %4 = title
+		// %5 = default formatted message
+		// %6 = says text
+		// %7 = options (space-separated)
+		var formatArgs = new Dictionary<string, CallState>
 		{
-			// Look for CHATFORMAT`<channel> attribute on the player
-			var chatFormatAttrName = $"CHATFORMAT`{channelName.ToPlainText().ToUpper()}";
-			
-			// Try to get the attribute
-			var attrResult = await attributeService.GetAttributeAsync(
-				player,
-				player,
-				chatFormatAttrName,
-				IAttributeService.AttributeMode.Read);
-			
-			// If attribute doesn't exist or is empty, return default
-			if (attrResult.IsError || attrResult.IsNone)
-			{
-				return defaultFormat;
-			}
-			
-			var attribute = attrResult.AsAttribute.Last();
-			if (MModule.getLength(attribute.Value) == 0)
-			{
-				return defaultFormat;
-			}
-			
-			// Evaluate the chatformat attribute with standard arguments:
-			// %0 = chat type character (", :, ;, @)
-			// %1 = channel name
-			// %2 = message
-			// %3 = player name
-			// %4 = title
-			// %5 = default formatted message
-			// %6 = says text
-			// %7 = options (space-separated)
-			var formatArgs = new Dictionary<string, CallState>
-			{
-				["0"] = new CallState(MModule.single(chatType)),
-				["1"] = new CallState(channelName),
-				["2"] = new CallState(message),
-				["3"] = new CallState(playerName),
-				["4"] = new CallState(title),
-				["5"] = new CallState(defaultFormat),
-				["6"] = new CallState(says),
-				["7"] = new CallState(MModule.single(string.Join(" ", options)))
-			};
-			
-			var sourceObj = source.IsNone ? player : source.Known();
-			var result = await attributeService.EvaluateAttributeFunctionAsync(
-				null!, // parser - not needed for attribute evaluation
-				sourceObj,
-				player,
-				chatFormatAttrName,
-				formatArgs,
-				evalParent: true,
-				ignorePermissions: false);
-			
-			// If evaluation returns empty, use default
-			return MModule.getLength(result) > 0 ? result : defaultFormat;
-		}
-		catch
-		{
-			// On any error, return the default format
-			return defaultFormat;
-		}
+			["0"] = new CallState(MModule.single(chatType)),
+			["1"] = new CallState(channelName),
+			["2"] = new CallState(message),
+			["3"] = new CallState(playerName),
+			["4"] = new CallState(title),
+			["5"] = new CallState(defaultFormat),
+			["6"] = new CallState(says),
+			["7"] = new CallState(MModule.single(string.Join(" ", options)))
+		};
+		
+		return await AttributeHelpers.EvaluateFormatAttribute(
+			attributeService,
+			null, // parser - not needed for attribute evaluation
+			player,
+			player,
+			chatFormatAttrName,
+			formatArgs,
+			defaultFormat,
+			checkParents: true);
 	}
 	
 	/// <summary>
