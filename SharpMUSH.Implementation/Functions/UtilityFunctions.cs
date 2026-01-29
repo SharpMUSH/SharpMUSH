@@ -1519,17 +1519,58 @@ public partial class Functions
 	[SharpFunction(Name = "slev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> SLev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Return the current parser function depth (stack level)
-		return ValueTask.FromResult(new CallState(parser.CurrentState.ParserFunctionDepth ?? 0));
+		// Return the current switch nesting depth
+		return ValueTask.FromResult(new CallState(parser.CurrentState.SwitchStack.Count));
 	}
 
-	[SharpFunction(Name = "stext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "stext", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: stext() requires text file system integration which is planned for future release.
-		// Text files allow storing large amounts of text accessible via file://<filename> references.
-		// See CoPilot Files/TEXT_FILE_SYSTEM_PLAN.md for implementation details.
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		// stext([<n>]) returns the string being matched in the current or nth nested switch.
+		// stext(L) returns the outermost switch string.
+		// n=0 is current switch, n=1 is the switch the current is nested in, etc.
+		
+		var args = parser.CurrentState.Arguments;
+		var stack = parser.CurrentState.SwitchStack;
+		
+		int depth = 0;
+		
+		// Validate arguments first, before checking stack count
+		if (args.TryGetValue("0", out var depthArg) && depthArg.Message != null)
+		{
+			var depthStr = depthArg.Message!.ToPlainText().Trim();
+			
+			// Skip processing if the argument is empty (defaults to 0)
+			if (!string.IsNullOrEmpty(depthStr))
+			{
+				// Handle "L" or "l" for outermost (last) switch
+				if (depthStr.Equals("L", StringComparison.OrdinalIgnoreCase))
+				{
+					depth = stack.Count - 1;
+				}
+				else if (!int.TryParse(depthStr, out depth) || depth < 0)
+				{
+					return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER"));
+				}
+			}
+		}
+		
+		// Now check if we're in a switch context
+		if (stack.Count == 0)
+		{
+			return ValueTask.FromResult(new CallState(string.Empty));
+		}
+		
+		// Convert depth to index from top of stack
+		// depth 0 = current (top), depth 1 = parent, etc.
+		if (depth >= stack.Count)
+		{
+			return ValueTask.FromResult(new CallState(string.Empty));
+		}
+		
+		// Get the nth item from the stack (0 is top)
+		var item = stack.ElementAtOrDefault(depth);
+		return ValueTask.FromResult(new CallState(item ?? MModule.empty()));
 	}
 
 	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

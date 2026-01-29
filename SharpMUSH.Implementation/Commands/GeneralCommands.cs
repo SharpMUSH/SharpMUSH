@@ -620,49 +620,33 @@ public partial class Commands
 			baseDesc = MModule.single("You see nothing special.");
 		}
 
-		var formatArgs = new Dictionary<string, CallState>();
+		var flags = await viewingObject.Flags.Value.ToArrayAsync();
+		var defaultFormattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
+			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
 		
-		var formattedName = MModule.single(baseName);
+		var formattedName = defaultFormattedName;
 		if (realViewing.IsRoom && viewingFromInside)
 		{
-			var nameFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "NAMEFORMAT",
-				IAttributeService.AttributeMode.Read, false);
+			var nameFormatArgs = new Dictionary<string, CallState>
+			{
+				["0"] = new CallState(viewingObject.DBRef.ToString()),
+				["1"] = new CallState(defaultFormattedName)
+			};
 			
-			if (nameFormatResult.IsAttribute)
-			{
-				var flags = await viewingObject.Flags.Value.ToArrayAsync();
-				formatArgs["0"] = new CallState(viewingObject.DBRef.ToString());
-				formatArgs["1"] = new CallState($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
-					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
-				
-				formattedName = await AttributeService.EvaluateAttributeFunctionAsync(
-					parser, executor, realViewing, "NAMEFORMAT", formatArgs);
-			}
-			else
-			{
-				var flags = await viewingObject.Flags.Value.ToArrayAsync();
-				formattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
-					$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
-			}
-		}
-		else
-		{
-			var flags = await viewingObject.Flags.Value.ToArrayAsync();
-			formattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
-				$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+			formattedName = await AttributeHelpers.EvaluateFormatAttribute(
+				AttributeService, parser, executor, realViewing, "NAMEFORMAT", 
+				nameFormatArgs, defaultFormattedName, checkParents: false);
 		}
 
 		var formatAttrName = useIdesc ? "IDESCFORMAT" : "DESCFORMAT";
-		var descFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, formatAttrName,
-			IAttributeService.AttributeMode.Read, false);
-		
-		var formattedDesc = baseDesc;
-		if (descFormatResult.IsAttribute)
+		var descFormatArgs = new Dictionary<string, CallState>
 		{
-			formatArgs["0"] = new CallState(baseDesc);
-			formattedDesc = await AttributeService.EvaluateAttributeFunctionAsync(
-				parser, executor, realViewing, formatAttrName, formatArgs);
-		}
+			["0"] = new CallState(baseDesc)
+		};
+		
+		var formattedDesc = await AttributeHelpers.EvaluateFormatAttribute(
+			AttributeService, parser, executor, realViewing, formatAttrName, 
+			descFormatArgs, baseDesc, checkParents: false);
 
 		await NotifyService!.Notify(executor, formattedName);
 		if (MModule.getLength(formattedDesc) > 0)
@@ -723,72 +707,89 @@ public partial class Commands
 
 			if (visibleContents.Count > 0)
 			{
-				var conFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "CONFORMAT",
-					IAttributeService.AttributeMode.Read, false);
+				var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
+				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
+				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
+				var defaultContents = MModule.single($"{contentsLabel}\n{string.Join("\n", visibleContents.Select(x => x.Object().Name))}");
 				
-				if (conFormatResult.IsAttribute)
+				var conFormatArgs = new Dictionary<string, CallState>
 				{
-					var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
-					var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
-					
-					formatArgs["0"] = new CallState(contentDbrefs);
-					formatArgs["1"] = new CallState(contentNames);
-					
-					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
-						parser, executor, realViewing, "CONFORMAT", formatArgs);
-					
-					await NotifyService.Notify(executor, formattedContents);
-				}
-				else
-				{
-					var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
-					var contentsList = string.Join("\n", visibleContents.Select(x => x.Object().Name));
-					await NotifyService.Notify(executor, $"{contentsLabel}\n{contentsList}");
-				}
+					["0"] = new CallState(contentDbrefs),
+					["1"] = new CallState(contentNames)
+				};
+				
+				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
+					AttributeService, parser, executor, realViewing, "CONFORMAT", 
+					conFormatArgs, defaultContents, checkParents: false);
+				
+				await NotifyService.Notify(executor, formattedContents);
 			}
 
 			if (visibleExits.Count > 0 && realViewing.IsRoom)
 			{
-				var exitFormatResult = await AttributeService.GetAttributeAsync(executor, realViewing, "EXITFORMAT",
-					IAttributeService.AttributeMode.Read, false);
-				
-				if (exitFormatResult.IsAttribute)
+				var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
+				var exitFormatArgs = new Dictionary<string, CallState>
 				{
-					var exitDbrefs = string.Join(" ", visibleExits.Select(x => x.Object().DBRef.ToString()));
-					
-					formatArgs["0"] = new CallState(exitDbrefs);
-					
-					var formattedExits = await AttributeService.EvaluateAttributeFunctionAsync(
-						parser, executor, realViewing, "EXITFORMAT", formatArgs);
-					
-					await NotifyService.Notify(executor, formattedExits);
+					["0"] = new CallState(exitDbrefs)
+				};
+				
+				// Build default exit display
+				var isTransparent = await realViewing.IsTransparent();
+				MString defaultExits;
+				if (isTransparent)
+				{
+					var exitDisplays = new List<string>();
+					foreach (var exit in visibleExits)
+					{
+						var exitObj = exit.WithRoomOption().Object();
+						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
+						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						
+						if (await exit.WithRoomOption().IsOpaque())
+						{
+							exitDisplays.Add(exitObj.Name);
+						}
+						else
+						{
+							exitDisplays.Add($"{exitObj.Name} to {destName}");
+						}
+					}
+					defaultExits = MModule.single(string.Join("\n", exitDisplays));
 				}
 				else
 				{
-					var isTransparent = await realViewing.IsTransparent();
-					if (isTransparent)
+					var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
+					defaultExits = MModule.single($"Obvious exits:\n{exitNames}");
+				}
+				
+				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
+					AttributeService, parser, executor, realViewing, "EXITFORMAT", 
+					exitFormatArgs, defaultExits, checkParents: false);
+				
+				// If a custom format was applied, send it as a single notification
+				// If using default format in transparent rooms, send one notification per exit to match original behavior
+				if (formattedExits == defaultExits && isTransparent)
+				{
+					// Original behavior: one notification per exit in transparent rooms
+					foreach (var exit in visibleExits)
 					{
-						foreach (var exit in visibleExits)
+						var exitObj = exit.WithRoomOption().Object();
+						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
+						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
+						
+						if (await exit.WithRoomOption().IsOpaque())
 						{
-							var exitObj = exit.WithRoomOption().Object();
-							var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
-							var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
-							
-							if (await exit.WithRoomOption().IsOpaque())
-							{
-								await NotifyService.Notify(executor, exitObj.Name);
-							}
-							else
-							{
-								await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
-							}
+							await NotifyService.Notify(executor, exitObj.Name);
+						}
+						else
+						{
+							await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
 						}
 					}
-					else
-					{
-						var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
-						await NotifyService.Notify(executor, $"Obvious exits:\n{exitNames}");
-					}
+				}
+				else
+				{
+					await NotifyService.Notify(executor, formattedExits);
 				}
 			}
 		}
@@ -1950,25 +1951,36 @@ public partial class Commands
 			defaultArg = args.Last().Value.Message!;
 		}
 
-		foreach (var (expr, action) in pairs)
-		{
-			if (expr is null) break;
+		// Push the switch string onto the context stack
+		parser.CurrentState.SwitchStack.Push(strArg.Message!);
 
-			// Use wildcard/glob pattern matching
-			if (MModule.isWildcardMatch(strArg.Message!, expr.Message!))
+		try
+		{
+			foreach (var (expr, action) in pairs)
 			{
-				matched = true;
-				// This is Inline.
-				await parser.CommandListParseVisitor(action.Message!)();
+				if (expr is null) break;
+
+				// Use wildcard/glob pattern matching
+				if (MModule.isWildcardMatch(strArg.Message!, expr.Message!))
+				{
+					matched = true;
+					// This is Inline.
+					await parser.CommandListParseVisitor(action.Message!)();
+				}
 			}
-		}
 
-		if (defaultArg.IsSome() && !matched)
+			if (defaultArg.IsSome() && !matched)
+			{
+				await parser.CommandListParseVisitor(defaultArg.AsValue())();
+			}
+
+			return new CallState(matched);
+		}
+		finally
 		{
-			await parser.CommandListParseVisitor(defaultArg.AsValue())();
+			// Pop the switch string from the context stack
+			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
-
-		return new CallState(matched);
 	}
 
 	[SharpCommand(Name = "@WAIT", Switches = ["PID", "UNTIL"],
@@ -3865,153 +3877,164 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "You must specify a test string.");
 			return new CallState("#-1 NO TEST STRING");
 		}
-		
-		await NotifyService!.Notify(executor, $"@select: Testing string '{testString}'");
-		
-		// Count expression/action pairs (args are: 0=test string, then pairs of expr,action)
-		int pairCount = (args.Count - 1) / 2;
-		bool hasDefault = (args.Count - 1) % 2 == 1;
-		
-		await NotifyService.Notify(executor, $"  Expression/action pairs: {pairCount}");
-		if (hasDefault)
+
+		// Push the switch string onto the context stack
+		parser.CurrentState.SwitchStack.Push(args["0"].Message!);
+
+		try
 		{
-			await NotifyService.Notify(executor, "  Has default action");
-		}
-		
-		// Check switches
-		if (switches.Contains("REGEXP"))
-		{
-			await NotifyService.Notify(executor, "  Mode: Regular expression matching");
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "  Mode: Wildcard pattern matching");
-		}
-		
-		if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
-		{
-			await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
+			await NotifyService!.Notify(executor, $"@select: Testing string '{testString}'");
 			
-			if (switches.Contains("NOBREAK"))
+			// Count expression/action pairs (args are: 0=test string, then pairs of expr,action)
+			int pairCount = (args.Count - 1) / 2;
+			bool hasDefault = (args.Count - 1) % 2 == 1;
+			
+			await NotifyService.Notify(executor, $"  Expression/action pairs: {pairCount}");
+			if (hasDefault)
 			{
-				await NotifyService.Notify(executor, "  @break won't propagate to caller");
+				await NotifyService.Notify(executor, "  Has default action");
 			}
 			
-			if (switches.Contains("LOCALIZE"))
+			// Check switches
+			if (switches.Contains("REGEXP"))
 			{
-				await NotifyService.Notify(executor, "  Q-registers will be localized");
+				await NotifyService.Notify(executor, "  Mode: Regular expression matching");
+			}
+			else
+			{
+				await NotifyService.Notify(executor, "  Mode: Wildcard pattern matching");
 			}
 			
-			if (switches.Contains("CLEARREGS"))
+			if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
 			{
-				await NotifyService.Notify(executor, "  Q-registers will be cleared");
-			}
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "  Execution: Queued");
-		}
-		
-		if (switches.Contains("NOTIFY"))
-		{
-			await NotifyService.Notify(executor, "  Will queue @notify after completion");
-		}
-		
-		// Pattern matching implementation
-		bool isRegexp = switches.Contains("REGEXP");
-		bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
-		bool localizeRegs = switches.Contains("LOCALIZE");
-		bool clearRegs = switches.Contains("CLEARREGS");
-		
-		// Process expression/action pairs
-		bool matchFound = false;
-		for (int i = 0; i < pairCount; i++)
-		{
-			var exprIndex = (i * 2) + 1;
-			var actionIndex = (i * 2) + 2;
-			
-			var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
-			var action = args[actionIndex.ToString()].Message;
-			
-			// Perform pattern matching
-			bool matches = false;
-			if (isRegexp)
-			{
-				// Regular expression matching
-				try
+				await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
+				
+				if (switches.Contains("NOBREAK"))
 				{
-					var regex = new Regex(pattern, RegexOptions.None);
-					matches = regex.IsMatch(testString);
+					await NotifyService.Notify(executor, "  @break won't propagate to caller");
 				}
-				catch (ArgumentException)
+				
+				if (switches.Contains("LOCALIZE"))
 				{
-					await NotifyService.Notify(executor, $"Invalid regex pattern: {pattern}");
-					continue;
+					await NotifyService.Notify(executor, "  Q-registers will be localized");
+				}
+				
+				if (switches.Contains("CLEARREGS"))
+				{
+					await NotifyService.Notify(executor, "  Q-registers will be cleared");
 				}
 			}
 			else
 			{
-				// Wildcard pattern matching
-				var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-				var regex = new Regex(regexPattern, RegexOptions.None);
-				matches = regex.IsMatch(testString);
+				await NotifyService.Notify(executor, "  Execution: Queued");
 			}
 			
-			if (matches && action != null)
+			if (switches.Contains("NOTIFY"))
 			{
-				matchFound = true;
+				await NotifyService.Notify(executor, "  Will queue @notify after completion");
+			}
+			
+			// Pattern matching implementation
+			bool isRegexp = switches.Contains("REGEXP");
+			bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
+			bool localizeRegs = switches.Contains("LOCALIZE");
+			bool clearRegs = switches.Contains("CLEARREGS");
+			
+			// Process expression/action pairs
+			bool matchFound = false;
+			for (int i = 0; i < pairCount; i++)
+			{
+				var exprIndex = (i * 2) + 1;
+				var actionIndex = (i * 2) + 2;
 				
-				// Substitute #$ with test string in action
-				var actionText = action.ToPlainText().Replace("#$", testString);
-				var actionMString = MModule.single(actionText);
+				var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
+				var action = args[actionIndex.ToString()].Message;
 				
-				// Execute action (inline for now, queue support can be added later)
-				if (isInline)
+				// Perform pattern matching
+				bool matches = false;
+				if (isRegexp)
 				{
-					await parser.CommandListParse(actionMString);
+					// Regular expression matching
+					try
+					{
+						var regex = new Regex(pattern, RegexOptions.None);
+						matches = regex.IsMatch(testString);
+					}
+					catch (ArgumentException)
+					{
+						await NotifyService.Notify(executor, $"Invalid regex pattern: {pattern}");
+						continue;
+					}
 				}
 				else
 				{
-					// Queue the action
-					await Mediator!.Send(new QueueCommandListRequest(
-						actionMString,
-						parser.CurrentState,
-						new DbRefAttribute(executor.Object().DBRef, []),
-						0));
+					// Wildcard pattern matching
+					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+					var regex = new Regex(regexPattern, RegexOptions.None);
+					matches = regex.IsMatch(testString);
 				}
 				
-				// @select only executes first match
-				break;
+				if (matches && action != null)
+				{
+					matchFound = true;
+					
+					// Substitute #$ with test string in action
+					var actionText = action.ToPlainText().Replace("#$", testString);
+					var actionMString = MModule.single(actionText);
+					
+					// Execute action (inline for now, queue support can be added later)
+					if (isInline)
+					{
+						await parser.CommandListParse(actionMString);
+					}
+					else
+					{
+						// Queue the action
+						await Mediator!.Send(new QueueCommandListRequest(
+							actionMString,
+							parser.CurrentState,
+							new DbRefAttribute(executor.Object().DBRef, []),
+							0));
+					}
+					
+					// @select only executes first match
+					break;
+				}
 			}
+			
+			// Execute default action if no match and default exists
+			if (!matchFound && hasDefault)
+			{
+				var defaultIndex = args.Count - 1;
+				var defaultAction = args[defaultIndex.ToString()].Message;
+				
+				if (defaultAction != null)
+				{
+					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
+					var actionMString = MModule.single(actionText);
+					
+					if (isInline)
+					{
+						await parser.CommandListParse(actionMString);
+					}
+					else
+					{
+						await Mediator!.Send(new QueueCommandListRequest(
+							actionMString,
+							parser.CurrentState,
+							new DbRefAttribute(executor.Object().DBRef, []),
+							0));
+					}
+				}
+			}
+			
+			return CallState.Empty;
 		}
-		
-		// Execute default action if no match and default exists
-		if (!matchFound && hasDefault)
+		finally
 		{
-			var defaultIndex = args.Count - 1;
-			var defaultAction = args[defaultIndex.ToString()].Message;
-			
-			if (defaultAction != null)
-			{
-				var actionText = defaultAction.ToPlainText().Replace("#$", testString);
-				var actionMString = MModule.single(actionText);
-				
-				if (isInline)
-				{
-					await parser.CommandListParse(actionMString);
-				}
-				else
-				{
-					await Mediator!.Send(new QueueCommandListRequest(
-						actionMString,
-						parser.CurrentState,
-						new DbRefAttribute(executor.Object().DBRef, []),
-						0));
-				}
-			}
+			// Pop the switch string from the context stack
+			parser.CurrentState.SwitchStack.TryPop(out _);
 		}
-		
-		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@TRIGGER",

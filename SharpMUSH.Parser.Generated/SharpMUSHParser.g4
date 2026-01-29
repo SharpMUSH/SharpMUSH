@@ -101,6 +101,7 @@ complexSubstitutionSymbol: (
         | ITEXT_NUM
         | ITEXT_LAST
         | STEXT_NUM
+        | STEXT_LAST
         | VWX
     )
 ;

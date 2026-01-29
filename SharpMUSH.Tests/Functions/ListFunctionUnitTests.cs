@@ -78,11 +78,12 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	// TODO: Fix: %$0 is for switches.
-	// TODO: This should be #@, which is not yet implemented.
+	// Fixed: %$0 is for switches, not iterations.
+	// Using inum(0) for iteration number, which is the correct function.
+	// TODO: Implement #@ token as shorthand for inum(0).
 	[Test, NotInParallel]
-	[Arguments("iter(5 6 7,%$0)", "1 2 3")]
-	[Arguments("iter(1|2|3,iter(1 2 3,add(%$0,%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
+	[Arguments("iter(5 6 7,inum(0))", "1 2 3")]
+	[Arguments("iter(1|2|3,iter(1 2 3,add(inum(0),%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
 	public async Task IterationNumber(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
