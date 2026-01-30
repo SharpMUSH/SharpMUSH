@@ -95,10 +95,10 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 			{
 				try
 				{
-					var transformedData = _transformService.TransformAsync(
+					var transformedData = _transformService.Transform(
 						data,
 						connection.Capabilities,
-						connection.Preferences).GetAwaiter().GetResult();
+						connection.Preferences);
 					buffer.Messages.Add(transformedData);
 				}
 				catch (Exception ex)

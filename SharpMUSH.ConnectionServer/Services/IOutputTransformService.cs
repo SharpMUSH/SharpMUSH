@@ -19,4 +19,13 @@ public interface IOutputTransformService
 		ProtocolCapabilities capabilities,
 		PlayerOutputPreferences? preferences
 	);
+
+	/// <summary>
+	/// Synchronous version of TransformAsync for use in synchronous contexts
+	/// </summary>
+	byte[] Transform(
+		byte[] rawOutput,
+		ProtocolCapabilities capabilities,
+		PlayerOutputPreferences? preferences
+	);
 }

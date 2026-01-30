@@ -29,6 +29,15 @@ public partial class OutputTransformService : IOutputTransformService
 		ProtocolCapabilities capabilities,
 		PlayerOutputPreferences? preferences)
 	{
+		var result = Transform(rawOutput, capabilities, preferences);
+		return ValueTask.FromResult(result);
+	}
+
+	public byte[] Transform(
+		byte[] rawOutput,
+		ProtocolCapabilities capabilities,
+		PlayerOutputPreferences? preferences)
+	{
 		try
 		{
 			// Convert to string for processing
@@ -40,15 +49,13 @@ public partial class OutputTransformService : IOutputTransformService
 
 			// Convert back to bytes with appropriate encoding
 			var targetEncoding = GetTargetEncoding(capabilities.Charset);
-			var result = targetEncoding.GetBytes(text);
-
-			return ValueTask.FromResult(result);
+			return targetEncoding.GetBytes(text);
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error transforming output");
 			// Return original output on error
-			return ValueTask.FromResult(rawOutput);
+			return rawOutput;
 		}
 	}
 
@@ -81,14 +88,8 @@ public partial class OutputTransformService : IOutputTransformService
 
 	private string ApplyCharsetTransformations(string text, ProtocolCapabilities capabilities)
 	{
-		// If client doesn't support UTF-8, we may need to replace unsupported characters
-		if (!capabilities.SupportsUtf8 && capabilities.Charset != "UTF-8")
-		{
-			// This will be handled by the encoding conversion below
-			// Characters that can't be represented will become '?'
-			return text;
-		}
-
+		// Character set transformations are handled by the encoding conversion
+		// when we convert the final text to bytes using GetTargetEncoding()
 		return text;
 	}
 
@@ -133,7 +134,7 @@ public partial class OutputTransformService : IOutputTransformService
 			var gray = color256 - 232;
 			if (gray < 8) return 0;      // Black
 			if (gray < 20) return 7;     // White
-			return 7;                     // Bright white
+			return 15;                    // Bright white
 		}
 
 		// Color cube: extract RGB components and map to nearest 16-color
@@ -146,15 +147,15 @@ public partial class OutputTransformService : IOutputTransformService
 		var bright = (r + g + b) > 6;
 		
 		// Determine primary color
-		if (r > g && r > b) return bright ? 1 : 1; // Red
-		if (g > r && g > b) return bright ? 2 : 2; // Green
-		if (b > r && b > g) return bright ? 4 : 4; // Blue
-		if (r == g && r > b) return bright ? 3 : 3; // Yellow
-		if (r == b && r > g) return bright ? 5 : 5; // Magenta
-		if (g == b && g > r) return bright ? 6 : 6; // Cyan
+		if (r > g && r > b) return bright ? 9 : 1;   // Red (bright: 9, normal: 1)
+		if (g > r && g > b) return bright ? 10 : 2;  // Green (bright: 10, normal: 2)
+		if (b > r && b > g) return bright ? 12 : 4;  // Blue (bright: 12, normal: 4)
+		if (r == g && r > b) return bright ? 11 : 3; // Yellow (bright: 11, normal: 3)
+		if (r == b && r > g) return bright ? 13 : 5; // Magenta (bright: 13, normal: 5)
+		if (g == b && g > r) return bright ? 14 : 6; // Cyan (bright: 14, normal: 6)
 		
 		// Grayscale
-		return bright ? 7 : 0;
+		return bright ? 7 : 0; // White or Black
 	}
 
 	private static Encoding GetTargetEncoding(string charset)

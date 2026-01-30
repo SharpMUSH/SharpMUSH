@@ -100,7 +100,7 @@ public class OutputTransformServiceTests
 	public async Task TransformAsync_DowngradesXterm256_WhenNotSupported()
 	{
 		// Arrange
-		var input = "\x1b[38;5;196mBright red\x1b[0m"u8.ToArray(); // 256-color red
+		var input = "\x1b[38;5;196mBright red\x1b[0m"u8.ToArray(); // 256-color red (196)
 		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
 		var preferences = new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: true, Xterm256Enabled: false);
 
@@ -109,9 +109,11 @@ public class OutputTransformServiceTests
 
 		// Assert
 		var resultText = Encoding.UTF8.GetString(result);
-		// Should contain 16-color code instead of 256-color
-		await Assert.That(resultText).Contains("\x1b[3");
-		await Assert.That(resultText).DoesNotContain("38;5;196");
+		// 196 in 256-color palette should be downgraded to a 16-color code
+		// The regex replaces 38;5;N with 3X where X is the mapped color
+		await Assert.That(resultText).Contains("\x1b[3"); // Should have a 16-color foreground code
+		await Assert.That(resultText).Contains("Bright red"); // Text should be preserved
+		await Assert.That(resultText).DoesNotContain("38;5;196"); // 256-color code should be removed
 	}
 
 	[Test]

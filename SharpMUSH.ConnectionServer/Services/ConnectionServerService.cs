@@ -117,7 +117,18 @@ public class ConnectionServerService(
 		if (_sessionState.TryGetValue(handle, out var connection))
 		{
 			var updated = connection with { Preferences = preferences };
-			_sessionState.TryUpdate(handle, updated, connection);
+			// TryUpdate returns false if the value changed between TryGetValue and TryUpdate
+			// In that case, retry the update
+			while (!_sessionState.TryUpdate(handle, updated, connection))
+			{
+				// Connection was updated by another thread, get the latest value and retry
+				if (!_sessionState.TryGetValue(handle, out connection))
+				{
+					// Connection was removed
+					return false;
+				}
+				updated = connection with { Preferences = preferences };
+			}
 			return true;
 		}
 		return false;
