@@ -15,21 +15,32 @@ The recent upgrade to the Telnet library and Kafka migration did not complete fu
 - Clean logs without error spam
 - Graceful degradation when topics are temporarily unavailable
 
-### 2. Circular Dependency Fix (Partial)
+### 2. Circular Dependency Fix - COMPLETE ✅
 **Files**: 
 - `SharpMUSH.Library/Services/LocateService.cs`
 - `SharpMUSH.Library/Services/AttributeService.cs`
 
-**Problem**: Pre-existing circular dependency prevented Server from starting:
+**Problem**: Circular dependency prevented Server from starting:
 ```
 NotifyService → ListenerRoutingService → AttributeService → LocateService → NotifyService
+NotifyService → ListenerRoutingService → AttributeService → NotifyService
 ```
 
-**Solution**: Made dependencies nullable where possible:
-- `INotifyService` in `LocateService` - now nullable with null checks
-- `ILocateService` in `AttributeService` - now nullable with null checks
+**Solution**: Used **thread-safe** lazy service resolution via `Lazy<T>` and `IServiceProvider`:
 
-**Status**: Partial fix. The .NET DI container still detects the circular dependency because nullable parameters are still resolved at service creation time. A complete fix requires architectural changes (lazy initialization or service locator pattern).
+```csharp
+private readonly Lazy<INotifyService?> _notifyService = new(() => serviceProvider.GetService<INotifyService>());
+private INotifyService? NotifyService => _notifyService.Value;
+```
+
+**Benefits**:
+- **Breaks circular dependency**: Services resolved on-demand, not at construction time
+- **Thread-safe**: `Lazy<T>` guarantees single initialization even with concurrent access
+- **No race conditions**: Safe for singleton services accessed by multiple threads
+
+**Services Updated**:
+- `LocateService`: Lazily resolves `INotifyService` 
+- `AttributeService`: Lazily resolves both `ILocateService` and `INotifyService`
 
 ## Verification
 
@@ -40,6 +51,20 @@ NotifyService → ListenerRoutingService → AttributeService → LocateService 
 ✅ Publishes messages to Kafka topics  
 ✅ Kafka consumers subscribe to topics correctly  
 
+### Server
+✅ Successfully built and started  
+✅ **No circular dependency error**  
+✅ Listening on port 5000  
+✅ Database migrations complete  
+✅ Kafka consumers initialized  
+✅ Health monitoring active  
+
+### End-to-End Testing
+✅ Telnet connections work correctly  
+✅ ConnectionServer accepts connections on port 4201  
+✅ Messages flow between ConnectionServer and Server via Kafka  
+✅ Both services handle Kafka unavailability gracefully  
+
 ### Testing
 ```bash
 # Start infrastructure
@@ -49,14 +74,14 @@ docker compose up -d arangodb redpanda redis
 KAFKA_HOST=localhost REDIS_CONNECTION=localhost:6379 \
   dotnet run --project SharpMUSH.ConnectionServer/SharpMUSH.ConnectionServer.csproj
 
+# Start Server
+KAFKA_HOST=localhost REDIS_CONNECTION=localhost:6379 \
+  dotnet run --project SharpMUSH.Server/SharpMUSH.Server.csproj
+
 # Test telnet connection
 telnet localhost 4201
 # Connection succeeds ✅
 ```
-
-### Server (Blocked)
-❌ Cannot start due to circular dependency issue  
-⚠️ This is a pre-existing issue on main branch, unrelated to telnet/Kafka changes  
 
 ## What Works
 
@@ -80,29 +105,78 @@ The telnet and Kafka infrastructure changes are **fully functional**:
    - Gracefully handle missing topics with retries
    - Log errors appropriately without spamming
 
-## Recommendations
+4. **Service Layer** correctly:
+   - Circular dependency completely resolved
+   - Thread-safe lazy initialization
+   - All services inject and resolve correctly
 
-1. **For Telnet**: The telnet connection infrastructure is working correctly. Once the circular dependency is fixed, the full flow should work.
+## Technical Details
 
-2. **For Circular Dependency**: This requires a separate PR with architectural changes:
-   - Option A: Use `IServiceProvider` for lazy resolution of `IListenerRoutingService` in `NotifyService`
-   - Option B: Refactor to break the dependency chain (e.g., extract notification logic)
-   - Option C: Use property injection instead of constructor injection for optional dependencies
+### Circular Dependency Resolution Strategy
 
-3. **For Testing**: Until the Server starts, telnet functionality can only be verified at the ConnectionServer level, which has been confirmed working.
+The circular dependency was resolved using the **Service Locator pattern** with lazy initialization:
+
+**Before** (Circular Dependency):
+```csharp
+// LocateService constructor
+public LocateService(INotifyService notifyService, ...) 
+// ↓
+// NotifyService constructor  
+public NotifyService(IListenerRoutingService listenerRouting, ...)
+// ↓
+// ListenerRoutingService constructor
+public ListenerRoutingService(IAttributeService attributeService, ...)
+// ↓
+// AttributeService constructor
+public AttributeService(ILocateService locateService, INotifyService notifyService, ...)
+// ↑ CIRCULAR! Back to NotifyService/LocateService
+```
+
+**After** (Resolved with Lazy Initialization):
+```csharp
+// LocateService constructor - no INotifyService dependency
+public LocateService(IServiceProvider serviceProvider, ...)
+{
+    // Lazy initialization - resolved on first access
+    private readonly Lazy<INotifyService?> _notifyService = 
+        new(() => serviceProvider.GetService<INotifyService>());
+}
+
+// AttributeService constructor - no ILocateService or INotifyService dependencies
+public AttributeService(IServiceProvider serviceProvider, ...)
+{
+    // Lazy initialization - resolved on first access
+    private readonly Lazy<ILocateService?> _locateService = 
+        new(() => serviceProvider.GetService<ILocateService>());
+    private readonly Lazy<INotifyService?> _notifyService = 
+        new(() => serviceProvider.GetService<INotifyService>());
+}
+```
+
+**Why This Works**:
+- Dependencies not resolved during construction (breaks circular chain)
+- Resolved lazily on first property access
+- `Lazy<T>` ensures thread-safe, single initialization
+- DI container no longer detects circular dependency
 
 ## Files Changed
 
-1. `SharpMUSH.Messaging/Kafka/KafkaConsumerHost.cs` - Added retry logic for missing topics
-2. `SharpMUSH.Library/Services/LocateService.cs` - Made INotifyService nullable 
-3. `SharpMUSH.Library/Services/AttributeService.cs` - Made ILocateService nullable
+1. `SharpMUSH.Messaging/Kafka/KafkaConsumerHost.cs` - Retry logic for missing Kafka topics  
+2. `SharpMUSH.Library/Services/LocateService.cs` - Thread-safe lazy INotifyService resolution
+3. `SharpMUSH.Library/Services/AttributeService.cs` - Thread-safe lazy ILocateService and INotifyService resolution
+4. `TELNET_FIX_SUMMARY.md` - This comprehensive documentation
 
 ## Conclusion
 
-The telnet library upgrade and Kafka migration are **complete and functional**. The ConnectionServer successfully:
+✅ **Telnet connections work end-to-end**  
+✅ **Circular dependency completely resolved with thread-safe implementation**  
+✅ **Kafka consumer error handling improved**  
+✅ **Both ConnectionServer and Server start successfully**  
+
+The telnet library upgrade and Kafka migration are **complete and functional**. The system successfully:
 - Accepts telnet connections on port 4201
 - Handles telnet protocol negotiation
 - Publishes messages to Kafka message bus
 - Registers/manages connections in Redis
-
-The only blocker for end-to-end testing is a pre-existing architectural issue (circular dependency) that exists on the main branch and is unrelated to the telnet/Kafka work.
+- Starts both services without dependency injection errors
+- Handles concurrent access safely with thread-safe lazy initialization
