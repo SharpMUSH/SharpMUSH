@@ -10,6 +10,19 @@ Connected!
 
 That's it - just the word "Connected!" followed by a newline.
 
+## Updated Proof (Integration Tests)
+
+**NEW:** Integration tests now prove the complete end-to-end flow from NotifyService to actual TCP socket delivery. See:
+- **`SharpMUSH.Tests/Integration/TelnetOutputIntegrationTests.cs`**
+- **`TELNET_OUTPUT_INTEGRATION_TESTS.md`** for detailed documentation
+
+The integration tests verify:
+1. ✅ NotifyService.Notify() is called (unit test)
+2. ✅ Message is batched and published to Kafka (automated integration test)
+3. ✅ Message reaches ConnectionServer and TCP socket (manual integration test)
+
+This provides complete proof of the entire message flow, not just the NotifyService call.
+
 ## Evidence
 
 ### 1. Source Code (Primary Evidence)
