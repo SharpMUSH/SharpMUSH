@@ -71,6 +71,9 @@ builder.Services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>(
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
+// Add Output Transformation Service
+builder.Services.AddSingleton<IOutputTransformService, OutputTransformService>();
+
 // Add DescriptorGeneratorService
 builder.Services.AddSingleton<IDescriptorGeneratorService, DescriptorGeneratorService>();
 

@@ -3,6 +3,7 @@ using System.Text;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
+using SharpMUSH.ConnectionServer.Models;
 
 namespace SharpMUSH.ConnectionServer.Services;
 
@@ -25,7 +26,8 @@ public class ConnectionServerService(
 		Func<byte[], ValueTask> promptOutputFunction,
 		Func<Encoding> encodingFunction,
 		Action disconnectFunction,
-		Func<string, string, ValueTask>? gmcpFunction = null)
+		Func<string, string, ValueTask>? gmcpFunction = null,
+		ProtocolCapabilities? capabilities = null)
 	{
 		try
 		{
@@ -37,7 +39,9 @@ public class ConnectionServerService(
 				promptOutputFunction,
 				encodingFunction,
 				disconnectFunction,
-				gmcpFunction);
+				gmcpFunction,
+				capabilities ?? new ProtocolCapabilities(),
+				null);
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
@@ -116,7 +120,9 @@ public class ConnectionServerService(
 		Func<byte[], ValueTask> PromptOutputFunction,
 		Func<Encoding> EncodingFunction,
 		Action DisconnectFunction,
-		Func<string, string, ValueTask>? GMCPFunction = null);
+		Func<string, string, ValueTask>? GMCPFunction,
+		ProtocolCapabilities Capabilities,
+		PlayerOutputPreferences? Preferences);
 
 	public enum ConnectionState
 	{
@@ -132,7 +138,8 @@ public interface IConnectionServerService
 		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction,
 		Func<Encoding> encodingFunction,
 		Action disconnectFunction,
-		Func<string, string, ValueTask>? gmcpFunction = null);
+		Func<string, string, ValueTask>? gmcpFunction = null,
+		SharpMUSH.ConnectionServer.Models.ProtocolCapabilities? capabilities = null);
 	
 	Task DisconnectAsync(long handle);
 
