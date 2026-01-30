@@ -19,7 +19,7 @@ namespace SharpMUSH.Library.Services;
 public class AttributeService(
 	IMediator mediator,
 	IPermissionService ps,
-	ILocateService locateService,
+	ILocateService? locateService,
 	IValidateService validateService, 
 	INotifyService notifyService,
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
@@ -336,6 +336,11 @@ public class AttributeService(
 		}
 
 		// Standard Object/Attribute evaluation
+		if (locateService == null)
+		{
+			return MModule.single("LocateService not available");
+		}
+		
 		var maybeObject =
 			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
 				LocateFlags.All);

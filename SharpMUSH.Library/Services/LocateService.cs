@@ -14,7 +14,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Services;
 
 public partial class LocateService(IMediator mediator, 
-	INotifyService notifyService, 
+	INotifyService? notifyService, 
 	IPermissionService permissionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration) : ILocateService
 {
@@ -35,8 +35,11 @@ public partial class LocateService(IMediator mediator,
 		var caller = await parser.CurrentState.CallerObject(mediator);
 		if (!loc.IsValid())
 		{
-			await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
-				caller.WithoutNone());
+			if (notifyService != null)
+			{
+				await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
+					caller.WithoutNone());
+			}
 		}
 
 		return loc;
@@ -53,8 +56,11 @@ public partial class LocateService(IMediator mediator,
 			return loc.AsAnyObject;
 		}
 
-		await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
-			caller.WithoutNone());
+		if (notifyService != null)
+		{
+			await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
+				caller.WithoutNone());
+		}
 		var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
 
 		return new Error<CallState>(new CallState(callStateMessage));
