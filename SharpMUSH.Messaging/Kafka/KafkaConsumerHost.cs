@@ -137,6 +137,12 @@ public class KafkaConsumerHost : BackgroundService
 			{
 				_logger.LogError(ex, "Error consuming message from topic {Topic}: {ErrorCode} - {ErrorReason}",
 					registration.Topic, ex.Error.Code, ex.Error.Reason);
+				
+				// If topic doesn't exist, wait before retrying to avoid spam
+				if (ex.Error.Code == ErrorCode.UnknownTopicOrPart)
+				{
+					await Task.Delay(5000, stoppingToken);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -193,6 +199,12 @@ public class KafkaConsumerHost : BackgroundService
 				// Clear batch on error to avoid processing partial batches
 				batch.Clear();
 				batchDeadline = DateTime.UtcNow.Add(_options.BatchTimeLimit);
+				
+				// If topic doesn't exist, wait before retrying to avoid spam
+				if (ex.Error.Code == ErrorCode.UnknownTopicOrPart)
+				{
+					await Task.Delay(5000, stoppingToken);
+				}
 			}
 			catch (Exception ex)
 			{
