@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using DotNext;
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using NaturalSort.Extension;
 using OneOf;
 using OneOf.Types;
@@ -19,12 +20,17 @@ namespace SharpMUSH.Library.Services;
 public class AttributeService(
 	IMediator mediator,
 	IPermissionService ps,
-	ILocateService? locateService,
+	IServiceProvider serviceProvider,
 	IValidateService validateService, 
-	INotifyService notifyService,
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IAttributeService
 {
+	private ILocateService? _locateService;
+	private ILocateService? LocateService => _locateService ??= serviceProvider.GetService<ILocateService>();
+	
+	private INotifyService? _notifyService;
+	private INotifyService? NotifyService => _notifyService ??= serviceProvider.GetService<INotifyService>();
+	
 	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
 	
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
@@ -336,13 +342,13 @@ public class AttributeService(
 		}
 
 		// Standard Object/Attribute evaluation
-		if (locateService == null)
+		if (LocateService == null)
 		{
 			return MModule.single("LocateService not available");
 		}
 		
 		var maybeObject =
-			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
+			await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
 				LocateFlags.All);
 
 		return maybeObject switch
@@ -481,16 +487,22 @@ public class AttributeService(
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
 		if (currentFlags.Contains(returnedFlag))
 		{
-			await notifyService.Notify(executor,
-				$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			if (NotifyService != null)
+			{
+				await NotifyService.Notify(executor,
+					$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			}
 			return new Success();
 		}
 
 		await mediator.Send(new SetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
-		await notifyService.Notify(executor,
-			$"Flag {returnedFlag.Name} set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+		if (NotifyService != null)
+		{
+			await NotifyService.Notify(executor,
+				$"Flag {returnedFlag.Name} set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+		}
 
 		return new Success();
 	}
@@ -521,16 +533,22 @@ public class AttributeService(
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
 		if (!currentFlags.Contains(returnedFlag))
 		{
-			await notifyService.Notify(executor,
-				$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			if (NotifyService != null)
+			{
+				await NotifyService.Notify(executor,
+					$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+			}
 			return new Success();
 		}
 
 		await mediator.Send(new UnsetAttributeFlagCommand(obj.Object().DBRef, returnedAttribute.AsAttribute.Last(),
 			returnedFlag));
 
-		await notifyService.Notify(executor,
-			$"Flag {returnedFlag.Name} unset from attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+		if (NotifyService != null)
+		{
+			await NotifyService.Notify(executor,
+				$"Flag {returnedFlag.Name} unset from attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
+		}
 
 		return new Success();
 	}
@@ -561,8 +579,11 @@ public class AttributeService(
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
 
-		await notifyService.Notify(executor,
-			$"Attribute {string.Join("`", attrPath)} SET.", obj);
+		if (NotifyService != null)
+		{
+			await NotifyService.Notify(executor,
+				$"Attribute {string.Join("`", attrPath)} SET.", obj);
+		}
 
 		return new Success();
 	}
@@ -601,10 +622,13 @@ public class AttributeService(
 
 		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr.Select(x => x.LongName!).ToArray()));
 
-		foreach (var attrDone in attrArr)
+		if (NotifyService != null)
 		{
-			await notifyService.Notify(executor,
-				$"Attribute {attrDone.LongName} CLEARED.", obj);
+			foreach (var attrDone in attrArr)
+			{
+				await NotifyService.Notify(executor,
+					$"Attribute {attrDone.LongName} CLEARED.", obj);
+			}
 		}
 
 		return new Success();

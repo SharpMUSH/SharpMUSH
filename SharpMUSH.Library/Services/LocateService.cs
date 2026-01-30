@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
@@ -14,10 +15,13 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Services;
 
 public partial class LocateService(IMediator mediator, 
-	INotifyService? notifyService, 
+	IServiceProvider serviceProvider, 
 	IPermissionService permissionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration) : ILocateService
 {
+	private INotifyService? _notifyService;
+	private INotifyService? NotifyService => _notifyService ??= serviceProvider.GetService<INotifyService>();
+	
 	private static readonly Regex NthRegex = Nth();
 
 	public enum ControlFlow
@@ -35,9 +39,9 @@ public partial class LocateService(IMediator mediator,
 		var caller = await parser.CurrentState.CallerObject(mediator);
 		if (!loc.IsValid())
 		{
-			if (notifyService != null)
+			if (NotifyService != null)
 			{
-				await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
+				await NotifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
 					caller.WithoutNone());
 			}
 		}
@@ -56,9 +60,9 @@ public partial class LocateService(IMediator mediator,
 			return loc.AsAnyObject;
 		}
 
-		if (notifyService != null)
+		if (NotifyService != null)
 		{
-			await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
+			await NotifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
 				caller.WithoutNone());
 		}
 		var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
