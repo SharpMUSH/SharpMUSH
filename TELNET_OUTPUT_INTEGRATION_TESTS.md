@@ -26,10 +26,10 @@ Telnet Client
 ### 1. Automated Test (Runs in CI)
 **`NotifyService_PublishesToKafka_WithBatching`**
 - ✅ Runs automatically in CI
-- Tests: NotifyService → Batching → Kafka Publisher
-- Validates the batching mechanism (8ms timeout)
-- Proves messages are published to Kafka
-- Does NOT require ConnectionServer running
+- Tests: Connection registration and message acceptance
+- Validates: Connection lifecycle management
+- Verifies: NotifyService accepts messages without errors
+- Does NOT verify: Kafka publishing or TCP delivery (requires ConnectionServer)
 
 ### 2. Manual End-to-End Tests (Require ConnectionServer)
 These tests prove the COMPLETE flow but require manual setup:
@@ -76,17 +76,23 @@ dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/TelnetOutputInte
 ## What the Tests Prove
 
 ### ✅ Automated Test Proves:
-1. NotifyService correctly registers connections
-2. Messages are batched with 8ms timeout
-3. Batched messages are published to Kafka
-4. The Kafka publisher is working correctly
+1. Connection registration and management works correctly
+2. NotifyService accepts messages without errors
+3. Connection cleanup works correctly
+4. The basic infrastructure is functional
+
+**Note:** The automated test does NOT verify that messages reach Kafka or the TCP socket. 
+This would require either:
+- A Kafka consumer in the test (complex, slow)
+- ConnectionServer running (not suitable for automated CI tests)
 
 ### ✅ Manual Tests Prove (when ConnectionServer is running):
-1. Messages flow from Kafka to ConnectionServer consumers
-2. ConnectionServer delivers messages to TCP sockets
-3. Message batching works end-to-end
-4. The "connect #1" command flow works completely
-5. Multiple rapid messages are correctly batched and delivered
+1. Complete message flow from NotifyService to TCP socket
+2. Messages flow from Kafka to ConnectionServer consumers
+3. ConnectionServer delivers messages to TCP sockets
+4. Message batching works end-to-end (8ms timeout)
+5. The "connect #1" command flow works completely
+6. Multiple rapid messages are correctly batched and delivered
 
 ## Key Design Decisions
 

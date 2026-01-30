@@ -9,9 +9,16 @@ namespace SharpMUSH.Tests.Integration;
 /// <summary>
 /// Integration tests that verify telnet output reaches the TCP socket.
 /// 
-/// IMPORTANT: These tests require both servers running:
-/// 1. Main Server (via WebAppFactory) - handles game logic and NotifyService
-/// 2. ConnectionServer - handles TCP sockets and Kafka consumers
+/// IMPORTANT: These tests cover different aspects of the message flow:
+/// 
+/// **Automated Test (runs in CI):**
+/// - `NotifyService_PublishesToKafka_WithBatching` - Validates connection management
+///   and that NotifyService accepts messages without errors. This ensures the basic
+///   infrastructure works but does NOT verify Kafka publishing or TCP delivery.
+/// 
+/// **Manual Tests (require ConnectionServer running):**
+/// These tests prove the COMPLETE end-to-end flow including TCP socket delivery.
+/// You must manually start ConnectionServer before running these tests.
 /// 
 /// The full message flow is:
 /// 1. NotifyService.Notify() is called in Main Server
@@ -19,11 +26,7 @@ namespace SharpMUSH.Tests.Integration;
 /// 3. ConnectionServer consumes from Kafka
 /// 4. ConnectionServer sends message to TCP socket
 /// 
-/// These tests prove this flow works end-to-end by:
-/// - Starting ConnectionServer on a unique port
-/// - Connecting via TCP to that port
-/// - Executing commands through the main server
-/// - Verifying responses arrive at the TCP socket
+/// Only the manual tests prove the complete flow works end-to-end.
 /// </summary>
 [NotInParallel]
 public class TelnetOutputIntegrationTests
@@ -35,11 +38,19 @@ public class TelnetOutputIntegrationTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	/// <summary>
-	/// This test validates that NotifyService correctly publishes messages to Kafka.
-	/// It proves the first part of the message flow: NotifyService → Kafka.
+	/// This test validates that NotifyService accepts messages and connections work correctly.
+	/// It proves the first part of the message flow: Connection registration and message acceptance.
 	/// 
-	/// The complete end-to-end test (including TCP socket delivery) requires ConnectionServer
-	/// to be running and is documented in the manual test below.
+	/// The complete end-to-end test (including Kafka publishing and TCP socket delivery) requires 
+	/// ConnectionServer to be running and is documented in the manual tests below.
+	/// 
+	/// This test verifies:
+	/// - Connection registration works correctly
+	/// - NotifyService accepts messages without errors
+	/// - Connection cleanup works correctly
+	/// 
+	/// Note: This test does NOT verify that messages reach Kafka or the TCP socket. 
+	/// For complete end-to-end verification, use the manual tests with ConnectionServer running.
 	/// </summary>
 	[Test]
 	public async Task NotifyService_PublishesToKafka_WithBatching()
@@ -48,31 +59,31 @@ public class TelnetOutputIntegrationTests
 		var handle = 99999L;
 		await ConnectionService.Register(
 			handle, 
-			"integration-test", 
-			"127.0.0.1", 
-			"test-client",
-			_ => ValueTask.CompletedTask, 
-			_ => ValueTask.CompletedTask, 
-			() => Encoding.UTF8);
+			"127.0.0.1",  // ipaddr
+			"integration-test",  // host
+			"test-client",  // connectionType
+			_ => ValueTask.CompletedTask,  // outputFunction
+			_ => ValueTask.CompletedTask,  // promptOutputFunction
+			() => Encoding.UTF8);  // encoding
 
 		// Send a message via NotifyService
 		const string testMessage = "Test message from NotifyService";
 		await NotifyService.Notify(handle, testMessage, sender: null);
 
 		// Wait for batching timer (8ms) plus buffer time
-		// This allows the message to be batched and published to Kafka
+		// This allows the message to be batched and sent to Kafka (if Kafka is available)
 		await Task.Delay(100);
+
+		// Verify connection is still active before cleanup
+		var connBefore = ConnectionService.Get(handle);
+		await Assert.That(connBefore).IsNotNull();
 
 		// Cleanup
 		await ConnectionService.Disconnect(handle);
 
-		// At this point, the message has been published to Kafka
-		// The ConnectionServer (if running) would consume it and send to TCP socket
-		// This test proves: NotifyService → Batching → Kafka Publisher works
-		
-		// Verify the connection was registered successfully
-		var conn = ConnectionService.Get(handle);
-		await Assert.That(conn).IsNull(); // Should be null after disconnect
+		// Verify the connection was properly cleaned up after disconnect
+		var connAfter = ConnectionService.Get(handle);
+		await Assert.That(connAfter).IsNull();
 	}
 
 	/// <summary>
