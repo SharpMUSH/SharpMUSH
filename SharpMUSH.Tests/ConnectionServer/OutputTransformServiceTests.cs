@@ -181,7 +181,7 @@ public class OutputTransformServiceTests
 	}
 
 	[Test]
-	public async Task TransformAsync_ReturnsOriginal_OnError()
+	public async Task TransformAsync_HandlesInvalidUtf8Gracefully()
 	{
 		// Arrange
 		var input = new byte[] { 0xFF, 0xFE, 0xFD }; // Invalid UTF-8
@@ -190,7 +190,11 @@ public class OutputTransformServiceTests
 		// Act
 		var result = await _service.TransformAsync(input, capabilities, null);
 
-		// Assert - should return original on error
-		await Assert.That(result.Length).IsGreaterThan(0);
+		// Assert - service should handle invalid UTF-8 gracefully by using replacement characters
+		// The exact output will be UTF-8 replacement characters (U+FFFD = EF BF BD in UTF-8)
+		var resultText = Encoding.UTF8.GetString(result);
+		await Assert.That(resultText).IsNotEmpty();
+		// UTF-8 encoding converts invalid bytes to replacement character
+		await Assert.That(resultText).Contains("\uFFFD"); // Replacement character
 	}
 }
