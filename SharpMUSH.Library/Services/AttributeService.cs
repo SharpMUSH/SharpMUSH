@@ -25,11 +25,11 @@ public class AttributeService(
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IAttributeService
 {
-	private ILocateService? _locateService;
-	private ILocateService? LocateService => _locateService ??= serviceProvider.GetService<ILocateService>();
+	private readonly Lazy<ILocateService?> _locateService = new(() => serviceProvider.GetService<ILocateService>());
+	private ILocateService? LocateService => _locateService.Value;
 	
-	private INotifyService? _notifyService;
-	private INotifyService? NotifyService => _notifyService ??= serviceProvider.GetService<INotifyService>();
+	private readonly Lazy<INotifyService?> _notifyService = new(() => serviceProvider.GetService<INotifyService>());
+	private INotifyService? NotifyService => _notifyService.Value;
 	
 	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
 	

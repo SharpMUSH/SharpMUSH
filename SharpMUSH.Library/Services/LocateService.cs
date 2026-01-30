@@ -19,8 +19,8 @@ public partial class LocateService(IMediator mediator,
 	IPermissionService permissionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration) : ILocateService
 {
-	private INotifyService? _notifyService;
-	private INotifyService? NotifyService => _notifyService ??= serviceProvider.GetService<INotifyService>();
+	private readonly Lazy<INotifyService?> _notifyService = new(() => serviceProvider.GetService<INotifyService>());
+	private INotifyService? NotifyService => _notifyService.Value;
 	
 	private static readonly Regex NthRegex = Nth();
 

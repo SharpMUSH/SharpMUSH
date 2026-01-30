@@ -40,7 +40,11 @@ public class LocateServiceCompatibilityTests
 		var wrapper = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		wrapper.CurrentValue.Returns(options);
 
-		_locateService = new LocateService(_mediator, _notifyService, _permissionService, wrapper);
+		// Create a mock IServiceProvider that returns the INotifyService
+		var serviceProvider = Substitute.For<IServiceProvider>();
+		serviceProvider.GetService(typeof(INotifyService)).Returns(_notifyService);
+
+		_locateService = new LocateService(_mediator, serviceProvider, _permissionService, wrapper);
 	}
 
 	[Test]
