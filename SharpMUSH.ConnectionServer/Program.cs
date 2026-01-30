@@ -113,6 +113,7 @@ builder.Services.AddConnectionServerMessaging(
 		x.AddConsumer<BroadcastConsumer>();
 		x.AddConsumer<DisconnectConnectionConsumer>();
 		x.AddConsumer<GMCPOutputConsumer>();
+		x.AddConsumer<UpdatePlayerPreferencesConsumer>();
 		
 		// Register WebSocket consumers
 		x.AddConsumer<WebSocketOutputConsumer>();

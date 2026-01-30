@@ -112,6 +112,17 @@ public class ConnectionServerService(
 	public IEnumerable<ConnectionData> GetAll() =>
 		_sessionState.Values;
 
+	public bool UpdatePreferences(long handle, PlayerOutputPreferences preferences)
+	{
+		if (_sessionState.TryGetValue(handle, out var connection))
+		{
+			var updated = connection with { Preferences = preferences };
+			_sessionState.TryUpdate(handle, updated, connection);
+			return true;
+		}
+		return false;
+	}
+
 	public record ConnectionData(
 		long Handle,
 		string? PlayerDbRef,
@@ -146,4 +157,6 @@ public interface IConnectionServerService
 	ConnectionServerService.ConnectionData? Get(long handle);
 
 	IEnumerable<ConnectionServerService.ConnectionData> GetAll();
+
+	bool UpdatePreferences(long handle, SharpMUSH.ConnectionServer.Models.PlayerOutputPreferences preferences);
 }
