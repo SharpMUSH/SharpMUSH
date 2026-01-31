@@ -311,9 +311,13 @@ spec:
           image: sharpmush/sharpmush-server:dev
           imagePullPolicy: Never
           ports:
+            - containerPort: 8080
+              name: http
             - containerPort: 9092
               name: metrics
           env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
             - name: ARANGO_CONNECTION_STRING
               value: "Server=http://arangodb:8529;User=root;Password=password;UseUnixSocket=false"
             - name: KAFKA_HOST
@@ -330,7 +334,7 @@ spec:
             limits:
               cpu: "500m"
 ---
-# SharpMUSH Service (for Prometheus scraping)
+# SharpMUSH Service (for Prometheus scraping and HTTP API)
 apiVersion: v1
 kind: Service
 metadata:
@@ -339,6 +343,9 @@ spec:
   selector:
     app: sharpmush
   ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
     - name: metrics
       port: 9092
       targetPort: 9092
