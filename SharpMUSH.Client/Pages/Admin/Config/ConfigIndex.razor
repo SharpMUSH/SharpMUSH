@@ -1,15 +1,15 @@
 @page "/admin/config"
 @layout ConfigLayout
-@inject NavigationManager NavigationManager
+@inject NavigationManager Navigation
 
 <PageTitle>Configuration - SharpMUSH</PageTitle>
 
 <div class="config-index-page">
     <div class="config-index-header">
-        <MudText Typo="Typo.h3" Style="color: var(--mud-palette-secondary);">
+        <MudText Typo="Typo.h4">
             <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" /> Server Configuration
         </MudText>
-        <MudText Typo="Typo.h6" Class="mud-text-secondary mt-3">
+        <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
             Manage all SharpMUSH server settings from one place
         </MudText>
     </div>
@@ -18,7 +18,7 @@
         <MudGrid>
             @* Server Category *@
             <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => NavigateTo("/admin/config/network"))">
+                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/network"))">
                     <MudCardContent>
                         <div class="category-card-header">
                             <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Secondary" Size="Size.Large" />
@@ -27,14 +27,14 @@
                         <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
                             Network connections, database, and core server settings
                         </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="36 settings" Class="mt-3" />
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="2 settings" Class="mt-3" />
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
             @* Performance Category *@
             <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => NavigateTo("/admin/config/limits"))">
+                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/limits"))">
                     <MudCardContent>
                         <div class="category-card-header">
                             <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Secondary" Size="Size.Large" />
@@ -43,14 +43,14 @@
                         <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
                             Resource limits, command queues, and optimization
                         </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="41 settings" Class="mt-3" />
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mt-3" />
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
             @* Security Category *@
             <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => NavigateTo("/admin/config/sitelock"))">
+                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/sitelock"))">
                     <MudCardContent>
                         <div class="category-card-header">
                             <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Secondary" Size="Size.Large" />
@@ -60,7 +60,7 @@
                             Access control, sitelock rules, and banned names
                         </MudText>
                         <div class="mt-3">
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="4 settings" Class="mr-2" />
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mr-2" />
                             <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Important" />
                         </div>
                     </MudCardContent>
@@ -69,7 +69,7 @@
 
             @* Content Category *@
             <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => NavigateTo("/admin/config/messages"))">
+                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/messages"))">
                     <MudCardContent>
                         <div class="category-card-header">
                             <MudIcon Icon="@Icons.Material.Filled.Article" Color="Color.Secondary" Size="Size.Large" />
@@ -78,14 +78,14 @@
                         <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
                             Messages, cosmetic options, and chat configuration
                         </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="45 settings" Class="mt-3" />
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mt-3" />
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
             @* Logs & Files Category *@
             <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => NavigateTo("/admin/config/logging"))">
+                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/logging"))">
                     <MudCardContent>
                         <div class="category-card-header">
                             <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" Size="Size.Large" />
@@ -94,14 +94,14 @@
                         <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
                             Logging, file paths, and database dumps
                         </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="23 settings" Class="mt-3" />
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mt-3" />
                     </MudCardContent>
                 </MudCard>
             </MudItem>
 
             @* Advanced Category *@
             <MudItem xs="12" md="6">
-                <MudCard Outlined="true" Class="category-card" @onclick="@(() => NavigateTo("/admin/config/attributes"))">
+                <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/attributes"))">
                     <MudCardContent>
                         <div class="category-card-header">
                             <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Secondary" Size="Size.Large" />
@@ -110,7 +110,7 @@
                         <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
                             Attributes, flags, costs, and specialized settings
                         </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="38 settings" Class="mt-3" />
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mt-3" />
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -119,21 +119,23 @@
         @* Quick Actions *@
         <MudPaper Outlined="true" Class="mt-6 pa-4">
             <MudText Typo="Typo.h6" Class="mb-3">Quick Actions</MudText>
-            <MudStack Row="true" Spacing="3">
+            <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Secondary" 
-                           StartIcon="@Icons.Material.Filled.Search">
+                           StartIcon="@Icons.Material.Filled.Search"
+                           Disabled="true">
                     Search All Settings
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Default" 
                            StartIcon="@Icons.Material.Filled.Upload"
-                           OnClick="@(() => NavigateTo("/admin/config/import"))">
+                           Disabled="true">
                     Import Config File
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Default" 
-                           StartIcon="@Icons.Material.Filled.Download">
+                           StartIcon="@Icons.Material.Filled.Download"
+                           Disabled="true">
                     Export Configuration
                 </MudButton>
             </MudStack>
@@ -149,7 +151,6 @@
     }
 
     .config-index-header {
-        text-align: center;
         margin-bottom: 48px;
     }
 
@@ -180,10 +181,3 @@
         }
     }
 </style>
-
-@code {
-    private void NavigateTo(string url)
-    {
-        NavigationManager.NavigateTo(url);
-    }
-}
