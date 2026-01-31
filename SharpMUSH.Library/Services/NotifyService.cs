@@ -15,9 +15,9 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Notifies objects and sends telnet data with automatic batching support.
-/// All notifications are automatically batched with an 8ms timeout to reduce Kafka overhead.
-/// Messages are accumulated and flushed after 8ms of inactivity.
-/// Combined with Kafka producer batching (8ms), provides ~16ms total latency (approaching 60fps).
+/// All notifications are automatically batched with a 1ms timeout to reduce Kafka overhead
+/// while maintaining interactive responsiveness.
+/// Messages are accumulated and flushed after 1ms of inactivity.
 /// </summary>
 public class NotifyService(
 	IMessageBus publishEndpoint, 
@@ -32,6 +32,20 @@ public class NotifyService(
 		public List<byte[]> AccumulatedMessages { get; } = [];
 		public object Lock { get; } = new();
 		public Timer? FlushTimer { get; set; }
+	}
+	
+	/// <summary>
+	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
+	/// </summary>
+	private static string NormalizeLineEnding(string text)
+	{
+		// Replace all standalone \n with \r\n (but don't double-up existing \r\n)
+		text = text.Replace("\r\n", "\n"); // First normalize everything to \n
+		text = text.Replace("\n", "\r\n");  // Then convert all to \r\n
+		
+		// Ensure it ends with exactly one \r\n
+		text = text.TrimEnd('\r', '\n');
+		return text + "\r\n";
 	}
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -78,6 +92,7 @@ public class NotifyService(
 			str => str
 		);
 
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Always use automatic batching with 8ms timeout
@@ -105,6 +120,7 @@ public class NotifyService(
 			str => str
 		);
 
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Always use automatic batching with 8ms timeout
@@ -126,6 +142,7 @@ public class NotifyService(
 			str => str
 		);
 
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Always use automatic batching with 8ms timeout
@@ -150,6 +167,8 @@ public class NotifyService(
 			str => str
 		);
 
+		// Prompts typically don't need newlines, but ensure consistency
+		// (Prompts are usually things like "> " without line breaks)
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
@@ -179,6 +198,7 @@ public class NotifyService(
 			str => str
 		);
 
+		// Prompts typically don't need newlines
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Publish prompt message to each handle
@@ -227,7 +247,7 @@ public class NotifyService(
 		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
 
 	/// <summary>
-	/// Adds a message to the batch for the specified handle and starts/resets the 8ms flush timer.
+	/// Adds a message to the batch for the specified handle and starts/resets the 1ms flush timer.
 	/// </summary>
 	private void AddToBatch(long handle, byte[] bytes)
 	{
@@ -236,7 +256,7 @@ public class NotifyService(
 		{
 			state.AccumulatedMessages.Add(bytes);
 
-			// Start or reset the timer to 8ms
+			// Start or reset the timer to 1ms
 			if (state.FlushTimer == null)
 			{
 				state.FlushTimer = new Timer(
@@ -254,20 +274,20 @@ public class NotifyService(
 						}
 					},
 					null,
-					8,
+					1,
 					Timeout.Infinite
 				);
 			}
 			else
 			{
-				state.FlushTimer.Change(8, Timeout.Infinite);
+				state.FlushTimer.Change(1, Timeout.Infinite);
 			}
 		}
 	}
 
 	/// <summary>
 	/// Flushes accumulated messages for a specific handle.
-	/// Called automatically by the 8ms timer or manually by EndBatchingScope.
+	/// Called automatically by the 1ms timer or manually by EndBatchingScope.
 	/// </summary>
 	private async Task FlushHandle(long handle)
 	{

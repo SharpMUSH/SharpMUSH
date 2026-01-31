@@ -28,8 +28,8 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	
 	// Configuration
 	private const int MaxBatchSize = 100; // Flush after 100 messages
-	private const int MaxBatchDelayMs = 10; // Flush after 10ms
-	private const int FlushTimerIntervalMs = 5; // Check for flushes every 5ms
+	private const int MaxBatchDelayMs = 1; // Flush after 1ms (near-instant for interactive use)
+	private const int FlushTimerIntervalMs = 1; // Check for flushes every 1ms
 	
 	// Metrics for debugging
 	private long _totalMessagesReceived = 0;
