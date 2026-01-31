@@ -33,6 +33,14 @@ public class NotifyService(
 		public object Lock { get; } = new();
 		public Timer? FlushTimer { get; set; }
 	}
+	
+	/// <summary>
+	/// Normalizes line endings by stripping any trailing \r or \n and adding \r\n
+	/// </summary>
+	private static string NormalizeLineEnding(string text)
+	{
+		return text.TrimEnd('\r', '\n') + "\r\n";
+	}
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
@@ -78,12 +86,7 @@ public class NotifyService(
 			str => str
 		);
 
-		// Always append \r\n to ensure proper line endings
-		if (!text.EndsWith("\r\n"))
-		{
-			text += "\r\n";
-		}
-
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Always use automatic batching with 8ms timeout
@@ -111,12 +114,7 @@ public class NotifyService(
 			str => str
 		);
 
-		// Always append \r\n to ensure proper line endings
-		if (!text.EndsWith("\r\n"))
-		{
-			text += "\r\n";
-		}
-
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Always use automatic batching with 8ms timeout
@@ -138,12 +136,7 @@ public class NotifyService(
 			str => str
 		);
 
-		// Always append \r\n to ensure proper line endings
-		if (!text.EndsWith("\r\n"))
-		{
-			text += "\r\n";
-		}
-
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Always use automatic batching with 8ms timeout
