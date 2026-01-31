@@ -8,7 +8,10 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 /// <summary>
 /// Consumes telnet output messages from Kafka and sends to connections
 /// </summary>
-public class TelnetOutputConsumer(IConnectionServerService connectionService, ILogger<TelnetOutputConsumer> logger)
+public class TelnetOutputConsumer(
+	IConnectionServerService connectionService,
+	IOutputTransformService transformService,
+	ILogger<TelnetOutputConsumer> logger)
 : IMessageConsumer<TelnetOutputMessage>
 {
 public async Task HandleAsync(TelnetOutputMessage message, CancellationToken cancellationToken = default)
@@ -23,7 +26,13 @@ return;
 
 try
 {
-await connection.OutputFunction(message.Data);
+// Transform output based on capabilities and preferences
+var transformedData = await transformService.TransformAsync(
+	message.Data,
+	connection.Capabilities,
+	connection.Preferences);
+
+await connection.OutputFunction(transformedData);
 }
 catch (Exception ex)
 {
@@ -35,7 +44,10 @@ logger.LogError(ex, "Error sending output to connection {Handle}", message.Handl
 /// <summary>
 /// Consumes telnet prompt messages from Kafka and sends to connections
 /// </summary>
-public class TelnetPromptConsumer(IConnectionServerService connectionService, ILogger<TelnetPromptConsumer> logger)
+public class TelnetPromptConsumer(
+	IConnectionServerService connectionService,
+	IOutputTransformService transformService,
+	ILogger<TelnetPromptConsumer> logger)
 : IMessageConsumer<TelnetPromptMessage>
 {
 public async Task HandleAsync(TelnetPromptMessage message, CancellationToken cancellationToken = default)
@@ -50,7 +62,13 @@ return;
 
 try
 {
-await connection.PromptOutputFunction(message.Data);
+// Transform output based on capabilities and preferences
+var transformedData = await transformService.TransformAsync(
+	message.Data,
+	connection.Capabilities,
+	connection.Preferences);
+
+await connection.PromptOutputFunction(transformedData);
 }
 catch (Exception ex)
 {
@@ -62,7 +80,10 @@ logger.LogError(ex, "Error sending prompt to connection {Handle}", message.Handl
 /// <summary>
 /// Consumes broadcast messages from Kafka and sends to all connections
 /// </summary>
-public class BroadcastConsumer(IConnectionServerService connectionService, ILogger<BroadcastConsumer> logger)
+public class BroadcastConsumer(
+	IConnectionServerService connectionService,
+	IOutputTransformService transformService,
+	ILogger<BroadcastConsumer> logger)
 : IMessageConsumer<BroadcastMessage>
 {
 public async Task HandleAsync(BroadcastMessage message, CancellationToken cancellationToken = default)
@@ -73,7 +94,13 @@ foreach (var connection in connections)
 {
 try
 {
-await connection.OutputFunction(message.Data);
+// Transform output based on capabilities and preferences
+var transformedData = await transformService.TransformAsync(
+	message.Data,
+	connection.Capabilities,
+	connection.Preferences);
+
+await connection.OutputFunction(transformedData);
 }
 catch (Exception ex)
 {

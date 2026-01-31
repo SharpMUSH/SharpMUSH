@@ -70,6 +70,9 @@ builder.Services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>(
 // Add ConnectionService
 builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
 
+// Add Output Transformation Service
+builder.Services.AddSingleton<IOutputTransformService, OutputTransformService>();
+
 // Add DescriptorGeneratorService
 builder.Services.AddSingleton<IDescriptorGeneratorService, DescriptorGeneratorService>();
 
@@ -105,6 +108,7 @@ builder.Services.AddConnectionServerMessaging(
 		x.AddConsumer<BroadcastConsumer>();
 		x.AddConsumer<DisconnectConnectionConsumer>();
 		x.AddConsumer<GMCPOutputConsumer>();
+		x.AddConsumer<UpdatePlayerPreferencesConsumer>();
 		
 		x.AddConsumer<WebSocketOutputConsumer>();
 		x.AddConsumer<WebSocketPromptConsumer>();
