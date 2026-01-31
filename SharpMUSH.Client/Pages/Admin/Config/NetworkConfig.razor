@@ -32,7 +32,7 @@
                 <MudCardContent>
                     <MudGrid>
                         <MudItem xs="12" md="6">
-                            <MudNumericField @bind-Value="_netOptions.Port"
+                            <MudNumericField T="uint" @bind-Value="_netOptions.Port"
                                            Label="Port"
                                            Variant="Variant.Outlined"
                                            HelperText="The port number the server listens on for incoming connections"
@@ -40,7 +40,7 @@
                                            Max="65535" />
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudNumericField @bind-Value="_netOptions.SslPort"
+                            <MudNumericField T="uint" @bind-Value="_netOptions.SslPort"
                                            Label="SSL Port"
                                            Variant="Variant.Outlined"
                                            HelperText="Port for SSL/TLS encrypted connections"
@@ -50,8 +50,10 @@
                         <MudItem xs="12">
                             <MudSwitch @bind-Value="_netOptions.UseSSL"
                                      Label="Enable SSL/TLS"
-                                     Color="Color.Secondary"
-                                     HelperText="Require encrypted connections for enhanced security" />
+                                     Color="Color.Secondary" />
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                Require encrypted connections for enhanced security
+                            </MudText>
                         </MudItem>
                     </MudGrid>
                 </MudCardContent>
@@ -67,21 +69,21 @@
                 <MudCardContent>
                     <MudGrid>
                         <MudItem xs="12" md="6">
-                            <MudNumericField @bind-Value="_netOptions.MaxConnections"
+                            <MudNumericField T="uint" @bind-Value="_netOptions.MaxConnections"
                                            Label="Maximum Connections"
                                            Variant="Variant.Outlined"
                                            HelperText="Maximum number of simultaneous player connections allowed"
                                            Min="1" />
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudNumericField @bind-Value="_netOptions.ConnectionsPerIP"
+                            <MudNumericField T="uint" @bind-Value="_netOptions.ConnectionsPerIP"
                                            Label="Connections Per IP"
                                            Variant="Variant.Outlined"
                                            HelperText="Maximum connections allowed from a single IP address"
                                            Min="1" />
                         </MudItem>
                         <MudItem xs="12" md="6">
-                            <MudNumericField @bind-Value="_netOptions.IdleTimeout"
+                            <MudNumericField T="uint" @bind-Value="_netOptions.IdleTimeout"
                                            Label="Idle Timeout (seconds)"
                                            Variant="Variant.Outlined"
                                            HelperText="Disconnect players who are idle for this many seconds"
@@ -100,18 +102,30 @@
                 </MudCardHeader>
                 <MudCardContent>
                     <MudStack Spacing="3">
-                        <MudSwitch @bind-Value="_netOptions.EnablePueblo"
-                                 Label="Enable Pueblo/HTML Support"
-                                 Color="Color.Secondary"
-                                 HelperText="Allow clients to render HTML formatting" />
-                        <MudSwitch @bind-Value="_netOptions.EnableIPv6"
-                                 Label="Enable IPv6"
-                                 Color="Color.Secondary"
-                                 HelperText="Accept connections over IPv6 in addition to IPv4" />
-                        <MudSwitch @bind-Value="_netOptions.EnableTelnet"
-                                 Label="Enable Telnet Negotiation"
-                                 Color="Color.Secondary"
-                                 HelperText="Support telnet protocol features" />
+                        <div>
+                            <MudSwitch @bind-Value="_netOptions.EnablePueblo"
+                                     Label="Enable Pueblo/HTML Support"
+                                     Color="Color.Secondary" />
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                Allow clients to render HTML formatting
+                            </MudText>
+                        </div>
+                        <div>
+                            <MudSwitch @bind-Value="_netOptions.EnableIPv6"
+                                     Label="Enable IPv6"
+                                     Color="Color.Secondary" />
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                Accept connections over IPv6 in addition to IPv4
+                            </MudText>
+                        </div>
+                        <div>
+                            <MudSwitch @bind-Value="_netOptions.EnableTelnet"
+                                     Label="Enable Telnet Negotiation"
+                                     Color="Color.Secondary" />
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                Support telnet protocol features
+                            </MudText>
+                        </div>
                     </MudStack>
                 </MudCardContent>
             </MudCard>

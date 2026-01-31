@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
+@using SharpMUSH.Client.Components
 
 <div class="config-layout">
     @* Secondary Drawer - Config Navigation *@
@@ -38,7 +39,7 @@
     }
 
     /* Adjust for mobile */
-    @media (max-width: 960px) {
+    @@media (max-width: 960px) {
         .config-layout {
             flex-direction: column;
         }
