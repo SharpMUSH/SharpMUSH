@@ -1,4 +1,5 @@
 ﻿@using MudBlazor.Utilities
+@using SharpMUSH.Client.Components
 @inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 
@@ -26,6 +27,19 @@
         <NavMenu IsCollapsed="@_isConfigRoute" />
     </MudDrawer>
     
+    @* Config Drawer - Shows when on config route *@
+    @if (_isConfigRoute)
+    {
+        <MudDrawer Open="true"
+                   ClipMode="DrawerClipMode.Never"
+                   Variant="DrawerVariant.Persistent"
+                   Anchor="Anchor.Left"
+                   Width="280px"
+                   Elevation="1">
+            <ConfigNavDrawer />
+        </MudDrawer>
+    }
+    
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.False" Class="@(_isConfigRoute ? "pa-0" : "")">
             @Body
@@ -38,10 +52,13 @@
     {
         PaletteDark = new PaletteDark
         {
-            AppbarText = MudColor.Parse("#00f5b7"),
-            TextSecondary = MudColor.Parse("#00f5b7"),
+            Primary = MudColor.Parse("#00f5b7"),
             Secondary = MudColor.Parse("#00f5b7"),
-            Surface = MudColor.Parse("#242424")
+            AppbarText = MudColor.Parse("#00f5b7"),
+            TextPrimary = "rgba(255, 255, 255, 0.87)",
+            TextSecondary = "rgba(255, 255, 255, 0.60)",
+            Surface = MudColor.Parse("#242424"),
+            Background = MudColor.Parse("#1a1a1a")
         }
     };
     
