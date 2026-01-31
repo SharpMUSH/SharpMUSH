@@ -21,6 +21,28 @@ spec:
     requests:
       storage: 1Gi
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
 # ArangoDB
 apiVersion: apps/v1
 kind: Deployment
@@ -38,7 +60,7 @@ spec:
     spec:
       containers:
         - name: arangodb
-          image: arangodb
+          image: arangodb:latest
           ports:
             - containerPort: 8529
           volumeMounts:
@@ -94,8 +116,7 @@ spec:
               rpk redpanda start --smp 1 --memory 1G --reserve-memory 0M \
                 --overprovisioned --node-id 0 \
                 --kafka-addr PLAINTEXT://0.0.0.0:9092 \
-                --advertise-kafka-addr PLAINTEXT://redpanda:9092 \
-                --set redpanda.max_compacted_log_segment_size=6291456
+                --advertise-kafka-addr PLAINTEXT://redpanda:9092
           ports:
             - name: kafka
               containerPort: 9092
@@ -135,6 +156,141 @@ spec:
       targetPort: 8082
   type: ClusterIP
 ---
+# Redis
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--appendonly", "yes"]
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: redis-storage
+          persistentVolumeClaim:
+            claimName: redis-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP
+---
+# Prometheus ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        monitor: 'sharpmush-monitor'
+
+    scrape_configs:
+      - job_name: 'sharpmush-server'
+        static_configs:
+          - targets: ['sharpmush:9092']
+            labels:
+              service: 'server'
+
+      - job_name: 'connectionserver'
+        static_configs:
+          - targets: ['connectionserver:9091']
+            labels:
+              service: 'connectionserver'
+
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+---
+# Prometheus
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest
+          args:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+            - '--web.console.templates=/usr/share/prometheus/consoles'
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus
+            - name: prometheus-storage
+              mountPath: /prometheus
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config
+        - name: prometheus-storage
+          persistentVolumeClaim:
+            claimName: prometheus-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+  type: ClusterIP
+---
 # SharpMUSH
 apiVersion: apps/v1
 kind: Deployment
@@ -153,18 +309,40 @@ spec:
       containers:
         - name: sharpmush-server
           image: sharpmush/sharpmush-server:dev
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 9092
+              name: metrics
+          env:
+            - name: ARANGO_CONNECTION_STRING
+              value: "Server=http://arangodb:8529;User=root;Password=password;UseUnixSocket=false"
+            - name: KAFKA_HOST
+              value: redpanda
+            - name: KAFKA_PORT
+              value: "9092"
+            - name: PROMETHEUS_URL
+              value: "http://prometheus:9090"
+            - name: REDIS_CONNECTION
+              value: "redis:6379"
           resources:
             requests:
               cpu: "500m"
             limits:
               cpu: "500m"
-          env:
-            - name: ARANGO_CONNECTION_STRING
-              value: "Server=http://arangodb:8529;User=root;Password=password;"
-            - name: KAFKA_HOST
-              value: redpanda
-            - name: KAFKA_PORT
-              value: "9092"
+---
+# SharpMUSH Service (for Prometheus scraping)
+apiVersion: v1
+kind: Service
+metadata:
+  name: sharpmush
+spec:
+  selector:
+    app: sharpmush
+  ports:
+    - name: metrics
+      port: 9092
+      targetPort: 9092
+  type: ClusterIP
 ---
 # ConnectionServer
 apiVersion: apps/v1
@@ -184,9 +362,14 @@ spec:
       containers:
         - name: connectionserver
           image: sharpmush/sharpmush-connectionserver:dev
-          command: ["dotnet", "SharpMUSH.ConnectionServer.dll"]
+          imagePullPolicy: Never
           ports:
             - containerPort: 4201
+              name: telnet
+            - containerPort: 4202
+              name: http
+            - containerPort: 9091
+              name: metrics
           env:
             - name: KAFKA_HOST
               value: redpanda
@@ -194,6 +377,10 @@ spec:
               value: "9092"
             - name: SHARPMUSH_HOST
               value: sharpmush
+            - name: PROMETHEUS_URL
+              value: "http://prometheus:9090"
+            - name: REDIS_CONNECTION
+              value: "redis:6379"
           resources:
             requests:
               cpu: "500m"
@@ -208,6 +395,10 @@ spec:
   selector:
     app: connectionserver
   ports:
-    - port: 4201
+    - name: telnet
+      port: 4201
       targetPort: 4201
+    - name: http
+      port: 4202
+      targetPort: 4202
   type: LoadBalancer

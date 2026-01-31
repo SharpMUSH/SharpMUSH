@@ -32,7 +32,7 @@
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<PackageReference Include="TelnetNegotiationCore " Version="1.1.0" />
+		<PackageReference Include="TelnetNegotiationCore" Version="2.2.0" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.2" />
 		<PackageReference Include="Testcontainers" Version="4.10.0" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.10.0" />
@@ -63,10 +63,6 @@
       <Link>TextFiles\ahelp\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-	
-  <ItemGroup>
-    <PackageReference Update="TelnetNegotiationCore" Version="2.1.0" />
   </ItemGroup>
 
 </Project>

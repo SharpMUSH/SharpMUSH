@@ -17,17 +17,27 @@ ILogger<BatchTelnetOutputConsumer> logger)
 {
 public Task HandleAsync(TelnetOutputMessage message, CancellationToken cancellationToken = default)
 {
-try
-{
-// Add message to batching service for efficient TCP writes
-batchingService.AddMessage(message.Handle, message.Data);
-}
-catch (Exception ex)
-{
-logger.LogError(ex, "Error adding message to batch for connection {Handle}", message.Handle);
-}
+	logger.LogInformation("BatchTelnetOutputConsumer.HandleAsync called for handle {Handle} with {Bytes} bytes", 
+		message.Handle, message.Data?.Length ?? 0);
+	
+	try
+	{
+		if (message.Data == null)
+		{
+			logger.LogWarning("Received null data for handle {Handle}", message.Handle);
+			return Task.CompletedTask;
+		}
+		
+		// Add message to batching service for efficient TCP writes
+		batchingService.AddMessage(message.Handle, message.Data);
+		logger.LogInformation("Successfully added message to batching service for handle {Handle}", message.Handle);
+	}
+	catch (Exception ex)
+	{
+		logger.LogError(ex, "Error adding message to batch for connection {Handle}", message.Handle);
+	}
 
-// Return immediately - batching service handles async flushing
-return Task.CompletedTask;
+	// Return immediately - batching service handles async flushing
+	return Task.CompletedTask;
 }
 }

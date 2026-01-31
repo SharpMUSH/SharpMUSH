@@ -45,7 +45,15 @@ public class TelnetServer : ConnectionHandler
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
 
-		var telnet = await new TelnetInterpreterBuilder().OnSubmit(async (byteArray, encoding, _) =>
+		var telnet = await new TelnetInterpreterBuilder()
+			.UseMode(TelnetInterpreter.TelnetMode.Server)
+			.UseLogger(_logger)
+		.OnNegotiation(async (data) =>
+		{
+			// Write telnet negotiation bytes to the network
+			await connection.Transport.Output.WriteAsync(data, ct);
+		})
+			.OnSubmit(async (byteArray, encoding, _) =>
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, encoding.GetString(byteArray)), ct))
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
 				await _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct))
@@ -69,65 +77,17 @@ public class TelnetServer : ConnectionHandler
 			remoteIp,
 			connection.RemoteEndPoint?.ToString() ?? remoteIp,
 			"telnet",
-			telnet.SendAsync,
-			telnet.SendPromptAsync,
-			() => telnet.CurrentEncoding,
-			connection.Abort,
-			async (module, message) =>
-			{
-				// Send GMCP message using TelnetNegotiationCore library method
-				await telnet.SendGMCPCommand(module, message);
-			});
-
-		try
+		async (data) =>
 		{
-			while (!ct.IsCancellationRequested)
-			{
-				var result = await connection.Transport.Input.ReadAsync(ct);
-
-				foreach (var segment in result.Buffer)
-				{
-					await telnet.InterpretByteArrayAsync(segment);
-				}
-
-				if (result.IsCompleted) break;
-				connection.Transport.Input.AdvanceTo(result.Buffer.End, result.Buffer.End);
-			}
-		}
-		catch (ConnectionResetException)
-		{
-			/* Disconnected while evaluating. That's fine. It just means someone closed their client. */
-		}
-		catch (Exception ex)
-		{
-			_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
-		}
-
-		// Disconnect and notify MainProcess
-		await _connectionService.DisconnectAsync(nextPort);
-	}
-
-	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection, CancellationToken ct)
-	{
-		/*
-		var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar =>
-		{
-			// Publish MSDP update to MainProcess
-			// resetVar is a string representing the variable name that was reset
-			// Create a dictionary with the reset variable
-			var msdpData = new Dictionary<string, string> { { "RESET", resetVar } };
-			await _publishEndpoint.Publish(new MSDPUpdateMessage(nextPort, msdpData), ct);
-		}));
-		*/
-
-		return async (ti, str) =>
-		{
+			// Write output directly to the network transport
+			_logger.LogInformation("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
 			try
 			{
 				await _semaphoreSlimForWriter.WaitAsync(ct);
 				try
 				{
-					await connection.Transport.Output.WriteAsync(ti.TelnetSafeString(str), ct);
+					await connection.Transport.Output.WriteAsync(data.AsMemory(), ct);
+					_logger.LogInformation("Successfully wrote {ByteCount} bytes to transport for handle {Handle}", data.Length, nextPort);
 				}
 				finally
 				{
@@ -142,8 +102,104 @@ public class TelnetServer : ConnectionHandler
 			{
 				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
 			}
-		};
+		},
+		async (data) =>
+		{
+			// Write prompt output directly to the network transport
+			try
+			{
+				await _semaphoreSlimForWriter.WaitAsync(ct);
+				try
+				{
+					await connection.Transport.Output.WriteAsync(data.AsMemory(), ct);
+				}
+				finally
+				{
+					_semaphoreSlimForWriter.Release();
+				}
+			}
+			catch (ObjectDisposedException ode)
+			{
+				_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+			}
+		},
+		() => telnet.CurrentEncoding,
+		connection.Abort,
+		async (module, message) =>
+		{
+			// Send GMCP message using TelnetNegotiationCore library method
+			await telnet.SendGMCPCommand(module, message);
+		});
+
+	try
+	{
+		while (!ct.IsCancellationRequested)
+		{
+			var result = await connection.Transport.Input.ReadAsync(ct);
+
+			foreach (var segment in result.Buffer)
+			{
+				await telnet.InterpretByteArrayAsync(segment);
+			}
+
+			if (result.IsCompleted) break;
+			connection.Transport.Input.AdvanceTo(result.Buffer.End, result.Buffer.End);
+		}
 	}
+	catch (ConnectionResetException)
+	{
+		/* Disconnected while evaluating. That's fine. It just means someone closed their client. */
+	}
+	catch (Exception ex)
+	{
+		_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
+	}
+
+	// Disconnect and notify MainProcess
+	await _connectionService.DisconnectAsync(nextPort);
+}
+
+private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection, CancellationToken ct)
+{
+	/*
+	var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar =>
+	{
+		// Publish MSDP update to MainProcess
+		// resetVar is a string representing the variable name that was reset
+		// Create a dictionary with the reset variable
+		var msdpData = new Dictionary<string, string> { { "RESET", resetVar } };
+		await _publishEndpoint.Publish(new MSDPUpdateMessage(nextPort, msdpData), ct);
+	}));
+	*/
+
+	return async (ti, str) =>
+	{
+		try
+		{
+			await _semaphoreSlimForWriter.WaitAsync(ct);
+			try
+			{
+				await connection.Transport.Output.WriteAsync(ti.TelnetSafeString(str), ct);
+			}
+			finally
+			{
+				_semaphoreSlimForWriter.Release();
+			}
+		}
+		catch (ObjectDisposedException ode)
+		{
+			_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+		}
+	};
+}
 }
 
 /// <summary>

@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Messaging.Abstractions;
 using OneOf;
 using SharpMUSH.Library.Commands.ListenPattern;
@@ -29,9 +30,11 @@ public class ListenerRoutingService(
 	IPermissionService permissionService,
 	ILockService lockService,
 	IConnectionService connectionService,
-	IAttributeService attributeService,
+	IServiceProvider serviceProvider,
 	IMessageBus publishEndpoint) : IListenerRoutingService
 {
+	private IAttributeService? _attributeService;
+	private IAttributeService AttributeService => _attributeService ??= serviceProvider.GetRequiredService<IAttributeService>();
 	public async ValueTask ProcessNotificationAsync(
 		NotificationContext context,
 		OneOf<MString, string> message,
@@ -89,7 +92,7 @@ public class ListenerRoutingService(
 		AnySharpObject speaker)
 	{
 		// Get @listen attribute
-		var listenAttr = await attributeService.GetAttributeAsync(
+		var listenAttr = await AttributeService.GetAttributeAsync(
 			listener, listener, "LISTEN",
 			IAttributeService.AttributeMode.Read,
 			parent: false);
@@ -151,7 +154,7 @@ public class ListenerRoutingService(
 	
 	private async ValueTask<bool> AttributeExistsAsync(AnySharpObject obj, string attributeName)
 	{
-		var result = await attributeService.GetAttributeAsync(
+		var result = await AttributeService.GetAttributeAsync(
 			obj, obj, attributeName,
 			IAttributeService.AttributeMode.Read,
 			parent: false);
@@ -245,7 +248,7 @@ public class ListenerRoutingService(
 		}
 		
 		// Get prefix from @prefix attribute or use default
-		var prefixAttr = await attributeService.GetAttributeAsync(
+		var prefixAttr = await AttributeService.GetAttributeAsync(
 			puppet, puppet, "PREFIX",
 			IAttributeService.AttributeMode.Read,
 			parent: false);

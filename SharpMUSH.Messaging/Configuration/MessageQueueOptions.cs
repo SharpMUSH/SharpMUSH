@@ -42,11 +42,14 @@ public class MessageQueueOptions
 
 	/// <summary>
 	/// Number of partitions for topics (affects parallelism)
+	/// Topics are automatically created with this partition count when first used.
 	/// </summary>
 	public short TopicPartitions { get; set; } = 3;
 
 	/// <summary>
 	/// Replication factor for topics
+	/// Topics are automatically created with this replication factor when first used.
+	/// For production with multiple brokers, set to 3 for high availability.
 	/// </summary>
 	public short TopicReplicationFactor { get; set; } = 1;
 
@@ -102,7 +105,8 @@ public class MessageQueueOptions
 			// When idempotence is enabled, acks must be set to "all"
 			{ "acks", EnableIdempotence ? "all" : "1" },
 			{ "max.request.size", MaxMessageBytes.ToString() },
-			{ "message.max.bytes", MaxMessageBytes.ToString() }
+			{ "message.max.bytes", MaxMessageBytes.ToString() },
+			{ "allow.auto.create.topics", "true" }
 		};
 	}
 
@@ -115,7 +119,8 @@ public class MessageQueueOptions
 		{
 			{ "fetch.max.bytes", MaxMessageBytes.ToString() },
 			{ "max.partition.fetch.bytes", MaxMessageBytes.ToString() },
-			{ "message.max.bytes", MaxMessageBytes.ToString() }
+			{ "message.max.bytes", MaxMessageBytes.ToString() },
+			{ "allow.auto.create.topics", "true" }
 		};
 	}
 }

@@ -1,5 +1,4 @@
 using SharpMUSH.Messaging.Kafka;
-using SharpMUSH.Messaging.Abstractions;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -94,28 +93,23 @@ builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMoni
 builder.Services.AddConnectionServerMessaging(
 	options =>
 	{
-		options.Host = kafkaHost!;
+		options.Host = kafkaHost;
 		options.Port = 9092;
 		options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
-		
-		// Configure batching for @dolist performance optimization
-		options.BatchMaxSize = 100; // Process up to 100 messages in a batch
-		options.BatchTimeLimit = TimeSpan.FromMilliseconds(10); // Wait max 10ms for a full batch
+		options.ConsumerGroupId = "connectionserver-consumer-group"; // Separate group from main server
+		options.BatchMaxSize = 100; 
+		options.BatchTimeLimit = TimeSpan.FromMilliseconds(8); 
 	},
 	x =>
 	{
-		// Register batch consumer for telnet output messages (solves @dolist performance issue)
-		// Batching is now configured via MessageQueueOptions.BatchMaxSize and BatchTimeLimit
 		x.AddConsumer<BatchTelnetOutputConsumer>();
 		
-		// Register individual consumers for other message types
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
 		x.AddConsumer<DisconnectConnectionConsumer>();
 		x.AddConsumer<GMCPOutputConsumer>();
 		x.AddConsumer<UpdatePlayerPreferencesConsumer>();
 		
-		// Register WebSocket consumers
 		x.AddConsumer<WebSocketOutputConsumer>();
 		x.AddConsumer<WebSocketPromptConsumer>();
 	});
@@ -145,7 +139,6 @@ builder.Services.AddOpenTelemetry()
 	.WithMetrics(metrics => metrics
 		.AddMeter("SharpMUSH")
 		.AddRuntimeInstrumentation()
-		.AddConsoleExporter()
 		.AddPrometheusExporter());
 
 var app = builder.Build();
@@ -154,15 +147,8 @@ try
 {
 	// Enable WebSocket support
 	app.UseWebSockets();
-
-	// Get WebSocketServer instance for the endpoint
 	var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
-
-	// Map WebSocket endpoint
-	app.Map("/ws", async context =>
-	{
-		await webSocketHandler.HandleWebSocketAsync(context);
-	});
+	app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
 
 	// Map API endpoints
 	app.MapControllers();

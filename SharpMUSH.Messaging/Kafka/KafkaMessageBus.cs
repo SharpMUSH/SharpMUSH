@@ -15,13 +15,16 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 	private readonly ILogger<KafkaMessageBus> _logger;
 	private readonly MessageQueueOptions _options;
 	private readonly Dictionary<Type, string> _topicMappings;
+	private readonly KafkaTopicManager _topicManager;
 
 	public KafkaMessageBus(
 		MessageQueueOptions options,
-		ILogger<KafkaMessageBus> logger)
+		ILogger<KafkaMessageBus> logger,
+		KafkaTopicManager topicManager)
 	{
 		_options = options;
 		_logger = logger;
+		_topicManager = topicManager;
 
 		// Configure Kafka producer
 		var config = new ProducerConfig
@@ -39,6 +42,7 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 			SocketKeepaliveEnable = true,
 			QueueBufferingMaxMessages = 100000,
 			QueueBufferingMaxKbytes = 1048576,
+			AllowAutoCreateTopics = true
 		};
 
 		_producer = new ProducerBuilder<string, string>(config)
@@ -94,6 +98,9 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 	{
 		try
 		{
+			// Ensure topic exists before sending
+			await _topicManager.EnsureTopicExistsAsync(topic, cancellationToken);
+
 			var messageJson = JsonSerializer.Serialize(message);
 			var kafkaMessage = new Message<string, string>
 			{
@@ -102,7 +109,7 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 			};
 
 			var result = await _producer.ProduceAsync(topic, kafkaMessage, cancellationToken);
-			
+
 			_logger.LogTrace("Message published to topic {Topic}, partition {Partition}, offset {Offset}",
 				topic, result.Partition.Value, result.Offset.Value);
 		}
@@ -143,6 +150,6 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 	{
 		_producer?.Flush(TimeSpan.FromSeconds(10));
 		_producer?.Dispose();
-		await ValueTask.CompletedTask;
+		await _topicManager.DisposeAsync();
 	}
 }
