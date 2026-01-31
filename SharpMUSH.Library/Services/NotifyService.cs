@@ -35,11 +35,17 @@ public class NotifyService(
 	}
 	
 	/// <summary>
-	/// Normalizes line endings by stripping any trailing \r or \n and adding \r\n
+	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
 	/// </summary>
 	private static string NormalizeLineEnding(string text)
 	{
-		return text.TrimEnd('\r', '\n') + "\r\n";
+		// Replace all standalone \n with \r\n (but don't double-up existing \r\n)
+		text = text.Replace("\r\n", "\n"); // First normalize everything to \n
+		text = text.Replace("\n", "\r\n");  // Then convert all to \r\n
+		
+		// Ensure it ends with exactly one \r\n
+		text = text.TrimEnd('\r', '\n');
+		return text + "\r\n";
 	}
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
