@@ -4,30 +4,34 @@
 
 <PageTitle>Configuration - SharpMUSH</PageTitle>
 
-<div class="config-index-page">
-    <div class="config-index-header">
-        <MudText Typo="Typo.h4">
-            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" /> Server Configuration
-        </MudText>
-        <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
-            Manage all SharpMUSH server settings from one place
-        </MudText>
-    </div>
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Spacing="4">
+        @* Header *@
+        <MudPaper Elevation="0" Class="pa-4">
+            <MudText Typo="Typo.h4" Color="Color.Secondary">
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" /> Server Configuration
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mt-2">
+                Manage all SharpMUSH server settings from one place
+            </MudText>
+        </MudPaper>
 
-    <div class="config-index-content">
+        @* Category Cards *@
         <MudGrid>
             @* Server Category *@
             <MudItem xs="12" md="6">
                 <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/network"))">
                     <MudCardContent>
-                        <div class="category-card-header">
-                            <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Class="ml-3">Server</MudText>
-                        </div>
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
-                            Network connections, database, and core server settings
-                        </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="2 settings" Class="mt-3" />
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Secondary" Size="Size.Large" />
+                                <MudText Typo="Typo.h6">Server</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2">
+                                Network connections, database, and core server settings
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="2 settings" />
+                        </MudStack>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -36,14 +40,16 @@
             <MudItem xs="12" md="6">
                 <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/limits"))">
                     <MudCardContent>
-                        <div class="category-card-header">
-                            <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Class="ml-3">Performance</MudText>
-                        </div>
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
-                            Resource limits, command queues, and optimization
-                        </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mt-3" />
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Secondary" Size="Size.Large" />
+                                <MudText Typo="Typo.h6">Performance</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2">
+                                Resource limits, command queues, and optimization
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                        </MudStack>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -52,17 +58,19 @@
             <MudItem xs="12" md="6">
                 <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/sitelock"))">
                     <MudCardContent>
-                        <div class="category-card-header">
-                            <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Class="ml-3">Security</MudText>
-                        </div>
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
-                            Access control, sitelock rules, and banned names
-                        </MudText>
-                        <div class="mt-3">
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mr-2" />
-                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Important" />
-                        </div>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Secondary" Size="Size.Large" />
+                                <MudText Typo="Typo.h6">Security</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2">
+                                Access control, sitelock rules, and banned names
+                            </MudText>
+                            <MudStack Row="true" Spacing="2">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Important" />
+                            </MudStack>
+                        </MudStack>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -71,14 +79,16 @@
             <MudItem xs="12" md="6">
                 <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/messages"))">
                     <MudCardContent>
-                        <div class="category-card-header">
-                            <MudIcon Icon="@Icons.Material.Filled.Article" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Class="ml-3">Content</MudText>
-                        </div>
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
-                            Messages, cosmetic options, and chat configuration
-                        </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mt-3" />
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Article" Color="Color.Secondary" Size="Size.Large" />
+                                <MudText Typo="Typo.h6">Content</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2">
+                                Messages, cosmetic options, and chat configuration
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                        </MudStack>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -87,14 +97,16 @@
             <MudItem xs="12" md="6">
                 <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/logging"))">
                     <MudCardContent>
-                        <div class="category-card-header">
-                            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Class="ml-3">Logs & Files</MudText>
-                        </div>
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
-                            Logging, file paths, and database dumps
-                        </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mt-3" />
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" Size="Size.Large" />
+                                <MudText Typo="Typo.h6">Logs & Files</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2">
+                                Logging, file paths, and database dumps
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                        </MudStack>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -103,21 +115,23 @@
             <MudItem xs="12" md="6">
                 <MudCard Outlined="true" Class="category-card" @onclick="@(() => Navigation.NavigateTo("/admin/config/attributes"))">
                     <MudCardContent>
-                        <div class="category-card-header">
-                            <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Secondary" Size="Size.Large" />
-                            <MudText Typo="Typo.h6" Class="ml-3">Advanced</MudText>
-                        </div>
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-3">
-                            Attributes, flags, costs, and specialized settings
-                        </MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" Class="mt-3" />
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Secondary" Size="Size.Large" />
+                                <MudText Typo="Typo.h6">Advanced</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2">
+                                Attributes, flags, costs, and specialized settings
+                            </MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                        </MudStack>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
         </MudGrid>
 
         @* Quick Actions *@
-        <MudPaper Outlined="true" Class="mt-6 pa-4">
+        <MudPaper Outlined="true" Class="pa-4">
             <MudText Typo="Typo.h6" Class="mb-3">Quick Actions</MudText>
             <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
                 <MudButton Variant="Variant.Outlined" 
@@ -140,24 +154,10 @@
                 </MudButton>
             </MudStack>
         </MudPaper>
-    </div>
-</div>
+    </MudStack>
+</MudContainer>
 
 <style>
-    .config-index-page {
-        padding: 48px 32px;
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-
-    .config-index-header {
-        margin-bottom: 48px;
-    }
-
-    .config-index-content {
-        margin-top: 32px;
-    }
-
     .category-card {
         cursor: pointer;
         transition: all 0.2s ease;
@@ -167,17 +167,5 @@
     .category-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 8px 24px rgba(0, 245, 183, 0.2);
-        border-color: var(--mud-palette-secondary);
-    }
-
-    .category-card-header {
-        display: flex;
-        align-items: center;
-    }
-
-    @@media (max-width: 960px) {
-        .config-index-page {
-            padding: 24px 16px;
-        }
     }
 </style>

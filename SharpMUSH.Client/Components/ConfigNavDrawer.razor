@@ -1,16 +1,16 @@
 @inject NavigationManager NavigationManager
 
-<div class="config-nav-drawer">
+<MudStack Spacing="0" Class="config-nav-drawer">
     @* Header *@
-    <div class="config-nav-header">
-        <MudText Typo="Typo.h6" Style="color: var(--mud-palette-secondary);">
+    <MudPaper Elevation="0" Class="config-nav-header pa-4">
+        <MudText Typo="Typo.h6" Color="Color.Secondary">
             <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" /> Configuration
         </MudText>
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">Server Settings</MudText>
-    </div>
+        <MudText Typo="Typo.body2" Color="Color.Default">Server Settings</MudText>
+    </MudPaper>
 
     @* Search Box *@
-    <div class="config-nav-search">
+    <MudPaper Elevation="0" Class="config-nav-search pa-3">
         <MudTextField @bind-Value="_searchText"
                       Placeholder="Search settings..."
                       Variant="Variant.Outlined"
@@ -19,12 +19,11 @@
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       IconSize="Size.Small"
                       Immediate="true"
-                      OnAdornmentClick="ClearSearch"
-                      Class="search-field" />
-    </div>
+                      OnAdornmentClick="ClearSearch" />
+    </MudPaper>
 
     @* Navigation Menu *@
-    <div class="config-nav-menu">
+    <MudPaper Elevation="0" Class="config-nav-menu">
         <MudNavMenu>
             @* Server Group *@
             <MudNavGroup Title="Server" Icon="@Icons.Material.Filled.Computer" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Server")">
@@ -116,24 +115,20 @@
                 </MudNavLink>
             </MudNavGroup>
         </MudNavMenu>
-    </div>
-</div>
+    </MudPaper>
+</MudStack>
 
 <style>
     .config-nav-drawer {
-        display: flex;
-        flex-direction: column;
         height: 100%;
     }
 
     .config-nav-header {
-        padding: 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom: 1px solid var(--mud-palette-divider);
     }
 
     .config-nav-search {
-        padding: 16px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom: 1px solid var(--mud-palette-divider);
     }
 
     .config-nav-menu {
@@ -144,10 +139,6 @@
 
     .change-indicator {
         margin-left: auto;
-    }
-
-    .search-field {
-        font-size: 0.875rem;
     }
 </style>
 
