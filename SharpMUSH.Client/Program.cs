@@ -23,7 +23,7 @@ builder.Services.AddHttpClient("api", sp =>
 {
 	var uri = new UriBuilder(builder.HostEnvironment.BaseAddress)
 	{
-		Port = 7296
+		Port = 9092
 	};
 	sp.BaseAddress = uri.Uri;
 });
