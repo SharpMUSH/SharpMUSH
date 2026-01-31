@@ -1,0 +1,265 @@
+@page "/admin/config/{category}"
+@using SharpMUSH.Client.Services
+@using System.Reflection
+@using System.Text.Json
+@inject AdminConfigService AdminConfigService
+@inject ISnackbar Snackbar
+
+<PageTitle>@CategoryTitle - Configuration</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_categorySettings == null || !_categorySettings.Any())
+    {
+        <MudCard>
+            <MudCardContent>
+                <MudAlert Severity="Severity.Warning">
+                    No settings found for category: @CategoryTitle
+                </MudAlert>
+            </MudCardContent>
+        </MudCard>
+    }
+    else
+    {
+        <MudCard>
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h5">@CategoryTitle Configuration</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @_categorySettings.Count settings in this category
+                    </MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Save"
+                               OnClick="SaveChanges"
+                               Disabled="!_hasChanges">
+                        Save Changes
+                    </MudButton>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudStack Spacing="3">
+                    @foreach (var setting in _categorySettings.OrderBy(s => s.Metadata.Name))
+                    {
+                        <MudPaper Outlined="true" Class="pa-4">
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.subtitle1">@setting.Metadata.Name</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@setting.Metadata.Description</MudText>
+                                
+                                @if (setting.PropertyType == typeof(bool))
+                                {
+                                    var boolValue = (bool)(setting.Value ?? false);
+                                    <MudSwitch T="bool"
+                                               Value="@boolValue"
+                                               ValueChanged="@(v => { setting.Value = v; _hasChanges = true; })"
+                                               Color="Color.Primary"
+                                               Label="@(boolValue ? "Enabled" : "Disabled")" />
+                                }
+                                else if (setting.PropertyType == typeof(int))
+                                {
+                                    var intValue = (int)(setting.Value ?? 0);
+                                    <MudNumericField T="int"
+                                                     Value="@intValue"
+                                                     ValueChanged="@(v => { setting.Value = v; _hasChanges = true; })"
+                                                     Variant="Variant.Outlined"
+                                                     Margin="Margin.Dense" />
+                                }
+                                else if (setting.PropertyType == typeof(uint))
+                                {
+                                    var uintValue = (uint)(setting.Value ?? 0u);
+                                    <MudNumericField T="int"
+                                                     Value="@((int)uintValue)"
+                                                     ValueChanged="@(v => { setting.Value = (uint)v; _hasChanges = true; })"
+                                                     Variant="Variant.Outlined"
+                                                     Margin="Margin.Dense" />
+                                }
+                                else if (setting.PropertyType == typeof(string))
+                                {
+                                    var strValue = setting.Value?.ToString() ?? "";
+                                    <MudTextField T="string"
+                                                  Value="@strValue"
+                                                  ValueChanged="@(v => { setting.Value = v; _hasChanges = true; })"
+                                                  Variant="Variant.Outlined"
+                                                  Margin="Margin.Dense" />
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2">
+                                        Type: @setting.PropertyType.Name (not yet supported)
+                                    </MudText>
+                                }
+                                
+                                <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                                    Property: @setting.PropertyPath
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+                    }
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string Category { get; set; } = string.Empty;
+
+    private bool _isLoading = true;
+    private bool _hasChanges = false;
+    private List<ConfigSetting> _categorySettings = new();
+    private Dictionary<string, object?> _originalValues = new();
+
+    public class ConfigSetting
+    {
+        public string PropertyPath { get; set; } = string.Empty;
+        public SharpMUSH.Configuration.SharpConfigAttribute Metadata { get; set; } = null!;
+        public Type PropertyType { get; set; } = null!;
+        public object? Value { get; set; }
+    }
+
+    private string CategoryTitle => Category switch
+    {
+        "net" => "Network",
+        "database" => "Database",
+        "limit" => "Limits",
+        "command" => "Commands",
+        "sitelock" => "Sitelock Rules",
+        "bannednames" => "Banned Names",
+        "restriction" => "Restrictions",
+        "message" => "Messages",
+        "cosmetic" => "Cosmetic",
+        "chat" => "Chat",
+        "log" => "Logging",
+        "file" => "Files",
+        "textfile" => "Text Files",
+        "dump" => "Database Dumps",
+        "attribute" => "Attributes",
+        "flag" => "Flags",
+        "cost" => "Costs",
+        "compatibility" => "Compatibility",
+        "alias" => "Aliases",
+        "debug" => "Debug",
+        "function" => "Functions",
+        "warning" => "Warnings",
+        _ => Category
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadConfigurationAsync();
+    }
+
+    private async Task LoadConfigurationAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var result = await AdminConfigService.GetOptionsAsync();
+            
+            if (result.IsT1)
+            {
+                Snackbar.Add("Failed to load configuration", Severity.Error);
+                return;
+            }
+
+            // Get the full config response from the service
+            var configResponse = await AdminConfigService.FetchConfigurationFromServer();
+            
+            // Extract settings for this category
+            _categorySettings = ExtractCategorySettings(configResponse.Configuration, configResponse.Metadata);
+            _originalValues = _categorySettings.ToDictionary(s => s.PropertyPath, s => s.Value);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading configuration: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private List<ConfigSetting> ExtractCategorySettings(object configObject, Dictionary<string, SharpMUSH.Configuration.SharpConfigAttribute> metadata)
+    {
+        var settings = new List<ConfigSetting>();
+        
+        // Get all properties with metadata
+        foreach (var kvp in metadata.Where(m => m.Value.Category.Equals(Category, StringComparison.OrdinalIgnoreCase)))
+        {
+            var propertyPath = kvp.Key;
+            var metadataAttr = kvp.Value;
+            
+            // Navigate to the property value
+            var value = GetPropertyValue(configObject, propertyPath);
+            var propertyType = GetPropertyType(configObject, propertyPath);
+            
+            if (propertyType != null)
+            {
+                settings.Add(new ConfigSetting
+                {
+                    PropertyPath = propertyPath,
+                    Metadata = metadataAttr,
+                    PropertyType = propertyType,
+                    Value = value
+                });
+            }
+        }
+        
+        return settings;
+    }
+
+    private object? GetPropertyValue(object obj, string propertyPath)
+    {
+        var parts = propertyPath.Split('.');
+        object? current = obj;
+        
+        foreach (var part in parts)
+        {
+            if (current == null) return null;
+            
+            var prop = current.GetType().GetProperty(part);
+            if (prop == null) return null;
+            
+            current = prop.GetValue(current);
+        }
+        
+        return current;
+    }
+
+    private Type? GetPropertyType(object obj, string propertyPath)
+    {
+        var parts = propertyPath.Split('.');
+        Type? currentType = obj.GetType();
+        
+        foreach (var part in parts)
+        {
+            if (currentType == null) return null;
+            
+            var prop = currentType.GetProperty(part);
+            if (prop == null) return null;
+            
+            currentType = prop.PropertyType;
+        }
+        
+        return currentType;
+    }
+
+    private void UpdateValue(ConfigSetting setting, object? newValue)
+    {
+        setting.Value = newValue;
+        _hasChanges = true;
+    }
+
+    private async Task SaveChanges()
+    {
+        Snackbar.Add("Save functionality not yet implemented", Severity.Info);
+        // TODO: Implement save to API
+        _hasChanges = false;
+    }
+}
