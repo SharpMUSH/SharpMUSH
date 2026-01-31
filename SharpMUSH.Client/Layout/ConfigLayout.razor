@@ -4,14 +4,14 @@
 
 <div class="config-layout">
     @* Secondary Drawer - Config Navigation *@
-    <div class="config-drawer">
+    <MudPaper Class="config-drawer" Elevation="1" Square="true">
         <ConfigNavDrawer />
-    </div>
+    </MudPaper>
 
     @* Main Content Area *@
-    <div class="config-content">
+    <MudPaper Class="config-content" Elevation="0" Square="true">
         @Body
-    </div>
+    </MudPaper>
 </div>
 
 <style>
@@ -27,17 +27,15 @@
     .config-drawer {
         width: 280px;
         height: 100%;
-        background: var(--mud-palette-surface);
-        border-right: 1px solid rgba(255, 255, 255, 0.12);
         overflow-y: auto;
         flex-shrink: 0;
+        border-right: 1px solid var(--mud-palette-divider);
     }
 
     .config-content {
         flex: 1;
         height: 100%;
         overflow-y: auto;
-        background: var(--mud-palette-background);
     }
 
     /* Adjust for mobile */
