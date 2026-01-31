@@ -31,16 +31,17 @@
     @if (_isConfigRoute)
     {
         <MudDrawer Open="true"
-                   ClipMode="DrawerClipMode.Never"
+                   ClipMode="DrawerClipMode.Docked"
                    Variant="DrawerVariant.Persistent"
                    Anchor="Anchor.Left"
                    Width="280px"
-                   Elevation="1">
+                   Elevation="0"
+                   Class="config-secondary-drawer">
             <ConfigNavDrawer />
         </MudDrawer>
     }
     
-    <MudMainContent>
+    <MudMainContent Class="@(_isConfigRoute ? "config-main-content" : "")">
         <MudContainer MaxWidth="MaxWidth.False" Class="@(_isConfigRoute ? "pa-0" : "")">
             @Body
         </MudContainer>
@@ -93,3 +94,13 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
+
+<style>
+    .config-secondary-drawer {
+        z-index: 1200 !important;
+    }
+    
+    .config-main-content {
+        margin-left: 280px !important;
+    }
+</style>
