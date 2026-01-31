@@ -1,11 +1,11 @@
 @* NavMenu with support for collapsed (icon-only) mode *@
 
-<MudPaper Width="250px" Class="py-3" Elevation="0">
+<MudPaper Width="@(IsCollapsed ? "60px" : "250px")" Class="py-3" Elevation="0">
     <MudNavMenu>
         @if (!IsCollapsed)
         {
             <MudText Typo="Typo.h6" Class="px-4">SharpMUSH</MudText>
-            <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Admin Panel</MudText>
+            <MudText Typo="Typo.body2" Class="px-4">Admin Panel</MudText>
             <MudDivider Class="my-2"/>
         }
         
@@ -31,8 +31,7 @@
         }
         else
         {
-            <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary">
-            </MudNavLink>
+            <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" />
         }
         
         <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info" IconColor="Color.Secondary">
