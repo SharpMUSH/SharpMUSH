@@ -1,5 +1,6 @@
 using System.Text;
 using Mediator;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 
