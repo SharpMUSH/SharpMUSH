@@ -10,20 +10,24 @@
 
 <MudLayout>
     <MudAppBar Elevation="1" Dense="true">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
+        @if (!_isConfigRoute)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
+        }
         @if (_isConfigRoute)
         {
-            <MudText Typo="Typo.h6" Style="color: var(--mud-palette-secondary);">Configuration</MudText>
+            <MudText Typo="Typo.h6" Color="Color.Secondary">Configuration</MudText>
         }
         <MudSpacer />
         <LoginDisplay />
     </MudAppBar>
     
     @* Primary Drawer - Collapses to mini when in config route *@
-    <MudDrawer @bind-Open="_drawerOpen" 
+    <MudDrawer Open="@(_isConfigRoute ? true : _drawerOpen)"
                ClipMode="DrawerClipMode.Always" 
                Elevation="2"
-               Variant="@(_isConfigRoute ? DrawerVariant.Mini : DrawerVariant.Responsive)">
+               Variant="@(_isConfigRoute ? DrawerVariant.Mini : DrawerVariant.Responsive)"
+               OpenMiniOnHover="true">
         <NavMenu IsCollapsed="@_isConfigRoute" />
     </MudDrawer>
     
