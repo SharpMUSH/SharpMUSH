@@ -128,26 +128,38 @@ The ConnectionServer will immediately apply the new preferences to all subsequen
 
 ### Integration with MainProcess
 
-**TODO:** The MainProcess should:
+The MainProcess is fully integrated with the protocol-aware output formatting system:
 
-1. **On player login:**
-   - Query player flags: `ANSI`, `COLOR`, `XTERM256`
-   - Send `UpdatePlayerPreferencesMessage` to ConnectionServer
+1. **On player login (SocketCommands.cs):**
+   - Queries player flags: `ANSI`, `COLOR`, `XTERM256`
+   - Sends `UpdatePlayerPreferencesMessage` to ConnectionServer
+   - Applies to both normal and guest login
 
-2. **On flag change:**
-   - Detect when player uses `@set me=ANSI` or `@set me=!ANSI`
-   - Send `UpdatePlayerPreferencesMessage` to ConnectionServer
+2. **On flag change (ObjectFlagChangeHandler.cs):**
+   - Detects when player uses `@set me=ANSI` or `@set me=!ANSI`
+   - Handles all output preference flags: ANSI, COLOR, XTERM256
+   - Sends `UpdatePlayerPreferencesMessage` to ConnectionServer
+   - Syncs all active connections for the player
 
-Example:
+Implementation:
 ```csharp
-// After player login
-var ansi = await HasFlag(playerDbRef, "ANSI");
-var color = await HasFlag(playerDbRef, "COLOR");
-var xterm = await HasFlag(playerDbRef, "XTERM256");
+// After player login (in SocketCommands.cs)
+await SyncPlayerOutputPreferences(handle, player);
 
-await messageBus.Publish(new UpdatePlayerPreferencesMessage(
-    connectionHandle, ansi, color, xterm
-));
+// Helper method
+private static async Task SyncPlayerOutputPreferences(long handle, SharpObject player)
+{
+    var ansiEnabled = await player.Flags.Value.AnyAsync(f =>
+        string.Equals(f.Name, "ANSI", StringComparison.OrdinalIgnoreCase));
+    var colorEnabled = await player.Flags.Value.AnyAsync(f =>
+        string.Equals(f.Name, "COLOR", StringComparison.OrdinalIgnoreCase));
+    var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
+        string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase));
+    
+    await MessageBus.Publish(new UpdatePlayerPreferencesMessage(
+        handle, ansiEnabled, colorEnabled, xterm256Enabled
+    ));
+}
 ```
 
 ## Testing
@@ -331,10 +343,94 @@ service.UpdatePreferences(
 
 ## Related Files
 
+**ConnectionServer (Output Transformation):**
 - `SharpMUSH.ConnectionServer/Models/ProtocolCapabilities.cs`
 - `SharpMUSH.ConnectionServer/Models/PlayerOutputPreferences.cs`
 - `SharpMUSH.ConnectionServer/Services/IOutputTransformService.cs`
 - `SharpMUSH.ConnectionServer/Services/OutputTransformService.cs`
 - `SharpMUSH.ConnectionServer/Consumers/UpdatePlayerPreferencesConsumer.cs`
+- `SharpMUSH.ConnectionServer/Services/ConnectionServerService.cs`
+
+**MainProcess (Flag Synchronization):**
+- `SharpMUSH.Implementation/Commands/Commands.cs` (IMessageBus integration)
+- `SharpMUSH.Implementation/Commands/SocketCommands.cs` (SyncPlayerOutputPreferences)
+- `SharpMUSH.Server/Handlers/ObjectFlagChangeHandler.cs` (Flag change detection)
+
+**Messages:**
 - `SharpMUSH.Messages/OutputMessages.cs` (UpdatePlayerPreferencesMessage)
+
+**Tests:**
 - `SharpMUSH.Tests/ConnectionServer/OutputTransformServiceTests.cs`
+
+## Implementation Summary
+
+### What Was Implemented
+
+1. **Data Models:**
+   - `ProtocolCapabilities` - Client protocol support (ANSI, XTERM256, UTF-8, charset)
+   - `PlayerOutputPreferences` - Player flag preferences (ANSI, COLOR, XTERM256)
+   - Extended `ConnectionData` with capabilities and preferences fields
+
+2. **Transformation Service:**
+   - `OutputTransformService` - Transforms output based on capabilities + preferences
+   - ANSI code stripping (regex-based)
+   - XTERM256 to 16-color downgrade
+   - Encoding conversion (UTF-8 ↔ ASCII ↔ Latin-1)
+   - Error handling (returns original on failure)
+
+3. **ConnectionServer Integration:**
+   - All output consumers apply transformations
+   - `UpdatePlayerPreferencesConsumer` handles preference updates
+   - Thread-safe preference updates with retry loop
+
+4. **MainProcess Integration:**
+   - `SyncPlayerOutputPreferences` method queries flags on login
+   - `ObjectFlagChangeHandler` detects flag changes in real-time
+   - Automatic sync to all active player connections
+
+### How It Works
+
+**Login Flow:**
+```
+Player connects → Successful login
+  → Query ANSI/COLOR/XTERM256 flags
+  → Publish UpdatePlayerPreferencesMessage
+  → ConnectionServer updates connection preferences
+  → All subsequent output transformed based on preferences
+```
+
+**Flag Change Flow:**
+```
+Player executes: @set me=!ANSI
+  → ManipulateSharpObjectService.SetOrUnsetFlag
+  → Publishes ObjectFlagChangedNotification
+  → ObjectFlagChangeHandler receives notification
+  → Queries all output preference flags
+  → Publishes UpdatePlayerPreferencesMessage for each connection
+  → ConnectionServer updates preferences
+  → Output immediately transformed based on new preferences
+```
+
+**Output Flow:**
+```
+NotifyService → UTF-8 bytes → Kafka
+  → ConnectionServer receives TelnetOutputMessage
+  → OutputTransformService.TransformAsync(bytes, capabilities, preferences)
+  → ANSI stripping (if disabled)
+  → XTERM256 downgrade (if not supported)
+  → Encoding conversion (if needed)
+  → Client receives properly formatted output
+```
+
+### Testing
+
+**Unit Tests:** 11 tests covering all transformation scenarios
+- ANSI preservation/stripping
+- XTERM256 preservation/downgrade
+- Encoding conversion
+- Error handling
+
+**Integration:** Real-time flag synchronization on login and flag changes
+
+**Compatibility:** Backward compatible - defaults preserve existing behavior
+
