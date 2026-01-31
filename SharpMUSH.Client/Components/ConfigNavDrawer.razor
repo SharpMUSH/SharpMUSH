@@ -1,0 +1,187 @@
+@inject NavigationManager NavigationManager
+
+<div class="config-nav-drawer">
+    @* Header *@
+    <div class="config-nav-header">
+        <MudText Typo="Typo.h6" Style="color: var(--mud-palette-secondary);">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" /> Configuration
+        </MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Server Settings</MudText>
+    </div>
+
+    @* Search Box *@
+    <div class="config-nav-search">
+        <MudTextField @bind-Value="_searchText"
+                      Placeholder="Search settings..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      IconSize="Size.Small"
+                      Immediate="true"
+                      OnAdornmentClick="ClearSearch"
+                      Class="search-field" />
+    </div>
+
+    @* Navigation Menu *@
+    <div class="config-nav-menu">
+        <MudNavMenu>
+            @* Server Group *@
+            <MudNavGroup Title="Server" Icon="@Icons.Material.Filled.Computer" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Server")">
+                <MudNavLink Href="/admin/config/network" Icon="@Icons.Material.Filled.NetworkCheck" Match="NavLinkMatch.All">
+                    Network @if (HasChanges("network")) { <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Warning" Class="change-indicator" /> }
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/database" Icon="@Icons.Material.Filled.Storage" Match="NavLinkMatch.All">
+                    Database
+                </MudNavLink>
+            </MudNavGroup>
+
+            @* Performance Group *@
+            <MudNavGroup Title="Performance" Icon="@Icons.Material.Filled.Speed" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Performance")">
+                <MudNavLink Href="/admin/config/limits" Icon="@Icons.Material.Filled.Timer" Match="NavLinkMatch.All">
+                    Limits
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/commands" Icon="@Icons.Material.Filled.Terminal" Match="NavLinkMatch.All">
+                    Commands
+                </MudNavLink>
+            </MudNavGroup>
+
+            @* Security Group *@
+            <MudNavGroup Title="Security" Icon="@Icons.Material.Filled.Security" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Security")">
+                <MudNavLink Href="/admin/config/sitelock" Icon="@Icons.Material.Filled.Lock" Match="NavLinkMatch.All">
+                    Sitelock <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Important" Class="ml-2" />
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/banned-names" Icon="@Icons.Material.Filled.Block" Match="NavLinkMatch.All">
+                    Banned Names
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/restrictions" Icon="@Icons.Material.Filled.GppBad" Match="NavLinkMatch.All">
+                    Restrictions
+                </MudNavLink>
+            </MudNavGroup>
+
+            @* Content Group *@
+            <MudNavGroup Title="Content" Icon="@Icons.Material.Filled.Article" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Content")">
+                <MudNavLink Href="/admin/config/messages" Icon="@Icons.Material.Filled.Message" Match="NavLinkMatch.All">
+                    Messages
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/cosmetic" Icon="@Icons.Material.Filled.Palette" Match="NavLinkMatch.All">
+                    Cosmetic
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/chat" Icon="@Icons.Material.Filled.Chat" Match="NavLinkMatch.All">
+                    Chat
+                </MudNavLink>
+            </MudNavGroup>
+
+            @* Logs & Files Group *@
+            <MudNavGroup Title="Logs & Files" Icon="@Icons.Material.Filled.FolderOpen" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Logs")">
+                <MudNavLink Href="/admin/config/logging" Icon="@Icons.Material.Filled.Description" Match="NavLinkMatch.All">
+                    Logging
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/files" Icon="@Icons.Material.Filled.Folder" Match="NavLinkMatch.All">
+                    Files
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/textfiles" Icon="@Icons.Material.Filled.TextSnippet" Match="NavLinkMatch.All">
+                    Text Files
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/dumps" Icon="@Icons.Material.Filled.Save" Match="NavLinkMatch.All">
+                    Database Dumps
+                </MudNavLink>
+            </MudNavGroup>
+
+            @* Advanced Group *@
+            <MudNavGroup Title="Advanced" Icon="@Icons.Material.Filled.Tune" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Advanced")">
+                <MudNavLink Href="/admin/config/attributes" Icon="@Icons.Material.Filled.Label" Match="NavLinkMatch.All">
+                    Attributes
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/flags" Icon="@Icons.Material.Filled.Flag" Match="NavLinkMatch.All">
+                    Flags
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/costs" Icon="@Icons.Material.Filled.MonetizationOn" Match="NavLinkMatch.All">
+                    Costs
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/compatibility" Icon="@Icons.Material.Filled.Verified" Match="NavLinkMatch.All">
+                    Compatibility
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/aliases" Icon="@Icons.Material.Filled.Link" Match="NavLinkMatch.All">
+                    Aliases
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/debug" Icon="@Icons.Material.Filled.BugReport" Match="NavLinkMatch.All">
+                    Debug
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/functions" Icon="@Icons.Material.Filled.Functions" Match="NavLinkMatch.All">
+                    Functions
+                </MudNavLink>
+                <MudNavLink Href="/admin/config/warnings" Icon="@Icons.Material.Filled.Warning" Match="NavLinkMatch.All">
+                    Warnings
+                </MudNavLink>
+            </MudNavGroup>
+        </MudNavMenu>
+    </div>
+</div>
+
+<style>
+    .config-nav-drawer {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .config-nav-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .config-nav-search {
+        padding: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .config-nav-menu {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 0;
+    }
+
+    .change-indicator {
+        margin-left: auto;
+    }
+
+    .search-field {
+        font-size: 0.875rem;
+    }
+</style>
+
+@code {
+    private string _searchText = string.Empty;
+    private HashSet<string> _changedSections = new();
+    private HashSet<string> _expandedGroups = new() { "Server", "Performance" }; // Default expanded
+
+    private bool IsGroupExpanded(string groupName)
+    {
+        // Expand group if current route matches any of its children
+        var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        
+        return groupName switch
+        {
+            "Server" => currentPath.Contains("network") || currentPath.Contains("database"),
+            "Performance" => currentPath.Contains("limits") || currentPath.Contains("commands"),
+            "Security" => currentPath.Contains("sitelock") || currentPath.Contains("banned") || currentPath.Contains("restrictions"),
+            "Content" => currentPath.Contains("messages") || currentPath.Contains("cosmetic") || currentPath.Contains("chat"),
+            "Logs" => currentPath.Contains("logging") || currentPath.Contains("files") || currentPath.Contains("textfiles") || currentPath.Contains("dumps"),
+            "Advanced" => currentPath.Contains("attributes") || currentPath.Contains("flags") || currentPath.Contains("costs") || 
+                         currentPath.Contains("compatibility") || currentPath.Contains("aliases") || currentPath.Contains("debug") || 
+                         currentPath.Contains("functions") || currentPath.Contains("warnings"),
+            _ => false
+        };
+    }
+
+    private bool HasChanges(string sectionName)
+    {
+        return _changedSections.Contains(sectionName);
+    }
+
+    private void ClearSearch()
+    {
+        _searchText = string.Empty;
+    }
+}
