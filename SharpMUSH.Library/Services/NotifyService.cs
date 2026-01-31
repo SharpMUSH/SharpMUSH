@@ -78,6 +78,12 @@ public class NotifyService(
 			str => str
 		);
 
+		// Always append \r\n to ensure proper line endings
+		if (!text.EndsWith("\r\n"))
+		{
+			text += "\r\n";
+		}
+
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Always use automatic batching with 8ms timeout
@@ -105,6 +111,12 @@ public class NotifyService(
 			str => str
 		);
 
+		// Always append \r\n to ensure proper line endings
+		if (!text.EndsWith("\r\n"))
+		{
+			text += "\r\n";
+		}
+
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Always use automatic batching with 8ms timeout
@@ -125,6 +137,12 @@ public class NotifyService(
 			markupString => markupString.ToString(),
 			str => str
 		);
+
+		// Always append \r\n to ensure proper line endings
+		if (!text.EndsWith("\r\n"))
+		{
+			text += "\r\n";
+		}
 
 		var bytes = Encoding.UTF8.GetBytes(text);
 
@@ -150,6 +168,8 @@ public class NotifyService(
 			str => str
 		);
 
+		// Prompts typically don't need newlines, but ensure consistency
+		// (Prompts are usually things like "> " without line breaks)
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
@@ -179,6 +199,7 @@ public class NotifyService(
 			str => str
 		);
 
+		// Prompts typically don't need newlines
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Publish prompt message to each handle
