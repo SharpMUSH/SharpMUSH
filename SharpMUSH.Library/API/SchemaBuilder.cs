@@ -13,214 +13,229 @@ public static class SchemaBuilder
 	{
 		var schema = new ConfigurationSchema();
 		
-		// Build category metadata
-		schema.Categories = BuildCategories();
-		
-		// Build property metadata
-		schema.Properties = BuildProperties(options);
+		// Build from reflection + attributes
+		schema.Properties = BuildPropertiesFromReflection(options);
+		schema.Categories = BuildCategoriesFromProperties(schema.Properties);
 		
 		return schema;
 	}
 	
-	private static List<CategoryMetadata> BuildCategories()
+	private static List<CategoryMetadata> BuildCategoriesFromProperties(Dictionary<string, PropertyMetadata> properties)
 	{
-		return new List<CategoryMetadata>
+		var categories = new Dictionary<string, CategoryMetadata>();
+		var groups = new Dictionary<string, HashSet<GroupMetadata>>();
+		
+		foreach (var prop in properties.Values)
 		{
-			new()
+			// Ensure category exists
+			if (!categories.ContainsKey(prop.Category))
 			{
-				Name = "NetOptions",
-				DisplayName = "Network Configuration",
-				Description = "Server connection and network settings",
-				Icon = "mdi-network",
-				Order = 1,
-				Groups = new List<GroupMetadata>
+				categories[prop.Category] = new CategoryMetadata
 				{
-					new() { Name = "connection", DisplayName = "Connection Settings", Order = 1 },
-					new() { Name = "limits", DisplayName = "Connection Limits", Order = 2 },
-					new() { Name = "protocol", DisplayName = "Network Protocol", Order = 3 }
-				}
-			},
-			new()
-			{
-				Name = "LimitOptions",
-				DisplayName = "Limits",
-				Description = "Resource and capacity limits",
-				Icon = "mdi-speedometer",
-				Order = 2,
-				Groups = new List<GroupMetadata>
-				{
-					new() { Name = "general", DisplayName = "General Limits", Order = 1 }
-				}
-			},
-			new()
-			{
-				Name = "ChatOptions",
-				DisplayName = "Chat",
-				Description = "Chat and communication settings",
-				Icon = "mdi-chat",
-				Order = 3,
-				Groups = new List<GroupMetadata>
-				{
-					new() { Name = "general", DisplayName = "Chat Settings", Order = 1 }
-				}
+					Name = prop.Category,
+					DisplayName = FormatCategoryDisplayName(prop.Category),
+					Description = GetCategoryDescription(prop.Category),
+					Icon = GetCategoryIcon(prop.Category),
+					Order = GetCategoryOrder(prop.Category),
+					Groups = new List<GroupMetadata>()
+				};
+				groups[prop.Category] = new HashSet<GroupMetadata>(new GroupMetadataComparer());
 			}
-			// Add more categories as needed
-		};
+			
+			// Add group if specified
+			if (!string.IsNullOrEmpty(prop.Group))
+			{
+				groups[prop.Category].Add(new GroupMetadata
+				{
+					Name = prop.Group,
+					DisplayName = prop.Group,
+					Order = 0 // Will be sorted by first property order
+				});
+			}
+		}
+		
+		// Convert groups to lists and sort
+		foreach (var category in categories.Values)
+		{
+			if (groups.TryGetValue(category.Name, out var categoryGroups))
+			{
+				category.Groups = categoryGroups.OrderBy(g => g.Order).ToList();
+			}
+		}
+		
+		return categories.Values.OrderBy(c => c.Order).ToList();
 	}
 	
-	private static Dictionary<string, PropertyMetadata> BuildProperties(SharpMUSHOptions options)
+	private static Dictionary<string, PropertyMetadata> BuildPropertiesFromReflection(SharpMUSHOptions options)
 	{
 		var properties = new Dictionary<string, PropertyMetadata>();
+		var optionsType = typeof(SharpMUSHOptions);
 		
-		// Build Network properties
-		AddNetworkProperties(properties, options.Net);
-		
-		// Add more property groups as needed
+		// Iterate through all option category properties (Net, Chat, Limit, etc.)
+		foreach (var categoryProp in optionsType.GetProperties())
+		{
+			var categoryValue = categoryProp.GetValue(options);
+			if (categoryValue == null) continue;
+			
+			var categoryType = categoryProp.PropertyType;
+			var categoryName = categoryProp.Name;
+			
+			// Get the default instance to extract default values
+			var defaultInstance = GetDefaultInstance(categoryType);
+			
+			// Iterate through properties in this category
+			foreach (var prop in categoryType.GetProperties())
+			{
+				var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
+				if (attr == null) continue;
+				
+				var path = $"{categoryName}.{prop.Name}";
+				var currentValue = prop.GetValue(categoryValue);
+				var defaultValue = defaultInstance != null ? prop.GetValue(defaultInstance) : null;
+				
+				properties[path] = new PropertyMetadata
+				{
+					Name = prop.Name,
+					DisplayName = attr.Name,
+					Description = attr.Description,
+					Category = categoryName,
+					Group = attr.Group,
+					Order = attr.Order,
+					Type = GetPropertyTypeName(prop.PropertyType),
+					Component = InferComponentType(prop.PropertyType),
+					DefaultValue = defaultValue,
+					Min = attr.Min,
+					Max = attr.Max,
+					Pattern = attr.ValidationPattern,
+					Required = !IsNullable(prop.PropertyType),
+					Tooltip = attr.Tooltip,
+					ReadOnly = false,
+					Path = path
+				};
+			}
+		}
 		
 		return properties;
 	}
 	
-	private static void AddNetworkProperties(Dictionary<string, PropertyMetadata> properties, NetOptions netOptions)
+	private static object? GetDefaultInstance(Type type)
 	{
-		// Connection Settings Group
-		properties.Add("NetOptions.Port", new PropertyMetadata
+		try
 		{
-			Name = "Port",
-			DisplayName = "Port",
-			Description = "The port number the server listens on for incoming connections",
-			Category = "NetOptions",
-			Group = "connection",
-			Order = 1,
-			Type = "integer",
-			Component = "numeric",
-			DefaultValue = 4201u,
-			Min = 1,
-			Max = 65535,
-			Required = true,
-			Path = "NetOptions.Port"
-		});
+			// Try to create instance with default constructor
+			return Activator.CreateInstance(type);
+		}
+		catch
+		{
+			// If no default constructor, return null
+			return null;
+		}
+	}
+	
+	private static string GetPropertyTypeName(Type type)
+	{
+		var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 		
-		properties.Add("NetOptions.SslPort", new PropertyMetadata
-		{
-			Name = "SslPort",
-			DisplayName = "SSL Port",
-			Description = "Port for SSL/TLS encrypted connections",
-			Category = "NetOptions",
-			Group = "connection",
-			Order = 2,
-			Type = "integer",
-			Component = "numeric",
-			DefaultValue = 4202u,
-			Min = 1,
-			Max = 65535,
-			Required = true,
-			Path = "NetOptions.SslPort"
-		});
+		if (underlyingType == typeof(bool)) return "boolean";
+		if (underlyingType == typeof(int) || underlyingType == typeof(uint) || 
+		    underlyingType == typeof(long) || underlyingType == typeof(ulong) ||
+		    underlyingType == typeof(short) || underlyingType == typeof(ushort)) return "integer";
+		if (underlyingType == typeof(float) || underlyingType == typeof(double) || 
+		    underlyingType == typeof(decimal)) return "number";
+		if (underlyingType == typeof(string)) return "string";
+		if (underlyingType.IsEnum) return "enum";
 		
-		properties.Add("NetOptions.UseSSL", new PropertyMetadata
-		{
-			Name = "UseSSL",
-			DisplayName = "Enable SSL/TLS",
-			Description = "Require encrypted connections for enhanced security",
-			Category = "NetOptions",
-			Group = "connection",
-			Order = 3,
-			Type = "boolean",
-			Component = "switch",
-			DefaultValue = true,
-			Path = "NetOptions.UseSSL"
-		});
+		return "string";
+	}
+	
+	private static string InferComponentType(Type type)
+	{
+		var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 		
-		// Connection Limits Group
-		properties.Add("NetOptions.MaxConnections", new PropertyMetadata
-		{
-			Name = "MaxConnections",
-			DisplayName = "Maximum Connections",
-			Description = "Maximum number of simultaneous player connections allowed",
-			Category = "NetOptions",
-			Group = "limits",
-			Order = 1,
-			Type = "integer",
-			Component = "numeric",
-			DefaultValue = 100u,
-			Min = 1,
-			Required = true,
-			Path = "NetOptions.MaxConnections"
-		});
+		if (underlyingType == typeof(bool)) return "switch";
+		if (underlyingType == typeof(int) || underlyingType == typeof(uint) || 
+		    underlyingType == typeof(long) || underlyingType == typeof(ulong) ||
+		    underlyingType == typeof(short) || underlyingType == typeof(ushort) ||
+		    underlyingType == typeof(float) || underlyingType == typeof(double) || 
+		    underlyingType == typeof(decimal)) return "numeric";
+		if (underlyingType.IsEnum) return "select";
 		
-		properties.Add("NetOptions.ConnectionsPerIP", new PropertyMetadata
+		return "text";
+	}
+	
+	private static bool IsNullable(Type type)
+	{
+		return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
+	}
+	
+	private static string FormatCategoryDisplayName(string categoryName)
+	{
+		// Remove "Options" suffix if present
+		if (categoryName.EndsWith("Options"))
 		{
-			Name = "ConnectionsPerIP",
-			DisplayName = "Connections Per IP",
-			Description = "Maximum connections allowed from a single IP address",
-			Category = "NetOptions",
-			Group = "limits",
-			Order = 2,
-			Type = "integer",
-			Component = "numeric",
-			DefaultValue = 5u,
-			Min = 1,
-			Required = true,
-			Path = "NetOptions.ConnectionsPerIP"
-		});
+			categoryName = categoryName.Substring(0, categoryName.Length - 7);
+		}
 		
-		properties.Add("NetOptions.IdleTimeout", new PropertyMetadata
+		// Add spaces before capital letters
+		return System.Text.RegularExpressions.Regex.Replace(categoryName, "([A-Z])", " $1").Trim();
+	}
+	
+	private static string? GetCategoryDescription(string categoryName)
+	{
+		return categoryName switch
 		{
-			Name = "IdleTimeout",
-			DisplayName = "Idle Timeout (seconds)",
-			Description = "Disconnect players who are idle for this many seconds",
-			Category = "NetOptions",
-			Group = "limits",
-			Order = 3,
-			Type = "integer",
-			Component = "numeric",
-			DefaultValue = 3600u,
-			Min = 60,
-			Tooltip = "Minimum 60 seconds recommended",
-			Path = "NetOptions.IdleTimeout"
-		});
+			"Net" => "Server connection and network settings",
+			"Limit" => "Resource and capacity limits",
+			"Chat" => "Chat and communication settings",
+			"Database" => "Database configuration",
+			"Command" => "Command processing settings",
+			"Log" => "Logging and audit settings",
+			"Message" => "System messages and prompts",
+			_ => null
+		};
+	}
+	
+	private static string? GetCategoryIcon(string categoryName)
+	{
+		return categoryName switch
+		{
+			"Net" => "mdi-network",
+			"Limit" => "mdi-speedometer",
+			"Chat" => "mdi-chat",
+			"Database" => "mdi-database",
+			"Command" => "mdi-console",
+			"Log" => "mdi-file-document",
+			"Message" => "mdi-message-text",
+			_ => "mdi-cog"
+		};
+	}
+	
+	private static int GetCategoryOrder(string categoryName)
+	{
+		return categoryName switch
+		{
+			"Net" => 1,
+			"Database" => 2,
+			"Limit" => 3,
+			"Chat" => 4,
+			"Command" => 5,
+			"Log" => 6,
+			"Message" => 7,
+			_ => 99
+		};
+	}
+	
+	private class GroupMetadataComparer : IEqualityComparer<GroupMetadata>
+	{
+		public bool Equals(GroupMetadata? x, GroupMetadata? y)
+		{
+			if (x == null || y == null) return false;
+			return x.Name == y.Name;
+		}
 		
-		// Network Protocol Group
-		properties.Add("NetOptions.EnablePueblo", new PropertyMetadata
+		public int GetHashCode(GroupMetadata obj)
 		{
-			Name = "EnablePueblo",
-			DisplayName = "Enable Pueblo/HTML Support",
-			Description = "Allow clients to render HTML formatting",
-			Category = "NetOptions",
-			Group = "protocol",
-			Order = 1,
-			Type = "boolean",
-			Component = "switch",
-			DefaultValue = false,
-			Path = "NetOptions.EnablePueblo"
-		});
-		
-		properties.Add("NetOptions.EnableIPv6", new PropertyMetadata
-		{
-			Name = "EnableIPv6",
-			DisplayName = "Enable IPv6",
-			Description = "Accept connections over IPv6 in addition to IPv4",
-			Category = "NetOptions",
-			Group = "protocol",
-			Order = 2,
-			Type = "boolean",
-			Component = "switch",
-			DefaultValue = true,
-			Path = "NetOptions.EnableIPv6"
-		});
-		
-		properties.Add("NetOptions.EnableTelnet", new PropertyMetadata
-		{
-			Name = "EnableTelnet",
-			DisplayName = "Enable Telnet Negotiation",
-			Description = "Support telnet protocol features",
-			Category = "NetOptions",
-			Group = "protocol",
-			Order = 3,
-			Type = "boolean",
-			Component = "switch",
-			DefaultValue = true,
-			Path = "NetOptions.EnableTelnet"
-		});
+			return obj.Name.GetHashCode();
+		}
 	}
 }
