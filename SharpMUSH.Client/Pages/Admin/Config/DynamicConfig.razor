@@ -20,7 +20,21 @@
 
     @* Content *@
     <div class="config-section-content">
-        @if (_loading)
+        @if (CustomPageCategories.Contains(Category))
+        {
+            <MudCard>
+                <MudCardContent>
+                    <MudAlert Severity="Severity.Error">
+                        <strong>Routing Error:</strong> The category "@Category" has a custom page that should be rendering instead of DynamicConfig.
+                        <br/>
+                        Expected route: <code>/admin/config/@Category</code>
+                        <br/>
+                        This message means the custom page is NOT being matched by the router.
+                    </MudAlert>
+                </MudCardContent>
+            </MudCard>
+        }
+        else if (_loading)
         {
             <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
         }
@@ -182,6 +196,9 @@
     [Parameter]
     public string Category { get; set; } = string.Empty;
 
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
     private bool _loading = true;
     private bool _hasChanges = false;
     private ConfigurationSchema? _schema;
@@ -190,10 +207,36 @@
     private Dictionary<string, object?> _currentValues = new();
     private Dictionary<string, object?> _originalValues = new();
 
+    // Categories that have custom pages - redirect to them
+    private static readonly HashSet<string> CustomPageCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bannednames",
+        "restrictions",
+        "sitelock",
+        "sitelockrules"
+    };
+
     private string CategoryTitle => _categoryMetadata?.DisplayName ?? FormatCategoryName(Category);
+
+    protected override void OnInitialized()
+    {
+        // Check if this category has a custom page - if so, let that page handle it
+        if (CustomPageCategories.Contains(Category))
+        {
+            // The custom page should be handling this - something went wrong
+            // Just continue and let it 404 or show error
+            return;
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
+        // Skip loading for custom page categories
+        if (CustomPageCategories.Contains(Category))
+        {
+            return;
+        }
+        
         await LoadConfigurationAsync();
     }
 

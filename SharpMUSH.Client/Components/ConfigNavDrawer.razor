@@ -47,13 +47,13 @@
 
             @* Security Group *@
             <MudNavGroup Title="Security" Icon="@Icons.Material.Filled.Security" IconColor="Color.Secondary" Expanded="@IsGroupExpanded("Security")">
-                <MudNavLink Href="/admin/config/sitelockrules" Icon="@Icons.Material.Filled.Lock" Match="NavLinkMatch.All">
+                <MudNavLink Href="/admin/config/sitelock" Icon="@Icons.Material.Filled.Lock" Match="NavLinkMatch.All">
                     Sitelock <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Important" Class="ml-2" />
                 </MudNavLink>
                 <MudNavLink Href="/admin/config/bannednames" Icon="@Icons.Material.Filled.Block" Match="NavLinkMatch.All">
                     Banned Names
                 </MudNavLink>
-                <MudNavLink Href="/admin/config/restriction" Icon="@Icons.Material.Filled.GppBad" Match="NavLinkMatch.All">
+                <MudNavLink Href="/admin/config/restrictions" Icon="@Icons.Material.Filled.GppBad" Match="NavLinkMatch.All">
                     Restrictions
                 </MudNavLink>
             </MudNavGroup>
@@ -155,13 +155,13 @@
         return groupName switch
         {
             "Server" => currentPath.Contains("network") || currentPath.Contains("database"),
-            "Performance" => currentPath.Contains("limits") || currentPath.Contains("commands"),
-            "Security" => currentPath.Contains("sitelock") || currentPath.Contains("banned") || currentPath.Contains("restrictions"),
-            "Content" => currentPath.Contains("messages") || currentPath.Contains("cosmetic") || currentPath.Contains("chat"),
-            "Logs" => currentPath.Contains("logging") || currentPath.Contains("files") || currentPath.Contains("textfiles") || currentPath.Contains("dumps"),
-            "Advanced" => currentPath.Contains("attributes") || currentPath.Contains("flags") || currentPath.Contains("costs") || 
-                         currentPath.Contains("compatibility") || currentPath.Contains("aliases") || currentPath.Contains("debug") || 
-                         currentPath.Contains("functions") || currentPath.Contains("warnings"),
+            "Performance" => currentPath.Contains("limit") || currentPath.Contains("command"),
+            "Security" => currentPath.Contains("sitelock") || currentPath.Contains("bannednames") || currentPath.Contains("restrictions"),
+            "Content" => currentPath.Contains("message") || currentPath.Contains("cosmetic") || currentPath.Contains("chat"),
+            "Logs" => currentPath.Contains("log") || currentPath.Contains("file") || currentPath.Contains("textfile") || currentPath.Contains("dump"),
+            "Advanced" => currentPath.Contains("attribute") || currentPath.Contains("flag") || currentPath.Contains("cost") || 
+                         currentPath.Contains("compatibility") || currentPath.Contains("alias") || currentPath.Contains("debug") || 
+                         currentPath.Contains("function") || currentPath.Contains("warning"),
             _ => false
         };
     }

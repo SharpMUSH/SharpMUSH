@@ -6,6 +6,8 @@
 		<OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<NoWarn>NU1510</NoWarn>
+		<!-- Disable trimming due to FSharp.Core incompatibility -->
+		<PublishTrimmed>false</PublishTrimmed>
 	</PropertyGroup>
 
 	<ItemGroup>

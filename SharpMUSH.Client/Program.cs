@@ -17,6 +17,9 @@ builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
+builder.Services.AddSingleton<RestrictionsService>();
+builder.Services.AddSingleton<BannedNamesService>();
+builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 
