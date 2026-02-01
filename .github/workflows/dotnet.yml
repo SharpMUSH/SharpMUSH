@@ -28,6 +28,8 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
+      env:
+        SHARPMUSH_ENABLE_TEST_TELEMETRY: true
       run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
     - name: Display Telemetry Summary
       if: always()
