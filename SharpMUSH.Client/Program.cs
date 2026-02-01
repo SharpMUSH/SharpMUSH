@@ -24,8 +24,8 @@ builder.Services.AddHttpClient("api", sp =>
 {
 	var uri = new UriBuilder(builder.HostEnvironment.BaseAddress)
 	{
-		Scheme = "http",  // Force HTTP for development API calls
-		Port = 8080
+		Scheme = "https",  // Use HTTPS for secure API calls
+		Port = 8081        // HTTPS port
 	};
 	sp.BaseAddress = uri.Uri;
 });

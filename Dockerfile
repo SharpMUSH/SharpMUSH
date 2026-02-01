@@ -8,7 +8,11 @@ RUN dotnet restore && dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c
 FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
-EXPOSE 8080 4201 4202 4203 9092
-ENV ASPNETCORE_URLS=http://+:8080
+# Copy the dev certificate
+COPY SharpMUSH.Server/sharpmush-dev.pfx /app/sharpmush-dev.pfx
+EXPOSE 8080 8081 4201 4202 4203 9092
+ENV ASPNETCORE_URLS=http://+:8080;https://+:8081
+ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/app/sharpmush-dev.pfx
+ENV ASPNETCORE_Kestrel__Certificates__Default__Password=DevPassword123!
 ENTRYPOINT ["dotnet", "SharpMUSH.Server.dll"]
 
