@@ -16,6 +16,7 @@ builder.Services.AddLogging();
 builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
+builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 
@@ -23,6 +24,7 @@ builder.Services.AddHttpClient("api", sp =>
 {
 	var uri = new UriBuilder(builder.HostEnvironment.BaseAddress)
 	{
+		Scheme = "http",  // Force HTTP for development API calls
 		Port = 8080
 	};
 	sp.BaseAddress = uri.Uri;

@@ -1,8 +1,10 @@
 @page "/admin/config/{category}"
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Models
 @using System.Reflection
 @using System.Text.Json
 @inject AdminConfigService AdminConfigService
+@inject ConfigSchemaService SchemaService
 @inject ISnackbar Snackbar
 
 <PageTitle>@CategoryTitle - Configuration</PageTitle>
@@ -160,19 +162,26 @@
         _isLoading = true;
         try
         {
-            var result = await AdminConfigService.GetOptionsAsync();
-            
-            if (result.IsT1)
+            // Fetch schema from the API
+            var schema = await SchemaService.GetSchemaAsync();
+            if (schema == null)
             {
-                Snackbar.Add("Failed to load configuration", Severity.Error);
+                Snackbar.Add("Failed to load configuration schema", Severity.Error);
                 return;
             }
 
-            // Get the full config response from the service
-            var configResponse = await AdminConfigService.FetchConfigurationFromServer();
+            // Fetch current config values
+            var result = await AdminConfigService.GetOptionsAsync();
+            if (result.IsT1)
+            {
+                Snackbar.Add("Failed to load configuration values", Severity.Error);
+                return;
+            }
+
+            var config = result.AsT0;
             
             // Extract settings for this category
-            _categorySettings = ExtractCategorySettings(configResponse.Configuration, configResponse.Metadata);
+            _categorySettings = ExtractCategorySettings(config, schema);
             _originalValues = _categorySettings.ToDictionary(s => s.PropertyPath, s => s.Value);
         }
         catch (Exception ex)
@@ -185,33 +194,60 @@
         }
     }
 
-    private List<ConfigSetting> ExtractCategorySettings(object configObject, Dictionary<string, SharpMUSH.Configuration.SharpConfigAttribute> metadata)
+    private List<ConfigSetting> ExtractCategorySettings(object configObject, ConfigSchema schema)
     {
         var settings = new List<ConfigSetting>();
         
-        // Get all properties with metadata
-        foreach (var kvp in metadata.Where(m => m.Value.Category.Equals(Category, StringComparison.OrdinalIgnoreCase)))
+        // Map route parameter to actual category name (add "Options" suffix for most categories)
+        var categoryFilter = Category.ToLower() switch
         {
-            var propertyPath = kvp.Key;
-            var metadataAttr = kvp.Value;
-            
-            // Navigate to the property value
+            "sitelockrules" => "SitelockRulesOptions",
+            "bannednames" => "BannedNamesOptions",
+            _ => $"{char.ToUpper(Category[0])}{Category.Substring(1)}Options"
+        };
+        
+        // Find matching category in schema
+        var categorySchema = schema.Categories.FirstOrDefault(c => 
+            c.Name.Equals(categoryFilter, StringComparison.OrdinalIgnoreCase));
+        
+        if (categorySchema == null)
+        {
+            return settings;
+        }
+        
+        // Create settings from schema properties
+        foreach (var prop in categorySchema.Properties)
+        {
+            var propertyPath = $"{categorySchema.Name}.{prop.Name}";
             var value = GetPropertyValue(configObject, propertyPath);
-            var propertyType = GetPropertyType(configObject, propertyPath);
             
-            if (propertyType != null)
+            settings.Add(new ConfigSetting
             {
-                settings.Add(new ConfigSetting
+                PropertyPath = propertyPath,
+                Metadata = new SharpMUSH.Configuration.SharpConfigAttribute
                 {
-                    PropertyPath = propertyPath,
-                    Metadata = metadataAttr,
-                    PropertyType = propertyType,
-                    Value = value
-                });
-            }
+                    Name = prop.DisplayName,
+                    Description = prop.Description ?? "",
+                    Category = categorySchema.Name
+                },
+                PropertyType = ParsePropertyType(prop.Type),
+                Value = value
+            });
         }
         
         return settings;
+    }
+    
+    private Type ParsePropertyType(string typeName)
+    {
+        return typeName.ToLower() switch
+        {
+            "boolean" => typeof(bool),
+            "integer" => typeof(int),
+            "number" => typeof(double),
+            "string" => typeof(string),
+            _ => typeof(string)
+        };
     }
 
     private object? GetPropertyValue(object obj, string propertyPath)
@@ -230,24 +266,6 @@
         }
         
         return current;
-    }
-
-    private Type? GetPropertyType(object obj, string propertyPath)
-    {
-        var parts = propertyPath.Split('.');
-        Type? currentType = obj.GetType();
-        
-        foreach (var part in parts)
-        {
-            if (currentType == null) return null;
-            
-            var prop = currentType.GetProperty(part);
-            if (prop == null) return null;
-            
-            currentType = prop.PropertyType;
-        }
-        
-        return currentType;
     }
 
     private void UpdateValue(ConfigSetting setting, object? newValue)

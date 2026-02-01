@@ -8,7 +8,7 @@ RUN dotnet restore && dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c
 FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
-EXPOSE 4201 4202 4203
-ENV ASPNETCORE_URLS=http://+:4201
+EXPOSE 8080 4201 4202 4203 9092
+ENV ASPNETCORE_URLS=http://+:8080
 ENTRYPOINT ["dotnet", "SharpMUSH.Server.dll"]
 
