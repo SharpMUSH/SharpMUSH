@@ -262,8 +262,11 @@
 
     private RenderFragment RenderPropertyContent(PropertyMetadata prop) => __builder =>
     {
-        var displayName = string.IsNullOrEmpty(prop.DisplayName) || prop.DisplayName == prop.Name
-            ? FormatPropertyName(prop.Name)
+        // If DisplayName looks like snake_case or hasn't been customized, format it
+        var displayName = string.IsNullOrEmpty(prop.DisplayName) || 
+                         prop.DisplayName.Contains('_') ||
+                         prop.DisplayName == prop.Name
+            ? FormatPropertyName(prop.DisplayName ?? prop.Name)
             : prop.DisplayName;
             
         if (prop.Component == "switch")
