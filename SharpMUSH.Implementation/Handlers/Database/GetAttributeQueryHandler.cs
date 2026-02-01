@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
@@ -10,10 +11,8 @@ public class GetAttributeQueryHandler(ISharpDatabase database)
 	: IStreamQueryHandler<GetAttributeQuery, SharpAttribute>
 {
 	public IAsyncEnumerable<SharpAttribute> Handle(GetAttributeQuery request,
-		CancellationToken cancellationToken) =>
-		database.GetAttributeAsync(request.DBRef, request.Attribute.Select(x => x.ToUpper()).ToArray(), cancellationToken)
-			.AsTask().GetAwaiter().GetResult()
-		?? AsyncEnumerable.Empty<SharpAttribute>();
+		CancellationToken cancellationToken)
+		=> database.GetAttributeAsync(request.DBRef, request.Attribute.Select(x => x.ToUpper()).ToArray(), cancellationToken);
 }
 
 public class GetLazyAttributeQueryHandler(ISharpDatabase database)
@@ -21,8 +20,7 @@ public class GetLazyAttributeQueryHandler(ISharpDatabase database)
 {
 	public IAsyncEnumerable<LazySharpAttribute> Handle(GetLazyAttributeQuery request,
 		CancellationToken cancellationToken)
-		=> database.GetLazyAttributeAsync(request.DBRef, request.Attribute.Select(x => x.ToUpper()).ToArray(), cancellationToken)
-		   ?? AsyncEnumerable.Empty<LazySharpAttribute>();
+		=> database.GetLazyAttributeAsync(request.DBRef, request.Attribute.Select(x => x.ToUpper()).ToArray(), cancellationToken);
 }
 
 public class GetAttributesQueryHandler(ISharpDatabase database)
@@ -33,22 +31,14 @@ public class GetAttributesQueryHandler(ISharpDatabase database)
 		=> request.Mode switch
 		{
 			IAttributeService.AttributePatternMode.Exact =>
-				database.GetAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
-					.AsTask().GetAwaiter().GetResult()
-				?? AsyncEnumerable.Empty<SharpAttribute>(),
+				database.GetAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken),
 			IAttributeService.AttributePatternMode.Wildcard =>
-				database.GetAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
-					.AsTask().GetAwaiter().GetResult()
-				?? AsyncEnumerable.Empty<SharpAttribute>(),
+				database.GetAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken),
 			IAttributeService.AttributePatternMode.Regex =>
 				database.GetAttributesByRegexAsync(
 						request.DBRef,
-						request.Pattern.ToUpper(), cancellationToken)
-					.AsTask().GetAwaiter().GetResult()
-				?? AsyncEnumerable.Empty<SharpAttribute>(),
+						request.Pattern.ToUpper(), cancellationToken),
 			_ => database.GetAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
-				     .AsTask().GetAwaiter().GetResult()
-			     ?? AsyncEnumerable.Empty<SharpAttribute>()
 		};
 }
 
@@ -60,22 +50,14 @@ public class GetLazyAttributesQueryHandler(ISharpDatabase database)
 		=> request.Mode switch
 		{
 			IAttributeService.AttributePatternMode.Exact =>
-				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
-					.AsTask().GetAwaiter().GetResult()
-				?? AsyncEnumerable.Empty<LazySharpAttribute>(),
+				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken),
 			IAttributeService.AttributePatternMode.Wildcard =>
-				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
-					.AsTask().GetAwaiter().GetResult()
-				?? AsyncEnumerable.Empty<LazySharpAttribute>(),
+				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken),
 			IAttributeService.AttributePatternMode.Regex =>
 				database.GetLazyAttributesByRegexAsync(
 						request.DBRef,
-						request.Pattern.ToUpper(), cancellationToken)
-					.AsTask().GetAwaiter().GetResult()
-				?? AsyncEnumerable.Empty<LazySharpAttribute>(),
+						request.Pattern.ToUpper(), cancellationToken),
 			_ =>
 				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
-					.AsTask().GetAwaiter().GetResult()
-				?? AsyncEnumerable.Empty<LazySharpAttribute>()
 		};
 }
