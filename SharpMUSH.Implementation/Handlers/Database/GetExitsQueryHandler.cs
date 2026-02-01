@@ -9,10 +9,7 @@ public class GetExitsQueryHandler(ISharpDatabase database)
 	: IStreamQueryHandler<GetExitsQuery, SharpExit>
 {
 	public IAsyncEnumerable<SharpExit> Handle(GetExitsQuery request, CancellationToken cancellationToken)
-		=> request.DBRef.Match<IAsyncEnumerable<SharpExit>?>(
-			   dbref => database.GetExitsAsync(dbref, cancellationToken)
-				   .AsTask().GetAwaiter().GetResult(),
-			   obj => database.GetExitsAsync(obj, cancellationToken)
-				   .AsTask().GetAwaiter().GetResult())
-		   ?? AsyncEnumerable.Empty<SharpExit>();
+		=> request.DBRef.Match<IAsyncEnumerable<SharpExit>>(
+			dbref => database.GetExitsAsync(dbref, cancellationToken),
+			obj => database.GetExitsAsync(obj, cancellationToken));
 }

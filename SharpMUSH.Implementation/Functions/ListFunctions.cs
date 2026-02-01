@@ -1198,7 +1198,7 @@ public partial class Functions
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
 		var listItems = MModule.split2(delimiter, list);
 
-		var sorted = await SortService!.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
+		var sorted = SortService!.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
 			SortService!.StringToSortType(sortType));
 
 		return MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync());
@@ -1767,7 +1767,7 @@ public partial class Functions
 		var aList2 = MModule.split2(delimiter, list2);
 
 		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = await SortService.Sort(Enumerable.DistinctBy(aList1
+		var sorted = SortService.Sort(Enumerable.DistinctBy(aList1
 			.Concat(aList2), MModule.plainText), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -1791,7 +1791,7 @@ public partial class Functions
 		var difference = aList1.Where(x => !set2.Contains(MModule.plainText(x)));
 
 		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = await SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -1815,7 +1815,7 @@ public partial class Functions
 		var intersection = aList1.Where(x => set2.Contains(MModule.plainText(x)));
 
 		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = await SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
@@ -1841,7 +1841,7 @@ public partial class Functions
 			.Concat(aList2.Where(x => !set1.Contains(MModule.plainText(x))));
 
 		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
-		var sorted = await SortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));

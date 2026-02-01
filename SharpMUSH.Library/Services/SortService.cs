@@ -86,21 +86,20 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				null)
 		};
 
-	public ValueTask<IAsyncEnumerable<MString>> Sort(IEnumerable<MString> items,
+	public IAsyncEnumerable<MString> Sort(IEnumerable<MString> items,
 		Func<MString, CancellationToken, ValueTask<string>> keySelector,
 		IMUSHCodeParser parser, ISortService.SortInformation sortData)
 		=> Sort(items.ToAsyncEnumerable(), keySelector, parser, sortData);
 
-	public async ValueTask<IAsyncEnumerable<MString>> Sort(IAsyncEnumerable<MString> source,
+	public async IAsyncEnumerable<MString> Sort(IAsyncEnumerable<MString> source,
 		Func<MString, CancellationToken, ValueTask<string>> keySelector,
 		IMUSHCodeParser parser, ISortService.SortInformation sortData)
 	{
-		await ValueTask.CompletedTask;
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
 		var (sortType, direction, _) = sortData;
 
-		return sortType switch
+		await foreach (var item in sortType switch
 		{
 			ISortService.SortType.CasedLexicographically
 				=> source
@@ -247,6 +246,9 @@ public class SortService(ILocateService locateService, IConnectionService connec
 					direction),
 			_ => source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.CurrentCulture,
 				direction)
-		};
+		})
+		{
+			yield return item;
+		}
 	}
 }
