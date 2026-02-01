@@ -5,17 +5,18 @@ namespace SharpMUSH.Tests.Server.Helpers;
 public class LogSanitizerTests
 {
 	[Test]
-	public void Sanitize_NullInput_ReturnsNullPlaceholder()
+	public async Task Sanitize_NullInput_ReturnsNullPlaceholder()
 	{
 		// Act
-		var result = LogSanitizer.Sanitize(null);
+		string? input = null;
+		var result = LogSanitizer.Sanitize(input);
 
 		// Assert
 		await Assert.That(result).IsEqualTo("[null]");
 	}
 
 	[Test]
-	public void Sanitize_EmptyString_ReturnsEmptyPlaceholder()
+	public async Task Sanitize_EmptyString_ReturnsEmptyPlaceholder()
 	{
 		// Act
 		var result = LogSanitizer.Sanitize(string.Empty);
@@ -25,7 +26,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_WhitespaceOnly_ReturnsEmptyPlaceholder()
+	public async Task Sanitize_WhitespaceOnly_ReturnsEmptyPlaceholder()
 	{
 		// Act
 		var result = LogSanitizer.Sanitize("   \t  ");
@@ -35,7 +36,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_NormalText_ReturnsUnchanged()
+	public async Task Sanitize_NormalText_ReturnsUnchanged()
 	{
 		// Arrange
 		var input = "Hello World";
@@ -48,7 +49,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_NewlineInInput_EscapesNewline()
+	public async Task Sanitize_NewlineInInput_EscapesNewline()
 	{
 		// Arrange
 		var input = "Line1\nLine2";
@@ -61,7 +62,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_CarriageReturnInInput_EscapesCarriageReturn()
+	public async Task Sanitize_CarriageReturnInInput_EscapesCarriageReturn()
 	{
 		// Arrange
 		var input = "Line1\rLine2";
@@ -74,7 +75,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_WindowsNewlineInInput_EscapesBoth()
+	public async Task Sanitize_WindowsNewlineInInput_EscapesBoth()
 	{
 		// Arrange
 		var input = "Line1\r\nLine2";
@@ -87,7 +88,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_TabInInput_ReplacedWithSpace()
+	public async Task Sanitize_TabInInput_ReplacedWithSpace()
 	{
 		// Arrange
 		var input = "Column1\tColumn2";
@@ -100,7 +101,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_ControlCharactersInInput_Removed()
+	public async Task Sanitize_ControlCharactersInInput_Removed()
 	{
 		// Arrange
 		var input = "Text\x00with\x01control\x02chars";
@@ -113,7 +114,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_LongInput_TruncatesWithEllipsis()
+	public async Task Sanitize_LongInput_TruncatesWithEllipsis()
 	{
 		// Arrange
 		var input = new string('A', 250);
@@ -128,7 +129,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_ExactlyMaxLength_NoTruncation()
+	public async Task Sanitize_ExactlyMaxLength_NoTruncation()
 	{
 		// Arrange
 		var input = new string('A', 200);
@@ -142,7 +143,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_LogInjectionAttempt_PreventsInjection()
+	public async Task Sanitize_LogInjectionAttempt_PreventsInjection()
 	{
 		// Arrange - attacker tries to inject fake log entries
 		var input = "normal\n2024-01-30 12:00:00 [ERROR] Fake admin login from attacker";
@@ -156,7 +157,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_UnicodeCharacters_Preserved()
+	public async Task Sanitize_UnicodeCharacters_Preserved()
 	{
 		// Arrange
 		var input = "Hello 世界 🌍";
@@ -169,7 +170,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_SpecialCharacters_Preserved()
+	public async Task Sanitize_SpecialCharacters_Preserved()
 	{
 		// Arrange
 		var input = "Price: $100.50 (50% off!)";
@@ -182,25 +183,25 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_MultipleInputs_SanitizesAll()
+	public async Task Sanitize_MultipleInputs_SanitizesAll()
 	{
 		// Arrange
 		var input1 = "Value1\nInjection";
 		var input2 = "Value2\tSpaced";
-		var input3 = null;
+		string? input3 = null;
 
 		// Act
 		var results = LogSanitizer.Sanitize(input1, input2, input3);
 
 		// Assert
-		await Assert.That(results).HasCount().EqualTo(3);
+		await Assert.That(results).Count().IsEqualTo(3);
 		await Assert.That(results[0]).IsEqualTo("Value1\\nInjection");
 		await Assert.That(results[1]).IsEqualTo("Value2 Spaced");
 		await Assert.That(results[2]).IsEqualTo("[null]");
 	}
 
 	[Test]
-	public void Sanitize_EmptyArray_ReturnsEmptyArray()
+	public async Task Sanitize_EmptyArray_ReturnsEmptyArray()
 	{
 		// Act
 		var results = LogSanitizer.Sanitize();
@@ -210,7 +211,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_MixedControlAndPrintable_FiltersCorrectly()
+	public async Task Sanitize_MixedControlAndPrintable_FiltersCorrectly()
 	{
 		// Arrange
 		var input = "Start\x1B[31mRed Text\x1B[0mEnd"; // ANSI escape sequences
@@ -223,7 +224,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_PathTraversal_Sanitized()
+	public async Task Sanitize_PathTraversal_Sanitized()
 	{
 		// Arrange
 		var input = "../../etc/passwd\n/root/.ssh/id_rsa";
@@ -237,7 +238,7 @@ public class LogSanitizerTests
 	}
 
 	[Test]
-	public void Sanitize_SqlInjection_NoSpecialHandling()
+	public async Task Sanitize_SqlInjection_NoSpecialHandling()
 	{
 		// Arrange - LogSanitizer doesn't handle SQL, but should preserve safe chars
 		var input = "'; DROP TABLE users; --";
