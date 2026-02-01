@@ -288,8 +288,8 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		// Check if telemetry output is enabled via environment variable
 		// By default, telemetry is disabled to reduce test output noise
 		var enableTelemetry = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_TELEMETRY");
-		var isEnabled = enableTelemetry?.Equals("true", StringComparison.OrdinalIgnoreCase) == true 
-		                || enableTelemetry == "1";
+		var isEnabled = !string.IsNullOrEmpty(enableTelemetry) && 
+		                (enableTelemetry.Equals("true", StringComparison.OrdinalIgnoreCase) || enableTelemetry == "1");
 		
 		if (!isEnabled)
 		{
