@@ -140,23 +140,23 @@ public interface ISharpDatabase
 	/// <param name="attribute">Attribute Path - uses attribute leaves</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The <see cref="SharpAttribute"/> hierarchy, with the last attribute being the final leaf.</returns>
-	IAsyncEnumerable<SharpAttribute>? GetAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 
 	// TODO: Return type for attribute pattern queries needs reconsideration.
 	// Attribute patterns return multiple attribute paths, so return type should ideally be
 	// IEnumerable<IEnumerable<SharpAttribute>> to represent full paths for each match.
-	IAsyncEnumerable<SharpAttribute>? GetAttributesAsync(DBRef dbref, string attributePattern,
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 	
-	IAsyncEnumerable<SharpAttribute>? GetAttributesByRegexAsync(DBRef dbref, string attributePattern,
+	ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
 	
-	IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributesAsync(DBRef dbref, string attributePattern,
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 	
-	IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
+	ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -595,7 +595,7 @@ public interface ISharpDatabase
 	IAsyncEnumerable<AnySharpContent> GetContentsAsync(AnySharpContainer node,
 		CancellationToken cancellationToken = default);
 
-	IAsyncEnumerable<SharpExit>? GetExitsAsync(DBRef obj, CancellationToken cancellationToken = default);
+	ValueTask<IAsyncEnumerable<SharpExit>?> GetExitsAsync(DBRef obj, CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpExit> GetExitsAsync(AnySharpContainer node, CancellationToken cancellationToken = default);
 

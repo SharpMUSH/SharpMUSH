@@ -1632,8 +1632,8 @@ public partial class ArangoDatabase(
 						MarkupStringModule.deserialize(await GetAttributeValue(x.Key, ct)))));
 	}
 
-	public async IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributesAsync(DBRef dbref,
-		string attributePattern, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesAsync(DBRef dbref,
+		string attributePattern, CancellationToken cancellationToken = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1651,7 +1651,7 @@ public partial class ArangoDatabase(
 
 		if (!result.Any())
 		{
-			yield break;
+			return null;
 		}
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
@@ -1659,22 +1659,27 @@ public partial class ArangoDatabase(
 		const string query =
 			$"FOR v IN 1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern RETURN v";
 
-		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
+		return GetLazyAttributesIterator(arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex },
 				{ "pattern", $"^{pattern}$" }
-			}, cancellationToken: cancellationToken);
-
-		await foreach (var item in result2.WithCancellation(cancellationToken))
+			}, cancellationToken: cancellationToken), cancellationToken);
+	}
+	
+	private async IAsyncEnumerable<LazySharpAttribute> GetLazyAttributesIterator(
+		IAsyncEnumerable<SharpAttributeQueryResult> source, 
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		await foreach (var item in source.WithCancellation(cancellationToken))
 		{
 			yield return await SharpAttributeQueryToLazySharpAttribute(item, cancellationToken);
 		}
 	}
 
 
-	public async IAsyncEnumerable<SharpAttribute>? GetAttributesAsync(DBRef dbref, string attributePattern,
-		[EnumeratorCancellation] CancellationToken ct = default)
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesAsync(DBRef dbref, string attributePattern,
+		CancellationToken ct = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1696,7 +1701,7 @@ public partial class ArangoDatabase(
 
 		if (!result.Any())
 		{
-			yield break;
+			return null;
 		}
 
 		// OPTIONS { indexHint: "inverted_index_name", forceIndexHint: true }
@@ -1706,21 +1711,26 @@ public partial class ArangoDatabase(
 
 		// FILTER v.LongName =~ @pattern 
 		
-		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
+		return GetAttributesIterator(arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, result.First().Id },
 				{ "pattern", $"^{pattern}$" }
-			}, cancellationToken: ct);
-		
-		await foreach (var item in result2.WithCancellation(ct))
+			}, cancellationToken: ct), ct);
+	}
+	
+	private async IAsyncEnumerable<SharpAttribute> GetAttributesIterator(
+		IAsyncEnumerable<SharpAttributeQueryResult> source,
+		[EnumeratorCancellation] CancellationToken ct = default)
+	{
+		await foreach (var item in source.WithCancellation(ct))
 		{
 			yield return await SharpAttributeQueryToSharpAttribute(item, ct);
 		}
 	}
 
-	public async IAsyncEnumerable<SharpAttribute>? GetAttributesByRegexAsync(DBRef dbref,
-		string attributePattern, [EnumeratorCancellation] CancellationToken ct = default)
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributesByRegexAsync(DBRef dbref,
+		string attributePattern, CancellationToken ct = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1736,7 +1746,7 @@ public partial class ArangoDatabase(
 
 		if (!result.Any())
 		{
-			yield break;
+			return null;
 		}
 
 		// Pattern matching supports hierarchical attribute trees with proper backtick handling:
@@ -1752,22 +1762,17 @@ public partial class ArangoDatabase(
 		const string query =
 			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern SORT v.LongName ASC RETURN v";
 
-		var result2 = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
+		return GetAttributesIterator(arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, result.First().Id },
 				{ "pattern", pattern }
-			}, cancellationToken: ct);
-
-		await foreach (var item in result2.WithCancellation(ct))
-		{
-			yield return await SharpAttributeQueryToSharpAttribute(item, ct);
-		}
+			}, cancellationToken: ct), ct);
 	}
 
 
-	public async IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributesByRegexAsync(DBRef dbref,
-		string attributePattern, [EnumeratorCancellation] CancellationToken ct = default)
+	public async ValueTask<IAsyncEnumerable<LazySharpAttribute>?> GetLazyAttributesByRegexAsync(DBRef dbref,
+		string attributePattern, CancellationToken ct = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
@@ -1776,7 +1781,7 @@ public partial class ArangoDatabase(
 
 		if (!result.Any())
 		{
-			yield break;
+			return null;
 		}
 
 		// Pattern matching supports hierarchical attribute trees with proper backtick handling:
@@ -1800,10 +1805,7 @@ public partial class ArangoDatabase(
 				{ "pattern", pattern }
 			}, cancellationToken: ct);
 
-		await foreach (var item in result2.WithCancellation(ct))
-		{
-			yield return await SharpAttributeQueryToLazySharpAttribute(item, ct);
-		}
+		return GetLazyAttributesIterator(result2, ct);
 	}
 
 	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttribute(SharpAttributeQueryResult x,
@@ -1904,8 +1906,8 @@ public partial class ArangoDatabase(
 		}, mergeObjects: true, cancellationToken: ct);
 	}
 
-	public async IAsyncEnumerable<SharpAttribute>? GetAttributeAsync(DBRef dbref, string[] attribute,
-		[EnumeratorCancellation] CancellationToken ct = default)
+	public async ValueTask<IAsyncEnumerable<SharpAttribute>?> GetAttributeAsync(DBRef dbref, string[] attribute,
+		CancellationToken ct = default)
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 
@@ -1924,7 +1926,7 @@ public partial class ArangoDatabase(
 
 		if (result == null)
 		{
-			yield break;
+			return null;
 		}
 
 		var count = 0;
@@ -1936,13 +1938,10 @@ public partial class ArangoDatabase(
 
 		if (count != attribute.Length)
 		{
-			yield break;
+			return null;
 		}
 
-		foreach (var item in resulted)
-		{
-			yield return item;
-		}
+		return resulted.ToAsyncEnumerable();
 	}
 
 	public IAsyncEnumerable<LazySharpAttribute>? GetLazyAttributeAsync(DBRef dbref,
@@ -2081,7 +2080,7 @@ public partial class ArangoDatabase(
 	public async ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag,
 		CancellationToken ct = default)
 	{
-		var attrInfo = GetAttributeAsync(dbref.DBRef, attribute, ct);
+		var attrInfo = await GetAttributeAsync(dbref.DBRef, attribute, ct);
 		if (attrInfo is null) return false;
 		var attr = await attrInfo.LastAsync(cancellationToken: ct);
 
@@ -2106,7 +2105,7 @@ public partial class ArangoDatabase(
 	public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag,
 		CancellationToken ct = default)
 	{
-		var attrInfo = GetAttributeAsync(dbref.DBRef, attribute, ct);
+		var attrInfo = await GetAttributeAsync(dbref.DBRef, attribute, ct);
 		if (attrInfo is null) return false;
 		var attr = await attrInfo.LastAsync(cancellationToken: ct);
 
@@ -2155,7 +2154,7 @@ public partial class ArangoDatabase(
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
 		// Get the attribute
-		var attrs = GetAttributeAsync(dbref, attribute, ct);
+		var attrs = await GetAttributeAsync(dbref, attribute, ct);
 		if (attrs is null) return false;
 
 		var targetAttr = await attrs.LastOrDefaultAsync(ct);
@@ -2189,7 +2188,7 @@ public partial class ArangoDatabase(
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
 		// Get the attribute
-		var attrs = GetAttributeAsync(dbref, attribute, ct);
+		var attrs = await GetAttributeAsync(dbref, attribute, ct);
 		if (attrs is null) return false;
 
 		var targetAttr = await attrs.LastOrDefaultAsync(ct);
@@ -2370,11 +2369,11 @@ public partial class ArangoDatabase(
 		SharpObjectQueryResult Obj
 	);
 	
-	public async IAsyncEnumerable<SharpExit>? GetExitsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken ct = default)
+	public async ValueTask<IAsyncEnumerable<SharpExit>?> GetExitsAsync(DBRef obj, CancellationToken ct = default)
 	{
 		// This is bad code. We can't use graphExits for this.
 		var baseObject = await GetObjectNodeAsync(obj, ct);
-		if (baseObject.IsNone) yield break;
+		if (baseObject.IsNone) return null;
 
 		// Optimized query: Get exit IDs and their object data in a single query by traversing both graphs
 		const string exitQuery = $@"
@@ -2388,12 +2387,12 @@ public partial class ArangoDatabase(
 				{ StartVertex, baseObject.Known().Id()! }
 			}, cancellationToken: ct);
 
-		await foreach (var exitData in query.WithCancellation(ct))
+		return query.Select<SharpExitQuery, SharpExit>(exitData =>
 		{
 			var exit = exitData.Exit;
 			var convertObject = SharpObjectQueryToSharpObject(exitData.Obj);
 			
-			yield return new SharpExit
+			return new SharpExit
 			{
 				Id = exit.Id,
 				Object = convertObject,
@@ -2401,7 +2400,7 @@ public partial class ArangoDatabase(
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(exit.Id), ct)),
 				Home = new(async ct => await GetHomeAsync(exit.Id, ct))
 			};
-		}
+		});
 	}
 
 	public IAsyncEnumerable<SharpExit> GetExitsAsync(AnySharpContainer node,
