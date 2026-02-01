@@ -262,13 +262,17 @@
 
     private RenderFragment RenderPropertyContent(PropertyMetadata prop) => __builder =>
     {
+        var displayName = string.IsNullOrEmpty(prop.DisplayName) || prop.DisplayName == prop.Name
+            ? FormatPropertyName(prop.Name)
+            : prop.DisplayName;
+            
         if (prop.Component == "switch")
         {
             <MudItem xs="12">
                 <MudSwitch T="bool"
                            Value="@GetBoolValue(prop)"
                            ValueChanged="@(v => UpdateValue(prop, v))"
-                           Label="@prop.DisplayName"
+                           Label="@displayName"
                            Color="Color.Secondary" />
                 <MudText Typo="Typo.caption" Class="mud-text-secondary">
                     @prop.Description
@@ -286,7 +290,7 @@
                     <MudNumericField T="int"
                                    Value="@GetIntValue(prop)"
                                    ValueChanged="@(v => UpdateValue(prop, v))"
-                                   Label="@prop.DisplayName"
+                                   Label="@displayName"
                                    Variant="Variant.Outlined"
                                    HelperText="@prop.Description"
                                    Min="@(minVal ?? int.MinValue)"
@@ -297,7 +301,7 @@
                     <MudNumericField T="double"
                                    Value="@GetDoubleValue(prop)"
                                    ValueChanged="@(v => UpdateValue(prop, v))"
-                                   Label="@prop.DisplayName"
+                                   Label="@displayName"
                                    Variant="Variant.Outlined"
                                    HelperText="@prop.Description" />
                 }
@@ -309,7 +313,7 @@
                 <MudTextField T="string"
                             Value="@GetStringValue(prop)"
                             ValueChanged="@(v => UpdateValue(prop, v))"
-                            Label="@prop.DisplayName"
+                            Label="@displayName"
                             Variant="Variant.Outlined"
                             HelperText="@prop.Description" />
             </MudItem>
@@ -446,5 +450,18 @@
     private string FormatCategoryName(string category)
     {
         return System.Text.RegularExpressions.Regex.Replace(category, "([A-Z])", " $1").Trim();
+    }
+
+    private string FormatPropertyName(string name)
+    {
+        // Handle snake_case: mud_name -> Mud Name
+        if (name.Contains('_'))
+        {
+            return string.Join(" ", name.Split('_')
+                .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
+        }
+        
+        // Handle PascalCase/camelCase: MudName -> Mud Name
+        return System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
     }
 }
