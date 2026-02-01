@@ -96,7 +96,7 @@ public static class SchemaBuilder
 				properties[path] = new PropertyMetadata
 				{
 					Name = prop.Name,
-					DisplayName = attr.Name,
+					DisplayName = FormatPropertyDisplayName(attr.Name),
 					Description = attr.Description,
 					Category = categoryName,
 					Group = attr.Group,
@@ -116,6 +116,27 @@ public static class SchemaBuilder
 		}
 		
 		return properties;
+	}
+	
+	private static string FormatPropertyDisplayName(string name)
+	{
+		if (string.IsNullOrEmpty(name)) return name;
+		
+		// Handle snake_case: mud_name -> Mud Name, player_creation -> Player Creation
+		if (name.Contains('_'))
+		{
+			return string.Join(" ", name.Split('_')
+				.Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
+		}
+		
+		// Handle all-lowercase words: logins -> Logins, guests -> Guests
+		if (name.All(char.IsLower))
+		{
+			return char.ToUpper(name[0]) + name.Substring(1);
+		}
+		
+		// Handle PascalCase/camelCase: MudName -> Mud Name, mudName -> Mud Name
+		return System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
 	}
 	
 	private static object? GetDefaultInstance(Type type)
