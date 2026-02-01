@@ -301,8 +301,8 @@ public partial class Functions
 		
 		// Check if we have a default (odd number of remaining args)
 		var hasDefault = orderedArgs.Count % 2 == 1;
-		KeyValuePair<string, CallState>? defaultValue = hasDefault ? orderedArgs.Last() : (KeyValuePair<string, CallState>?)null;
-		var patternListPairs = hasDefault ? orderedArgs.SkipLast(1).ToList() : orderedArgs;
+		KeyValuePair<string, CallState>? defaultValue = hasDefault ? orderedArgs[^1] : null;
+		var pairCount = hasDefault ? orderedArgs.Count - 1 : orderedArgs.Count;
 		
 		var results = new List<MString>();
 		var options = RegexOptions.None;
@@ -317,10 +317,10 @@ public partial class Functions
 		try
 		{
 			// Process pattern/list pairs manually (every 2 elements)
-			for (int i = 0; i < patternListPairs.Count - 1; i += 2)
+			for (int i = 0; i < pairCount - 1; i += 2)
 			{
-				var patternKv = patternListPairs[i];
-				var listKv = patternListPairs[i + 1];
+				var patternKv = orderedArgs[i];
+				var listKv = orderedArgs[i + 1];
 				
 				var pattern = await patternKv.Value.ParsedMessage();
 				var patternStr = pattern!.ToPlainText();
