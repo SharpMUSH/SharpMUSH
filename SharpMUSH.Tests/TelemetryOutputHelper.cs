@@ -5,6 +5,11 @@ namespace SharpMUSH.Tests;
 /// <summary>
 /// Helper class for outputting telemetry summaries.
 /// </summary>
+/// <remarks>
+/// Telemetry output is disabled by default during test disposal to reduce noise.
+/// It can be enabled by setting the environment variable SHARPMUSH_ENABLE_TEST_TELEMETRY=true or 
+/// SHARPMUSH_ENABLE_TEST_TELEMETRY=1.
+/// </remarks>
 public static class TelemetryOutputHelper
 {
 	/// <summary>
