@@ -457,14 +457,22 @@
 
     private string FormatPropertyName(string name)
     {
-        // Handle snake_case: mud_name -> Mud Name
+        if (string.IsNullOrEmpty(name)) return name;
+        
+        // Handle snake_case: mud_name -> Mud Name, player_creation -> Player Creation
         if (name.Contains('_'))
         {
             return string.Join(" ", name.Split('_')
                 .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
         }
         
-        // Handle PascalCase/camelCase: MudName -> Mud Name
+        // Handle all-lowercase words: logins -> Logins, guests -> Guests
+        if (name.All(char.IsLower))
+        {
+            return char.ToUpper(name[0]) + name.Substring(1);
+        }
+        
+        // Handle PascalCase/camelCase: MudName -> Mud Name, mudName -> Mud Name
         return System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
     }
 }
