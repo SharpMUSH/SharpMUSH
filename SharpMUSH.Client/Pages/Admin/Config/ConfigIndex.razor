@@ -1,10 +1,9 @@
 @page "/admin/config"
-@layout SharpMUSH.Client.Layout.ConfigLayout
 @inject NavigationManager Navigation
 
 <PageTitle>Configuration - SharpMUSH</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6 config-section-page">
     <MudStack Spacing="4">
         @* Header *@
         <MudPaper Elevation="0" Class="pa-4">
@@ -158,6 +157,10 @@
 </MudContainer>
 
 <style>
+    .config-section-page {
+        padding: 32px;
+    }
+
     .category-card {
         cursor: pointer;
         transition: all 0.2s ease;
