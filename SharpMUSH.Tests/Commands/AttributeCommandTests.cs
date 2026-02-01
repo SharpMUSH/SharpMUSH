@@ -74,7 +74,7 @@ public class AttributeCommandTests
 		await Database.SetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"], A.single("test_string_CPATTR_direct"), player);
 		
 		// Verify source exists
-		var sourceAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"]);
+		var sourceAttr = Database.GetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"]);
 		var sourceList = await sourceAttr!.ToListAsync();
 		await Assert.That(sourceList).Count().IsEqualTo(1);
 		
@@ -90,7 +90,7 @@ public class AttributeCommandTests
 			);
 
 		// Verify destination attribute was created
-		var destAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["DEST_DIRECT_CPATTR"]);
+		var destAttr = Database.GetAttributeAsync(player.Object.DBRef, ["DEST_DIRECT_CPATTR"]);
 		var destList = destAttr == null ? null : await destAttr.ToListAsync();
 		
 		await Assert.That(destList).IsNotNull();
@@ -341,7 +341,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_TEST=World,Universe"));
 
 		// Verify the attribute was changed
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Hello Universe");
 	}
@@ -358,7 +358,7 @@ public class AttributeCommandTests
 
 		// Verify the attribute was changed
 		// Note: RSArgs parser trims whitespace from arguments, so " End" becomes "End"
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_APPEND_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_APPEND_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("StartEnd");
 	}
@@ -374,7 +374,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_PREPEND_TEST=^,Start "));
 
 		// Verify the attribute was changed
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_PREPEND_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_PREPEND_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Start End");
 	}
@@ -390,7 +390,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/first #1/EDIT_FIRST_TEST=foo,qux"));
 
 		// Verify only first occurrence was replaced
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_FIRST_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_FIRST_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("qux bar foo baz");
 	}
@@ -406,7 +406,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_ALL_TEST=foo,qux"));
 
 		// Verify all occurrences were replaced
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_ALL_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_ALL_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("qux bar qux baz");
 	}
@@ -422,7 +422,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/check #1/EDIT_CHECK_TEST=Original,Changed"));
 
 		// Verify the attribute was NOT changed
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_CHECK_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_CHECK_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Original");
 	}
@@ -438,7 +438,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/regexp #1/EDIT_REGEX_TEST=\\\\d+,XXX"));
 
 		// Verify the regex replacement worked
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_REGEX_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_REGEX_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("fooXXXbar");
 	}
