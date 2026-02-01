@@ -104,7 +104,7 @@ public class LogSanitizerTests
 	public async Task Sanitize_ControlCharactersInInput_Removed()
 	{
 		// Arrange
-		var input = "Text\x00with\x01control\x02chars";
+		var input = $"Text{(char)0}with{(char)1}control{(char)2}chars";
 
 		// Act
 		var result = LogSanitizer.Sanitize(input);
@@ -125,7 +125,7 @@ public class LogSanitizerTests
 		// Assert
 		await Assert.That(result).StartsWith(new string('A', 200));
 		await Assert.That(result).EndsWith("... [truncated]");
-		await Assert.That(result.Length).IsEqualTo(216); // 200 + "... [truncated]"
+		await Assert.That(result.Length).IsEqualTo(215); // 200 + "... [truncated]" (15 chars)
 	}
 
 	[Test]
