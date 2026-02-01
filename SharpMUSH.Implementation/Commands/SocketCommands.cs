@@ -12,6 +12,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Messages;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -180,6 +181,9 @@ public partial class Commands
 			connectionCount.ToString(),
 			parser.CurrentState.Handle!.Value.ToString());
 
+		// Query player flags and send preferences to ConnectionServer for protocol-aware output formatting
+		await SyncPlayerOutputPreferences(parser.CurrentState.Handle!.Value, foundDB.Object);
+
 		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
 		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new CallState(playerDbRef);
@@ -342,6 +346,9 @@ public partial class Commands
 			connectionCount.ToString(),
 			handle.ToString());
 
+		// Query player flags and send preferences to ConnectionServer for protocol-aware output formatting
+		await SyncPlayerOutputPreferences(handle, selectedGuest.Object);
+
 		await NotifyService!.Notify(handle, "Connected!");
 		Logger?.LogDebug("Successful guest login for {@guest}", selectedGuest.Object);
 		return new CallState(playerDbRef);
@@ -362,6 +369,34 @@ public partial class Commands
 		
 		await ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
 		return new None();
+	}
+
+	/// <summary>
+	/// Query player flags and send output preferences to ConnectionServer
+	/// </summary>
+	private static async Task SyncPlayerOutputPreferences(long handle, SharpObject player)
+	{
+		// Query player flags: ANSI, COLOR, XTERM256
+		var ansiEnabled = await player.Flags.Value.AnyAsync(f =>
+			string.Equals(f.Name, "ANSI", StringComparison.OrdinalIgnoreCase));
+		var colorEnabled = await player.Flags.Value.AnyAsync(f =>
+			string.Equals(f.Name, "COLOR", StringComparison.OrdinalIgnoreCase));
+		var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
+			string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase));
+
+		// Send preferences to ConnectionServer via Kafka
+		if (MessageBus != null)
+		{
+			await MessageBus.Publish(new UpdatePlayerPreferencesMessage(
+				handle,
+				ansiEnabled,
+				colorEnabled,
+				xterm256Enabled
+			));
+
+			Logger?.LogDebug("Synced output preferences for handle {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}",
+				handle, ansiEnabled, colorEnabled, xterm256Enabled);
+		}
 	}
 
 	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]

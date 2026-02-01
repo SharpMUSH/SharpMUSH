@@ -9,7 +9,10 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 /// <summary>
 /// Consumes WebSocket output messages from Kafka and sends to connections
 /// </summary>
-public class WebSocketOutputConsumer(IConnectionServerService connectionService, ILogger<WebSocketOutputConsumer> logger)
+public class WebSocketOutputConsumer(
+	IConnectionServerService connectionService,
+	IOutputTransformService transformService,
+	ILogger<WebSocketOutputConsumer> logger)
 : IMessageConsumer<WebSocketOutputMessage>
 {
 public async Task HandleAsync(WebSocketOutputMessage message, CancellationToken cancellationToken = default)
@@ -25,7 +28,14 @@ return;
 try
 {
 var data = Encoding.UTF8.GetBytes(message.Data);
-await connection.OutputFunction(data);
+	
+// Transform output based on capabilities and preferences
+var transformedData = await transformService.TransformAsync(
+	data,
+	connection.Capabilities,
+	connection.Preferences);
+
+await connection.OutputFunction(transformedData);
 }
 catch (Exception ex)
 {
@@ -37,7 +47,10 @@ logger.LogError(ex, "Error sending WebSocket output to connection {Handle}", mes
 /// <summary>
 /// Consumes WebSocket prompt messages from Kafka and sends to connections
 /// </summary>
-public class WebSocketPromptConsumer(IConnectionServerService connectionService, ILogger<WebSocketPromptConsumer> logger)
+public class WebSocketPromptConsumer(
+	IConnectionServerService connectionService,
+	IOutputTransformService transformService,
+	ILogger<WebSocketPromptConsumer> logger)
 : IMessageConsumer<WebSocketPromptMessage>
 {
 public async Task HandleAsync(WebSocketPromptMessage message, CancellationToken cancellationToken = default)
@@ -53,7 +66,14 @@ return;
 try
 {
 var data = Encoding.UTF8.GetBytes(message.Data);
-await connection.PromptOutputFunction(data);
+	
+// Transform output based on capabilities and preferences
+var transformedData = await transformService.TransformAsync(
+	data,
+	connection.Capabilities,
+	connection.Preferences);
+
+await connection.PromptOutputFunction(transformedData);
 }
 catch (Exception ex)
 {

@@ -21,6 +21,7 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	}
 
 	private readonly IConnectionServerService _connectionService;
+	private readonly IOutputTransformService _transformService;
 	private readonly ILogger<TelnetOutputBatchingService> _logger;
 	private readonly ConcurrentDictionary<long, MessageBuffer> _buffers = new();
 	private Timer? _flushTimer;
@@ -40,9 +41,11 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 
 	public TelnetOutputBatchingService(
 		IConnectionServerService connectionService,
+		IOutputTransformService transformService,
 		ILogger<TelnetOutputBatchingService> logger)
 	{
 		_connectionService = connectionService;
+		_transformService = transformService;
 		_logger = logger;
 	}
 
@@ -87,7 +90,29 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 				buffer.FirstMessageTime = DateTime.UtcNow;
 			}
 			
-			buffer.Messages.Add(data);
+			// Transform the data based on connection capabilities and preferences
+			var connection = _connectionService.Get(handle);
+			if (connection != null)
+			{
+				try
+				{
+					var transformedData = _transformService.Transform(
+						data,
+						connection.Capabilities,
+						connection.Preferences);
+					buffer.Messages.Add(transformedData);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Error transforming message for connection {Handle}, using original", handle);
+					buffer.Messages.Add(data);
+				}
+			}
+			else
+			{
+				// Connection not found, add original data (will be logged during flush)
+				buffer.Messages.Add(data);
+			}
 			
 			// Immediate flush if batch is full
 			if (buffer.Messages.Count >= MaxBatchSize)

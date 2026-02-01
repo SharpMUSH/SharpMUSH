@@ -151,18 +151,18 @@ public class TextFileService : ITextFileService
 		}
 	}
 
-	public Task<string?> GetFileContentAsync(string fileReference)
+	public async Task<string?> GetFileContentAsync(string fileReference)
 	{
 		var (category, fileName) = ParseFileReference(fileReference);
 		var filePath = FindFilePath(category, fileName);
 		
 		if (filePath == null || !File.Exists(filePath))
 		{
-			return Task.FromResult<string?>(null);
+			return null;
 		}
 
-		var content = File.ReadAllText(filePath);
-		return Task.FromResult<string?>(content);
+		var content = await File.ReadAllTextAsync(filePath);
+		return content;
 	}
 
 	public async Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern)

@@ -44,3 +44,13 @@ public record MSDPOutputMessage(long Handle, Dictionary<string, string> Variable
 /// Message sent from MainProcess to ConnectionServer to send MSSP configuration to a connection
 /// </summary>
 public record MSSPOutputMessage(long Handle, Dictionary<string, string> Configuration);
+
+/// <summary>
+/// Message sent from MainProcess to ConnectionServer to update player output preferences for a connection
+/// </summary>
+public record UpdatePlayerPreferencesMessage(
+	long Handle,
+	bool AnsiEnabled,
+	bool ColorEnabled,
+	bool Xterm256Enabled
+);

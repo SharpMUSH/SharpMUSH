@@ -8,6 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -51,6 +52,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private static ITextFileService? TextFileService { get; set; }
 	
+	private static IMessageBus? MessageBus { get; set; }
+	
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -83,6 +86,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IPrometheusQueryService prometheusQueryService,
 		IWarningService warningService,
 		ITextFileService textFileService,
+		IMessageBus messageBus,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
@@ -110,6 +114,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		PrometheusQueryService = prometheusQueryService;
 		WarningService = warningService;
 		TextFileService = textFileService;
+		MessageBus = messageBus;
 		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)
