@@ -47,6 +47,12 @@ Run the tests with:
 dotnet test
 ```
 
+> **Note:** Test telemetry output is disabled by default to reduce console noise. To enable telemetry metrics during test runs, set the environment variable:
+> ```bash
+> export SHARPMUSH_ENABLE_TEST_TELEMETRY=true
+> dotnet test
+> ```
+
 The main entrypoint to set as a Startup Project is [`SharpMUSH.Server`](./SharpMUSH.Server).
 
 For full integration, you will also need to run [`SharpMUSH.ConnectionServer`](./SharpMUSH.ConnectionServer), which handles client connections.
