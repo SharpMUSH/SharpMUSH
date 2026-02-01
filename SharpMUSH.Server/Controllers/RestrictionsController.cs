@@ -5,6 +5,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -56,13 +57,13 @@ public class RestrictionsController(
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
 
-			logger.LogInformation("Added/updated command restriction for {CommandName}", commandName);
+			logger.LogInformation("Added/updated command restriction for {CommandName}", LogSanitizer.Sanitize(commandName));
 			return Ok();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error adding command restriction for {CommandName}", commandName);
-			return StatusCode(500, $"Error adding command restriction: {ex.Message}");
+			logger.LogError(ex, "Error adding command restriction for {CommandName}", LogSanitizer.Sanitize(commandName));
+			return StatusCode(500, "Error adding command restriction");
 		}
 	}
 
@@ -90,13 +91,13 @@ public class RestrictionsController(
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
 
-			logger.LogInformation("Deleted command restriction for {CommandName}", commandName);
+			logger.LogInformation("Deleted command restriction for {CommandName}", LogSanitizer.Sanitize(commandName));
 			return Ok();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error deleting command restriction for {CommandName}", commandName);
-			return StatusCode(500, $"Error deleting command restriction: {ex.Message}");
+			logger.LogError(ex, "Error deleting command restriction for {CommandName}", LogSanitizer.Sanitize(commandName));
+			return StatusCode(500, "Error deleting command restriction");
 		}
 	}
 
@@ -141,13 +142,13 @@ public class RestrictionsController(
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
 
-			logger.LogInformation("Added/updated function restriction for {FunctionName}", functionName);
+			logger.LogInformation("Added/updated function restriction for {FunctionName}", LogSanitizer.Sanitize(functionName));
 			return Ok();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error adding function restriction for {FunctionName}", functionName);
-			return StatusCode(500, $"Error adding function restriction: {ex.Message}");
+			logger.LogError(ex, "Error adding function restriction for {FunctionName}", LogSanitizer.Sanitize(functionName));
+			return StatusCode(500, "Error adding function restriction");
 		}
 	}
 
@@ -175,13 +176,13 @@ public class RestrictionsController(
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
 
-			logger.LogInformation("Deleted function restriction for {FunctionName}", functionName);
+			logger.LogInformation("Deleted function restriction for {FunctionName}", LogSanitizer.Sanitize(functionName));
 			return Ok();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error deleting function restriction for {FunctionName}", functionName);
-			return StatusCode(500, $"Error deleting function restriction: {ex.Message}");
+			logger.LogError(ex, "Error deleting function restriction for {FunctionName}", LogSanitizer.Sanitize(functionName));
+			return StatusCode(500, "Error deleting function restriction");
 		}
 	}
 

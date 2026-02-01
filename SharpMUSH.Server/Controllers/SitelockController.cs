@@ -5,6 +5,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -61,13 +62,13 @@ public class SitelockController(
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
 
-			logger.LogInformation("Added/updated sitelock rule for {HostPattern}", hostPattern);
+			logger.LogInformation("Added/updated sitelock rule for {HostPattern}", LogSanitizer.Sanitize(hostPattern));
 			return Ok();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error adding sitelock rule for {HostPattern}", hostPattern);
-			return StatusCode(500, $"Error adding sitelock rule: {ex.Message}");
+			logger.LogError(ex, "Error adding sitelock rule for {HostPattern}", LogSanitizer.Sanitize(hostPattern));
+			return StatusCode(500, "Error adding sitelock rule");
 		}
 	}
 
@@ -92,13 +93,13 @@ public class SitelockController(
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
 
-			logger.LogInformation("Deleted sitelock rule for {HostPattern}", hostPattern);
+			logger.LogInformation("Deleted sitelock rule for {HostPattern}", LogSanitizer.Sanitize(hostPattern));
 			return Ok();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error deleting sitelock rule for {HostPattern}", hostPattern);
-			return StatusCode(500, $"Error deleting sitelock rule: {ex.Message}");
+			logger.LogError(ex, "Error deleting sitelock rule for {HostPattern}", LogSanitizer.Sanitize(hostPattern));
+			return StatusCode(500, "Error deleting sitelock rule");
 		}
 	}
 }

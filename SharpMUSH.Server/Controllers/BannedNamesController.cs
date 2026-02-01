@@ -5,6 +5,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Helpers;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -60,13 +61,13 @@ public class BannedNamesController(
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
 
-			logger.LogInformation("Added banned name: {Name}", name);
+			logger.LogInformation("Added banned name: {Name}", LogSanitizer.Sanitize(name));
 			return Ok();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error adding banned name: {Name}", name);
-			return StatusCode(500, $"Error adding banned name: {ex.Message}");
+			logger.LogError(ex, "Error adding banned name: {Name}", LogSanitizer.Sanitize(name));
+			return StatusCode(500, "Error adding banned name");
 		}
 	}
 
@@ -94,13 +95,13 @@ public class BannedNamesController(
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
 			configReloadService.SignalChange();
 
-			logger.LogInformation("Deleted banned name: {Name}", name);
+			logger.LogInformation("Deleted banned name: {Name}", LogSanitizer.Sanitize(name));
 			return Ok();
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error deleting banned name: {Name}", name);
-			return StatusCode(500, $"Error deleting banned name: {ex.Message}");
+			logger.LogError(ex, "Error deleting banned name: {Name}", LogSanitizer.Sanitize(name));
+			return StatusCode(500, "Error deleting banned name");
 		}
 	}
 }
