@@ -29,8 +29,43 @@
             <MudCard>
                 <MudCardContent>
                     <MudAlert Severity="Severity.Warning">
-                        Category not found: @Category
+                        Configuration category "@Category" not found in schema.
                     </MudAlert>
+                </MudCardContent>
+            </MudCard>
+        }
+        else if (!_categoryProperties.Any())
+        {
+            <MudCard>
+                <MudCardContent>
+                    <MudAlert Severity="Severity.Info">
+                        No configuration properties found for category "@CategoryTitle".
+                        <br />
+                        <small>This category may not have been annotated with enhanced schema metadata yet.</small>
+                    </MudAlert>
+                </MudCardContent>
+            </MudCard>
+        }
+        else if (!_categoryMetadata.Groups.Any())
+        {
+            @* Fallback: Render all properties without grouping if Groups aren't defined yet *@
+            <MudCard Outlined="true" Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@CategoryTitle Settings</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudAlert Severity="Severity.Info" Class="mb-4">
+                        <strong>Note:</strong> This category has not been updated with enhanced schema metadata yet.
+                        Properties are displayed without grouping. Only the Network (Net) category currently has the full enhanced UI.
+                    </MudAlert>
+                    <MudGrid>
+                        @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
+                        {
+                            @RenderPropertyContent(prop)
+                        }
+                    </MudGrid>
                 </MudCardContent>
             </MudCard>
         }
@@ -51,58 +86,7 @@
                         <MudGrid>
                             @foreach (var prop in groupProperties)
                             {
-                                @if (prop.Component == "switch")
-                                {
-                                    <MudItem xs="12">
-                                        <MudSwitch T="bool"
-                                                   Value="@GetBoolValue(prop)"
-                                                   ValueChanged="@(v => UpdateValue(prop, v))"
-                                                   Label="@prop.DisplayName"
-                                                   Color="Color.Secondary" />
-                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                            @prop.Description
-                                        </MudText>
-                                    </MudItem>
-                                }
-                                else if (prop.Component == "numeric")
-                                {
-                                    <MudItem xs="12" md="6">
-                                        @if (prop.Type == "integer")
-                                        {
-                                            var minVal = GetIntMin(prop);
-                                            var maxVal = GetIntMax(prop);
-                                            
-                                            <MudNumericField T="int"
-                                                           Value="@GetIntValue(prop)"
-                                                           ValueChanged="@(v => UpdateValue(prop, v))"
-                                                           Label="@prop.DisplayName"
-                                                           Variant="Variant.Outlined"
-                                                           HelperText="@prop.Description"
-                                                           Min="@(minVal ?? int.MinValue)"
-                                                           Max="@(maxVal ?? int.MaxValue)" />
-                                        }
-                                        else
-                                        {
-                                            <MudNumericField T="double"
-                                                           Value="@GetDoubleValue(prop)"
-                                                           ValueChanged="@(v => UpdateValue(prop, v))"
-                                                           Label="@prop.DisplayName"
-                                                           Variant="Variant.Outlined"
-                                                           HelperText="@prop.Description" />
-                                        }
-                                    </MudItem>
-                                }
-                                else if (prop.Component == "text")
-                                {
-                                    <MudItem xs="12" md="6">
-                                        <MudTextField T="string"
-                                                    Value="@GetStringValue(prop)"
-                                                    ValueChanged="@(v => UpdateValue(prop, v))"
-                                                    Label="@prop.DisplayName"
-                                                    Variant="Variant.Outlined"
-                                                    HelperText="@prop.Description" />
-                                    </MudItem>
-                                }
+                                @RenderPropertyContent(prop)
                             }
                         </MudGrid>
                     </MudCardContent>
@@ -275,6 +259,62 @@
             _loading = false;
         }
     }
+
+    private RenderFragment RenderPropertyContent(PropertyMetadata prop) => __builder =>
+    {
+        if (prop.Component == "switch")
+        {
+            <MudItem xs="12">
+                <MudSwitch T="bool"
+                           Value="@GetBoolValue(prop)"
+                           ValueChanged="@(v => UpdateValue(prop, v))"
+                           Label="@prop.DisplayName"
+                           Color="Color.Secondary" />
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    @prop.Description
+                </MudText>
+            </MudItem>
+        }
+        else if (prop.Component == "numeric")
+        {
+            <MudItem xs="12" md="6">
+                @if (prop.Type == "integer")
+                {
+                    var minVal = GetIntMin(prop);
+                    var maxVal = GetIntMax(prop);
+                    
+                    <MudNumericField T="int"
+                                   Value="@GetIntValue(prop)"
+                                   ValueChanged="@(v => UpdateValue(prop, v))"
+                                   Label="@prop.DisplayName"
+                                   Variant="Variant.Outlined"
+                                   HelperText="@prop.Description"
+                                   Min="@(minVal ?? int.MinValue)"
+                                   Max="@(maxVal ?? int.MaxValue)" />
+                }
+                else
+                {
+                    <MudNumericField T="double"
+                                   Value="@GetDoubleValue(prop)"
+                                   ValueChanged="@(v => UpdateValue(prop, v))"
+                                   Label="@prop.DisplayName"
+                                   Variant="Variant.Outlined"
+                                   HelperText="@prop.Description" />
+                }
+            </MudItem>
+        }
+        else if (prop.Component == "text")
+        {
+            <MudItem xs="12" md="6">
+                <MudTextField T="string"
+                            Value="@GetStringValue(prop)"
+                            ValueChanged="@(v => UpdateValue(prop, v))"
+                            Label="@prop.DisplayName"
+                            Variant="Variant.Outlined"
+                            HelperText="@prop.Description" />
+            </MudItem>
+        }
+    };
 
     private IEnumerable<PropertyMetadata> GetPropertiesInGroup(string groupName)
     {
