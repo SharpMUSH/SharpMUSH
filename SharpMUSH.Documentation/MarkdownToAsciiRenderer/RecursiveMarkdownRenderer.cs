@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Text;
+using System.Text.RegularExpressions;
 using ANSILibrary;
 using Markdig.Extensions.Tables;
 using Markdig.Syntax;
@@ -24,6 +25,13 @@ public class RecursiveMarkdownRenderer
 	private const int START_BORDER_WIDTH = 2; // "| "
 	private const int END_BORDER_WIDTH = 2; // " |"
 	private const int COLUMN_SEPARATOR_WIDTH = 3; // " | "
+	
+	// Cached compiled regex patterns for performance
+	private static readonly Regex ColorAttributeRegex = new(@"color\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	private static readonly Regex StyleAttributeRegex = new(@"style\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	private static readonly Regex StyleColorRegex = new(@"color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	private static readonly Regex StyleBackgroundColorRegex = new(@"background-color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	private static readonly Regex ColorTagRegex = new(@"<color\s+([^>]+)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 	
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
@@ -523,7 +531,7 @@ public class RecursiveMarkdownRenderer
 	private string ParseFontTagToAnsiCode(string tag)
 	{
 		// Extract color attribute: <font color="red"> or <font color="#FF0000">
-		var colorMatch = System.Text.RegularExpressions.Regex.Match(tag, @"color\s*=\s*[""']([^""']+)[""']", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		var colorMatch = ColorAttributeRegex.Match(tag);
 		if (colorMatch.Success)
 		{
 			var color = ParseColorValue(colorMatch.Groups[1].Value);
@@ -536,32 +544,32 @@ public class RecursiveMarkdownRenderer
 	private string ParseSpanTagToAnsiCode(string tag)
 	{
 		// Extract style attribute: <span style="color: red"> or <span style="background-color: blue">
-		var styleMatch = System.Text.RegularExpressions.Regex.Match(tag, @"style\s*=\s*[""']([^""']+)[""']", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		var styleMatch = StyleAttributeRegex.Match(tag);
 		if (styleMatch.Success)
 		{
 			var style = styleMatch.Groups[1].Value;
 			
 			// Parse color
-			var colorMatch = System.Text.RegularExpressions.Regex.Match(style, @"color\s*:\s*([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-			var bgColorMatch = System.Text.RegularExpressions.Regex.Match(style, @"background-color\s*:\s*([^;]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+			var colorMatch = StyleColorRegex.Match(style);
+			var bgColorMatch = StyleBackgroundColorRegex.Match(style);
 			
-			var result = "";
+			var result = new StringBuilder();
 			
 			if (colorMatch.Success)
 			{
 				var fg = ParseColorValue(colorMatch.Groups[1].Value.Trim());
 				if (fg.HasValue)
-					result += ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(fg.Value));
+					result.Append(ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(fg.Value)));
 			}
 			
 			if (bgColorMatch.Success)
 			{
 				var bg = ParseColorValue(bgColorMatch.Groups[1].Value.Trim());
 				if (bg.HasValue)
-					result += ANSILibrary.ANSI.Background(ANSILibrary.ANSI.AnsiColor.NewRGB(bg.Value));
+					result.Append(ANSILibrary.ANSI.Background(ANSILibrary.ANSI.AnsiColor.NewRGB(bg.Value)));
 			}
 			
-			return result;
+			return result.ToString();
 		}
 		return "";
 	}
@@ -569,7 +577,7 @@ public class RecursiveMarkdownRenderer
 	private string ParseColorTagToAnsiCode(string tag)
 	{
 		// Extract color value: <color red> or <color #FF0000>
-		var match = System.Text.RegularExpressions.Regex.Match(tag, @"<color\s+([^>]+)>", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		var match = ColorTagRegex.Match(tag);
 		if (match.Success)
 		{
 			var color = ParseColorValue(match.Groups[1].Value.Trim());
