@@ -1,0 +1,162 @@
+@page "/admin/config/bannednames"
+@layout SharpMUSH.Client.Layout.ConfigLayout
+@using SharpMUSH.Client.Services
+@inject BannedNamesService BannedNamesService
+@inject ISnackbar Snackbar
+
+<PageTitle>Banned Names - Configuration</PageTitle>
+
+<div style="background: lime; color: black; padding: 20px; font-size: 24px; font-weight: bold; text-align: center;">
+    🚨 BANNEDNAMES.RAZOR IS RENDERING 🚨
+</div>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
+    <MudAlert Severity="Severity.Success" Class="mb-4">
+        ✅ <strong>CUSTOM PAGE:</strong> BannedNames.razor is rendering correctly!
+    </MudAlert>
+    
+    <MudText Typo="Typo.h4" GutterBottom="true">Banned Player Names</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Manage the list of names that players are not allowed to use when creating characters.
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Add Banned Name</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudTextField @bind-Value="_newName" 
+                                  Label="Name to Ban" 
+                                  Variant="Variant.Outlined"
+                                  Immediate="true"
+                                  OnKeyDown="HandleKeyDown" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               OnClick="AddBannedName"
+                               Disabled="string.IsNullOrWhiteSpace(_newName)"
+                               FullWidth="true"
+                               StartIcon="@Icons.Material.Filled.Add">
+                        Add Name
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Banned Names List</MudText>
+            
+            @if (_bannedNames == null || !_bannedNames.Any())
+            {
+                <MudAlert Severity="Severity.Info">No banned names configured.</MudAlert>
+            }
+            else
+            {
+                <MudList T="string">
+                    @foreach (var name in _bannedNames.OrderBy(n => n))
+                    {
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between align-center" style="width: 100%">
+                                <MudText>@name</MudText>
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => DeleteBannedName(name))" />
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private bool _loading = true;
+    private List<string> _bannedNames = new();
+    private string _newName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBannedNames();
+    }
+
+    private async Task LoadBannedNames()
+    {
+        _loading = true;
+        try
+        {
+            var names = await BannedNamesService.GetBannedNamesAsync();
+            _bannedNames = names?.ToList() ?? new List<string>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading banned names: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task AddBannedName()
+    {
+        if (string.IsNullOrWhiteSpace(_newName))
+            return;
+
+        try
+        {
+            var success = await BannedNamesService.AddBannedNameAsync(_newName.Trim());
+            if (success)
+            {
+                Snackbar.Add($"Banned name '{_newName}' added successfully", Severity.Success);
+                _newName = string.Empty;
+                await LoadBannedNames();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add banned name '{_newName}'", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding banned name: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteBannedName(string name)
+    {
+        try
+        {
+            var success = await BannedNamesService.DeleteBannedNameAsync(name);
+            if (success)
+            {
+                Snackbar.Add($"Banned name '{name}' removed successfully", Severity.Success);
+                await LoadBannedNames();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to remove banned name '{name}'", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error removing banned name: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AddBannedName();
+        }
+    }
+}

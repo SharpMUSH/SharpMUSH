@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SharpMUSH Schema Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
+        h1 { color: #569cd6; }
+        h2 { color: #4ec9b0; margin-top: 20px; }
+        h3 { color: #dcdcaa; margin-top: 15px; }
+        pre { background: #2d2d30; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .category { margin: 20px 0; padding: 15px; background: #252526; border-left: 3px solid #569cd6; }
+        .group { margin: 10px 0 10px 20px; padding: 10px; background: #1e1e1e; border-left: 2px solid #4ec9b0; }
+        .property { margin: 5px 0 5px 20px; padding: 8px; background: #2d2d30; border-radius: 3px; }
+        .label { color: #9cdcfe; font-weight: bold; }
+        .value { color: #ce9178; }
+        button { background: #0e639c; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 10px 5px; }
+        button:hover { background: #1177bb; }
+        #error { color: #f48771; padding: 15px; background: #3f1d1d; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>SharpMUSH Enhanced Schema API Test</h1>
+    <button onclick="loadSchema()">Load Schema</button>
+    <button onclick="showJSON()">Show Raw JSON</button>
+    <div id="error" style="display:none;"></div>
+    <div id="result"></div>
+
+    <script>
+        let schemaData = null;
+
+        async function loadSchema() {
+            try {
+                const response = await fetch('https://localhost:8081/api/configuration');
+                const data = await response.json();
+                schemaData = data;
+                
+                const result = document.getElementById('result');
+                const error = document.getElementById('error');
+                error.style.display = 'none';
+                
+                let html = `<h2>Schema Summary</h2>`;
+                html += `<p><span class="label">Categories:</span> <span class="value">${data.schema.categories.length}</span></p>`;
+                html += `<p><span class="label">Total Properties:</span> <span class="value">${Object.keys(data.schema.properties).length}</span></p>`;
+                
+                // Show categories with their groups and properties
+                for (const category of data.schema.categories) {
+                    html += `<div class="category">`;
+                    html += `<h2>${category.displayName} (${category.name})</h2>`;
+                    html += `<p>${category.description || 'No description'}</p>`;
+                    html += `<p><span class="label">Icon:</span> <span class="value">${category.icon || 'none'}</span></p>`;
+                    
+                    // Get properties for this category
+                    const categoryProps = Object.values(data.schema.properties).filter(p => p.category === category.name);
+                    
+                    // Group by group name
+                    const grouped = {};
+                    for (const prop of categoryProps) {
+                        const groupName = prop.group || 'Ungrouped';
+                        if (!grouped[groupName]) grouped[groupName] = [];
+                        grouped[groupName].push(prop);
+                    }
+                    
+                    for (const groupName in grouped) {
+                        const props = grouped[groupName].sort((a, b) => a.order - b.order);
+                        html += `<div class="group">`;
+                        html += `<h3>${groupName} (${props.length} properties)</h3>`;
+                        
+                        for (const prop of props) {
+                            html += `<div class="property">`;
+                            html += `<span class="label">${prop.displayName}</span> `;
+                            html += `<span style="color: #608b4e;">(${prop.component})</span><br>`;
+                            html += `<small>${prop.description}</small><br>`;
+                            html += `<small><span class="label">Type:</span> ${prop.type} | `;
+                            html += `<span class="label">Default:</span> ${JSON.stringify(prop.defaultValue)} | `;
+                            if (prop.min != null) html += `<span class="label">Min:</span> ${prop.min} | `;
+                            if (prop.max != null) html += `<span class="label">Max:</span> ${prop.max} | `;
+                            html += `<span class="label">Path:</span> ${prop.path}</small>`;
+                            html += `</div>`;
+                        }
+                        
+                        html += `</div>`;
+                    }
+                    
+                    html += `</div>`;
+                }
+                
+                result.innerHTML = html;
+            } catch (e) {
+                const error = document.getElementById('error');
+                error.textContent = 'Error: ' + e.message;
+                error.style.display = 'block';
+            }
+        }
+        
+        function showJSON() {
+            if (!schemaData) {
+                alert('Load schema first!');
+                return;
+            }
+            const result = document.getElementById('result');
+            result.innerHTML = '<h2>Raw JSON Response</h2><pre>' + JSON.stringify(schemaData.schema, null, 2) + '</pre>';
+        }
+    </script>
+</body>
+</html>

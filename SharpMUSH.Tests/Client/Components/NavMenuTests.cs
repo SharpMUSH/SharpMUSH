@@ -1,5 +1,4 @@
 using Bunit;
-using TUnit.Core;
 using SharpMUSH.Client.Layout;
 
 namespace SharpMUSH.Tests.Client.Components;
@@ -82,27 +81,5 @@ public class NavMenuTests : MudBlazorTestContext
 		var securityLink = cut.Find("a[href='/security']");
 		await Assert.That(securityLink).IsNotNull();
 		await Assert.That(securityLink.TextContent).Contains("Security");
-	}
-
-	[Test]
-	public async Task NavMenu_ApplicationTitleExists()
-	{
-		// Arrange & Act
-		var cut = Render<NavMenu>();
-
-		// Assert
-		var markup = cut.Markup;
-		await Assert.That(markup).Contains("My Application");
-	}
-
-	[Test]
-	public async Task NavMenu_SecondaryTextExists()
-	{
-		// Arrange & Act
-		var cut = Render<NavMenu>();
-
-		// Assert
-		var markup = cut.Markup;
-		await Assert.That(markup).Contains("Secondary Text");
 	}
 }

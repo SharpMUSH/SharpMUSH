@@ -2831,6 +2831,14 @@ public class Migration_CreateDatabase : IArangoMigration
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
+			Name = "COLOR",
+			Symbol = "C",
+			Aliases = (string[])["COLOUR"],
+			System = true,
+			TypeRestrictions = DatabaseConstants.typesPlayer
+		}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
+		{
 			Name = "DARK",
 			Symbol = "D",
 			System = true,

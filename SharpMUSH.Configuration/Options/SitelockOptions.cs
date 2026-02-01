@@ -7,8 +7,11 @@ namespace SharpMUSH.Configuration.Options;
 public record BannedNamesOptions(
 	[property: SharpConfig(
 		Name = "banned_names",
+		Category = "BannedNames",
 		Description = "List of player names that are prohibited and cannot be created",
-		Category = "Banned Names")]
+		Group = "Name Restrictions",
+		Order = 1,
+		Tooltip = "Players cannot create characters with these names")]
 	string[] BannedNames
 );
 
@@ -19,7 +22,10 @@ public record BannedNamesOptions(
 public record SitelockRulesOptions(
 	[property: SharpConfig(
 		Name = "sitelock_rules",
+		Category = "SitelockRules",
 		Description = "Sitelock rules mapping host patterns to access options (e.g., !connect, !create, !guest, register, suspect)",
-		Category = "Sitelock Rules")]
+		Group = "Access Control",
+		Order = 1,
+		Tooltip = "Format: host pattern → access rules array")]
 	Dictionary<string, string[]> Rules
 );

@@ -16,6 +16,10 @@ builder.Services.AddLogging();
 builder.Services.AddSingleton<ISlugHelper, SlugHelper>();
 builder.Services.AddSingleton<WikiService>();
 builder.Services.AddSingleton<AdminConfigService>();
+builder.Services.AddSingleton<ConfigSchemaService>();
+builder.Services.AddSingleton<RestrictionsService>();
+builder.Services.AddSingleton<BannedNamesService>();
+builder.Services.AddSingleton<SitelockService>();
 builder.Services.AddSingleton<IWebSocketClientService, WebSocketClientService>();
 builder.Services.AddSingleton<DatabaseConversionService>();
 
@@ -23,7 +27,8 @@ builder.Services.AddHttpClient("api", sp =>
 {
 	var uri = new UriBuilder(builder.HostEnvironment.BaseAddress)
 	{
-		Port = 7296
+		Scheme = "https",  // Use HTTPS for secure API calls
+		Port = 8081        // HTTPS port
 	};
 	sp.BaseAddress = uri.Uri;
 });

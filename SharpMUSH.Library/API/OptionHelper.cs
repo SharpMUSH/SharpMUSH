@@ -10,6 +10,7 @@ public static class OptionHelper
 		=> new()
 		{
 			Configuration = options,
-			Metadata = ConfigMetadata.PropertyMetadata.ToDictionary()
+			Metadata = ConfigMetadata.PropertyMetadata.ToDictionary(),
+			Schema = SchemaBuilder.BuildSchema(options)
 		};
 }

@@ -1,5 +1,7 @@
 ﻿@using MudBlazor.Utilities
+@using SharpMUSH.Client.Components
 @inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudPopoverProvider />
@@ -8,43 +10,98 @@
 
 <MudLayout>
     <MudAppBar Elevation="1" Dense="true">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
+        @if (!_isConfigRoute)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
+        }
+        @if (_isConfigRoute)
+        {
+            <MudText Typo="Typo.h6" Color="Color.Secondary">Configuration</MudText>
+        }
         <MudSpacer />
         <LoginDisplay />
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <NavMenu />
+    
+    @* Primary Drawer - Collapses to mini when in config route *@
+    <MudDrawer Open="@(_isConfigRoute ? true : _drawerOpen)"
+               ClipMode="DrawerClipMode.Always" 
+               Elevation="2"
+               Variant="@(_isConfigRoute ? DrawerVariant.Mini : DrawerVariant.Responsive)"
+               OpenMiniOnHover="true">
+        <NavMenu IsCollapsed="@_isConfigRoute" />
     </MudDrawer>
-    <MudMainContent>
-        <MudContainer Gutters="true">
+    
+    @* Config Drawer - Shows when on config route *@
+    @if (_isConfigRoute)
+    {
+        <MudDrawer Open="true"
+                   ClipMode="DrawerClipMode.Docked"
+                   Variant="DrawerVariant.Persistent"
+                   Anchor="Anchor.Left"
+                   Width="280px"
+                   Elevation="0"
+                   Class="config-secondary-drawer"
+                   Style="margin-left: 60px;">
+            <ConfigNavDrawer />
+        </MudDrawer>
+    }
+    
+    <MudMainContent Class="@(_isConfigRoute ? "config-main-content" : "")">
+        <MudContainer MaxWidth="MaxWidth.False" Class="@(_isConfigRoute ? "pa-0" : "")">
             @Body
         </MudContainer>
     </MudMainContent>
-    <MudAppBar Fixed=true Style="height:2.5em;" Bottom=true Dense=true>
-        <ul style="list-style:none; display:inline-flex; justify-content:space-between; width:100%">
-            <li><MudIconButton Style="padding:3px;" Icon="@Icons.Custom.Brands.GitHub" Href="https://github.com/SharpMUSH/SharpMUSH" /></li>
-            <li><MudText Style="color:var(--mud-palette-drawer-text)"> &copy; 2025-@DateTimeOffset.Now.Year SharpMUSH</MudText> </li>
-        </ul>
-    </MudAppBar>
 </MudLayout>
-@code {
 
+@code {
     private readonly MudTheme _theme = new()
     {
         PaletteDark = new PaletteDark
         {
-            AppbarText = MudColor.Parse("#00f5b7"),
-            TextSecondary = MudColor.Parse("#00f5b7"),
+            Primary = MudColor.Parse("#00f5b7"),
             Secondary = MudColor.Parse("#00f5b7"),
-            Surface = MudColor.Parse("#242424")
+            AppbarText = MudColor.Parse("#00f5b7"),
+            TextPrimary = "rgba(255, 255, 255, 0.87)",
+            TextSecondary = "rgba(255, 255, 255, 0.60)",
+            Surface = MudColor.Parse("#242424"),
+            Background = MudColor.Parse("#1a1a1a")
         }
     };
     
     private bool _isDarkMode = true;
-    bool _drawerOpen = false;
+    private bool _drawerOpen = false;
+    private bool _isConfigRoute = false;
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+        UpdateConfigRouteState();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        UpdateConfigRouteState();
+        StateHasChanged();
+    }
+
+    private void UpdateConfigRouteState()
+    {
+        _isConfigRoute = NavigationManager.Uri.Contains("/admin/config");
+    }
 
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
     }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
 }
+
+<style>
+    .config-main-content {
+        margin-left: 340px !important; /* 60px mini drawer + 280px config drawer */
+    }
+</style>
