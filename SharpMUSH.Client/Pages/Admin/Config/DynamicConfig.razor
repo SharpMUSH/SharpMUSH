@@ -1,7 +1,7 @@
 @page "/admin/config/{category}"
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Models
-@using System.Reflection
+@using SharpMUSH.Library.API
 @using System.Text.Json
 @inject AdminConfigService AdminConfigService
 @inject ConfigSchemaService SchemaService
@@ -9,148 +9,204 @@
 
 <PageTitle>@CategoryTitle - Configuration</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
-    @if (_isLoading)
+<div class="config-section-page">
+    @* Header *@
+    <div class="config-section-header">
+        <MudText Typo="Typo.h4">@CategoryTitle</MudText>
+        <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
+            @_categoryMetadata?.Description
+        </MudText>
+    </div>
+
+    @* Content *@
+    <div class="config-section-content">
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+        }
+        else if (_categoryMetadata == null)
+        {
+            <MudCard>
+                <MudCardContent>
+                    <MudAlert Severity="Severity.Warning">
+                        Category not found: @Category
+                    </MudAlert>
+                </MudCardContent>
+            </MudCard>
+        }
+        else
+        {
+            @* Render groups as cards *@
+            @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
+            {
+                var groupProperties = GetPropertiesInGroup(group.Name).OrderBy(p => p.Order).ToList();
+                
+                <MudCard Outlined="true" Class="mb-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">@group.DisplayName</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudGrid>
+                            @foreach (var prop in groupProperties)
+                            {
+                                @if (prop.Component == "switch")
+                                {
+                                    <MudItem xs="12">
+                                        <MudSwitch T="bool"
+                                                   Value="@GetBoolValue(prop)"
+                                                   ValueChanged="@(v => UpdateValue(prop, v))"
+                                                   Label="@prop.DisplayName"
+                                                   Color="Color.Secondary" />
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                            @prop.Description
+                                        </MudText>
+                                    </MudItem>
+                                }
+                                else if (prop.Component == "numeric")
+                                {
+                                    <MudItem xs="12" md="6">
+                                        @if (prop.Type == "integer")
+                                        {
+                                            var minVal = GetIntMin(prop);
+                                            var maxVal = GetIntMax(prop);
+                                            
+                                            <MudNumericField T="int"
+                                                           Value="@GetIntValue(prop)"
+                                                           ValueChanged="@(v => UpdateValue(prop, v))"
+                                                           Label="@prop.DisplayName"
+                                                           Variant="Variant.Outlined"
+                                                           HelperText="@prop.Description"
+                                                           Min="@(minVal ?? int.MinValue)"
+                                                           Max="@(maxVal ?? int.MaxValue)" />
+                                        }
+                                        else
+                                        {
+                                            <MudNumericField T="double"
+                                                           Value="@GetDoubleValue(prop)"
+                                                           ValueChanged="@(v => UpdateValue(prop, v))"
+                                                           Label="@prop.DisplayName"
+                                                           Variant="Variant.Outlined"
+                                                           HelperText="@prop.Description" />
+                                        }
+                                    </MudItem>
+                                }
+                                else if (prop.Component == "text")
+                                {
+                                    <MudItem xs="12" md="6">
+                                        <MudTextField T="string"
+                                                    Value="@GetStringValue(prop)"
+                                                    ValueChanged="@(v => UpdateValue(prop, v))"
+                                                    Label="@prop.DisplayName"
+                                                    Variant="Variant.Outlined"
+                                                    HelperText="@prop.Description" />
+                                    </MudItem>
+                                }
+                            }
+                        </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            }
+        }
+    </div>
+
+    @* Save/Reset Bar *@
+    @if (_hasChanges)
     {
-        <MudProgressLinear Indeterminate="true" />
-    }
-    else if (_categorySettings == null || !_categorySettings.Any())
-    {
-        <MudCard>
-            <MudCardContent>
-                <MudAlert Severity="Severity.Warning">
-                    No settings found for category: @CategoryTitle
-                </MudAlert>
-            </MudCardContent>
-        </MudCard>
-    }
-    else
-    {
-        <MudCard>
-            <MudCardHeader>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h5">@CategoryTitle Configuration</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @_categorySettings.Count settings in this category
-                    </MudText>
-                </CardHeaderContent>
-                <CardHeaderActions>
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Save"
-                               OnClick="SaveChanges"
-                               Disabled="!_hasChanges">
-                        Save Changes
+        <MudPaper Elevation="4" Class="save-bar">
+            <div class="save-bar-content">
+                <div class="save-bar-info">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
+                    <MudText Typo="Typo.body1"><strong>Unsaved changes</strong> in this section</MudText>
+                </div>
+                <div class="save-bar-actions">
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetChanges">
+                        Reset Changes
                     </MudButton>
-                </CardHeaderActions>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudStack Spacing="3">
-                    @foreach (var setting in _categorySettings.OrderBy(s => s.Metadata.Name))
-                    {
-                        <MudPaper Outlined="true" Class="pa-4">
-                            <MudStack Spacing="2">
-                                <MudText Typo="Typo.subtitle1">@setting.Metadata.Name</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@setting.Metadata.Description</MudText>
-                                
-                                @if (setting.PropertyType == typeof(bool))
-                                {
-                                    var boolValue = (bool)(setting.Value ?? false);
-                                    <MudSwitch T="bool"
-                                               Value="@boolValue"
-                                               ValueChanged="@(v => { setting.Value = v; _hasChanges = true; })"
-                                               Color="Color.Primary"
-                                               Label="@(boolValue ? "Enabled" : "Disabled")" />
-                                }
-                                else if (setting.PropertyType == typeof(int))
-                                {
-                                    var intValue = (int)(setting.Value ?? 0);
-                                    <MudNumericField T="int"
-                                                     Value="@intValue"
-                                                     ValueChanged="@(v => { setting.Value = v; _hasChanges = true; })"
-                                                     Variant="Variant.Outlined"
-                                                     Margin="Margin.Dense" />
-                                }
-                                else if (setting.PropertyType == typeof(uint))
-                                {
-                                    var uintValue = (uint)(setting.Value ?? 0u);
-                                    <MudNumericField T="int"
-                                                     Value="@((int)uintValue)"
-                                                     ValueChanged="@(v => { setting.Value = (uint)v; _hasChanges = true; })"
-                                                     Variant="Variant.Outlined"
-                                                     Margin="Margin.Dense" />
-                                }
-                                else if (setting.PropertyType == typeof(string))
-                                {
-                                    var strValue = setting.Value?.ToString() ?? "";
-                                    <MudTextField T="string"
-                                                  Value="@strValue"
-                                                  ValueChanged="@(v => { setting.Value = v; _hasChanges = true; })"
-                                                  Variant="Variant.Outlined"
-                                                  Margin="Margin.Dense" />
-                                }
-                                else
-                                {
-                                    <MudText Typo="Typo.body2">
-                                        Type: @setting.PropertyType.Name (not yet supported)
-                                    </MudText>
-                                }
-                                
-                                <MudText Typo="Typo.caption" Color="Color.Tertiary">
-                                    Property: @setting.PropertyPath
-                                </MudText>
-                            </MudStack>
-                        </MudPaper>
-                    }
-                </MudStack>
-            </MudCardContent>
-        </MudCard>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SaveChanges" StartIcon="@Icons.Material.Filled.Save">
+                        Save Configuration
+                    </MudButton>
+                </div>
+            </div>
+        </MudPaper>
     }
-</MudContainer>
+</div>
+
+<style>
+    .config-section-page {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .config-section-header {
+        padding: 24px 32px;
+        background: var(--mud-palette-surface);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .config-section-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 32px;
+    }
+
+    .save-bar {
+        position: sticky;
+        bottom: 0;
+        padding: 16px 32px;
+        background: var(--mud-palette-surface);
+        border-top: 2px solid var(--mud-palette-warning);
+        z-index: 10;
+    }
+
+    .save-bar-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .save-bar-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .save-bar-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    @@media (max-width: 600px) {
+        .save-bar-content {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .save-bar-actions {
+            width: 100%;
+            justify-content: stretch;
+        }
+
+        .save-bar-actions > * {
+            flex: 1;
+        }
+    }
+</style>
 
 @code {
     [Parameter]
     public string Category { get; set; } = string.Empty;
 
-    private bool _isLoading = true;
+    private bool _loading = true;
     private bool _hasChanges = false;
-    private List<ConfigSetting> _categorySettings = new();
+    private ConfigurationSchema? _schema;
+    private CategoryMetadata? _categoryMetadata;
+    private Dictionary<string, PropertyMetadata> _categoryProperties = new();
+    private Dictionary<string, object?> _currentValues = new();
     private Dictionary<string, object?> _originalValues = new();
 
-    public class ConfigSetting
-    {
-        public string PropertyPath { get; set; } = string.Empty;
-        public SharpMUSH.Configuration.SharpConfigAttribute Metadata { get; set; } = null!;
-        public Type PropertyType { get; set; } = null!;
-        public object? Value { get; set; }
-    }
-
-    private string CategoryTitle => Category switch
-    {
-        "net" => "Network",
-        "database" => "Database",
-        "limit" => "Limits",
-        "command" => "Commands",
-        "sitelock" => "Sitelock Rules",
-        "bannednames" => "Banned Names",
-        "restriction" => "Restrictions",
-        "message" => "Messages",
-        "cosmetic" => "Cosmetic",
-        "chat" => "Chat",
-        "log" => "Logging",
-        "file" => "Files",
-        "textfile" => "Text Files",
-        "dump" => "Database Dumps",
-        "attribute" => "Attributes",
-        "flag" => "Flags",
-        "cost" => "Costs",
-        "compatibility" => "Compatibility",
-        "alias" => "Aliases",
-        "debug" => "Debug",
-        "function" => "Functions",
-        "warning" => "Warnings",
-        _ => Category
-    };
+    private string CategoryTitle => _categoryMetadata?.DisplayName ?? FormatCategoryName(Category);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -159,7 +215,9 @@
 
     private async Task LoadConfigurationAsync()
     {
-        _isLoading = true;
+        _loading = true;
+        _hasChanges = false;
+        
         try
         {
             // Fetch schema from the API
@@ -169,6 +227,26 @@
                 Snackbar.Add("Failed to load configuration schema", Severity.Error);
                 return;
             }
+
+            _schema = schema;
+
+            // Map URL parameter to category name
+            var categoryName = MapCategoryName(Category);
+            
+            // Find matching category
+            _categoryMetadata = schema.Categories.FirstOrDefault(c => 
+                c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+
+            if (_categoryMetadata == null)
+            {
+                Snackbar.Add($"Category '{categoryName}' not found", Severity.Warning);
+                return;
+            }
+
+            // Get properties for this category
+            _categoryProperties = schema.Properties
+                .Where(kvp => kvp.Value.Category.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
             // Fetch current config values
             var result = await AdminConfigService.GetOptionsAsync();
@@ -180,9 +258,13 @@
 
             var config = result.AsT0;
             
-            // Extract settings for this category
-            _categorySettings = ExtractCategorySettings(config, schema);
-            _originalValues = _categorySettings.ToDictionary(s => s.PropertyPath, s => s.Value);
+            // Extract current values
+            foreach (var prop in _categoryProperties.Values)
+            {
+                var value = GetPropertyValue(config, prop.Path);
+                _currentValues[prop.Path] = value;
+                _originalValues[prop.Path] = value;
+            }
         }
         catch (Exception ex)
         {
@@ -190,64 +272,14 @@
         }
         finally
         {
-            _isLoading = false;
+            _loading = false;
         }
     }
 
-    private List<ConfigSetting> ExtractCategorySettings(object configObject, ConfigSchema schema)
+    private IEnumerable<PropertyMetadata> GetPropertiesInGroup(string groupName)
     {
-        var settings = new List<ConfigSetting>();
-        
-        // Map route parameter to actual category name (add "Options" suffix for most categories)
-        var categoryFilter = Category.ToLower() switch
-        {
-            "sitelockrules" => "SitelockRulesOptions",
-            "bannednames" => "BannedNamesOptions",
-            _ => $"{char.ToUpper(Category[0])}{Category.Substring(1)}Options"
-        };
-        
-        // Find matching category in schema
-        var categorySchema = schema.Categories.FirstOrDefault(c => 
-            c.Name.Equals(categoryFilter, StringComparison.OrdinalIgnoreCase));
-        
-        if (categorySchema == null)
-        {
-            return settings;
-        }
-        
-        // Create settings from schema properties
-        foreach (var prop in categorySchema.Properties)
-        {
-            var propertyPath = $"{categorySchema.Name}.{prop.Name}";
-            var value = GetPropertyValue(configObject, propertyPath);
-            
-            settings.Add(new ConfigSetting
-            {
-                PropertyPath = propertyPath,
-                Metadata = new SharpMUSH.Configuration.SharpConfigAttribute
-                {
-                    Name = prop.DisplayName,
-                    Description = prop.Description ?? "",
-                    Category = categorySchema.Name
-                },
-                PropertyType = ParsePropertyType(prop.Type),
-                Value = value
-            });
-        }
-        
-        return settings;
-    }
-    
-    private Type ParsePropertyType(string typeName)
-    {
-        return typeName.ToLower() switch
-        {
-            "boolean" => typeof(bool),
-            "integer" => typeof(int),
-            "number" => typeof(double),
-            "string" => typeof(string),
-            _ => typeof(string)
-        };
+        return _categoryProperties.Values.Where(p => 
+            (p.Group ?? "General").Equals(groupName, StringComparison.OrdinalIgnoreCase));
     }
 
     private object? GetPropertyValue(object obj, string propertyPath)
@@ -268,10 +300,60 @@
         return current;
     }
 
-    private void UpdateValue(ConfigSetting setting, object? newValue)
+    private bool GetBoolValue(PropertyMetadata prop)
     {
-        setting.Value = newValue;
-        _hasChanges = true;
+        if (_currentValues.TryGetValue(prop.Path, out var value) && value is bool boolValue)
+            return boolValue;
+        return prop.DefaultValue is bool defaultBool ? defaultBool : false;
+    }
+
+    private int GetIntValue(PropertyMetadata prop)
+    {
+        if (_currentValues.TryGetValue(prop.Path, out var value))
+        {
+            if (value is int intValue) return intValue;
+            if (value is uint uintValue) return (int)uintValue;
+            if (value is long longValue) return (int)longValue;
+        }
+        
+        if (prop.DefaultValue is int defaultInt) return defaultInt;
+        if (prop.DefaultValue is uint defaultUint) return (int)defaultUint;
+        return 0;
+    }
+
+    private double GetDoubleValue(PropertyMetadata prop)
+    {
+        if (_currentValues.TryGetValue(prop.Path, out var value) && value is double doubleValue)
+            return doubleValue;
+        return prop.DefaultValue is double defaultDouble ? defaultDouble : 0.0;
+    }
+
+    private string GetStringValue(PropertyMetadata prop)
+    {
+        if (_currentValues.TryGetValue(prop.Path, out var value) && value != null)
+            return value.ToString() ?? "";
+        return prop.DefaultValue?.ToString() ?? "";
+    }
+
+    private int? GetIntMin(PropertyMetadata prop)
+    {
+        if (prop.Min is int intMin) return intMin;
+        if (prop.Min is uint uintMin) return (int)uintMin;
+        return null;
+    }
+
+    private int? GetIntMax(PropertyMetadata prop)
+    {
+        if (prop.Max is int intMax) return intMax;
+        if (prop.Max is uint uintMax) return (int)uintMax;
+        return null;
+    }
+
+    private void UpdateValue(PropertyMetadata prop, object? newValue)
+    {
+        _currentValues[prop.Path] = newValue;
+        _hasChanges = !_currentValues.All(kvp => 
+            Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)));
     }
 
     private async Task SaveChanges()
@@ -279,5 +361,50 @@
         Snackbar.Add("Save functionality not yet implemented", Severity.Info);
         // TODO: Implement save to API
         _hasChanges = false;
+    }
+
+    private void ResetChanges()
+    {
+        foreach (var kvp in _originalValues)
+        {
+            _currentValues[kvp.Key] = kvp.Value;
+        }
+        _hasChanges = false;
+        StateHasChanged();
+    }
+
+    private string MapCategoryName(string urlCategory)
+    {
+        return urlCategory.ToLower() switch
+        {
+            "net" or "network" => "Net",
+            "database" => "Database",
+            "limit" or "limits" => "Limit",
+            "command" or "commands" => "Command",
+            "chat" => "Chat",
+            "log" or "logging" => "Log",
+            "message" or "messages" => "Message",
+            "cosmetic" => "Cosmetic",
+            "cost" or "costs" => "Cost",
+            "attribute" or "attributes" => "Attribute",
+            "flag" or "flags" => "Flag",
+            "compatibility" => "Compatibility",
+            "alias" or "aliases" => "Alias",
+            "debug" => "Debug",
+            "function" or "functions" => "Function",
+            "warning" or "warnings" => "Warning",
+            "restriction" or "restrictions" => "Restriction",
+            "bannednames" => "BannedNames",
+            "sitelock" or "sitelockrules" => "SitelockRules",
+            "dump" => "Dump",
+            "file" or "files" => "File",
+            "textfile" or "textfiles" => "TextFile",
+            _ => char.ToUpper(urlCategory[0]) + urlCategory.Substring(1)
+        };
+    }
+
+    private string FormatCategoryName(string category)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(category, "([A-Z])", " $1").Trim();
     }
 }
