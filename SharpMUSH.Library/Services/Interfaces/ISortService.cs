@@ -40,7 +40,7 @@ public interface ISortService
 	/// <param name="sortData">Sort Type</param>
 	/// <param name="keySelector">Transform from MString to string</param>
 	/// <returns>Sorted List</returns>
-	ValueTask<IAsyncEnumerable<MString>> Sort(IEnumerable<MString> items, Func<MString, CancellationToken, ValueTask<string>> keySelector, IMUSHCodeParser parser, SortInformation sortData);
+	IAsyncEnumerable<MString> Sort(IEnumerable<MString> items, Func<MString, CancellationToken, ValueTask<string>> keySelector, IMUSHCodeParser parser, SortInformation sortData);
 	
 	/// <summary>
 	/// Sorts a list of MStrings according to the specified sort type and order.
@@ -50,5 +50,5 @@ public interface ISortService
 	/// <param name="sortData">Sort Type</param>
 	/// <param name="keySelector">Transform from MString to string</param>
 	/// <returns>Sorted List</returns>
-	ValueTask<IAsyncEnumerable<MString>> Sort(IAsyncEnumerable<MString> items, Func<MString, CancellationToken, ValueTask<string>> keySelector, IMUSHCodeParser parser, SortInformation sortData);
+	IAsyncEnumerable<MString> Sort(IAsyncEnumerable<MString> items, Func<MString, CancellationToken, ValueTask<string>> keySelector, IMUSHCodeParser parser, SortInformation sortData);
 }
