@@ -16,6 +16,16 @@
    - Implementation timeline
    - Responsive design patterns
 
+3. **`CONFIG_UI_SECURITY_INTEGRATION.md`** - ✅ Completed integration
+   - Banned Names, Restrictions, and Sitelock pages
+   - Integrated into config sidebar under 🔒 Security
+   - Redirect pages for old URLs
+
+4. **`CONFIG_UI_SECURITY_VISUAL.md`** - Visual guide
+   - Navigation structure
+   - User flows
+   - Color coding and responsive behavior
+
 ### Key Design Decisions
 
 ✅ **Dual-Sidebar Pattern** (Like Figma/VS Code)
@@ -32,7 +42,7 @@
 ```
 🖥️ Server (Network, Database)
 ⚡ Performance (Limits, Commands)
-🔒 Security (Sitelock, Banned Names, Restrictions)
+🔒 Security (Sitelock, Banned Names, Restrictions) ✅ INTEGRATED
 📝 Content (Messages, Cosmetic, Chat)
 📊 Logs & Files (Logging, Files, Dumps)
 ⚙️ Advanced (7 subsections)
@@ -40,72 +50,95 @@
 
 ---
 
-## 🚀 Implementation Roadmap
+## 🚀 Implementation Status
+
+### ✅ Phase 0: Security Pages Integration (COMPLETED)
+**Goal:** Integrate existing security pages into config sidebar
+
+**Completed:**
+- ✅ Updated `BannedNames.razor` route to `/admin/config/bannednames`
+- ✅ Updated `Restrictions.razor` route to `/admin/config/restrictions`
+- ✅ Updated `Sitelock.razor` route to `/admin/config/sitelock`
+- ✅ Applied `ConfigLayout` to all three pages
+- ✅ Updated `ConfigNavDrawer.razor` navigation
+- ✅ Added auto-expansion logic for Security group
+- ✅ Created redirect pages for backward compatibility
+
+**Files Modified:** 4
+**Files Created:** 5
+**Time Spent:** ~1 hour
+
+---
 
 ### Phase 1: Layout Foundation (2-3 hours)
 **Goal:** Get dual-sidebar working
 
-**Files to modify:**
-- `Layout/MainLayout.razor` - Add config route detection
-- `Layout/NavMenu.razor` - Add collapsed/icon-only mode
+**Status:** ✅ COMPLETED (ConfigLayout.razor exists)
 
-**New files:**
-- `Layout/ConfigLayout.razor` - Config-specific layout
-- `Components/ConfigNavDrawer.razor` - Category navigation
+**Completed:**
+- ✅ `Layout/ConfigLayout.razor` - Config-specific layout with dual panes
+- ✅ `Components/ConfigNavDrawer.razor` - Category navigation sidebar
+- ✅ `Layout/MainLayout.razor` - Already supports mini drawer mode
 
-**Code:**
-```razor
-// MainLayout.razor additions
-@code {
-    private bool _isConfigRoute => 
-        NavigationManager.Uri.Contains("/admin/config");
-}
-
-// In MudLayout:
-<MudDrawer Variant="@(_isConfigRoute ? DrawerVariant.Mini : DrawerVariant.Responsive)">
-```
+---
 
 ### Phase 2: Navigation Structure (2-3 hours)
 **Goal:** Build the config sidebar
 
-**New Components:**
-- `Components/ConfigNavDrawer.razor` - Full navigation tree
-- `Services/ConfigNavigationService.cs` - Category metadata
+**Status:** ✅ PARTIALLY COMPLETED
 
-**Features:**
-- Collapsible `MudNavGroup` for each category
-- Active state highlighting
-- Changed state indicators (orange dots)
-- Search bar at top
+**Completed:**
+- ✅ `Components/ConfigNavDrawer.razor` - Full navigation tree
+- ✅ Collapsible `MudNavGroup` for each category
+- ✅ Active state highlighting
+- ✅ Security group fully functional
+
+**Remaining:**
+- ⏳ Changed state indicators (orange dots) - needs state tracking
+- ⏳ Search bar functionality - filter logic needed
+
+---
 
 ### Phase 3: Content Rendering (3-4 hours)
 **Goal:** Display settings with proper inputs
 
-**New Components:**
-- `Pages/Admin/ConfigSection.razor` - Base section renderer
-- `Components/ConfigFields/` - Specialized input components
+**Status:** 🔄 IN PROGRESS
 
-**Replace Current:**
-- `AdminConfig.razor` - Swap accordion for routed sections
+**Completed:**
+- ✅ Security pages using ConfigLayout
+
+**Remaining:**
+- ⏳ Other config sections (Network, Database, Limits, etc.)
+- ⏳ Base section renderer component
+- ⏳ Specialized input components for different setting types
+- ⏳ URL routing for all sections
 
 **URL Structure:**
 ```
-/admin/config/network
-/admin/config/database
-/admin/config/limits
+✅ /admin/config/sitelock
+✅ /admin/config/bannednames  
+✅ /admin/config/restrictions
+⏳ /admin/config/net
+⏳ /admin/config/database
+⏳ /admin/config/limit
+⏳ /admin/config/command
 ... etc
 ```
+
+---
 
 ### Phase 4: Features & Polish (2-3 hours)
 **Goal:** Professional UX touches
 
-**Implement:**
-- Unsaved changes tracking
-- Navigation guard (warn before leaving)
-- Save/Reset sticky bar
-- Search functionality
-- Keyboard shortcuts (Ctrl+S)
-- Loading states
+**Status:** ⏳ NOT STARTED
+
+**To Implement:**
+- ⏳ Unsaved changes tracking
+- ⏳ Navigation guard (warn before leaving)
+- ⏳ Save/Reset sticky bar
+- ⏳ Search functionality
+- ⏳ Keyboard shortcuts (Ctrl+S)
+- ⏳ Loading states
 
 ---
 
