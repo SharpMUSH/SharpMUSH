@@ -17,8 +17,41 @@ public class GetObjectFlagQueryHandler(ISharpDatabase database)
 	: IQueryHandler<GetObjectFlagQuery, SharpObjectFlag?>
 {
 	public async ValueTask<SharpObjectFlag?> Handle(GetObjectFlagQuery request,
-		CancellationToken cancellationToken) =>
-		await database.GetObjectFlagAsync(request.FlagName, cancellationToken);
+		CancellationToken cancellationToken)
+	{
+		// First try exact match
+		var exactMatch = await database.GetObjectFlagAsync(request.FlagName, cancellationToken);
+		if (exactMatch is not null)
+		{
+			return exactMatch;
+		}
+
+		// If no exact match, try partial match (prefix matching)
+		// Get all flags and find the first one that matches as a prefix (case-insensitive)
+		var upperFlagName = request.FlagName.ToUpperInvariant();
+		await foreach (var flag in database.GetObjectFlagsAsync(cancellationToken))
+		{
+			// Check if the flag name starts with the search term
+			if (flag.Name.StartsWith(upperFlagName, StringComparison.InvariantCultureIgnoreCase))
+			{
+				return flag;
+			}
+
+			// Check aliases too
+			if (flag.Aliases is not null)
+			{
+				foreach (var alias in flag.Aliases)
+				{
+					if (alias.StartsWith(upperFlagName, StringComparison.InvariantCultureIgnoreCase))
+					{
+						return flag;
+					}
+				}
+			}
+		}
+
+		return null;
+	}
 }
 
 public class GetObjectFlagsQueryHandler(ISharpDatabase database)
