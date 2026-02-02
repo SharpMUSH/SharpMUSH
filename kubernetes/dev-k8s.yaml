@@ -106,9 +106,12 @@ spec:
       labels:
         app: redpanda
     spec:
+      securityContext:
+        fsGroup: 101
       containers:
         - name: redpanda
-          image: docker.redpanda.com/redpandadata/redpanda:latest
+          image: redpandadata/redpanda:latest
+          imagePullPolicy: IfNotPresent
           command:
             - /bin/bash
             - -c
@@ -249,9 +252,14 @@ spec:
       labels:
         app: prometheus
     spec:
+      securityContext:
+        fsGroup: 65534
+        runAsUser: 65534
+        runAsGroup: 65534
       containers:
         - name: prometheus
-          image: prom/prometheus:latest
+          image: docker.io/prom/prometheus:latest
+          imagePullPolicy: IfNotPresent
           args:
             - '--config.file=/etc/prometheus/prometheus.yml'
             - '--storage.tsdb.path=/prometheus'
@@ -308,8 +316,8 @@ spec:
     spec:
       containers:
         - name: sharpmush-server
-          image: sharpmush/sharpmush-server:dev
-          imagePullPolicy: Never
+          image: docker.io/sharpmush/sharpmush-server:dev
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http
@@ -377,8 +385,8 @@ spec:
     spec:
       containers:
         - name: connectionserver
-          image: sharpmush/sharpmush-connectionserver:dev
-          imagePullPolicy: Never
+          image: docker.io/sharpmush/sharpmush-connectionserver:dev
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4201
               name: telnet
