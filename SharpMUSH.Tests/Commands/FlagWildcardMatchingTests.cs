@@ -106,7 +106,7 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask SetFlag_AliasPartialMatch_Colour()
 	{
-		// Test that "colo" matches "COLOR" via its alias "COLOUR"
+		// Test that "colo" matches "COLOR" (either via direct prefix match on COLOR or via alias COLOUR prefix match)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=colo"));
 
 		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
