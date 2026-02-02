@@ -13,6 +13,7 @@ namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
 /// Tests for wildcard/partial flag matching in @set command
+/// Uses unique test objects to avoid state pollution from other tests
 /// </summary>
 [NotInParallel]
 public class FlagWildcardMatchingTests
@@ -28,50 +29,98 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_Color()
 	{
-		// Test that "@set #1=col" sets the COLOR flag
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=col"));
+		// Create a unique player for this test
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate ColorTestPlayer1=testpass"));
+		
+		// Test that "@set *ColorTestPlayer1=col" sets the COLOR flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set *ColorTestPlayer1=col"));
 
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var onePlayer = one.AsPlayer;
-		var flags = await onePlayer.Object.Flags.Value.ToArrayAsync();
+		// Verify the flag was set
+		var players = Mediator.CreateStream(new GetAllPlayersQuery());
+		var testPlayer = await players.FirstOrDefaultAsync(p => p.Object.Name == "ColorTestPlayer1");
+		
+		await Assert.That(testPlayer).IsNotNull();
+		var flags = await testPlayer!.Object.Flags.Value.ToArrayAsync();
 		var hasColorFlag = flags.Any(x => x.Name == "COLOR");
+		await Assert.That(hasColorFlag).IsTrue();
+	}
 
+	[Test]
+	public async ValueTask UnsetFlag_PartialMatch_Color()
+	{
+		// Create a unique player for this test
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate ColorTestPlayer2=testpass"));
+		
+		// Set COLOR flag first
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set *ColorTestPlayer2=COLOR"));
+		
+		// Test that "@set *ColorTestPlayer2=!col" unsets the COLOR flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set *ColorTestPlayer2=!col"));
+
+		// Verify the flag was unset
+		var players = Mediator.CreateStream(new GetAllPlayersQuery());
+		var testPlayer = await players.FirstOrDefaultAsync(p => p.Object.Name == "ColorTestPlayer2");
+		
+		await Assert.That(testPlayer).IsNotNull();
+		var flags = await testPlayer!.Object.Flags.Value.ToArrayAsync();
+		var hasColorFlag = flags.Any(x => x.Name == "COLOR");
+		await Assert.That(hasColorFlag).IsFalse();
+	}
+
+	[Test]
+	public async ValueTask SetFlag_AliasPartialMatch_Colour()
+	{
+		// Create a unique player for this test
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate ColorTestPlayer3=testpass"));
+		
+		// Test that "colo" matches "COLOR" via prefix
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set *ColorTestPlayer3=colo"));
+
+		// Verify the flag was set
+		var players = Mediator.CreateStream(new GetAllPlayersQuery());
+		var testPlayer = await players.FirstOrDefaultAsync(p => p.Object.Name == "ColorTestPlayer3");
+		
+		await Assert.That(testPlayer).IsNotNull();
+		var flags = await testPlayer!.Object.Flags.Value.ToArrayAsync();
+		var hasColorFlag = flags.Any(x => x.Name == "COLOR");
 		await Assert.That(hasColorFlag).IsTrue();
 	}
 
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_NoCommand()
 	{
-		// First, find a thing to test with (not a player)
-		var thingResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create TestFlagThing"));
-		var thingDbRef = DBRef.Parse(thingResult.Message!.ToPlainText()!);
-		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
+		// Create a thing to test with
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create NoCommandTestThing1"));
+		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
 		// Test that "@set thing=no_com" sets the NO_COMMAND flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=no_com"));
 
-		var updatedThing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var flags = await updatedThing.AsThing.Object.Flags.Value.ToArrayAsync();
+		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
+		var flags = await thing.AsThing.Object.Flags.Value.ToArrayAsync();
 		var hasNoCommandFlag = flags.Any(x => x.Name == "NO_COMMAND");
 
 		await Assert.That(hasNoCommandFlag).IsTrue();
 	}
 
-	// NOTE: Unset tests removed - they revealed a pre-existing issue with unsetting flags on player #1
-	// that is unrelated to the wildcard matching feature. The DebugVerboseTests show that unsetting
-	// works correctly on newly created objects. The issue is likely test pollution on player #1.
-	
 	[Test]
-	public async ValueTask SetFlag_AliasPartialMatch_Colour()
+	public async ValueTask UnsetFlag_PartialMatch_NoCommand()
 	{
-		// Test that "colo" matches "COLOR" (either via direct prefix match on COLOR or via alias COLOUR prefix match)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=colo"));
+		// Create a thing to test with
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create NoCommandTestThing2"));
+		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var flags = await one.AsPlayer.Object.Flags.Value.ToArrayAsync();
-		var hasColorFlag = flags.Any(x => x.Name == "COLOR");
+		// Set NO_COMMAND flag first
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=NO_COMMAND"));
 
-		await Assert.That(hasColorFlag).IsTrue();
+		// Test that "@set thing=!no_com" unsets the NO_COMMAND flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=!no_com"));
+
+		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
+		var flags = await thing.AsThing.Object.Flags.Value.ToArrayAsync();
+		var hasNoCommandFlag = flags.Any(x => x.Name == "NO_COMMAND");
+
+		await Assert.That(hasNoCommandFlag).IsFalse();
 	}
 
 	[Test]
