@@ -39,12 +39,10 @@ public class GetObjectFlagQueryHandler(ISharpDatabase database)
 			// Check aliases too
 			if (flag.Aliases is not null)
 			{
-				foreach (var alias in flag.Aliases)
+				if (flag.Aliases.Any(alias =>
+					alias.StartsWith(request.FlagName, StringComparison.InvariantCultureIgnoreCase)))
 				{
-					if (alias.StartsWith(request.FlagName, StringComparison.InvariantCultureIgnoreCase))
-					{
-						return flag;
-					}
+					return flag;
 				}
 			}
 		}
