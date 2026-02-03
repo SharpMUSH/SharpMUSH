@@ -12,6 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Extensions;
 using Testcontainers.Redpanda;
 using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,12 +21,16 @@ var connectionServerOptions = new ConnectionServerOptions();
 builder.Configuration.GetSection("ConnectionServer").Bind(connectionServerOptions);
 builder.Services.AddSingleton(connectionServerOptions);
 
-builder.Services.AddLogging(logging => logging.AddSerilog(
-	new LoggerConfiguration()
-		.Enrich.FromLogContext()
-		.WriteTo.Console()
-		.CreateLogger()
-));
+builder.Services.AddLogging(logging =>
+{
+	// Use standard logging configuration with JSON in K8s, plain text elsewhere
+	var loggerConfig = LoggingConfiguration.CreateStandardConsoleConfiguration(
+		minimumLevel: LogEventLevel.Information,
+		overrides: LoggingConfiguration.CreateStandardOverrides()
+	);
+	
+	logging.AddSerilog(loggerConfig.CreateLogger());
+});
 
 // Get Kafka/RedPanda configuration from environment or configuration
 var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST");
