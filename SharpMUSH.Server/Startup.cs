@@ -11,6 +11,7 @@ using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Compact;
 using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -214,43 +215,49 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		{
 			logging.ClearProviders();
 			
-			// Create standard console logger (JSON in K8s, plain text elsewhere)
-			var consoleLogger = LoggingConfiguration.CreateStandardConsoleConfiguration(
-				minimumLevel: LogEventLevel.Debug,
-				overrides: LoggingConfiguration.CreateStandardOverrides()
-			).CreateLogger();
+			// Get standard overrides to use consistently
+			var overrides = LoggingConfiguration.CreateStandardOverrides();
+			
+			// Build a single logger configuration with both console and database sinks
+			var loggerConfig = new LoggerConfiguration()
+				.MinimumLevel.Debug()
+				.Enrich.FromLogContext();
+			
+			// Apply standard overrides
+			foreach (var (ns, level) in overrides)
+			{
+				loggerConfig.MinimumLevel.Override(ns, level);
+			}
+			
+			// Add console sink (JSON in K8s, plain text elsewhere)
+			if (LoggingConfiguration.IsRunningInKubernetes())
+			{
+				loggerConfig.WriteTo.Console(new CompactJsonFormatter());
+			}
+			else
+			{
+				loggerConfig.WriteTo.Console();
+			}
 			
 			// Add database logging sink (batched)
-			var databaseLogger = new LoggerConfiguration()
-				.MinimumLevel.Debug()
-				.MinimumLevel.Override("ZiggyCreatures.Caching.Fusion", LogEventLevel.Error)
-				.Enrich.FromLogContext()
-				.WriteTo.Sink(new PeriodicBatchingSink(
-					new ArangoSerilogSink(
-						logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
-						"CurrentSharpMUSHWorld",
-						DatabaseConstants.Logs,
-						ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
-						true,
-						true,
-						true),
-					new PeriodicBatchingSinkOptions
-					{
-						BatchSizeLimit = 1000,
-						QueueLimit = 100000,
-						Period = TimeSpan.FromSeconds(2),
-						EagerlyEmitFirstEvent = true,
-					}))
-				.CreateLogger();
+			loggerConfig.WriteTo.Sink(new PeriodicBatchingSink(
+				new ArangoSerilogSink(
+					logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
+					"CurrentSharpMUSHWorld",
+					DatabaseConstants.Logs,
+					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
+					true,
+					true,
+					true),
+				new PeriodicBatchingSinkOptions
+				{
+					BatchSizeLimit = 1000,
+					QueueLimit = 100000,
+					Period = TimeSpan.FromSeconds(2),
+					EagerlyEmitFirstEvent = true,
+				}));
 			
-			// Combine console and database logging
-			logging.AddSerilog(new LoggerConfiguration()
-				.MinimumLevel.Debug()
-				.MinimumLevel.Override("ZiggyCreatures.Caching.Fusion", LogEventLevel.Error)
-				.Enrich.FromLogContext()
-				.WriteTo.Logger(consoleLogger)
-				.WriteTo.Logger(databaseLogger)
-				.CreateLogger());
+			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
 
 		// Configure OpenTelemetry Metrics for Prometheus
