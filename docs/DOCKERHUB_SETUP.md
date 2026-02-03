@@ -4,9 +4,17 @@ This guide explains how to set up automatic Docker image publishing to DockerHub
 
 ## Overview
 
-The repository is configured to automatically build and publish Docker images to DockerHub whenever a new version tag is pushed to the `main` branch. The workflow builds two images:
+The repository has two Docker publishing workflows:
+
+### 1. Production Releases (version tags)
+Automatically builds and publishes Docker images to DockerHub whenever a new version tag is pushed. The workflow builds two images:
 - `sharpmush/sharpmush-server` - The main SharpMUSH server
 - `sharpmush/sharpmush-connectionserver` - The connection server
+
+### 2. Dev Builds (main branch)
+Automatically builds and publishes Docker images with the `dev` tag on every push to the `main` branch:
+- `sharpmush/sharpmush-server:dev` - Latest development build of the server
+- `sharpmush/sharpmush-connectionserver:dev` - Latest development build of the connection server
 
 ## Required GitHub Secrets
 
@@ -47,11 +55,13 @@ This is a DockerHub access token (not your password) that allows GitHub Actions 
 5. Value: Paste the access token you copied from DockerHub
 6. Click **Add secret**
 
-## How to Trigger a Build
+## How to Trigger Builds
 
-The workflow automatically runs when you push a version tag to the repository. Here's how to create and push a version tag:
+### Production Release Build (Version Tags)
 
-### Creating a Version Tag
+The production workflow automatically runs when you push a version tag to the repository. Here's how to create and push a version tag:
+
+#### Creating a Version Tag
 
 ```bash
 # Create a new version tag (e.g., v1.0.0)
@@ -61,12 +71,12 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-### Version Tag Format
+#### Version Tag Format
 
 - Tags must follow the format: `v*.*.*` (e.g., `v1.0.0`, `v2.1.3`, `v0.9.0`)
 - The workflow will automatically extract the version number and use it to tag the Docker images
 
-### What Gets Published
+#### What Gets Published (Version Tags)
 
 When you push a tag like `v1.0.0`, the workflow will publish:
 - `sharpmush/sharpmush-server:1.0.0`
@@ -76,13 +86,33 @@ When you push a tag like `v1.0.0`, the workflow will publish:
 
 The `latest` tag is always updated to point to the most recent version.
 
+### Dev Build (Main Branch Pushes)
+
+The dev workflow automatically runs on **every push to the `main` branch**:
+
+#### What Gets Published (Main Branch)
+
+Every push to `main` updates:
+- `sharpmush/sharpmush-server:dev`
+- `sharpmush/sharpmush-connectionserver:dev`
+
+These images reflect the latest state of the `main` branch and are used by `docker-compose-hub.yml` for development/testing purposes.
+
 ## Manual Triggering
 
-You can also manually trigger the workflow from the GitHub Actions UI:
+You can also manually trigger either workflow from the GitHub Actions UI:
+
+### For Production Releases:
 1. Go to **Actions** tab in your repository
 2. Select **Publish Docker Images** workflow
 3. Click **Run workflow**
 4. Select the branch/tag and click **Run workflow**
+
+### For Dev Builds:
+1. Go to **Actions** tab in your repository
+2. Select **Publish Dev Docker Images** workflow
+3. Click **Run workflow**
+4. Select the `main` branch and click **Run workflow**
 
 ## Verifying the Workflow
 
