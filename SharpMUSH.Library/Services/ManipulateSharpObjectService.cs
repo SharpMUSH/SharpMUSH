@@ -205,7 +205,7 @@ public class ManipulateSharpObjectService(
 
 		switch (unset)
 		{
-			case true when !await obj.HasFlag(plainFlag):
+			case true when !await obj.HasFlag(realFlag.Name):
 			{
 				if (notify)
 				{
@@ -233,7 +233,7 @@ public class ManipulateSharpObjectService(
 
 				break;
 			}
-			case false when await obj.HasFlag(plainFlag):
+			case false when await obj.HasFlag(realFlag.Name):
 			{
 				if (notify)
 				{

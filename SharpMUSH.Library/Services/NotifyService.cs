@@ -324,25 +324,18 @@ public class NotifyService(
 			_batchingStates.TryRemove(handle, out _);
 		}
 
-		// Combine all accumulated messages with newlines and publish as one message
+		// Combine all accumulated messages and publish as one message
+		// Note: Each message already has \r\n from NormalizeLineEnding, so just concatenate directly
 		if (messagesToFlush?.Count > 0)
 		{
-			var totalSize = messagesToFlush.Sum(m => m.Length) + (messagesToFlush.Count - 1) * 2; // +2 for \r\n
+			var totalSize = messagesToFlush.Sum(m => m.Length);
 			var combined = new byte[totalSize];
 			var offset = 0;
 
-			for (var i = 0; i < messagesToFlush.Count; i++)
+			foreach (var message in messagesToFlush)
 			{
-				var message = messagesToFlush[i];
 				Array.Copy(message, 0, combined, offset, message.Length);
 				offset += message.Length;
-
-				// Add \r\n between messages (not after the last one)
-				if (i < messagesToFlush.Count - 1)
-				{
-					combined[offset++] = (byte)'\r';
-					combined[offset++] = (byte)'\n';
-				}
 			}
 
 			await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
