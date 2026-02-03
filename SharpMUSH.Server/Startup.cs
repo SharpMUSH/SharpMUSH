@@ -213,7 +213,15 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddLogging(logging =>
 		{
 			logging.ClearProviders();
-			logging.AddSerilog(new LoggerConfiguration()
+			
+			// Create standard console logger (JSON in K8s, plain text elsewhere)
+			var consoleLogger = LoggingConfiguration.CreateStandardConsoleConfiguration(
+				minimumLevel: LogEventLevel.Debug,
+				overrides: LoggingConfiguration.CreateStandardOverrides()
+			).CreateLogger();
+			
+			// Add database logging sink (batched)
+			var databaseLogger = new LoggerConfiguration()
 				.MinimumLevel.Debug()
 				.MinimumLevel.Override("ZiggyCreatures.Caching.Fusion", LogEventLevel.Error)
 				.Enrich.FromLogContext()
@@ -233,8 +241,16 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 						Period = TimeSpan.FromSeconds(2),
 						EagerlyEmitFirstEvent = true,
 					}))
+				.CreateLogger();
+			
+			// Combine console and database logging
+			logging.AddSerilog(new LoggerConfiguration()
+				.MinimumLevel.Debug()
+				.MinimumLevel.Override("ZiggyCreatures.Caching.Fusion", LogEventLevel.Error)
+				.Enrich.FromLogContext()
+				.WriteTo.Logger(consoleLogger)
+				.WriteTo.Logger(databaseLogger)
 				.CreateLogger());
-			;
 		});
 
 		// Configure OpenTelemetry Metrics for Prometheus
