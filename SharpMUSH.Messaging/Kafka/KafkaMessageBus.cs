@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
@@ -128,14 +130,25 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 	}
 	
 	/// <summary>
+	/// Cache for Handle property reflection to avoid repeated lookups.
+	/// Maps message type to its Handle property info, if it has one.
+	/// </summary>
+	private static readonly ConcurrentDictionary<Type, PropertyInfo?> _handlePropertyCache = new();
+	
+	/// <summary>
 	/// Gets a partition key for the message to ensure ordering of related messages.
 	/// Messages with the same key are guaranteed to be delivered to the same partition in order.
 	/// </summary>
 	private static string GetPartitionKey<T>(T message) where T : class
 	{
-		// Use reflection to check for a Handle property
-		var handleProperty = typeof(T).GetProperty("Handle");
-		if (handleProperty?.PropertyType == typeof(long))
+		// Use cached reflection to check for a Handle property
+		var handleProperty = _handlePropertyCache.GetOrAdd(typeof(T), type =>
+		{
+			var prop = type.GetProperty("Handle");
+			return prop?.PropertyType == typeof(long) ? prop : null;
+		});
+		
+		if (handleProperty != null)
 		{
 			var handle = (long?)handleProperty.GetValue(message);
 			if (handle.HasValue)

@@ -150,7 +150,17 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 				Interlocked.Increment(ref _flushesFromTimeout);
 				// Fire and forget - don't wait for the flush to complete
 				// Each connection's buffer has its own lock to ensure sequential processing
-				_ = Task.Run(async () => await FlushBufferAsync(handle, buffer));
+				_ = Task.Run(async () =>
+				{
+					try
+					{
+						await FlushBufferAsync(handle, buffer);
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "Unhandled error in timer-triggered flush for connection {Handle}", handle);
+					}
+				});
 			}
 		}
 	}
@@ -231,7 +241,17 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	private void FlushBuffer(long handle, MessageBuffer buffer)
 	{
 		// Fire and forget to avoid blocking AddMessage
-		_ = Task.Run(async () => await FlushBufferAsync(handle, buffer));
+		_ = Task.Run(async () =>
+		{
+			try
+			{
+				await FlushBufferAsync(handle, buffer);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Unhandled error in size-triggered flush for connection {Handle}", handle);
+			}
+		});
 	}
 
 	/// <summary>
@@ -247,8 +267,14 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 			tasks.Add(FlushBufferAsync(handle, buffer));
 		}
 		
-		// Wait for all flushes to complete during shutdown
-		Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));
+		// Wait for all flushes to complete during shutdown with a timeout
+		var completed = Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));
+		
+		if (!completed)
+		{
+			_logger.LogWarning("Not all buffers flushed within 5 seconds during shutdown. {Count} buffers pending.",
+				tasks.Count(t => !t.IsCompleted));
+		}
 	}
 
 	/// <summary>
@@ -259,7 +285,17 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 		if (_buffers.TryRemove(handle, out var buffer))
 		{
 			// Flush any remaining messages asynchronously
-			_ = Task.Run(async () => await FlushBufferAsync(handle, buffer));
+			_ = Task.Run(async () =>
+			{
+				try
+				{
+					await FlushBufferAsync(handle, buffer);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Error flushing buffer during connection removal for handle {Handle}", handle);
+				}
+			});
 		}
 	}
 
