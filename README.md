@@ -32,6 +32,13 @@ This features such elements as our Compatibility, Installation, and API document
 Currently, there is no Release Candidate for SharpMUSH. 
 We are still in the early stages of development, and are working on getting a stable release out.
 
+# Docker Deployment
+SharpMUSH is available as Docker images on DockerHub:
+- `sharpmush/sharpmush-server` - Main server
+- `sharpmush/sharpmush-connectionserver` - Connection server
+
+For information on setting up automatic DockerHub publishing when new versions are released, see [DockerHub Setup Guide](./docs/DOCKERHUB_SETUP.md).
+
 # Quick Contribution Guide
 ## How to Build and Test
 - Install [.Net 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
