@@ -102,16 +102,22 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 			await _topicManager.EnsureTopicExistsAsync(topic, cancellationToken);
 
 			var messageJson = JsonSerializer.Serialize(message);
+			
+			// Use a partition key that ensures ordering for related messages
+			// For output messages, use the Handle to ensure all messages to the same connection
+			// are routed to the same partition and maintain order
+			var partitionKey = GetPartitionKey(message);
+			
 			var kafkaMessage = new Message<string, string>
 			{
-				Key = Guid.NewGuid().ToString(), // Random key for load balancing
+				Key = partitionKey,
 				Value = messageJson
 			};
 
 			var result = await _producer.ProduceAsync(topic, kafkaMessage, cancellationToken);
 
-			_logger.LogTrace("Message published to topic {Topic}, partition {Partition}, offset {Offset}",
-				topic, result.Partition.Value, result.Offset.Value);
+			_logger.LogTrace("Message published to topic {Topic}, partition {Partition}, offset {Offset}, key {Key}",
+				topic, result.Partition.Value, result.Offset.Value, partitionKey);
 		}
 		catch (ProduceException<string, string> ex)
 		{
@@ -119,6 +125,29 @@ public class KafkaMessageBus : IMessageBus, IAsyncDisposable
 				topic, ex.Error.Code, ex.Error.Reason);
 			throw;
 		}
+	}
+	
+	/// <summary>
+	/// Gets a partition key for the message to ensure ordering of related messages.
+	/// Messages with the same key are guaranteed to be delivered to the same partition in order.
+	/// </summary>
+	private static string GetPartitionKey<T>(T message) where T : class
+	{
+		// Use reflection to check for a Handle property
+		var handleProperty = typeof(T).GetProperty("Handle");
+		if (handleProperty?.PropertyType == typeof(long))
+		{
+			var handle = (long?)handleProperty.GetValue(message);
+			if (handle.HasValue)
+			{
+				// Use the handle as the partition key to ensure all messages
+				// for the same connection go to the same partition
+				return handle.Value.ToString();
+			}
+		}
+		
+		// For messages without a Handle, use a random key for load balancing
+		return Guid.NewGuid().ToString();
 	}
 
 	private string GetTopicForMessageType<T>()

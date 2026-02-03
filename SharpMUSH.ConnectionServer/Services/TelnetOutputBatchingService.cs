@@ -130,36 +130,54 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	{
 		var now = DateTime.UtcNow;
 		
+		// Process each buffer independently. Use Task.Run to avoid blocking the timer thread
+		// while still ensuring sequential processing per connection.
 		foreach (var (handle, buffer) in _buffers)
 		{
+			// Check if we need to flush without holding the lock for too long
+			bool shouldFlush = false;
 			lock (buffer.Lock)
 			{
 				if (buffer.Messages.Count > 0)
 				{
 					var timeSinceFirst = (now - buffer.FirstMessageTime).TotalMilliseconds;
-					
-					if (timeSinceFirst >= MaxBatchDelayMs)
-					{
-						Interlocked.Increment(ref _flushesFromTimeout);
-						FlushBuffer(handle, buffer);
-					}
+					shouldFlush = timeSinceFirst >= MaxBatchDelayMs;
 				}
+			}
+			
+			if (shouldFlush)
+			{
+				Interlocked.Increment(ref _flushesFromTimeout);
+				// Fire and forget - don't wait for the flush to complete
+				// Each connection's buffer has its own lock to ensure sequential processing
+				_ = Task.Run(async () => await FlushBufferAsync(handle, buffer));
 			}
 		}
 	}
 
 	/// <summary>
 	/// Flushes a specific buffer by combining all messages and sending via TCP.
-	/// Must be called while holding buffer.Lock.
+	/// This async version properly handles the async OutputFunction call.
 	/// </summary>
-	private void FlushBuffer(long handle, MessageBuffer buffer)
+	private async Task FlushBufferAsync(long handle, MessageBuffer buffer)
 	{
-		if (buffer.Messages.Count == 0)
+		List<byte[]>? messagesToFlush = null;
+		int messageCount = 0;
+		
+		// Collect messages to flush while holding the lock
+		lock (buffer.Lock)
 		{
-			return;
+			if (buffer.Messages.Count == 0)
+			{
+				return;
+			}
+			
+			messageCount = buffer.Messages.Count;
+			messagesToFlush = new List<byte[]>(buffer.Messages);
+			buffer.Messages.Clear();
 		}
-
-		var messageCount = buffer.Messages.Count;
+		
+		// Perform the actual flush outside the lock to avoid blocking other operations
 		Interlocked.Increment(ref _totalBatchesFlushed);
 		Interlocked.Add(ref _totalMessagesInBatches, messageCount);
 
@@ -168,18 +186,17 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 		{
 			_logger.LogWarning("Cannot flush {Count} messages for unknown connection handle: {Handle}",
 				messageCount, handle);
-			buffer.Messages.Clear();
 			return;
 		}
 
 		try
 		{
 			// Combine all messages into a single buffer
-			var totalLength = buffer.Messages.Sum(m => m.Length);
+			var totalLength = messagesToFlush.Sum(m => m.Length);
 			var combined = new byte[totalLength];
 			var offset = 0;
 
-			foreach (var message in buffer.Messages)
+			foreach (var message in messagesToFlush)
 			{
 				Buffer.BlockCopy(message, 0, combined, offset, message.Length);
 				offset += message.Length;
@@ -187,7 +204,7 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 
 			// Measure TCP write time
 			var sw = Stopwatch.StartNew();
-			connection.OutputFunction(combined).GetAwaiter().GetResult();
+			await connection.OutputFunction(combined);
 			sw.Stop();
 			
 			Interlocked.Add(ref _totalTcpWriteTimeMs, sw.ElapsedMilliseconds);
@@ -195,15 +212,26 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 			_logger.LogInformation("Flushed {Count} messages ({Bytes} bytes) to connection {Handle} in {TcpWriteMs}ms",
 				messageCount, totalLength, handle, sw.ElapsedMilliseconds);
 
-			buffer.Messages.Clear();
-			buffer.LastFlushTime = DateTime.UtcNow;
+			lock (buffer.Lock)
+			{
+				buffer.LastFlushTime = DateTime.UtcNow;
+			}
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "Error flushing {Count} messages to connection {Handle}",
 				messageCount, handle);
-			buffer.Messages.Clear();
 		}
+	}
+	
+	/// <summary>
+	/// Synchronous wrapper for FlushBufferAsync for compatibility with AddMessage.
+	/// Used when immediate flush is needed due to batch size limit.
+	/// </summary>
+	private void FlushBuffer(long handle, MessageBuffer buffer)
+	{
+		// Fire and forget to avoid blocking AddMessage
+		_ = Task.Run(async () => await FlushBufferAsync(handle, buffer));
 	}
 
 	/// <summary>
@@ -211,13 +239,16 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	/// </summary>
 	private void FlushAllBuffers()
 	{
+		var tasks = new List<Task>();
+		
 		foreach (var (handle, buffer) in _buffers)
 		{
-			lock (buffer.Lock)
-			{
-				FlushBuffer(handle, buffer);
-			}
+			// Launch async flush for each buffer
+			tasks.Add(FlushBufferAsync(handle, buffer));
 		}
+		
+		// Wait for all flushes to complete during shutdown
+		Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(5));
 	}
 
 	/// <summary>
@@ -227,10 +258,8 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	{
 		if (_buffers.TryRemove(handle, out var buffer))
 		{
-			lock (buffer.Lock)
-			{
-				FlushBuffer(handle, buffer);
-			}
+			// Flush any remaining messages asynchronously
+			_ = Task.Run(async () => await FlushBufferAsync(handle, buffer));
 		}
 	}
 
