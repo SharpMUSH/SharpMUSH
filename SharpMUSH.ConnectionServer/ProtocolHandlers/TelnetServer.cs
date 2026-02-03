@@ -79,15 +79,18 @@ public class TelnetServer : ConnectionHandler
 			"telnet",
 		async (data) =>
 		{
-			// Write output directly to the network transport
-			_logger.LogInformation("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
+			// Write output to the network transport with proper telnet escaping
+			// TelnetSafeBytes escapes IAC (0xFF) characters and applies MCCP compression if negotiated
+			_logger.LogDebug("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
 			try
 			{
 				await _semaphoreSlimForWriter.WaitAsync(ct);
 				try
 				{
-					await connection.Transport.Output.WriteAsync(data.AsMemory(), ct);
-					_logger.LogInformation("Successfully wrote {ByteCount} bytes to transport for handle {Handle}", data.Length, nextPort);
+					var telnetSafeData = telnet.TelnetSafeBytes(data);
+					await connection.Transport.Output.WriteAsync(telnetSafeData.AsMemory(), ct);
+					_logger.LogDebug("Successfully wrote {ByteCount} telnet-safe bytes ({Original} original) to transport for handle {Handle}", 
+						telnetSafeData.Length, data.Length, nextPort);
 				}
 				finally
 				{
@@ -105,13 +108,15 @@ public class TelnetServer : ConnectionHandler
 		},
 		async (data) =>
 		{
-			// Write prompt output directly to the network transport
+			// Write prompt output to the network transport with proper telnet escaping
+			// TelnetSafeBytes escapes IAC (0xFF) characters and applies MCCP compression if negotiated
 			try
 			{
 				await _semaphoreSlimForWriter.WaitAsync(ct);
 				try
 				{
-					await connection.Transport.Output.WriteAsync(data.AsMemory(), ct);
+					var telnetSafeData = telnet.TelnetSafeBytes(data);
+					await connection.Transport.Output.WriteAsync(telnetSafeData.AsMemory(), ct);
 				}
 				finally
 				{
