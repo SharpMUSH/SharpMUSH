@@ -17,7 +17,7 @@ ILogger<BatchTelnetOutputConsumer> logger)
 {
 public Task HandleAsync(TelnetOutputMessage message, CancellationToken cancellationToken = default)
 {
-	logger.LogInformation("BatchTelnetOutputConsumer.HandleAsync called for handle {Handle} with {Bytes} bytes", 
+	logger.LogDebug("BatchTelnetOutputConsumer.HandleAsync called for handle {Handle} with {Bytes} bytes", 
 		message.Handle, message.Data?.Length ?? 0);
 	
 	try
@@ -30,7 +30,7 @@ public Task HandleAsync(TelnetOutputMessage message, CancellationToken cancellat
 		
 		// Add message to batching service for efficient TCP writes
 		batchingService.AddMessage(message.Handle, message.Data);
-		logger.LogInformation("Successfully added message to batching service for handle {Handle}", message.Handle);
+		logger.LogDebug("Successfully added message to batching service for handle {Handle}", message.Handle);
 	}
 	catch (Exception ex)
 	{

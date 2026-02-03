@@ -79,7 +79,7 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 	public void AddMessage(long handle, byte[] data)
 	{
 		Interlocked.Increment(ref _totalMessagesReceived);
-		_logger.LogInformation("Adding message for handle {Handle} ({Bytes} bytes)", handle, data.Length);
+		_logger.LogDebug("Adding message for handle {Handle} ({Bytes} bytes)", handle, data.Length);
 		
 		var buffer = _buffers.GetOrAdd(handle, _ => new MessageBuffer());
 		
@@ -219,7 +219,7 @@ public class TelnetOutputBatchingService : IHostedService, IDisposable
 			
 			Interlocked.Add(ref _totalTcpWriteTimeMs, sw.ElapsedMilliseconds);
 
-			_logger.LogInformation("Flushed {Count} messages ({Bytes} bytes) to connection {Handle} in {TcpWriteMs}ms",
+			_logger.LogDebug("Flushed {Count} messages ({Bytes} bytes) to connection {Handle} in {TcpWriteMs}ms",
 				messageCount, totalLength, handle, sw.ElapsedMilliseconds);
 
 			lock (buffer.Lock)
