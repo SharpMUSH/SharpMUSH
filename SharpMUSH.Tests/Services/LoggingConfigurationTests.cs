@@ -44,7 +44,7 @@ public class LoggingConfigurationTests
 		{
 			// Clear K8s variable and set only DOTNET_RUNNING_IN_CONTAINER
 			Environment.SetEnvironmentVariable("KUBERNETES_SERVICE_HOST", null);
-			Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", "true");
+			Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", "1");
 			
 			// Act
 			var result = LoggingConfiguration.IsRunningInKubernetes();
