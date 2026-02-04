@@ -11,6 +11,7 @@ using System.Threading;
 
 namespace SharpMUSH.Tests.Functions;
 
+[NotInParallel]
 public class MailFunctionUnitTests
 {
 	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
