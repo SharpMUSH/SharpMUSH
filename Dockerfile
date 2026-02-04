@@ -17,6 +17,3 @@ ENV ASPNETCORE_URLS=http://+:8080;https://+:8081
 ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/app/sharpmush-dev.pfx
 ENV ASPNETCORE_Kestrel__Certificates__Default__Password=DevPassword123!
 ENTRYPOINT ["dotnet", "SharpMUSH.Server.dll"]
-
-
-
