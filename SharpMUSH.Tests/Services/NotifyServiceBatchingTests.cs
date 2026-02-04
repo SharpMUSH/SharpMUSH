@@ -40,8 +40,8 @@ public class NotifyServiceBatchingTests
 		await notifyService.Notify(1L, "Message 2", null);
 		await notifyService.Notify(1L, "Message 3", null);
 
-		// Wait for the batching timer to flush (1ms + margin for timer overhead)
-		await Task.Delay(50);
+		// Wait for all pending batches to flush
+		await notifyService.WaitForPendingFlushesAsync();
 
 		// Assert
 		await Assert.That(publishedMessages.Count).IsEqualTo(1);
@@ -67,8 +67,8 @@ public class NotifyServiceBatchingTests
 		// Act
 		await notifyService.Notify(1L, "Single message", null);
 		
-		// Wait for the batching timer to flush
-		await Task.Delay(50);
+		// Wait for all pending batches to flush
+		await notifyService.WaitForPendingFlushesAsync();
 
 		// Assert
 		await Assert.That(publishedMessages.Count).IsEqualTo(1);
@@ -90,8 +90,8 @@ public class NotifyServiceBatchingTests
 		// Act - Send a message that already has a newline
 		await notifyService.Notify(1L, "Message with newline\n", null);
 		
-		// Wait for the batching timer to flush
-		await Task.Delay(50);
+		// Wait for all pending batches to flush
+		await notifyService.WaitForPendingFlushesAsync();
 
 		// Assert
 		await Assert.That(publishedMessages.Count).IsEqualTo(1);
@@ -112,8 +112,8 @@ public class NotifyServiceBatchingTests
 		// Act
 		await notifyService.Notify(1L, "", null);
 		
-		// Wait to ensure no flush happens
-		await Task.Delay(50);
+		// Wait for all pending batches to flush (should be none for empty message)
+		await notifyService.WaitForPendingFlushesAsync();
 
 		// Assert - Empty messages should not be published
 		await Assert.That(publishedMessages.Count).IsEqualTo(0);
