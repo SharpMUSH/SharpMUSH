@@ -520,7 +520,7 @@ public partial class ArangoDatabase(
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
 			new
 			{
-				_key = obj.Object().Key,
+				_key = obj.Object().Key.ToString(),
 				Warnings = warnings
 			}, cancellationToken: ct);
 
@@ -1872,7 +1872,7 @@ public partial class ArangoDatabase(
 		
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
-			_key = target.Key,
+			_key = target.Key.ToString(),
 			Locks = target.Locks
 				.Select(kvp => new KeyValuePair<string, SharpLockDataQueryResult>(
 					kvp.Key,
@@ -1890,7 +1890,7 @@ public partial class ArangoDatabase(
 	{
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
-			_key = target.Key,
+			_key = target.Key.ToString(),
 			Locks = target.Locks
 				.Where(kvp => kvp.Key != lockName)
 				.Select(kvp => new KeyValuePair<string, SharpLockDataQueryResult>(
