@@ -32,6 +32,7 @@ public class NotifyService(
 		public List<byte[]> AccumulatedMessages { get; } = [];
 		public object Lock { get; } = new();
 		public Timer? FlushTimer { get; set; }
+		public TaskCompletionSource? FlushCompletionSource { get; set; }
 	}
 	
 	/// <summary>
@@ -256,6 +257,12 @@ public class NotifyService(
 		{
 			state.AccumulatedMessages.Add(bytes);
 
+			// Create a new TaskCompletionSource if we don't have one
+			if (state.FlushCompletionSource == null)
+			{
+				state.FlushCompletionSource = new TaskCompletionSource();
+			}
+
 			// Start or reset the timer to 1ms
 			if (state.FlushTimer == null)
 			{
@@ -298,6 +305,7 @@ public class NotifyService(
 
 		List<byte[]>? messagesToFlush = null;
 		bool shouldRemoveState = false;
+		TaskCompletionSource? completionSource = null;
 		lock (state.Lock)
 		{
 			if (state.AccumulatedMessages.Count == 0)
@@ -312,6 +320,10 @@ public class NotifyService(
 				state.AccumulatedMessages.Clear();
 				state.FlushTimer?.Dispose();
 				state.FlushTimer = null;
+				
+				// Capture the completion source to signal after publish
+				completionSource = state.FlushCompletionSource;
+				state.FlushCompletionSource = null;
 				
 				// Always remove state after flushing to prevent memory leak.
 				// A new state will be created automatically when the next message arrives.
@@ -328,17 +340,34 @@ public class NotifyService(
 		// Note: Each message already has \r\n from NormalizeLineEnding, so just concatenate directly
 		if (messagesToFlush?.Count > 0)
 		{
-			var totalSize = messagesToFlush.Sum(m => m.Length);
-			var combined = new byte[totalSize];
-			var offset = 0;
-
-			foreach (var message in messagesToFlush)
+			try
 			{
-				Array.Copy(message, 0, combined, offset, message.Length);
-				offset += message.Length;
-			}
+				var totalSize = messagesToFlush.Sum(m => m.Length);
+				var combined = new byte[totalSize];
+				var offset = 0;
 
-			await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
+				foreach (var message in messagesToFlush)
+				{
+					Array.Copy(message, 0, combined, offset, message.Length);
+					offset += message.Length;
+				}
+
+				await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
+				
+				// Signal completion after successful publish
+				completionSource?.TrySetResult();
+			}
+			catch (Exception ex)
+			{
+				// Signal exception on completion source
+				completionSource?.TrySetException(ex);
+				throw;
+			}
+		}
+		else
+		{
+			// No messages to flush, but still signal completion
+			completionSource?.TrySetResult();
 		}
 	}
 
@@ -364,5 +393,35 @@ public class NotifyService(
 		}
 		
 		return new CallState(errorReturn);
+	}
+
+	/// <summary>
+	/// Waits for all pending batched messages to be flushed.
+	/// This is primarily useful for testing to ensure deterministic behavior.
+	/// </summary>
+	public async Task WaitForPendingFlushesAsync()
+	{
+		// Collect all pending TaskCompletionSources
+		var pendingTasks = new List<Task>();
+		
+		foreach (var kvp in _batchingStates)
+		{
+			TaskCompletionSource? tcs = null;
+			lock (kvp.Value.Lock)
+			{
+				tcs = kvp.Value.FlushCompletionSource;
+			}
+			
+			if (tcs != null)
+			{
+				pendingTasks.Add(tcs.Task);
+			}
+		}
+		
+		// Wait for all pending flushes to complete
+		if (pendingTasks.Count > 0)
+		{
+			await Task.WhenAll(pendingTasks);
+		}
 	}
 }
