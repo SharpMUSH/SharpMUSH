@@ -87,10 +87,6 @@ builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
 // Add WebSocketServer
 builder.Services.AddSingleton<WebSocketServer>();
 
-// Add batching service for @dolist performance optimization
-builder.Services.AddSingleton<TelnetOutputBatchingService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<TelnetOutputBatchingService>());
-
 // Add health monitoring service
 builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
 
@@ -107,7 +103,7 @@ builder.Services.AddConnectionServerMessaging(
 	},
 	x =>
 	{
-		x.AddConsumer<BatchTelnetOutputConsumer>();
+		x.AddConsumer<TelnetOutputConsumer>();
 		
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
