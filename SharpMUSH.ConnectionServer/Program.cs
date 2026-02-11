@@ -116,9 +116,9 @@ builder.Services.AddConnectionServerMessaging(
 		// - Middleware: TelnetOutputBatchMiddleware (IMessageMiddleware)
 		// - Pipeline: Deserialize → AddBatching(100, 10ms) → TelnetOutputBatchMiddleware
 		// - Groups messages by Handle, concatenates data IN ORDER, sends batched output
-		// - Batch timeout increased to 10ms for better performance (from 8ms)
-		// - Single worker ensures partition ordering is maintained
-		// - Parallel processing across different connections for performance
+		// - Batch timeout: 10ms for good performance with low latency
+		// - BytesSum distribution: Messages with same Handle go to same worker (ordering)
+		// - Multiple workers (Environment.ProcessorCount): Different connections processed in parallel
 		x.AddBatchConsumer<TelnetOutputBatchMiddleware, TelnetOutputMessage>(100, TimeSpan.FromMilliseconds(10));
 		
 		// All other messages: Use REGULAR CONSUMERS (individual message processing)

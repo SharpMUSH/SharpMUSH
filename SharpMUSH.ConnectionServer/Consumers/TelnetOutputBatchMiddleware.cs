@@ -24,10 +24,16 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 /// Ordering Guarantees:
 /// - Messages with the same Handle use the same partition key (Handle.ToString())
 /// - Kafka guarantees ordering within a partition
-/// - Single worker (WithWorkersCount(1)) ensures partitions are processed in order
+/// - BytesSum distribution strategy ensures messages with same partition key go to same worker
+/// - Multiple workers process different connections in parallel (no ordering constraint between connections)
 /// - Grouping preserves message order within each Handle
 /// - Concatenation maintains the original message sequence
 /// - Different connections are processed in parallel (independent, no ordering constraint)
+/// 
+/// Performance:
+/// - WorkerCount defaults to Environment.ProcessorCount for parallel processing
+/// - BytesSum distribution maintains ordering while utilizing multiple cores
+/// - Different connections processed by different workers simultaneously
 /// 
 /// Configuration: Batches up to 100 messages or waits 10ms before processing.
 /// </summary>

@@ -1,5 +1,6 @@
 using KafkaFlow;
 using KafkaFlow.Configuration;
+using KafkaFlow.Consumers.DistributionStrategies;
 using KafkaFlow.Serializer;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Messaging.Abstractions;
@@ -204,7 +205,7 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 			.Topic(topic)
 			.WithGroupId(_options.ConsumerGroupId)
 			.WithBufferSize(_options.BatchMaxSize)
-			.WithWorkersCount(1) // Parallel processing
+			.WithWorkersCount(_options.WorkerCount) // Multiple workers for parallel processing
 			.WithAutoOffsetReset(KFAutoOffsetReset.Latest)
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()
@@ -249,11 +250,16 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 		// 1. Deserialize messages
 		// 2. Add batching to accumulate messages
 		// 3. Add custom middleware to process the batch using GetMessagesBatch()
+		// 
+		// BytesSum distribution strategy ensures messages with the same partition key
+		// (e.g., Handle for TelnetOutputMessage) always go to the same worker,
+		// maintaining ordering while allowing parallel processing across different keys.
 		_clusterBuilder.AddConsumer(consumer => consumer
 			.Topic(topic)
 			.WithGroupId(_options.ConsumerGroupId)
 			.WithBufferSize(_options.BatchMaxSize)
-			.WithWorkersCount(1) // Use single worker for batching
+			.WithWorkersCount(_options.WorkerCount) // Multiple workers with BytesSum distribution
+			.WithWorkerDistributionStrategy<BytesSumDistributionStrategy>() // Partition-aware distribution
 			.WithAutoOffsetReset(KFAutoOffsetReset.Latest)
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()

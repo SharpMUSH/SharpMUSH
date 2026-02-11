@@ -55,6 +55,14 @@ public class MessageQueueOptions
 	public int MaxInFlightRequests { get; set; } = 1;
 
 	/// <summary>
+	/// Number of worker threads for processing messages in parallel.
+	/// With BytesSum distribution strategy, messages with the same partition key
+	/// always go to the same worker, maintaining ordering while allowing parallelism.
+	/// Default: Number of processor cores for optimal parallel processing.
+	/// </summary>
+	public int WorkerCount { get; set; } = Environment.ProcessorCount;
+
+	/// <summary>
 	/// Maximum message size in bytes (6MB for SharpMUSH production)
 	/// </summary>
 	public int MaxMessageBytes { get; set; } = 6 * 1024 * 1024; // 6MB
