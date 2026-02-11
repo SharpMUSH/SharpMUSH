@@ -9,45 +9,20 @@ namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// Full integration test for message ordering.
-/// Creates all factories directly without TUnit shared sessions to avoid deadlock.
+/// Uses TUnit ClassDataSource pattern with shared test session infrastructure.
 /// </summary>
 [Explicit]
 [NotInParallel]
 public class MessageOrderingIntegrationTests
 {
-// Don't use Shared = PerTestSession to avoid TUnit deadlock
-[ClassDataSource<WebAppFactory>]
+[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 public required WebAppFactory MainServer { get; init; }
 
-[ClassDataSource<RedPandaTestServer>]
-public required RedPandaTestServer RedPandaTestServer { get; init; }
-
-[ClassDataSource<RedisTestServer>]
-public required RedisTestServer RedisTestServer { get; init; }
-
-private ConnectionServerFactory? _connectionServer;
+[ClassDataSource<ConnectionServerFactory>(Shared = SharedType.PerTestSession)]
+public required ConnectionServerFactory ConnectionServer { get; init; }
 
 private const int ConnectionTimeout = 15000; // 15 seconds
 private const int IdleTimeout = 2000; // 2 seconds with no data
-
-[Before(Test)]
-public async Task Setup()
-{
-Console.WriteLine("=== Setting up ConnectionServer ===");
-_connectionServer = new ConnectionServerFactory(RedPandaTestServer, RedisTestServer);
-await _connectionServer.InitializeAsync();
-Console.WriteLine($"✓ ConnectionServer ready on telnet:{_connectionServer.TelnetPort}, http:{_connectionServer.HttpPort}");
-}
-
-[After(Test)]
-public async Task Cleanup()
-{
-if (_connectionServer != null)
-{
-Console.WriteLine("=== Cleaning up ConnectionServer ===");
-await _connectionServer.DisposeAsync();
-}
-}
 
 [Test]
 [Timeout(600_000)] // 10 minutes
@@ -56,7 +31,7 @@ public async Task TelnetOutput_WithDolCommand_MaintainsMessageOrdering(Cancellat
 Console.WriteLine("=== Message Ordering Integration Test ===\n");
 Console.WriteLine("Using TUnit test factories for both servers\n");
 
-if (_connectionServer == null)
+if (ConnectionServer == null)
 {
 throw new InvalidOperationException("ConnectionServer not initialized");
 }
@@ -65,15 +40,15 @@ throw new InvalidOperationException("ConnectionServer not initialized");
 var parser = MainServer.Services.GetRequiredService<IMUSHCodeParser>();
 var connectionService = MainServer.Services.GetRequiredService<IConnectionService>();
 Console.WriteLine("✓ Main server services available");
-Console.WriteLine($"✓ ConnectionServer listening on telnet port {_connectionServer.TelnetPort}");
-Console.WriteLine($"✓ ConnectionServer listening on HTTP port {_connectionServer.HttpPort}");
+Console.WriteLine($"✓ ConnectionServer listening on telnet port {ConnectionServer.TelnetPort}");
+Console.WriteLine($"✓ ConnectionServer listening on HTTP port {ConnectionServer.HttpPort}");
 
 try
 {
 // Connect via TCP
-Console.WriteLine($"\nConnecting to telnet port {_connectionServer.TelnetPort}...");
+Console.WriteLine($"\nConnecting to telnet port {ConnectionServer.TelnetPort}...");
 using var client = new TcpClient();
-await client.ConnectAsync("localhost", _connectionServer.TelnetPort);
+await client.ConnectAsync("localhost", ConnectionServer.TelnetPort);
 Console.WriteLine("✓ Connected!");
 
 var stream = client.GetStream();

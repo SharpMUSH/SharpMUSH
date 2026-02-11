@@ -1,7 +1,6 @@
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using SharpMUSH.ConnectionServer;
 using TUnit.Core;
@@ -10,15 +9,16 @@ using TUnit.Core.Interfaces;
 namespace SharpMUSH.Tests;
 
 /// <summary>
-/// Factory for ConnectionServer integration testing using TUnit infrastructure.
-/// Starts the actual ConnectionServer application (not a test server) so it
-/// listens on real ports for telnet connections.
+/// Factory for ConnectionServer integration testing using ASP.NET Core testing infrastructure.
+/// Uses WebApplicationFactory to properly start and manage ConnectionServer lifecycle.
 /// </summary>
-public class ConnectionServerFactory : IAsyncDisposable
+public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncInitializer
 {
-	private readonly RedPandaTestServer _redPandaTestServer;
-	private readonly RedisTestServer _redisTestServer;
-	private Task? _serverTask;
+	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
+	public required RedPandaTestServer RedPandaTestServer { get; init; }
+	
+	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
+	public required RedisTestServer RedisTestServer { get; init; }
 	
 	/// <summary>
 	/// Port where Telnet server is listening.
@@ -30,47 +30,48 @@ public class ConnectionServerFactory : IAsyncDisposable
 	/// </summary>
 	public int HttpPort { get; private set; }
 
-	public ConnectionServerFactory(RedPandaTestServer redPandaTestServer, RedisTestServer redisTestServer)
+	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
-		_redPandaTestServer = redPandaTestServer;
-		_redisTestServer = redisTestServer;
+		// Get test infrastructure addresses
+		var kafkaHost = RedPandaTestServer.Instance.Hostname;
+		var kafkaPort = RedPandaTestServer.Instance.GetMappedPublicPort(9092);
+		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
+		var redisConnection = $"localhost:{redisPort}";
+
+		// Use random available ports for testing
+		TelnetPort = GetAvailablePort();
+		HttpPort = GetAvailablePort();
+
+		Console.WriteLine($"ConnectionServerFactory: Configuring with Kafka={kafkaHost}:{kafkaPort}, Redis={redisConnection}");
+		Console.WriteLine($"ConnectionServerFactory: Telnet port={TelnetPort}, HTTP port={HttpPort}");
+
+		// Override configuration with test values
+		var config = new Dictionary<string, string?>
+		{
+			["KAFKA_HOST"] = $"{kafkaHost}:{kafkaPort}",
+			["REDIS_CONNECTION"] = redisConnection,
+			["ConnectionServer:TelnetPort"] = TelnetPort.ToString(),
+			["ConnectionServer:HttpPort"] = HttpPort.ToString(),
+		};
+		
+		builder.UseConfiguration(new ConfigurationBuilder()
+			.AddInMemoryCollection(config)
+			.Build());
+			
+		builder.UseUrls($"http://localhost:{HttpPort}");
 	}
 
 	public async Task InitializeAsync()
 	{
 		Console.WriteLine("ConnectionServerFactory: Starting initialization...");
 		
-		// Get test infrastructure addresses
-		var kafkaHost = _redPandaTestServer.Instance.Hostname;
-		var kafkaPort = _redPandaTestServer.Instance.GetMappedPublicPort(9092);
-		var redisPort = _redisTestServer.Instance.GetMappedPublicPort(6379);
-		var redisConnection = $"localhost:{redisPort}";
-
-		Console.WriteLine($"ConnectionServerFactory: Kafka={kafkaHost}:{kafkaPort}, Redis={redisConnection}");
-
-		// Set environment variables for test infrastructure
-		Environment.SetEnvironmentVariable("KAFKA_HOST", $"{kafkaHost}:{kafkaPort}");
-		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
-
-		// Use random available ports for testing
-		TelnetPort = GetAvailablePort();
-		HttpPort = GetAvailablePort();
-
-		Console.WriteLine($"ConnectionServerFactory: Telnet port={TelnetPort}, HTTP port={HttpPort}");
-
-		// Set environment variables for ConnectionServer configuration
-		Environment.SetEnvironmentVariable("ConnectionServer__TelnetPort", TelnetPort.ToString());
-		Environment.SetEnvironmentVariable("ConnectionServer__HttpPort", HttpPort.ToString());
-
-		// Start the actual ConnectionServer application in a background task
-		// Don't await Main() - it runs until the application stops
-		Console.WriteLine("ConnectionServerFactory: Starting Program.Main() in background...");
-		_serverTask = Task.Run(() => Program.Main([]));
+		// Create the server - this starts the application
+		_ = Server;
 		
 		Console.WriteLine("ConnectionServerFactory: Waiting for server to become healthy...");
 		
 		// Wait for server to start listening
-		using var httpClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{HttpPort}") };
+		using var httpClient = CreateClient();
 		var retries = 40;
 		while (retries-- > 0)
 		{
@@ -111,39 +112,5 @@ public class ConnectionServerFactory : IAsyncDisposable
 		var port = ((System.Net.IPEndPoint)socket.LocalEndpoint).Port;
 		socket.Stop();
 		return port;
-	}
-
-	public async ValueTask DisposeAsync()
-	{
-		// To stop the server, we need to trigger a shutdown
-		// We can do this by sending a stop signal to the HTTP endpoint or
-		// by killing the process. For now, we'll just wait a bit and let it timeout.
-		
-		if (_serverTask != null)
-		{
-			try
-			{
-				// Send shutdown request to the server
-				using var httpClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{HttpPort}") };
-				httpClient.Timeout = TimeSpan.FromSeconds(2);
-				try
-				{
-					// Try to trigger graceful shutdown by calling a special endpoint
-					// If this doesn't exist, the timeout will handle it
-					await httpClient.PostAsync("/shutdown", null!);
-				}
-				catch
-				{
-					// Ignore errors - server might not have shutdown endpoint
-				}
-				
-				// Wait for server task to complete
-				await _serverTask.WaitAsync(TimeSpan.FromSeconds(10));
-			}
-			catch
-			{
-				// Timeout or other error - that's okay, process will be cleaned up
-			}
-		}
 	}
 }
