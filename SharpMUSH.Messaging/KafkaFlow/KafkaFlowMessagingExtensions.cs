@@ -28,14 +28,14 @@ public static class KafkaFlowMessagingExtensions
 
 		services.AddSingleton(options);
 
-		// Configure KafkaFlow
+		// Configure KafkaFlow with type-based producer
 		services.AddKafka(kafka => kafka
 			.AddCluster(cluster =>
 			{
 				cluster
 					.WithBrokers([$"{options.Host}:{options.Port}"])
-					.AddProducer(
-						"sharpmush-producer",
+					// Use type-based producer following KafkaFlow best practices
+					.AddProducer<SharpMushProducer>(
 						producer => producer
 							.WithCompression(ParseCompressionType(options.CompressionType), null)
 							.WithAcks(options.EnableIdempotence ? KFAcks.All : KFAcks.Leader)
@@ -68,14 +68,14 @@ public static class KafkaFlowMessagingExtensions
 
 		services.AddSingleton(options);
 
-		// Configure KafkaFlow
+		// Configure KafkaFlow with type-based producer
 		services.AddKafka(kafka => kafka
 			.AddCluster(cluster =>
 			{
 				cluster
 					.WithBrokers([$"{options.Host}:{options.Port}"])
-					.AddProducer(
-						"sharpmush-producer",
+					// Use type-based producer following KafkaFlow best practices
+					.AddProducer<SharpMushProducer>(
 						producer => producer
 							.WithCompression(ParseCompressionType(options.CompressionType), null)
 							.WithAcks(options.EnableIdempotence ? KFAcks.All : KFAcks.Leader)

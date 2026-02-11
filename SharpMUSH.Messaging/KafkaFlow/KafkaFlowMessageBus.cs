@@ -6,26 +6,22 @@ using SharpMUSH.Messaging.Abstractions;
 namespace SharpMUSH.Messaging.KafkaFlow;
 
 /// <summary>
-/// KafkaFlow-based implementation of IMessageBus
+/// KafkaFlow-based implementation of IMessageBus using type-based producer pattern.
+/// Injects IMessageProducer&lt;SharpMushProducer&gt; following KafkaFlow best practices.
 /// </summary>
-public class KafkaFlowMessageBus(IProducerAccessor producerAccessor) : IMessageBus
+public class KafkaFlowMessageBus(IMessageProducer<SharpMushProducer> producer) : IMessageBus
 {
-	private const string ProducerName = "sharpmush-producer";
-
 	public async Task Publish<T>(T message, CancellationToken cancellationToken = default) where T : class
 	{
 		var topic = GetTopicForMessageType<T>();
-		
-		var producer = producerAccessor.GetProducer(ProducerName);
-		await producer.ProduceAsync(topic, message);
+		await producer.ProduceAsync(topic, null, message);
 	}
 	
 	public async Task HandlePublish<T>(T message, CancellationToken cancellationToken = default) where T : IHandleMessage
 	{
 		var topic = GetTopicForMessageType<T>();
-		var partitionKey = message.Handle;
+		var partitionKey = message.Handle.ToString();
 		
-		var producer = producerAccessor.GetProducer(ProducerName);
 		await producer.ProduceAsync(topic, partitionKey, message);
 	}
 
