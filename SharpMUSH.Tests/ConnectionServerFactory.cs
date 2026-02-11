@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using SharpMUSH.ConnectionServer;
 using TUnit.Core;
@@ -20,6 +22,7 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 	public required RedisTestServer RedisTestServer { get; init; }
 
 	private WebApplicationFactory<Program>? _factory;
+	private HttpClient? _httpClient;
 	
 	/// <summary>
 	/// Access to ConnectionServer services for testing.
@@ -60,13 +63,34 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 			.WithWebHostBuilder(builder =>
 			{
 				builder.UseEnvironment("Testing");
-				// Additional configuration can go here if needed
+				// Use Kestrel (not test server) to actually listen on ports
+				builder.UseKestrel();
+				builder.UseUrls($"http://localhost:{HttpPort}");
 			});
 		
-		// Ensure server is created (this triggers the build)
-		_ = _factory.Server;
+		// Create HTTP client - this triggers the server to start
+		_httpClient = _factory.CreateClient();
 		
-		// Give the server a moment to start listening
+		// Wait for server to be ready by checking health endpoint
+		var retries = 10;
+		while (retries-- > 0)
+		{
+			try
+			{
+				var response = await _httpClient.GetAsync("/health");
+				if (response.IsSuccessStatusCode)
+				{
+					break;
+				}
+			}
+			catch
+			{
+				// Server not ready yet
+			}
+			await Task.Delay(500);
+		}
+		
+		// Give the telnet listener a moment to start
 		await Task.Delay(1000);
 	}
 
@@ -81,6 +105,7 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
+		_httpClient?.Dispose();
 		if (_factory != null)
 		{
 			await _factory.DisposeAsync();
