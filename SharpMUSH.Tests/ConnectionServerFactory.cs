@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Hosting;
 using SharpMUSH.ConnectionServer;
 using TUnit.Core;
 using TUnit.Core.Interfaces;
@@ -10,8 +10,8 @@ namespace SharpMUSH.Tests;
 
 /// <summary>
 /// Factory for ConnectionServer integration testing using TUnit infrastructure.
-/// Provides access to ConnectionServer services while sharing test infrastructure
-/// (Redis, Kafka, ArangoDB) across the test session.
+/// Starts the actual ConnectionServer application (not a test server) so it
+/// listens on real ports for telnet connections.
 /// </summary>
 public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 {
@@ -21,13 +21,8 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedisTestServer RedisTestServer { get; init; }
 
-	private WebApplicationFactory<Program>? _factory;
-	private HttpClient? _httpClient;
-	
-	/// <summary>
-	/// Access to ConnectionServer services for testing.
-	/// </summary>
-	public IServiceProvider Services => _factory!.Services;
+	private Task? _serverTask;
+	private CancellationTokenSource? _cts;
 	
 	/// <summary>
 	/// Port where Telnet server is listening.
@@ -43,11 +38,12 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 	{
 		// Get test infrastructure addresses
 		var kafkaHost = RedPandaTestServer.Instance.Hostname;
+		var kafkaPort = RedPandaTestServer.Instance.GetMappedPublicPort(9092);
 		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
 		var redisConnection = $"localhost:{redisPort}";
 
 		// Set environment variables for test infrastructure
-		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
+		Environment.SetEnvironmentVariable("KAFKA_HOST", $"{kafkaHost}:{kafkaPort}");
 		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
 
 		// Use random available ports for testing
@@ -58,28 +54,31 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 		Environment.SetEnvironmentVariable("ConnectionServer__TelnetPort", TelnetPort.ToString());
 		Environment.SetEnvironmentVariable("ConnectionServer__HttpPort", HttpPort.ToString());
 
-		// Create ConnectionServer factory
-		_factory = new WebApplicationFactory<Program>()
-			.WithWebHostBuilder(builder =>
+		// Start the actual ConnectionServer application by calling Program.Main()
+		_cts = new CancellationTokenSource();
+		_serverTask = Task.Run(async () =>
+		{
+			try
 			{
-				builder.UseEnvironment("Testing");
-				// Use Kestrel (not test server) to actually listen on ports
-				builder.UseKestrel();
-				builder.UseUrls($"http://localhost:{HttpPort}");
-			});
+				await Program.Main([]);
+			}
+			catch (OperationCanceledException)
+			{
+				// Expected when stopping
+			}
+		}, _cts.Token);
 		
-		// Create HTTP client - this triggers the server to start
-		_httpClient = _factory.CreateClient();
-		
-		// Wait for server to be ready by checking health endpoint
-		var retries = 10;
+		// Wait for server to start listening
+		using var httpClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{HttpPort}") };
+		var retries = 40;
 		while (retries-- > 0)
 		{
 			try
 			{
-				var response = await _httpClient.GetAsync("/health");
+				var response = await httpClient.GetAsync("/health");
 				if (response.IsSuccessStatusCode)
 				{
+					Console.WriteLine($"ConnectionServer started successfully on telnet:{TelnetPort}, http:{HttpPort}");
 					break;
 				}
 			}
@@ -90,7 +89,7 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 			await Task.Delay(500);
 		}
 		
-		// Give the telnet listener a moment to start
+		// Give telnet listener time to fully initialize
 		await Task.Delay(1000);
 	}
 
@@ -105,10 +104,22 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
-		_httpClient?.Dispose();
-		if (_factory != null)
+		if (_cts != null)
 		{
-			await _factory.DisposeAsync();
+			_cts.Cancel();
+			_cts.Dispose();
+		}
+		
+		if (_serverTask != null)
+		{
+			try
+			{
+				await _serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+			}
+			catch
+			{
+				// Timeout or cancellation is okay
+			}
 		}
 	}
 }
