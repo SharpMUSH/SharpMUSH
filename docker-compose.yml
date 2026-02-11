@@ -33,6 +33,8 @@ services:
       - PLAINTEXT://redpanda:9092
       - --set
       - redpanda.max_compacted_log_segment_size=6291456
+      - --set
+      - redpanda.default_topic_partitions=1
     ports:
       - "9092:9092"   # Kafka API
       - "9644:9644"   # Admin API
