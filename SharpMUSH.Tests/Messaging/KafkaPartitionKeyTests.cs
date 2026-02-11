@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Messages;
 using SharpMUSH.Messaging.Configuration;
-using SharpMUSH.Messaging.Kafka;
+using SharpMUSH.Messaging.KafkaFlow;
 using System.Reflection;
 using System.Text;
 using TUnit.Assertions;
@@ -23,7 +23,7 @@ public class KafkaPartitionKeyTests
 	/// </summary>
 	private static string InvokeGetPartitionKey<T>(T message) where T : class
 	{
-		var method = typeof(KafkaMessageBus).GetMethod(
+		var method = typeof(KafkaFlowMessageBus).GetMethod(
 			"GetPartitionKey",
 			BindingFlags.NonPublic | BindingFlags.Static);
 		
