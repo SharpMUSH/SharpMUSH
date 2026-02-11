@@ -8,26 +8,13 @@ namespace SharpMUSH.Messaging.KafkaFlow;
 /// Adapter that bridges between KafkaFlow's IMessageHandler and our IMessageConsumer
 /// </summary>
 /// <typeparam name="TMessage">The message type</typeparam>
-public class MessageConsumerAdapter<TMessage> : IMessageHandler<TMessage>
+public class MessageConsumerAdapter<TMessage>(IServiceProvider serviceProvider) : IMessageHandler<TMessage>
 	where TMessage : class
 {
-	private readonly IServiceProvider _serviceProvider;
-
-	public MessageConsumerAdapter(IServiceProvider serviceProvider)
-	{
-		_serviceProvider = serviceProvider;
-	}
-
 	public async Task Handle(IMessageContext context, TMessage message)
 	{
-		// Create a scope for this message
-		using var scope = _serviceProvider.CreateScope();
-		
-		// Get the registered consumer from DI
+		using var scope = serviceProvider.CreateScope();
 		var consumer = scope.ServiceProvider.GetRequiredService<IMessageConsumer<TMessage>>();
-		
-		// Use the worker stopped token for cancellation
-		// KafkaFlow manages graceful shutdown through this token
 		await consumer.HandleAsync(message, context.ConsumerContext.WorkerStopped);
 	}
 }

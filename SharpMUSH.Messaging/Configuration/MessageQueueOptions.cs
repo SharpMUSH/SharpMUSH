@@ -16,42 +16,14 @@ public class MessageQueueOptions
 	public int Port { get; set; } = 9092;
 
 	/// <summary>
-	/// Timeout for request/response messages in seconds
-	/// </summary>
-	public int RequestTimeoutSeconds { get; set; } = 5;
-
-	/// <summary>
 	/// Number of retry attempts for failed messages
 	/// </summary>
 	public int RetryCount { get; set; } = 3;
 
 	/// <summary>
-	/// Delay between retry attempts in seconds
-	/// </summary>
-	public int RetryDelaySeconds { get; set; } = 5;
-
-	/// <summary>
-	/// Topic name for telnet output messages
-	/// </summary>
-	public string TelnetOutputTopic { get; set; } = "telnet-output";
-
-	/// <summary>
 	/// Consumer group ID
 	/// </summary>
 	public string ConsumerGroupId { get; set; } = "sharpmush-consumer-group";
-
-	/// <summary>
-	/// Number of partitions for topics (affects parallelism)
-	/// Topics are automatically created with this partition count when first used.
-	/// </summary>
-	public short TopicPartitions { get; set; } = 3;
-
-	/// <summary>
-	/// Replication factor for topics
-	/// Topics are automatically created with this replication factor when first used.
-	/// For production with multiple brokers, set to 3 for high availability.
-	/// </summary>
-	public short TopicReplicationFactor { get; set; } = 1;
 
 	/// <summary>
 	/// Enable idempotent producer (ensures exactly-once semantics)
@@ -90,37 +62,4 @@ public class MessageQueueOptions
 	/// Combined with producer batching (8ms), provides ~16ms total latency (approaching 60fps)
 	/// </summary>
 	public TimeSpan BatchTimeLimit { get; set; } = TimeSpan.FromMilliseconds(8);
-
-	/// <summary>
-	/// Gets Kafka producer configuration
-	/// </summary>
-	public Dictionary<string, string> GetKafkaProducerConfig()
-	{
-		return new Dictionary<string, string>
-		{
-			{ "enable.idempotence", EnableIdempotence.ToString().ToLower() },
-			{ "compression.type", CompressionType },
-			{ "batch.size", BatchSize.ToString() },
-			{ "linger.ms", LingerMs.ToString() },
-			// When idempotence is enabled, acks must be set to "all"
-			{ "acks", EnableIdempotence ? "all" : "1" },
-			{ "max.request.size", MaxMessageBytes.ToString() },
-			{ "message.max.bytes", MaxMessageBytes.ToString() },
-			{ "allow.auto.create.topics", "true" }
-		};
-	}
-
-	/// <summary>
-	/// Gets Kafka consumer configuration
-	/// </summary>
-	public Dictionary<string, string> GetKafkaConsumerConfig()
-	{
-		return new Dictionary<string, string>
-		{
-			{ "fetch.max.bytes", MaxMessageBytes.ToString() },
-			{ "max.partition.fetch.bytes", MaxMessageBytes.ToString() },
-			{ "message.max.bytes", MaxMessageBytes.ToString() },
-			{ "allow.auto.create.topics", "true" }
-		};
-	}
 }

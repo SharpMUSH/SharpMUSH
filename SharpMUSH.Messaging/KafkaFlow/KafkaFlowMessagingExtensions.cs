@@ -33,8 +33,7 @@ public static class KafkaFlowMessagingExtensions
 			.AddCluster(cluster =>
 			{
 				cluster
-					.WithBrokers(new[] { $"{options.Host}:{options.Port}" })
-					// Add producer with batching configuration
+					.WithBrokers([$"{options.Host}:{options.Port}"])
 					.AddProducer(
 						"sharpmush-producer",
 						producer => producer
@@ -74,8 +73,7 @@ public static class KafkaFlowMessagingExtensions
 			.AddCluster(cluster =>
 			{
 				cluster
-					.WithBrokers(new[] { $"{options.Host}:{options.Port}" })
-					// Add producer with batching configuration
+					.WithBrokers([$"{options.Host}:{options.Port}"])
 					.AddProducer(
 						"sharpmush-producer",
 						producer => producer
@@ -168,7 +166,7 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 			.Topic(topic)
 			.WithGroupId(_options.ConsumerGroupId)
 			.WithBufferSize(_options.BatchMaxSize)
-			.WithWorkersCount(10) // Parallel processing
+			.WithWorkersCount(1) // Parallel processing
 			.WithAutoOffsetReset(KFAutoOffsetReset.Latest)
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()
@@ -177,7 +175,7 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 					// Register the adapter as a handler
 					try
 					{
-						var addHandlerMethod = h.GetType().GetMethod("AddHandler", new Type[] { });
+						var addHandlerMethod = h.GetType().GetMethod("AddHandler", []);
 						if (addHandlerMethod == null)
 						{
 							throw new InvalidOperationException(

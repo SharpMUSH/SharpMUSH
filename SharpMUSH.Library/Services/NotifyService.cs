@@ -20,7 +20,7 @@ public class NotifyService(
 	IMessageBus publishEndpoint, 
 	IConnectionService connections,
 	IListenerRoutingService? listenerRoutingService = null,
-	Mediator.IMediator? mediator = null) : INotifyService
+	IMediator? mediator = null) : INotifyService
 {
 	/// <summary>
 	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
@@ -67,7 +67,7 @@ public class NotifyService(
 				);
 				
 				// Fire and forget - don't await to avoid blocking notification
-				_ = listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
+				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}
 			catch
 			{

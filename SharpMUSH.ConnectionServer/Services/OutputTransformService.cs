@@ -132,9 +132,9 @@ public partial class OutputTransformService : IOutputTransformService
 		{
 			// Grayscale: map to black (0), white (7), or bright white (15)
 			var gray = color256 - 232;
-			if (gray < 8) return 0;      // Black
-			if (gray < 20) return 7;     // White
-			return 15;                    // Bright white
+			if (gray < 8) return 0; // Black
+			if (gray < 20) return 7; // White
+			return 15; // Bright white
 		}
 
 		// Color cube: extract RGB components and map to nearest 16-color
@@ -145,15 +145,15 @@ public partial class OutputTransformService : IOutputTransformService
 
 		// Map to 16-color by checking brightness
 		var bright = (r + g + b) > 6;
-		
+
 		// Determine primary color
-		if (r > g && r > b) return bright ? 9 : 1;   // Red (bright: 9, normal: 1)
-		if (g > r && g > b) return bright ? 10 : 2;  // Green (bright: 10, normal: 2)
-		if (b > r && b > g) return bright ? 12 : 4;  // Blue (bright: 12, normal: 4)
+		if (r > g && r > b) return bright ? 9 : 1; // Red (bright: 9, normal: 1)
+		if (g > r && g > b) return bright ? 10 : 2; // Green (bright: 10, normal: 2)
+		if (b > r && b > g) return bright ? 12 : 4; // Blue (bright: 12, normal: 4)
 		if (r == g && r > b) return bright ? 11 : 3; // Yellow (bright: 11, normal: 3)
 		if (r == b && r > g) return bright ? 13 : 5; // Magenta (bright: 13, normal: 5)
 		if (g == b && g > r) return bright ? 14 : 6; // Cyan (bright: 14, normal: 6)
-		
+
 		// Grayscale
 		return bright ? 7 : 0; // White or Black
 	}

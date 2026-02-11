@@ -12,33 +12,32 @@ public class TelnetOutputConsumer(
 	IConnectionServerService connectionService,
 	IOutputTransformService transformService,
 	ILogger<TelnetOutputConsumer> logger)
-: IMessageConsumer<TelnetOutputMessage>
+	: IMessageConsumer<TelnetOutputMessage>
 {
-public async Task HandleAsync(TelnetOutputMessage message, CancellationToken cancellationToken = default)
-{
-var connection = connectionService.Get(message.Handle);
+	public async Task HandleAsync(TelnetOutputMessage message, CancellationToken cancellationToken = default)
+	{
+		var connection = connectionService.Get(message.Handle);
 
-if (connection == null)
-{
-logger.LogWarning("Received output for unknown connection handle: {Handle}", message.Handle);
-return;
-}
+		if (connection == null)
+		{
+			logger.LogWarning("Received output for unknown connection handle: {Handle}", message.Handle);
+			return;
+		}
 
-try
-{
-// Transform output based on capabilities and preferences
-var transformedData = await transformService.TransformAsync(
-	message.Data,
-	connection.Capabilities,
-	connection.Preferences);
+		try
+		{
+			var transformedData = await transformService.TransformAsync(
+				message.Data,
+				connection.Capabilities,
+				connection.Preferences);
 
-await connection.OutputFunction(transformedData);
-}
-catch (Exception ex)
-{
-logger.LogError(ex, "Error sending output to connection {Handle}", message.Handle);
-}
-}
+			await connection.OutputFunction(transformedData);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error sending output to connection {Handle}", message.Handle);
+		}
+	}
 }
 
 /// <summary>
@@ -48,33 +47,32 @@ public class TelnetPromptConsumer(
 	IConnectionServerService connectionService,
 	IOutputTransformService transformService,
 	ILogger<TelnetPromptConsumer> logger)
-: IMessageConsumer<TelnetPromptMessage>
+	: IMessageConsumer<TelnetPromptMessage>
 {
-public async Task HandleAsync(TelnetPromptMessage message, CancellationToken cancellationToken = default)
-{
-var connection = connectionService.Get(message.Handle);
+	public async Task HandleAsync(TelnetPromptMessage message, CancellationToken cancellationToken = default)
+	{
+		var connection = connectionService.Get(message.Handle);
 
-if (connection == null)
-{
-logger.LogWarning("Received prompt for unknown connection handle: {Handle}", message.Handle);
-return;
-}
+		if (connection == null)
+		{
+			logger.LogWarning("Received prompt for unknown connection handle: {Handle}", message.Handle);
+			return;
+		}
 
-try
-{
-// Transform output based on capabilities and preferences
-var transformedData = await transformService.TransformAsync(
-	message.Data,
-	connection.Capabilities,
-	connection.Preferences);
+		try
+		{
+			var transformedData = await transformService.TransformAsync(
+				message.Data,
+				connection.Capabilities,
+				connection.Preferences);
 
-await connection.PromptOutputFunction(transformedData);
-}
-catch (Exception ex)
-{
-logger.LogError(ex, "Error sending prompt to connection {Handle}", message.Handle);
-}
-}
+			await connection.PromptOutputFunction(transformedData);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error sending prompt to connection {Handle}", message.Handle);
+		}
+	}
 }
 
 /// <summary>
@@ -84,45 +82,45 @@ public class BroadcastConsumer(
 	IConnectionServerService connectionService,
 	IOutputTransformService transformService,
 	ILogger<BroadcastConsumer> logger)
-: IMessageConsumer<BroadcastMessage>
+	: IMessageConsumer<BroadcastMessage>
 {
-public async Task HandleAsync(BroadcastMessage message, CancellationToken cancellationToken = default)
-{
-var connections = connectionService.GetAll();
+	public async Task HandleAsync(BroadcastMessage message, CancellationToken cancellationToken = default)
+	{
+		var connections = connectionService.GetAll();
 
-foreach (var connection in connections)
-{
-try
-{
+		foreach (var connection in connections)
+		{
+			try
+			{
 // Transform output based on capabilities and preferences
-var transformedData = await transformService.TransformAsync(
-	message.Data,
-	connection.Capabilities,
-	connection.Preferences);
+				var transformedData = await transformService.TransformAsync(
+					message.Data,
+					connection.Capabilities,
+					connection.Preferences);
 
-await connection.OutputFunction(transformedData);
-}
-catch (Exception ex)
-{
-logger.LogError(ex, "Error broadcasting to connection {Handle}", connection.Handle);
-}
-}
-}
+				await connection.OutputFunction(transformedData);
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "Error broadcasting to connection {Handle}", connection.Handle);
+			}
+		}
+	}
 }
 
 /// <summary>
 /// Consumes disconnect commands from Kafka
 /// </summary>
 public class DisconnectConnectionConsumer(
-IConnectionServerService connectionService,
-ILogger<DisconnectConnectionConsumer> logger)
-: IMessageConsumer<DisconnectConnectionMessage>
+	IConnectionServerService connectionService,
+	ILogger<DisconnectConnectionConsumer> logger)
+	: IMessageConsumer<DisconnectConnectionMessage>
 {
-public async Task HandleAsync(DisconnectConnectionMessage message, CancellationToken cancellationToken = default)
-{
-logger.LogInformation("Disconnecting connection {Handle}. Reason: {Reason}", 
-message.Handle, message.Reason ?? "None");
+	public async Task HandleAsync(DisconnectConnectionMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogInformation("Disconnecting connection {Handle}. Reason: {Reason}",
+			message.Handle, message.Reason ?? "None");
 
-await connectionService.DisconnectAsync(message.Handle);
-}
+		await connectionService.DisconnectAsync(message.Handle);
+	}
 }
