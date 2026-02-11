@@ -18,11 +18,35 @@ public class MessageOrderingIntegrationTests
 [ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 public required WebAppFactory MainServer { get; init; }
 
-[ClassDataSource<ConnectionServerFactory>(Shared = SharedType.PerTestSession)]
-public required ConnectionServerFactory ConnectionServer { get; init; }
+[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
+public required RedPandaTestServer RedPandaTestServer { get; init; }
+
+[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
+public required RedisTestServer RedisTestServer { get; init; }
+
+private ConnectionServerFactory? _connectionServer;
 
 private const int ConnectionTimeout = 15000; // 15 seconds
 private const int IdleTimeout = 2000; // 2 seconds with no data
+
+[Before(Test)]
+public async Task Setup()
+{
+Console.WriteLine("=== Setting up ConnectionServer ===");
+_connectionServer = new ConnectionServerFactory(RedPandaTestServer, RedisTestServer);
+await _connectionServer.InitializeAsync();
+Console.WriteLine($"✓ ConnectionServer ready on telnet:{_connectionServer.TelnetPort}, http:{_connectionServer.HttpPort}");
+}
+
+[After(Test)]
+public async Task Cleanup()
+{
+if (_connectionServer != null)
+{
+Console.WriteLine("=== Cleaning up ConnectionServer ===");
+await _connectionServer.DisposeAsync();
+}
+}
 
 [Test]
 [Timeout(600_000)] // 10 minutes
@@ -31,19 +55,24 @@ public async Task TelnetOutput_WithDolCommand_MaintainsMessageOrdering(Cancellat
 Console.WriteLine("=== Message Ordering Integration Test ===\n");
 Console.WriteLine("Using TUnit test factories for both servers\n");
 
+if (_connectionServer == null)
+{
+throw new InvalidOperationException("ConnectionServer not initialized");
+}
+
 // Verify services are available
 var parser = MainServer.Services.GetRequiredService<IMUSHCodeParser>();
 var connectionService = MainServer.Services.GetRequiredService<IConnectionService>();
 Console.WriteLine("✓ Main server services available");
-Console.WriteLine($"✓ ConnectionServer listening on telnet port {ConnectionServer.TelnetPort}");
-Console.WriteLine($"✓ ConnectionServer listening on HTTP port {ConnectionServer.HttpPort}");
+Console.WriteLine($"✓ ConnectionServer listening on telnet port {_connectionServer.TelnetPort}");
+Console.WriteLine($"✓ ConnectionServer listening on HTTP port {_connectionServer.HttpPort}");
 
 try
 {
 // Connect via TCP
-Console.WriteLine($"\nConnecting to telnet port {ConnectionServer.TelnetPort}...");
+Console.WriteLine($"\nConnecting to telnet port {_connectionServer.TelnetPort}...");
 using var client = new TcpClient();
-await client.ConnectAsync("localhost", ConnectionServer.TelnetPort);
+await client.ConnectAsync("localhost", _connectionServer.TelnetPort);
 Console.WriteLine("✓ Connected!");
 
 var stream = client.GetStream();

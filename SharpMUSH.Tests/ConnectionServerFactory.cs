@@ -14,14 +14,10 @@ namespace SharpMUSH.Tests;
 /// Starts the actual ConnectionServer application (not a test server) so it
 /// listens on real ports for telnet connections.
 /// </summary>
-public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
+public class ConnectionServerFactory : IAsyncDisposable
 {
-	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
-	public required RedPandaTestServer RedPandaTestServer { get; init; }
-
-	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
-	public required RedisTestServer RedisTestServer { get; init; }
-
+	private readonly RedPandaTestServer _redPandaTestServer;
+	private readonly RedisTestServer _redisTestServer;
 	private Task? _serverTask;
 	
 	/// <summary>
@@ -34,14 +30,20 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 	/// </summary>
 	public int HttpPort { get; private set; }
 
+	public ConnectionServerFactory(RedPandaTestServer redPandaTestServer, RedisTestServer redisTestServer)
+	{
+		_redPandaTestServer = redPandaTestServer;
+		_redisTestServer = redisTestServer;
+	}
+
 	public async Task InitializeAsync()
 	{
 		Console.WriteLine("ConnectionServerFactory: Starting initialization...");
 		
 		// Get test infrastructure addresses
-		var kafkaHost = RedPandaTestServer.Instance.Hostname;
-		var kafkaPort = RedPandaTestServer.Instance.GetMappedPublicPort(9092);
-		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
+		var kafkaHost = _redPandaTestServer.Instance.Hostname;
+		var kafkaPort = _redPandaTestServer.Instance.GetMappedPublicPort(9092);
+		var redisPort = _redisTestServer.Instance.GetMappedPublicPort(6379);
 		var redisConnection = $"localhost:{redisPort}";
 
 		Console.WriteLine($"ConnectionServerFactory: Kafka={kafkaHost}:{kafkaPort}, Redis={redisConnection}");
