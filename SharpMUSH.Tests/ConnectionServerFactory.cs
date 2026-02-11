@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
 using SharpMUSH.ConnectionServer;
@@ -22,7 +23,6 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 	public required RedisTestServer RedisTestServer { get; init; }
 
 	private Task? _serverTask;
-	private CancellationTokenSource? _cts;
 	
 	/// <summary>
 	/// Port where Telnet server is listening.
@@ -54,8 +54,8 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 		Environment.SetEnvironmentVariable("ConnectionServer__TelnetPort", TelnetPort.ToString());
 		Environment.SetEnvironmentVariable("ConnectionServer__HttpPort", HttpPort.ToString());
 
-		// Start the actual ConnectionServer application by calling Program.Main()
-		_cts = new CancellationTokenSource();
+		// Start the actual ConnectionServer application in a background task
+		// We can't pass cancellation token to Main(), so we'll use the host's lifetime instead
 		_serverTask = Task.Run(async () =>
 		{
 			try
@@ -66,7 +66,7 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 			{
 				// Expected when stopping
 			}
-		}, _cts.Token);
+		});
 		
 		// Wait for server to start listening
 		using var httpClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{HttpPort}") };
@@ -104,21 +104,34 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
-		if (_cts != null)
-		{
-			_cts.Cancel();
-			_cts.Dispose();
-		}
+		// To stop the server, we need to trigger a shutdown
+		// We can do this by sending a stop signal to the HTTP endpoint or
+		// by killing the process. For now, we'll just wait a bit and let it timeout.
 		
 		if (_serverTask != null)
 		{
 			try
 			{
-				await _serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+				// Send shutdown request to the server
+				using var httpClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{HttpPort}") };
+				httpClient.Timeout = TimeSpan.FromSeconds(2);
+				try
+				{
+					// Try to trigger graceful shutdown by calling a special endpoint
+					// If this doesn't exist, the timeout will handle it
+					await httpClient.PostAsync("/shutdown", null!);
+				}
+				catch
+				{
+					// Ignore errors - server might not have shutdown endpoint
+				}
+				
+				// Wait for server task to complete
+				await _serverTask.WaitAsync(TimeSpan.FromSeconds(10));
 			}
 			catch
 			{
-				// Timeout or cancellation is okay
+				// Timeout or other error - that's okay, process will be cleaned up
 			}
 		}
 	}

@@ -25,7 +25,8 @@ private const int ConnectionTimeout = 15000; // 15 seconds
 private const int IdleTimeout = 2000; // 2 seconds with no data
 
 [Test]
-public async Task TelnetOutput_WithDolCommand_MaintainsMessageOrdering()
+[Timeout(600_000)] // 10 minutes
+public async Task TelnetOutput_WithDolCommand_MaintainsMessageOrdering(CancellationToken cancellationToken)
 {
 Console.WriteLine("=== Message Ordering Integration Test ===\n");
 Console.WriteLine("Using TUnit test factories for both servers\n");
