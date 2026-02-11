@@ -226,24 +226,28 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		   || (await examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
 	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
-	{
+	{ 
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
-
-		var fromStep = from.MinusRoom();
-		var toStep = to.MinusRoom();
 
 		if (type.HasFlag(IPermissionService.InteractType.Hear) && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
+		/*
+		 // This check exists for being able to insert a Modification to the code.
 		// Check if objects are in the same location or if 'from' controls 'to'
-		return fromStep.Object().Id == (await toStep.Location()).Object().Id
+		var fromStep = from.MinusRoom();
+		var toStep = to.MinusRoom();
+		
+		 return fromStep.Object().Id == (await toStep.Location()).Object().Id
 		    || toStep.Object().Id == (await fromStep.Location()).Object().Id
 		    || await Controls(to, from);
+		    */
+		return await ValueTask.FromResult(true);
 	}
 
-	public async ValueTask<bool> CanInteract(AnySharpContent result, AnySharpObject executor,
+	public async ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interactee,
 		IPermissionService.InteractType type)
-		=> await CanInteract(result.WithRoomOption(), executor, type);
+		=> await CanInteract(interactor, interactee.WithRoomOption(), type);
 
 	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
 		=> !await evaluationTarget.IsPriv()

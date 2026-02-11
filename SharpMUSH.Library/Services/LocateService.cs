@@ -13,8 +13,9 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class LocateService(IMediator mediator, 
-	INotifyService notifyService, 
+public partial class LocateService(
+	IMediator mediator,
+	INotifyService notifyService,
 	IPermissionService permissionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration) : ILocateService
 {
@@ -58,7 +59,6 @@ public partial class LocateService(IMediator mediator,
 		var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
 
 		return new Error<CallState>(new CallState(callStateMessage));
-
 	}
 
 	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
@@ -71,7 +71,7 @@ public partial class LocateService(IMediator mediator,
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
-	
+
 	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, CallState> foundFunc)
@@ -117,7 +117,7 @@ public partial class LocateService(IMediator mediator,
 
 		if (await permissionService.CanExamine(executor, location.WithExitOption()) ||
 		    ((!await result.IsDarkLegal() || await location.WithExitOption().IsLight() || await result.IsLight()) &&
-		     await permissionService.CanInteract(result, executor, IPermissionService.InteractType.See)))
+		     await permissionService.CanInteract(executor, result, IPermissionService.InteractType.See)))
 		{
 			return result.WithNoneOption().WithErrorOption();
 		}
@@ -221,7 +221,7 @@ public partial class LocateService(IMediator mediator,
 			var maybeMatch = await mediator
 				.CreateStream(new GetPlayerQuery(name))
 				.FirstOrDefaultAsync();
-			
+
 			match = maybeMatch is null
 				? new None()
 				: maybeMatch;
@@ -282,10 +282,10 @@ public partial class LocateService(IMediator mediator,
 				var contents = mediator
 					.CreateStream(new GetContentsQuery(where.AsContainer))
 					.Select(x => x.WithRoomOption());
-				
+
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
-				
+
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -297,10 +297,10 @@ public partial class LocateService(IMediator mediator,
 				var maybeContents = mediator.CreateStream(new GetContentsQuery(location));
 				var contents = maybeContents?
 					.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
-				
+
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
-				
+
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -316,10 +316,10 @@ public partial class LocateService(IMediator mediator,
 							.CreateStream(new GetContentsQuery(location))
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
-						
+
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);
-						
+
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
 					}
@@ -340,9 +340,10 @@ public partial class LocateService(IMediator mediator,
 								.Where(x => x.IsExit)
 								.Select(x => new AnySharpObject(x.AsExit));
 
-							(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, zmrExits, looker, where, bestMatch,
+							(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, zmrExits, looker, where,
+								bestMatch,
 								exact, final, curr, right_type, flags, name);
-							
+
 							if (c == ControlFlow.Break) break;
 							if (c == ControlFlow.Return) break;
 						}
@@ -361,7 +362,7 @@ public partial class LocateService(IMediator mediator,
 
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);
-						
+
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
 					}
@@ -450,7 +451,7 @@ public partial class LocateService(IMediator mediator,
 				if (flow == ControlFlow.Continue) continue;
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
-			else if (!await permissionService.CanInteract(cur, looker, IPermissionService.InteractType.Match))
+			else if (!await permissionService.CanInteract(looker, cur, IPermissionService.InteractType.Match))
 			{
 				// continue;
 			}

@@ -156,7 +156,7 @@ public static class MessageHelpers
 				continue;
 			}
 
-			if (!await permissionService.CanInteract(locateTarget, executor, InteractType.Hear))
+			if (!await permissionService.CanInteract(executor, locateTarget, InteractType.Hear))
 			{
 				continue;
 			}
