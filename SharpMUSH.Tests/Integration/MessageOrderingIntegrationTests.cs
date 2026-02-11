@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// Full integration test for message ordering.
-/// Uses TUnit test factory for main server, assumes ConnectionServer is running separately.
+/// Uses TUnit test factories for both servers.
 /// </summary>
 [Explicit]
 [NotInParallel]
@@ -18,7 +18,9 @@ public class MessageOrderingIntegrationTests
 [ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 public required WebAppFactory MainServer { get; init; }
 
-private const int TelnetPort = 4201; // Standard telnet port
+[ClassDataSource<ConnectionServerFactory>(Shared = SharedType.PerTestSession)]
+public required ConnectionServerFactory ConnectionServer { get; init; }
+
 private const int ConnectionTimeout = 15000; // 15 seconds
 private const int IdleTimeout = 2000; // 2 seconds with no data
 
@@ -26,21 +28,21 @@ private const int IdleTimeout = 2000; // 2 seconds with no data
 public async Task TelnetOutput_WithDolCommand_MaintainsMessageOrdering()
 {
 Console.WriteLine("=== Message Ordering Integration Test ===\n");
-Console.WriteLine("Using TUnit test factory for main server\n");
-Console.WriteLine("IMPORTANT: ConnectionServer must be running separately!");
-Console.WriteLine("Start it with: dotnet run --project SharpMUSH.ConnectionServer\n");
+Console.WriteLine("Using TUnit test factories for both servers\n");
 
 // Verify services are available
 var parser = MainServer.Services.GetRequiredService<IMUSHCodeParser>();
 var connectionService = MainServer.Services.GetRequiredService<IConnectionService>();
 Console.WriteLine("✓ Main server services available");
+Console.WriteLine($"✓ ConnectionServer listening on telnet port {ConnectionServer.TelnetPort}");
+Console.WriteLine($"✓ ConnectionServer listening on HTTP port {ConnectionServer.HttpPort}");
 
 try
 {
 // Connect via TCP
-Console.WriteLine($"\nConnecting to telnet port {TelnetPort}...");
+Console.WriteLine($"\nConnecting to telnet port {ConnectionServer.TelnetPort}...");
 using var client = new TcpClient();
-await client.ConnectAsync("localhost", TelnetPort);
+await client.ConnectAsync("localhost", ConnectionServer.TelnetPort);
 Console.WriteLine("✓ Connected!");
 
 var stream = client.GetStream();
@@ -112,7 +114,7 @@ Console.WriteLine("This proves the KafkaFlow implementation maintains message or
 catch (SocketException ex)
 {
 Console.WriteLine($"\n❌ Socket error: {ex.Message}");
-Console.WriteLine("Make sure ConnectionServer is running: dotnet run --project SharpMUSH.ConnectionServer");
+Console.WriteLine("ConnectionServer factory should have started automatically via TUnit");
 throw;
 }
 }

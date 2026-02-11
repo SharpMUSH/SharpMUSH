@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using KafkaFlow;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
@@ -14,6 +15,8 @@ using SharpMUSH.Messaging.KafkaFlow;
 using Testcontainers.Redpanda;
 using Serilog;
 using Serilog.Events;
+
+[assembly: InternalsVisibleTo("SharpMUSH.Tests")]
 
 var builder = WebApplication.CreateBuilder(args);
 
