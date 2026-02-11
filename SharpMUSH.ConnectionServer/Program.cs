@@ -9,6 +9,7 @@ using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.ConnectionServer.Strategy;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messages;
 using SharpMUSH.Messaging.KafkaFlow;
 using Testcontainers.Redpanda;
 using Serilog;
@@ -105,7 +106,7 @@ builder.Services.AddConnectionServerMessaging(
 	{
 		// Use batch consumer for TelnetOutputMessage for better performance
 		// Batches up to 100 messages or waits 8ms before processing
-		x.AddBatchConsumer<TelnetOutputBatchHandler>(100, TimeSpan.FromMilliseconds(8));
+		x.AddBatchConsumer<TelnetOutputBatchMiddleware, TelnetOutputMessage>(100, TimeSpan.FromMilliseconds(8));
 		
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
