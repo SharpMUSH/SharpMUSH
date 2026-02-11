@@ -105,7 +105,7 @@ builder.Services.AddConnectionServerMessaging(
 	{
 		// Use batch consumer for TelnetOutputMessage for better performance
 		// Batches up to 100 messages or waits 8ms before processing
-		x.AddBatchConsumer<TelnetOutputBatchMiddleware>(100, TimeSpan.FromMilliseconds(8));
+		x.AddBatchConsumer<TelnetOutputBatchHandler>(100, TimeSpan.FromMilliseconds(8));
 		
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
