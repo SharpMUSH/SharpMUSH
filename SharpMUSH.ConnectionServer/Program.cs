@@ -189,3 +189,6 @@ finally
 	await bus.StopAsync();
 	await redisStrategy.DisposeAsync();
 }
+
+// Required for WebApplicationFactory<Program> in tests
+public partial class Program { }
