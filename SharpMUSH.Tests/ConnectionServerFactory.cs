@@ -80,19 +80,22 @@ public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncIni
 	{
 		Console.WriteLine("ConnectionServerFactory: Starting initialization...");
 		
-		// Access Server property to start the application
-		// With our CreateHost override, this creates a real server
-		_ = Server;
+		// The _host should already be started from CreateHost()
+		// Don't access Server property as that creates a TestServer
+		if (_host == null)
+		{
+			throw new InvalidOperationException("Host was not created - CreateHost should have been called");
+		}
 		
-		// Wait a bit for the host to actually start
-		await Task.Delay(3000);
+		// Wait a bit for the host to fully start
+		await Task.Delay(5000);
 		
-		Console.WriteLine("ConnectionServerFactory: Waiting for server to become healthy...");
+		Console.WriteLine($"ConnectionServerFactory: Waiting for server to become healthy (telnet:{TelnetPort}, http:{HttpPort})...");
 		
 		// Wait for server to start listening - use a real HttpClient for actual HTTP port
 		using var httpClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{HttpPort}") };
 		httpClient.Timeout = TimeSpan.FromSeconds(5);
-		var retries = 20; // Reduced since we already waited 3 seconds
+		var retries = 30;
 		while (retries-- > 0)
 		{
 			try
@@ -103,10 +106,14 @@ public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncIni
 					Console.WriteLine($"ConnectionServerFactory: ✓ Server healthy on telnet:{TelnetPort}, http:{HttpPort}");
 					break;
 				}
+				else
+				{
+					Console.WriteLine($"ConnectionServerFactory: Health check returned {response.StatusCode}");
+				}
 			}
 			catch (Exception ex)
 			{
-				if (retries % 5 == 0)
+				if (retries % 5 == 0 || retries < 5)
 				{
 					Console.WriteLine($"ConnectionServerFactory: Still waiting... ({retries} retries left, error: {ex.Message})");
 				}
