@@ -31,19 +31,11 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 /// 
 /// Configuration: Batches up to 100 messages or waits 10ms before processing.
 /// </summary>
-public class TelnetOutputBatchMiddleware : IMessageMiddleware
+public class TelnetOutputBatchMiddleware(
+	IServiceScopeFactory serviceScopeFactory,
+	ILogger<TelnetOutputBatchMiddleware> logger)
+	: IMessageMiddleware
 {
-	private readonly IServiceScopeFactory _serviceScopeFactory;
-	private readonly ILogger<TelnetOutputBatchMiddleware> _logger;
-
-	public TelnetOutputBatchMiddleware(
-		IServiceScopeFactory serviceScopeFactory,
-		ILogger<TelnetOutputBatchMiddleware> logger)
-	{
-		_serviceScopeFactory = serviceScopeFactory;
-		_logger = logger;
-	}
-
 	public async Task Invoke(IMessageContext context, MiddlewareDelegate next)
 	{
 		// Get the batch of messages as per KafkaFlow's recommended pattern
@@ -51,12 +43,12 @@ public class TelnetOutputBatchMiddleware : IMessageMiddleware
 		
 		if (batch == null || batch.Count == 0)
 		{
-			_logger.LogWarning("Received empty batch");
+			logger.LogWarning("Received empty batch");
 			return;
 		}
 
 		// Create a scope for dependency resolution (required by KafkaFlow)
-		using var scope = _serviceScopeFactory.CreateScope();
+		using var scope = serviceScopeFactory.CreateScope();
 		var connectionService = scope.ServiceProvider.GetRequiredService<IConnectionServerService>();
 		var transformService = scope.ServiceProvider.GetRequiredService<IOutputTransformService>();
 
@@ -64,26 +56,27 @@ public class TelnetOutputBatchMiddleware : IMessageMiddleware
 		// Since messages with the same Handle use the same partition key, Kafka guarantees
 		// they arrive in order. We must preserve this order when concatenating.
 		var messagesByHandle = batch
-			.Select(ctx => ctx.Message.Value as TelnetOutputMessage)
-			.Where(msg => msg != null)
-			.GroupBy(msg => msg!.Handle, msg => msg, (key, msgs) => new { Handle = key, Messages = msgs.ToList() })
+			.Select(ctx => (TelnetOutputMessage)ctx.Message.Value)
+			.GroupBy(msg => msg!.Handle, 
+				msg => msg, 
+				(key, msgs) => new { Handle = key, Messages = msgs.ToList() })
 			.ToList();
 
-		_logger.LogDebug("Processing batch of {Count} messages for {ConnectionCount} connections",
+		logger.LogDebug("Processing batch of {Count} messages for {ConnectionCount} connections",
 			batch.Count, messagesByHandle.Count);
 
 		// Process each connection's messages in parallel (connections are independent)
 		// This improves performance without breaking ordering guarantees
 		await Parallel.ForEachAsync(messagesByHandle, 
 			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-			async (group, cancellationToken) =>
+			async (group, _) =>
 		{
 			var handle = group.Handle;
 			var connection = connectionService.Get(handle);
 
 			if (connection == null)
 			{
-				_logger.LogWarning("Received output for unknown connection handle: {Handle}", handle);
+				logger.LogWarning("Received output for unknown connection handle: {Handle}", handle);
 				return;
 			}
 
@@ -104,11 +97,8 @@ public class TelnetOutputBatchMiddleware : IMessageMiddleware
 				// CRITICAL: Maintain order when concatenating
 				foreach (var msg in messages)
 				{
-					if (msg?.Data != null)
-					{
-						Array.Copy(msg.Data, 0, concatenated, offset, msg.Data.Length);
-						offset += msg.Data.Length;
-					}
+					Array.Copy(msg.Data, 0, concatenated, offset, msg.Data.Length);
+					offset += msg.Data.Length;
 				}
 
 				// Transform and send the batched output
@@ -119,15 +109,13 @@ public class TelnetOutputBatchMiddleware : IMessageMiddleware
 
 				await connection.OutputFunction(transformedData);
 
-				_logger.LogTrace("Sent batched output ({Size} bytes from {MessageCount} messages) to connection {Handle}",
+				logger.LogTrace("Sent batched output ({Size} bytes from {MessageCount} messages) to connection {Handle}",
 					totalSize, messages.Count, handle);
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Error sending batched output to connection {Handle}", handle);
+				logger.LogError(ex, "Error sending batched output to connection {Handle}", handle);
 			}
 		});
-
-		// Don't call next - batch processing is terminal
 	}
 }
