@@ -17,11 +17,19 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 /// How it works:
 /// 1. Implements IMessageMiddleware to process batches (not IMessageHandler)
 /// 2. Uses GetMessagesBatch() to retrieve accumulated messages
-/// 3. Groups messages by Handle (connection ID)
-/// 4. Concatenates data for each connection
-/// 5. Sends batched output to TCP connections
+/// 3. Groups messages by Handle (connection ID) while preserving order
+/// 4. Concatenates data for each connection IN ORDER
+/// 5. Sends batched output to TCP connections in parallel
 /// 
-/// Configuration: Batches up to 100 messages or waits 8ms before processing.
+/// Ordering Guarantees:
+/// - Messages with the same Handle use the same partition key (Handle.ToString())
+/// - Kafka guarantees ordering within a partition
+/// - Single worker (WithWorkersCount(1)) ensures partitions are processed in order
+/// - Grouping preserves message order within each Handle
+/// - Concatenation maintains the original message sequence
+/// - Different connections are processed in parallel (independent, no ordering constraint)
+/// 
+/// Configuration: Batches up to 100 messages or waits 10ms before processing.
 /// </summary>
 public class TelnetOutputBatchMiddleware : IMessageMiddleware
 {
@@ -52,42 +60,48 @@ public class TelnetOutputBatchMiddleware : IMessageMiddleware
 		var connectionService = scope.ServiceProvider.GetRequiredService<IConnectionServerService>();
 		var transformService = scope.ServiceProvider.GetRequiredService<IOutputTransformService>();
 
-		// Group messages by Handle (connection ID)
+		// Group messages by Handle (connection ID) while preserving order within each group
+		// Since messages with the same Handle use the same partition key, Kafka guarantees
+		// they arrive in order. We must preserve this order when concatenating.
 		var messagesByHandle = batch
 			.Select(ctx => ctx.Message.Value as TelnetOutputMessage)
 			.Where(msg => msg != null)
-			.GroupBy(msg => msg!.Handle)
+			.GroupBy(msg => msg!.Handle, msg => msg, (key, msgs) => new { Handle = key, Messages = msgs.ToList() })
 			.ToList();
 
 		_logger.LogDebug("Processing batch of {Count} messages for {ConnectionCount} connections",
 			batch.Count, messagesByHandle.Count);
 
-		// Process each connection's messages as a batch
-		foreach (var group in messagesByHandle)
+		// Process each connection's messages in parallel (connections are independent)
+		// This improves performance without breaking ordering guarantees
+		await Parallel.ForEachAsync(messagesByHandle, 
+			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+			async (group, cancellationToken) =>
 		{
-			var handle = group.Key;
+			var handle = group.Handle;
 			var connection = connectionService.Get(handle);
 
 			if (connection == null)
 			{
 				_logger.LogWarning("Received output for unknown connection handle: {Handle}", handle);
-				continue;
+				return;
 			}
 
 			try
 			{
-				// Concatenate all message data for this connection
-				var messages = group.ToList();
+				// Concatenate all message data for this connection IN ORDER
+				var messages = group.Messages;
 				var totalSize = messages.Sum(msg => msg?.Data?.Length ?? 0);
 				
 				if (totalSize == 0)
 				{
-					continue; // Skip if no valid data
+					return; // Skip if no valid data
 				}
 				
 				var concatenated = new byte[totalSize];
 				var offset = 0;
 
+				// CRITICAL: Maintain order when concatenating
 				foreach (var msg in messages)
 				{
 					if (msg?.Data != null)
@@ -106,13 +120,13 @@ public class TelnetOutputBatchMiddleware : IMessageMiddleware
 				await connection.OutputFunction(transformedData);
 
 				_logger.LogTrace("Sent batched output ({Size} bytes from {MessageCount} messages) to connection {Handle}",
-					totalSize, group.Count(), handle);
+					totalSize, messages.Count, handle);
 			}
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "Error sending batched output to connection {Handle}", handle);
 			}
-		}
+		});
 
 		// Don't call next - batch processing is terminal
 	}
