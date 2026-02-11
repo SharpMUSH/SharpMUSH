@@ -9,19 +9,20 @@ namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// Full integration test for message ordering.
-/// Uses TUnit test factories for both servers.
+/// Creates all factories directly without TUnit shared sessions to avoid deadlock.
 /// </summary>
 [Explicit]
 [NotInParallel]
 public class MessageOrderingIntegrationTests
 {
-[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
+// Don't use Shared = PerTestSession to avoid TUnit deadlock
+[ClassDataSource<WebAppFactory>]
 public required WebAppFactory MainServer { get; init; }
 
-[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
+[ClassDataSource<RedPandaTestServer>]
 public required RedPandaTestServer RedPandaTestServer { get; init; }
 
-[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
+[ClassDataSource<RedisTestServer>]
 public required RedisTestServer RedisTestServer { get; init; }
 
 private ConnectionServerFactory? _connectionServer;
