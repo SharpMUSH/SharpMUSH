@@ -2475,8 +2475,8 @@ public partial class Commands
 		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
@@ -2518,8 +2518,8 @@ public partial class Commands
 		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
