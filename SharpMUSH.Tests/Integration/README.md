@@ -2,38 +2,42 @@
 
 ## MessageOrderingIntegrationTests
 
-This test provides **definitive proof** of message ordering behavior in the SharpMUSH system.
-
 ### What It Tests
 
-The test verifies that when executing `@dol lnum(1,100)=think %iL`, all 100 messages arrive at the telnet client in perfect sequential order (1, 2, 3, ..., 100).
+Verifies that messages from SharpMUSH maintain perfect sequential ordering through the entire system:
+1. Server generates messages via `@dol lnum(1,100)=think %iL`
+2. Messages published to Kafka
+3. ConnectionServer consumes from Kafka
+4. Messages sent to Telnet client via TCP
+5. Verifies all 100 messages arrive in order (1, 2, 3, ..., 100)
 
-This tests the **entire message flow**:
-1. Command execution in SharpMUSH.Server
-2. Message production to Kafka via KafkaFlow
-3. Message consumption from Kafka in SharpMUSH.ConnectionServer
-4. Batch processing via TelnetOutputBatchMiddleware
-5. TCP delivery to telnet client
+### Test Architecture
+
+Uses **TUnit test factories** following SharpMUSH test patterns:
+
+- `[ClassDataSource<WebAppFactory>]` - Main server with all infrastructure
+- Leverages existing test servers (Redis, Kafka, ArangoDB)
+- Marked `[Explicit]` - won't run with other tests
+- Shared infrastructure across test session
+
+Pattern matches `HookAndMogrifierIntegrationTests.cs` and other integration tests.
 
 ### Prerequisites
 
-Before running the test, you must:
-
-1. **Start Infrastructure**:
+1. **Infrastructure running** (docker-compose or standalone):
    ```bash
    docker-compose up -d
    ```
-   This starts Kafka/Redpanda, Redis, and ArangoDB.
 
-2. **Build the Solution**:
+2. **ConnectionServer running separately**:
    ```bash
-   dotnet build
+   dotnet run --project SharpMUSH.ConnectionServer
    ```
-   This builds SharpMUSH.Server and SharpMUSH.ConnectionServer executables.
+   
+   Note: ConnectionServer must run separately because its Program class
+   is not accessible for WebApplicationFactory pattern.
 
 ### Running the Test
-
-The test is marked `[Explicit]` so it **does NOT run** with the regular test suite. You must run it explicitly:
 
 ```bash
 dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MessageOrderingIntegrationTests/*"
@@ -41,69 +45,64 @@ dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MessageOrderingI
 
 ### Test Process
 
-1. **Setup** (10 seconds):
-   - Starts SharpMUSH.Server process
-   - Starts SharpMUSH.ConnectionServer process
-   - Waits for servers to initialize
+1. **Initialization** (via TUnit):
+   - WebAppFactory starts main server
+   - Shares test infrastructure (Kafka, Redis, ArangoDB)
+   - Services available through dependency injection
 
 2. **Execution**:
-   - Connects to telnet port (4201)
+   - Connects to telnet port 4201 (must be running separately)
+   - Handles telnet negotiation
    - Authenticates as wizard
-   - Executes `@dol lnum(1,100)=think %iL`
-   - Captures output for up to 15 seconds
+   - Executes: `@dol lnum(1,100)=think %iL`
+   - Captures output for up to 15 seconds (2 second idle timeout)
 
 3. **Verification**:
-   - Extracts numbers from output
-   - Verifies exactly 100 messages received
-   - Verifies sequential order (1-100)
-
-4. **Cleanup**:
-   - Kills both server processes
+   - Extracts numbers from output using regex
+   - Verifies exactly 100 numbers received
+   - Verifies sequential order (1, 2, 3, ..., 100)
+   - Reports any violations with context
 
 ### Expected Results
 
-**✅ SUCCESS**: All 100 messages arrive in perfect order
+**If test PASSES**:
 ```
-✅✅✅ SUCCESS! All 100 messages received in perfect order 1-100!
-This proves the KafkaFlow implementation maintains message ordering correctly.
+✓✓✓ SUCCESS: All 100 messages arrived in perfect sequential order (1-100) ✓✓✓
+This proves the KafkaFlow implementation maintains message ordering correctly!
 ```
 
-**❌ FAILURE**: Messages arrive out of order
+**If test FAILS**:
 ```
-❌ Found N ordering violations:
-  - Position X: Expected Y, got Z. Context: [...]
+=== ❌ ORDERING VIOLATIONS (3) ===
+Position 7: expected 8, got 9 (context: 6, 7, 9, 10)
+Position 8: expected 9, got 10 (context: 7, 9, 10, 11)
+Position 82: expected 83, got 82 (context: 81, 82, 82, 84)
 ```
+Provides exact evidence of ordering problems for debugging.
 
 ### Troubleshooting
 
-**"Could not find solution directory"**
-- The test must be run from within the SharpMUSH solution directory tree
+**"Socket error: Connection refused"**:
+- ConnectionServer not running
+- Start it: `dotnet run --project SharpMUSH.ConnectionServer`
+- Wait a few seconds for it to fully initialize
 
-**"SharpMUSH.Server not found at: ..."**
-- Run `dotnet build` to build the servers first
+**"Expected 100 messages but got X"**:
+- Check ConnectionServer logs
+- Verify wizard account exists
+- Ensure infrastructure is healthy
 
-**"Failed to connect to localhost:4201"**
-- Infrastructure might not be running: `docker-compose up -d`
-- Servers might not have started yet: increase `StartupDelayMs` in test code
-- Check server logs for errors
+**"Ordering violations"**:
+- This IS the issue being tested!
+- Proves message ordering problem exists
+- Use details to investigate root cause (partitions, batching, etc.)
 
-**"Expected 100 messages but got X"**
-- Some messages were lost or not captured
-- Increase capture timeout in test code
-- Check Kafka/Redis/ArangoDB are running and accessible
+### Why This Approach
 
-**Messages out of order**
-- This is the actual issue the test is designed to detect
-- The test output will show exact violations with context
-- This proves there is a message ordering problem in the system
+✅ Uses established TUnit patterns from SharpMUSH tests
+✅ Leverages existing WebAppFactory infrastructure  
+✅ Shares test infrastructure (fast, efficient)
+✅ Marked Explicit (won't break CI)
+✅ Follows same pattern as other integration tests
 
-### Why This Test Matters
-
-This test provides **objective, reproducible proof** of message ordering behavior:
-- No assumptions
-- No speculation
-- No relying on documentation
-- Actual end-to-end behavior testing
-
-If this test **PASSES**, the system works correctly.
-If this test **FAILS**, we have definitive proof of the issue with exact details.
+This provides **objective proof** of ordering behavior through actual end-to-end testing.
