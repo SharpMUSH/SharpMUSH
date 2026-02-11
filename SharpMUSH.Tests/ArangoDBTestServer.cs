@@ -5,7 +5,11 @@ namespace SharpMUSH.Tests;
 
 public class ArangoDbTestServer : IAsyncInitializer, IAsyncDisposable
 {
-	public ArangoDbContainer Instance { get; } =  new ArangoDbBuilder("arangodb:latest")
+	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
+	public required DockerNetwork DockerNetwork { get; init; }
+
+	public ArangoDbContainer Instance => field ??= new ArangoDbBuilder("arangodb:latest")
+		.WithNetwork(DockerNetwork.Instance)
 		.WithPassword("password")
 		.WithReuse(false)
 		.Build();

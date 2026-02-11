@@ -5,7 +5,11 @@ namespace SharpMUSH.Tests;
 
 public class MySqlTestServer : IAsyncInitializer, IAsyncDisposable
 {
-	public MySqlContainer Instance { get; } = new MySqlBuilder("mysql:latest")
+	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
+	public required DockerNetwork DockerNetwork { get; init; }
+
+	public MySqlContainer Instance => field ??= new MySqlBuilder("mysql:latest")
+		.WithNetwork(DockerNetwork.Instance)
 		.WithDatabase("sharpmush_test")
 		.WithUsername("testuser")
 		.WithPassword("testpass")

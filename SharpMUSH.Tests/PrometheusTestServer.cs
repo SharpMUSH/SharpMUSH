@@ -22,7 +22,11 @@ scrape_configs:
       - targets: ['host.docker.internal:9092']
 ";
 
-	public IContainer Instance { get; } = new ContainerBuilder("prom/prometheus:latest")
+	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
+	public required DockerNetwork DockerNetwork { get; init; }
+
+	public IContainer Instance => field ??= new ContainerBuilder("prom/prometheus:latest")
+		.WithNetwork(DockerNetwork.Instance)
 		.WithPortBinding(9090, 9090)
 		.WithCommand("--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus")
 		.WithResourceMapping(
