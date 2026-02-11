@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SharpMUSH.ConnectionServer;
 using TUnit.Core;
@@ -9,9 +12,9 @@ using TUnit.Core.Interfaces;
 namespace SharpMUSH.Tests;
 
 /// <summary>
-/// Factory for ConnectionServer integration testing using ASP.NET Core testing infrastructure.
-/// Uses WebApplicationFactory to properly start and manage ConnectionServer lifecycle.
-/// Overrides CreateHost to create a real host that listens on actual ports (not just TestServer).
+/// Factory for ConnectionServer integration testing.
+/// Uses WebApplicationFactory but configures it to use real Kestrel server instead of TestServer.
+/// This is necessary because telnet connections require actual TCP ports, not in-memory TestServer.
 /// </summary>
 public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncInitializer
 {
@@ -59,36 +62,48 @@ public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncIni
 			.AddInMemoryCollection(config)
 			.Build());
 			
+		// CRITICAL: Use real Kestrel server instead of TestServer
+		// This makes Kestrel actually listen on TCP ports
+		builder.UseKestrel();
 		builder.UseUrls($"http://localhost:{HttpPort}");
+		
+		// Don't use TestServer - we need real ports
+		builder.UseSetting(WebHostDefaults.ApplicationKey, typeof(Program).Assembly.FullName);
 	}
 
-	private IHost? _host;
-	
 	protected override IHost CreateHost(IHostBuilder builder)
 	{
-		// Create a real host instead of a TestServer
-		// This is necessary so Kestrel actually listens on real ports for telnet connections
-		_host = builder.Build();
+		// Build the host - this will use the Kestrel configuration from ConfigureWebHost
+		var host = builder.Build();
 		
-		// Start the host - this actually makes it listen on ports
-		_host.StartAsync().GetAwaiter().GetResult();
+		// Start the host asynchronously
+		host.StartAsync().GetAwaiter().GetResult();
 		
-		return _host;
+		Console.WriteLine("ConnectionServerFactory: Host created and started");
+		
+		return host;
 	}
 
 	public async Task InitializeAsync()
 	{
 		Console.WriteLine("ConnectionServerFactory: Starting initialization...");
 		
-		// The _host should already be started from CreateHost()
-		// Don't access Server property as that creates a TestServer
-		if (_host == null)
+		// Trigger host creation by accessing Services
+		// This will call CreateHost() which starts the server
+		var services = Services;
+		
+		Console.WriteLine("ConnectionServerFactory: Checking server addresses...");
+		
+		// Get the actual server to verify it's listening
+		var server = services.GetRequiredService<IServer>();
+		var addresses = server.Features.Get<IServerAddressesFeature>();
+		if (addresses != null)
 		{
-			throw new InvalidOperationException("Host was not created - CreateHost should have been called");
+			Console.WriteLine($"ConnectionServerFactory: Server listening on: {string.Join(", ", addresses.Addresses)}");
 		}
 		
 		// Wait a bit for the host to fully start
-		await Task.Delay(5000);
+		await Task.Delay(3000);
 		
 		Console.WriteLine($"ConnectionServerFactory: Waiting for server to become healthy (telnet:{TelnetPort}, http:{HttpPort})...");
 		
