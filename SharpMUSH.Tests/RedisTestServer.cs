@@ -12,7 +12,11 @@ public class RedisTestServer : IAsyncInitializer, IAsyncDisposable
 {
 	private const int RedisPort = 6379;
 
-	public IContainer Instance { get; } = new ContainerBuilder("redis:7-alpine")
+	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
+	public required DockerNetwork DockerNetwork { get; init; }
+
+	public IContainer Instance => field ??= new ContainerBuilder("redis:7-alpine")
+		.WithNetwork(DockerNetwork.Instance)
 		.WithPortBinding(RedisPort, true) // Random host port
 		.WithCommand("redis-server", "--appendonly", "yes")
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("redis-cli", "ping"))
