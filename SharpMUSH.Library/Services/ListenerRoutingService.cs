@@ -72,7 +72,7 @@ public class ListenerRoutingService(
 				continue;
 			
 			// Skip if can't interact
-			if (!await permissionService.CanInteract(objAsObject, actualSender, IPermissionService.InteractType.Hear))
+			if (!await permissionService.CanInteract(actualSender,objAsObject,  IPermissionService.InteractType.Hear))
 				continue;
 			
 			// Process ^-listen patterns (if MONITOR flag)

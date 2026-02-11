@@ -1771,7 +1771,7 @@ public partial class Commands
 
 		var found = maybeFound.AsSharpObject;
 
-		if (!await PermissionService!.CanInteract(found, executor, IPermissionService.InteractType.Hear))
+		if (!await PermissionService!.CanInteract(executor, found, InteractType.Hear))
 		{
 			await NotifyService!.Notify(executor, $"{found.Object().Name} does not want to hear from you.");
 			return CallState.Empty;
@@ -2676,8 +2676,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
-					InteractType.Hear));
+				await PermissionService!.CanInteract(executor, obj, InteractType.Hear));
 
 		if (isSpoof)
 		{
@@ -2782,7 +2781,7 @@ public partial class Commands
 
 			var locateTarget = maybeLocateTarget.AsSharpObject;
 
-			if (!await PermissionService!.CanInteract(locateTarget, executor, IPermissionService.InteractType.Hear))
+			if (!await PermissionService!.CanInteract(executor, locateTarget, InteractType.Hear))
 			{
 				await NotifyService!.Notify(executor, $"{locateTarget.Object().Name} does not want to hear from you.");
 				continue;
@@ -3629,7 +3628,7 @@ public partial class Commands
 
 		await foreach (var obj in contents
 			               .Where(async (x, _)
-				               => await PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
+				               => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
@@ -4742,8 +4741,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
-					IPermissionService.InteractType.Hear));
+				await PermissionService!.CanInteract(executor, obj, InteractType.Hear));
 
 		var canSpoof = await executor.HasPower("CAN_SPOOF");
 		var controlsExecutor = await PermissionService!.Controls(executor, enactor);
@@ -5658,7 +5656,7 @@ public partial class Commands
 				LocateFlags.All,
 				async target =>
 				{
-					if (await PermissionService.CanInteract(target, executor, InteractType.Hear))
+					if (await PermissionService.CanInteract(executor, target, InteractType.Hear))
 					{
 						await NotifyService!.Notify(target, message, executor, notificationType);
 					}

@@ -2480,8 +2480,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj, executor,
-					IPermissionService.InteractType.Hear));
+				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
 		{
@@ -2523,7 +2522,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
+				await PermissionService!.CanInteract(executor, obj,
 					IPermissionService.InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
@@ -2553,7 +2552,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor, IPermissionService.InteractType.Hear));
+				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
 		{
