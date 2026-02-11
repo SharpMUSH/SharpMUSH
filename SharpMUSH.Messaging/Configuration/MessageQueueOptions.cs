@@ -47,6 +47,14 @@ public class MessageQueueOptions
 	public int LingerMs { get; set; } = 8;
 
 	/// <summary>
+	/// Maximum number of in-flight requests per connection.
+	/// Set to 1 to guarantee strict message ordering within a partition.
+	/// Higher values (up to 5 with idempotence) can improve throughput but may reorder messages.
+	/// Default: 1 for strict ordering guarantees.
+	/// </summary>
+	public int MaxInFlightRequests { get; set; } = 1;
+
+	/// <summary>
 	/// Maximum message size in bytes (6MB for SharpMUSH production)
 	/// </summary>
 	public int MaxMessageBytes { get; set; } = 6 * 1024 * 1024; // 6MB

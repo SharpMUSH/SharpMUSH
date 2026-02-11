@@ -40,6 +40,16 @@ public static class KafkaFlowMessagingExtensions
 							.WithCompression(ParseCompressionType(options.CompressionType), null)
 							.WithAcks(options.EnableIdempotence ? KFAcks.All : KFAcks.Leader)
 							.WithLingerMs(options.LingerMs) // Producer-level batching
+							.WithProducerConfig(new Confluent.Kafka.ProducerConfig
+							{
+								// Critical for message ordering: limit in-flight requests
+								// With max.in.flight.requests.per.connection = 1, messages are sent
+								// one batch at a time, guaranteeing ordering within a partition
+								MaxInFlight = options.MaxInFlightRequests,
+								
+								// Enable idempotence for exactly-once semantics
+								EnableIdempotence = options.EnableIdempotence
+							})
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
 
@@ -83,6 +93,16 @@ public static class KafkaFlowMessagingExtensions
 							.WithCompression(ParseCompressionType(options.CompressionType), null)
 							.WithAcks(options.EnableIdempotence ? KFAcks.All : KFAcks.Leader)
 							.WithLingerMs(options.LingerMs) // Producer-level batching
+							.WithProducerConfig(new Confluent.Kafka.ProducerConfig
+							{
+								// Critical for message ordering: limit in-flight requests
+								// With max.in.flight.requests.per.connection = 1, messages are sent
+								// one batch at a time, guaranteeing ordering within a partition
+								MaxInFlight = options.MaxInFlightRequests,
+								
+								// Enable idempotence for exactly-once semantics
+								EnableIdempotence = options.EnableIdempotence
+							})
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
 
