@@ -6,41 +6,6 @@ using SharpMUSH.Messaging.Abstractions;
 namespace SharpMUSH.ConnectionServer.Consumers;
 
 /// <summary>
-/// Consumes telnet output messages from Kafka and sends to connections
-/// </summary>
-public class TelnetOutputConsumer(
-	IConnectionServerService connectionService,
-	IOutputTransformService transformService,
-	ILogger<TelnetOutputConsumer> logger)
-	: IMessageConsumer<TelnetOutputMessage>
-{
-	public async Task HandleAsync(TelnetOutputMessage message, CancellationToken cancellationToken = default)
-	{
-		var connection = connectionService.Get(message.Handle);
-
-		if (connection == null)
-		{
-			logger.LogWarning("Received output for unknown connection handle: {Handle}", message.Handle);
-			return;
-		}
-
-		try
-		{
-			var transformedData = await transformService.TransformAsync(
-				message.Data,
-				connection.Capabilities,
-				connection.Preferences);
-
-			await connection.OutputFunction(transformedData);
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Error sending output to connection {Handle}", message.Handle);
-		}
-	}
-}
-
-/// <summary>
 /// Consumes telnet prompt messages from Kafka and sends to connections
 /// </summary>
 public class TelnetPromptConsumer(

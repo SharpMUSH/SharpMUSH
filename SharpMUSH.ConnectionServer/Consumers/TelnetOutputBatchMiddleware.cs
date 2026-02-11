@@ -8,8 +8,20 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 
 /// <summary>
 /// Batch middleware for TelnetOutputMessage following KafkaFlow's recommended pattern.
-/// Implements IMessageMiddleware to process batches using GetMessagesBatch().
-/// Groups messages by Handle and concatenates data before sending to TCP connections.
+/// 
+/// IMPORTANT: This middleware is ONLY used for TelnetOutputMessage consumer.
+/// Each KafkaFlow consumer has its own independent middleware pipeline, so this
+/// batching behavior does NOT affect other message types like TelnetPromptMessage,
+/// BroadcastMessage, GMCPOutputMessage, etc. Those use their own regular consumers.
+/// 
+/// How it works:
+/// 1. Implements IMessageMiddleware to process batches (not IMessageHandler)
+/// 2. Uses GetMessagesBatch() to retrieve accumulated messages
+/// 3. Groups messages by Handle (connection ID)
+/// 4. Concatenates data for each connection
+/// 5. Sends batched output to TCP connections
+/// 
+/// Configuration: Batches up to 100 messages or waits 8ms before processing.
 /// </summary>
 public class TelnetOutputBatchMiddleware : IMessageMiddleware
 {

@@ -104,10 +104,22 @@ builder.Services.AddConnectionServerMessaging(
 	},
 	x =>
 	{
-		// Use batch consumer for TelnetOutputMessage for better performance
-		// Batches up to 100 messages or waits 8ms before processing
+		// Each consumer registration creates an INDEPENDENT KafkaFlow consumer with its own:
+		// - Topic subscription
+		// - Middleware pipeline  
+		// - Worker configuration
+		// - Buffer settings
+		//
+		// This means batch processing for TelnetOutputMessage does NOT affect other message types.
+		
+		// TelnetOutputMessage: Uses BATCH PROCESSING
+		// - Middleware: TelnetOutputBatchMiddleware (IMessageMiddleware)
+		// - Pipeline: Deserialize → AddBatching(100, 8ms) → TelnetOutputBatchMiddleware
+		// - Groups messages by Handle, concatenates data, sends batched output
 		x.AddBatchConsumer<TelnetOutputBatchMiddleware, TelnetOutputMessage>(100, TimeSpan.FromMilliseconds(8));
 		
+		// All other messages: Use REGULAR CONSUMERS (individual message processing)
+		// - Pipeline: Deserialize → TypedHandler (processes each message individually)
 		x.AddConsumer<TelnetPromptConsumer>();
 		x.AddConsumer<BroadcastConsumer>();
 		x.AddConsumer<DisconnectConnectionConsumer>();
