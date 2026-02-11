@@ -15,20 +15,20 @@ public class MessageOrderingIntegrationTests
 	private Process? _mainServerProcess;
 	private Process? _connectionServerProcess;
 	private const int TelnetPort = 4201;
-	private const int StartupDelayMs = 5000; // Time for servers to start
+	private const int StartupDelayMs = 30000; // Time for servers to start (30s for infrastructure setup)
 
 	[Before(Test)]
 	public async Task Setup()
 	{
 		// Start SharpMUSH.Server
 		_mainServerProcess = StartServer(
-			"/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.Server/bin/Debug/net9.0/SharpMUSH.Server",
+			"/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.Server/bin/Debug/net10.0/SharpMUSH.Server",
 			"SharpMUSH.Server"
 		);
 
 		// Start SharpMUSH.ConnectionServer
 		_connectionServerProcess = StartServer(
-			"/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.ConnectionServer/bin/Debug/net9.0/SharpMUSH.ConnectionServer",
+			"/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.ConnectionServer/bin/Debug/net10.0/SharpMUSH.ConnectionServer",
 			"SharpMUSH.ConnectionServer"
 		);
 
