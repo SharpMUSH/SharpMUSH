@@ -62,9 +62,6 @@ public class TelnetOutputBatchMiddleware(
 				(key, msgs) => new { Handle = key, Messages = msgs.ToList() })
 			.ToList();
 
-		logger.LogDebug("Processing batch of {Count} messages for {ConnectionCount} connections",
-			batch.Count, messagesByHandle.Count);
-
 		// Process each connection's messages in parallel (connections are independent)
 		// This improves performance without breaking ordering guarantees
 		await Parallel.ForEachAsync(messagesByHandle, 
@@ -108,9 +105,6 @@ public class TelnetOutputBatchMiddleware(
 					connection.Preferences);
 
 				await connection.OutputFunction(transformedData);
-
-				logger.LogTrace("Sent batched output ({Size} bytes from {MessageCount} messages) to connection {Handle}",
-					totalSize, messages.Count, handle);
 			}
 			catch (Exception ex)
 			{
