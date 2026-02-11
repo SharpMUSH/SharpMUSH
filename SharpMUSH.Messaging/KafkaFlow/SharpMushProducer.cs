@@ -9,22 +9,15 @@ namespace SharpMUSH.Messaging.KafkaFlow;
 /// Following KafkaFlow's type-based producer pattern, this class encapsulates
 /// the message production logic and can be injected where needed.
 /// </summary>
-public class SharpMushProducer
+public class SharpMushProducer(IMessageProducer<SharpMushProducer> producer)
 {
-	private readonly IMessageProducer<SharpMushProducer> _producer;
-
-	public SharpMushProducer(IMessageProducer<SharpMushProducer> producer)
-	{
-		_producer = producer;
-	}
-
 	/// <summary>
 	/// Produces a message to the appropriate topic
 	/// </summary>
 	public async Task ProduceAsync<T>(T message, CancellationToken cancellationToken = default) where T : class
 	{
 		var topic = GetTopicForMessageType<T>();
-		await _producer.ProduceAsync(topic, null, message);
+		await producer.ProduceAsync(topic, null, message);
 	}
 
 	/// <summary>
@@ -35,7 +28,7 @@ public class SharpMushProducer
 		var topic = GetTopicForMessageType<T>();
 		var partitionKey = message.Handle.ToString();
 		
-		await _producer.ProduceAsync(topic, partitionKey, message);
+		await producer.ProduceAsync(topic, partitionKey, message);
 	}
 
 	private static string GetTopicForMessageType<T>()

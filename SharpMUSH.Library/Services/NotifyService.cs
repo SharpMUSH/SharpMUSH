@@ -86,7 +86,7 @@ public class NotifyService(
 		// Publish directly to Kafka - batching is handled by KafkaFlow producer
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
-			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 		}
 	}
 
@@ -112,7 +112,7 @@ public class NotifyService(
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Publish directly to Kafka - batching is handled by KafkaFlow producer
-		await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+		await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -136,7 +136,7 @@ public class NotifyService(
 		// Publish directly to Kafka - batching is handled by KafkaFlow producer
 		foreach (var handle in handles)
 		{
-			await publishEndpoint.Publish(new TelnetOutputMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 		}
 	}
 
@@ -161,7 +161,7 @@ public class NotifyService(
 
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
-			await publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
 		}
 	}
 
@@ -192,7 +192,7 @@ public class NotifyService(
 		// Publish prompt message to each handle
 		foreach (var handle in handles)
 		{
-			await publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
 		}
 	}
 

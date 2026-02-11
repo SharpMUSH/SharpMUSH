@@ -20,9 +20,4 @@ public class KafkaFlowMessageBus(SharpMushProducer producer) : IMessageBus
 	{
 		return producer.HandleProduceAsync(message, cancellationToken);
 	}
-
-	public Task Send<T>(T message, CancellationToken cancellationToken = default) where T : class
-	{
-		return Publish(message, cancellationToken);
-	}
 }
