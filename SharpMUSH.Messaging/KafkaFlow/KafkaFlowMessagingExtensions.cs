@@ -49,6 +49,9 @@ public static class KafkaFlowMessagingExtensions
 			})
 		);
 
+		// Register the producer class
+		services.AddSingleton<SharpMushProducer>();
+		
 		// Register IMessageBus implementation
 		services.AddSingleton<IMessageBus, KafkaFlowMessageBus>();
 
@@ -89,6 +92,9 @@ public static class KafkaFlowMessagingExtensions
 			})
 		);
 
+		// Register the producer class
+		services.AddSingleton<SharpMushProducer>();
+		
 		// Register IMessageBus implementation
 		services.AddSingleton<IMessageBus, KafkaFlowMessageBus>();
 
