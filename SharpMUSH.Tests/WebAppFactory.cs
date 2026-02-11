@@ -23,11 +23,15 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 using TUnit.Core.Interfaces;
+using TUnit.AspNetCore;
 
 namespace SharpMUSH.Tests;
 
-public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
+public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>, IAsyncInitializer, IAsyncDisposable
 {
+	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
+	public required DockerNetwork DockerNetwork { get; init; }
+
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
 	
@@ -43,7 +47,7 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedisTestServer RedisTestServer { get; init; }
 
-	public IServiceProvider Services => _server!.Services;
+	public new IServiceProvider Services => _server!.Services;
 	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
@@ -245,7 +249,7 @@ public class WebAppFactory : IAsyncInitializer, IAsyncDisposable
 		}
 	}
 
-	public async ValueTask DisposeAsync()
+	public new async ValueTask DisposeAsync()
 	{
 		// Output telemetry summary before disposing
 		try

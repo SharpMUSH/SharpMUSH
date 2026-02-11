@@ -192,7 +192,7 @@ public class ChannelMessageRequestHandler(
 			{
 				var isGagged = status.Gagged ?? false;
 				var wantsToHear = notification.Source.IsNone ||
-				                  await permissionService.CanInteract(member, notification.Source.Known(),
+				                  await permissionService.CanInteract( notification.Source.Known(),member,
 					                  IPermissionService.InteractType.Hear);
 
 				if (!isGagged && wantsToHear)
