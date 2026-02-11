@@ -126,11 +126,11 @@ public interface IKafkaFlowConsumerConfigurator
 	void AddConsumer<TConsumer>() where TConsumer : class;
 
 	/// <summary>
-	/// Registers a batch consumer for a specific message type with batching middleware
+	/// Registers a batch consumer middleware for a specific message type with batching middleware
 	/// </summary>
 	/// <param name="batchSize">Maximum number of messages to batch</param>
 	/// <param name="batchTimeout">Maximum time to wait for a full batch</param>
-	void AddBatchConsumer<THandler>(int batchSize, TimeSpan batchTimeout) where THandler : class;
+	void AddBatchConsumer<TMiddleware>(int batchSize, TimeSpan batchTimeout) where TMiddleware : class, IMessageMiddleware;
 }
 
 /// <summary>
@@ -210,23 +210,27 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 		);
 	}
 
-	public void AddBatchConsumer<THandler>(int batchSize, TimeSpan batchTimeout) where THandler : class
+	public void AddBatchConsumer<TMiddleware>(int batchSize, TimeSpan batchTimeout) where TMiddleware : class, IMessageMiddleware
 	{
-		// Find the IMessageHandler<T> interface from KafkaFlow
-		var handlerInterface = typeof(THandler).GetInterfaces()
-			.FirstOrDefault(i => i.IsGenericType && 
-				i.GetGenericTypeDefinition().FullName == "KafkaFlow.IMessageHandler`1");
-
-		if (handlerInterface == null)
+		// For batch consumers, we need to determine the message type from the middleware
+		// Since middlewares work with batches, we'll use a naming convention or configuration
+		// For now, we'll extract from the middleware class name (e.g., TelnetOutputBatchMiddleware -> TelnetOutputMessage)
+		var middlewareName = typeof(TMiddleware).Name;
+		var messageTypeName = middlewareName.Replace("BatchMiddleware", "Message").Replace("Batch", "");
+		
+		// Find the message type by name in the Messages assembly
+		var messageType = typeof(SharpMUSH.Messages.TelnetOutputMessage).Assembly.GetTypes()
+			.FirstOrDefault(t => t.Name == messageTypeName);
+		
+		if (messageType == null)
 		{
-			throw new InvalidOperationException($"{typeof(THandler).Name} does not implement IMessageHandler<T>");
+			throw new InvalidOperationException($"Could not determine message type from middleware {typeof(TMiddleware).Name}");
 		}
 
-		var messageType = handlerInterface.GetGenericArguments()[0];
 		var topic = GetTopicFromMessageType(messageType);
 
-		// Register the batch handler in DI
-		_services.AddTransient(typeof(THandler));
+		// Register the middleware in DI
+		_services.AddTransient<TMiddleware>();
 
 		// Add KafkaFlow consumer with batching middleware
 		_clusterBuilder.AddConsumer(consumer => consumer
@@ -238,29 +242,7 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()
 				.AddBatching(batchSize, batchTimeout) // Add batch consume middleware
-				.AddTypedHandlers(h =>
-				{
-					// Register the batch handler
-					try
-					{
-						var addHandlerMethod = h.GetType().GetMethod("AddHandler", []);
-						if (addHandlerMethod == null)
-						{
-							throw new InvalidOperationException(
-								$"Could not find AddHandler method on handler configurator for message type {messageType.Name}");
-						}
-
-						var genericMethod = addHandlerMethod.MakeGenericMethod(typeof(THandler));
-						genericMethod.Invoke(h, null);
-					}
-					catch (Exception ex)
-					{
-						throw new InvalidOperationException(
-							$"Failed to register batch handler for message type {messageType.Name}. " +
-							$"Handler type: {typeof(THandler).Name}",
-							ex);
-					}
-				})
+				.Add<TMiddleware>() // Add our batch processing middleware
 			)
 		);
 	}

@@ -1,4 +1,5 @@
 using KafkaFlow;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;
@@ -6,36 +7,47 @@ using SharpMUSH.Messages;
 namespace SharpMUSH.ConnectionServer.Consumers;
 
 /// <summary>
-/// Batch consumer for TelnetOutputMessage that concatenates messages per connection
+/// Batch middleware for TelnetOutputMessage that concatenates messages per connection
 /// and sends them as batched TCP output for improved performance.
 /// Uses KafkaFlow's batch consume middleware.
 /// </summary>
-public class TelnetOutputBatchHandler(
-	IConnectionServerService connectionService,
-	IOutputTransformService transformService,
-	ILogger<TelnetOutputBatchHandler> logger)
-	: IMessageHandler<TelnetOutputMessage>
+public class TelnetOutputBatchMiddleware : IMessageMiddleware
 {
-	public async Task Handle(IMessageContext context, TelnetOutputMessage message)
+	private readonly IServiceScopeFactory _serviceScopeFactory;
+	private readonly ILogger<TelnetOutputBatchMiddleware> _logger;
+
+	public TelnetOutputBatchMiddleware(
+		IServiceScopeFactory serviceScopeFactory,
+		ILogger<TelnetOutputBatchMiddleware> logger)
+	{
+		_serviceScopeFactory = serviceScopeFactory;
+		_logger = logger;
+	}
+
+	public async Task Invoke(IMessageContext context, MiddlewareDelegate next)
 	{
 		// Get the batch of messages from the context
 		var batch = context.GetMessagesBatch();
 		
 		if (batch == null || batch.Count == 0)
 		{
-			logger.LogWarning("Received empty batch");
+			_logger.LogWarning("Received empty batch");
 			return;
 		}
 
+		// Create a scope for dependency resolution
+		using var scope = _serviceScopeFactory.CreateScope();
+		var connectionService = scope.ServiceProvider.GetRequiredService<IConnectionServerService>();
+		var transformService = scope.ServiceProvider.GetRequiredService<IOutputTransformService>();
+
 		// Group messages by Handle (connection ID)
-		// In a batch, context.Message contains the deserialized message
 		var messagesByHandle = batch
 			.Select(ctx => ctx.Message.Value as TelnetOutputMessage)
 			.Where(msg => msg != null)
 			.GroupBy(msg => msg!.Handle)
 			.ToList();
 
-		logger.LogDebug("Processing batch of {Count} messages for {ConnectionCount} connections",
+		_logger.LogDebug("Processing batch of {Count} messages for {ConnectionCount} connections",
 			batch.Count, messagesByHandle.Count);
 
 		// Process each connection's messages
@@ -46,7 +58,7 @@ public class TelnetOutputBatchHandler(
 
 			if (connection == null)
 			{
-				logger.LogWarning("Received output for unknown connection handle: {Handle}", handle);
+				_logger.LogWarning("Received output for unknown connection handle: {Handle}", handle);
 				continue;
 			}
 
@@ -81,13 +93,15 @@ public class TelnetOutputBatchHandler(
 
 				await connection.OutputFunction(transformedData);
 
-				logger.LogTrace("Sent batched output ({Size} bytes from {MessageCount} messages) to connection {Handle}",
+				_logger.LogTrace("Sent batched output ({Size} bytes from {MessageCount} messages) to connection {Handle}",
 					totalSize, group.Count(), handle);
 			}
 			catch (Exception ex)
 			{
-				logger.LogError(ex, "Error sending batched output to connection {Handle}", handle);
+				_logger.LogError(ex, "Error sending batched output to connection {Handle}", handle);
 			}
 		}
+
+		// Don't call next - batch processing is terminal
 	}
 }
