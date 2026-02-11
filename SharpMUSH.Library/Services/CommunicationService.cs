@@ -44,7 +44,7 @@ public class CommunicationService(
 
 			var player = playerResult.WithoutNone();
 
-			if (await permissionService.CanInteract(player, executor, InteractType.Hear))
+			if (await permissionService.CanInteract( executor, player, InteractType.Hear))
 			{
 				validPorts.Add(port);
 			}
@@ -79,7 +79,7 @@ public class CommunicationService(
 					return false;
 				}
 
-				return await permissionService.CanInteract(objWithRoom, executor, InteractType.Hear);
+				return await permissionService.CanInteract(executor, objWithRoom, InteractType.Hear);
 			});
 
 		await foreach (var obj in interactableContents)
@@ -114,7 +114,7 @@ public class CommunicationService(
 
 		var target = maybeLocateTarget.AsSharpObject;
 
-		if (!await permissionService.CanInteract(target, executor, InteractType.Hear))
+		if (!await permissionService.CanInteract(executor, target, InteractType.Hear))
 		{
 			if (notifyOnPermissionFailure)
 			{

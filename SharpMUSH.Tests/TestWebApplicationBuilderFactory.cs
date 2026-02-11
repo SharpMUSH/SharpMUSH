@@ -2,6 +2,7 @@ using Core.Arango;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -17,6 +18,7 @@ using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 using System.Linq;
+using TUnit.AspNetCore;
 
 namespace SharpMUSH.Tests;
 
@@ -27,8 +29,23 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	string prometheusUrl,
 	string? databaseName = null,
 	string sqlPlatform = "mysql") :
-	WebApplicationFactory<TProgram> where TProgram : class
+	TestWebApplicationFactory<TProgram> where TProgram : class
 {
+	/// <summary>
+	/// Lifecycle Step 4: Runs BEFORE Program.cs startup.
+	/// Use this for configuration that Program.cs needs during its initialization.
+	/// </summary>
+	protected override void ConfigureStartupConfiguration(IConfigurationBuilder configurationBuilder)
+	{
+		// Set Prometheus URL as environment variable so the PrometheusStrategyProvider will use ExternalStrategy
+		// This runs before Program.cs, so if Program.cs reads environment variables, they'll be available
+		Environment.SetEnvironmentVariable("PROMETHEUS_URL", prometheusUrl);
+	}
+
+	/// <summary>
+	/// Lifecycle Step 3: Shared configuration for all tests (runs once per test session).
+	/// Use ConfigureServices (NOT ConfigureTestServices) here for shared service registration.
+	/// </summary>
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
 		var log = new LoggerConfiguration()
@@ -38,9 +55,6 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			.CreateLogger();
 
 		Log.Logger = log;
-
-		// Set Prometheus URL as environment variable so the PrometheusStrategyProvider will use ExternalStrategy
-		Environment.SetEnvironmentVariable("PROMETHEUS_URL", prometheusUrl);
 
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 		if (!File.Exists(colorFile))
@@ -59,7 +73,10 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			}
 		}
 
-		builder.ConfigureTestServices(sc =>
+		// IMPORTANT: Use ConfigureServices (not ConfigureTestServices) in ConfigureWebHost
+		// This is shared configuration that runs once per test session (step 3)
+		// ConfigureTestServices should be reserved for per-test overrides (step 7)
+		builder.ConfigureServices(sc =>
 			{
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 				var config = ReadPennMushConfig.Create(configFile);

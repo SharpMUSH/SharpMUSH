@@ -31,15 +31,15 @@ public interface IPermissionService
 
 	ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute);
 
-	ValueTask<bool> CanInteract(AnySharpObject result, AnySharpObject executor, InteractType type);
+	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpObject interacted, InteractType type);
 	
-	ValueTask<bool> CanInteract(AnySharpContent result, AnySharpObject executor, InteractType type);
+	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interacted, InteractType type);
 
 	ValueTask<bool> CanNoSpoof(AnySharpObject executor);
 
 	ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1);
 
-	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destnation);
+	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination);
 
 	ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target);
 	

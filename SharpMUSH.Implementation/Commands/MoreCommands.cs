@@ -2475,13 +2475,12 @@ public partial class Commands
 		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj, executor,
-					IPermissionService.InteractType.Hear));
+				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
 		{
@@ -2518,12 +2517,12 @@ public partial class Commands
 		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor,
+				await PermissionService!.CanInteract(executor, obj,
 					IPermissionService.InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
@@ -2553,7 +2552,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(obj.WithRoomOption(), executor, IPermissionService.InteractType.Hear));
+				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
 
 		await foreach (var obj in interactableContents)
 		{
