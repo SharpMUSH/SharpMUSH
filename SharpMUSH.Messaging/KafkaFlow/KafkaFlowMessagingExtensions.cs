@@ -258,8 +258,8 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 			.Topic(topic)
 			.WithGroupId(_options.ConsumerGroupId)
 			.WithBufferSize(_options.BatchMaxSize)
-			.WithWorkersCount(_options.WorkerCount) // Multiple workers with BytesSum distribution
-			.WithWorkerDistributionStrategy<BytesSumDistributionStrategy>() // Partition-aware distribution
+			.WithWorkersCount(1) // TEMPORARY: Single worker to test ordering
+			// .WithWorkerDistributionStrategy<BytesSumDistributionStrategy>() // TEMPORARY: Disabled to test
 			.WithAutoOffsetReset(KFAutoOffsetReset.Latest)
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()
