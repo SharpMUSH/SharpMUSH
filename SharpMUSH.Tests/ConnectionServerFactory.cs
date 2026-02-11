@@ -36,11 +36,15 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 
 	public async Task InitializeAsync()
 	{
+		Console.WriteLine("ConnectionServerFactory: Starting initialization...");
+		
 		// Get test infrastructure addresses
 		var kafkaHost = RedPandaTestServer.Instance.Hostname;
 		var kafkaPort = RedPandaTestServer.Instance.GetMappedPublicPort(9092);
 		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
 		var redisConnection = $"localhost:{redisPort}";
+
+		Console.WriteLine($"ConnectionServerFactory: Kafka={kafkaHost}:{kafkaPort}, Redis={redisConnection}");
 
 		// Set environment variables for test infrastructure
 		Environment.SetEnvironmentVariable("KAFKA_HOST", $"{kafkaHost}:{kafkaPort}");
@@ -50,23 +54,18 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 		TelnetPort = GetAvailablePort();
 		HttpPort = GetAvailablePort();
 
+		Console.WriteLine($"ConnectionServerFactory: Telnet port={TelnetPort}, HTTP port={HttpPort}");
+
 		// Set environment variables for ConnectionServer configuration
 		Environment.SetEnvironmentVariable("ConnectionServer__TelnetPort", TelnetPort.ToString());
 		Environment.SetEnvironmentVariable("ConnectionServer__HttpPort", HttpPort.ToString());
 
 		// Start the actual ConnectionServer application in a background task
-		// We can't pass cancellation token to Main(), so we'll use the host's lifetime instead
-		_serverTask = Task.Run(async () =>
-		{
-			try
-			{
-				await Program.Main([]);
-			}
-			catch (OperationCanceledException)
-			{
-				// Expected when stopping
-			}
-		});
+		// Don't await Main() - it runs until the application stops
+		Console.WriteLine("ConnectionServerFactory: Starting Program.Main() in background...");
+		_serverTask = Task.Run(() => Program.Main([]));
+		
+		Console.WriteLine("ConnectionServerFactory: Waiting for server to become healthy...");
 		
 		// Wait for server to start listening
 		using var httpClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{HttpPort}") };
@@ -78,19 +77,29 @@ public class ConnectionServerFactory : IAsyncInitializer, IAsyncDisposable
 				var response = await httpClient.GetAsync("/health");
 				if (response.IsSuccessStatusCode)
 				{
-					Console.WriteLine($"ConnectionServer started successfully on telnet:{TelnetPort}, http:{HttpPort}");
+					Console.WriteLine($"ConnectionServerFactory: ✓ Server healthy on telnet:{TelnetPort}, http:{HttpPort}");
 					break;
 				}
 			}
-			catch
+			catch (Exception ex)
 			{
-				// Server not ready yet
+				if (retries % 10 == 0)
+				{
+					Console.WriteLine($"ConnectionServerFactory: Still waiting... ({retries} retries left, error: {ex.Message})");
+				}
 			}
 			await Task.Delay(500);
 		}
 		
+		if (retries <= 0)
+		{
+			Console.WriteLine("ConnectionServerFactory: ❌ Server failed to become healthy within timeout!");
+			throw new TimeoutException("ConnectionServer did not become healthy within the timeout period");
+		}
+		
 		// Give telnet listener time to fully initialize
 		await Task.Delay(1000);
+		Console.WriteLine("ConnectionServerFactory: Initialization complete");
 	}
 
 	private static int GetAvailablePort()

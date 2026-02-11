@@ -126,12 +126,16 @@ var sb = new StringBuilder();
 var buffer = new char[4096];
 var lastReadTime = DateTime.UtcNow;
 var startTime = DateTime.UtcNow;
+var readCount = 0;
+
+Console.WriteLine($"  ReadUntilIdle: totalTimeout={totalTimeout}ms, idleTimeout={idleTimeout}ms");
 
 while (true)
 {
 var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
 if (elapsed > totalTimeout)
 {
+Console.WriteLine($"  ReadUntilIdle: Hit total timeout after {elapsed}ms, {readCount} reads, {sb.Length} bytes");
 break;
 }
 
@@ -139,6 +143,7 @@ var timeSinceLastRead = (DateTime.UtcNow - lastReadTime).TotalMilliseconds;
 if (timeSinceLastRead > idleTimeout && sb.Length > 0)
 {
 // No data for idle timeout, assume we're done
+Console.WriteLine($"  ReadUntilIdle: Idle timeout after {timeSinceLastRead}ms, {readCount} reads, {sb.Length} bytes");
 break;
 }
 
@@ -149,6 +154,11 @@ if (count > 0)
 {
 sb.Append(buffer, 0, count);
 lastReadTime = DateTime.UtcNow;
+readCount++;
+if (readCount % 10 == 0)
+{
+Console.WriteLine($"  ReadUntilIdle: {readCount} reads, {sb.Length} bytes so far...");
+}
 }
 }
 else
@@ -157,6 +167,7 @@ await Task.Delay(50);
 }
 }
 
+Console.WriteLine($"  ReadUntilIdle: Complete - {readCount} reads, {sb.Length} bytes total");
 return sb.ToString();
 }
 
