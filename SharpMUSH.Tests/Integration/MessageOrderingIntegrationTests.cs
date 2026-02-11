@@ -9,31 +9,67 @@ namespace SharpMUSH.Tests.Integration;
 /// <summary>
 /// Full integration test for message ordering through the entire system:
 /// Server → Kafka → ConnectionServer → Telnet Client
+/// 
+/// IMPORTANT: This test is marked [Explicit] and must be run manually.
+/// 
+/// Prerequisites:
+/// 1. Infrastructure must be running: docker-compose up -d
+/// 2. Servers must be built: dotnet build
+/// 3. Run with: dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MessageOrderingIntegrationTests/*"
 /// </summary>
 public class MessageOrderingIntegrationTests
 {
 	private Process? _mainServerProcess;
 	private Process? _connectionServerProcess;
 	private const int TelnetPort = 4201;
-	private const int StartupDelayMs = 30000; // Time for servers to start (30s for infrastructure setup)
+	private const int StartupDelayMs = 10000; // Time for servers to start and connect to infrastructure
 
 	[Before(Test)]
 	public async Task Setup()
 	{
+		// Find the solution directory
+		var solutionDir = FindSolutionDirectory();
+		if (solutionDir == null)
+		{
+			throw new Exception("Could not find solution directory");
+		}
+
+		Console.WriteLine($"Solution directory: {solutionDir}");
+
 		// Start SharpMUSH.Server
-		_mainServerProcess = StartServer(
-			"/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.Server/bin/Debug/net10.0/SharpMUSH.Server",
-			"SharpMUSH.Server"
-		);
+		var mainServerPath = Path.Combine(solutionDir, "SharpMUSH.Server", "bin", "Debug", "net10.0", "SharpMUSH.Server");
+		if (!File.Exists(mainServerPath))
+		{
+			throw new Exception($"SharpMUSH.Server not found at: {mainServerPath}. Run 'dotnet build' first.");
+		}
+		_mainServerProcess = StartServer(mainServerPath, "SharpMUSH.Server");
 
 		// Start SharpMUSH.ConnectionServer
-		_connectionServerProcess = StartServer(
-			"/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.ConnectionServer/bin/Debug/net10.0/SharpMUSH.ConnectionServer",
-			"SharpMUSH.ConnectionServer"
-		);
+		var connectionServerPath = Path.Combine(solutionDir, "SharpMUSH.ConnectionServer", "bin", "Debug", "net10.0", "SharpMUSH.ConnectionServer");
+		if (!File.Exists(connectionServerPath))
+		{
+			throw new Exception($"SharpMUSH.ConnectionServer not found at: {connectionServerPath}. Run 'dotnet build' first.");
+		}
+		_connectionServerProcess = StartServer(connectionServerPath, "SharpMUSH.ConnectionServer");
 
-		// Wait for servers to start
+		// Wait for servers to start and connect to infrastructure
+		Console.WriteLine($"Waiting {StartupDelayMs}ms for servers to initialize...");
 		await Task.Delay(StartupDelayMs);
+		Console.WriteLine("Servers should be ready");
+	}
+
+	private static string? FindSolutionDirectory()
+	{
+		var currentDir = Directory.GetCurrentDirectory();
+		while (currentDir != null)
+		{
+			if (File.Exists(Path.Combine(currentDir, "SharpMUSH.sln")))
+			{
+				return currentDir;
+			}
+			currentDir = Directory.GetParent(currentDir)?.FullName;
+		}
+		return null;
 	}
 
 	[After(Test)]
@@ -57,39 +93,64 @@ public class MessageOrderingIntegrationTests
 		_mainServerProcess?.Dispose();
 	}
 
-	[Test]
+	[Test, Explicit("Full integration test - requires infrastructure and takes several minutes")]
 	public async Task TelnetOutput_WithDolCommand_MaintainsMessageOrdering()
 	{
+		Console.WriteLine("=== Starting Integration Test ===");
+		Console.WriteLine($"Connecting to localhost:{TelnetPort}...");
+		
 		// Arrange
 		using var client = new TcpClient();
-		await client.ConnectAsync("localhost", TelnetPort);
+		try
+		{
+			await client.ConnectAsync("localhost", TelnetPort);
+			Console.WriteLine("✅ Connected to telnet server");
+		}
+		catch (Exception ex)
+		{
+			throw new Exception($"Failed to connect to localhost:{TelnetPort}. Is SharpMUSH.ConnectionServer running?", ex);
+		}
+
 		using var stream = client.GetStream();
 		var reader = new StreamReader(stream, Encoding.UTF8);
 		var writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
 
 		// Read initial telnet negotiation and welcome messages
-		await ReadUntilPrompt(reader, TimeSpan.FromSeconds(5));
+		Console.WriteLine("Reading initial welcome messages...");
+		var welcome = await ReadUntilPrompt(reader, TimeSpan.FromSeconds(5));
+		Console.WriteLine($"Welcome message received ({welcome.Length} chars)");
 
 		// Act: Connect as wizard
+		Console.WriteLine("Authenticating as wizard...");
 		await writer.WriteLineAsync("connect wizard password");
-		await ReadUntilPrompt(reader, TimeSpan.FromSeconds(5));
+		var loginResponse = await ReadUntilPrompt(reader, TimeSpan.FromSeconds(5));
+		Console.WriteLine($"Login response received ({loginResponse.Length} chars)");
 
 		// Execute @dol command that generates 100 sequential messages
+		Console.WriteLine("Executing: @dol lnum(1,100)=think %iL");
 		await writer.WriteLineAsync("@dol lnum(1,100)=think %iL");
 
 		// Capture all output for the next several seconds
+		Console.WriteLine("Capturing output (max 15 seconds, or until 2 seconds idle)...");
 		var output = await ReadOutput(reader, TimeSpan.FromSeconds(15));
+		Console.WriteLine($"Output captured ({output.Length} chars, {output.Count(c => c == '\n')} lines)");
 
 		// Assert: Extract numbers and verify they're in order
 		var numbers = ExtractNumbers(output);
+		Console.WriteLine($"Extracted {numbers.Count} numbers from output");
 
 		// Should have exactly 100 numbers
 		if (numbers.Count != 100)
 		{
-			throw new Exception($"Expected 100 messages but got {numbers.Count}. Output:\n{output}");
+			Console.WriteLine($"❌ Expected 100 messages but got {numbers.Count}");
+			Console.WriteLine($"Numbers found: [{string.Join(", ", numbers.Take(20))}...]");
+			Console.WriteLine("\n=== RAW OUTPUT ===");
+			Console.WriteLine(output);
+			throw new Exception($"Expected 100 messages but got {numbers.Count}");
 		}
 
 		// Verify sequential ordering
+		var violations = new List<string>();
 		for (int i = 0; i < numbers.Count; i++)
 		{
 			var expected = i + 1;
@@ -97,17 +158,26 @@ public class MessageOrderingIntegrationTests
 
 			if (actual != expected)
 			{
-				// Find where this number appeared out of order
 				var context = GetOrderingContext(numbers, i);
-				throw new Exception($"Message ordering violation at position {i}:\n" +
-							$"Expected: {expected}\n" +
-							$"Actual: {actual}\n" +
-							$"Context: {context}\n" +
-							$"Full sequence: [{string.Join(", ", numbers)}]");
+				var violation = $"Position {i}: Expected {expected}, got {actual}. Context: {context}";
+				violations.Add(violation);
+				Console.WriteLine($"❌ {violation}");
 			}
 		}
 
-		Console.WriteLine("✅ All 100 messages received in perfect order!");
+		if (violations.Any())
+		{
+			Console.WriteLine($"\n❌ Found {violations.Count} ordering violations:");
+			foreach (var v in violations)
+			{
+				Console.WriteLine($"  - {v}");
+			}
+			Console.WriteLine($"\nFull sequence: [{string.Join(", ", numbers)}]");
+			throw new Exception($"Message ordering violated in {violations.Count} places. See console output for details.");
+		}
+
+		Console.WriteLine("✅✅✅ SUCCESS! All 100 messages received in perfect order 1-100!");
+		Console.WriteLine("This proves the KafkaFlow implementation maintains message ordering correctly.");
 	}
 
 	private static Process StartServer(string executablePath, string name)
