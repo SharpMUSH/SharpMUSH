@@ -1,4 +1,4 @@
-using SharpMUSH.Messaging.Kafka;
+using KafkaFlow;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -9,7 +9,7 @@ using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.ConnectionServer.Strategy;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messaging.Extensions;
+using SharpMUSH.Messaging.KafkaFlow;
 using Testcontainers.Redpanda;
 using Serilog;
 using Serilog.Events;
@@ -144,6 +144,10 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
+// Start Kafka bus
+var bus = app.Services.CreateKafkaBus();
+await bus.StartAsync();
+
 try
 {
 	// Enable WebSocket support
@@ -164,5 +168,6 @@ try
 }
 finally
 {
+	await bus.StopAsync();
 	await redisStrategy.DisposeAsync();
 }
