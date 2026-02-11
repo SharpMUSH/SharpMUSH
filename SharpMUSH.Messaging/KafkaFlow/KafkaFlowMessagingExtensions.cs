@@ -124,6 +124,13 @@ public interface IKafkaFlowConsumerConfigurator
 	/// Registers a consumer for a specific message type
 	/// </summary>
 	void AddConsumer<TConsumer>() where TConsumer : class;
+
+	/// <summary>
+	/// Registers a batch consumer for a specific message type with batching middleware
+	/// </summary>
+	/// <param name="batchSize">Maximum number of messages to batch</param>
+	/// <param name="batchTimeout">Maximum time to wait for a full batch</param>
+	void AddBatchConsumer<THandler>(int batchSize, TimeSpan batchTimeout) where THandler : class;
 }
 
 /// <summary>
@@ -196,6 +203,61 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 						throw new InvalidOperationException(
 							$"Failed to register consumer adapter for message type {messageType.Name}. " +
 							$"Consumer type: {typeof(TConsumer).Name}, Adapter type: {adapterType.Name}",
+							ex);
+					}
+				})
+			)
+		);
+	}
+
+	public void AddBatchConsumer<THandler>(int batchSize, TimeSpan batchTimeout) where THandler : class
+	{
+		// Find the IMessageHandler<T> interface from KafkaFlow
+		var handlerInterface = typeof(THandler).GetInterfaces()
+			.FirstOrDefault(i => i.IsGenericType && 
+				i.GetGenericTypeDefinition().FullName == "KafkaFlow.IMessageHandler`1");
+
+		if (handlerInterface == null)
+		{
+			throw new InvalidOperationException($"{typeof(THandler).Name} does not implement IMessageHandler<T>");
+		}
+
+		var messageType = handlerInterface.GetGenericArguments()[0];
+		var topic = GetTopicFromMessageType(messageType);
+
+		// Register the batch handler in DI
+		_services.AddTransient(typeof(THandler));
+
+		// Add KafkaFlow consumer with batching middleware
+		_clusterBuilder.AddConsumer(consumer => consumer
+			.Topic(topic)
+			.WithGroupId(_options.ConsumerGroupId)
+			.WithBufferSize(_options.BatchMaxSize)
+			.WithWorkersCount(1) // Use single worker for batching
+			.WithAutoOffsetReset(KFAutoOffsetReset.Latest)
+			.AddMiddlewares(middlewares => middlewares
+				.AddDeserializer<JsonCoreDeserializer>()
+				.AddBatching(batchSize, batchTimeout) // Add batch consume middleware
+				.AddTypedHandlers(h =>
+				{
+					// Register the batch handler
+					try
+					{
+						var addHandlerMethod = h.GetType().GetMethod("AddHandler", []);
+						if (addHandlerMethod == null)
+						{
+							throw new InvalidOperationException(
+								$"Could not find AddHandler method on handler configurator for message type {messageType.Name}");
+						}
+
+						var genericMethod = addHandlerMethod.MakeGenericMethod(typeof(THandler));
+						genericMethod.Invoke(h, null);
+					}
+					catch (Exception ex)
+					{
+						throw new InvalidOperationException(
+							$"Failed to register batch handler for message type {messageType.Name}. " +
+							$"Handler type: {typeof(THandler).Name}",
 							ex);
 					}
 				})
