@@ -11,6 +11,7 @@ namespace SharpMUSH.Tests;
 /// <summary>
 /// Factory for ConnectionServer integration testing using ASP.NET Core testing infrastructure.
 /// Uses WebApplicationFactory to properly start and manage ConnectionServer lifecycle.
+/// Overrides CreateHost to create a real host that listens on actual ports (not just TestServer).
 /// </summary>
 public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncInitializer
 {
@@ -61,18 +62,37 @@ public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncIni
 		builder.UseUrls($"http://localhost:{HttpPort}");
 	}
 
+	private IHost? _host;
+	
+	protected override IHost CreateHost(IHostBuilder builder)
+	{
+		// Create a real host instead of a TestServer
+		// This is necessary so Kestrel actually listens on real ports for telnet connections
+		_host = builder.Build();
+		
+		// Start the host - this actually makes it listen on ports
+		_host.StartAsync().GetAwaiter().GetResult();
+		
+		return _host;
+	}
+
 	public async Task InitializeAsync()
 	{
 		Console.WriteLine("ConnectionServerFactory: Starting initialization...");
 		
-		// Create the server - this starts the application
+		// Access Server property to start the application
+		// With our CreateHost override, this creates a real server
 		_ = Server;
+		
+		// Wait a bit for the host to actually start
+		await Task.Delay(3000);
 		
 		Console.WriteLine("ConnectionServerFactory: Waiting for server to become healthy...");
 		
-		// Wait for server to start listening
-		using var httpClient = CreateClient();
-		var retries = 40;
+		// Wait for server to start listening - use a real HttpClient for actual HTTP port
+		using var httpClient = new HttpClient { BaseAddress = new Uri($"http://localhost:{HttpPort}") };
+		httpClient.Timeout = TimeSpan.FromSeconds(5);
+		var retries = 20; // Reduced since we already waited 3 seconds
 		while (retries-- > 0)
 		{
 			try
@@ -86,12 +106,12 @@ public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncIni
 			}
 			catch (Exception ex)
 			{
-				if (retries % 10 == 0)
+				if (retries % 5 == 0)
 				{
 					Console.WriteLine($"ConnectionServerFactory: Still waiting... ({retries} retries left, error: {ex.Message})");
 				}
 			}
-			await Task.Delay(500);
+			await Task.Delay(1000); // 1 second between attempts
 		}
 		
 		if (retries <= 0)
@@ -101,7 +121,7 @@ public class ConnectionServerFactory : WebApplicationFactory<Program>, IAsyncIni
 		}
 		
 		// Give telnet listener time to fully initialize
-		await Task.Delay(1000);
+		await Task.Delay(2000);
 		Console.WriteLine("ConnectionServerFactory: Initialization complete");
 	}
 

@@ -18,7 +18,8 @@ public class MessageOrderingIntegrationTests
 [ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
 public required WebAppFactory MainServer { get; init; }
 
-[ClassDataSource<ConnectionServerFactory>(Shared = SharedType.PerTestSession)]
+// Don't use Shared for ConnectionServerFactory to avoid TUnit initialization deadlock
+[ClassDataSource<ConnectionServerFactory>]
 public required ConnectionServerFactory ConnectionServer { get; init; }
 
 private const int ConnectionTimeout = 15000; // 15 seconds
