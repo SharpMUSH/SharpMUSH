@@ -39,7 +39,7 @@ public static class KafkaFlowMessagingExtensions
 						"sharpmush-producer",
 						producer => producer
 							.WithCompression(ParseCompressionType(options.CompressionType), null)
-							.WithAcks(options.EnableIdempotence ? Acks.All : Acks.Leader)
+							.WithAcks(options.EnableIdempotence ? KFAcks.All : KFAcks.Leader)
 							.WithLingerMs(options.LingerMs) // Producer-level batching
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
@@ -175,12 +175,24 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 				.AddTypedHandlers(h =>
 				{
 					// Register the adapter as a handler
-					var addHandlerMethod = h.GetType()
-						.GetMethod("AddHandler", new Type[] { });
-					if (addHandlerMethod != null)
+					try
 					{
+						var addHandlerMethod = h.GetType().GetMethod("AddHandler", new Type[] { });
+						if (addHandlerMethod == null)
+						{
+							throw new InvalidOperationException(
+								$"Could not find AddHandler method on handler configurator for message type {messageType.Name}");
+						}
+
 						var genericMethod = addHandlerMethod.MakeGenericMethod(adapterType);
 						genericMethod.Invoke(h, null);
+					}
+					catch (Exception ex)
+					{
+						throw new InvalidOperationException(
+							$"Failed to register consumer adapter for message type {messageType.Name}. " +
+							$"Consumer type: {typeof(TConsumer).Name}, Adapter type: {adapterType.Name}",
+							ex);
 					}
 				})
 			)

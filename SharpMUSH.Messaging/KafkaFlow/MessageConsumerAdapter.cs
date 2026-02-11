@@ -26,7 +26,8 @@ public class MessageConsumerAdapter<TMessage> : IMessageHandler<TMessage>
 		// Get the registered consumer from DI
 		var consumer = scope.ServiceProvider.GetRequiredService<IMessageConsumer<TMessage>>();
 		
-		// Handle the message
+		// Use the worker stopped token for cancellation
+		// KafkaFlow manages graceful shutdown through this token
 		await consumer.HandleAsync(message, context.ConsumerContext.WorkerStopped);
 	}
 }
