@@ -10,8 +10,8 @@ namespace SharpMUSH.Tests.Services;
 
 public class MoveServiceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMoveService MoveService => WebAppFactoryArg.Services.GetRequiredService<IMoveService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();

@@ -237,10 +237,10 @@ public class ScheduledTaskManagementServiceTests
 	}
 
 	[Test]
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public async Task Service_StartsWithValidConfiguration(WebAppFactory factory)
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public async Task Service_StartsWithValidConfiguration(ServerWebAppFactory factory)
 	{
-		// This integration test verifies the service can start with the WebAppFactory
+		// This integration test verifies the service can start with the ServerWebAppFactory
 		var schedulerFactory = factory.Services.GetService<ISchedulerFactory>();
 		
 		// The fact that the factory initialized successfully and has a scheduler means the service can work

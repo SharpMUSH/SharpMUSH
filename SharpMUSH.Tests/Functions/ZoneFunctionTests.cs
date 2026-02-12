@@ -13,8 +13,8 @@ namespace SharpMUSH.Tests.Functions;
 [NotInParallel]
 public class ZoneFunctionTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;

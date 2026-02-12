@@ -13,8 +13,8 @@ namespace SharpMUSH.Tests.Parser;
 [NotInParallel]
 public class RecursionAndInvocationLimitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;

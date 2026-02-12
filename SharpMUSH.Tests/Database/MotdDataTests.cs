@@ -7,8 +7,8 @@ namespace SharpMUSH.Tests.Database;
 
 public class MotdDataTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private ISharpDatabase _database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IExpandedObjectDataService _dataService => WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();

@@ -14,8 +14,8 @@ namespace SharpMUSH.Tests.Database;
 [NotInParallel]
 public class ZoneDatabaseTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();

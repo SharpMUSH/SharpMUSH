@@ -12,8 +12,8 @@ namespace SharpMUSH.Tests.Performance;
 [NotInParallel]
 public class KafkaPerformanceValidation
 {
-[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-public required WebAppFactory WebAppFactoryArg { get; init; }
+[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 private IMessageBus MessageBus => WebAppFactoryArg.Services.GetRequiredService<IMessageBus>();
 

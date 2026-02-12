@@ -8,8 +8,8 @@ namespace SharpMUSH.Tests.Services;
 
 public class ListenerRoutingServiceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IListenerRoutingService ListenerRoutingService => 
 		WebAppFactoryArg.Services.GetRequiredService<IListenerRoutingService>();

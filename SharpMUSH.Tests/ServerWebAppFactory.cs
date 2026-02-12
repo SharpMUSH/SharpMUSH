@@ -27,7 +27,7 @@ using TUnit.AspNetCore;
 
 namespace SharpMUSH.Tests;
 
-public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>, IAsyncInitializer, IAsyncDisposable
+public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>, IAsyncInitializer, IAsyncDisposable
 {
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
@@ -48,7 +48,7 @@ public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>
 	public required RedisTestServer RedisTestServer { get; init; }
 
 	public new IServiceProvider Services => _server!.Services;
-	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
+	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
 	// Optional parameters for custom SQL connection
@@ -56,11 +56,11 @@ public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>
 	private readonly string _sqlPlatform;
 	private readonly string? _customDatabaseName;
 
-	public WebAppFactory() : this(null, null, "mysql")
+	public ServerWebAppFactory() : this(null, null, "mysql")
 	{
 	}
 
-	public WebAppFactory(string? sqlConnectionString, string? databaseName, string sqlPlatform = "mysql")
+	public ServerWebAppFactory(string? sqlConnectionString, string? databaseName, string sqlPlatform = "mysql")
 	{
 		_customSqlConnectionString = sqlConnectionString;
 		_customDatabaseName = databaseName;
@@ -170,7 +170,7 @@ public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>
 
 		await CreateKafkaTopicsAsync(kafkaHost);
 
-		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
+		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
 			Substitute.For<INotifyService>(),

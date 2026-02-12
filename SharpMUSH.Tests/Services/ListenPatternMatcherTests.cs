@@ -6,8 +6,8 @@ namespace SharpMUSH.Tests.Services;
 
 public class ListenPatternMatcherTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IListenPatternMatcher ListenPatternMatcher => 
 		WebAppFactoryArg.Services.GetRequiredService<IListenPatternMatcher>();

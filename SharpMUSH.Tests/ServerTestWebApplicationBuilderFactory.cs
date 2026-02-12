@@ -22,7 +22,7 @@ using TUnit.AspNetCore;
 
 namespace SharpMUSH.Tests;
 
-public class TestWebApplicationBuilderFactory<TProgram>(
+public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
 	INotifyService notifier,
