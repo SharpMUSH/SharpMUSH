@@ -1,18 +1,14 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using TUnit.Core.Interfaces;
 using TUnit.AspNetCore;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
-using KafkaFlow;
 
 namespace SharpMUSH.Tests;
 
 /// <summary>
 /// Integration test factory for SharpMUSH.ConnectionServer.
 /// Manages test infrastructure lifecycle and provides access to services.
-/// IMPORTANT: This factory starts the ConnectionServer on REAL network ports (4201 for telnet, 4202 for HTTP)
-/// to enable integration testing of TCP/telnet connections and Kafka messaging.
 /// </summary>
 public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.ConnectionServer.Program>, IAsyncInitializer, IAsyncDisposable
 {
@@ -25,10 +21,8 @@ public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH
 	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedisTestServer RedisTestServer { get; init; }
 
-	public new IServiceProvider Services => _app!.Services;
-	private WebApplication? _app;
-	private Task? _runTask;
-	private CancellationTokenSource? _cts;
+	public new IServiceProvider Services => _server!.Services;
+	private ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.ConnectionServer.Program>? _server;
 
 	public virtual async Task InitializeAsync()
 	{
@@ -37,36 +31,11 @@ public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH
 
 		var kafkaHost = RedPandaTestServer.Instance.GetBootstrapAddress();
 
-		// Create topics for ConnectionServer
 		await CreateKafkaTopicsAsync(kafkaHost);
 
-		// Set environment variables for ConnectionServer configuration
-		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
-		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
-
-		// Create the actual ConnectionServer application using Program.CreateHostBuilderAsync
-		_app = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync([]);
-
-		// Start Kafka bus
-		var bus = _app.Services.CreateKafkaBus();
-		await bus.StartAsync();
-
-		// Start the application running in the background
-		_cts = new CancellationTokenSource();
-		_runTask = Task.Run(async () =>
-		{
-			try
-			{
-				await _app.StartAsync(_cts.Token);
-			}
-			catch (OperationCanceledException)
-			{
-				// Expected during shutdown
-			}
-		}, _cts.Token);
-
-		// Wait for the server to start listening
-		await Task.Delay(1000);
+		_server = new ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.ConnectionServer.Program>(
+			redisConnection,
+			kafkaHost);
 	}
 
 	private static async Task CreateKafkaTopicsAsync(string bootstrapServers)
@@ -100,12 +69,6 @@ public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH
 			"websocket-output",
 			"websocket-prompt",
 			"gmcp-output",
-			"gmcp-signal",
-			"msdp-update",
-			"mssp-update",
-			"naws-update",
-			"connection-established",
-			"connection-closed",
 			"disconnect-connection",
 			"broadcast",
 			"update-player-preferences"
@@ -133,29 +96,6 @@ public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH
 	public new async ValueTask DisposeAsync()
 	{
 		GC.SuppressFinalize(this);
-		
-		// Stop the ConnectionServer
-		if (_cts is not null)
-		{
-			await _cts.CancelAsync();
-			_cts.Dispose();
-		}
-
-		if (_runTask is not null)
-		{
-			try
-			{
-				await _runTask;
-			}
-			catch (OperationCanceledException)
-			{
-				// Expected when canceling
-			}
-		}
-
-		if (_app is not null)
-		{
-			await _app.DisposeAsync();
-		}
+		await ValueTask.CompletedTask;
 	}
 }
