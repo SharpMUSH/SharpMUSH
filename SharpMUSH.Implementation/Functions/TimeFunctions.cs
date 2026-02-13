@@ -180,7 +180,7 @@ public partial class Functions
 			// Check for "start of" modifiers
 			if (modifier.StartsWith("start of "))
 			{
-				var unit = modifier.AsSpan(9).Trim().ToString();
+				var unit = modifier.Substring(9).Trim();
 				baseTime = unit switch
 				{
 					"day" => new DateTimeOffset(baseTime.Year, baseTime.Month, baseTime.Day, 0, 0, 0, baseTime.Offset),
@@ -363,7 +363,7 @@ public partial class Functions
 				}
 				else if (modifier.StartsWith("start of ", StringComparison.OrdinalIgnoreCase))
 				{
-					var unit = modifier.AsSpan(9).ToString().ToLower();
+					var unit = modifier.Substring(9).ToLower();
 					return unit switch
 					{
 						"month" => new DateTimeOffset(currentDt.Year, currentDt.Month, 1, 0, 0, 0, currentDt.Offset),

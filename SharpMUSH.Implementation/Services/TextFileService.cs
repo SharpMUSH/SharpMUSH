@@ -269,9 +269,8 @@ public class TextFileService : ITextFileService
 			if (match.Success)
 			{
 				var startPos = match.Index;
-				// Find next header or end of file using Span to avoid allocation
-				var remainingContent = content.AsSpan(startPos + match.Length);
-				var nextHeaderMatch = Regex.Match(remainingContent.ToString(), @"^# ", RegexOptions.Multiline);
+				// Find next header or end of file
+				var nextHeaderMatch = Regex.Match(content.Substring(startPos + match.Length), @"^# ", RegexOptions.Multiline);
 				var endPos = nextHeaderMatch.Success 
 					? startPos + match.Length + nextHeaderMatch.Index 
 					: content.Length;

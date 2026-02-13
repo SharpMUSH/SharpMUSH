@@ -2862,9 +2862,9 @@ public partial class Commands
 		var isPose = messageText.StartsWith(":");
 		var isSemiPose = messageText.StartsWith(";");
 		
-		// Extract pose text if needed using Span to avoid allocation
+		// Extract pose text if needed (reuse this value)
 		var displayText = (isPose || isSemiPose) 
-			? $"{executor.Object().Name}{messageText.AsSpan(1)}" 
+			? $"{executor.Object().Name}{messageText.Substring(1)}" 
 			: messageText;
 		
 		// Send whisper to each target

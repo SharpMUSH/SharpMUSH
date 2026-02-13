@@ -99,11 +99,11 @@ public partial class ValidateService(
 				return false;
 			}
 			
-			// Extract the attribute name after "User:" using Span
+			// Extract the attribute name after "User:"
 			var colonIndex = lockTypeName.IndexOf(':');
 			if (colonIndex >= 0 && colonIndex < lockTypeName.Length - 1)
 			{
-				var attributeName = lockTypeName.AsSpan(colonIndex + 1).ToString().ToUpper();
+				var attributeName = lockTypeName.Substring(colonIndex + 1).ToUpper();
 				
 				// Validate as attribute name
 				return ValidAttributeNameRegex().IsMatch(attributeName);

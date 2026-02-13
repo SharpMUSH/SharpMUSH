@@ -179,25 +179,44 @@ public static class AnsiEscapeParser
 	private static AnsiState ParseOscHyperlink(ReadOnlySpan<char> content, AnsiState currentState)
 	{
 		// OSC 8 format: 8;params;url
-		// Need to convert to string for Split operation
-		var contentStr = content.ToString();
-		var parts = contentStr.Split(';');
-		if (parts.Length >= 3 && parts[0] == "8")
+		// Parse without string allocation
+		var firstSemicolon = content.IndexOf(';');
+		if (firstSemicolon < 0 || !content.Slice(0, firstSemicolon).SequenceEqual("8"))
 		{
-			var url = parts[2].TrimEnd('\x07', '\\'); // Remove BEL or backslash
-			if (string.IsNullOrEmpty(url))
-			{
-				// Clear hyperlink
-				return currentState with { LinkUrl = null };
-			}
-			else
-			{
-				// Set hyperlink
-				return currentState with { LinkUrl = url };
-			}
+			return currentState;
 		}
-
-		return currentState;
+		
+		var secondSemicolon = content.Slice(firstSemicolon + 1).IndexOf(';');
+		if (secondSemicolon < 0)
+		{
+			return currentState;
+		}
+		
+		// Extract URL part (after second semicolon)
+		var urlStart = firstSemicolon + 1 + secondSemicolon + 1;
+		if (urlStart >= content.Length)
+		{
+			return currentState;
+		}
+		
+		var urlSpan = content.Slice(urlStart);
+		
+		// Trim BEL or backslash from end
+		while (urlSpan.Length > 0 && (urlSpan[^1] == '\x07' || urlSpan[^1] == '\\'))
+		{
+			urlSpan = urlSpan.Slice(0, urlSpan.Length - 1);
+		}
+		
+		if (urlSpan.IsEmpty)
+		{
+			// Clear hyperlink
+			return currentState with { LinkUrl = null };
+		}
+		else
+		{
+			// Set hyperlink
+			return currentState with { LinkUrl = urlSpan.ToString() };
+		}
 	}
 
 	/// <summary>
