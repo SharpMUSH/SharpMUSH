@@ -27,8 +27,9 @@ public class MessageQueueOptions
 
 	/// <summary>
 	/// Enable idempotent producer (ensures exactly-once semantics)
+	/// Note: Currently disabled for better performance (using acks=1 instead of acks=all)
 	/// </summary>
-	public bool EnableIdempotence { get; set; } = true;
+	public bool EnableIdempotence { get; set; } = false;
 
 	/// <summary>
 	/// Compression type (none, gzip, snappy, lz4, zstd)
@@ -42,9 +43,9 @@ public class MessageQueueOptions
 
 	/// <summary>
 	/// Linger time in milliseconds (how long to wait for batching)
-	/// Combined with consumer batching (8ms), provides ~16ms total latency (approaching 60fps)
+	/// Optimized to 16ms for better throughput with acceptable latency (still well within 60fps)
 	/// </summary>
-	public int LingerMs { get; set; } = 8;
+	public int LingerMs { get; set; } = 16;
 
 	/// <summary>
 	/// Maximum number of in-flight requests per connection.

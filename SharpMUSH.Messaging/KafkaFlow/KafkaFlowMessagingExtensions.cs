@@ -39,7 +39,7 @@ public static class KafkaFlowMessagingExtensions
 					.AddProducer<SharpMushProducer>(
 						producer => producer
 							.WithCompression(ParseCompressionType(options.CompressionType), null)
-							.WithAcks(options.EnableIdempotence ? KFAcks.All : KFAcks.Leader)
+							.WithAcks(KFAcks.Leader) // acks=1 for optimal performance (leader acknowledgment only)
 							.WithLingerMs(options.LingerMs) // Producer-level batching
 							.WithProducerConfig(new Confluent.Kafka.ProducerConfig
 							{
@@ -48,8 +48,9 @@ public static class KafkaFlowMessagingExtensions
 								// one batch at a time, guaranteeing ordering within a partition
 								MaxInFlight = options.MaxInFlightRequests,
 								
-								// Enable idempotence for exactly-once semantics
-								EnableIdempotence = options.EnableIdempotence
+								// Disable idempotence for better performance (acks=1 instead of acks=all)
+								// For MUSH game state, leader acknowledgment provides sufficient durability
+								EnableIdempotence = false
 							})
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
@@ -92,7 +93,7 @@ public static class KafkaFlowMessagingExtensions
 					.AddProducer<SharpMushProducer>(
 						producer => producer
 							.WithCompression(ParseCompressionType(options.CompressionType), null)
-							.WithAcks(options.EnableIdempotence ? KFAcks.All : KFAcks.Leader)
+							.WithAcks(KFAcks.Leader) // acks=1 for optimal performance (leader acknowledgment only)
 							.WithLingerMs(options.LingerMs) // Producer-level batching
 							.WithProducerConfig(new Confluent.Kafka.ProducerConfig
 							{
@@ -101,8 +102,9 @@ public static class KafkaFlowMessagingExtensions
 								// one batch at a time, guaranteeing ordering within a partition
 								MaxInFlight = options.MaxInFlightRequests,
 								
-								// Enable idempotence for exactly-once semantics
-								EnableIdempotence = options.EnableIdempotence
+								// Disable idempotence for better performance (acks=1 instead of acks=all)
+								// For MUSH game state, leader acknowledgment provides sufficient durability
+								EnableIdempotence = false
 							})
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
