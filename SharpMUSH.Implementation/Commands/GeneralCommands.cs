@@ -3834,7 +3834,7 @@ public partial class Commands
 				var delay = task.RunDelay.HasValue ? $"+{task.RunDelay.Value.TotalSeconds:F1}s" : "ready";
 				var commandText = task.Command.ToPlainText();
 				var truncatedCommand = commandText.Length > 40 
-					? commandText.AsSpan(0, 40).ToString()
+					? commandText[..40]
 					: commandText;
 				await NotifyService.Notify(executor, $"  [{task.Pid}] {task.SemaphoreSource} ({delay}): {truncatedCommand}");
 			}

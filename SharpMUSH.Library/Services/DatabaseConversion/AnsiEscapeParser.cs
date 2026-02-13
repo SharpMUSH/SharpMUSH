@@ -201,7 +201,8 @@ public static class AnsiEscapeParser
 		
 		var urlSpan = content.Slice(urlStart);
 		
-		// Trim BEL or backslash from end
+		// Trim any remaining BEL or backslash characters that might not have been stripped by ParseOscSequence
+		// Note: ESC\ sequence should already be handled by ParseOscSequence, but we trim backslash for safety
 		while (urlSpan.Length > 0 && (urlSpan[^1] == '\x07' || urlSpan[^1] == '\\'))
 		{
 			urlSpan = urlSpan.Slice(0, urlSpan.Length - 1);
