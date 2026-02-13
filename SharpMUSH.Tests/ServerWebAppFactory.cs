@@ -143,12 +143,21 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	
 	public virtual async Task InitializeAsync()
 	{
-		var log = new LoggerConfiguration()
+		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
-			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.MinimumLevel.Debug()
-			.CreateLogger();
+			.MinimumLevel.Debug();
 		
+		// Only write to console if explicitly enabled via environment variable
+		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
+		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) && 
+		                       (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
+		
+		if (isConsoleEnabled)
+		{
+			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
+		}
+		
+		var log = logConfig.CreateLogger();
 		Log.Logger = log;
 		
 		var config = new ArangoConfiguration

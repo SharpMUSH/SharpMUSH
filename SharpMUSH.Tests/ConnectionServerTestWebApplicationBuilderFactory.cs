@@ -24,12 +24,21 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
-		var log = new LoggerConfiguration()
+		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
-			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.MinimumLevel.Debug()
-			.CreateLogger();
-
+			.MinimumLevel.Debug();
+		
+		// Only write to console if explicitly enabled via environment variable
+		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
+		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) && 
+		                       (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
+		
+		if (isConsoleEnabled)
+		{
+			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
+		}
+		
+		var log = logConfig.CreateLogger();
 		Log.Logger = log;
 
 		// Set environment variables for ConnectionServer to use test infrastructure
