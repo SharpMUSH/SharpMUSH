@@ -1120,10 +1120,11 @@ public partial class Functions
 			return null;
 		}
 
-		// Parse hex to RGB
-		var r = Convert.ToInt32(hex.Substring(1, 2), 16);
-		var g = Convert.ToInt32(hex.Substring(3, 2), 16);
-		var b = Convert.ToInt32(hex.Substring(5, 2), 16);
+		// Parse hex to RGB using Span<char> to avoid substring allocations
+		var hexSpan = hex.AsSpan();
+		var r = int.Parse(hexSpan.Slice(1, 2), System.Globalization.NumberStyles.HexNumber);
+		var g = int.Parse(hexSpan.Slice(3, 2), System.Globalization.NumberStyles.HexNumber);
+		var b = int.Parse(hexSpan.Slice(5, 2), System.Globalization.NumberStyles.HexNumber);
 
 		return $"{r} {g} {b}";
 	}
@@ -1202,9 +1203,10 @@ public partial class Functions
 		}
 
 		var rgb = colorMatch[0].rgb;
-		var r = Convert.ToInt32(rgb.Substring(2, 2), 16);
-		var g = Convert.ToInt32(rgb.Substring(4, 2), 16);
-		var b = Convert.ToInt32(rgb.Substring(6, 2), 16);
+		var rgbSpan = rgb.AsSpan();
+		var r = int.Parse(rgbSpan.Slice(2, 2), System.Globalization.NumberStyles.HexNumber);
+		var g = int.Parse(rgbSpan.Slice(4, 2), System.Globalization.NumberStyles.HexNumber);
+		var b = int.Parse(rgbSpan.Slice(6, 2), System.Globalization.NumberStyles.HexNumber);
 
 		// Simple brightness check
 		var brightness = (r + g + b) / 3;

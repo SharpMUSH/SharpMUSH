@@ -194,7 +194,7 @@ public partial class Functions
 			// Check for "weekday N" modifier
 			if (modifier.StartsWith("weekday "))
 			{
-				if (int.TryParse(modifier.Substring(8).Trim(), out var targetWeekday))
+				if (int.TryParse(modifier.AsSpan(8).Trim(), out var targetWeekday))
 				{
 					var currentWeekday = (int)baseTime.DayOfWeek;
 					var daysToAdd = (targetWeekday - currentWeekday + 7) % 7;
@@ -374,7 +374,7 @@ public partial class Functions
 				}
 				else if (modifier.StartsWith("weekday ", StringComparison.OrdinalIgnoreCase))
 				{
-					if (int.TryParse(modifier.Substring(8), out var targetDay))
+					if (int.TryParse(modifier.AsSpan(8), out var targetDay))
 					{
 						var currentDay = (int)currentDt.DayOfWeek;
 						var daysToAdd = (targetDay - currentDay + 7) % 7;

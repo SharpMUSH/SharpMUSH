@@ -67,9 +67,11 @@ public partial class Commands
 			return (plainListText, MModule.empty());
 		}
 
-		var paramValue = plainListText.Substring(0, spaceIndex);
+		// Use AsSpan() to avoid substring allocations
+		var textSpan = plainListText.AsSpan();
+		var paramValue = textSpan.Slice(0, spaceIndex).ToString();
 		var remainingText = plainListText.Length > spaceIndex + 1
-			? MModule.single(plainListText.Substring(spaceIndex + 1))
+			? MModule.single(textSpan.Slice(spaceIndex + 1).ToString())
 			: MModule.empty();
 		
 		return (paramValue, remainingText);
@@ -3830,7 +3832,11 @@ public partial class Commands
 			foreach (var task in semaphoreTasks.Take(10))
 			{
 				var delay = task.RunDelay.HasValue ? $"+{task.RunDelay.Value.TotalSeconds:F1}s" : "ready";
-				await NotifyService.Notify(executor, $"  [{task.Pid}] {task.SemaphoreSource} ({delay}): {task.Command.ToPlainText().Substring(0, Math.Min(40, task.Command.ToPlainText().Length))}");
+				var commandText = task.Command.ToPlainText();
+				var truncatedCommand = commandText.Length > 40 
+					? commandText[..40]
+					: commandText;
+				await NotifyService.Notify(executor, $"  [{task.Pid}] {task.SemaphoreSource} ({delay}): {truncatedCommand}");
 			}
 			if (semaphoreTasks.Length > 10)
 			{
@@ -5368,16 +5374,17 @@ public partial class Commands
 				}
 				else
 				{
-					// For substring match, highlight the matching parts
+					// For substring match, highlight the matching parts using Span to avoid allocations
 					var plainValue = MModule.plainText(attr.Value);
 					var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 					var index = plainValue.IndexOf(pattern, comparison);
 					
 					if (index >= 0)
 					{
-						var before = plainValue.Substring(0, index);
-						var match = plainValue.Substring(index, pattern.Length);
-						var after = plainValue.Substring(index + pattern.Length);
+						var valueSpan = plainValue.AsSpan();
+						var before = valueSpan.Slice(0, index).ToString();
+						var match = valueSpan.Slice(index, pattern.Length).ToString();
+						var after = valueSpan.Slice(index + pattern.Length).ToString();
 						
 						displayValue = MModule.concat(
 							MModule.concat(
@@ -5470,13 +5477,13 @@ public partial class Commands
 		var attributeText = attribute.Value.ToPlainText();
 		var attributeLongName = attribute.LongName!.ToUpper();
 		
-		// Strip ^...: or $...: prefixes for listen/command patterns
+		// Strip ^...: or $...: prefixes for listen/command patterns using Span
 		if (attributeText.StartsWith("^") || attributeText.StartsWith("$"))
 		{
 			var colonIndex = attributeText.IndexOf(':');
 			if (colonIndex > 0)
 			{
-				attributeText = attributeText.Substring(colonIndex + 1).TrimStart();
+				attributeText = attributeText.AsSpan(colonIndex + 1).TrimStart().ToString();
 			}
 		}
 		
