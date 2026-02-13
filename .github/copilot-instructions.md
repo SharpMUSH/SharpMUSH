@@ -114,6 +114,52 @@ dotnet run --project SharpMUSH.Tests -- --output detailed
 dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/BuildingCommandTests/*" --output detailed
 ```
 
+### Test Environment Variables
+
+SharpMUSH tests are configured to minimize console output by default, sending metrics to Prometheus instead. You can control test output behavior with these environment variables:
+
+#### SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING
+Controls whether logs are written to the console during tests.
+- **Default**: Disabled (logs sent to Prometheus only)
+- **To Enable**: Set to `true` or `1`
+
+```powershell
+# PowerShell
+$env:SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING = "true"
+dotnet run --project SharpMUSH.Tests
+
+# Or inline
+$env:SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING = "true"; dotnet run --project SharpMUSH.Tests
+```
+
+```bash
+# Bash
+export SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=true
+dotnet run --project SharpMUSH.Tests
+
+# Or inline
+SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=true dotnet run --project SharpMUSH.Tests
+```
+
+#### SHARPMUSH_ENABLE_TEST_TELEMETRY
+Controls whether a telemetry summary is displayed at the end of test runs.
+- **Default**: Disabled
+- **To Enable**: Set to `true` or `1`
+
+```powershell
+# PowerShell
+$env:SHARPMUSH_ENABLE_TEST_TELEMETRY = "true"
+dotnet run --project SharpMUSH.Tests
+```
+
+```bash
+# Bash
+export SHARPMUSH_ENABLE_TEST_TELEMETRY=true
+dotnet run --project SharpMUSH.Tests
+```
+
+**Note**: By default, test output is minimized to reduce noise. Metrics and logs are collected by Prometheus during tests and can be queried via the Prometheus API or viewed in Grafana. Enable console logging only when debugging specific test issues.
+
 ## Build Requirements
 - .NET 10 (as specified in global.json)
 - Build with: `dotnet build`

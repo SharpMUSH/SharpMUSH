@@ -9,6 +9,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -38,6 +39,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private static IBooleanExpressionParser? BooleanExpressionParser { get; set; }
 	private static ITextFileService? TextFileService { get; set; }
 	private static ILogger<Functions>? Logger { get; set; }
+	private static IMessageBus? MessageBus { get; set; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 
@@ -46,6 +48,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	public Functions(
 		ILogger<Functions> logger,
 		IMediator mediator,
+		IMessageBus messageBus,
 		ISharpDatabase database,
 		ILocateService locateService,
 		IAttributeService attributeService,
@@ -71,6 +74,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	{
 		Logger = logger;
 		Mediator = mediator;
+		MessageBus = messageBus;
 		Database = database;
 		LocateService = locateService;
 		AttributeService = attributeService;

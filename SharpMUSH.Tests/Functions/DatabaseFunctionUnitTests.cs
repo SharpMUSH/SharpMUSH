@@ -8,8 +8,8 @@ namespace SharpMUSH.Tests.Functions;
 [NotInParallel]
 public class DatabaseFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }

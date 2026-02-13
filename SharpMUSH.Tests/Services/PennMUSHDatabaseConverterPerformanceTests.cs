@@ -10,8 +10,8 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class PennMUSHDatabaseConverterPerformanceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IPennMUSHDatabaseConverter GetConverter()
 	{

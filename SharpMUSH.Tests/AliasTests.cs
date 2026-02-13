@@ -12,8 +12,8 @@ namespace SharpMUSH.Tests;
 [NotInParallel]
 public class AliasTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;

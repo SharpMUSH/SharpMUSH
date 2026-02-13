@@ -16,8 +16,8 @@ namespace SharpMUSH.Tests.Integration;
 [NotInParallel]
 public class HookIntegrationTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
@@ -214,8 +214,8 @@ public class HookIntegrationTests
 [NotInParallel]
 public class MogrifierIntegrationTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();

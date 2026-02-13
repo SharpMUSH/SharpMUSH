@@ -27,7 +27,7 @@ using TUnit.AspNetCore;
 
 namespace SharpMUSH.Tests;
 
-public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>, IAsyncInitializer, IAsyncDisposable
+public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>, IAsyncInitializer, IAsyncDisposable
 {
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
@@ -48,7 +48,7 @@ public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>
 	public required RedisTestServer RedisTestServer { get; init; }
 
 	public new IServiceProvider Services => _server!.Services;
-	private TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
+	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
 	// Optional parameters for custom SQL connection
@@ -56,11 +56,11 @@ public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>
 	private readonly string _sqlPlatform;
 	private readonly string? _customDatabaseName;
 
-	public WebAppFactory() : this(null, null, "mysql")
+	public ServerWebAppFactory() : this(null, null, "mysql")
 	{
 	}
 
-	public WebAppFactory(string? sqlConnectionString, string? databaseName, string sqlPlatform = "mysql")
+	public ServerWebAppFactory(string? sqlConnectionString, string? databaseName, string sqlPlatform = "mysql")
 	{
 		_customSqlConnectionString = sqlConnectionString;
 		_customDatabaseName = databaseName;
@@ -143,12 +143,21 @@ public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>
 	
 	public virtual async Task InitializeAsync()
 	{
-		var log = new LoggerConfiguration()
+		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
-			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.MinimumLevel.Debug()
-			.CreateLogger();
+			.MinimumLevel.Debug();
 		
+		// Only write to console if explicitly enabled via environment variable
+		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
+		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) && 
+		                       (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
+		
+		if (isConsoleEnabled)
+		{
+			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
+		}
+		
+		var log = logConfig.CreateLogger();
 		Log.Logger = log;
 		
 		var config = new ArangoConfiguration
@@ -170,7 +179,7 @@ public class WebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>
 
 		await CreateKafkaTopicsAsync(kafkaHost);
 
-		_server = new TestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
+		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
 			Substitute.For<INotifyService>(),

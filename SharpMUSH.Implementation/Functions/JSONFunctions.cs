@@ -13,7 +13,6 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
@@ -435,7 +434,7 @@ public partial class Functions
 					continue;
 				}
 
-				await Mediator!.Publish(new SignalGMCPNotification(
+				await MessageBus!.Publish(new Messages.GMCPOutputMessage(
 					connection.Handle,
 					package,
 					message));

@@ -16,24 +16,9 @@ public class MessageQueueOptions
 	public int Port { get; set; } = 9092;
 
 	/// <summary>
-	/// Timeout for request/response messages in seconds
-	/// </summary>
-	public int RequestTimeoutSeconds { get; set; } = 5;
-
-	/// <summary>
 	/// Number of retry attempts for failed messages
 	/// </summary>
 	public int RetryCount { get; set; } = 3;
-
-	/// <summary>
-	/// Delay between retry attempts in seconds
-	/// </summary>
-	public int RetryDelaySeconds { get; set; } = 5;
-
-	/// <summary>
-	/// Topic name for telnet output messages
-	/// </summary>
-	public string TelnetOutputTopic { get; set; } = "telnet-output";
 
 	/// <summary>
 	/// Consumer group ID
@@ -41,22 +26,10 @@ public class MessageQueueOptions
 	public string ConsumerGroupId { get; set; } = "sharpmush-consumer-group";
 
 	/// <summary>
-	/// Number of partitions for topics (affects parallelism)
-	/// Topics are automatically created with this partition count when first used.
-	/// </summary>
-	public short TopicPartitions { get; set; } = 3;
-
-	/// <summary>
-	/// Replication factor for topics
-	/// Topics are automatically created with this replication factor when first used.
-	/// For production with multiple brokers, set to 3 for high availability.
-	/// </summary>
-	public short TopicReplicationFactor { get; set; } = 1;
-
-	/// <summary>
 	/// Enable idempotent producer (ensures exactly-once semantics)
+	/// Note: Currently disabled for better performance (using acks=1 instead of acks=all)
 	/// </summary>
-	public bool EnableIdempotence { get; set; } = true;
+	public bool EnableIdempotence { get; set; } = false;
 
 	/// <summary>
 	/// Compression type (none, gzip, snappy, lz4, zstd)
@@ -70,9 +43,25 @@ public class MessageQueueOptions
 
 	/// <summary>
 	/// Linger time in milliseconds (how long to wait for batching)
-	/// Combined with consumer batching (8ms), provides ~16ms total latency (approaching 60fps)
+	/// Optimized to 16ms for better throughput with acceptable latency (still well within 60fps)
 	/// </summary>
-	public int LingerMs { get; set; } = 8;
+	public int LingerMs { get; set; } = 16;
+
+	/// <summary>
+	/// Maximum number of in-flight requests per connection.
+	/// Set to 1 to guarantee strict message ordering within a partition.
+	/// Higher values (up to 5 with idempotence) can improve throughput but may reorder messages.
+	/// Default: 1 for strict ordering guarantees.
+	/// </summary>
+	public int MaxInFlightRequests { get; set; } = 1;
+
+	/// <summary>
+	/// Number of worker threads for processing messages in parallel.
+	/// With BytesSum distribution strategy, messages with the same partition key
+	/// always go to the same worker, maintaining ordering while allowing parallelism.
+	/// Default: Number of processor cores for optimal parallel processing.
+	/// </summary>
+	public int WorkerCount { get; set; } = Environment.ProcessorCount;
 
 	/// <summary>
 	/// Maximum message size in bytes (6MB for SharpMUSH production)
@@ -90,37 +79,4 @@ public class MessageQueueOptions
 	/// Combined with producer batching (8ms), provides ~16ms total latency (approaching 60fps)
 	/// </summary>
 	public TimeSpan BatchTimeLimit { get; set; } = TimeSpan.FromMilliseconds(8);
-
-	/// <summary>
-	/// Gets Kafka producer configuration
-	/// </summary>
-	public Dictionary<string, string> GetKafkaProducerConfig()
-	{
-		return new Dictionary<string, string>
-		{
-			{ "enable.idempotence", EnableIdempotence.ToString().ToLower() },
-			{ "compression.type", CompressionType },
-			{ "batch.size", BatchSize.ToString() },
-			{ "linger.ms", LingerMs.ToString() },
-			// When idempotence is enabled, acks must be set to "all"
-			{ "acks", EnableIdempotence ? "all" : "1" },
-			{ "max.request.size", MaxMessageBytes.ToString() },
-			{ "message.max.bytes", MaxMessageBytes.ToString() },
-			{ "allow.auto.create.topics", "true" }
-		};
-	}
-
-	/// <summary>
-	/// Gets Kafka consumer configuration
-	/// </summary>
-	public Dictionary<string, string> GetKafkaConsumerConfig()
-	{
-		return new Dictionary<string, string>
-		{
-			{ "fetch.max.bytes", MaxMessageBytes.ToString() },
-			{ "max.partition.fetch.bytes", MaxMessageBytes.ToString() },
-			{ "message.max.bytes", MaxMessageBytes.ToString() },
-			{ "allow.auto.create.topics", "true" }
-		};
-	}
 }

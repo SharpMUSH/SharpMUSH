@@ -6,8 +6,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Functions;
 public class JsonFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();

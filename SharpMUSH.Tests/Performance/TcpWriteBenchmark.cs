@@ -9,8 +9,8 @@ namespace SharpMUSH.Tests.Performance;
 [NotInParallel]
 public class TcpWriteBenchmark
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	[Test]
 	public async Task MeasureBatchingServiceMetrics()

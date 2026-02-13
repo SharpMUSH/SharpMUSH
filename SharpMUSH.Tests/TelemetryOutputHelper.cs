@@ -9,6 +9,10 @@ namespace SharpMUSH.Tests;
 /// Telemetry output is disabled by default during test disposal to reduce noise.
 /// It can be enabled by setting the environment variable SHARPMUSH_ENABLE_TEST_TELEMETRY=true or 
 /// SHARPMUSH_ENABLE_TEST_TELEMETRY=1.
+/// 
+/// Console logging during tests is also disabled by default. Logs are sent to Prometheus instead.
+/// Console logging can be enabled by setting SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=true or 
+/// SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=1.
 /// </remarks>
 public static class TelemetryOutputHelper
 {

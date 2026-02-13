@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using KafkaFlow;
+using Microsoft.AspNetCore.Builder;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
@@ -34,12 +35,17 @@ public class Program
 		
 		var app = builder.Build();
 		
+		// Start Kafka bus
+		var bus = app.Services.CreateKafkaBus();
+		await bus.StartAsync();
+		
 		try
 		{
 			await ConfigureApp(app).RunAsync();
 		}
 		finally
 		{
+			await bus.StopAsync();
 			await prometheusStrategy.DisposeAsync();
 			await redisStrategy.DisposeAsync();
 		}

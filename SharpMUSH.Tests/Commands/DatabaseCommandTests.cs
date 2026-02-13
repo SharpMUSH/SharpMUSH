@@ -12,8 +12,8 @@ namespace SharpMUSH.Tests.Commands;
 [NotInParallel]
 public class DatabaseCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory SqlWebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory SqlWebAppFactoryArg { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }

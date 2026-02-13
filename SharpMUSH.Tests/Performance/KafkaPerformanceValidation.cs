@@ -12,8 +12,8 @@ namespace SharpMUSH.Tests.Performance;
 [NotInParallel]
 public class KafkaPerformanceValidation
 {
-[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-public required WebAppFactory WebAppFactoryArg { get; init; }
+[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 private IMessageBus MessageBus => WebAppFactoryArg.Services.GetRequiredService<IMessageBus>();
 
@@ -122,8 +122,10 @@ await Assert.That(options.BatchSize).IsGreaterThan(16384)
 .Because("Should have reasonable batch size (>16KB)");
 await Assert.That(options.BatchMaxSize).IsGreaterThan(0)
 .Because("Should have consumer batching enabled");
-await Assert.That(options.EnableIdempotence).IsTrue()
-.Because("Should have idempotence for reliability");
+        // EnableIdempotence disabled for performance (acks=1 instead of acks=all)
+        // MaxInFlight=1 still ensures ordering within partitions
+        await Assert.That(options.EnableIdempotence).IsFalse()
+            .Because("Idempotence disabled for lower latency (acks=1), ordering via MaxInFlight=1");
 
 Console.WriteLine($"Kafka Configuration:");
 Console.WriteLine($"  Compression: {options.CompressionType}");
@@ -141,9 +143,10 @@ public async Task Kafka_Configuration_ShouldBeOptimizedForDoListScenario()
 var options = WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Messaging.Configuration.MessageQueueOptions>();
 
 // Assert - Verify settings optimized for @dolist (rapid sequential messages)
-await Assert.That(options.LingerMs).IsGreaterThanOrEqualTo(1)
-.And.IsLessThanOrEqualTo(10)
-.Because("LingerMs should be small but non-zero for batching (1-10ms)");
+        // LingerMs optimized at 16ms for better throughput while maintaining reasonable latency
+        await Assert.That(options.LingerMs).IsGreaterThanOrEqualTo(10)
+            .And.IsLessThanOrEqualTo(20)
+            .Because("LingerMs should balance batching and latency (10-20ms for optimal throughput)");
 
 await Assert.That(options.BatchMaxSize).IsGreaterThanOrEqualTo(100)
 .Because("Consumer batch size should handle @dolist iterations (>=100)");

@@ -1,3 +1,5 @@
+using SharpMUSH.Messages;
+
 namespace SharpMUSH.Messaging.Abstractions;
 
 /// <summary>
@@ -14,10 +16,10 @@ public interface IMessageBus
 	Task Publish<T>(T message, CancellationToken cancellationToken = default) where T : class;
 
 	/// <summary>
-	/// Sends a message directly to a specific topic
+	/// Publishes a message to the appropriate Kafka topic
 	/// </summary>
 	/// <typeparam name="T">The message type</typeparam>
-	/// <param name="message">The message to send</param>
+	/// <param name="message">The message to publish</param>
 	/// <param name="cancellationToken">Cancellation token</param>
-	Task Send<T>(T message, CancellationToken cancellationToken = default) where T : class;
+	Task HandlePublish<T>(T message, CancellationToken cancellationToken = default) where T : IHandleMessage;
 }

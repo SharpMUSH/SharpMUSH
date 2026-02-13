@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text;
+﻿using System.Text;
 using MarkupString;
 using SharpMUSH.Messaging.Abstractions;
 using Mediator;
@@ -14,27 +13,15 @@ using SharpMUSH.Messages;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Notifies objects and sends telnet data with automatic batching support.
-/// All notifications are automatically batched with a 1ms timeout to reduce Kafka overhead
-/// while maintaining interactive responsiveness.
-/// Messages are accumulated and flushed after 1ms of inactivity.
+/// Notifies objects and sends telnet data.
+/// KafkaFlow handles batching automatically via producer LingerMs configuration.
 /// </summary>
 public class NotifyService(
 	IMessageBus publishEndpoint, 
 	IConnectionService connections,
 	IListenerRoutingService? listenerRoutingService = null,
-	Mediator.IMediator? mediator = null) : INotifyService
+	IMediator? mediator = null) : INotifyService
 {
-	private readonly ConcurrentDictionary<long, BatchingState> _batchingStates = new();
-
-	private class BatchingState
-	{
-		public List<byte[]> AccumulatedMessages { get; } = [];
-		public object Lock { get; } = new();
-		public Timer? FlushTimer { get; set; }
-		public TaskCompletionSource? FlushCompletionSource { get; set; }
-	}
-	
 	/// <summary>
 	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
 	/// </summary>
@@ -80,7 +67,7 @@ public class NotifyService(
 				);
 				
 				// Fire and forget - don't await to avoid blocking notification
-				_ = listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
+				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}
 			catch
 			{
@@ -96,10 +83,10 @@ public class NotifyService(
 		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 8ms timeout
+		// Publish directly to Kafka - batching is handled by KafkaFlow producer
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
-			AddToBatch(handle, bytes);
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 		}
 	}
 
@@ -124,8 +111,8 @@ public class NotifyService(
 		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 8ms timeout
-		AddToBatch(handle, bytes);
+		// Publish directly to Kafka - batching is handled by KafkaFlow producer
+		await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -146,10 +133,10 @@ public class NotifyService(
 		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 8ms timeout
+		// Publish directly to Kafka - batching is handled by KafkaFlow producer
 		foreach (var handle in handles)
 		{
-			AddToBatch(handle, bytes);
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 		}
 	}
 
@@ -174,7 +161,7 @@ public class NotifyService(
 
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
-			await publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
 		}
 	}
 
@@ -205,7 +192,7 @@ public class NotifyService(
 		// Publish prompt message to each handle
 		foreach (var handle in handles)
 		{
-			await publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
 		}
 	}
 
@@ -248,130 +235,6 @@ public class NotifyService(
 		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
 
 	/// <summary>
-	/// Adds a message to the batch for the specified handle and starts/resets the 1ms flush timer.
-	/// </summary>
-	private void AddToBatch(long handle, byte[] bytes)
-	{
-		var state = _batchingStates.GetOrAdd(handle, _ => new BatchingState());
-		lock (state.Lock)
-		{
-			state.AccumulatedMessages.Add(bytes);
-
-			// Create a new TaskCompletionSource if we don't have one
-			if (state.FlushCompletionSource == null)
-			{
-				state.FlushCompletionSource = new TaskCompletionSource();
-			}
-
-			// Start or reset the timer to 1ms
-			if (state.FlushTimer == null)
-			{
-				state.FlushTimer = new Timer(
-					_ =>
-					{
-						try
-						{
-							// Fire-and-forget pattern - don't block the timer thread
-							_ = Task.Run(async () => await FlushHandle(handle));
-						}
-						catch (Exception)
-						{
-							// Suppress exceptions to prevent timer crashes
-							// In production, this should log the exception
-						}
-					},
-					null,
-					1,
-					Timeout.Infinite
-				);
-			}
-			else
-			{
-				state.FlushTimer.Change(1, Timeout.Infinite);
-			}
-		}
-	}
-
-	/// <summary>
-	/// Flushes accumulated messages for a specific handle.
-	/// Called automatically by the 1ms timer or manually by EndBatchingScope.
-	/// </summary>
-	private async Task FlushHandle(long handle)
-	{
-		if (!_batchingStates.TryGetValue(handle, out var state))
-		{
-			return;
-		}
-
-		List<byte[]>? messagesToFlush = null;
-		bool shouldRemoveState = false;
-		TaskCompletionSource? completionSource = null;
-		lock (state.Lock)
-		{
-			if (state.AccumulatedMessages.Count == 0)
-			{
-				// No messages to flush. Clean up the state if this was a manual flush (EndBatchingScope)
-				// indicated by a null timer. For timer-based flushes, keep the state for potential reuse.
-				shouldRemoveState = state.FlushTimer == null;
-			}
-			else
-			{
-				messagesToFlush = [.. state.AccumulatedMessages];
-				state.AccumulatedMessages.Clear();
-				state.FlushTimer?.Dispose();
-				state.FlushTimer = null;
-				
-				// Capture the completion source to signal after publish
-				completionSource = state.FlushCompletionSource;
-				state.FlushCompletionSource = null;
-				
-				// Always remove state after flushing to prevent memory leak.
-				// A new state will be created automatically when the next message arrives.
-				shouldRemoveState = true;
-			}
-		}
-
-		if (shouldRemoveState)
-		{
-			_batchingStates.TryRemove(handle, out _);
-		}
-
-		// Combine all accumulated messages and publish as one message
-		// Note: Each message already has \r\n from NormalizeLineEnding, so just concatenate directly
-		if (messagesToFlush?.Count > 0)
-		{
-			try
-			{
-				var totalSize = messagesToFlush.Sum(m => m.Length);
-				var combined = new byte[totalSize];
-				var offset = 0;
-
-				foreach (var message in messagesToFlush)
-				{
-					Array.Copy(message, 0, combined, offset, message.Length);
-					offset += message.Length;
-				}
-
-				await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
-				
-				// Signal completion after successful publish
-				completionSource?.TrySetResult();
-			}
-			catch (Exception ex)
-			{
-				// Signal exception on completion source
-				completionSource?.TrySetException(ex);
-				throw;
-			}
-		}
-		else
-		{
-			// No messages to flush, but still signal completion
-			completionSource?.TrySetResult();
-		}
-	}
-
-	/// <summary>
 	/// Unified error handling: optionally notify user, then return error.
 	/// The notify message and error return are SEPARATE and can be different strings.
 	/// Callers choose which error and notification to use via ErrorMessages constants.
@@ -393,35 +256,5 @@ public class NotifyService(
 		}
 		
 		return new CallState(errorReturn);
-	}
-
-	/// <summary>
-	/// Waits for all pending batched messages to be flushed.
-	/// This is primarily useful for testing to ensure deterministic behavior.
-	/// </summary>
-	public async Task WaitForPendingFlushesAsync()
-	{
-		// Collect all pending TaskCompletionSources
-		var pendingTasks = new List<Task>();
-		
-		foreach (var kvp in _batchingStates)
-		{
-			TaskCompletionSource? tcs = null;
-			lock (kvp.Value.Lock)
-			{
-				tcs = kvp.Value.FlushCompletionSource;
-			}
-			
-			if (tcs != null)
-			{
-				pendingTasks.Add(tcs.Task);
-			}
-		}
-		
-		// Wait for all pending flushes to complete
-		if (pendingTasks.Count > 0)
-		{
-			await Task.WhenAll(pendingTasks);
-		}
 	}
 }
