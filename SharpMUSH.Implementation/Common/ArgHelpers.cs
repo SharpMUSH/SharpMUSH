@@ -302,8 +302,10 @@ public static partial class ArgHelpers
 			return null; // No room/obj format, or empty room name (invalid)
 		}
 
-		var roomName = input.Substring(0, slashIndex).Trim();
-		var objectsPart = input.Substring(slashIndex + 1).Trim();
+		// Use Span to avoid substring allocations
+		var inputSpan = input.AsSpan();
+		var roomName = inputSpan.Slice(0, slashIndex).Trim().ToString();
+		var objectsPart = inputSpan.Slice(slashIndex + 1).Trim().ToString();
 
 		// Parse the objects part as a name list
 		var objectNames = NameListString(objectsPart).ToList();

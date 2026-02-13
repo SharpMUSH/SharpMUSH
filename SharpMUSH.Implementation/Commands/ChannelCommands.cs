@@ -399,9 +399,9 @@ public partial class Commands
 		var outputLines = new List<MString>();
 		foreach (var attr in aliases)
 		{
-			// Extract alias name from attribute name (CHANALIAS`ALIAS -> ALIAS)
+			// Extract alias name from attribute name (CHANALIAS`ALIAS -> ALIAS) using Span
 			var attrName = attr.Name;
-			var aliasName = attrName.StartsWith("CHANALIAS`") ? attrName.Substring(10) : attrName;
+			var aliasName = attrName.StartsWith("CHANALIAS`") ? attrName.AsSpan(10).ToString() : attrName;
 			var channelName = attr.Value;
 			
 			outputLines.Add(MModule.concat(
