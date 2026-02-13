@@ -113,7 +113,7 @@ public class ConnectionStateBenchmarks
 		for (int i = 0; i < iterations; i++)
 		{
 			var value = _inMemoryCache!.GetValueOrDefault(TestHandle);
-			_inMemoryCache.AddOrUpdate(TestHandle, "updated", (_, _) => "updated");
+			_inMemoryCache!.AddOrUpdate(TestHandle, "updated", (_, _) => "updated");
 		}
 	}
 	
@@ -127,10 +127,10 @@ public class ConnectionStateBenchmarks
 		
 		for (int i = 0; i < iterations; i++)
 		{
-			var data = await _redisStore.GetConnectionAsync(TestHandle);
+			var data = await _redisStore!.GetConnectionAsync(TestHandle);
 			if (data != null)
 			{
-				await _redisStore.UpdateMetadataAsync(TestHandle, "test", "updated");
+				await _redisStore!.UpdateMetadataAsync(TestHandle, "test", "updated");
 			}
 		}
 	}
