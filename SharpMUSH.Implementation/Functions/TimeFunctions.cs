@@ -180,7 +180,7 @@ public partial class Functions
 			// Check for "start of" modifiers
 			if (modifier.StartsWith("start of "))
 			{
-				var unit = modifier.Substring(9).Trim();
+				var unit = modifier.AsSpan(9).Trim().ToString();
 				baseTime = unit switch
 				{
 					"day" => new DateTimeOffset(baseTime.Year, baseTime.Month, baseTime.Day, 0, 0, 0, baseTime.Offset),
@@ -194,7 +194,7 @@ public partial class Functions
 			// Check for "weekday N" modifier
 			if (modifier.StartsWith("weekday "))
 			{
-				if (int.TryParse(modifier.Substring(8).Trim(), out var targetWeekday))
+				if (int.TryParse(modifier.AsSpan(8).Trim(), out var targetWeekday))
 				{
 					var currentWeekday = (int)baseTime.DayOfWeek;
 					var daysToAdd = (targetWeekday - currentWeekday + 7) % 7;
@@ -363,7 +363,7 @@ public partial class Functions
 				}
 				else if (modifier.StartsWith("start of ", StringComparison.OrdinalIgnoreCase))
 				{
-					var unit = modifier.Substring(9).ToLower();
+					var unit = modifier.AsSpan(9).ToString().ToLower();
 					return unit switch
 					{
 						"month" => new DateTimeOffset(currentDt.Year, currentDt.Month, 1, 0, 0, 0, currentDt.Offset),
@@ -374,7 +374,7 @@ public partial class Functions
 				}
 				else if (modifier.StartsWith("weekday ", StringComparison.OrdinalIgnoreCase))
 				{
-					if (int.TryParse(modifier.Substring(8), out var targetDay))
+					if (int.TryParse(modifier.AsSpan(8), out var targetDay))
 					{
 						var currentDay = (int)currentDt.DayOfWeek;
 						var daysToAdd = (targetDay - currentDay + 7) % 7;

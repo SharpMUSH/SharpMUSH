@@ -1218,8 +1218,8 @@ LOCATE()
 							var colonIndex = attrValue.IndexOf(':', dollarIndex);
 							if (colonIndex > dollarIndex)
 							{
-								// Extract just the command pattern part (after $ and before :)
-								var commandPart = attrValue.Substring(dollarIndex + 1, colonIndex - dollarIndex - 1);
+								// Extract just the command pattern part (after $ and before :) using Span
+								var commandPart = attrValue.AsSpan(dollarIndex + 1, colonIndex - dollarIndex - 1).ToString();
 								if (IsWildcardMatch(commandPart, commandPattern))
 								{
 									hasMatchingCommand = true;
@@ -1323,9 +1323,10 @@ LOCATE()
 			
 			if (slashIndex > 0)
 			{
-				// Format: object/attribute
-				var objPart = callbackSpec.Substring(0, slashIndex);
-				var attrPart = callbackSpec.Substring(slashIndex + 1);
+				// Format: object/attribute - Use Span to avoid substring allocations
+				var specSpan = callbackSpec.AsSpan();
+				var objPart = specSpan.Slice(0, slashIndex).ToString();
+				var attrPart = specSpan.Slice(slashIndex + 1).ToString();
 				
 				var objResult = await LocateService!.Locate(parser, executor, executor, objPart, LocateFlags.All);
 				if (objResult.IsValid())
