@@ -65,6 +65,9 @@ public class Program
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
 
+		// Prometheus metrics endpoint (for scraping, not for logging to console)
+		app.MapPrometheusScrapingEndpoint();
+
 		return app;
 	}
 }
