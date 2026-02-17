@@ -81,6 +81,7 @@ services:
     ports:
       - "4201:4201" # Telnet
       - "4202:4202" # ConnectionServer HTTP API
+      - "9091:9091" # Metrics endpoint (for external monitoring tools)
     networks:
       - sharpmush-net
 
@@ -102,6 +103,8 @@ services:
         condition: service_healthy
       connectionserver:
         condition: service_started
+    ports:
+      - "9092:9092" # Metrics endpoint (for external monitoring tools)
     volumes:
       - arangodb-socket:/var/run/arangodb3
     networks:
