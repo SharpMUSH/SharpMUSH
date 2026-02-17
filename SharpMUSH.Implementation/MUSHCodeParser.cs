@@ -159,6 +159,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
 		
+		if (Configuration.CurrentValue.Debug.ParserStrictMode)
+		{
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
+		
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
@@ -234,6 +239,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.ParserStrictMode)
+		{
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
@@ -369,6 +378,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Trace = false // Don't trace during validation
 		};
 		
+		if (Configuration.CurrentValue.Debug.ParserStrictMode)
+		{
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
+		
 		// Create custom error listener to collect errors
 		var errorListener = new ParserErrorListener(plaintext.ToString());
 		
@@ -445,6 +459,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			},
 			Trace = false
 		};
+		
+		if (Configuration.CurrentValue.Debug.ParserStrictMode)
+		{
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
 		
 		// Remove error listeners to avoid noise during analysis
 		sharpParser.RemoveErrorListeners();
