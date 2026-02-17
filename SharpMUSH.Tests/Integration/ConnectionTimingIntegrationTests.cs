@@ -9,8 +9,18 @@ namespace SharpMUSH.Tests.Integration;
 /// <summary>
 /// Integration tests to measure actual connection timing and performance.
 /// These tests validate the connection flow documented in TELNET_CONNECTION_TIMING_ANALYSIS.md
+/// 
+/// NOTE: These tests require both ConnectionServer and Server to be running.
+/// To run these tests:
+/// 1. Start infrastructure: docker-compose up -d
+/// 2. Start ConnectionServer: cd SharpMUSH.ConnectionServer && dotnet run
+/// 3. Start Server: cd SharpMUSH.Server && dotnet run
+/// 4. Run tests: dotnet test --filter "ConnectionTimingIntegrationTests"
+/// 
+/// Alternatively, use the ServerWebAppFactory which starts both servers for testing.
 /// </summary>
 [NotInParallel]
+[Skip("Requires running servers - use ServerWebAppFactory or start servers manually")]
 public class ConnectionTimingIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
