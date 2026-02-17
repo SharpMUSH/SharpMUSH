@@ -32,17 +32,6 @@ spec:
     requests:
       storage: 1Gi
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: prometheus-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
----
 # ArangoDB
 apiVersion: apps/v1
 kind: Deployment
@@ -207,98 +196,6 @@ spec:
       targetPort: 6379
   type: ClusterIP
 ---
-# Prometheus ConfigMap
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-config
-data:
-  prometheus.yml: |
-    global:
-      scrape_interval: 15s
-      evaluation_interval: 15s
-      external_labels:
-        monitor: 'sharpmush-monitor'
-
-    scrape_configs:
-      - job_name: 'sharpmush-server'
-        static_configs:
-          - targets: ['sharpmush:9092']
-            labels:
-              service: 'server'
-
-      - job_name: 'connectionserver'
-        static_configs:
-          - targets: ['connectionserver:9091']
-            labels:
-              service: 'connectionserver'
-
-      - job_name: 'prometheus'
-        static_configs:
-          - targets: ['localhost:9090']
----
-# Prometheus
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: prometheus
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: prometheus
-  template:
-    metadata:
-      labels:
-        app: prometheus
-    spec:
-      securityContext:
-        fsGroup: 65534
-        runAsUser: 65534
-        runAsGroup: 65534
-      containers:
-        - name: prometheus
-          image: docker.io/prom/prometheus:latest
-          imagePullPolicy: IfNotPresent
-          args:
-            - '--config.file=/etc/prometheus/prometheus.yml'
-            - '--storage.tsdb.path=/prometheus'
-            - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-            - '--web.console.templates=/usr/share/prometheus/consoles'
-          ports:
-            - containerPort: 9090
-          volumeMounts:
-            - name: prometheus-config
-              mountPath: /etc/prometheus
-            - name: prometheus-storage
-              mountPath: /prometheus
-          resources:
-            requests:
-              cpu: "250m"
-              memory: "512Mi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
-      volumes:
-        - name: prometheus-config
-          configMap:
-            name: prometheus-config
-        - name: prometheus-storage
-          persistentVolumeClaim:
-            claimName: prometheus-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: prometheus
-spec:
-  selector:
-    app: prometheus
-  ports:
-    - port: 9090
-      targetPort: 9090
-  type: ClusterIP
----
 # SharpMUSH
 apiVersion: apps/v1
 kind: Deployment
@@ -338,8 +235,6 @@ spec:
               value: redpanda
             - name: KAFKA_PORT
               value: "9092"
-            - name: PROMETHEUS_URL
-              value: "http://prometheus:9090"
             - name: REDIS_CONNECTION
               value: "redis:6379"
           resources:
@@ -401,8 +296,6 @@ spec:
               value: "9092"
             - name: SHARPMUSH_HOST
               value: sharpmush
-            - name: PROMETHEUS_URL
-              value: "http://prometheus:9090"
             - name: REDIS_CONNECTION
               value: "redis:6379"
           resources:

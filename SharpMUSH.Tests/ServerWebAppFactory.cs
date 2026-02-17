@@ -41,9 +41,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 	
-	[ClassDataSource<PrometheusTestServer>(Shared = SharedType.PerTestSession)]
-	public required PrometheusTestServer PrometheusTestServer { get; init; }
-	
 	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedisTestServer RedisTestServer { get; init; }
 
@@ -168,8 +165,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		var prometheusUrl = $"http://localhost:{PrometheusTestServer.Instance.GetMappedPublicPort(9090)}";
-
 		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
 		var redisConnection = $"localhost:{redisPort}";
 		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
@@ -183,7 +178,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(), 
 			configFile,
 			Substitute.For<INotifyService>(),
-			prometheusUrl,
 			_customDatabaseName,
 			_sqlPlatform);
 
@@ -313,13 +307,5 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		{
 			return;
 		}
-
-		var prometheusService = _server.Services.GetService<IPrometheusQueryService>();
-		if (prometheusService == null)
-		{
-			return;
-		}
-
-		await TelemetryOutputHelper.OutputTelemetrySummaryAsync(prometheusService);
 	}
 }
