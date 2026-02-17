@@ -594,34 +594,30 @@ public class RecursiveMarkdownRenderer
 		// Hex color: #RRGGBB or #RGB
 		if (colorStr.StartsWith("#"))
 		{
-			try
+			if (colorStr.Length == 7) // #RRGGBB
 			{
-				if (colorStr.Length == 7) // #RRGGBB
+				if (byte.TryParse(colorStr.AsSpan(1, 2), System.Globalization.NumberStyles.HexNumber, null, out var r) &&
+				    byte.TryParse(colorStr.AsSpan(3, 2), System.Globalization.NumberStyles.HexNumber, null, out var g) &&
+				    byte.TryParse(colorStr.AsSpan(5, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
 				{
-					var r = Convert.ToByte(colorStr.Substring(1, 2), 16);
-					var g = Convert.ToByte(colorStr.Substring(3, 2), 16);
-					var b = Convert.ToByte(colorStr.Substring(5, 2), 16);
-					return Color.FromArgb(r, g, b);
-				}
-				else if (colorStr.Length == 4) // #RGB - expand each digit
-				{
-					var r = (byte)(Convert.ToByte(colorStr.Substring(1, 1), 16) * 17);
-					var g = (byte)(Convert.ToByte(colorStr.Substring(2, 1), 16) * 17);
-					var b = (byte)(Convert.ToByte(colorStr.Substring(3, 1), 16) * 17);
 					return Color.FromArgb(r, g, b);
 				}
 			}
-			catch { return null; }
-		}
-		
-		// Named colors
-		try
-		{
-			return Color.FromName(colorStr);
-		}
-		catch
-		{
+			else if (colorStr.Length == 4) // #RGB - expand each digit
+			{
+				if (byte.TryParse(colorStr.AsSpan(1, 1), System.Globalization.NumberStyles.HexNumber, null, out var r) &&
+				    byte.TryParse(colorStr.AsSpan(2, 1), System.Globalization.NumberStyles.HexNumber, null, out var g) &&
+				    byte.TryParse(colorStr.AsSpan(3, 1), System.Globalization.NumberStyles.HexNumber, null, out var b))
+				{
+					return Color.FromArgb((byte)(r * 17), (byte)(g * 17), (byte)(b * 17));
+				}
+			}
+			
 			return null;
 		}
+		
+		// Named colors - Color.FromName doesn't throw, but returns invalid color if name doesn't exist
+		var namedColor = Color.FromName(colorStr);
+		return namedColor.IsKnownColor ? namedColor : null;
 	}
 }
