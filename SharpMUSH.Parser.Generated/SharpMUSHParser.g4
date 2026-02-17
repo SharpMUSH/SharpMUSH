@@ -26,7 +26,8 @@ startCommandString:
 ;
 
 // Start looking for a pattern with comma separated arguments.
-startPlainCommaCommandArgs: commaCommandArgs EOF;
+// Can be completely empty (no arguments)
+startPlainCommaCommandArgs: commaCommandArgs? EOF;
 
 // Start looking for a pattern with an '=' split, followed by comma separated arguments.
 startEqSplitCommandArgs:
@@ -43,7 +44,8 @@ startEqSplitCommand:
 ; 
 
 // Start looking for a single-argument command value, by parsing the argument.
-startPlainSingleCommandArg: singleCommandArg EOF;
+// Can be empty (no argument)
+startPlainSingleCommandArg: singleCommandArg? EOF;
 
 // Start looking for a plain string. These may start with a function call.
 startPlainString: evaluationString EOF;

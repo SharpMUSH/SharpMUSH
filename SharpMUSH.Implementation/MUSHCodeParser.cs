@@ -315,16 +315,44 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
-		=> ParseInternal(text, p => p.commaCommandArgs(), nameof(CommandCommaArgsParse));
+	{
+		// Handle empty input without parsing
+		if (MModule.getLength(text) == 0)
+		{
+			return ValueTask.FromResult<CallState?>(CallState.Empty);
+		}
+		return ParseInternal(text, p => p.startPlainCommaCommandArgs(), nameof(CommandCommaArgsParse));
+	}
 
 	public ValueTask<CallState?> CommandSingleArgParse(MString text)
-		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse));
+	{
+		// Handle empty input without parsing
+		if (MModule.getLength(text) == 0)
+		{
+			return ValueTask.FromResult<CallState?>(CallState.Empty);
+		}
+		return ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse));
+	}
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse));
+	{
+		// Handle empty input without parsing
+		if (MModule.getLength(text) == 0)
+		{
+			return ValueTask.FromResult<CallState?>(CallState.Empty);
+		}
+		return ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse));
+	}
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse));
+	{
+		// Handle empty input without parsing
+		if (MModule.getLength(text) == 0)
+		{
+			return ValueTask.FromResult<CallState?>(CallState.Empty);
+		}
+		return ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse));
+	}
 
 	/// <summary>
 	/// Tokenizes the input text and returns token information for syntax highlighting.
