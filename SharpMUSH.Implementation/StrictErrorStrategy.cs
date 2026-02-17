@@ -13,7 +13,7 @@ public class StrictErrorStrategy : DefaultErrorStrategy
 	/// </summary>
 	public override void Recover(Parser recognizer, RecognitionException e)
 	{
-		throw new ParseCanceledException($"Parser error: {e.Message}", e);
+		throw new InvalidOperationException($"Parser error: {e.Message}", e);
 	}
 
 	/// <summary>
@@ -22,7 +22,7 @@ public class StrictErrorStrategy : DefaultErrorStrategy
 	public override IToken RecoverInline(Parser recognizer)
 	{
 		var exception = new InputMismatchException(recognizer);
-		throw new ParseCanceledException($"Unexpected token: {exception.Message}", exception);
+		throw new InvalidOperationException($"Unexpected token: {exception.Message}", exception);
 	}
 
 	/// <summary>
