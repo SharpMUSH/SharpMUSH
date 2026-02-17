@@ -14,6 +14,7 @@ public class TelemetryService : ITelemetryService, IDisposable
 	private readonly Histogram<double> _commandInvocationDuration;
 	private readonly Histogram<double> _notificationSpeed;
 	private readonly Counter<long> _connectionEvents;
+	private readonly Histogram<double> _connectionTiming;
 	private readonly ObservableGauge<int> _activeConnectionCount;
 	private readonly ObservableGauge<int> _loggedInPlayerCount;
 	private readonly ObservableGauge<int> _serverHealthState;
@@ -50,6 +51,12 @@ public class TelemetryService : ITelemetryService, IDisposable
 		_connectionEvents = _meter.CreateCounter<long>(
 			"sharpmush.connection.events",
 			description: "Count of connection events");
+
+		// Connection timing histogram
+		_connectionTiming = _meter.CreateHistogram<double>(
+			"sharpmush.connection.timing",
+			unit: "ms",
+			description: "Time taken for connection lifecycle stages");
 
 		// Active connection count gauge
 		_activeConnectionCount = _meter.CreateObservableGauge<int>(
@@ -121,6 +128,12 @@ public class TelemetryService : ITelemetryService, IDisposable
 	public void SetConnectionServerHealthState(bool isHealthy)
 	{
 		_currentConnectionServerHealthState = isHealthy;
+	}
+
+	public void RecordConnectionTiming(string stage, double durationMs)
+	{
+		_connectionTiming.Record(durationMs,
+			new KeyValuePair<string, object?>("connection.stage", stage));
 	}
 
 	public void Dispose()

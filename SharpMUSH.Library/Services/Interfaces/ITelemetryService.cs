@@ -58,4 +58,11 @@ public interface ITelemetryService
 	/// </summary>
 	/// <param name="isHealthy">Whether the connection server is healthy.</param>
 	void SetConnectionServerHealthState(bool isHealthy);
+
+	/// <summary>
+	/// Records the time taken for a connection lifecycle event.
+	/// </summary>
+	/// <param name="stage">The stage of connection (e.g., tcp_accept, telnet_setup, register, kafka_publish).</param>
+	/// <param name="durationMs">Duration in milliseconds.</param>
+	void RecordConnectionTiming(string stage, double durationMs);
 }

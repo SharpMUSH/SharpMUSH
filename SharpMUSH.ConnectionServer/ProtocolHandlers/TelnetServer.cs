@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Library.Notifications;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Handlers;
@@ -24,6 +25,7 @@ public class TelnetServer : ConnectionHandler
 	private readonly IConnectionServerService _connectionService;
 	private readonly IMessageBus _publishEndpoint;
 	private readonly IDescriptorGeneratorService _descriptorGenerator;
+	private readonly ITelemetryService? _telemetryService;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 	private readonly SemaphoreSlim _semaphoreSlimForWriter = new(1, 1);
 
@@ -31,20 +33,30 @@ public class TelnetServer : ConnectionHandler
 		ILogger<TelnetServer> logger,
 		IConnectionServerService connectionService,
 		IMessageBus publishEndpoint,
-		IDescriptorGeneratorService descriptorGenerator)
+		IDescriptorGeneratorService descriptorGenerator,
+		ITelemetryService? telemetryService = null)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
 		_connectionService = connectionService;
 		_publishEndpoint = publishEndpoint;
 		_descriptorGenerator = descriptorGenerator;
+		_telemetryService = telemetryService;
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
+		var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
+		var stageStopwatch = System.Diagnostics.Stopwatch.StartNew();
+		
+		// Stage 1: Descriptor allocation
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
+		
+		_telemetryService?.RecordConnectionTiming("descriptor_allocation", stageStopwatch.Elapsed.TotalMilliseconds);
+		stageStopwatch.Restart();
 
+		// Stage 2: Telnet protocol setup
 		var telnet = await new TelnetInterpreterBuilder()
 			.UseMode(TelnetInterpreter.TelnetMode.Server)
 			.UseLogger(_logger)
@@ -66,6 +78,9 @@ public class TelnetServer : ConnectionHandler
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
 			.AddPlugin<MCCPProtocol>()
 			.BuildAsync();
+
+		_telemetryService?.RecordConnectionTiming("telnet_setup", stageStopwatch.Elapsed.TotalMilliseconds);
+		stageStopwatch.Restart();
 
 		var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 			? "unknown"
@@ -140,6 +155,9 @@ public class TelnetServer : ConnectionHandler
 			await telnet.SendGMCPCommand(module, message);
 		});
 
+	_telemetryService?.RecordConnectionTiming("connection_registration", stageStopwatch.Elapsed.TotalMilliseconds);
+	_telemetryService?.RecordConnectionTiming("total_connection_establishment", totalStopwatch.Elapsed.TotalMilliseconds);
+
 	try
 	{
 		while (!ct.IsCancellationRequested)
@@ -165,7 +183,9 @@ public class TelnetServer : ConnectionHandler
 	}
 
 	// Disconnect and notify MainProcess
+	var disconnectStopwatch = System.Diagnostics.Stopwatch.StartNew();
 	await _connectionService.DisconnectAsync(nextPort);
+	_telemetryService?.RecordConnectionTiming("disconnection", disconnectStopwatch.Elapsed.TotalMilliseconds);
 }
 
 private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection, CancellationToken ct)
