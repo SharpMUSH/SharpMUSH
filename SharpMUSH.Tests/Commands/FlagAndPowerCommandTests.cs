@@ -23,6 +23,8 @@ public class FlagAndPowerCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
@@ -175,6 +177,8 @@ public class FlagAndPowerCommandTests
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async ValueTask Power_List_DisplaysAllPowers()
 	{

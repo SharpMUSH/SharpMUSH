@@ -56,6 +56,8 @@ public class GeneralCommandTests
 				TestHelpers.MessageEquals(msg, "3 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async ValueTask DoListSimple2()
 	{
@@ -202,6 +204,8 @@ public class GeneralCommandTests
 				TestHelpers.MessageEquals(msg, "2 is 2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async ValueTask DoBreakSimpleCommandList()
 	{
@@ -354,6 +358,8 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async ValueTask Search_PerformsDatabaseSearch()
 	{
@@ -368,6 +374,8 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async ValueTask Entrances_ShowsLinkedObjects()
 	{
