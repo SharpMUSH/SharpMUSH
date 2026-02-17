@@ -11,7 +11,6 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
-using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 
 namespace SharpMUSH.Benchmarks;
@@ -32,15 +31,11 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = log;
 
-		// Initialize Prometheus strategy for benchmarks
-		var prometheusStrategy = PrometheusStrategyProvider.GetStrategy();
-		prometheusStrategy.InitializeAsync().AsTask().Wait();
-
 		// Initialize Redis strategy for benchmarks
 		var redisStrategy = RedisStrategyProvider.GetStrategy();
 		redisStrategy.InitializeAsync().AsTask().Wait();
 
-		var startup = new Startup(acnf, colorFile, prometheusStrategy, redisStrategy);
+		var startup = new Startup(acnf, colorFile, redisStrategy);
 
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
