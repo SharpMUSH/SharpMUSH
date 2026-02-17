@@ -64,6 +64,7 @@ singleCommandArg: evaluationString;
 evaluationString:
       function explicitEvaluationString?
     | explicitEvaluationString
+    | /* empty - allow zero-length expressions */
 ;
 
 explicitEvaluationString:
