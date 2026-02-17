@@ -63,19 +63,22 @@ public static partial class ArgHelpers
 	public static ValueTask<CallState> AggregateDecimals(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction)
 	{
-		try
+		var decimals = new List<decimal>();
+		
+		foreach (var arg in args)
 		{
-			var result = args
-				.Select(x => decimal.Parse(EmptyStringToZero(MModule.plainText(x.Value.Message))))
-				.Aggregate(aggregateFunction);
-			
-			// Format decimal to remove unnecessary trailing zeros and decimal point
-			return ValueTask.FromResult<CallState>(FormatDecimal(result));
+			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
+			if (!decimal.TryParse(text, out var value))
+			{
+				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			}
+			decimals.Add(value);
 		}
-		catch (Exception)
-		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
-		}
+		
+		var result = decimals.Aggregate(aggregateFunction);
+		
+		// Format decimal to remove unnecessary trailing zeros and decimal point
+		return ValueTask.FromResult<CallState>(FormatDecimal(result));
 	}
 	
 	/// <summary>
@@ -90,104 +93,106 @@ public static partial class ArgHelpers
 	public static ValueTask<CallState> AggregateIntegers(ImmutableSortedDictionary<string, CallState> args,
 		Func<int, int, int> aggregateFunction)
 	{
-		try
+		var integers = new List<int>();
+		
+		foreach (var arg in args)
 		{
-			return ValueTask.FromResult<CallState>(args
-				.Select(x
-					=> int.Parse(EmptyStringToZero(MModule.plainText(x.Value.Message))))
-				.Aggregate(aggregateFunction).ToString(CultureInfo.InvariantCulture));
+			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
+			if (!int.TryParse(text, out var value))
+			{
+				return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+			}
+			integers.Add(value);
 		}
-		catch (Exception)
-		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
-		}
+		
+		var result = integers.Aggregate(aggregateFunction);
+		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
 	}
 
 	public static ValueTask<CallState> ValidateIntegerAndEvaluate(ImmutableSortedDictionary<string, CallState> args,
 		Func<IEnumerable<int>, MString> aggregateFunction)
 	{
-		try
+		var integers = new List<int>();
+		
+		foreach (var arg in args)
 		{
-			return ValueTask.FromResult<CallState>(
-				aggregateFunction(args
-					.Select(x
-						=> int.Parse(EmptyStringToZero(MModule.plainText(x.Value.Message!))))));
+			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message!));
+			if (!int.TryParse(text, out var value))
+			{
+				return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+			}
+			integers.Add(value);
 		}
-		catch (Exception)
-		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
-		}
+		
+		return ValueTask.FromResult<CallState>(aggregateFunction(integers));
 	}
 
 	public static ValueTask<CallState> AggregateDecimalToInt(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, decimal, decimal> aggregateFunction)
 	{
-		try
+		var decimals = new List<decimal>();
+		
+		foreach (var arg in args)
 		{
-			return ValueTask.FromResult<CallState>(Math.Floor(args
-				.Select(x
-					=> decimal.Parse(string.Join(string.Empty, EmptyStringToZero(MModule.plainText(x.Value.Message)))))
-				.Aggregate(aggregateFunction)).ToString(CultureInfo.InvariantCulture));
+			var text = string.Join(string.Empty, EmptyStringToZero(MModule.plainText(arg.Value.Message)));
+			if (!decimal.TryParse(text, out var value))
+			{
+				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
+			}
+			decimals.Add(value);
 		}
-		catch (Exception)
-		{
-			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
-		}
+		
+		var result = Math.Floor(decimals.Aggregate(aggregateFunction));
+		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
 	}
 
 	public static ValueTask<CallState> EvaluateDecimal(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, decimal> func)
 	{
-		try
-		{
-			var result = func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message))));
-			return ValueTask.FromResult<CallState>(FormatDecimal(result));
-		}
-		catch (Exception)
+		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		if (!decimal.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
 		}
+		
+		var result = func(value);
+		return ValueTask.FromResult<CallState>(FormatDecimal(result));
 	}
 
 	public static ValueTask<CallState> EvaluateDecimalToInteger(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, int> func)
 	{
-		try
-		{
-			return ValueTask.FromResult<CallState>(
-				func(decimal.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
-		}
-		catch (Exception)
+		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		if (!decimal.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
 		}
+		
+		return ValueTask.FromResult<CallState>(func(value));
 	}
 
 	public static ValueTask<CallState> EvaluateDouble(ImmutableSortedDictionary<string, CallState> args,
 		Func<double, double> func)
 	{
-		try
-		{
-			return ValueTask.FromResult<CallState>(
-				func(double.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
-		}
-		catch (Exception)
+		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		if (!double.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
 		}
+		
+		return ValueTask.FromResult<CallState>(func(value));
 	}
 
 	public static ValueTask<CallState> EvaluateInteger(ImmutableSortedDictionary<string, CallState> args,
 		Func<int, int> func)
 	{
-		try
-		{
-			return ValueTask.FromResult<CallState>(func(int.Parse(EmptyStringToZero(MModule.plainText(args["0"].Message)))));
-		}
-		catch (Exception)
+		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		if (!int.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorInteger);
 		}
+		
+		return ValueTask.FromResult<CallState>(func(value));
 	}
 
 	public static string EmptyStringToZero(string input)
