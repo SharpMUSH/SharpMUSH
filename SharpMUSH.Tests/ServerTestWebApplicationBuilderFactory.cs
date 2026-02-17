@@ -90,6 +90,21 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 				var config = ReadPennMushConfig.Create(configFile);
 				
+				// Check for PARSER_STRICT_MODE environment variable
+				var parserStrictMode = Environment.GetEnvironmentVariable("PARSER_STRICT_MODE");
+				if (!string.IsNullOrEmpty(parserStrictMode) && 
+				    (parserStrictMode.Equals("true", StringComparison.OrdinalIgnoreCase) || 
+				     parserStrictMode.Equals("1", StringComparison.OrdinalIgnoreCase)))
+				{
+					config = config with
+					{
+						Debug = config.Debug with
+						{
+							ParserStrictMode = true
+						}
+					};
+				}
+				
 				// Create IOptionsMonitor for SqlService with test connection string
 				var sqlOptionsMonitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 				
