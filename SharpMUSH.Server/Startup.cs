@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
 using Serilog.Events;
@@ -250,14 +248,5 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 			
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
-
-		// Configure OpenTelemetry Metrics for Prometheus
-		services.AddOpenTelemetry()
-			.ConfigureResource(resource => resource
-				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
-			.WithMetrics(metrics => metrics
-				.AddMeter("SharpMUSH")
-				.AddRuntimeInstrumentation()
-				.AddPrometheusExporter());
 	}
 }
