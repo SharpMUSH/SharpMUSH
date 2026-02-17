@@ -283,9 +283,7 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
-		var arguments = context.argument() ?? Enumerable.Empty<ArgumentContext>().ToArray();
-		// Convert ArgumentContext to EvaluationStringContext (arguments may be empty, represented as null evaluationString)
-		var evaluationStringArgs = arguments.Select(arg => arg.evaluationString()).ToArray();
+		var evaluationStringArgs = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext?>().ToArray();
 
 		var executor = await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
@@ -358,7 +356,7 @@ public class SharpMUSHParserVisitor(
 	/// <param name="visitor"></param>
 	/// <returns>The resulting CallState.</returns>
 	public async ValueTask<CallState> CallFunction(string name, MString src,
-		FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
+		FunctionContext context, EvaluationStringContext?[] args, SharpMUSHParserVisitor visitor)
 	{
 		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var success = true;
@@ -494,10 +492,12 @@ public class SharpMUSHParserVisitor(
 			{
 				refinedArguments = await args
 					.ToAsyncEnumerable()
-					.Select<EvaluationStringContext, CallState>(async (x, ct) => new CallState(
-						stripAnsi
-							? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
-							: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
+					.Select<EvaluationStringContext?, CallState>(async (x, ct) => x == null 
+						? new CallState(MModule.empty(), context.Depth())
+						: new CallState(
+							stripAnsi
+								? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
+								: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 					.ToListAsync();
 			}
@@ -515,6 +515,10 @@ public class SharpMUSHParserVisitor(
 				// For NoParse functions with multiple arguments, store unevaluated text with deferred evaluation
 				refinedArguments = args.Select(x =>
 				{
+					if (x == null)
+					{
+						return new CallState(MModule.empty(), context.Depth());
+					}
 					var text = GetContextText(x);
 					var evalText = stripAnsi ? MModule.plainText2(text) : text;
 					return new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi));

@@ -61,9 +61,7 @@ commaCommandArgs:
 ;
 
 
-singleCommandArg: evaluationString;
-
-argument: evaluationString;
+singleCommandArg: evaluationString?;
 
 
 
@@ -92,7 +90,7 @@ bracketPattern:
 
 function: 
     FUNCHAR {++inFunction;} 
-    (argument ({inBraceDepth == 0}? COMMAWS argument)*)?
+    (evaluationString? ({inBraceDepth == 0}? COMMAWS evaluationString?)*)?
     CPAREN {--inFunction;} 
 ;
 
@@ -148,6 +146,7 @@ beginGenericText:
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
+    | { inBraceDepth == 0 }? CBRACK
     | (escapedText|OPAREN|OTHER|ansi) 
 ;
 
