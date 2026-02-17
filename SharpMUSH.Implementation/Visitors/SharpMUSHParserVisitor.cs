@@ -1730,7 +1730,7 @@ public class SharpMUSHParserVisitor(
 		// Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(), commaArgs?.ToString());
 		return new CallState(null,
 			context.Depth(),
-			[baseArg!.Message!, .. commaArgs?.Arguments ?? []],
+			[baseArg?.Message ?? MModule.empty(), .. commaArgs?.Arguments ?? []],
 			() => ValueTask.FromResult<MString?>(null));
 	}
 
@@ -1750,8 +1750,8 @@ public class SharpMUSHParserVisitor(
 		var baseArg = await VisitChildren(singleCommandArg[0]);
 		var rsArg = singleCommandArg.Length > 1 ? await VisitChildren(singleCommandArg[1]) : null;
 		MString[] args = singleCommandArg.Length > 1
-			? [baseArg!.Message!, rsArg!.Message!]
-			: [baseArg!.Message!];
+			? [baseArg?.Message ?? MModule.empty(), rsArg?.Message ?? MModule.empty()]
+			: [baseArg?.Message ?? MModule.empty()];
 
 		// Log.Logger.Information("VisitEqSplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
 		return new CallState(
