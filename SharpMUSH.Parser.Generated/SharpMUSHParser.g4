@@ -61,9 +61,9 @@ commaCommandArgs:
 ;
 
 
-singleCommandArg: evaluationString | /* empty */;
+singleCommandArg: evaluationString;
 
-argument: evaluationString | /* empty */;
+argument: evaluationString;
 
 
 

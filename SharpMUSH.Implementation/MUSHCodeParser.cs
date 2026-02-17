@@ -187,6 +187,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	public ValueTask<CallState?> FunctionParse(MString text)
 	{
+		// Handle empty input - return empty result to avoid parser attempting to match
+		if (MModule.getLength(text) == 0)
+		{
+			return ValueTask.FromResult<CallState?>(new CallState(MModule.empty()));
+		}
+		
 		// Ensure we have invocation tracking for standalone function parsing
 		// Check if tracking is already initialized - if not, create a new parser with tracking
 		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
@@ -222,10 +228,23 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)
-		=> ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse));
+	{
+		// Handle empty input - return empty result to avoid parser attempting to match
+		if (MModule.getLength(text) == 0)
+		{
+			return ValueTask.FromResult<CallState?>(new CallState(MModule.empty()));
+		}
+		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse));
+	}
 
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{
+		// Handle empty input - return function that returns empty result
+		if (MModule.getLength(text) == 0)
+		{
+			return () => ValueTask.FromResult<CallState?>(new CallState(MModule.empty()));
+		}
+		
 		var plaintext = MModule.plainText(text);
 		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(CommandListParseVisitor));
 		SharpMUSHLexer sharpLexer = new(inputStream);
@@ -271,6 +290,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <returns>A completed task.</returns>
 	public async ValueTask<CallState> CommandParse(long handle, IConnectionService connectionService, MString text)
 	{
+		// Handle empty input - return empty result to avoid parser attempting to match
+		if (MModule.getLength(text) == 0)
+		{
+			return CallState.Empty;
+		}
+		
 		var handleId = connectionService.Get(handle);
 		var newParser = Push(new ParserState(
 			Registers: new([[]]),
@@ -309,6 +334,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <returns>A completed task.</returns>
 	public async ValueTask<CallState> CommandParse(MString text)
 	{
+		// Handle empty input - return empty result to avoid parser attempting to match
+		if (MModule.getLength(text) == 0)
+		{
+			return CallState.Empty;
+		}
+		
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse));
 
 		return result ?? CallState.Empty;
