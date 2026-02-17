@@ -53,18 +53,22 @@ commandList: command ({inBraceDepth == 0}? SEMICOLON command)*;
 command: evaluationString;
 
 commaCommandArgs:
-    {lookingForCommandArgCommas = true;} singleCommandArg (
+    {lookingForCommandArgCommas = true;} (singleCommandArg (
         {inBraceDepth == 0}? COMMAWS singleCommandArg
-    )* {lookingForCommandArgCommas = false;}
+    )*)? {lookingForCommandArgCommas = false;}
 ;
 
 
-singleCommandArg: evaluationString;
+singleCommandArg: argument;
+
+argument:
+      evaluationString
+    | /* empty - allow zero-length arguments */
+;
 
 evaluationString:
       function explicitEvaluationString?
     | explicitEvaluationString
-    | /* empty - allow zero-length expressions */
 ;
 
 explicitEvaluationString:
@@ -87,7 +91,7 @@ bracketPattern:
 
 function: 
     FUNCHAR {++inFunction;} 
-    (evaluationString ({inBraceDepth == 0}? COMMAWS evaluationString)*)?
+    (argument ({inBraceDepth == 0}? COMMAWS argument)*)?
     CPAREN {--inFunction;} 
 ;
 
