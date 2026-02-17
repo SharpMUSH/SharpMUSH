@@ -12,7 +12,6 @@ using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Tests.Configuration;
 
-[NotInParallel]
 public class ConfigurationControllerTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
