@@ -31,16 +31,16 @@ startPlainCommaCommandArgs: commaCommandArgs? EOF;
 
 // Start looking for a pattern with an '=' split, followed by comma separated arguments.
 startEqSplitCommandArgs:
-    {lookingForCommandArgEquals = true;} singleCommandArg (
+    {lookingForCommandArgEquals = true;} (singleCommandArg (
       EQUALS {lookingForCommandArgEquals = false;} commaCommandArgs
-    )? EOF
+    ))? EOF
 ;
 
 // Start looking for a pattern, with a '=' split, but without comma separated arguments.
 startEqSplitCommand:
-    {lookingForCommandArgEquals = true;} singleCommandArg (
+    {lookingForCommandArgEquals = true;} (singleCommandArg (
         EQUALS {lookingForCommandArgEquals = false;} singleCommandArg
-    )? EOF
+    ))? EOF
 ; 
 
 // Start looking for a single-argument command value, by parsing the argument.
@@ -61,12 +61,11 @@ commaCommandArgs:
 ;
 
 
-singleCommandArg: argument;
+singleCommandArg: evaluationString | /* empty */;
 
-argument:
-      evaluationString
-    | /* empty - allow zero-length arguments */
-;
+argument: evaluationString | /* empty */;
+
+
 
 evaluationString:
       function explicitEvaluationString?
