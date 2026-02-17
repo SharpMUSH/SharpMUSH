@@ -1,7 +1,5 @@
 using KafkaFlow;
 using Microsoft.AspNetCore.Connections;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
@@ -42,9 +40,6 @@ public class Program
 			app.MapGet("/", () => "SharpMUSH Connection Server");
 			app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
 			app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
-
-			// Prometheus metrics endpoint
-			app.MapPrometheusScrapingEndpoint();
 
 			await app.RunAsync();
 		}
@@ -206,15 +201,6 @@ public class Program
 
 		// Add API controllers
 		builder.Services.AddControllers();
-
-		// Configure OpenTelemetry Metrics for Prometheus
-		builder.Services.AddOpenTelemetry()
-			.ConfigureResource(resource => resource
-				.AddService("SharpMUSH.ConnectionServer", serviceVersion: "1.0.0"))
-			.WithMetrics(metrics => metrics
-				.AddMeter("SharpMUSH")
-				.AddRuntimeInstrumentation()
-				.AddPrometheusExporter());
 
 		return builder.Build();
 	}

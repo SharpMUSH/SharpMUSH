@@ -29,14 +29,13 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.KafkaFlow;
 using SharpMUSH.Server.Strategy.ArangoDB;
-using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile, PrometheusStrategy prometheusStrategy, RedisStrategy redisStrategy)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisStrategy redisStrategy)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -88,13 +87,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
-		services.AddSingleton<IPrometheusQueryService>(sp =>
-		{
-			var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
-			var logger = sp.GetRequiredService<ILogger<PrometheusQueryService>>();
-			var prometheusUrl = prometheusStrategy.GetPrometheusUrl();
-			return new PrometheusQueryService(httpClient, logger, prometheusUrl);
-		});
 		
 		// Configure Redis connection using strategy pattern
 		services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
@@ -266,7 +258,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, Prometh
 			.WithMetrics(metrics => metrics
 				.AddMeter("SharpMUSH")
 				.AddRuntimeInstrumentation()
-				.AddConsoleExporter()
 				.AddPrometheusExporter());
 	}
 }

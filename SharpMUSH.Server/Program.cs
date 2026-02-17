@@ -1,7 +1,6 @@
 ﻿using KafkaFlow;
 using Microsoft.AspNetCore.Builder;
 using SharpMUSH.Server.Strategy.ArangoDB;
-using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 
 namespace SharpMUSH.Server;
@@ -14,10 +13,6 @@ public class Program
 
 		var arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
 
-		// Initialize Prometheus strategy
-		var prometheusStrategy = PrometheusStrategyProvider.GetStrategy();
-		await prometheusStrategy.InitializeAsync();
-
 		// Initialize Redis strategy
 		var redisStrategy = RedisStrategyProvider.GetStrategy();
 		await redisStrategy.InitializeAsync();
@@ -29,7 +24,7 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(arangoConfig, colorFile, prometheusStrategy, redisStrategy);
+		var startup = new Startup(arangoConfig, colorFile, redisStrategy);
 		
 		startup.ConfigureServices(builder.Services);
 		
@@ -46,7 +41,6 @@ public class Program
 		finally
 		{
 			await bus.StopAsync();
-			await prometheusStrategy.DisposeAsync();
 			await redisStrategy.DisposeAsync();
 		}
 	}
@@ -70,9 +64,6 @@ public class Program
 		// Health and readiness endpoints for deployment checks
 		app.MapGet("/health", () => "healthy");
 		app.MapGet("/ready", () => "ready");
-
-		// Prometheus metrics endpoint
-		app.MapPrometheusScrapingEndpoint();
 
 		return app;
 	}

@@ -15,7 +15,6 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
 using SharpMUSH.Server.Strategy.ArangoDB;
-using SharpMUSH.Server.Strategy.Prometheus;
 using SharpMUSH.Server.Strategy.Redis;
 using System.Linq;
 using TUnit.AspNetCore;
@@ -26,7 +25,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
 	INotifyService notifier,
-	string prometheusUrl,
 	string? databaseName = null,
 	string sqlPlatform = "mysql") :
 	TestWebApplicationFactory<TProgram> where TProgram : class
@@ -37,9 +35,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureStartupConfiguration(IConfigurationBuilder configurationBuilder)
 	{
-		// Set Prometheus URL as environment variable so the PrometheusStrategyProvider will use ExternalStrategy
-		// This runs before Program.cs, so if Program.cs reads environment variables, they'll be available
-		Environment.SetEnvironmentVariable("PROMETHEUS_URL", prometheusUrl);
+		// No Prometheus configuration needed anymore
 	}
 
 	/// <summary>
