@@ -43,7 +43,7 @@ public class Program
 			app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
 			app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
 
-			// Prometheus metrics endpoint
+			// Prometheus metrics endpoint (for scraping, not for logging to console)
 			app.MapPrometheusScrapingEndpoint();
 
 			await app.RunAsync();
@@ -207,7 +207,7 @@ public class Program
 		// Add API controllers
 		builder.Services.AddControllers();
 
-		// Configure OpenTelemetry Metrics for Prometheus
+		// Configure OpenTelemetry Metrics - NO console logging, only Prometheus exporter for metrics endpoint
 		builder.Services.AddOpenTelemetry()
 			.ConfigureResource(resource => resource
 				.AddService("SharpMUSH.ConnectionServer", serviceVersion: "1.0.0"))

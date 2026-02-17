@@ -793,20 +793,42 @@ public partial class ArangoDatabase(
 
 	public async ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken ct = default)
 	{
-		var newJson = new Dictionary<string, object>
+		// Use a transaction with exclusive lock to prevent write-write conflicts
+		var transaction = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction
 		{
-			{ "_key", dataType },
-			{ "Data", data }
-		};
+			LockTimeout = DatabaseBehaviorConstants.TransactionTimeout,
+			WaitForSync = true,
+			AllowImplicit = false,
+			Collections = new ArangoTransactionScope
+			{
+				Exclusive = [DatabaseConstants.ServerData]
+			}
+		}, ct);
 
-		_ = await arangoDb.Document.CreateAsync(handle,
-			DatabaseConstants.ServerData,
-			newJson,
-			overwriteMode: ArangoOverwriteMode.Update,
-			mergeObjects: true,
-			keepNull: true,
-			waitForSync: true,
-			cancellationToken: ct);
+		try
+		{
+			var newJson = new Dictionary<string, object>
+			{
+				{ "_key", dataType },
+				{ "Data", data }
+			};
+
+			_ = await arangoDb.Document.CreateAsync(transaction,
+				DatabaseConstants.ServerData,
+				newJson,
+				overwriteMode: ArangoOverwriteMode.Update,
+				mergeObjects: true,
+				keepNull: true,
+				waitForSync: true,
+				cancellationToken: ct);
+
+			await arangoDb.Transaction.CommitAsync(transaction, ct);
+		}
+		catch
+		{
+			// Transaction will automatically be aborted if not committed
+			throw;
+		}
 	}
 
 	public record ArangoDocumentWrapper<T>(T Data);

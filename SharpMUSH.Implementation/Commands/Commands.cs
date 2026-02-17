@@ -46,8 +46,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	
 	private static ITelemetryService? TelemetryService { get; set; }
 	
-	private static IPrometheusQueryService? PrometheusQueryService { get; set; }
-	
 	private static IWarningService? WarningService { get; set; }
 	
 	private static ITextFileService? TextFileService { get; set; }
@@ -83,7 +81,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IHookService hookService,
 		IEventService eventService,
 		ITelemetryService telemetryService,
-		IPrometheusQueryService prometheusQueryService,
 		IWarningService warningService,
 		ITextFileService textFileService,
 		IMessageBus messageBus,
@@ -111,7 +108,6 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		HookService = hookService;
 		EventService = eventService;
 		TelemetryService = telemetryService;
-		PrometheusQueryService = prometheusQueryService;
 		WarningService = warningService;
 		TextFileService = textFileService;
 		MessageBus = messageBus;
