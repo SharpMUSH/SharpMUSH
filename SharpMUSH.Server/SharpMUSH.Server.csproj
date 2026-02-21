@@ -28,11 +28,11 @@
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
     <PackageReference Include="Quartz.AspNetCore" Version="3.15.1" />
-    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<PackageReference Include="TelnetNegotiationCore" Version="2.2.0" />
+		<PackageReference Include="TelnetNegotiationCore" Version="2.3.0" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.3" />
 		<PackageReference Include="Testcontainers" Version="4.10.0" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.10.0" />
