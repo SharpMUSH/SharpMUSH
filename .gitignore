@@ -411,3 +411,4 @@ gen
 *.bak
 # Text files directory - managed separately
 TextFiles/
+/nul
