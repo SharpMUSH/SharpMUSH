@@ -11,25 +11,22 @@
 	</MudText>
 
 	<MudPaper Class="pa-4">
-		<MudFileUpload T="IBrowserFile" 
-		               Accept=".cnf,.conf,.txt" 
-		               FilesChanged="OnFileSelected" 
-		               MaximumFileCount="1"
-		               MaxFileSize="1048576">
-			<ActivatorContent>
-				<MudCard Outlined="true" Style="min-height: 200px; border: 2px dashed #ccc;">
-					<MudCardContent>
-						<div class="d-flex flex-column align-center justify-center" style="min-height: 150px;">
-							<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
-							<MudText Typo="Typo.h6">Drop files here or click</MudText>
-							<MudText Typo="Typo.body2" Class="mt-2">
-								Supported formats: .cnf, .conf, .txt (max 1MB)
-							</MudText>
-						</div>
-					</MudCardContent>
-				</MudCard>
-			</ActivatorContent>
-		</MudFileUpload>
+		<MudCard Outlined="true" Style="min-height: 200px; border: 2px dashed #ccc;">
+        <MudCardContent>
+            <MudFileUpload T="IBrowserFile"
+                            Accept=".cnf,.conf,.txt"
+                            FilesChanged="OnFileSelected"
+                            MaximumFileCount="1"
+                            MaxFileSize="1048576" />
+				<div class="d-flex flex-column align-center justify-center" style="min-height: 150px;">
+					<MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" />
+					<MudText Typo="Typo.h6">Drop files here or click</MudText>
+					<MudText Typo="Typo.body2" Class="mt-2">
+						Supported formats: .cnf, .conf, .txt (max 1MB)
+					</MudText>
+				</div>
+			</MudCardContent>
+		</MudCard>
 	</MudPaper>
 
 	@if (_selectedFile != null)
