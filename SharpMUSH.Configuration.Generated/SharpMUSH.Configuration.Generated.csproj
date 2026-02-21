@@ -8,6 +8,8 @@
 		<OutputItemType>Analyzer</OutputItemType>
 		<EnableDynamicLoading>true</EnableDynamicLoading>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<EnablePreviewFeatures>true</EnablePreviewFeatures>
+		<Features>$(Features);runtime-async=on</Features>
   </PropertyGroup>
 	
   <ItemGroup>
