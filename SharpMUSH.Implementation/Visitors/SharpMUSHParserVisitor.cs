@@ -282,11 +282,27 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
-		var arguments = context.functionArg().Select(x => x?.evaluationString()).ToArray();
+		var evalStrings = context.evaluationString();
+		var commas = context.COMMAWS();
 
-		if(arguments.Length == 1 && arguments[0] is null)
+		EvaluationStringContext?[] arguments;
+		if (evalStrings is null || evalStrings.Length == 0 && commas.Length == 0)
 		{
 			arguments = [];
+		}
+		else
+		{
+			var argCount = commas.Length + 1;
+			arguments = new EvaluationStringContext?[argCount];
+			var evalIdx = 0;
+			for (var i = 0; i < argCount; i++)
+			{
+				if (evalIdx < evalStrings.Length
+					&& (i >= commas.Length || evalStrings[evalIdx].Start.StartIndex < commas[i].Symbol.StartIndex))
+				{
+					arguments[i] = evalStrings[evalIdx++];
+				}
+			}
 		}
 
 		var executor = await parser.CurrentState.ExecutorObject(Mediator);
@@ -1687,99 +1703,112 @@ public class SharpMUSHParserVisitor(
 					 source), context.Depth());
 
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="SharpMUSHParser.singleCommandArg"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
+	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startPlainSingleCommandArg"/>.
+	/// Wraps the evaluated string result as Arguments to match the expected output format.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public override async ValueTask<CallState?> VisitSingleCommandArg([NotNull] SingleCommandArgContext context)
+	public override async ValueTask<CallState?> VisitStartPlainSingleCommandArg([NotNull] StartPlainSingleCommandArgContext context)
 	{
-		if (context.evaluationString() is null)
+		var evalString = context.evaluationString();
+		if (evalString is null)
 			return CallState.Empty;
 
-		var visitedChildren = await VisitChildren(context);
+		var visited = await Visit(evalString);
 
 		return new CallState(
 			Message: null,
 			context.Depth(),
 			Arguments:
 			[
-				visitedChildren?.Message ??
-				MModule.substring(context.Start.StartIndex,
-					context.Stop?.StopIndex is null
-						? 0
-						: context.Stop.StopIndex - context.Start.StartIndex + 1, source)
+				visited?.Message ?? GetContextText(evalString)
 			],
 			ParsedMessage: () => ValueTask.FromResult<MString?>(null));
 	}
 
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startEqSplitCommandArgs"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitStartEqSplitCommandArgs(
 		[NotNull] StartEqSplitCommandArgsContext context)
 	{
-		var baseArg = await VisitChildren(context.singleCommandArg()) ?? CallState.Empty;
-		var commaArgs = await VisitChildren(context.commaCommandArgs());
-		// Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(), commaArgs?.ToString());
+		var evalString = context.evaluationString();
+		var baseArg = evalString is not null ? await Visit(evalString) : CallState.Empty;
+		var commaArgsContext = context.commaCommandArgs();
+		var commaArgs = commaArgsContext is not null
+			? await VisitCommaCommandArgs(commaArgsContext)
+			: null;
 		return new CallState(null,
 			context.Depth(),
-			[baseArg!.Message!, .. commaArgs?.Arguments ?? []],
+			[baseArg?.Message ?? MModule.empty(), .. commaArgs?.Arguments ?? []],
 			() => ValueTask.FromResult<MString?>(null));
 	}
 
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startEqSplitCommand"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitStartEqSplitCommand(
 		[NotNull] StartEqSplitCommandContext context)
 	{
-		var singleCommandArg = context.singleCommandArg();
-		var baseArg = await VisitChildren(singleCommandArg[0]) ?? CallState.Empty;
-		var rsArg = singleCommandArg.Length > 1 ? await VisitChildren(singleCommandArg[1]) : null;
-		MString[] args = singleCommandArg.Length > 1
-			? [baseArg!.Message!, rsArg!.Message!]
-			: [baseArg!.Message!];
+		var evalStrings = context.evaluationString();
+		var equalsToken = context.EQUALS();
 
-		// Log.Logger.Information("VisitEqSplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
-		return new CallState(
-			null,
-			context.Depth(),
-			args,
-			() => ValueTask.FromResult<MString?>(null));
+		if (equalsToken is not null)
+		{
+			var equalsPos = equalsToken.Symbol.StartIndex;
+			var lhsExists = evalStrings.Length > 0 && evalStrings[0].Start.StartIndex < equalsPos;
+			var lhsArg = lhsExists ? await Visit(evalStrings[0]) : null;
+			var rsIdx = lhsExists ? 1 : 0;
+			var rhsArg = rsIdx < evalStrings.Length ? await Visit(evalStrings[rsIdx]) : null;
+			return new CallState(null, context.Depth(),
+				[lhsArg?.Message ?? MModule.empty(), rhsArg?.Message ?? MModule.empty()],
+				() => ValueTask.FromResult<MString?>(null));
+		}
+		else
+		{
+			var msg = evalStrings.Length > 0
+				? (await Visit(evalStrings[0]))?.Message ?? MModule.empty()
+				: MModule.empty();
+			return new CallState(null, context.Depth(), [msg],
+				() => ValueTask.FromResult<MString?>(null));
+		}
 	}
 
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.commaCommandArgs"/>.
-	/// <para>
-	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
-	/// on <paramref name="context"/>.
-	/// </para>
+	/// Directly visits evaluationString contexts and maps them to argument slots
+	/// based on their positions relative to COMMAWS tokens.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitCommaCommandArgs(
-		[NotNull] CommaCommandArgsContext context) =>
-		new(
-			null,
-			context.Depth(),
-			(await VisitChildren(context))!.Arguments,
+		[NotNull] CommaCommandArgsContext context)
+	{
+		var evalStrings = context.evaluationString();
+		var commas = context.COMMAWS();
+		var argCount = commas.Length + 1;
+		var arguments = new MString[argCount];
+		var evalIdx = 0;
+		for (var i = 0; i < argCount; i++)
+		{
+			if (evalIdx < evalStrings.Length
+				&& (i >= commas.Length || evalStrings[evalIdx].Start.StartIndex < commas[i].Symbol.StartIndex))
+			{
+				var result = await Visit(evalStrings[evalIdx++]);
+				arguments[i] = result?.Message ?? GetContextText(evalStrings[evalIdx - 1]);
+			}
+			else
+			{
+				arguments[i] = MModule.empty();
+			}
+		}
+		return new CallState(null, context.Depth(), arguments,
 			() => ValueTask.FromResult<MString?>(null));
+	}
 
 	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(
 		[NotNull] ComplexSubstitutionSymbolContext context)
