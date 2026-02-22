@@ -595,9 +595,6 @@ public class GeneralCommandTests
 		// After the fix, messages should be accumulated and sent as a batch.
 		// We use the same pattern as DoListSimple - a simple message without iteration markers.
 
-		// Clear previous mock calls to avoid interference from other tests
-		NotifyService.ClearReceivedCalls();
-
 		// Use @pemit which uses Notify(AnySharpObject) -> Notify(DBRef)
 		// This should call Notify three times with the same message
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Batched test message"));
@@ -614,12 +611,6 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
-		// This test validates that context-based batching batches notifications to ANY target,
-		// not just the enactor. Before context-based batching, notifications to other players
-		// would not be batched.
-
-		NotifyService.ClearReceivedCalls();
-
 		// Send to player #2 (different from enactor #1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
 
@@ -637,8 +628,6 @@ public class GeneralCommandTests
 		// This test validates that nested @dolists properly use ref-counting for batching context.
 		// Messages from both outer and inner loops should be batched together.
 
-		NotifyService.ClearReceivedCalls();
-
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
 
@@ -655,8 +644,6 @@ public class GeneralCommandTests
 	{
 		// Negative test: Without @break, all loop iterations should send messages
 
-		NotifyService.ClearReceivedCalls();
-
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Message"));
 
 		// Should receive exactly 3 messages (one per iteration)
@@ -672,8 +659,6 @@ public class GeneralCommandTests
 	{
 		// Positive test: @break should stop the loop after first iteration
 		// Use @break as a conditional command to stop after first iteration
-
-		NotifyService.ClearReceivedCalls();
 
 		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message ##;@break}"));
@@ -694,8 +679,6 @@ public class GeneralCommandTests
 		// Even with @break in the command list, the using statement should
 		// ensure messages are flushed via disposal.
 
-		NotifyService.ClearReceivedCalls();
-
 		// Loop with @break - both @pemit and @break execute in each iteration
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
 
@@ -715,8 +698,6 @@ public class GeneralCommandTests
 		// the ref-counted batching context and still flushes messages.
 		// Note: With the command structure {@pemit; @break}, both commands execute
 		// in each iteration, so @break happens after the @pemit.
-
-		NotifyService.ClearReceivedCalls();
 
 		// Outer loop runs twice, inner loop has 3 items
 		// With {@pemit; @break}, the @pemit runs in each inner iteration
