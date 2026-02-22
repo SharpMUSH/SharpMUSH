@@ -88,7 +88,7 @@ public class SuggestionController(
 			if (suggestionData.Categories[categoryKey].Add(normalizedWord))
 			{
 				await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-				logger.LogInformation("Added word '{Word}' to category '{Category}'", normalizedWord, SanitizeUserLogInput(categoryKey));
+				logger.LogInformation("Added word '{Word}' to category '{Category}'", SanitizeUserLogInput(normalizedWord), SanitizeUserLogInput(categoryKey));
 				return Ok(new { message = $"Added '{normalizedWord}' to category '{categoryKey}'" });
 			}
 			else
@@ -130,7 +130,7 @@ public class SuggestionController(
 				}
 
 				await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-				logger.LogInformation("Removed word '{Word}' from category '{Category}'", normalizedWord, SanitizeUserLogInput(categoryKey));
+				logger.LogInformation("Removed word '{Word}' from category '{Category}'", SanitizeUserLogInput(normalizedWord), SanitizeUserLogInput(categoryKey));
 				return Ok(new { message = $"Removed '{normalizedWord}' from category '{categoryKey}'" });
 			}
 			else
