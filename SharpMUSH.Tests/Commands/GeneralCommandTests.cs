@@ -661,7 +661,7 @@ public class GeneralCommandTests
 		// Use @break as a conditional command to stop after first iteration
 
 		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived ##;@break}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}"));
 
 		// With {@pemit; @break}, @pemit runs in each iteration then @break happens
 		// So we get 3 messages (one per loop start) but @break doesn't prevent them
