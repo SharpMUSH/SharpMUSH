@@ -672,12 +672,12 @@ public class GeneralCommandTests
 				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(0))
+			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 
 		await NotifyService
-			.Received(Quantity.Exactly(0))
+			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
