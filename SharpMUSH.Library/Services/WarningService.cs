@@ -126,6 +126,7 @@ public class WarningService(
 			checkedCount++;
 
 			// Get the owner for this object
+			// TODO: There's a failure here with: System.InvalidOperationException: Sequence contains no elements
 			var owner = await obj.Owner.WithCancellation(CancellationToken.None);
 			var ownerDbRef = owner.Object.DBRef;
 

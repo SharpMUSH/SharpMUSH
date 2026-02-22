@@ -644,13 +644,13 @@ public class GeneralCommandTests
 	{
 		// Negative test: Without @break, all loop iterations should send messages
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Message"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived"));
 
 		// Should receive exactly 3 messages (one per iteration)
 		await NotifyService
 			.Received(Quantity.Exactly(3))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "DoListWithoutBreak_AllMessagesReceived")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -661,14 +661,25 @@ public class GeneralCommandTests
 		// Use @break as a conditional command to stop after first iteration
 
 		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message ##;@break}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived ##;@break}"));
 
 		// With {@pemit; @break}, @pemit runs in each iteration then @break happens
 		// So we get 3 messages (one per loop start) but @break doesn't prevent them
 		// This is the actual MUSH behavior - @break affects the next iteration, not current
 		await NotifyService
-			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(Quantity.Exactly(0))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(Quantity.Exactly(0))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
