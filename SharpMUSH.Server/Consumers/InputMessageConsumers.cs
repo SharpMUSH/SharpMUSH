@@ -16,8 +16,8 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 {
 	public async Task HandleAsync(TelnetInputMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogTrace("[KAFKA-RECV] TelnetInputMessage received - Handle: {Handle}, Input: {Input}",
-			message.Handle, message.Input);
+		logger.LogTrace("[KAFKA-RECV] TelnetInputMessage received - Handle: {Handle}, InputLength: {InputLength}",
+			message.Handle, message.Input?.Length ?? 0);
 
 		try
 		{
@@ -48,9 +48,6 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 	public Task HandleAsync(GMCPSignalMessage message, CancellationToken cancellationToken = default)
 	{
 		logger.LogTrace("[KAFKA-RECV] GMCPSignalMessage received - Handle: {Handle}, Package: {Package}, Info: {Info}",
-			message.Handle, message.Package, message.Info);
-
-		logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}",
 			message.Handle, message.Package, message.Info);
 
 		// Set GMCP capability flag on first GMCP message
@@ -105,9 +102,6 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 	{
 		logger.LogTrace("[KAFKA-RECV] MSDPUpdateMessage received - Handle: {Handle}, Variables: {Variables}",
 			message.Handle, string.Join(", ", message.Variables.Select(kv => $"{kv.Key}={kv.Value}")));
-
-		logger.LogDebug("Received MSDP update from handle {Handle} with {Count} variables",
-			message.Handle, message.Variables.Count);
 
 		// Store each MSDP variable in connection metadata
 		foreach (var variable in message.Variables)
@@ -164,9 +158,6 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionS
 	public Task HandleAsync(NAWSUpdateMessage message, CancellationToken cancellationToken = default)
 	{
 		logger.LogTrace("[KAFKA-RECV] NAWSUpdateMessage received - Handle: {Handle}, Width: {Width}, Height: {Height}",
-			message.Handle, message.Width, message.Height);
-
-		logger.LogDebug("Received NAWS update from handle {Handle}: {Width}x{Height}",
 			message.Handle, message.Width, message.Height);
 
 		// Update connection metadata with new window size

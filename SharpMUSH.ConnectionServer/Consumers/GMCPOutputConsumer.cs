@@ -29,9 +29,15 @@ public class GMCPOutputConsumer(IConnectionServerService connectionService, ILog
 			return;
 		}
 
+		if (message.Message is null)
+		{
+			logger.LogWarning("Connection {Handle} received GMCP module {Module} with null message body; skipping dispatch.", message.Handle, message.Module);
+			return;
+		}
+
 		try
 		{
-			await connection.GMCPFunction(message.Module, message.Message!);
+			await connection.GMCPFunction(message.Module, message.Message);
 		}
 		catch (Exception ex)
 		{

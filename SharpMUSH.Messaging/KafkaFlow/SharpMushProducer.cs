@@ -17,8 +17,8 @@ public class SharpMushProducer(IMessageProducer<SharpMushProducer> producer, ILo
 	public async Task ProduceAsync<T>(T message, CancellationToken cancellationToken = default) where T : class
 	{
 		var topic = GetTopicForMessageType<T>();
-		logger.LogTrace("[KAFKA-SEND] Publishing message to topic {Topic} - Type: {MessageType}, Message: {@Message}",
-			topic, typeof(T).Name, message);
+		logger.LogTrace("[KAFKA-SEND] Publishing message to topic {Topic} - Type: {MessageType}",
+			topic, typeof(T).Name);
 
 		await producer.ProduceAsync(topic, null, message);
 
@@ -34,8 +34,8 @@ public class SharpMushProducer(IMessageProducer<SharpMushProducer> producer, ILo
 		var topic = GetTopicForMessageType<T>();
 		var partitionKey = message.Handle.ToString();
 
-		logger.LogTrace("[KAFKA-SEND] Publishing handle-based message to topic {Topic} - Type: {MessageType}, Handle: {Handle}, PartitionKey: {PartitionKey}, Message: {@Message}",
-			topic, typeof(T).Name, message.Handle, partitionKey, message);
+		logger.LogTrace("[KAFKA-SEND] Publishing handle-based message to topic {Topic} - Type: {MessageType}, Handle: {Handle}, PartitionKey: {PartitionKey}",
+			topic, typeof(T).Name, message.Handle, partitionKey);
 
 		await producer.ProduceAsync(topic, partitionKey, message);
 

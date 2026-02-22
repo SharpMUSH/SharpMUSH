@@ -49,25 +49,32 @@ public class ConnectionServerService(
 			// Store in Redis if available
 			if (stateStore != null)
 			{
-				await stateStore.SetConnectionAsync(handle, new ConnectionStateData
+				try
 				{
-					Handle = handle,
-					PlayerRef = null,
-					State = "Connected",
-					IpAddress = ipAddress,
-					Hostname = hostname,
-					ConnectionType = connectionType,
-					ConnectedAt = DateTimeOffset.UtcNow,
-					LastSeen = DateTimeOffset.UtcNow,
-					Metadata = new Dictionary<string, string>
+					await stateStore.SetConnectionAsync(handle, new ConnectionStateData
 					{
-						{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-						{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-						{ "InternetProtocolAddress", ipAddress },
-						{ "HostName", hostname },
-						{ "ConnectionType", connectionType }
-					}
-				});
+						Handle = handle,
+						PlayerRef = null,
+						State = "Connected",
+						IpAddress = ipAddress,
+						Hostname = hostname,
+						ConnectionType = connectionType,
+						ConnectedAt = DateTimeOffset.UtcNow,
+						LastSeen = DateTimeOffset.UtcNow,
+						Metadata = new Dictionary<string, string>
+						{
+							{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+							{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+							{ "InternetProtocolAddress", ipAddress },
+							{ "HostName", hostname },
+							{ "ConnectionType", connectionType }
+						}
+					});
+				}
+				catch (Exception ex)
+				{
+					logger.LogWarning(ex, "Failed to persist connection state to Redis for handle {Handle}; continuing with publish", handle);
+				}
 			}
 
 			// Publish connection established message to MainProcess
@@ -100,7 +107,14 @@ public class ConnectionServerService(
 			// Remove from Redis if available
 			if (stateStore != null)
 			{
-				await stateStore.RemoveConnectionAsync(handle);
+				try
+				{
+					await stateStore.RemoveConnectionAsync(handle);
+				}
+				catch (Exception ex)
+				{
+					logger.LogWarning(ex, "Failed to remove connection state from Redis for handle {Handle}; continuing with publish", handle);
+				}
 			}
 
 			// Publish connection closed message to MainProcess

@@ -37,7 +37,7 @@ try
 			.WithOutput(Console.OpenStandardOutput())
 			.ConfigureLogging(builder => builder
 				.AddSerilog(Log.Logger)
-				.SetMinimumLevel(LogLevel.Debug))
+				.SetMinimumLevel(LogLevel.Trace))
 			.WithServices(services =>
 			{
 				// Register document manager

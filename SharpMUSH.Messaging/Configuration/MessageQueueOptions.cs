@@ -91,4 +91,16 @@ public class MessageQueueOptions
 	/// Default: 1 for single-broker setups. Increase for multi-broker clusters.
 	/// </summary>
 	public short TopicReplicationFactor { get; set; } = 1;
+
+	/// <summary>
+	/// librdkafka debug contexts to enable (e.g. "broker,topic,msg").
+	/// Null disables debug logging. Only enable when troubleshooting.
+	/// </summary>
+	public string? KafkaDebugContexts { get; set; }
+
+	/// <summary>
+	/// Interval in milliseconds for librdkafka statistics collection.
+	/// 0 disables statistics (default). Only enable when troubleshooting.
+	/// </summary>
+	public int KafkaStatisticsIntervalMs { get; set; } = 0;
 }

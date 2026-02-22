@@ -1,5 +1,4 @@
 ﻿using Core.Arango;
-using Core.Arango.Serilog;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -10,7 +9,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
-using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
@@ -169,24 +167,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 			// Read Serilog configuration from appsettings.json (MinimumLevel, Overrides, WriteTo, Enrich)
 			var loggerConfig = new LoggerConfiguration()
 				.ReadFrom.Configuration(configuration);
-
-			// Add database logging sink (batched) - must remain in code due to DI dependency
-			loggerConfig.WriteTo.Sink(new PeriodicBatchingSink(
-				new ArangoSerilogSink(
-					logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
-					"CurrentSharpMUSHWorld",
-					DatabaseConstants.Logs,
-					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
-					true,
-					true,
-					true),
-				new PeriodicBatchingSinkOptions
-				{
-					BatchSizeLimit = 1000,
-					QueueLimit = 100000,
-					Period = TimeSpan.FromSeconds(2),
-					EagerlyEmitFirstEvent = true,
-				}));
 
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});

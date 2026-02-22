@@ -7,6 +7,7 @@ using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Strategy;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -26,7 +27,7 @@ public class Program
 		var app = await CreateHostBuilderAsync(args);
 
 		// Get logger for startup logging
-		var logger = app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
+		var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
 		// Start Kafka bus
 		logger.LogTrace("[KAFKA-STARTUP] Starting Kafka bus...");

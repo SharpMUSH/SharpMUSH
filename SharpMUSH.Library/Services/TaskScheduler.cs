@@ -53,8 +53,14 @@ public class TaskScheduler(
 		CancellationTokenSource Cts
 	);
 
-	private readonly Channel<QueueEntry> _immediateQueue = Channel.CreateUnbounded<QueueEntry>(
-		new UnboundedChannelOptions { SingleReader = true });
+	private const int ImmediateQueueCapacity = 10_000;
+
+	private readonly Channel<QueueEntry> _immediateQueue = Channel.CreateBounded<QueueEntry>(
+		new BoundedChannelOptions(ImmediateQueueCapacity)
+		{
+			SingleReader = true,
+			FullMode = BoundedChannelFullMode.Wait
+		});
 	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
 	private readonly CancellationTokenSource _shutdownCts = new();
 	private Task? _consumerTask;
@@ -104,7 +110,12 @@ public class TaskScheduler(
 		var pid = NextPid();
 		var entry = new QueueEntry(pid, triggerName, group, action, new CancellationTokenSource());
 		_pendingEntries[pid] = entry;
-		_immediateQueue.Writer.TryWrite(entry);
+		if (!_immediateQueue.Writer.TryWrite(entry))
+		{
+			_pendingEntries.TryRemove(pid, out _);
+			entry.Cts.Dispose();
+			logger.LogWarning("Failed to enqueue work (PID {Pid}, Group {Group}) - queue may be completed", pid, group);
+		}
 		return ValueTask.CompletedTask;
 	}
 
@@ -145,11 +156,16 @@ public class TaskScheduler(
 			pid,
 			$"handle:{handle}-{pid}",
 			DirectInputGroup,
-			async() => await parser.FromState(state).CommandParse(handle, connectionService, command),
+			async () => await parser.FromState(state).CommandParse(handle, connectionService, command),
 			new CancellationTokenSource()
 		);
 		_pendingEntries[pid] = entry;
-		_immediateQueue.Writer.TryWrite(entry);
+		if (!_immediateQueue.Writer.TryWrite(entry))
+		{
+			_pendingEntries.TryRemove(pid, out _);
+			entry.Cts.Dispose();
+			logger.LogWarning("Failed to enqueue user command (PID {Pid}) - queue may be completed", pid);
+		}
 		return ValueTask.CompletedTask;
 	}
 
@@ -165,12 +181,17 @@ public class TaskScheduler(
 			new CancellationTokenSource()
 		);
 		_pendingEntries[pid] = entry;
-		_immediateQueue.Writer.TryWrite(entry);
+		if (!_immediateQueue.Writer.TryWrite(entry))
+		{
+			_pendingEntries.TryRemove(pid, out _);
+			entry.Cts.Dispose();
+			logger.LogWarning("Failed to enqueue command list (PID {Pid}) - queue may be completed", pid);
+		}
 		return ValueTask.CompletedTask;
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
-		int oldValue)
+int oldValue)
 	{
 		if (oldValue < 0)
 		{
@@ -227,7 +248,12 @@ public class TaskScheduler(
 			new CancellationTokenSource()
 		);
 		_pendingEntries[pid] = entry;
-		_immediateQueue.Writer.TryWrite(entry);
+		if (!_immediateQueue.Writer.TryWrite(entry))
+		{
+			_pendingEntries.TryRemove(pid, out _);
+			entry.Cts.Dispose();
+			logger.LogWarning("Failed to enqueue async attribute (PID {Pid}) - queue may be completed", pid);
+		}
 		return ValueTask.CompletedTask;
 	}
 
@@ -451,7 +477,10 @@ public class TaskScheduler(
 			if (kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
 			{
 				kvp.Value.Cts.Cancel();
-				_pendingEntries.TryRemove(kvp.Key, out _);
+				if (_pendingEntries.TryRemove(kvp.Key, out var removed))
+				{
+					removed.Cts.Dispose();
+				}
 			}
 		}
 	}
@@ -462,6 +491,7 @@ public class TaskScheduler(
 		if (_pendingEntries.TryRemove(pid, out var entry))
 		{
 			entry.Cts.Cancel();
+			entry.Cts.Dispose();
 			return true;
 		}
 
@@ -582,17 +612,13 @@ public class TaskScheduler(
 		}
 	}
 
-	public async IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj)
+	public IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj)
 	{
-		await Task.CompletedTask;
 		var dbRefPrefix = $"dbref:{obj}-";
-		foreach (var kvp in _pendingEntries)
-		{
-			if (kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
-			{
-				yield return kvp.Key;
-			}
-		}
+		return _pendingEntries
+			.Where(kvp => kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
+			.Select(kvp => kvp.Key)
+			.ToAsyncEnumerable();
 	}
 
 	private static async ValueTask<SemaphoreTaskData> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)

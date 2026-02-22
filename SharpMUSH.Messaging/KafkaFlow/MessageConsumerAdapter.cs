@@ -17,12 +17,11 @@ public class MessageConsumerAdapter<TMessage>(IServiceProvider serviceProvider) 
 		using var scope = serviceProvider.CreateScope();
 		var logger = scope.ServiceProvider.GetRequiredService<ILogger<MessageConsumerAdapter<TMessage>>>();
 
-		logger.LogTrace("[KAFKA-ADAPTER] Handling message - Type: {MessageType}, Topic: {Topic}, Partition: {Partition}, Offset: {Offset}, Message: {@Message}",
+		logger.LogTrace("[KAFKA-ADAPTER] Handling message - Type: {MessageType}, Topic: {Topic}, Partition: {Partition}, Offset: {Offset}",
 			typeof(TMessage).Name,
 			context.ConsumerContext.Topic,
 			context.ConsumerContext.Partition,
-			context.ConsumerContext.Offset,
-			message);
+			context.ConsumerContext.Offset);
 
 		var consumer = scope.ServiceProvider.GetRequiredService<IMessageConsumer<TMessage>>();
 

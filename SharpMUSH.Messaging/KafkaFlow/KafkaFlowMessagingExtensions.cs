@@ -44,25 +44,11 @@ public static class KafkaFlowMessagingExtensions
 							.WithLingerMs(options.LingerMs) // Producer-level batching
 							.WithProducerConfig(new Confluent.Kafka.ProducerConfig
 							{
-								// Critical for message ordering: limit in-flight requests
-								// With max.in.flight.requests.per.connection = 1, messages are sent
-								// one batch at a time, guaranteeing ordering within a partition
 								MaxInFlight = options.MaxInFlightRequests,
-
-								// Disable idempotence for better performance (acks=1 instead of acks=all)
-								// For MUSH game state, leader acknowledgment provides sufficient durability
 								EnableIdempotence = false,
-
-								// Enable librdkafka internal debug logging
-								// Available contexts: broker, topic, msg, protocol, queue, consumer, security, fetch, all
-								// Output goes to stderr/console by default - redirect with 2> or 2>&1
-								Debug = "broker,topic,msg",
-
-								// Log connection close events
-								LogConnectionClose = true,
-
-								// Get producer statistics every 10 seconds
-								StatisticsIntervalMs = 10000
+								Debug = options.KafkaDebugContexts,
+								LogConnectionClose = options.KafkaDebugContexts != null,
+								StatisticsIntervalMs = options.KafkaStatisticsIntervalMs
 							})
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
@@ -72,13 +58,6 @@ public static class KafkaFlowMessagingExtensions
 				configureConsumers(configurator);
 			})
 		);
-
-		// Log producer registration
-		var loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
-		var logger = loggerFactory?.CreateLogger("KafkaFlow.Configuration");
-		logger?.LogTrace(
-			"[KAFKA-CONFIG] Registered ConnectionServer producer - Type: {ProducerType}, Broker: {Broker}:{Port}, Compression: {Compression}, Acks: Leader, LingerMs: {LingerMs}, MaxInFlight: {MaxInFlight}",
-			nameof(SharpMushProducer), options.Host, options.Port, options.CompressionType, options.LingerMs, options.MaxInFlightRequests);
 
 		// Register the producer class
 		services.AddSingleton<SharpMushProducer>();
@@ -116,25 +95,11 @@ public static class KafkaFlowMessagingExtensions
 							.WithLingerMs(options.LingerMs) // Producer-level batching
 							.WithProducerConfig(new Confluent.Kafka.ProducerConfig
 							{
-								// Critical for message ordering: limit in-flight requests
-								// With max.in.flight.requests.per.connection = 1, messages are sent
-								// one batch at a time, guaranteeing ordering within a partition
 								MaxInFlight = options.MaxInFlightRequests,
-
-								// Disable idempotence for better performance (acks=1 instead of acks=all)
-								// For MUSH game state, leader acknowledgment provides sufficient durability
 								EnableIdempotence = false,
-
-								// Enable librdkafka internal debug logging
-								// Available contexts: broker, topic, msg, protocol, queue, consumer, security, fetch, all
-								// Output goes to stderr/console by default - redirect with 2> or 2>&1
-								Debug = "broker,topic,msg",
-
-								// Log connection close events
-								LogConnectionClose = true,
-
-								// Get producer statistics every 10 seconds
-								StatisticsIntervalMs = 10000
+								Debug = options.KafkaDebugContexts,
+								LogConnectionClose = options.KafkaDebugContexts != null,
+								StatisticsIntervalMs = options.KafkaStatisticsIntervalMs
 							})
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
@@ -144,13 +109,6 @@ public static class KafkaFlowMessagingExtensions
 				configureConsumers(configurator);
 			})
 		);
-
-		// Log producer registration
-		var loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
-		var logger = loggerFactory?.CreateLogger("KafkaFlow.Configuration");
-		logger?.LogTrace(
-			"[KAFKA-CONFIG] Registered MainProcess producer - Type: {ProducerType}, Broker: {Broker}:{Port}, Compression: {Compression}, Acks: Leader, LingerMs: {LingerMs}, MaxInFlight: {MaxInFlight}",
-			nameof(SharpMushProducer), options.Host, options.Port, options.CompressionType, options.LingerMs, options.MaxInFlightRequests);
 
 		// Register the producer class
 		services.AddSingleton<SharpMushProducer>();
@@ -231,17 +189,8 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 		var messageType = consumerInterface.GetGenericArguments()[0];
 		var topic = GetTopicFromMessageType(messageType);
 
-		// Get logger to log consumer registration
-		var loggerFactory = _services.BuildServiceProvider().GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
-		var logger = loggerFactory?.CreateLogger("KafkaFlow.Configuration");
-
-		logger?.LogTrace("[KAFKA-CONFIG] Registering consumer - ConsumerType: {ConsumerType}, MessageType: {MessageType}, Topic: {Topic}, GroupId: {GroupId}, Workers: {Workers}",
-			typeof(TConsumer).Name, messageType.Name, topic, _options.ConsumerGroupId, _options.WorkerCount);
-
 		// Ensure topic exists (created on bus startup if missing)
 		_clusterBuilder.CreateTopicIfNotExists(topic, _options.TopicPartitions, _options.TopicReplicationFactor);
-		logger?.LogTrace("[KAFKA-CONFIG] Ensuring topic exists - Topic: {Topic}, Partitions: {Partitions}, ReplicationFactor: {ReplicationFactor}",
-			topic, _options.TopicPartitions, _options.TopicReplicationFactor);
 
 		// Register the consumer in DI
 		var consumerServiceType = typeof(IMessageConsumer<>).MakeGenericType(messageType);
@@ -260,12 +209,8 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 			.WithAutoOffsetReset(KFAutoOffsetReset.Latest) // Start from current position on first start
 			.WithConsumerConfig(new Confluent.Kafka.ConsumerConfig
 			{
-				// Enable librdkafka internal debug logging for consumers
-				// Output goes to stderr/console by default - redirect with 2> or 2>&1
-				Debug = "broker,topic,consumer,fetch",
-
-				// Get consumer statistics every 10 seconds
-				StatisticsIntervalMs = 10000
+				Debug = _options.KafkaDebugContexts,
+				StatisticsIntervalMs = _options.KafkaStatisticsIntervalMs
 			})
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()
@@ -303,17 +248,8 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 		var messageType = typeof(TMessage);
 		var topic = GetTopicFromMessageType(messageType);
 
-		// Get logger to log batch consumer registration
-		var loggerFactory = _services.BuildServiceProvider().GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
-		var logger = loggerFactory?.CreateLogger("KafkaFlow.Configuration");
-
-		logger?.LogTrace("[KAFKA-CONFIG] Registering batch consumer - MiddlewareType: {MiddlewareType}, MessageType: {MessageType}, Topic: {Topic}, GroupId: {GroupId}, BatchSize: {BatchSize}, BatchTimeout: {BatchTimeout}, Workers: {Workers}",
-			typeof(TMiddleware).Name, messageType.Name, topic, _options.ConsumerGroupId, batchSize, batchTimeout, _options.WorkerCount);
-
 		// Ensure topic exists (created on bus startup if missing)
 		_clusterBuilder.CreateTopicIfNotExists(topic, _options.TopicPartitions, _options.TopicReplicationFactor);
-		logger?.LogTrace("[KAFKA-CONFIG] Ensuring topic exists - Topic: {Topic}, Partitions: {Partitions}, ReplicationFactor: {ReplicationFactor}",
-			topic, _options.TopicPartitions, _options.TopicReplicationFactor);
 
 		// Register the middleware in DI
 		_services.AddTransient<TMiddleware>();
@@ -335,12 +271,8 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 			.WithAutoOffsetReset(KFAutoOffsetReset.Latest) // Start from current position on first start
 			.WithConsumerConfig(new Confluent.Kafka.ConsumerConfig
 			{
-				// Enable librdkafka internal debug logging for consumers
-				// Output goes to stderr/console by default - redirect with 2> or 2>&1
-				Debug = "broker,topic,consumer,fetch",
-
-				// Get consumer statistics every 10 seconds
-				StatisticsIntervalMs = 10000
+				Debug = _options.KafkaDebugContexts,
+				StatisticsIntervalMs = _options.KafkaStatisticsIntervalMs
 			})
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()

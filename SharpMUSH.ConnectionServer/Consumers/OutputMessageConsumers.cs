@@ -28,8 +28,14 @@ public class TelnetPromptConsumer(
 
 		try
 		{
+			if (message.Data is null)
+			{
+				logger.LogWarning("Received TelnetPromptMessage with null data for handle: {Handle}", message.Handle);
+				return;
+			}
+
 			var transformedData = await transformService.TransformAsync(
-				message.Data!,
+				message.Data,
 				connection.Capabilities,
 				connection.Preferences);
 
@@ -58,13 +64,19 @@ public class BroadcastConsumer(
 
 		var connections = connectionService.GetAll();
 
+		if (message.Data is null)
+		{
+			logger.LogWarning("Received BroadcastMessage with null data");
+			return;
+		}
+
 		foreach (var connection in connections)
 		{
 			try
 			{
 				// Transform output based on capabilities and preferences
 				var transformedData = await transformService.TransformAsync(
-					message.Data!,
+					message.Data,
 					connection.Capabilities,
 					connection.Preferences);
 
@@ -88,10 +100,7 @@ public class DisconnectConnectionConsumer(
 {
 	public async Task HandleAsync(DisconnectConnectionMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogTrace("[KAFKA-RECV] DisconnectConnectionMessage received - Handle: {Handle}, Reason: {Reason}",
-			message.Handle, message.Reason ?? "None");
-
-		logger.LogInformation("Disconnecting connection {Handle}. Reason: {Reason}",
+		logger.LogInformation("[KAFKA-RECV] Disconnecting connection {Handle}. Reason: {Reason}",
 			message.Handle, message.Reason ?? "None");
 
 		await connectionService.DisconnectAsync(message.Handle);
