@@ -166,7 +166,7 @@ public static class WarningTypeHelper
 		var negateFlags = WarningType.None;
 
 		var warnings = warningList.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-		
+
 		foreach (var warning in warnings)
 		{
 			var isNegated = warning.StartsWith('!');

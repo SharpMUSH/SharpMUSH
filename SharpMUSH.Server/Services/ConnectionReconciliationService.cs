@@ -1,8 +1,8 @@
-using SharpMUSH.Messaging.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.Server.Services;
 

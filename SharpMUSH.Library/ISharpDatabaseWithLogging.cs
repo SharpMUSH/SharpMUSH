@@ -1,14 +1,14 @@
-using System.Text.Json.Serialization;
 using SharpMUSH.Library.Models;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library;
 
 public interface ISharpDatabaseWithLogging
 {
 	ValueTask SetupLogging();
-	
+
 	IAsyncEnumerable<LogEventEntity> GetChannelLogs(SharpChannel channel, int skip = 0, int count = 100);
-	
+
 	IAsyncEnumerable<LogEventEntity> GetLogsFromCategory(string category, int skip = 0, int count = 100);
 }
 

@@ -1,8 +1,6 @@
 using Mediator;
 using SharpMUSH.Library;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -13,7 +11,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// new objects when dbrefs are recycled after object destruction.
 /// </summary>
 /// <param name="med">Mediator for database queries to look up object creation times</param>
-public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med) 
+public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 	: SharpMUSHBoolExpParserBaseVisitor<string>
 {
 	protected override string AggregateResult(string aggregate, string nextResult)
@@ -132,13 +130,13 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 	{
 		var value = context.@string().GetText();
 		var normalizedDbRef = NormalizeDbRef(value);
-		
+
 		if (context.attributeName() != null)
 		{
 			var attrName = context.attributeName().GetText();
 			return $"@{normalizedDbRef}/{attrName}";
 		}
-		
+
 		return $"@{normalizedDbRef}";
 	}
 
@@ -150,21 +148,21 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 	{
 		// Try to parse as a dbref
 		var parsed = HelperFunctions.ParseDbRef(value);
-		
+
 		if (parsed.IsNone())
 		{
 			// Not a dbref, return as-is (could be a name like "me" or an object name)
 			return value;
 		}
-		
+
 		var dbref = parsed.AsValue();
-		
+
 		// If it already has a creation timestamp, no normalization needed
 		if (dbref.CreationMilliseconds.HasValue)
 		{
 			return value;
 		}
-		
+
 		// Look up the object to get its creation time
 		try
 		{
@@ -175,16 +173,16 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 				.ConfigureAwait(false)
 				.GetAwaiter()
 				.GetResult();
-			
+
 			if (objResult.IsNone)
 			{
 				// Object doesn't exist, return original (validation will catch this)
 				return value;
 			}
-			
+
 			var obj = objResult.Known;
 			var objDbRef = obj.Object().DBRef;
-			
+
 			// Return objid format
 			return $"#{objDbRef.Number}:{objDbRef.CreationMilliseconds}";
 		}

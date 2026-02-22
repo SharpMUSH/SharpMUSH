@@ -1,6 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using SharpMUSH.Library.Models;
+using System.Collections.Concurrent;
 using System.Text;
-using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -25,22 +25,22 @@ public interface IConnectionService
 		ConcurrentDictionary<string, string> Metadata
 	)
 	{
-		public TimeSpan? Connected 
+		public TimeSpan? Connected
 			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
-			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
+				DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
 			: null;
 
-		public TimeSpan? Idle 
+		public TimeSpan? Idle
 			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
-			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
+				DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
 			: null;
-		
+
 		public string InternetProtocolAddress => Metadata.GetValueOrDefault(nameof(InternetProtocolAddress), "UNKNOWN");
 
 		public string HostName => Metadata.GetValueOrDefault(nameof(HostName), InternetProtocolAddress);
-		
+
 		public string ConnectionType => Metadata[nameof(ConnectionType)];
 	}
 
@@ -58,7 +58,7 @@ public interface IConnectionService
 	/// </summary>
 	/// <param name="handle"></param>
 	ConnectionData? Get(long handle);
-	
+
 	/// <summary>
 	/// Get all handles connected to the DBRef
 	/// </summary>

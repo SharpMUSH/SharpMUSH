@@ -68,7 +68,7 @@ public class WarningTopologyTests
 	{
 		// Normal should include exit-oneway and exit-multiple
 		var normal = WarningType.Normal;
-		
+
 		await Assert.That(normal.HasFlag(WarningType.ExitOneway)).IsTrue();
 		await Assert.That(normal.HasFlag(WarningType.ExitMultiple)).IsTrue();
 	}
@@ -94,7 +94,7 @@ public class WarningTopologyTests
 		// - Creating an exit with NOTHING destination (DBRef -1 or 0)
 		// - Setting up WarningService with mocked dependencies
 		// - Verifying warning notification is sent
-		
+
 		// Placeholder for future integration testing
 		await Task.CompletedTask;
 	}
@@ -109,7 +109,7 @@ public class WarningTopologyTests
 		// - NOT creating a return exit from room B to room A
 		// - Mocking GetExitsQuery to return empty list for destination room
 		// - Verifying one-way warning notification is sent
-		
+
 		// Placeholder for future integration testing
 		await Task.CompletedTask;
 	}
@@ -124,7 +124,7 @@ public class WarningTopologyTests
 		// - Creating MULTIPLE return exits from room B to room A
 		// - Mocking GetExitsQuery to return multiple exits
 		// - Verifying multiple-return warning notification is sent
-		
+
 		// Placeholder for future integration testing
 		await Task.CompletedTask;
 	}

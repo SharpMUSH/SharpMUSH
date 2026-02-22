@@ -1,7 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Globalization;
-using System.Text.RegularExpressions;
-using Mediator;
+﻿using Mediator;
 using OneOf;
 using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
@@ -10,6 +7,9 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Immutable;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Common;
 
@@ -19,7 +19,7 @@ public static partial class ArgHelpers
 		MString defaultValue)
 	{
 		if (args.Count - 1 < item || item == 0 && string.IsNullOrEmpty(args[item.ToString()]?.Message?.ToString()) ||
-		    args[item.ToString()].Message?.ToString() is null)
+				args[item.ToString()].Message?.ToString() is null)
 		{
 			return defaultValue;
 		}
@@ -64,7 +64,7 @@ public static partial class ArgHelpers
 		Func<decimal, decimal, decimal> aggregateFunction)
 	{
 		var decimals = new List<decimal>();
-		
+
 		foreach (var arg in args)
 		{
 			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
@@ -74,13 +74,13 @@ public static partial class ArgHelpers
 			}
 			decimals.Add(value);
 		}
-		
+
 		var result = decimals.Aggregate(aggregateFunction);
-		
+
 		// Format decimal to remove unnecessary trailing zeros and decimal point
 		return ValueTask.FromResult<CallState>(FormatDecimal(result));
 	}
-	
+
 	/// <summary>
 	/// Formats a decimal number to remove unnecessary trailing zeros and decimal point.
 	/// E.g., 10.0 -> "10", 10.5 -> "10.5", 10.123 -> "10.123"
@@ -94,7 +94,7 @@ public static partial class ArgHelpers
 		Func<int, int, int> aggregateFunction)
 	{
 		var integers = new List<int>();
-		
+
 		foreach (var arg in args)
 		{
 			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
@@ -104,7 +104,7 @@ public static partial class ArgHelpers
 			}
 			integers.Add(value);
 		}
-		
+
 		var result = integers.Aggregate(aggregateFunction);
 		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
 	}
@@ -113,7 +113,7 @@ public static partial class ArgHelpers
 		Func<IEnumerable<int>, MString> aggregateFunction)
 	{
 		var integers = new List<int>();
-		
+
 		foreach (var arg in args)
 		{
 			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message!));
@@ -123,7 +123,7 @@ public static partial class ArgHelpers
 			}
 			integers.Add(value);
 		}
-		
+
 		return ValueTask.FromResult<CallState>(aggregateFunction(integers));
 	}
 
@@ -131,7 +131,7 @@ public static partial class ArgHelpers
 		Func<decimal, decimal, decimal> aggregateFunction)
 	{
 		var decimals = new List<decimal>();
-		
+
 		foreach (var arg in args)
 		{
 			var text = string.Join(string.Empty, EmptyStringToZero(MModule.plainText(arg.Value.Message)));
@@ -141,7 +141,7 @@ public static partial class ArgHelpers
 			}
 			decimals.Add(value);
 		}
-		
+
 		var result = Math.Floor(decimals.Aggregate(aggregateFunction));
 		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
 	}
@@ -154,7 +154,7 @@ public static partial class ArgHelpers
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
 		}
-		
+
 		var result = func(value);
 		return ValueTask.FromResult<CallState>(FormatDecimal(result));
 	}
@@ -167,7 +167,7 @@ public static partial class ArgHelpers
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
 		}
-		
+
 		return ValueTask.FromResult<CallState>(func(value));
 	}
 
@@ -179,7 +179,7 @@ public static partial class ArgHelpers
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
 		}
-		
+
 		return ValueTask.FromResult<CallState>(func(value));
 	}
 
@@ -191,7 +191,7 @@ public static partial class ArgHelpers
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorInteger);
 		}
-		
+
 		return ValueTask.FromResult<CallState>(func(value));
 	}
 

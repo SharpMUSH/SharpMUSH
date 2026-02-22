@@ -6,7 +6,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface ISortService
 {
 	record SortInformation(SortType Type, OrderByDirection Direction, string? AttributeName);
-	
+
 	[Flags]
 	enum SortType
 	{
@@ -41,7 +41,7 @@ public interface ISortService
 	/// <param name="keySelector">Transform from MString to string</param>
 	/// <returns>Sorted List</returns>
 	IAsyncEnumerable<MString> Sort(IEnumerable<MString> items, Func<MString, CancellationToken, ValueTask<string>> keySelector, IMUSHCodeParser parser, SortInformation sortData);
-	
+
 	/// <summary>
 	/// Sorts a list of MStrings according to the specified sort type and order.
 	/// </summary>

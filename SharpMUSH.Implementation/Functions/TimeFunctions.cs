@@ -1,11 +1,11 @@
-﻿using System.Text.RegularExpressions;
-using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -15,12 +15,12 @@ public partial class Functions
 	// Matches: number + optional unit (y/year/years, w/week/weeks, d/day/days, h/hour/hours, m/minute/minutes, s/second/seconds)
 	[GeneratedRegex(@"(?<number>[-+]?\d+(?:\.\d+)?)\s*(?<unit>y(?:ears?)?|w(?:eeks?)?|d(?:ays?)?|h(?:ours?)?|m(?:inutes?)?|s(?:econds?)?)", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
 	private static partial Regex DurationPattern();
-	
+
 	// Generated regex for parsing etimefmt format codes
 	// Matches: $ + optional width + optional flags (x,z,t) + code letter
 	[GeneratedRegex(@"\$(?<width>\d*)(?<flags>[xzt]*)(?<code>[yYwWdDhHmMsS$])", RegexOptions.Compiled)]
 	private static partial Regex ETimeFmtPattern();
-	
+
 	// Generated regex for parsing timefmt format codes
 	// Matches: $ + format code letter
 	[GeneratedRegex(@"\$(?<code>.)", RegexOptions.Compiled)]
@@ -92,11 +92,11 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var timeStr = args["0"].Message!.ToPlainText().Trim();
-		
+
 		// Parse the initial timestring
 		DateTimeOffset baseTime;
 		bool isUnixEpoch = false;
-		
+
 		// Handle "now" keyword
 		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase))
 		{
@@ -127,7 +127,7 @@ public partial class Functions
 					{
 						return new ValueTask<CallState>(Errors.ErrorInteger);
 					}
-					
+
 					var unit = match.Groups["unit"].Value.ToLower();
 					totalSeconds += unit switch
 					{
@@ -143,15 +143,15 @@ public partial class Functions
 				}
 				return ValueTask.FromResult<CallState>(totalSeconds.ToString());
 			}
-			
+
 			return new ValueTask<CallState>(Errors.ErrorBadArgumentFormat.Replace("{0}", "SECSCALC"));
 		}
-		
+
 		// Apply modifiers
 		for (int i = 1; i < args.Count; i++)
 		{
 			var modifier = args[i.ToString()].Message!.ToPlainText().Trim().ToLower();
-			
+
 			// Check for "unixepoch" modifier
 			if (modifier == "unixepoch")
 			{
@@ -162,21 +162,21 @@ public partial class Functions
 				}
 				continue;
 			}
-			
+
 			// Check for "localtime" modifier
 			if (modifier == "localtime")
 			{
 				baseTime = baseTime.ToLocalTime();
 				continue;
 			}
-			
+
 			// Check for "utc" modifier
 			if (modifier == "utc")
 			{
 				baseTime = baseTime.ToUniversalTime();
 				continue;
 			}
-			
+
 			// Check for "start of" modifiers
 			if (modifier.StartsWith("start of "))
 			{
@@ -190,7 +190,7 @@ public partial class Functions
 				};
 				continue;
 			}
-			
+
 			// Check for "weekday N" modifier
 			if (modifier.StartsWith("weekday "))
 			{
@@ -202,7 +202,7 @@ public partial class Functions
 				}
 				continue;
 			}
-			
+
 			// Parse numeric modifiers like "5 days", "3 hours", etc.
 			var parts = modifier.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length == 2)
@@ -223,7 +223,7 @@ public partial class Functions
 				}
 			}
 		}
-		
+
 		return ValueTask.FromResult<CallState>(baseTime.ToUnixTimeSeconds().ToString());
 	}
 
@@ -239,16 +239,16 @@ public partial class Functions
 	public static ValueTask<CallState> StringSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
-		
+
 		// Parse strings like "5m 1s", "1d 2h 3m 4s", "3y 2m 7d 5h 23m", etc.
 		// Use generated regex to extract all number-unit pairs
 		var matches = DurationPattern().Matches(timeStr);
-		
+
 		if (matches.Count == 0)
 		{
 			return new ValueTask<CallState>(Errors.ErrorInteger);
 		}
-		
+
 		long totalSeconds = 0;
 		foreach (Match match in matches)
 		{
@@ -256,7 +256,7 @@ public partial class Functions
 			{
 				return new ValueTask<CallState>(Errors.ErrorInteger);
 			}
-			
+
 			var unit = match.Groups["unit"].Value.ToLower();
 			// Use array pattern matching for first character
 			totalSeconds += unit switch
@@ -317,13 +317,13 @@ public partial class Functions
 	public static ValueTask<CallState> TimeCalc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		
+
 		// Get the base time string
 		var timeStr = args["0"].Message!.ToPlainText().Trim();
-		
+
 		// Parse the base time
 		DateTimeOffset dt;
-		
+
 		if (timeStr.Equals("now", StringComparison.OrdinalIgnoreCase))
 		{
 			dt = DateTimeOffset.UtcNow;
@@ -347,7 +347,7 @@ public partial class Functions
 			.Aggregate(dt, (currentDt, i) =>
 			{
 				var modifier = args[i.ToString()].Message!.ToPlainText().Trim();
-				
+
 				if (modifier.Equals("unixepoch", StringComparison.OrdinalIgnoreCase))
 				{
 					// Already in Unix epoch format
@@ -414,7 +414,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var format = args["0"].Message!.ToPlainText();
-		
+
 		// Get the time to format (default to current time)
 		DateTimeOffset dt;
 		if (args.TryGetValue("1", out var secsArg))
@@ -430,7 +430,7 @@ public partial class Functions
 		{
 			dt = DateTimeOffset.Now;
 		}
-		
+
 		// Get timezone (default to local)
 		if (args.TryGetValue("2", out var tzArg))
 		{
@@ -483,7 +483,7 @@ public partial class Functions
 
 		return ValueTask.FromResult<CallState>(result);
 	}
-	
+
 	private static string CalculateWeekOfYearFromSunday(DateTimeOffset dt)
 	{
 		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
@@ -492,7 +492,7 @@ public partial class Functions
 		var weekNumber = dt < firstSunday ? 0 : (int)((dt - firstSunday).TotalDays / 7) + 1;
 		return weekNumber.ToString("D2");
 	}
-	
+
 	private static string CalculateWeekOfYearFromMonday(DateTimeOffset dt)
 	{
 		var startOfYear = new DateTimeOffset(dt.Year, 1, 1, 0, 0, 0, dt.Offset);
@@ -534,8 +534,8 @@ public partial class Functions
 		{
 			2 => ValueTask.FromResult<CallState>($"{days:D2}d {hours:D2}h {minutes:D2}m {seconds:D2}s"),
 			1 => ValueTask.FromResult<CallState>($"{days}d  {hours}h  {minutes}m  {seconds}s"),
-			_ => ValueTask.FromResult<CallState>(" " + string.Join("  ", 
-				new[] { 
+			_ => ValueTask.FromResult<CallState>(" " + string.Join("  ",
+				new[] {
 					days > 0 ? $"{days}d" : null,
 					hours > 0 ? $"{hours}h" : null,
 					minutes > 0 ? $"{minutes}m" : null,
@@ -649,11 +649,11 @@ public partial class Functions
 		// Join parts with two spaces and respect width limit
 		const string separator = "  ";
 		var result = string.Join(separator, parts);
-		
+
 		// Trim from the end until it fits width
 		if (result.Length > maxWidth && parts.Count > 1)
 		{
-			parts = parts.TakeWhile((_, index) => 
+			parts = parts.TakeWhile((_, index) =>
 				string.Join(separator, parts.Take(index + 1)).Length <= maxWidth || index == 0
 			).ToList();
 			result = string.Join(separator, parts);
@@ -695,7 +695,7 @@ public partial class Functions
 			var widthStr = match.Groups["width"].Value;
 			var flags = match.Groups["flags"].Value.ToLower();
 			var codeChar = match.Groups["code"].Value;
-			
+
 			var width = string.IsNullOrEmpty(widthStr) ? 0 : int.Parse(widthStr);
 			var addSuffix = flags.Contains('x');
 			var skipZero = flags.Contains('z');
@@ -727,7 +727,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result.TrimStart(' '));
 	}
 
-	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["seconds", "timezone"])]
 	public static ValueTask<CallState> ConvSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -765,7 +765,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(dateTime.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy"));
 	}
 
-	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["time-string", "timezone"])]
 	public static ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

@@ -121,14 +121,14 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		// Optimize #TRUE - no need to compile or cache
 		if (lockString is "#TRUE" or "")
 			return true;
-		
+
 		return bep.Compile(lockString)(gated, unlocker);
 	}
 
 	public bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
-		if(lockString is "#TRUE" or "") return true;
-		
+		if (lockString is "#TRUE" or "") return true;
+
 		var compile = bep.Compile(lockString);
 		// For channel locks, we need to evaluate the lock against the unlocker
 		// Channels don't have the same object structure, so we pass a synthetic object representation
@@ -143,11 +143,11 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		AnySharpObject unlocker)
 	{
 		var lockString = Get(standardType, gated);
-		
+
 		// Optimize #TRUE - no need to compile or cache
 		if (lockString is "#TRUE" or "")
 			return true;
-		
+
 		return cache.GetOrSet($"lock:{gated.Object().DBRef}:{standardType.ToString()}", bep.Compile(lockString))(
 			gated, unlocker);
 	}
@@ -160,7 +160,7 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 			cache.GetOrSet($"lock:{g.Object().DBRef}:{standardType.ToString()}", bep.Compile(Get(standardType, g)))(g,
 				unlocker));
 
-	public bool Validate(string lockString, AnySharpObject lockee) 
+	public bool Validate(string lockString, AnySharpObject lockee)
 		=> bep.Validate(lockString, lockee);
 
 	public bool Set(

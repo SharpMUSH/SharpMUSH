@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -8,10 +7,10 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class StatusMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, 
-		IExpandedObjectDataService objectDataService, 
-		IMediator mediator, 
-		INotifyService notifyService, 
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser,
+		IExpandedObjectDataService objectDataService,
+		IMediator mediator,
+		INotifyService notifyService,
 		MString? arg0, MString? arg1, string sw)
 	{
 		// --> STATUS = tagged, untagged, cleared, uncleared, read, unread, urgent or unurgent

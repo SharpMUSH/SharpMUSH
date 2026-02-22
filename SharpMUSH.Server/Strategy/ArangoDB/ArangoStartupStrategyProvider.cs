@@ -13,7 +13,8 @@ public static class ArangoStartupStrategyProvider
 		{
 			return new ArangoSocketStartupStrategy();
 		}
-		else {
+		else
+		{
 			return new ArangoKubernetesStartupStrategy(arangoConnStr);
 		}
 	}

@@ -1,6 +1,6 @@
-using System.Drawing;
 using ANSILibrary;
 using Markdig.Syntax.Inlines;
+using System.Drawing;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 

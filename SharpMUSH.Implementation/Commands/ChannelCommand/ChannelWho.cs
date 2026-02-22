@@ -24,7 +24,7 @@ public static class ChannelWho
 
 		var delimitedMembers = MModule.multipleWithDelimiter(MModule.single(", "),
 			memberArray.Select(x => MModule.single(x.Member.Object().Name)));
-		
+
 		var memberOutput =
 			MModule.multiple([
 				MModule.single("Members of channel <"), channel.Name, MModule.single("> are:\n"),

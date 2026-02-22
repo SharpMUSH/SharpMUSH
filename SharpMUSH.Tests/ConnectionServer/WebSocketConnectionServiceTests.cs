@@ -1,8 +1,8 @@
-using System.Text;
-using SharpMUSH.Messaging.Abstractions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Messaging.Abstractions;
+using System.Text;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 
@@ -19,19 +19,19 @@ public class WebSocketConnectionServiceTests
 		var logger = new LoggerFactory().CreateLogger<ConnectionServerService>();
 		var publishEndpoint = Substitute.For<IMessageBus>();
 		var service = new ConnectionServerService(logger, publishEndpoint);
-		
+
 		var handle = 1000001L;
 		var ipAddress = "192.168.1.1";
 		var hostname = "test.local";
 		var connectionType = "websocket";
-		
+
 		byte[]? receivedData = null;
 		Func<byte[], ValueTask> outputFunction = async (data) =>
 		{
 			receivedData = data;
 			await ValueTask.CompletedTask;
 		};
-		
+
 		byte[]? receivedPrompt = null;
 		Func<byte[], ValueTask> promptFunction = async (data) =>
 		{
@@ -75,7 +75,7 @@ public class WebSocketConnectionServiceTests
 		var logger = new LoggerFactory().CreateLogger<ConnectionServerService>();
 		var publishEndpoint = Substitute.For<IMessageBus>();
 		var service = new ConnectionServerService(logger, publishEndpoint);
-		
+
 		var handle = 1000002L;
 		var disconnected = false;
 
@@ -136,7 +136,7 @@ public class WebSocketConnectionServiceTests
 		var logger = new LoggerFactory().CreateLogger<ConnectionServerService>();
 		var publishEndpoint = Substitute.For<IMessageBus>();
 		var service = new ConnectionServerService(logger, publishEndpoint);
-		
+
 		var handle = 1000003L;
 
 		// Act
@@ -152,8 +152,8 @@ public class WebSocketConnectionServiceTests
 
 		// Assert - verify ConnectionEstablishedMessage was published with correct connection type
 		await publishEndpoint.Received(1).Publish(
-			Arg.Is<SharpMUSH.Messages.ConnectionEstablishedMessage>(m => 
-				m.Handle == handle && 
+			Arg.Is<SharpMUSH.Messages.ConnectionEstablishedMessage>(m =>
+				m.Handle == handle &&
 				m.ConnectionType == "websocket" &&
 				m.IpAddress == "192.168.1.100"),
 			Arg.Any<CancellationToken>());

@@ -15,16 +15,16 @@ public class RenameAttributeEntryCommandHandler(ISharpDatabase database) : IComm
 		{
 			return null;
 		}
-		
+
 		// Delete the old entry
 		await database.DeleteAttributeEntryAsync(request.OldName, cancellationToken);
-		
+
 		// Create new entry with the same settings but new name
 		return await database.CreateOrUpdateAttributeEntryAsync(
-			request.NewName, 
-			oldEntry.DefaultFlags, 
-			oldEntry.Limit, 
-			oldEntry.Enum, 
+			request.NewName,
+			oldEntry.DefaultFlags,
+			oldEntry.Limit,
+			oldEntry.Enum,
 			cancellationToken);
 	}
 }

@@ -27,7 +27,7 @@ public class DatabaseCommandTests
 	{
 		// Use unique table names for command tests to avoid interference with function tests
 		var connectionString = MySqlTestServer.Instance.GetConnectionString();
-		
+
 		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
@@ -60,7 +60,7 @@ public class DatabaseCommandTests
 		{
 			await cmd.ExecuteNonQueryAsync();
 		}
-		
+
 		await using (var cmd = new MySqlCommand("TRUNCATE TABLE test_mapsql_data_cmd", connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
@@ -137,10 +137,10 @@ public class DatabaseCommandTests
 	{
 		// First create a test channel
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/add TestClockChannel"));
-		
+
 		// Now test @clock to set a lock on the channel
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@clock/join TestClockChannel=#TRUE"));
-		
+
 		// Verify the command executed successfully (didn't throw or return error)
 		await Assert.That(result).IsNotNull();
 	}
@@ -231,7 +231,7 @@ public class DatabaseCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().StartsWith("Test_MapSql_WithMultipleRows: 0 ")) ||
 				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 0"))));
-		
+
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
@@ -272,7 +272,7 @@ public class DatabaseCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3")) ||
 				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3"))));
-		
+
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>

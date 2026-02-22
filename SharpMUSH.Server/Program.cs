@@ -27,9 +27,9 @@ public class Program
 		}
 
 		var startup = new Startup(arangoConfig, colorFile, redisStrategy);
-		
+
 		startup.ConfigureServices(builder.Services, builder.Configuration);
-		
+
 		var app = builder.Build();
 
 		// Get logger for startup logging
@@ -40,7 +40,7 @@ public class Program
 		var bus = app.Services.CreateKafkaBus();
 		await bus.StartAsync();
 		logger.LogInformation("[KAFKA-STARTUP] Kafka bus started successfully");
-		
+
 		try
 		{
 			await ConfigureApp(app).RunAsync();

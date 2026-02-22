@@ -1,5 +1,4 @@
 using KafkaFlow;
-using KafkaFlow.Producers;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Messages;
 

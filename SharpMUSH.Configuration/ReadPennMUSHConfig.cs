@@ -1,7 +1,6 @@
-﻿using System.Collections.Immutable;
-using System.Text.RegularExpressions;
+﻿using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Configuration.Generated;
+using System.Text.RegularExpressions;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Configuration;
@@ -11,7 +10,7 @@ public static partial class ReadPennMushConfig
 	public static SharpMUSHOptions Create(string configFile)
 	{
 		string[] text;
-		
+
 		// Use generated metadata instead of reflection
 		var propertyDictionary = ConfigMetadata.PropertyToAttributeName;
 		var configDictionary = ConfigMetadata.AttributeToPropertyName.Keys

@@ -193,7 +193,7 @@ public interface IKafkaFlowConsumerConfigurator
 	/// <typeparam name="TMessage">The message type to consume and batch</typeparam>
 	/// <param name="batchSize">Maximum number of messages to batch</param>
 	/// <param name="batchTimeout">Maximum time to wait for a full batch</param>
-	void AddBatchConsumer<TMiddleware, TMessage>(int batchSize, TimeSpan batchTimeout) 
+	void AddBatchConsumer<TMiddleware, TMessage>(int batchSize, TimeSpan batchTimeout)
 		where TMiddleware : class, IMessageMiddleware
 		where TMessage : class;
 }
@@ -296,7 +296,7 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 		);
 	}
 
-	public void AddBatchConsumer<TMiddleware, TMessage>(int batchSize, TimeSpan batchTimeout) 
+	public void AddBatchConsumer<TMiddleware, TMessage>(int batchSize, TimeSpan batchTimeout)
 		where TMiddleware : class, IMessageMiddleware
 		where TMessage : class
 	{

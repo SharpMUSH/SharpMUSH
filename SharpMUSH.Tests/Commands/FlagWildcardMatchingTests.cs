@@ -114,7 +114,7 @@ public class FlagWildcardMatchingTests
 		// an exact match should be preferred over a partial match
 		// Testing with COLOR which should match exactly
 		var flag = await Mediator.Send(new GetObjectFlagQuery("COLOR"));
-		
+
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.Name).IsEqualTo("COLOR");
 	}
@@ -124,7 +124,7 @@ public class FlagWildcardMatchingTests
 	{
 		// Test that "col" returns the COLOR flag
 		var flag = await Mediator.Send(new GetObjectFlagQuery("COL"));
-		
+
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.Name).IsEqualTo("COLOR");
 	}
@@ -134,17 +134,17 @@ public class FlagWildcardMatchingTests
 	{
 		// Test that lowercase "col" also works
 		var flag = await Mediator.Send(new GetObjectFlagQuery("col"));
-		
+
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.Name).IsEqualTo("COLOR");
 	}
-	
+
 	[Test]
 	public async ValueTask GetObjectFlagQuery_AliasPartialMatch()
 	{
 		// Test that "colo" matches COLOR (could match via COLOR or its alias COLOUR)
 		var flag = await Mediator.Send(new GetObjectFlagQuery("colo"));
-		
+
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.Name).IsEqualTo("COLOR");
 	}

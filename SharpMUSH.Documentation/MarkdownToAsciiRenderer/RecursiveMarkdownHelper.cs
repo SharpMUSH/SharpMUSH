@@ -19,12 +19,12 @@ public static class RecursiveMarkdownHelper
 			.UsePipeTables()
 			.EnableTrackTrivia() // Track HTML
 			.Build();
-		
+
 		var document = Markdown.Parse(markdown, pipeline);
 		var renderer = new RecursiveMarkdownRenderer(maxWidth);
 		return renderer.Render(document);
 	}
-	
+
 	/// <summary>
 	/// Renders markdown text to MString using a custom renderer
 	/// </summary>
@@ -36,11 +36,11 @@ public static class RecursiveMarkdownHelper
 			.UsePipeTables()
 			.EnableTrackTrivia() // Track HTML
 			.Build();
-		
+
 		var document = Markdown.Parse(markdown, pipeline);
 		return renderer.Render(document);
 	}
-	
+
 	/// <summary>
 	/// Renders a parsed MarkdownDocument to MString using the recursive renderer
 	/// </summary>

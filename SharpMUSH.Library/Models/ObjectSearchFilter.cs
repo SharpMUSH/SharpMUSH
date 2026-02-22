@@ -75,8 +75,8 @@ public record ObjectSearchFilter
 	/// <summary>
 	/// Check if this filter has any active filters
 	/// </summary>
-	public bool HasFilters => Types != null || Owner != null || NamePattern != null || 
-	                          MinDbRef != null || MaxDbRef != null || Zone != null || 
-	                          Parent != null || HasFlag != null || HasPower != null ||
-	                          Skip != null || Limit != null;
+	public bool HasFilters => Types != null || Owner != null || NamePattern != null ||
+														MinDbRef != null || MaxDbRef != null || Zone != null ||
+														Parent != null || HasFlag != null || HasPower != null ||
+														Skip != null || Limit != null;
 }

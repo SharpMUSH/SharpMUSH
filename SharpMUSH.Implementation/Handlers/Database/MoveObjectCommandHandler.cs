@@ -16,9 +16,9 @@ public class MoveObjectCommandHandler(ISharpDatabase database, IPublisher publis
 			async player => await player.Location.WithCancellation(cancellationToken).ContinueWith(t => t.Result.Object().DBRef, cancellationToken),
 			async exit => await exit.Location.WithCancellation(cancellationToken).ContinueWith(t => t.Result.Object().DBRef, cancellationToken),
 			async thing => await thing.Location.WithCancellation(cancellationToken).ContinueWith(t => t.Result.Object().DBRef, cancellationToken));
-		
+
 		await database.MoveObjectAsync(request.Target, request.Destination, cancellationToken);
-		
+
 		// Publish notification for event system
 		await publisher.Publish(new ObjectMovedNotification(
 			request.Target,
@@ -28,7 +28,7 @@ public class MoveObjectCommandHandler(ISharpDatabase database, IPublisher publis
 			request.IsSilent,
 			request.Cause),
 			cancellationToken);
-		
+
 		return request.Destination.Match(
 			player => player.Object.DBRef,
 			room => room.Object.DBRef,

@@ -38,7 +38,7 @@ public class MarkdownToAsciiRenderer : MarkupRendererBase<MarkdownToAsciiRendere
 		Write(markdownObject);
 		return Container;
 	}
-	
+
 	/// <summary>
 	/// Renders the specified markdown object (returns the <see cref="MarkupStringContainer"/> as a render object).
 	/// </summary>

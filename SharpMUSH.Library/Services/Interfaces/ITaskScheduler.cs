@@ -30,7 +30,7 @@ public interface ITaskScheduler
 	/// <param name="dbAttribute">Attribute to register under.</param>
 	/// <param name="oldValue">Check the old value, in case we don't need to wait at all.</param>
 	ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue);
-	
+
 	/// <summary>
 	/// Write an async function to the scheduler, to be immediately executed when the scheduler runs.
 	/// </summary>
@@ -75,7 +75,7 @@ public interface ITaskScheduler
 	/// </summary>
 	/// <returns>An AsyncEnumerable grouped by type, and the time/date they may be expected to run by.</returns>
 	IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj);
-	
+
 	/// <summary>
 	/// Get all Tasks currently running on the scheduler for a DBref's specific Attribute, when they are due, and the handle they are associated with.
 	/// </summary>
@@ -109,7 +109,7 @@ public interface ITaskScheduler
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
 	ValueTask NotifyAll(DbRefAttribute dbAttribute);
-	
+
 	/// <summary>
 	/// Modify Q-registers of the first waiting task on a semaphore.
 	/// </summary>
@@ -117,14 +117,14 @@ public interface ITaskScheduler
 	/// <param name="qRegisters">Dictionary of Q-register names to values</param>
 	/// <returns>True if a task was found and modified, false otherwise</returns>
 	ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters);
-	
+
 	/// <summary>
 	/// Drains a series of Jobs, removing them from jobs to be performed.
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
 	/// <param name="count">Optional number of tasks to drain (null = all)</param>
 	ValueTask Drain(DbRefAttribute dbAttribute, int? count = null);
-	
+
 	/// <summary>
 	/// Removes all non-Semaphore jobs related to a DBRef from executing immediately.
 	/// </summary>

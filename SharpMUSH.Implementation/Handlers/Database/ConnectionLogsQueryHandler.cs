@@ -4,7 +4,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetConnectionLogsQueryHandler(ISharpDatabase database) 
+public class GetConnectionLogsQueryHandler(ISharpDatabase database)
 	: IStreamQueryHandler<GetConnectionLogsQuery, LogEventEntity>
 {
 	public IAsyncEnumerable<LogEventEntity> Handle(GetConnectionLogsQuery request, CancellationToken cancellationToken)
@@ -13,15 +13,15 @@ public class GetConnectionLogsQueryHandler(ISharpDatabase database)
 		{
 			return SafeAsyncEnumerable(loggingDb.GetLogsFromCategory(request.Category, request.Skip, request.Count));
 		}
-		
+
 		// Return empty enumerable if logging is not supported
 		return AsyncEnumerable.Empty<LogEventEntity>();
 	}
-	
+
 	private static async IAsyncEnumerable<LogEventEntity> SafeAsyncEnumerable(IAsyncEnumerable<LogEventEntity> source)
 	{
 		var enumerator = source.GetAsyncEnumerator();
-		
+
 		try
 		{
 			while (true)
@@ -35,9 +35,9 @@ public class GetConnectionLogsQueryHandler(ISharpDatabase database)
 				{
 					yield break;
 				}
-				
+
 				if (!hasNext) yield break;
-				
+
 				yield return enumerator.Current;
 			}
 		}

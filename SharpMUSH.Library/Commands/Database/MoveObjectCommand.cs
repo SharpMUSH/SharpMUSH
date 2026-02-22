@@ -7,7 +7,7 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.Commands.Database;
 
 public record MoveObjectCommand(
-	AnySharpContent Target, 
+	AnySharpContent Target,
 	AnySharpContainer Destination,
 	DBRef? Enactor = null,
 	bool IsSilent = false,

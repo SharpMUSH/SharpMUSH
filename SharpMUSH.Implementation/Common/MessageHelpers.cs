@@ -1,6 +1,6 @@
 using Mediator;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -13,7 +13,7 @@ public static class MessageHelpers
 {
 	private const string SpecialRecipientDbref = "#-2";
 	private const string RecipientReplacementToken = "##";
-	
+
 	/// <summary>
 	/// Determines the notification type based on the prefix character of the message.
 	/// Used for commands like @pemit, say, etc.
@@ -30,7 +30,7 @@ public static class MessageHelpers
 			_ => INotifyService.NotificationType.Say
 		};
 	}
-	
+
 	/// <summary>
 	/// Strips the message type prefix from the message if present.
 	/// </summary>
@@ -46,7 +46,7 @@ public static class MessageHelpers
 			_ => message
 		};
 	}
-	
+
 	public static async ValueTask<CallState> ProcessMessageAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
@@ -140,8 +140,8 @@ public static class MessageHelpers
 
 				var container = locateTarget.AsContainer;
 				var evaluatedMessage = await EvaluateMessageForRecipient(
-					parser, attributeService, executor, enactor, 
-					locateTarget, objToEvaluate, attrToEvaluate, 
+					parser, attributeService, executor, enactor,
+					locateTarget, objToEvaluate, attrToEvaluate,
 					pinnedAttribute, defmsg, functionArgs);
 
 				await communicationService.SendToRoomAsync(

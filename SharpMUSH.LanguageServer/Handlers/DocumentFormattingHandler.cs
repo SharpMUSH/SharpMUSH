@@ -19,7 +19,7 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 	}
 
 	public override Task<TextEditContainer?> Handle(
-		DocumentFormattingParams request, 
+		DocumentFormattingParams request,
 		CancellationToken cancellationToken)
 	{
 		var uri = request.TextDocument.Uri.ToString();
@@ -59,9 +59,9 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error formatting document: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		return Task.FromResult<TextEditContainer?>(null);
@@ -102,7 +102,7 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 
 		// Count nesting level based on brackets
 		var indent = 0;
-		
+
 		// If line starts with closing bracket, reduce indent
 		if (trimmed.StartsWith(")") || trimmed.StartsWith("}") || trimmed.StartsWith("]"))
 		{
@@ -118,7 +118,7 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 	}
 
 	protected override DocumentFormattingRegistrationOptions CreateRegistrationOptions(
-		DocumentFormattingCapability capability, 
+		DocumentFormattingCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new DocumentFormattingRegistrationOptions

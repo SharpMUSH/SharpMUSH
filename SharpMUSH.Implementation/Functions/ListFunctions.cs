@@ -168,7 +168,7 @@ public partial class Functions
 				}
 			});
 			var parsed = (await newParser.FunctionParse(attrValue))!.Message!;
-			
+
 			if (parsed.ToPlainText() == "1")
 			{
 				result.Add(item);
@@ -250,7 +250,7 @@ public partial class Functions
 				}
 			});
 			var parsed = (await newParser.FunctionParse(attrValue))!;
-			
+
 			// FilterBool returns items where the function evaluates to a boolean true
 			if (parsed.Message!.Truthy())
 			{
@@ -465,7 +465,7 @@ public partial class Functions
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 		var list = MModule.split2(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
-			{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
+		{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
 		var result = new List<MString>();
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
@@ -633,7 +633,7 @@ public partial class Functions
 		{
 			var index = i + 1; // 1-based indexing
 			var negativeIndex = i - list.Length; // negative indexing from end
-			
+
 			// Check if this position should be deleted
 			if (!positionsSet.Contains(index) && !positionsSet.Contains(negativeIndex))
 			{
@@ -974,29 +974,29 @@ public partial class Functions
 		{
 			return "INVALID DBREF IN LIST";
 		}
-		
+
 		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
 			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
 			return (dbref.AsT0, item.Object()!.Name);
 		});
 
-		var exact = await locatedNames.FirstOrDefaultAsync(async (x,ct) 
+		var exact = await locatedNames.FirstOrDefaultAsync(async (x, ct)
 			=> (await x).Name == name);
 
 		if (exact != null)
 		{
 			return (await exact).AsT0;
 		}
-		
-		var partial = await locatedNames.FirstOrDefaultAsync(async (x,ct) 
+
+		var partial = await locatedNames.FirstOrDefaultAsync(async (x, ct)
 			=> (await x).Name.Contains(name, StringComparison.OrdinalIgnoreCase));
 
 		if (partial != null)
 		{
 			return (await partial).AsT0;
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -1016,29 +1016,29 @@ public partial class Functions
 		{
 			return "INVALID DBREF IN LIST";
 		}
-		
+
 		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
 		{
 			var item = await Mediator!.Send(new GetObjectNodeQuery(dbref.AsT0));
 			return (dbref.AsT0, item.Object()!.Name);
 		});
 
-		var exact = locatedNames.Where(async (x,ct) 
+		var exact = locatedNames.Where(async (x, ct)
 			=> (await x).Name == name);
 
 		if (await exact.AnyAsync())
 		{
 			return string.Join(" ", exact.Select(async x => (await x).AsT0.ToString()));
 		}
-		
-		var partial = locatedNames.Where(async (x,ct) 
+
+		var partial = locatedNames.Where(async (x, ct)
 			=> (await x).Name.Contains(name, StringComparison.OrdinalIgnoreCase));
 
 		if (await partial.AnyAsync())
 		{
 			return string.Join(" ", partial.Select(async x => (await x).AsT0.ToString()));
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -1065,7 +1065,7 @@ public partial class Functions
 
 		var random = new Random();
 		IEnumerable<MString> result;
-		
+
 		if (typeArg == "L")
 		{
 			// Linear from random start
@@ -1140,7 +1140,7 @@ public partial class Functions
 		{
 			var index = i + 1; // 1-based indexing
 			var negativeIndex = i - list.Count; // negative indexing from end
-			
+
 			// Check if this position should be replaced
 			if (positionsSet.Contains(index) || positionsSet.Contains(negativeIndex))
 			{
@@ -1269,7 +1269,7 @@ public partial class Functions
 				for (var j = 0; j < list.Count; j++)
 				{
 					if (i == j) continue;
-					
+
 					var newParser = parser.Push(parser.CurrentState with
 					{
 						Arguments = new Dictionary<string, CallState>
@@ -1370,10 +1370,10 @@ public partial class Functions
 
 		// Sort keys with their indices and use standard LINQ OrderBy with a comparison
 		var sortTypeStr = sortType.ToPlainText().ToLower();
-		
+
 		// Create pairs of (index, key)
 		var indexedKeys = keys.Select((k, i) => new { Index = i, Key = k }).ToList();
-		
+
 		// Use simple LINQ OrderBy based on keys
 		IEnumerable<int> sortedIndices = sortTypeStr switch
 		{
@@ -1464,7 +1464,7 @@ public partial class Functions
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
 		var stepArg = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
-		
+
 		if (!int.TryParse(stepArg, out var step) || step < 1 || step > 30)
 		{
 			return new CallState(Errors.ErrorInteger);
@@ -1504,17 +1504,17 @@ public partial class Functions
 	public static async ValueTask<CallState> StringFirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
-		
+
 		// If single argument, split by spaces and return first non-empty element
 		if (orderedArgs.Count == 1)
 		{
 			var singleArg = await parser.FunctionParse(orderedArgs["0"].Message!);
 			var elements = singleArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-			return elements.Length > 0 
+			return elements.Length > 0
 				? new CallState(MModule.single(elements[0]))
 				: CallState.Empty;
 		}
-		
+
 		// Original multi-argument logic: iterate through arguments to find the first non-empty one after parsing
 		var argsArray = orderedArgs.ToArray();
 		for (int i = 0; i < argsArray.Length - 1; i++)
@@ -1525,7 +1525,7 @@ public partial class Functions
 				return new CallState(argsArray[i].Value.Message);
 			}
 		}
-		
+
 		// If no non-empty argument found, return the last argument
 		return new CallState(argsArray[^1].Value.Message);
 	}
@@ -1534,13 +1534,13 @@ public partial class Functions
 	public static ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
-		
+
 		// If single argument, just return it as-is
 		if (orderedArgs.Count == 1)
 		{
 			return ValueTask.FromResult(new CallState(orderedArgs["0"].Message));
 		}
-		
+
 		// Original multi-argument logic: join all but last with last as delimiter
 		var allOf = Enumerable.SkipLast(orderedArgs, 1)
 			.Select(x => x.Value.Message!)
@@ -1610,11 +1610,11 @@ public partial class Functions
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
 		var list = MModule.split2(delimiter, listArg);
-		
+
 		// Remove consecutive duplicates based on sort type comparison
 		var result = new List<MString>();
 		var sortTypeStr = sortType.ToPlainText();
-		
+
 		for (var i = 0; i < list.Length; i++)
 		{
 			if (i == 0)
@@ -1625,7 +1625,7 @@ public partial class Functions
 			{
 				var current = list[i].ToPlainText();
 				var previous = list[i - 1].ToPlainText();
-				
+
 				// Compare based on sort type
 				var isDuplicate = sortTypeStr.ToLower() switch
 				{
@@ -1633,7 +1633,7 @@ public partial class Functions
 					"n" => int.TryParse(current, out var c2) && int.TryParse(previous, out var p2) && c2 == p2,
 					_ => current == previous
 				};
-				
+
 				if (!isDuplicate)
 				{
 					result.Add(list[i]);
@@ -1713,7 +1713,7 @@ public partial class Functions
 			// Positive position: insert BEFORE the item at position (1-indexed)
 			// Convert to 0-indexed: position - 1
 			insertIndex = position - 1;
-			
+
 			// Clamp to valid range [0, count]
 			if (insertIndex > count)
 			{
@@ -1732,7 +1732,7 @@ public partial class Functions
 			var posFromRight = Math.Abs(position);
 			var targetIndex = count - posFromRight;
 			insertIndex = targetIndex + 1;
-			
+
 			// Clamp to valid range [0, count]
 			if (insertIndex > count)
 			{

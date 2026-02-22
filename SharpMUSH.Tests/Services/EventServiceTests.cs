@@ -22,7 +22,7 @@ public class EventServiceTests
 			"TEST`EVENT",
 			null,
 			"arg0", "arg1");
-		
+
 		// Should complete without throwing an exception
 		await ValueTask.CompletedTask;
 	}

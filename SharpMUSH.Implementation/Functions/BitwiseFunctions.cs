@@ -1,8 +1,8 @@
-﻿using System.Numerics;
-using SharpMUSH.Implementation.Common;
+﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Numerics;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -15,7 +15,7 @@ public partial class Functions
 	/// Base 64 characters for conversion.
 	/// </summary>
 	private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-	
+
 	/// <summary>
 	/// Base 36 characters for conversion, for PennMUSH compatibility.
 	/// </summary>
@@ -27,13 +27,13 @@ public partial class Functions
 		var input = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!);
 		var fromBaseStr = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(1).Value.Message!);
 		var toBaseStr = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(2).Value.Message!);
-		
+
 		// Parse the base arguments as integers
 		if (!int.TryParse(ArgHelpers.EmptyStringToZero(fromBaseStr), out var fromBase))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
 		}
-		
+
 		if (!int.TryParse(ArgHelpers.EmptyStringToZero(toBaseStr), out var toBase))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
@@ -47,7 +47,7 @@ public partial class Functions
 
 		var fromBaseChars = fromBase <= 36 ? Chars36 : Chars;
 		var toBaseChars = toBase <= 36 ? Chars36 : Chars;
-		
+
 		// Validate input according to fromBase
 		if (input.Any(c => fromBaseChars.IndexOf(c) >= fromBase))
 		{

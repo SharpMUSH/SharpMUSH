@@ -66,7 +66,7 @@ public class GeneralCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "4 This is, a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
-	
+
 	[Test]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DolistCommand()
@@ -290,8 +290,8 @@ public class GeneralCommandTests
 		// Should notify about the location
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "is in")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "is in")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -307,8 +307,8 @@ public class GeneralCommandTests
 		// Should notify that it's not a player
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "only @whereis players")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "only @whereis players")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -321,8 +321,8 @@ public class GeneralCommandTests
 		// Should notify about restart
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Restarted")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Restarted")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -335,8 +335,8 @@ public class GeneralCommandTests
 		// Should notify about searching
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Searching")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Searching")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -349,8 +349,8 @@ public class GeneralCommandTests
 		// Should notify about database statistics
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Database Statistics")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Database Statistics")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -363,8 +363,8 @@ public class GeneralCommandTests
 		// Should notify about search
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("database search")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("database search")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -377,7 +377,7 @@ public class GeneralCommandTests
 		// Should notify about entrances
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Entrances")), 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Entrances")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -391,8 +391,8 @@ public class GeneralCommandTests
 		// Should notify about command information
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("Command:")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Command:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -405,8 +405,8 @@ public class GeneralCommandTests
 		// Should notify about global functions
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Global user-defined functions")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Global user-defined functions")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -419,8 +419,8 @@ public class GeneralCommandTests
 		// Should notify about function information
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Function:")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Function:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -433,8 +433,8 @@ public class GeneralCommandTests
 		// Should notify about mapping
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "@map:")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@map:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -447,7 +447,7 @@ public class GeneralCommandTests
 		// Should notify about triggering
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "@trigger:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -474,8 +474,8 @@ public class GeneralCommandTests
 		// Should notify about halting
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "@halt:")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@halt:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -488,7 +488,7 @@ public class GeneralCommandTests
 		// Should notify about queue
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "@ps:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -501,8 +501,8 @@ public class GeneralCommandTests
 		// Should notify about select
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("@select:")),  
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@select:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -516,8 +516,8 @@ public class GeneralCommandTests
 		// Should notify about attribute info
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf<MString,string>>(s => s.Value.ToString()!.Contains("@attribute:")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@attribute:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -526,12 +526,12 @@ public class GeneralCommandTests
 	{
 		// Test @attribute/access command creates an attribute entry with no_command flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
-		
+
 		// Verify the entry was created in the database
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
 		var entry = entries.FirstOrDefault(e => e.Name == "MYATTR");
-		
+
 		await Assert.That(entry).IsNotNull();
 		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
 	}
@@ -541,12 +541,12 @@ public class GeneralCommandTests
 	{
 		// Test @attribute/access validates flag names
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR=INVALIDFLAG"));
-		
+
 		// Verify that no entry was created with an invalid flag
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
 		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR");
-		
+
 		// Entry should not exist because the flag was invalid
 		await Assert.That(entry).IsNull();
 	}
@@ -563,7 +563,7 @@ public class GeneralCommandTests
 		var entry = entries.FirstOrDefault(e => e.Name == "TESTATTR2");
 		await Assert.That(entry).IsNotNull();
 		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
-		
+
 		// Use SetAttributeCommand directly to bypass & command test issues
 		var player = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(new DBRef(1)));
 		var success = await Mediator.Send(new Library.Commands.Database.SetAttributeCommand(
@@ -571,16 +571,16 @@ public class GeneralCommandTests
 			["TESTATTR2"],
 			MModule.single("test value"),
 			player.AsPlayer));
-		
+
 		await Assert.That(success).IsTrue();
 
 		// Verify the attribute was created with the no_command flag from the entry
 		var attrs = await Mediator.CreateStream(new Library.Queries.Database.GetAttributeQuery(new DBRef(1), ["TESTATTR2"]))
 			.ToArrayAsync();
-		
+
 		var attr = attrs.LastOrDefault();
 		await Assert.That(attr).IsNotNull();
-		
+
 		// Verify the attribute has the no_command flag from the entry
 		// This confirms that ArangoDatabase.cs:1832-1849 correctly applies flags from entries
 		await Assert.That(attr!.Flags.Any(f => f.Name.Equals("no_command", StringComparison.OrdinalIgnoreCase))).IsTrue();
@@ -594,10 +594,10 @@ public class GeneralCommandTests
 		// Before the fix, Notify(DBRef) would bypass batching and send messages immediately.
 		// After the fix, messages should be accumulated and sent as a batch.
 		// We use the same pattern as DoListSimple - a simple message without iteration markers.
-		
+
 		// Clear previous mock calls to avoid interference from other tests
 		NotifyService.ClearReceivedCalls();
-		
+
 		// Use @pemit which uses Notify(AnySharpObject) -> Notify(DBRef)
 		// This should call Notify three times with the same message
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Batched test message"));
@@ -617,9 +617,9 @@ public class GeneralCommandTests
 		// This test validates that context-based batching batches notifications to ANY target,
 		// not just the enactor. Before context-based batching, notifications to other players
 		// would not be batched.
-		
+
 		NotifyService.ClearReceivedCalls();
-		
+
 		// Send to player #2 (different from enactor #1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
 
@@ -636,9 +636,9 @@ public class GeneralCommandTests
 	{
 		// This test validates that nested @dolists properly use ref-counting for batching context.
 		// Messages from both outer and inner loops should be batched together.
-		
+
 		NotifyService.ClearReceivedCalls();
-		
+
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
 
@@ -654,9 +654,9 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
 		// Negative test: Without @break, all loop iterations should send messages
-		
+
 		NotifyService.ClearReceivedCalls();
-		
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Message"));
 
 		// Should receive exactly 3 messages (one per iteration)
@@ -672,9 +672,9 @@ public class GeneralCommandTests
 	{
 		// Positive test: @break should stop the loop after first iteration
 		// Use @break as a conditional command to stop after first iteration
-		
+
 		NotifyService.ClearReceivedCalls();
-		
+
 		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message ##;@break}"));
 
@@ -693,9 +693,9 @@ public class GeneralCommandTests
 		// This test validates that @break properly flushes batched messages.
 		// Even with @break in the command list, the using statement should
 		// ensure messages are flushed via disposal.
-		
+
 		NotifyService.ClearReceivedCalls();
-		
+
 		// Loop with @break - both @pemit and @break execute in each iteration
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
 
@@ -715,9 +715,9 @@ public class GeneralCommandTests
 		// the ref-counted batching context and still flushes messages.
 		// Note: With the command structure {@pemit; @break}, both commands execute
 		// in each iteration, so @break happens after the @pemit.
-		
+
 		NotifyService.ClearReceivedCalls();
-		
+
 		// Outer loop runs twice, inner loop has 3 items
 		// With {@pemit; @break}, the @pemit runs in each inner iteration
 		// Expected: 2 outer iterations * 3 inner iterations = 6 messages

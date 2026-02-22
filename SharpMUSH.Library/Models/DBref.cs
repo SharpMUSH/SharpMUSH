@@ -22,7 +22,7 @@ public readonly struct DBRef : IEquatable<DBRef>
 		=> HashCode.Combine(Number, CreationMilliseconds);
 
 	public override string ToString()
-		=> CreationMilliseconds is null 
+		=> CreationMilliseconds is null
 			? $"#{Number}"
 			: $"#{Number}:{CreationMilliseconds}";
 
@@ -37,7 +37,7 @@ public readonly struct DBRef : IEquatable<DBRef>
 		dbref = parsed.IsSome() ? parsed.AsValue() : default;
 		return parsed.IsSome();
 	}
-	
-	public static DBRef Parse(string value) 
+
+	public static DBRef Parse(string value)
 		=> HelperFunctions.ParseDbRef(value).AsValue();
 }

@@ -1,14 +1,13 @@
 using DotNext.Collections.Generic;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
-using System.Data.Common;
-using SharpMUSH.Implementation.Common;
-using SharpMUSH.Library;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Data.Common;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -126,7 +125,7 @@ public partial class Commands
 		var colnamesSwitch = switches.Contains("COLNAMES");
 		var spoofSwitch = switches.Contains("SPOOF");
 		var prepareSwitch = switches.Contains("PREPARE");
-		
+
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
 		{
@@ -136,8 +135,8 @@ public partial class Commands
 
 		// Parse arguments: obj/attr=query
 		if (parser.CurrentState.Arguments.Count < 2 ||
-		    !parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg) ||
-		    !parser.CurrentState.Arguments.TryGetValue("1", out var queryArg))
+				!parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg) ||
+				!parser.CurrentState.Arguments.TryGetValue("1", out var queryArg))
 		{
 			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
 			return new CallState("#-1 INVALID ARGUMENTS");
@@ -174,7 +173,7 @@ public partial class Commands
 				}
 
 				var attribute = maybeAttribute.AsAttribute.Last();
-				
+
 				try
 				{
 					var columnNames = new List<string>();
@@ -235,12 +234,12 @@ public partial class Commands
 								() =>
 								{
 									var remainder = columnNames
-										.Select((x, i) 
+										.Select((x, i)
 												=> new KeyValuePair<string, CallState>((i + 1).ToString(), MModule.single(x)))
 										.ToDictionary();
-									
+
 									remainder.TryAdd("0", MModule.single("0"));
-										
+
 									var newState = parser.CurrentState with
 									{
 										Arguments = remainder,
@@ -248,7 +247,7 @@ public partial class Commands
 									};
 									return ValueTask.FromResult(newState);
 								},
-								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")) ));
+								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
 
 							firstRow = false;
 						}
@@ -258,7 +257,7 @@ public partial class Commands
 							() =>
 							{
 								var values = row.Values.ToList();
-								
+
 								parser.CurrentState.AddRegister("0", MModule.single(currentRow.ToString()));
 
 								var dict = values.Select((x, i) =>
@@ -293,8 +292,8 @@ public partial class Commands
 					// The attribute will execute with the permissions of the enactor rather than executor
 
 					// Return success - rows have been queued for execution
-					var message = rowNumber == 1 
-						? "No rows returned." 
+					var message = rowNumber == 1
+						? "No rows returned."
 						: $"{rowNumber - 1} row{(rowNumber > 2 ? "s" : "")} queued for execution.";
 					await NotifyService!.Notify(executor, message);
 					return new CallState(MModule.single(message));

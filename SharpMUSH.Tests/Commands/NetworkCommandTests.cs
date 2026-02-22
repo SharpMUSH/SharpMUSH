@@ -57,7 +57,7 @@ public class NetworkCommandTests
 		// Verify the command executed and sent output to the user
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 

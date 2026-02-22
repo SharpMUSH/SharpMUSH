@@ -1,12 +1,11 @@
-using System.Collections.Concurrent;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
 
 namespace SharpMUSH.Library.Services;
 
@@ -27,13 +26,13 @@ public class HookService : IHookService
 	{
 		var upperCommand = commandName.ToUpper();
 		var upperHookType = hookType.ToUpper();
-		
+
 		if (_hooks.TryGetValue(upperCommand, out var commandHooks) &&
-		    commandHooks.TryGetValue(upperHookType, out var hook))
+				commandHooks.TryGetValue(upperHookType, out var hook))
 		{
 			return ValueTask.FromResult<Option<CommandHook>>(hook);
 		}
-		
+
 		return ValueTask.FromResult<Option<CommandHook>>(new OneOf.Types.None());
 	}
 
@@ -42,9 +41,9 @@ public class HookService : IHookService
 	{
 		var upperCommand = commandName.ToUpper();
 		var upperHookType = hookType.ToUpper();
-		
+
 		var hook = new CommandHook(upperHookType, targetObject, attributeName, inline, nobreak, localize, clearregs);
-		
+
 		_hooks.AddOrUpdate(
 			upperCommand,
 			_ => new Dictionary<string, CommandHook> { [upperHookType] = hook },
@@ -53,7 +52,7 @@ public class HookService : IHookService
 				existingHooks[upperHookType] = hook;
 				return existingHooks;
 			});
-		
+
 		return ValueTask.FromResult(true);
 	}
 
@@ -61,24 +60,24 @@ public class HookService : IHookService
 	{
 		var upperCommand = commandName.ToUpper();
 		var upperHookType = hookType.ToUpper();
-		
+
 		if (_hooks.TryGetValue(upperCommand, out var commandHooks))
 		{
 			return ValueTask.FromResult(commandHooks.Remove(upperHookType));
 		}
-		
+
 		return ValueTask.FromResult(false);
 	}
 
 	public ValueTask<Dictionary<string, CommandHook>> GetAllHooksAsync(string commandName)
 	{
 		var upperCommand = commandName.ToUpper();
-		
+
 		if (_hooks.TryGetValue(upperCommand, out var commandHooks))
 		{
 			return ValueTask.FromResult(new Dictionary<string, CommandHook>(commandHooks));
 		}
-		
+
 		return ValueTask.FromResult(new Dictionary<string, CommandHook>());
 	}
 
@@ -87,35 +86,35 @@ public class HookService : IHookService
 		// Get required services
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
 		var attributeService = parser.ServiceProvider.GetRequiredService<IAttributeService>();
-		
+
 		// Get the target object
 		var targetQuery = new GetObjectNodeQuery(hook.TargetObject);
 		var targetResult = await mediator.Send(targetQuery);
-		
+
 		if (targetResult.IsNone)
 		{
 			return CallState.Empty;
 		}
-		
+
 		var targetObject = targetResult.Known;
-		
+
 		// Get the attribute from the target object
 		var attrResult = await attributeService.GetAttributeAsync(
 			targetObject,
 			targetObject,
 			hook.AttributeName,
 			IAttributeService.AttributeMode.Execute);
-		
+
 		if (attrResult.IsError || attrResult.IsNone)
 		{
 			return CallState.Empty;
 		}
-		
+
 		// For now, return empty - full implementation would require parser.With and
 		// proper state management which are available in implementation-level parsers
 		// This provides the infrastructure for hook execution to be completed later
 		await ValueTask.CompletedTask;
-		
+
 		return CallState.Empty;
 	}
 }

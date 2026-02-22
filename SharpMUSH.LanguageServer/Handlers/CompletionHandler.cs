@@ -39,7 +39,7 @@ public class CompletionHandler : CompletionHandlerBase
 			var lines = document.Text.Split('\n');
 			var line = request.Position.Line < lines.Length ? lines[request.Position.Line] : string.Empty;
 			var character = (int)request.Position.Character;
-			
+
 			// Get the word being typed
 			var wordStart = character;
 			while (wordStart > 0 && IsWordCharacter(line[wordStart - 1]))
@@ -89,9 +89,9 @@ public class CompletionHandler : CompletionHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error generating completions: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		return Task.FromResult(new CompletionList(completions, isIncomplete: false));
@@ -114,8 +114,8 @@ public class CompletionHandler : CompletionHandlerBase
 			return "";
 		if (minArgs == maxArgs)
 			return string.Join(", ", Enumerable.Range(1, minArgs).Select(i => $"arg{i}"));
-		return string.Join(", ", Enumerable.Range(1, minArgs).Select(i => $"arg{i}")) + 
-		       (maxArgs > minArgs ? ", ..." : "");
+		return string.Join(", ", Enumerable.Range(1, minArgs).Select(i => $"arg{i}")) +
+					 (maxArgs > minArgs ? ", ..." : "");
 	}
 
 	private static void AddCommonPatterns(List<CompletionItem> completions, string prefix)
@@ -148,7 +148,7 @@ public class CompletionHandler : CompletionHandlerBase
 	}
 
 	protected override CompletionRegistrationOptions CreateRegistrationOptions(
-		CompletionCapability capability, 
+		CompletionCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new CompletionRegistrationOptions

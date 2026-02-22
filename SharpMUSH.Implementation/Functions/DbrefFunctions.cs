@@ -51,7 +51,7 @@ public partial class Functions
 			async exit =>
 			{
 				var linkTypeAttr = await AttributeService!.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
-				
+
 				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
 				{
 					var linkTypeText = linkTypeAttr.AsT0[0].Value.ToPlainText();
@@ -67,7 +67,7 @@ public partial class Functions
 						}
 					}
 				}
-				
+
 				try
 				{
 					var destination = await exit.Location.WithCancellation(CancellationToken.None);
@@ -333,12 +333,12 @@ public partial class Functions
 				// Query all objects that have FOLLOWING attribute set to this object's dbref
 				var targetDbref = found.Object().DBRef.ToString();
 				var followers = new List<string>();
-				
+
 				// Use filtered query to get all objects more efficiently
 				// Note: We can't filter by attribute value in the database easily, 
 				// so we still need to check attributes in application code
 				var allObjects = Mediator!.CreateStream(new GetAllObjectsQuery());
-				
+
 				await foreach (var obj in allObjects)
 				{
 					// Get the FOLLOWING attribute for this object
@@ -352,7 +352,7 @@ public partial class Functions
 						}
 					}
 				}
-				
+
 				return new CallState(string.Join(" ", followers));
 			});
 	}
@@ -372,13 +372,13 @@ public partial class Functions
 				// Get the FOLLOWING attribute from the target object
 				var followingAttr = await AttributeService!.GetAttributeAsync(
 					executor, found, "FOLLOWING", IAttributeService.AttributeMode.Read, false);
-				
+
 				if (followingAttr.IsAttribute)
 				{
 					// Return the dbref stored in the FOLLOWING attribute
 					return new CallState(followingAttr.AsAttribute.Last().Value.ToPlainText());
 				}
-				
+
 				return new CallState(string.Empty);
 			});
 	}
@@ -427,14 +427,14 @@ public partial class Functions
 		// Format: llockflags([<lock type>])
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.Arguments;
-		
+
 		if (args.Count == 0)
 		{
 			// Return all available lock flags
 			var flags = LockService!.LockPrivileges.Keys;
 			return new CallState(string.Join(" ", flags));
 		}
-		
+
 		// With argument, return flags for a specific lock type
 		var lockType = args["0"].Message!.ToPlainText();
 		if (LockService!.SystemLocks.TryGetValue(lockType, out var lockFlags))
@@ -453,10 +453,10 @@ public partial class Functions
 				flagList.Add("owner");
 			if (lockFlags.HasFlag(Library.Services.LockService.LockFlags.Locked))
 				flagList.Add("locked");
-			
+
 			return new CallState(string.Join(" ", flagList));
 		}
-		
+
 		return new CallState(string.Empty);
 	}
 
@@ -467,22 +467,22 @@ public partial class Functions
 		// lockflags() returns lock flags for a specific lock on an object
 		// Format: lockflags([<object>[/<locktype>]])
 		var args = parser.CurrentState.Arguments;
-		
+
 		if (args.Count == 0)
 		{
 			// Return all available lock flag letters
 			// In PennMUSH: v=visual, n=no_inherit, c=no_clone, w=wizard, o=owner, l=locked
 			return new CallState("vncwol");
 		}
-		
+
 		// Parse object/locktype
 		var argStr = args["0"].Message!.ToPlainText();
 		var parts = argStr.Split('/', 2);
 		var objectRef = parts[0];
 		var lockType = parts.Length > 1 ? parts[1] : "Basic";
-		
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objectRef, LocateFlags.All,
 			found =>
@@ -492,7 +492,7 @@ public partial class Functions
 				{
 					return ValueTask.FromResult(new CallState(string.Empty));
 				}
-				
+
 				// Convert flags to string
 				var flagChars = new List<char>();
 				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Visual))
@@ -507,7 +507,7 @@ public partial class Functions
 					flagChars.Add('o');
 				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Locked))
 					flagChars.Add('l');
-				
+
 				return ValueTask.FromResult(new CallState(new string(flagChars.ToArray())));
 			});
 	}
@@ -544,7 +544,7 @@ public partial class Functions
 		// Format: llocks([<object>])
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
-		
+
 		AnySharpObject target = executor;
 		if (args.TryGetValue("0", out var objArg))
 		{
@@ -569,7 +569,7 @@ public partial class Functions
 		// Format: locks(<object>)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		
+
 		var maybeTarget = await LocateService!.Locate(parser, executor, executor, objStr, LocateFlags.All);
 		if (!maybeTarget.IsValid())
 		{
@@ -585,10 +585,10 @@ public partial class Functions
 	[SharpFunction(Name = "localize", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.NoParse, ParameterNames = ["string"])]
 	public static async ValueTask<CallState> Localize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await parser
-			   .With(
-				   x => x with { Registers = [] },
-				   newParser => newParser.FunctionParse(parser.CurrentState.Arguments["0"].Message!))
-		   ?? CallState.Empty;
+				 .With(
+					 x => x with { Registers = [] },
+					 newParser => newParser.FunctionParse(parser.CurrentState.Arguments["0"].Message!))
+			 ?? CallState.Empty;
 
 	[SharpFunction(Name = "locate", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "name", "type"])]
 	public static async ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -769,8 +769,8 @@ LOCATE()
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var args = parser.CurrentState.Arguments;
-		var lockName = args.TryGetValue("1", out var lockArg) 
-			? lockArg.Message!.ToPlainText() 
+		var lockName = args.TryGetValue("1", out var lockArg)
+			? lockArg.Message!.ToPlainText()
 			: "Basic";
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -794,7 +794,7 @@ LOCATE()
 		// Format: lockfilter(<object list>, <lock name>[, <lock eval>])
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
-		
+
 		var objListStr = args["0"].Message!.ToPlainText();
 		var lockName = args["1"].Message!.ToPlainText();
 		var shouldPass = args.TryGetValue("2", out var evalArg)
@@ -827,7 +827,7 @@ LOCATE()
 
 			// Evaluate the lock
 			var passes = LockService!.Evaluate(lockData.LockString, found, executor);
-			
+
 			if (passes == shouldPass)
 			{
 				results.Add(found.Object().DBRef.ToString());
@@ -941,7 +941,7 @@ LOCATE()
 
 		// Process criteria as positional class/restriction pairs
 		var appLevelCriteria = new List<(string key, string value)>();
-		
+
 		// Arguments come in pairs: class, restriction, class, restriction, ...
 		for (int i = 1; i < args.Count; i += 2)
 		{
@@ -1034,7 +1034,7 @@ LOCATE()
 		// This avoids re-compiling the same lock string or expression for every object in the result set
 		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, bool>>();
 		var compiledEvals = new List<(string evalExpression, string? typeFilter)>();
-		
+
 		foreach (var (key, value) in appLevelCriteria)
 		{
 			switch (key)
@@ -1050,7 +1050,7 @@ LOCATE()
 						compiledLocks.Add(BooleanExpressionParser!.Compile(value));
 					}
 					break;
-				
+
 				case "EVAL":
 					compiledEvals.Add((value, null));
 					break;
@@ -1066,7 +1066,7 @@ LOCATE()
 				case "ETHING" or "EOBJECT":
 					compiledEvals.Add((value, "THING"));
 					break;
-				
+
 				case "LISTEN":
 				case "COMMAND":
 					// These require attribute pattern matching - store for app-level evaluation
@@ -1074,16 +1074,16 @@ LOCATE()
 					break;
 			}
 		}
-		
+
 		// Extract LISTEN and COMMAND criteria for app-level evaluation
 		var listenPattern = appLevelCriteria.FirstOrDefault(x => x.key == "LISTEN").value;
 		var commandPattern = appLevelCriteria.FirstOrDefault(x => x.key == "COMMAND").value;
 		var hasListenCriteria = !string.IsNullOrEmpty(listenPattern);
 		var hasCommandCriteria = !string.IsNullOrEmpty(commandPattern);
-		
+
 		// Check if we need to convert SharpObject to AnySharpObject for app-level criteria
 		var hasAppLevelCriteria = compiledLocks.Count > 0 || compiledEvals.Count > 0 || hasListenCriteria || hasCommandCriteria;
-		
+
 		// Build filter object
 		// IMPORTANT: Only apply START/COUNT at database level if there are NO app-level criteria
 		// If there are app-level criteria, we must apply START/COUNT after filtering in application code
@@ -1105,7 +1105,7 @@ LOCATE()
 
 		// Query database with filters applied at database level
 		var filteredObjects = Mediator!.CreateStream(new GetFilteredObjectsQuery(filter));
-		
+
 		if (!hasAppLevelCriteria)
 		{
 			// No app-level criteria, just convert to dbrefs directly without fetching full objects
@@ -1126,7 +1126,7 @@ LOCATE()
 			// Convert the raw SharpObject to a properly-typed AnySharpObject once for all evaluations
 			var typedObj = await CreateAnySharpObjectFromSharpObject(obj);
 			bool matches = true;
-			
+
 			// Evaluate pre-compiled lock criteria
 			foreach (var compiledLock in compiledLocks)
 			{
@@ -1136,7 +1136,7 @@ LOCATE()
 					break;
 				}
 			}
-			
+
 			// Evaluate eval expressions if locks passed
 			if (matches)
 			{
@@ -1148,12 +1148,12 @@ LOCATE()
 						matches = false;
 						break;
 					}
-					
+
 					// Replace ## with the object's dbref number in the expression
 					// Use just the number (e.g., "1") for numeric comparisons
 					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
 					var expression = evalExpression.Replace("##", objectDbRefNum);
-					
+
 					// Evaluate the expression
 					var evalResult = await parser.FunctionParse(MModule.single(expression));
 					if (evalResult == null || !evalResult.Message.Truthy())
@@ -1163,7 +1163,7 @@ LOCATE()
 					}
 				}
 			}
-			
+
 			// Evaluate LISTEN pattern if specified
 			if (matches && hasListenCriteria)
 			{
@@ -1172,9 +1172,9 @@ LOCATE()
 				if (!attributesResult.IsError)
 				{
 					var hasMatchingListen = false;
-					
-					foreach (var attr in attributesResult.AsAttributes.Where(a => a.Name.Equals("LISTEN", StringComparison.OrdinalIgnoreCase) || 
-					                                           a.Name.StartsWith("LISTEN`", StringComparison.OrdinalIgnoreCase)))
+
+					foreach (var attr in attributesResult.AsAttributes.Where(a => a.Name.Equals("LISTEN", StringComparison.OrdinalIgnoreCase) ||
+																										 a.Name.StartsWith("LISTEN`", StringComparison.OrdinalIgnoreCase)))
 					{
 						var attrValue = attr.Value?.ToPlainText() ?? "";
 						// Check if the listen pattern matches our search pattern
@@ -1185,7 +1185,7 @@ LOCATE()
 							break;
 						}
 					}
-					
+
 					if (!hasMatchingListen)
 					{
 						matches = false;
@@ -1197,7 +1197,7 @@ LOCATE()
 					matches = false;
 				}
 			}
-			
+
 			// Evaluate COMMAND pattern if specified
 			if (matches && hasCommandCriteria)
 			{
@@ -1206,7 +1206,7 @@ LOCATE()
 				if (!attributesResult.IsError)
 				{
 					var hasMatchingCommand = false;
-					
+
 					foreach (var attr in attributesResult.AsAttributes)
 					{
 						var attrValue = attr.Value?.ToPlainText() ?? "";
@@ -1228,7 +1228,7 @@ LOCATE()
 							}
 						}
 					}
-					
+
 					if (!hasMatchingCommand)
 					{
 						matches = false;
@@ -1246,7 +1246,7 @@ LOCATE()
 				finalResults.Add(typedObj.Object().DBRef.ToString());
 			}
 		}
-		
+
 		// Apply START/COUNT at application level if we had app-level filtering
 		// This ensures pagination happens AFTER all runtime filters are applied
 		if (start.HasValue || count.HasValue)
@@ -1258,7 +1258,7 @@ LOCATE()
 
 		return new CallState(string.Join(" ", finalResults));
 	}
-	
+
 	/// <summary>
 	/// Simple wildcard pattern matching for LISTEN and COMMAND searches.
 	/// Supports * as a wildcard that matches any sequence of characters.
@@ -1267,7 +1267,7 @@ LOCATE()
 	{
 		// Convert pattern to regex: escape special chars except *, then replace * with .*
 		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
-		return System.Text.RegularExpressions.Regex.IsMatch(value, regexPattern, 
+		return System.Text.RegularExpressions.Regex.IsMatch(value, regexPattern,
 			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
 
@@ -1281,7 +1281,7 @@ LOCATE()
 		// We use the Mediator to fetch the fully-typed object asynchronously
 		var dbref = new DBRef(obj.Key, obj.CreationTime);
 		var result = await Mediator!.Send(new GetObjectNodeQuery(dbref));
-		
+
 		if (result.IsNone)
 		{
 			// This shouldn't happen in normal operation, but handle it gracefully
@@ -1296,10 +1296,10 @@ LOCATE()
 	{
 		// lsearchr() is like lsearch but with regex support for name patterns
 		// We'll modify the behavior by passing a flag through the search
-		
+
 		// Temporarily store the original arguments
 		var originalArgs = parser.CurrentState.Arguments;
-		
+
 		// Call the shared search implementation with regex enabled
 		return await ListSearchInternal(parser, _2, useRegex: true);
 	}
@@ -1309,25 +1309,25 @@ LOCATE()
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var namelist = ArgHelpers.NameList(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
-		var hasErrorCallback = parser.CurrentState.Arguments.Count > 1 
+		var hasErrorCallback = parser.CurrentState.Arguments.Count > 1
 			&& !string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["1"].Message?.ToPlainText());
-		
+
 		// Parse optional object/attribute parameter for error callback
 		AnySharpObject? callbackObject = null;
 		string[]? callbackAttribute = null;
-		
+
 		if (hasErrorCallback)
 		{
 			var callbackSpec = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 			var slashIndex = callbackSpec.LastIndexOf('/');
-			
+
 			if (slashIndex > 0)
 			{
 				// Format: object/attribute - Use Span to avoid substring allocations
 				var specSpan = callbackSpec.AsSpan();
 				var objPart = specSpan.Slice(0, slashIndex).ToString();
 				var attrPart = specSpan.Slice(slashIndex + 1).ToString();
-				
+
 				var objResult = await LocateService!.Locate(parser, executor, executor, objPart, LocateFlags.All);
 				if (objResult.IsValid())
 				{
@@ -1342,22 +1342,22 @@ LOCATE()
 				callbackAttribute = callbackSpec.Split('`');
 			}
 		}
-		
+
 		var resultList = new List<string>();
-		
+
 		// Process each name in the list
 		foreach (var item in namelist)
 		{
 			DBRef? resolvedDbref = null;
 			int errorCode = 0; // 0 = success, -1 = not found, -2 = ambiguous
 			string originalName = string.Empty;
-			
+
 			if (item.IsT0)
 			{
 				// Already a dbref - validate it exists
 				var dbref = item.AsT0;
 				var exists = await Mediator!.Send(new GetBaseObjectNodeQuery(dbref));
-				
+
 				if (exists != null)
 				{
 					resolvedDbref = dbref;
@@ -1373,9 +1373,9 @@ LOCATE()
 				// String name - need to locate
 				var name = item.AsT1;
 				originalName = name;
-				
+
 				var locateResult = await LocateService!.Locate(parser, executor, executor, name, LocateFlags.All);
-				
+
 				if (locateResult.IsValid())
 				{
 					// Found valid object
@@ -1391,7 +1391,7 @@ LOCATE()
 					// Error occurred - check if ambiguous or not found
 					var error = locateResult.AsT5;
 					if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
-					    error.Value.Contains("#-2"))
+							error.Value.Contains("#-2"))
 					{
 						errorCode = -2;
 					}
@@ -1406,7 +1406,7 @@ LOCATE()
 					errorCode = -1;
 				}
 			}
-			
+
 			if (resolvedDbref.HasValue)
 			{
 				// Successfully resolved - add the dbref
@@ -1416,31 +1416,31 @@ LOCATE()
 			{
 				// Failed to resolve - add error code
 				resultList.Add($"#{errorCode}");
-				
+
 				// Call error callback if provided
 				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
 				{
 					var attrResult = await AttributeService!.GetAttributeAsync(
 						executor, callbackObject, string.Join("`", callbackAttribute),
 						IAttributeService.AttributeMode.Read, true);
-					
+
 					if (!attrResult.IsNone && !attrResult.IsError)
 					{
 						var attribute = attrResult.AsAttribute.Last();
 						var attrValue = attribute.Value;
-						
+
 						// Replace %0 with the original name and %1 with the error code
 						var substitutedCommand = attrValue.ToString()
 							.Replace("%0", originalName)
 							.Replace("%1", $"#{errorCode}");
-						
+
 						// Parse and execute the command
 						await parser.CommandParse(MModule.single(substitutedCommand));
 					}
 				}
 			}
 		}
-		
+
 		return string.Join(" ", resultList);
 	}
 
@@ -1536,16 +1536,16 @@ LOCATE()
 		// nlsearch() returns the count of objects matching lsearch criteria
 		var result = await ListSearch(parser, _2);
 		var resultStr = result.Message?.ToPlainText() ?? "";
-		
+
 		if (resultStr.StartsWith("#-1"))
 		{
 			return result;
 		}
 
-		var count = string.IsNullOrWhiteSpace(resultStr) 
-			? 0 
+		var count = string.IsNullOrWhiteSpace(resultStr)
+			? 0
 			: resultStr.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-		
+
 		return new CallState(count);
 	}
 
@@ -1626,8 +1626,8 @@ LOCATE()
 							async newParent =>
 							{
 								if (!await PermissionService.Controls(executor, newParent)
-								    || (!await target.HasFlag("LINK_OK")
-								        && !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
+										|| (!await target.HasFlag("LINK_OK")
+												&& !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
 								{
 									return Errors.ErrorPerm;
 								}
@@ -1768,7 +1768,7 @@ LOCATE()
 
 					// Handle zone setting like @chzone
 					var arg1Str = arg1Value!.Message!.ToPlainText();
-					
+
 					// Check if removing zone (setting to "none")
 					if (arg1Str.Equals("none", StringComparison.OrdinalIgnoreCase))
 					{
@@ -1777,38 +1777,38 @@ LOCATE()
 						{
 							return Errors.ErrorPerm;
 						}
-						
+
 						await Mediator!.Send(new UnsetObjectZoneCommand(target));
 						return string.Empty;
 					}
-					
+
 					// Locate the zone object
 					var maybeZone = await LocateService!.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
 					if (!maybeZone.IsValid())
 					{
 						return "#-1 INVALID ZONE";
 					}
-					
+
 					var zone = maybeZone.AsAnyObject;
-					
+
 					// Check permissions - must control both object and zone, or pass ChZone lock
 					if (!await PermissionService!.Controls(executor, target))
 					{
 						return Errors.ErrorPerm;
 					}
-					
+
 					bool canZone = await PermissionService.Controls(executor, zone);
 					if (!canZone && !LockService!.Evaluate(LockType.ChZone, zone, executor))
 					{
 						return Errors.ErrorPerm;
 					}
-					
+
 					// Check for cycles before setting the zone
 					if (!await HelperFunctions.SafeToAddZone(Mediator!, Database!, target, zone))
 					{
 						return Errors.ZoneLoop;
 					}
-					
+
 					// Handle flag/power stripping (simplified - no /preserve in function)
 					if (!target.IsPlayer)
 					{
@@ -1826,7 +1826,7 @@ LOCATE()
 							await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, target, "!TRUST", false);
 						}
 					}
-					
+
 					await Mediator!.Send(new SetObjectZoneCommand(target, zone));
 					return string.Empty;
 				}
@@ -1834,8 +1834,8 @@ LOCATE()
 				// Get zone of the target object - query fresh from database
 				var freshTarget = await Mediator!.Send(new GetObjectNodeQuery(target.Object().DBRef));
 				var zoneObj = await freshTarget.Known.Object().Zone.WithCancellation(CancellationToken.None);
-				return zoneObj.IsNone 
-					? "#-1" 
+				return zoneObj.IsNone
+					? "#-1"
 					: zoneObj.Known.Object().DBRef.ToString();
 			});
 	}
@@ -2119,7 +2119,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				var players = await  locate.AsContainer.Content(Mediator!)
+				var players = await locate.AsContainer.Content(Mediator!)
 					.Where(x => x.IsPlayer)
 					.Skip(start - 1)
 					.Take(count)
@@ -2147,7 +2147,7 @@ LOCATE()
 					return Errors.ExitsCannotContainThings;
 				}
 
-				return string.Join(" ",  locate.AsContainer.Content(Mediator!)
+				return string.Join(" ", locate.AsContainer.Content(Mediator!)
 					.Select(x => x.Object().DBRef.ToString()));
 			});
 	}

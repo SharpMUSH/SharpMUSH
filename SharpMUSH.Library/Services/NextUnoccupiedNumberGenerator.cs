@@ -21,7 +21,7 @@ public class NextUnoccupiedNumberGenerator(long initial)
 		}
 		else
 		{
-			_unoccupiedNumbers.Add(number);			
+			_unoccupiedNumbers.Add(number);
 		}
 	}
 

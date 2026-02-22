@@ -82,7 +82,7 @@ public class ReferencesHandler : ReferencesHandlerBase
 					{
 						// Include the reference if requested, or exclude the definition
 						var isDefinition = IsDefinitionLine(currentLine, word, index);
-						
+
 						if (request.Context.IncludeDeclaration || !isDefinition)
 						{
 							locations.Add(new Location
@@ -106,9 +106,9 @@ public class ReferencesHandler : ReferencesHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error finding references: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		return Task.FromResult<LocationContainer?>(null);
@@ -134,7 +134,7 @@ public class ReferencesHandler : ReferencesHandlerBase
 	}
 
 	protected override ReferenceRegistrationOptions CreateRegistrationOptions(
-		ReferenceCapability capability, 
+		ReferenceCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new ReferenceRegistrationOptions

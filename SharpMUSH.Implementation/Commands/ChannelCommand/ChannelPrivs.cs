@@ -37,9 +37,9 @@ public static class ChannelPrivs
 			await NotifyService.Notify(executor,
 				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError.Value)}");
 		}
-		
+
 		await Mediator.Send(new UpdateChannelCommand(channel,
-			null, 
+			null,
 			null,
 			Privs: privilegeList.AsPrivileges,
 			null,
@@ -47,7 +47,7 @@ public static class ChannelPrivs
 			null,
 			null,
 			null,
-			null, 
+			null,
 			null));
 
 		return new CallState("CHAT: Channel privileges have been updated.");

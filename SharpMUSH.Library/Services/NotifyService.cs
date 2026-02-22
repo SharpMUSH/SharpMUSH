@@ -1,6 +1,4 @@
-﻿using System.Text;
-using MarkupString;
-using SharpMUSH.Messaging.Abstractions;
+﻿using MarkupString;
 using Mediator;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -9,6 +7,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Abstractions;
+using System.Text;
 
 namespace SharpMUSH.Library.Services;
 
@@ -17,7 +17,7 @@ namespace SharpMUSH.Library.Services;
 /// KafkaFlow handles batching automatically via producer LingerMs configuration.
 /// </summary>
 public class NotifyService(
-	IMessageBus publishEndpoint, 
+	IMessageBus publishEndpoint,
 	IConnectionService connections,
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null) : INotifyService
@@ -30,7 +30,7 @@ public class NotifyService(
 		// Replace all standalone \n with \r\n (but don't double-up existing \r\n)
 		text = text.Replace("\r\n", "\n"); // First normalize everything to \n
 		text = text.Replace("\n", "\r\n");  // Then convert all to \r\n
-		
+
 		// Ensure it ends with exactly one \r\n
 		text = text.TrimEnd('\r', '\n');
 		return text + "\r\n";
@@ -58,14 +58,14 @@ public class NotifyService(
 					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
 					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
 				);
-				
+
 				var notificationContext = new NotificationContext(
 					Target: who,
 					Location: location,
 					IsRoomBroadcast: false,
 					ExcludedObjects: []
 				);
-				
+
 				// Fire and forget - don't await to avoid blocking notification
 				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}
@@ -208,7 +208,7 @@ public class NotifyService(
 
 		// Get all handles for the target location/object
 		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
-		
+
 		// Get all handles to exclude
 		var excludeHandles = new HashSet<long>();
 		foreach (var exceptDbRef in except)
@@ -218,10 +218,10 @@ public class NotifyService(
 				excludeHandles.Add(conn.Handle);
 			}
 		}
-		
+
 		// Filter out excluded handles and notify the rest
 		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
-		
+
 		if (notifyHandles.Length > 0)
 		{
 			await Notify(notifyHandles, what, sender, type);
@@ -254,7 +254,7 @@ public class NotifyService(
 		{
 			await Notify(target, notifyMessage, sender: null);
 		}
-		
+
 		return new CallState(errorReturn);
 	}
 }

@@ -74,18 +74,18 @@ public class InlayHintHandler : InlayHintsHandlerBase
 			if (_parser.FunctionLibrary.TryGetValue(functionName.ToUpperInvariant(), out var functionDef))
 			{
 				var attr = functionDef.LibraryInformation.Attribute;
-				
+
 				// Process arguments character by character to get accurate positions
 				var argPositions = FindArgumentPositions(argsText);
-				
+
 				// Add hints for each argument
 				for (int i = 0; i < argPositions.Count && i < attr.MaxArgs; i++)
 				{
 					var argPos = argPositions[i];
-					
+
 					// Create parameter name hint
 					var paramName = GetParameterName(functionName, i, attr);
-					
+
 					// Add hint at the start of this argument (absolute position in line)
 					hints.Add(new InlayHint
 					{
@@ -156,7 +156,7 @@ public class InlayHintHandler : InlayHintsHandlerBase
 		{
 			return ExpandParameterName(attr.ParameterNames, index);
 		}
-		
+
 		// Fallback to generic parameter name
 		return $"arg{index + 1}";
 	}
@@ -171,7 +171,7 @@ public class InlayHintHandler : InlayHintsHandlerBase
 	{
 		// Find which parameter pattern applies to this index
 		int currentIndex = 0;
-		
+
 		foreach (var paramName in parameterNames)
 		{
 			if (paramName.Contains("..."))
@@ -182,11 +182,11 @@ public class InlayHintHandler : InlayHintsHandlerBase
 					// Paired repeating pattern like "case...|result..."
 					var parts = paramName.Split('|');
 					var cleanParts = parts.Select(p => p.Replace("...", "").Trim()).ToArray();
-					
+
 					// Calculate which part of the pair this index represents
 					var pairIndex = (index - currentIndex) / cleanParts.Length;
 					var partIndex = (index - currentIndex) % cleanParts.Length;
-					
+
 					return $"{cleanParts[partIndex]}{pairIndex + 1}";
 				}
 				else
@@ -206,7 +206,7 @@ public class InlayHintHandler : InlayHintsHandlerBase
 				currentIndex++;
 			}
 		}
-		
+
 		// If we get here, we've gone past all defined parameters
 		return $"arg{index + 1}";
 	}

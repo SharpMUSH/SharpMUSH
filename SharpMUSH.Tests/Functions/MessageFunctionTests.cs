@@ -1,8 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using OneOf;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -22,9 +20,9 @@ public class MessageFunctionTests
 	public async Task MessageBasicReturnsEmpty()
 	{
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC_19283 #1=MessageFunc_Value_19283"));
-		
+
 		var result = (await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC_19283)")))?.Message!;
-		
+
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 	}
 
@@ -32,18 +30,18 @@ public class MessageFunctionTests
 	public async Task MessageBasicSendsNotification()
 	{
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC2_37291 #1=MessageFuncSends_Value_37291"));
-		
+
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC2_37291)"));
-		
+
 		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c => 
+		var messageCall = calls.FirstOrDefault(c =>
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
 			return TestHelpers.MessageContains(msg, "MessageFuncSends_Value_37291");
 		});
-		
+
 		await Assert.That(messageCall).IsNotNull();
 	}
 
@@ -51,18 +49,18 @@ public class MessageFunctionTests
 	public async Task MessageWithAttributeEvaluation()
 	{
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGEVAL_82044 #1=MessageEval_Result_82044:[mul(3,7)]"));
-		
+
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGEVAL_82044)"));
-		
+
 		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c => 
+		var messageCall = calls.FirstOrDefault(c =>
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
 			return TestHelpers.MessageContains(msg, "MessageEval_Result_82044:21");
 		});
-		
+
 		await Assert.That(messageCall).IsNotNull();
 	}
 
@@ -70,16 +68,16 @@ public class MessageFunctionTests
 	public async Task MessageUsesDefaultWhenAttributeMissing()
 	{
 		await Parser.FunctionParse(MModule.single("message(#1,MessageDefault_Value_91847,MISSING_ATTR_91847)"));
-		
+
 		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c => 
+		var messageCall = calls.FirstOrDefault(c =>
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
 			return TestHelpers.MessageContains(msg, "MessageDefault_Value_91847");
 		});
-		
+
 		await Assert.That(messageCall).IsNotNull();
 	}
 
@@ -87,18 +85,18 @@ public class MessageFunctionTests
 	public async Task MessageWithMultipleArguments()
 	{
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGARGS_63018 #1=MessageArgs_Value_63018"));
-		
+
 		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGARGS_63018)"));
-		
+
 		var calls = NotifyService.ReceivedCalls().ToList();
-		var messageCall = calls.FirstOrDefault(c => 
+		var messageCall = calls.FirstOrDefault(c =>
 		{
 			var args = c.GetArguments();
 			if (args.Length < 2) return false;
 			if (args[1] is not OneOf<MString, string> msg) return false;
 			return TestHelpers.MessageContains(msg, "MessageArgs_Value_63018");
 		});
-		
+
 		await Assert.That(messageCall).IsNotNull();
 	}
 

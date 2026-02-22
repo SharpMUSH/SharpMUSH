@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using System.Text;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Core.Arango;
@@ -21,9 +19,10 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server;
-using TUnit.Core.Interfaces;
+using System.Collections.Concurrent;
+using System.Text;
 using TUnit.AspNetCore;
+using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
 
@@ -34,13 +33,13 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
-	
+
 	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedPandaTestServer RedPandaTestServer { get; init; }
-	
+
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
-	
+
 	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedisTestServer RedisTestServer { get; init; }
 
@@ -100,7 +99,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				));
 		}
 	}
-	
+
 	public IMUSHCodeParser CommandParser
 	{
 		get
@@ -137,26 +136,26 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				));
 		}
 	}
-	
+
 	public virtual async Task InitializeAsync()
 	{
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.MinimumLevel.Verbose();
-		
+
 		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
-		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) && 
-		                       (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
-		
+		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
+													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
+
 		if (isConsoleEnabled)
 		{
 			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
 		}
-		
+
 		var log = logConfig.CreateLogger();
 		Log.Logger = log;
-		
+
 		var config = new ArangoConfiguration
 		{
 			ConnectionString = $"Server={ArangoDbTestServer.Instance.GetTransportAddress()};User=root;Realm=;Password=password;",
@@ -175,7 +174,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		await CreateKafkaTopicsAsync(kafkaHost);
 
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
-			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(), 
+			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
 			Substitute.For<INotifyService>(),
 			_customDatabaseName,
@@ -184,15 +183,15 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();
 		var databaseService = provider.GetRequiredService<ISharpDatabase>();
-		
+
 		// Migrate the database, which ensures we have a #1 object to bind to.
 		await databaseService.Migrate();
 
 		var realOne = await databaseService.GetObjectNodeAsync(new DBRef(1));
 		_one = realOne.Object()!.DBRef;
-		await connectionService.Register(1, "localhost", "locahost","test", _ => ValueTask.CompletedTask,  _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await connectionService.Register(1, "localhost", "locahost", "test", _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await connectionService.Bind(1, _one);
-		
+
 		var schedulerFactory = provider.GetRequiredService<ISchedulerFactory>();
 		var scheduler = await schedulerFactory.GetScheduler();
 		if (!scheduler.IsStarted)
@@ -205,15 +204,15 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	{
 		// Format can be: "//127.0.0.1:9092/", "kafka://127.0.0.1:9092", or "127.0.0.1:9092"
 		var cleanedAddress = bootstrapServers;
-		
+
 		if (cleanedAddress.Contains("://"))
 		{
 			cleanedAddress = cleanedAddress.Substring(cleanedAddress.IndexOf("://") + 3);
 		}
-		
+
 		cleanedAddress = cleanedAddress.TrimStart('/');
 		cleanedAddress = cleanedAddress.TrimEnd('/');
-		
+
 		var config = new AdminClientConfig
 		{
 			BootstrapServers = cleanedAddress,
@@ -243,7 +242,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		try
 		{
 			await adminClient.CreateTopicsAsync(topicSpecifications);
-			
+
 			await Task.Delay(2000);
 		}
 		catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists || r.Error.Code == ErrorCode.NoError))
@@ -263,7 +262,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		{
 			Console.Error.WriteLine($"Error outputting telemetry summary: {ex.Message}");
 		}
-		
+
 		// Shutdown the Quartz scheduler gracefully with a timeout
 		if (_server?.Services != null)
 		{
@@ -286,7 +285,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				}
 			}
 		}
-		
+
 		GC.SuppressFinalize(this);
 	}
 
@@ -295,9 +294,9 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		// Check if telemetry output is enabled via environment variable
 		// By default, telemetry is disabled to reduce test output noise
 		var enableTelemetry = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_TELEMETRY");
-		var isEnabled = !string.IsNullOrEmpty(enableTelemetry) && 
-		                (enableTelemetry.Equals("true", StringComparison.OrdinalIgnoreCase) || enableTelemetry == "1");
-		
+		var isEnabled = !string.IsNullOrEmpty(enableTelemetry) &&
+										(enableTelemetry.Equals("true", StringComparison.OrdinalIgnoreCase) || enableTelemetry == "1");
+
 		if (!isEnabled)
 		{
 			return;

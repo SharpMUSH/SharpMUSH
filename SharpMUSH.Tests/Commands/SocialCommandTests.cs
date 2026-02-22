@@ -19,7 +19,7 @@ public class SocialCommandTests
 	[Test]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 
-public async ValueTask SayCommand()
+	public async ValueTask SayCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("say Hello world"));
 

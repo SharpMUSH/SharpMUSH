@@ -26,18 +26,18 @@ public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInfo
 	}
 }
 
-public class FunctionLibraryService : 
-	LibraryService<string, FunctionDefinition> 
-{ 
+public class FunctionLibraryService :
+	LibraryService<string, FunctionDefinition>
+{
 	public FunctionLibraryService() : base(StringComparer.OrdinalIgnoreCase)
 	{
 	}
 }
-	
 
-public class CommandLibraryService : 
-	LibraryService<string, CommandDefinition> 
-{ 
+
+public class CommandLibraryService :
+	LibraryService<string, CommandDefinition>
+{
 	public CommandLibraryService() : base(StringComparer.OrdinalIgnoreCase)
 	{
 	}

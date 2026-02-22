@@ -1,14 +1,9 @@
-﻿using System.Text.RegularExpressions;
-using DotNext.Collections.Generic;
-using Microsoft.FSharp.Core;
+﻿using DotNext.Collections.Generic;
 using SharpMUSH.Implementation.Common;
-using SharpMUSH.Implementation.Definitions;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -74,7 +69,7 @@ public partial class Functions
 		return RegLMatchInternal(parser, true, true);
 	}
 
-	[SharpFunction(Name = "reswitch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, 
+	[SharpFunction(Name = "reswitch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
 		ParameterNames = ["text", "pattern...|result...", "default"])]
 	public static async ValueTask<CallState> reswitch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -110,7 +105,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var str = args["0"].Message!.ToPlainText();
 		var pattern = args["1"].Message!.ToPlainText();
-		
+
 		try
 		{
 			var options = RegexOptions.None;
@@ -118,13 +113,13 @@ public partial class Functions
 			{
 				options |= RegexOptions.IgnoreCase;
 			}
-			
+
 			var regex = new Regex(pattern, options);
 			var match = regex.Match(str);
-			
+
 			// Check if the entire string matches (not just a substring)
 			var isFullMatch = match.Success && match.Index == 0 && match.Length == str.Length;
-			
+
 			// Handle register list if provided
 			if (args.ContainsKey("2"))
 			{
@@ -134,7 +129,7 @@ public partial class Functions
 					SetRegistersFromMatch(parser, match, registerList);
 				}
 			}
-			
+
 			return ValueTask.FromResult(new CallState(isFullMatch ? "1" : "0"));
 		}
 		catch (ArgumentException)
@@ -149,17 +144,17 @@ public partial class Functions
 	private static void SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
 	{
 		if (!match.Success) return;
-		
+
 		var registers = registerList.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		
+
 		for (int i = 0; i < registers.Length; i++)
 		{
 			var reg = registers[i];
 			var parts = reg.Split(':');
-			
+
 			string captureIndexOrName;
 			string qRegister;
-			
+
 			if (parts.Length == 2)
 			{
 				// X:Y format - X is capture, Y is q-register
@@ -173,7 +168,7 @@ public partial class Functions
 				captureIndexOrName = i.ToString();
 				qRegister = parts[0];
 			}
-			
+
 			// Get the capture value
 			string value = "";
 			if (int.TryParse(captureIndexOrName, out int captureIndex))
@@ -193,7 +188,7 @@ public partial class Functions
 					value = group.Value;
 				}
 			}
-			
+
 			// Set the q-register
 			parser.CurrentState.AddRegister(qRegister, MModule.single(value));
 		}
@@ -208,10 +203,10 @@ public partial class Functions
 		var list = args["0"].Message!;
 		var pattern = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var outputSep = all && args.ContainsKey("3") 
-			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter.ToPlainText()) 
+		var outputSep = all && args.ContainsKey("3")
+			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter.ToPlainText())
 			: delimiter;
-		
+
 		try
 		{
 			var options = RegexOptions.None;
@@ -219,10 +214,10 @@ public partial class Functions
 			{
 				options |= RegexOptions.IgnoreCase;
 			}
-			
+
 			var regex = new Regex(pattern, options);
 			var splitList = MModule.split2(delimiter, list) ?? [];
-			
+
 			if (all)
 			{
 				var matches = splitList.Where(x => regex.IsMatch(x.ToPlainText()));
@@ -252,7 +247,7 @@ public partial class Functions
 		var outputSep = all && args.ContainsKey("3")
 			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter.ToPlainText())
 			: delimiter;
-		
+
 		try
 		{
 			var options = RegexOptions.None;
@@ -260,10 +255,10 @@ public partial class Functions
 			{
 				options |= RegexOptions.IgnoreCase;
 			}
-			
+
 			var regex = new Regex(pattern, options);
 			var splitList = MModule.split2(delimiter, list) ?? [];
-			
+
 			if (all)
 			{
 				// Return positions of all matches (1-indexed)
@@ -271,7 +266,7 @@ public partial class Functions
 					.Select((item, index) => new { item, index })
 					.Where(x => regex.IsMatch(x.item.ToPlainText()))
 					.Select(x => MModule.single((x.index + 1).ToString()));
-				
+
 				return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, positions));
 			}
 			else
@@ -280,7 +275,7 @@ public partial class Functions
 				var position = splitList
 					.Select((item, index) => new { item, index })
 					.FirstOrDefault(x => regex.IsMatch(x.item.ToPlainText()));
-				
+
 				return ValueTask.FromResult(new CallState(position != null ? (position.index + 1).ToString() : "0"));
 			}
 		}
@@ -298,12 +293,12 @@ public partial class Functions
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var str = arg0!.ToPlainText();
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered.Skip(1).ToList();
-		
+
 		// Check if we have a default (odd number of remaining args)
 		var hasDefault = orderedArgs.Count % 2 == 1;
 		KeyValuePair<string, CallState>? defaultValue = hasDefault ? orderedArgs[^1] : null;
 		var pairCount = hasDefault ? orderedArgs.Count - 1 : orderedArgs.Count;
-		
+
 		var results = new List<MString>();
 		var options = RegexOptions.None;
 		if (caseInsensitive)
@@ -321,27 +316,27 @@ public partial class Functions
 			{
 				var patternKv = orderedArgs[i];
 				var listKv = orderedArgs[i + 1];
-				
+
 				var pattern = await patternKv.Value.ParsedMessage();
 				var patternStr = pattern!.ToPlainText();
-				
+
 				try
 				{
 					var regex = new Regex(patternStr, options);
 					var match = regex.Match(str!);
-					
+
 					if (match.Success)
 					{
 						// Replace #$ with the original string and $N with captures
 						var list = listKv.Value.Message!.ToPlainText();
 						list = list.Replace("#$", str);
-						
+
 						// Replace numbered captures ($0, $1, etc.)
 						for (int j = 0; j < match.Groups.Count; j++)
 						{
 							list = list.Replace($"${j}", match.Groups[j].Value);
 						}
-						
+
 						// Replace named captures ($<name>)
 						foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
 						{
@@ -351,12 +346,12 @@ public partial class Functions
 								list = list.Replace($"$<{groupName}>", group.Value);
 							}
 						}
-						
+
 						// Parse and evaluate the list
 						var evaluated = (await parser.FunctionParse(MModule.single(list))) ?? new CallState(MModule.empty());
 						var evaluatedMsg = evaluated.Message ?? MModule.empty();
 						results.Add(evaluatedMsg);
-						
+
 						if (!all)
 						{
 							// Return first match for reswitch/reswitchi
@@ -370,20 +365,20 @@ public partial class Functions
 					continue;
 				}
 			}
-			
+
 			// If we got here and have results (for reswitchall/reswitchalli), return them
 			if (results.Any())
 			{
 				return new CallState(MModule.multipleWithDelimiter(MModule.single(" "), results));
 			}
-			
+
 			// No matches - return default if available
 			if (defaultValue != null)
 			{
 				var defaultEvaluated = await defaultValue.Value.Value.ParsedMessage();
 				return new CallState(defaultEvaluated!);
 			}
-			
+
 			return new CallState(MModule.empty());
 		}
 		finally
@@ -393,7 +388,7 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "REGREPLACE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "REGREPLACE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
 		ParameterNames = ["string", "pattern", "replacement", "flags"])]
 	public static ValueTask<CallState> RegReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -407,15 +402,15 @@ public partial class Functions
 		try
 		{
 			var regexOptions = RegexOptions.None;
-			
+
 			if (flags.Contains('i'))
 			{
 				regexOptions |= RegexOptions.IgnoreCase;
 			}
-			
+
 			// 'g' flag for global replace is default behavior of Regex.Replace
 			// So we don't need special handling for it
-			
+
 			var result = Regex.Replace(str, pattern, replacement, regexOptions);
 			return ValueTask.FromResult<CallState>(result);
 		}

@@ -20,9 +20,9 @@ public class SuggestionController(
 	{
 		try
 		{
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			return Ok(suggestionData);
 		}
 		catch (Exception ex)
@@ -40,14 +40,14 @@ public class SuggestionController(
 	{
 		try
 		{
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			if (suggestionData.Categories == null || !suggestionData.Categories.ContainsKey(category.ToLower()))
 			{
 				return NotFound($"Category '{category}' not found");
 			}
-			
+
 			return Ok(suggestionData.Categories[category.ToLower()].OrderBy(w => w));
 		}
 		catch (Exception ex)
@@ -70,20 +70,20 @@ public class SuggestionController(
 				return BadRequest("Word cannot be empty");
 			}
 
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			if (suggestionData.Categories == null)
 			{
 				suggestionData = suggestionData with { Categories = new Dictionary<string, HashSet<string>>() };
 			}
-			
+
 			var categoryKey = category.ToLower();
 			if (!suggestionData.Categories.ContainsKey(categoryKey))
 			{
 				suggestionData.Categories[categoryKey] = new HashSet<string>();
 			}
-			
+
 			var normalizedWord = word.ToLower().Trim();
 			if (suggestionData.Categories[categoryKey].Add(normalizedWord))
 			{
@@ -111,15 +111,15 @@ public class SuggestionController(
 	{
 		try
 		{
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			var categoryKey = category.ToLower();
 			if (suggestionData.Categories == null || !suggestionData.Categories.ContainsKey(categoryKey))
 			{
 				return NotFound($"Category '{category}' not found");
 			}
-			
+
 			var normalizedWord = word.ToLower().Trim();
 			if (suggestionData.Categories[categoryKey].Remove(normalizedWord))
 			{
@@ -128,7 +128,7 @@ public class SuggestionController(
 				{
 					suggestionData.Categories.Remove(categoryKey);
 				}
-				
+
 				await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
 				logger.LogInformation("Removed word '{Word}' from category '{Category}'", normalizedWord, categoryKey);
 				return Ok(new { message = $"Removed '{normalizedWord}' from category '{categoryKey}'" });
@@ -153,15 +153,15 @@ public class SuggestionController(
 	{
 		try
 		{
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			var categoryKey = category.ToLower();
 			if (suggestionData.Categories == null || !suggestionData.Categories.ContainsKey(categoryKey))
 			{
 				return NotFound($"Category '{category}' not found");
 			}
-			
+
 			suggestionData.Categories.Remove(categoryKey);
 			await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
 			logger.LogInformation("Deleted category '{Category}'", categoryKey);
@@ -188,7 +188,7 @@ public class SuggestionController(
 			}
 
 			await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-			logger.LogInformation("Updated suggestion data with {CategoryCount} categories", 
+			logger.LogInformation("Updated suggestion data with {CategoryCount} categories",
 				suggestionData.Categories?.Count ?? 0);
 			return Ok(new { message = "Suggestion data updated successfully" });
 		}

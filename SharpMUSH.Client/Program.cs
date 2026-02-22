@@ -51,5 +51,5 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorizationCore();
 
 var app = builder.Build();
-	
+
 await app.RunAsync();

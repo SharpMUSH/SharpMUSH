@@ -1,6 +1,6 @@
-using System.Data.Common;
 using MySqlConnector;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Data.Common;
 
 namespace SharpMUSH.Library.Services.Providers;
 
@@ -19,7 +19,7 @@ public class MySqlProvider : ISqlProvider
 	public bool IsAvailable => !string.IsNullOrEmpty(_dataSource.ConnectionString);
 
 	public string ProviderName => "MySQL";
-	
+
 	public string ParameterPlaceholderFormat => "?";
 
 	public async ValueTask<DbConnection> CreateConnectionAsync()

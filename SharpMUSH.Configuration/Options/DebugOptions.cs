@@ -8,7 +8,7 @@ public record DebugOptions(
 		Group = "Parser Debugging",
 		Order = 1)]
 	bool DebugSharpParser,
-	
+
 	[property: SharpConfig(
 		Name = "parser_prediction_mode",
 		Category = "Debug",
@@ -28,7 +28,7 @@ public enum ParserPredictionMode
 	/// Strong LL parsing - faster but less powerful. Use for simpler grammars.
 	/// </summary>
 	SLL,
-	
+
 	/// <summary>
 	/// Full LL(*) parsing - slower but more powerful. Can handle complex grammars.
 	/// Default mode.

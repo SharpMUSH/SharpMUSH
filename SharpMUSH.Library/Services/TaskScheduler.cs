@@ -7,9 +7,9 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
@@ -158,9 +158,9 @@ public class TaskScheduler(
 
 		var triggerIdentity = $"dbref:{state.Executor}-{NextPid()}";
 		var triggerGroup = $"{SemaphoreGroup}:{dbRefAttribute}";
-		
+
 		// DIAGNOSTIC: Log the group key being used for job creation
-		
+
 		await _scheduler.ScheduleJob(
 			JobBuilder
 				.CreateForAsync<SemaphoreTask>()
@@ -225,13 +225,13 @@ public class TaskScheduler(
 	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		var groupKey = $"{SemaphoreGroup}:{dbAttribute}";
-		
+
 		// DIAGNOSTIC: Log the group key being used for notification lookup
-		
+
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(groupKey));
 
-		
+
 		// If oldValue is negative, we notify the specified number of tasks
 		// If oldValue is >= 0, we notify based on count
 		var tasksToNotify = oldValue < 0 ? Math.Min(count, 0 - oldValue) : count;
@@ -246,7 +246,7 @@ public class TaskScheduler(
 				{
 					continue;
 				}
-				
+
 				var job = to.JobKey;
 				await _scheduler.TriggerJob(job);
 			}
@@ -311,13 +311,13 @@ public class TaskScheduler(
 			}
 
 			var data = job.JobDataMap;
-			
+
 			// Get the current ParserState
 			if (!data.TryGetValue("State", out var stateObj) || stateObj is not ParserState state)
 			{
 				return false;
 			}
-			
+
 			// Modify the Q-registers in the state
 			// We need to get the top dictionary from the Registers stack and add/update the Q-registers
 			if (state.Registers.TryPeek(out var registers))
@@ -337,13 +337,13 @@ public class TaskScheduler(
 				}
 				state.Registers.Push(newRegisters);
 			}
-			
+
 			// Update the job data with the modified state
 			data["State"] = state;
-			
+
 			// Need to re-add the job to persist the changes
 			await _scheduler.AddJob(job, replace: true, storeNonDurableWhileAwaitingScheduling: true);
-			
+
 			return true;
 		}
 		catch (Exception)
@@ -496,7 +496,7 @@ public class TaskScheduler(
 	{
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"));
-		
+
 		foreach (var key in keys)
 		{
 			// Extract PID from identity: "dbref:{executor}-{pid}"

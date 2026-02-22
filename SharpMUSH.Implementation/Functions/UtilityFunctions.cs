@@ -1,6 +1,4 @@
-﻿using System.Drawing;
-using System.Text.RegularExpressions;
-using DotNext;
+﻿using DotNext;
 using DotNext.Collections.Generic;
 using MarkupString;
 using Microsoft.Extensions.Logging;
@@ -16,6 +14,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Drawing;
+using System.Text.RegularExpressions;
 using XSoundex;
 using static ANSILibrary.ANSI;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -80,14 +80,14 @@ public partial class Functions
 			var code = cde.AsSpan();
 			var curHilight = false;
 			var isBackground = false;
-			
+
 			// Check if this is a background color (starts with /)
 			if (code.StartsWith("/"))
 			{
 				isBackground = true;
 				code = code[1..];
 			}
-			
+
 			if (code.StartsWith("#"))
 			{
 				// Handle RGB color (hex code)
@@ -98,7 +98,7 @@ public partial class Functions
 					foreground = color;
 				continue;
 			}
-			
+
 			if (code.StartsWith(['+']) && !code.StartsWith("+xterm"))
 			{
 				// Handle named color from colors.json
@@ -114,7 +114,7 @@ public partial class Functions
 				}
 				continue;
 			}
-			
+
 			var xterm = 0;
 			if (
 				(int.TryParse(code, out xterm) && xterm >= 0 && xterm < 256) ||
@@ -132,7 +132,7 @@ public partial class Functions
 				}
 				continue;
 			}
-			
+
 			if (code.StartsWith(['<']) && code.EndsWith(['>']))
 			{
 				// Handle RGB color as <r g b> format
@@ -150,7 +150,7 @@ public partial class Functions
 				}
 				continue;
 			}
-			
+
 			// Reset isBackground for character-by-character processing
 			isBackground = false;
 			// ansi code. each gets evaluated individually.
@@ -283,13 +283,13 @@ public partial class Functions
 	public static async ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		// If single argument, split it by spaces and check each element
 		if (args.Count == 1)
 		{
 			var singleArg = await parser.FunctionParse(args["0"].Message!);
 			var elements = singleArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-			
+
 			var allTrue = true;
 			foreach (var element in elements)
 			{
@@ -741,7 +741,7 @@ public partial class Functions
 		var isValid = IsValidRegexPattern(arg);
 		return ValueTask.FromResult<CallState>(new(isValid ? "1" : "0"));
 	}
-	
+
 	private static bool IsValidRegexPattern(string pattern)
 	{
 		try
@@ -1282,12 +1282,12 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		// Parse arguments based on PennMUSH signature: scan(<looker>, <command>[, <switches>]) or scan(<command>)
 		AnySharpObject looker;
 		MString command;
 		string switches;
-		
+
 		if (args.Count == 1)
 		{
 			// scan(<command>) - looker defaults to executor
@@ -1301,7 +1301,7 @@ public partial class Functions
 			var lookerName = args["0"].Message!.ToPlainText();
 			command = args["1"].Message!;
 			switches = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : "all";
-			
+
 			// Locate the looker object
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, lookerName, LocateFlags.All);
 			if (locateResult.IsError || locateResult.IsNone)
@@ -1320,7 +1320,7 @@ public partial class Functions
 		// Collect objects to scan based on switches
 		var objectsToScan = new List<AnySharpObject>();
 		var switchList = switches.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		
+
 		// Determine which locations to check
 		bool checkMe = switchList.Contains("me") || switchList.Contains("all") || switchList.Contains("self");
 		bool checkInventory = switchList.Contains("inventory") || switchList.Contains("all") || switchList.Contains("self");
@@ -1350,12 +1350,12 @@ public partial class Functions
 			var dbref = looker.Object().DBRef;
 			var locationQuery = new GetLocationQuery(dbref);
 			var locationOpt = await Mediator!.Send(locationQuery);
-			
+
 			if (!locationOpt.IsNone)
 			{
 				var location = locationOpt.WithoutNone();
 				objectsToScan.Add(location.WithExitOption());
-				
+
 				// Add contents of the location
 				var contents = await System.Linq.AsyncEnumerable.ToListAsync(
 					Mediator!.CreateStream(new GetContentsQuery(location)));
@@ -1375,7 +1375,7 @@ public partial class Functions
 			{
 				var masterRoom = masterRoomResult.Known;
 				objectsToScan.Add(masterRoom);
-				
+
 				if (masterRoom.IsContainer)
 				{
 					var masterContents = await System.Linq.AsyncEnumerable.ToListAsync(
@@ -1406,7 +1406,7 @@ public partial class Functions
 
 		// Format results as "dbref/attribute" pairs
 		var matches = matchResult.AsValue();
-		var results = matches.Select(match => 
+		var results = matches.Select(match =>
 			$"{match.SObject.Object().DBRef}/{match.Attribute.Name}");
 
 		return string.Join(" ", results);
@@ -1497,7 +1497,7 @@ public partial class Functions
 		var word = args["1"].Message!.ToPlainText();
 		var separator = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : " ";
 		var limit = 20;
-		
+
 		if (args.ContainsKey("3"))
 		{
 			if (!int.TryParse(args["3"].Message!.ToPlainText(), out limit) || limit < 1)
@@ -1594,17 +1594,17 @@ public partial class Functions
 		// stext([<n>]) returns the string being matched in the current or nth nested switch.
 		// stext(L) returns the outermost switch string.
 		// n=0 is current switch, n=1 is the switch the current is nested in, etc.
-		
+
 		var args = parser.CurrentState.Arguments;
 		var stack = parser.CurrentState.SwitchStack;
-		
+
 		int depth = 0;
-		
+
 		// Validate arguments first, before checking stack count
 		if (args.TryGetValue("0", out var depthArg) && depthArg.Message != null)
 		{
 			var depthStr = depthArg.Message!.ToPlainText().Trim();
-			
+
 			// Skip processing if the argument is empty (defaults to 0)
 			if (!string.IsNullOrEmpty(depthStr))
 			{
@@ -1619,20 +1619,20 @@ public partial class Functions
 				}
 			}
 		}
-		
+
 		// Now check if we're in a switch context
 		if (stack.Count == 0)
 		{
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
-		
+
 		// Convert depth to index from top of stack
 		// depth 0 = current (top), depth 1 = parent, etc.
 		if (depth >= stack.Count)
 		{
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
-		
+
 		// Get the nth item from the stack (0 is top)
 		var item = stack.ElementAtOrDefault(depth);
 		return ValueTask.FromResult(new CallState(item ?? MModule.empty()));
@@ -1698,17 +1698,17 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		// Two forms:
 		// testlock(<lock key>, <victim>) - test a lock expression against a victim
 		// testlock(<object>, <victim>, <lock name>) - test a named lock on object against victim
-		
+
 		if (args.Count == 2)
 		{
 			// Form 1: testlock(<lock key>, <victim>)
 			var lockString = args["0"].Message!.ToPlainText();
 			var victimName = args["1"].Message!.ToPlainText();
-			
+
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, victimName, LocateFlags.All,
 				victim =>
@@ -1730,7 +1730,7 @@ public partial class Functions
 			var objectName = args["0"].Message!.ToPlainText();
 			var victimName = args["1"].Message!.ToPlainText();
 			var lockName = args["2"].Message!.ToPlainText();
-			
+
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, objectName, LocateFlags.All,
 				async lockedObject =>
@@ -1742,7 +1742,7 @@ public partial class Functions
 						return new CallState("#-1 INVALID VICTIM");
 					}
 					var victim = victimResult.AsAnyObject;
-					
+
 					// Get the named lock from the object
 					if (!lockedObject.Object().Locks.TryGetValue(lockName, out var lockData))
 					{
@@ -1762,8 +1762,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var fileReference = args["0"].Message!.ToPlainText();
-		var separator = args.TryGetValue("1", out var sep) 
-			? sep.Message!.ToPlainText() 
+		var separator = args.TryGetValue("1", out var sep)
+			? sep.Message!.ToPlainText()
 			: " ";
 
 		if (TextFileService == null)
@@ -1802,7 +1802,7 @@ public partial class Functions
 		try
 		{
 			var content = await TextFileService.GetEntryAsync(fileReference, entryName);
-			return content != null 
+			return content != null
 				? new CallState(content)
 				: new CallState("#-1 ENTRY NOT FOUND");
 		}

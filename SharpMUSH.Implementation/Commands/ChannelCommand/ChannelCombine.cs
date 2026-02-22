@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -6,6 +5,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -20,17 +20,17 @@ public static class ChannelCombine
 		{
 			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
-		} 
-		
+		}
+
 		var yesNoString = yesNo?.ToPlainText();
 		if (yesNoString is not null && !(yesNoString.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
-		                                 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
+																		 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
 		{
 			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.");
 			return new CallState("#-1 INVALID OPTION");
 		}
 
-		var channelList = Mediator.CreateStream(new GetChannelListQuery()); 
+		var channelList = Mediator.CreateStream(new GetChannelListQuery());
 		if (channelName is null)
 		{
 			channels = [.. await channelList.ToArrayAsync()];
@@ -45,7 +45,7 @@ public static class ChannelCombine
 
 			channels = [maybeChannel.AsChannel];
 		}
-		
+
 		var combineOn = yesNoString?.Equals("yes", StringComparison.OrdinalIgnoreCase) ?? true;
 
 		foreach (var channel in channels)
@@ -72,7 +72,7 @@ public static class ChannelCombine
 				null,
 				null
 			)));
-			
+
 			if (combineOn)
 			{
 				await NotifyService.Notify(executor, $"CHAT: Combined channels turned on for {channel.Name.ToPlainText()}.");

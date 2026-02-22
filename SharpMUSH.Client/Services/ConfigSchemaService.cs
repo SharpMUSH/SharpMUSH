@@ -1,7 +1,5 @@
-using System.Net.Http.Json;
-using SharpMUSH.Client.Models;
 using SharpMUSH.Library.API;
-using SharpMUSH.Configuration;
+using System.Net.Http.Json;
 
 namespace SharpMUSH.Client.Services;
 
@@ -14,7 +12,7 @@ public class ConfigSchemaService(IHttpClientFactory httpClientFactory)
 			// Use the named "api" client which is configured to point to port 8081
 			var client = httpClientFactory.CreateClient("api");
 			var response = await client.GetFromJsonAsync<ConfigurationResponse>("/api/configuration");
-			
+
 			if (response?.Schema == null)
 			{
 				return null;

@@ -47,14 +47,14 @@ try
 				services.AddSingleton<IMUSHCodeParser>(sp =>
 				{
 					var logger = sp.GetRequiredService<ILogger<MUSHCodeParser>>();
-					
+
 					// Create minimal libraries - LSP doesn't need full runtime
 					var functionLibrary = new LibraryService<string, FunctionDefinition>();
 					var commandLibrary = new LibraryService<string, CommandDefinition>();
-					
+
 					// Create a minimal options wrapper
 					var options = new MinimalOptionsWrapper();
-					
+
 					// Create the parser with minimal dependencies
 					return new MUSHCodeParser(logger, functionLibrary, commandLibrary, options, sp);
 				});
@@ -108,6 +108,6 @@ finally
 /// </summary>
 file class MinimalOptionsWrapper : IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>
 {
-	public SharpMUSH.Configuration.Options.SharpMUSHOptions CurrentValue => 
+	public SharpMUSH.Configuration.Options.SharpMUSHOptions CurrentValue =>
 		throw new NotSupportedException("LSP parser does not support runtime options");
 }

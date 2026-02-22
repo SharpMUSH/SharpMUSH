@@ -1,7 +1,3 @@
-
-using SharpMUSH.Library.Definitions;
-using TUnit.Core;
-
 namespace SharpMUSH.Tests.Services;
 
 public class WarningNoWarnTests
@@ -42,7 +38,7 @@ public class WarningNoWarnTests
 		// Test that warn_interval parses time strings like "1h", "30m", "10m1s"
 		var validInterval = "1h";
 		await Assert.That(validInterval).IsEqualTo("1h");
-		
+
 		var complexInterval = "10m1s";
 		await Assert.That(complexInterval).IsEqualTo("10m1s");
 	}

@@ -24,9 +24,9 @@ public class ConfigCommandTests
 		// Should notify with "Configuration Categories:"
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Configuration Categories:")), 
-				Arg.Any<AnySharpObject>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Configuration Categories:")),
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -39,9 +39,9 @@ public class ConfigCommandTests
 		// Should notify with "Options in Net:"
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Options in Net:")), 
-				Arg.Any<AnySharpObject>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Options in Net:")),
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -53,8 +53,8 @@ public class ConfigCommandTests
 		// Should receive at least one notification about mud_name
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "mud_name")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "mud_name")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -66,9 +66,9 @@ public class ConfigCommandTests
 		// Should notify that option was not found
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "No configuration category or option")),
-				Arg.Any<AnySharpObject>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "No configuration category or option")),
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -102,8 +102,8 @@ public class ConfigCommandTests
 		// Should notify with MOTD settings
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Message of the Day settings")), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Message of the Day settings")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -171,12 +171,12 @@ public class ConfigCommandTests
 		// Should notify about the equivalent @config/set command
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => 
-					s.Value.ToString()!.Contains("@enable") && 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+					s.Value.ToString()!.Contains("@enable") &&
 					s.Value.ToString()!.Contains("@config/set") &&
 					s.Value.ToString()!.Contains("noisy_whisper")),
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -189,12 +189,12 @@ public class ConfigCommandTests
 		// Should notify about the equivalent @config/set command
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => 
-					s.Value.ToString()!.Contains("@disable") && 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+					s.Value.ToString()!.Contains("@disable") &&
 					s.Value.ToString()!.Contains("@config/set") &&
 					s.Value.ToString()!.Contains("noisy_whisper")),
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -207,10 +207,10 @@ public class ConfigCommandTests
 		// Should notify that option was not found
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
 					s.Value.ToString()!.Contains("No configuration option")),
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -223,10 +223,10 @@ public class ConfigCommandTests
 		// Should notify that option was not found
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
 					s.Value.ToString()!.Contains("No configuration option")),
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -239,10 +239,10 @@ public class ConfigCommandTests
 		// Should notify that it's not a boolean option
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
 					s.Value.ToString()!.Contains("not a boolean option")),
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -255,10 +255,10 @@ public class ConfigCommandTests
 		// Should notify that it's not a boolean option
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
 					s.Value.ToString()!.Contains("not a boolean option")),
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -271,11 +271,11 @@ public class ConfigCommandTests
 		// Should show usage message
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => 
-					s.Value.ToString()!.Contains("Usage:") && 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+					s.Value.ToString()!.Contains("Usage:") &&
 					s.Value.ToString()!.Contains("@enable")),
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -288,11 +288,11 @@ public class ConfigCommandTests
 		// Should show usage message
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => 
-					s.Value.ToString()!.Contains("Usage:") && 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+					s.Value.ToString()!.Contains("Usage:") &&
 					s.Value.ToString()!.Contains("@disable")),
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 }

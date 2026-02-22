@@ -1,8 +1,5 @@
 using Serilog.Events;
 using SharpMUSH.Library.Services;
-using TUnit.Core;
-using TUnit.Assertions;
-using TUnit.Assertions.Extensions;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -20,10 +17,10 @@ public class LoggingConfigurationTests
 			// Set only KUBERNETES_SERVICE_HOST, clear DOTNET_RUNNING_IN_CONTAINER
 			Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", null);
 			Environment.SetEnvironmentVariable("KUBERNETES_SERVICE_HOST", "10.0.0.1");
-			
+
 			// Act
 			var result = LoggingConfiguration.IsRunningInKubernetes();
-			
+
 			// Assert
 			await Assert.That(result).IsTrue();
 		}
@@ -33,7 +30,7 @@ public class LoggingConfigurationTests
 			Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", originalDotnetValue);
 		}
 	}
-	
+
 	[Test]
 	public async Task IsRunningInKubernetes_WithDotnetRunningInContainer_ReturnsTrue()
 	{
@@ -45,10 +42,10 @@ public class LoggingConfigurationTests
 			// Clear K8s variable and set only DOTNET_RUNNING_IN_CONTAINER
 			Environment.SetEnvironmentVariable("KUBERNETES_SERVICE_HOST", null);
 			Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", "1");
-			
+
 			// Act
 			var result = LoggingConfiguration.IsRunningInKubernetes();
-			
+
 			// Assert
 			await Assert.That(result).IsTrue();
 		}
@@ -58,7 +55,7 @@ public class LoggingConfigurationTests
 			Environment.SetEnvironmentVariable("KUBERNETES_SERVICE_HOST", originalK8sValue);
 		}
 	}
-	
+
 	[Test]
 	public async Task IsRunningInKubernetes_WithoutK8sVariables_ReturnsFalse()
 	{
@@ -69,10 +66,10 @@ public class LoggingConfigurationTests
 		{
 			Environment.SetEnvironmentVariable("KUBERNETES_SERVICE_HOST", null);
 			Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", null);
-			
+
 			// Act
 			var result = LoggingConfiguration.IsRunningInKubernetes();
-			
+
 			// Assert
 			await Assert.That(result).IsFalse();
 		}
@@ -82,21 +79,21 @@ public class LoggingConfigurationTests
 			Environment.SetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER", originalDotnetValue);
 		}
 	}
-	
+
 	[Test]
 	public async Task CreateStandardConsoleConfiguration_ReturnsValidConfiguration()
 	{
 		// Act
 		var config = LoggingConfiguration.CreateStandardConsoleConfiguration();
-		
+
 		// Assert
 		await Assert.That(config).IsNotNull();
-		
+
 		// Create the logger to verify it doesn't throw
 		var logger = config.CreateLogger();
 		await Assert.That(logger).IsNotNull();
 	}
-	
+
 	[Test]
 	public async Task CreateStandardConsoleConfiguration_WithCustomMinimumLevel_SetsLevel()
 	{
@@ -104,7 +101,7 @@ public class LoggingConfigurationTests
 		var config = LoggingConfiguration.CreateStandardConsoleConfiguration(
 			minimumLevel: LogEventLevel.Warning
 		);
-		
+
 		// Assert
 		await Assert.That(config).IsNotNull();
 		var logger = config.CreateLogger();
@@ -112,13 +109,13 @@ public class LoggingConfigurationTests
 		await Assert.That(logger.IsEnabled(LogEventLevel.Information)).IsFalse();
 		await Assert.That(logger.IsEnabled(LogEventLevel.Warning)).IsTrue();
 	}
-	
+
 	[Test]
 	public async Task CreateStandardOverrides_ReturnsExpectedOverrides()
 	{
 		// Act
 		var overrides = LoggingConfiguration.CreateStandardOverrides();
-		
+
 		// Assert
 		await Assert.That(overrides).IsNotNull();
 		await Assert.That(overrides).ContainsKey("ZiggyCreatures.Caching.Fusion");

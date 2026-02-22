@@ -1,8 +1,8 @@
-using System.Runtime.CompilerServices;
 using Markdig.Helpers;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -203,7 +203,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal void WriteRaw(ReadOnlySpan<char> content)
 		=> WriteToContainer(MModule.single(content.ToString()));
-	
+
 	/// <summary>
 	/// Writes a newline.
 	/// </summary>
@@ -215,7 +215,7 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 		WriteToContainer(MModule.single("\n"));
 
 		_previousWasLine = true;
-		
+
 		return (T)this;
 	}
 
@@ -229,12 +229,12 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	{
 		WriteIndent();
 		_previousWasLine = true;
-		
+
 		WriteToContainer(MModule.single(content + "\n"));
 
 		return (T)this;
 	}
-	
+
 	/// <summary>
 	/// Writes a content followed by a newline.
 	/// </summary>
@@ -245,8 +245,8 @@ public abstract class MarkupRendererBase<T> : MarkupRendererBase where T : Marku
 	{
 		WriteIndent();
 		_previousWasLine = true;
-		
-		WriteToContainer(MModule.concat(content,MModule.single("\n")));
+
+		WriteToContainer(MModule.concat(content, MModule.single("\n")));
 
 		return (T)this;
 	}

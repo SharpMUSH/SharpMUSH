@@ -12,10 +12,10 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 public static class ChannelAdd
 {
 	public static async ValueTask<CallState> Handle(
-		IMUSHCodeParser parser, 
-		ILocateService LocateService, 
-		IPermissionService PermissionService, 
-		IMediator Mediator, 
+		IMUSHCodeParser parser,
+		ILocateService LocateService,
+		IPermissionService PermissionService,
+		IMediator Mediator,
 		INotifyService NotifyService,
 		IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName, MString privileges)
 	{

@@ -1,13 +1,13 @@
-using System.Security.Cryptography;
-using System.Text;
 using OneOf;
 using OneOf.Types;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SharpMUSH.Implementation.Common;
 
 public static class CryptoHelpers
 {
-	public static readonly Dictionary<string, HashAlgorithm> hashAlgorithms = new(StringComparer.InvariantCultureIgnoreCase) 
+	public static readonly Dictionary<string, HashAlgorithm> hashAlgorithms = new(StringComparer.InvariantCultureIgnoreCase)
 	{
 		{"MD5", MD5.Create()},
 		{"SHA1", SHA1.Create()},
@@ -22,11 +22,11 @@ public static class CryptoHelpers
 		{
 			return new None();
 		}
-		
+
 		hashAlgorithm.Initialize();
-		
+
 		var data = hashAlgorithm.ComputeHash(Encoding.UTF32.GetBytes(str.ToPlainText()));
-		
+
 		var sBuilder = new StringBuilder();
 
 		// Loop through each byte of the hashed data and format each one as a hexadecimal string.

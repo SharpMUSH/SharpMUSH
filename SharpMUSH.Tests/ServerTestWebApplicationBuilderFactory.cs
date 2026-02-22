@@ -1,7 +1,5 @@
 using Core.Arango;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -13,10 +11,6 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server;
-using SharpMUSH.Server.Strategy.ArangoDB;
-using SharpMUSH.Server.Strategy.Redis;
-using System.Linq;
 using TUnit.AspNetCore;
 
 namespace SharpMUSH.Tests;
@@ -47,17 +41,17 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.MinimumLevel.Verbose();
-		
+
 		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
-		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) && 
-		                       (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
-		
+		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
+													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
+
 		if (isConsoleEnabled)
 		{
 			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
 		}
-		
+
 		var log = logConfig.CreateLogger();
 		Log.Logger = log;
 
@@ -85,10 +79,10 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			{
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 				var config = ReadPennMushConfig.Create(configFile);
-				
+
 				// Create IOptionsMonitor for SqlService with test connection string
 				var sqlOptionsMonitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
-				
+
 				// Override SQL configuration with test values by parsing connection string
 				var sqlConfigOverride = config with
 				{
@@ -101,7 +95,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 						SqlPlatform = sqlPlatform
 					}
 				};
-				
+
 				substitute.CurrentValue.Returns(config);
 				sqlOptionsMonitor.CurrentValue.Returns(sqlConfigOverride);
 
@@ -110,10 +104,10 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 
 				sc.RemoveAll<INotifyService>();
 				sc.AddSingleton(notifier);
-				
+
 				sc.RemoveAll<ISqlService>();
 				sc.AddSingleton<ISqlService>(new SqlService(sqlOptionsMonitor));
-				
+
 				if (!string.IsNullOrEmpty(databaseName))
 				{
 					sc.RemoveAll<ArangoHandle>();
@@ -122,13 +116,13 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			}
 		);
 	}
-	
+
 	private static string ExtractSqlHost(string connectionString)
 	{
 		var parts = connectionString.Split(';');
 		string? host = null;
 		string? port = null;
-		
+
 		foreach (var trimmedPart in parts.Select(part => part.Trim()))
 		{
 			if (trimmedPart.StartsWith("Server=", StringComparison.OrdinalIgnoreCase))
@@ -138,14 +132,14 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			else if (trimmedPart.StartsWith("Port=", StringComparison.OrdinalIgnoreCase))
 				port = trimmedPart.Substring(5);
 		}
-		
+
 		// Combine host and port if both present
 		if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(port))
 			return $"{host}:{port}";
-		
+
 		return host ?? "localhost";
 	}
-	
+
 	private static string ExtractSqlDatabase(string connectionString)
 	{
 		var parts = connectionString.Split(';');
@@ -158,7 +152,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		}
 		return "";
 	}
-	
+
 	private static string ExtractSqlUsername(string connectionString)
 	{
 		var parts = connectionString.Split(';');
@@ -175,7 +169,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		}
 		return "";
 	}
-	
+
 	private static string ExtractSqlPassword(string connectionString)
 	{
 		var parts = connectionString.Split(';');

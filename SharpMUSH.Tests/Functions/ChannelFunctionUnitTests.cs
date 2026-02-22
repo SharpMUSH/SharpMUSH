@@ -2,11 +2,9 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -132,7 +130,7 @@ public class ChannelFunctionUnitTests
 			throw new InvalidOperationException("Test channel is not initialized.");
 		}
 		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
-		
+
 		var userStartsOn = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
 		await Assert.That(userStartsOn.ToPlainText()).Contains("ON");
 

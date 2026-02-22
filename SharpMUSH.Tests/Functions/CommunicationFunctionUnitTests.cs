@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -21,37 +20,37 @@ public class CommunicationFunctionUnitTests
 	public async Task PrivateEmit()
 	{
 		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
-		
+
 		// Execute the function with unique message
 		var result = (await Parser.FunctionParse(MModule.single($"pemit(#1,{uniqueMessage})")))?.Message!;
-		
+
 		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
-		
+
 		// Verify NotifyService.Notify was called (message now passed through function)
 		// We check that Notify was called at least once with any AnySharpObject
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(x => x.Value.ToString()!.Contains(uniqueMessage)), 
-				Arg.Any<AnySharpObject?>(), 
+				Arg.Is<OneOf.OneOf<MString, string>>(x => x.Value.ToString()!.Contains(uniqueMessage)),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
-	
+
 	[Test]
 	public async Task PemitPort()
 	{
 		const string uniqueMessage = "PemitPort_test_unique_message_for_verification";
-		
+
 		// Execute the function with unique message for port-based messaging
 		var result = (await Parser.FunctionParse(MModule.single($"pemit(1234,{uniqueMessage})")))?.Message!;
-		
+
 		// Verify return value is empty (side effect function)
 		// Note: Port 1234 may not have a valid connection in the test environment,
 		// but the function should still return successfully
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
-		
+
 		// The function now filters ports by permission check, so Notify may or may not be called
 		// depending on whether port 1234 has a valid connection with proper permissions
 		// We just verify the function executed without error
@@ -95,21 +94,21 @@ public class CommunicationFunctionUnitTests
 	public async Task Nspemit()
 	{
 		const string uniqueMessage = "Nspemit_test_unique_message_for_verification";
-		
+
 		// Execute the function with unique message
 		var result = (await Parser.FunctionParse(MModule.single($"nspemit(#1,{uniqueMessage})")))?.Message!;
-		
+
 		// Verify return value is empty (side effect function)
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
-		
+
 		// Verify NotifyService.Notify was called (message now passed through function)
 		// We check that Notify was called at least once with any AnySharpObject
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(), 
-				Arg.Any<OneOf<MString, string>>(), 
-				Arg.Any<AnySharpObject?>(), 
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 

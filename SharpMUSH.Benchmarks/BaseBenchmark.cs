@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using System.Text;
 using BenchmarkDotNet.Attributes;
 using Core.Arango;
 using Core.Arango.Serialization.Json;
@@ -14,6 +12,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
+using System.Collections.Concurrent;
+using System.Text;
 using Testcontainers.ArangoDb;
 
 namespace SharpMUSH.Benchmarks;
@@ -32,7 +32,7 @@ public class BaseBenchmark
 	private TestWebApplicationBuilderFactory<Server.Program>? _server;
 	private ISharpDatabase? _database;
 	private ArangoDbContainer? _container;
-	
+
 	[GlobalSetup]
 	public async ValueTask Setup()
 	{
@@ -48,7 +48,7 @@ public class BaseBenchmark
 			ConnectionString = $"Server={_container.GetTransportAddress()};User=root;Realm=;Password=password;",
 			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
 		};
-		
+
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
@@ -69,7 +69,7 @@ public class BaseBenchmark
 
 		var mockPublisher = Substitute.For<IPublisher>();
 		var simpleConnectionService = new ConnectionService(mockPublisher);
-		await simpleConnectionService.Register(1, "localhost", "localhost", "test",  _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await simpleConnectionService.Register(1, "localhost", "localhost", "test", _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await simpleConnectionService.Bind(1, one);
 
 		var parser = _server!.Services.GetRequiredService<IMUSHCodeParser>();

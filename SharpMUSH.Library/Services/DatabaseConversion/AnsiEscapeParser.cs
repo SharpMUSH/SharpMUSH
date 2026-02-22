@@ -1,8 +1,6 @@
+using MarkupString;
 using System.Drawing;
 using System.Text;
-using System.Text.RegularExpressions;
-using ANSILibrary;
-using MarkupString;
 using static MarkupString.MarkupImplementation;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
@@ -150,7 +148,7 @@ public static class AnsiEscapeParser
 	{
 		// OSC sequences end with ESC\ or BEL (0x07)
 		var endPos = position + 2; // Start after ESC]
-		
+
 		while (endPos < text.Length)
 		{
 			if (text[endPos] == '\x07') // BEL
@@ -185,29 +183,29 @@ public static class AnsiEscapeParser
 		{
 			return currentState;
 		}
-		
+
 		var secondSemicolon = content.Slice(firstSemicolon + 1).IndexOf(';');
 		if (secondSemicolon < 0)
 		{
 			return currentState;
 		}
-		
+
 		// Extract URL part (after second semicolon)
 		var urlStart = firstSemicolon + 1 + secondSemicolon + 1;
 		if (urlStart >= content.Length)
 		{
 			return currentState;
 		}
-		
+
 		var urlSpan = content.Slice(urlStart);
-		
+
 		// Trim any remaining BEL or backslash characters that might not have been stripped by ParseOscSequence
 		// Note: ESC\ sequence should already be handled by ParseOscSequence, but we trim backslash for safety
 		while (urlSpan.Length > 0 && (urlSpan[^1] == '\x07' || urlSpan[^1] == '\\'))
 		{
 			urlSpan = urlSpan.Slice(0, urlSpan.Length - 1);
 		}
-		
+
 		if (urlSpan.IsEmpty)
 		{
 			// Clear hyperlink
@@ -232,7 +230,7 @@ public static class AnsiEscapeParser
 
 		var codes = new List<int>();
 		var start = 0;
-		
+
 		for (var i = 0; i <= parameters.Length; i++)
 		{
 			if (i == parameters.Length || parameters[i] == ';')
@@ -381,13 +379,13 @@ public static class AnsiEscapeParser
 
 		// Build the markup based on state, including hyperlink support if present
 		AnsiMarkup markup;
-		
+
 		if (state.LinkUrl != null)
 		{
 			// Create markup with hyperlink
 			var linkText = Microsoft.FSharp.Core.FSharpOption<string>.Some(text);
 			var linkUrl = Microsoft.FSharp.Core.FSharpOption<string>.Some(state.LinkUrl);
-			
+
 			markup = AnsiMarkup.Create(
 				foreground: state.Foreground,
 				background: state.Background,

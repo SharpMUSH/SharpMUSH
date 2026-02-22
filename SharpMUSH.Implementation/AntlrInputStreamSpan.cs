@@ -1,6 +1,6 @@
-﻿using System.Runtime.CompilerServices;
-using Antlr4.Runtime;
+﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Implementation;
 
@@ -36,7 +36,7 @@ internal class AntlrInputStreamSpan(ReadOnlyMemory<char> input, string sourceNam
 			return string.Empty;
 		}
 
-		return Data[a..(num+1)].ToString();
+		return Data[a..(num + 1)].ToString();
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

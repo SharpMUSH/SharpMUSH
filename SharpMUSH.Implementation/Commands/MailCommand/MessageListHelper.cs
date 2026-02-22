@@ -25,7 +25,7 @@ public class ErrorOrMailList : OneOfBase<Error<string>, IAsyncEnumerable<SharpMa
 
 	public static implicit operator ErrorOrMailList(Error<string> x) => new(x);
 
-	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x) 
+	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x)
 		=> new(OneOf<Error<string>, IAsyncEnumerable<SharpMail>>.FromT1(x));
 }
 
@@ -46,7 +46,7 @@ public static class MessageListHelper
 		return mailData.ActiveFolder!;
 	}
 
-	public static async ValueTask<ErrorOrMailList> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService,IMediator? mediator, INotifyService? notifyService,  MString? arg0, AnySharpObject executor)
+	public static async ValueTask<ErrorOrMailList> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, MString? arg0, AnySharpObject executor)
 	{
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
@@ -75,7 +75,7 @@ public static class MessageListHelper
 			['*', .. var person] => await FilterMailByPerson(parser, executor, mailList, person),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
-				                                                           && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay))),
+																																	 && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay))),
 			['>', .. var days] when int.TryParse(days, out var afterDay)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-afterDay))),
 			['<', .. var days] when int.TryParse(days, out var beforeDay)
@@ -93,13 +93,13 @@ public static class MessageListHelper
 			"folder"
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ when rangeSplit.Length == 2
-			       && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
+						 && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left)),
 			_ when rangeSplit.Length == 2
-			       && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
+						 && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1)),
 			_ when rangeSplit.Length == 2
-			       && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
+						 && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Take(right)),
 			_ when int.TryParse(msgList, out var specificMessage)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(specificMessage).Take(1)),
@@ -110,8 +110,8 @@ public static class MessageListHelper
 
 		return filteredList;
 	}
-	
-	public static async ValueTask<ErrorOrMailList> HandleSent(IMUSHCodeParser parser,IMediator? mediator, INotifyService? notifyService,  MString? arg0, AnySharpObject executor, SharpPlayer target)
+
+	public static async ValueTask<ErrorOrMailList> HandleSent(IMUSHCodeParser parser, IMediator? mediator, INotifyService? notifyService, MString? arg0, AnySharpObject executor, SharpPlayer target)
 	{
 		await ValueTask.CompletedTask;
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
@@ -139,7 +139,7 @@ public static class MessageListHelper
 				=> new Error<string>("MAIL: Invalid message specification"),
 			['~', .. var days] when int.TryParse(days, out var exactDay)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-exactDay - 1)
-				                                                           && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay))),
+																																	 && x.DateSent <= DateTimeOffset.UtcNow.AddDays(-exactDay))),
 			['>', .. var days] when int.TryParse(days, out var afterDay)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.DateSent >= DateTimeOffset.UtcNow.AddDays(-afterDay))),
 			['<', .. var days] when int.TryParse(days, out var beforeDay)
@@ -155,13 +155,13 @@ public static class MessageListHelper
 			"urgent"
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Urgent)),
 			_ when rangeSplit.Length == 2
-			       && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
+						 && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left)),
 			_ when rangeSplit.Length == 2
-			       && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
+						 && int.TryParse(rangeSplit[0], out var left) && !int.TryParse(rangeSplit[1], out _)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1)),
 			_ when rangeSplit.Length == 2
-			       && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
+						 && !int.TryParse(rangeSplit[0], out _) && int.TryParse(rangeSplit[1], out var right)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Take(right)),
 			_ when int.TryParse(msgList, out var specificMessage)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(specificMessage).Take(1)),
@@ -174,15 +174,15 @@ public static class MessageListHelper
 	}
 
 	private static async ValueTask<ErrorOrMailList> FilterMailByPerson(
-		IMUSHCodeParser parser, 
-		AnySharpObject executor, 
-		IAsyncEnumerable<SharpMail> mailList, 
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		IAsyncEnumerable<SharpMail> mailList,
 		string personName)
 	{
 		// Try to locate the person using the Locate service
 		var locateService = parser.ServiceProvider.GetRequiredService<ILocateService>();
 		var locateResult = await locateService.Locate(parser, executor, executor, personName, LocateFlags.PlayersPreference);
-		
+
 		if (!locateResult.IsValid() || !locateResult.IsPlayer)
 		{
 			// If person not found or not a player, fall back to string matching
@@ -193,7 +193,7 @@ public static class MessageListHelper
 					return from.Object()?.Name.StartsWith(personName, StringComparison.OrdinalIgnoreCase) ?? false;
 				}));
 		}
-		
+
 		// Filter by exact player dbref match
 		var targetPlayerDbref = locateResult.AsPlayer.Object.DBRef;
 		return ErrorOrMailList.FromAsyncEnumerable(mailList

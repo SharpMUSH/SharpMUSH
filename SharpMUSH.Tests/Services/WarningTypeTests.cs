@@ -68,7 +68,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_ExitUnlinked_ReturnsExitUnlinked()
 	{
 		// Arrange - use unique name "warn-exit-unlinked-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("exit-unlinked");
 
@@ -80,7 +80,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_ThingDesc_ReturnsThingDesc()
 	{
 		// Arrange - use unique name "warn-thing-desc-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("thing-desc");
 
@@ -92,7 +92,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_RoomDesc_ReturnsRoomDesc()
 	{
 		// Arrange - use unique name "warn-room-desc-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("room-desc");
 
@@ -104,7 +104,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_MyDesc_ReturnsPlayerDesc()
 	{
 		// Arrange - use unique name "warn-player-desc-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("my-desc");
 
@@ -116,7 +116,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_ExitOneway_ReturnsExitOneway()
 	{
 		// Arrange - use unique name "warn-exit-oneway-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("exit-oneway");
 
@@ -128,7 +128,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_ExitMultiple_ReturnsExitMultiple()
 	{
 		// Arrange - use unique name "warn-exit-multiple-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("exit-multiple");
 
@@ -140,7 +140,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_ExitMsgs_ReturnsExitMsgs()
 	{
 		// Arrange - use unique name "warn-exit-msgs-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("exit-msgs");
 
@@ -152,7 +152,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_ThingMsgs_ReturnsThingMsgs()
 	{
 		// Arrange - use unique name "warn-thing-msgs-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("thing-msgs");
 
@@ -164,7 +164,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_ExitDesc_ReturnsExitDesc()
 	{
 		// Arrange - use unique name "warn-exit-desc-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("exit-desc");
 
@@ -176,7 +176,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_LockChecks_ReturnsLockProbs()
 	{
 		// Arrange - use unique name "warn-lock-checks-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("lock-checks");
 
@@ -188,7 +188,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_MultipleWarnings_ReturnsCombined()
 	{
 		// Arrange - use unique name "warn-multiple-combined"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("exit-unlinked thing-desc");
 
@@ -201,7 +201,7 @@ public class WarningTypeTests
 	public async Task ParseWarnings_NegatedWarning_RemovesFromAll()
 	{
 		// Arrange - use unique name "warn-negated-test"
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("all !exit-desc");
 
@@ -216,7 +216,7 @@ public class WarningTypeTests
 	{
 		// Arrange - use unique name "warn-unknown-test"
 		var unknownList = new List<string>();
-		
+
 		// Act
 		var result = WarningTypeHelper.ParseWarnings("exit-unlinked unknown-warning", unknownList);
 
@@ -271,7 +271,7 @@ public class WarningTypeTests
 	{
 		// Arrange - use unique name "warn-unparse-multiple"
 		var flags = WarningType.ExitUnlinked | WarningType.ThingDesc;
-		
+
 		// Act
 		var result = WarningTypeHelper.UnparseWarnings(flags);
 
@@ -284,7 +284,7 @@ public class WarningTypeTests
 	public async Task UnparseWarnings_PrefersGroupNames_OverIndividual()
 	{
 		// Arrange - when all flags of a group are set, should show group name
-		
+
 		// Act
 		var result = WarningTypeHelper.UnparseWarnings(WarningType.Normal);
 

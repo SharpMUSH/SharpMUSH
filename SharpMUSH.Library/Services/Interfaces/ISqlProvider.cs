@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Data.Common;
-using System.Threading.Tasks;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -14,7 +12,7 @@ public interface ISqlProvider : IAsyncDisposable
 	/// </summary>
 	/// <returns>A new database connection</returns>
 	ValueTask<DbConnection> CreateConnectionAsync();
-	
+
 	/// <summary>
 	/// Escapes a string for safe use in SQL queries.
 	/// Note: This method provides basic escaping for specific use cases.
@@ -28,12 +26,12 @@ public interface ISqlProvider : IAsyncDisposable
 	/// Checks if the provider is available and configured
 	/// </summary>
 	bool IsAvailable { get; }
-	
+
 	/// <summary>
 	/// Gets the name of the provider
 	/// </summary>
 	string ProviderName { get; }
-	
+
 	/// <summary>
 	/// Gets the parameter placeholder format for this provider
 	/// (e.g., "?" for MySQL, "$" for PostgreSQL, "@p" for SQL Server)

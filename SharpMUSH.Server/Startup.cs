@@ -1,6 +1,5 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
-using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -27,7 +26,6 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.KafkaFlow;
-using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Redis;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
@@ -61,37 +59,37 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 			return db;
 		});
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
-			/*
-			 * PennMUSH Password Compatibility - IMPLEMENTED
-			 * 
-			 * SharpMUSH uses PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations
-			 * for new passwords.
-			 *
-			 * PennMUSH uses SHA1 in password_hash, stored as: V:ALGO:HASH:TIMESTAMP
-			 * - V: Version number (Currently 2)
-			 * - ALGO: Digest algorithm (Default is SHA1)
-			 * - HASH: Salted hash (first 2 chars are salt prepended to plaintext before hashing)
-			 * - TIMESTAMP: Unix timestamp when password was set
-			 *
-			 * Salt characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
-			 *
-			 * The PasswordService now supports both formats:
-			 * - Verification: Detects PennMUSH format and uses SHA1/SHA256 verification as needed
-			 * - New passwords: Always use modern PBKDF2 (more secure)
-			 * 
-			 * Users with imported PennMUSH passwords should reset their passwords for better security,
-			 * but can still log in with their old passwords until they do.
-			 */
+		/*
+		 * PennMUSH Password Compatibility - IMPLEMENTED
+		 * 
+		 * SharpMUSH uses PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations
+		 * for new passwords.
+		 *
+		 * PennMUSH uses SHA1 in password_hash, stored as: V:ALGO:HASH:TIMESTAMP
+		 * - V: Version number (Currently 2)
+		 * - ALGO: Digest algorithm (Default is SHA1)
+		 * - HASH: Salted hash (first 2 chars are salt prepended to plaintext before hashing)
+		 * - TIMESTAMP: Unix timestamp when password was set
+		 *
+		 * Salt characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+		 *
+		 * The PasswordService now supports both formats:
+		 * - Verification: Detects PennMUSH format and uses SHA1/SHA256 verification as needed
+		 * - New passwords: Always use modern PBKDF2 (more secure)
+		 * 
+		 * Users with imported PennMUSH passwords should reset their passwords for better security,
+		 * but can still log in with their old passwords until they do.
+		 */
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
-		
+
 		// Configure Redis connection using strategy pattern
 		services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
-			
+
 			try
 			{
 				var multiplexer = redisStrategy.GetConnectionAsync().AsTask().GetAwaiter().GetResult();
@@ -104,10 +102,10 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 				throw;
 			}
 		});
-		
+
 		// Add Redis-backed connection state store
 		services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>();
-		
+
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -130,15 +128,15 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddSingleton<IListenerRoutingService, ListenerRoutingService>();
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
-		
+
 		// Initialize TextFileService
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
-		
+
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
-		
+
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
 		services.AddSingleton<ConfigurationReloadService>();

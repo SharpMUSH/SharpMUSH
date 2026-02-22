@@ -53,13 +53,13 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 		logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}",
 			message.Handle, message.Package, message.Info);
 
-// Set GMCP capability flag on first GMCP message
+		// Set GMCP capability flag on first GMCP message
 		connectionService.Update(message.Handle, "GMCP", "1");
 
-// Store GMCP package and info in connection metadata
+		// Store GMCP package and info in connection metadata
 		connectionService.Update(message.Handle, $"GMCP_{message.Package}", message.Info);
 
-// Handle specific GMCP packages
+		// Handle specific GMCP packages
 		HandleGMCPPackage(message.Handle, message.Package, message.Info);
 
 		return Task.CompletedTask;
@@ -67,7 +67,7 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 
 	private void HandleGMCPPackage(long handle, string package, string info)
 	{
-// Process specific GMCP packages
+		// Process specific GMCP packages
 		switch (package)
 		{
 			case "Core.Hello":
@@ -109,13 +109,13 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 		logger.LogDebug("Received MSDP update from handle {Handle} with {Count} variables",
 			message.Handle, message.Variables.Count);
 
-// Store each MSDP variable in connection metadata
+		// Store each MSDP variable in connection metadata
 		foreach (var variable in message.Variables)
 		{
 			connectionService.Update(message.Handle, $"MSDP_{variable.Key}", variable.Value);
 		}
 
-// Handle specific MSDP variables
+		// Handle specific MSDP variables
 		HandleMSDPVariables(message.Handle, message.Variables);
 
 		return Task.CompletedTask;
@@ -123,7 +123,7 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 
 	private void HandleMSDPVariables(long handle, Dictionary<string, string> variables)
 	{
-// Process specific MSDP variables
+		// Process specific MSDP variables
 		foreach (var variable in variables)
 		{
 			switch (variable.Key)
@@ -169,7 +169,7 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionS
 		logger.LogDebug("Received NAWS update from handle {Handle}: {Width}x{Height}",
 			message.Handle, message.Width, message.Height);
 
-// Update connection metadata with new window size
+		// Update connection metadata with new window size
 		connectionService.Update(message.Handle, "HEIGHT", message.Height.ToString(CultureInfo.InvariantCulture));
 		connectionService.Update(message.Handle, "WIDTH", message.Width.ToString(CultureInfo.InvariantCulture));
 

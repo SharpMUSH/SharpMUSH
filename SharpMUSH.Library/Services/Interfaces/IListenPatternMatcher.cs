@@ -37,12 +37,12 @@ public enum ListenBehavior
 	/// Default - triggers for others speaking (like @ahear)
 	/// </summary>
 	AHear,
-	
+
 	/// <summary>
 	/// Triggers for anyone speaking (attribute has AAHEAR flag, like @aahear)
 	/// </summary>
 	AAHear,
-	
+
 	/// <summary>
 	/// Triggers only when object speaks (attribute has AMHEAR flag, like @amhear)
 	/// </summary>

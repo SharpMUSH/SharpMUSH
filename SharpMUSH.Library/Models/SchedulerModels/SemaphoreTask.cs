@@ -3,7 +3,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Models.SchedulerModels;
 
-internal class SemaphoreTask(IMUSHCodeParser parser): IJob
+internal class SemaphoreTask(IMUSHCodeParser parser) : IJob
 {
 	public async Task Execute(IJobExecutionContext context)
 	{

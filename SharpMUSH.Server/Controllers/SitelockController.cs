@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
@@ -79,7 +78,7 @@ public class SitelockController(
 		{
 			var currentOptions = options.CurrentValue;
 			var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules);
-			
+
 			if (!newRules.Remove(hostPattern))
 			{
 				return NotFound($"Sitelock rule for '{hostPattern}' not found");

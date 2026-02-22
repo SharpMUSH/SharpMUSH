@@ -1,6 +1,4 @@
 using KafkaFlow;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;
 
@@ -66,8 +64,8 @@ public class TelnetOutputBatchMiddleware(
 		// they arrive in order. We must preserve this order when concatenating.
 		var messagesByHandle = batch
 			.Select(ctx => (TelnetOutputMessage)ctx.Message.Value)
-			.GroupBy(msg => msg!.Handle, 
-				msg => msg, 
+			.GroupBy(msg => msg!.Handle,
+				msg => msg,
 				(key, msgs) => new { Handle = key, Messages = msgs.ToList() })
 			.ToList();
 
@@ -76,7 +74,7 @@ public class TelnetOutputBatchMiddleware(
 
 		// Process each connection's messages in parallel (connections are independent)
 		// This improves performance without breaking ordering guarantees
-		await Parallel.ForEachAsync(messagesByHandle, 
+		await Parallel.ForEachAsync(messagesByHandle,
 			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
 			async (group, _) =>
 		{
@@ -97,12 +95,12 @@ public class TelnetOutputBatchMiddleware(
 				// Concatenate all message data for this connection IN ORDER
 				var messages = group.Messages;
 				var totalSize = messages.Sum(msg => msg?.Data?.Length ?? 0);
-				
+
 				if (totalSize == 0)
 				{
 					return; // Skip if no valid data
 				}
-				
+
 				// Use Span<byte> for efficient zero-copy concatenation
 				var concatenated = new byte[totalSize];
 				var destination = concatenated.AsSpan();

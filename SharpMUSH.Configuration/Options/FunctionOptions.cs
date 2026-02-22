@@ -8,7 +8,7 @@ public record FunctionOptions(
 		Group = "Security",
 		Order = 1)]
 	bool SaferUserFunctions,
-	
+
 	[property: SharpConfig(
 		Name = "function_side_effects",
 		Category = "Function",

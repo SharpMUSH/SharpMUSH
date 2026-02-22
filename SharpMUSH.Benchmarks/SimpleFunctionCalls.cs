@@ -1,7 +1,7 @@
-﻿using System.Text;
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Text;
 
 namespace SharpMUSH.Benchmarks;
 

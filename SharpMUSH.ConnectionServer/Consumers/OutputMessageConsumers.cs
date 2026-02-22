@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;
 using SharpMUSH.Messaging.Abstractions;
@@ -63,7 +62,7 @@ public class BroadcastConsumer(
 		{
 			try
 			{
-// Transform output based on capabilities and preferences
+				// Transform output based on capabilities and preferences
 				var transformedData = await transformService.TransformAsync(
 					message.Data!,
 					connection.Capabilities,

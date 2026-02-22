@@ -16,7 +16,7 @@ public static class ChannelDescribe
 			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
-		
+
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -32,15 +32,15 @@ public static class ChannelDescribe
 		}
 
 		await Mediator.Send(new UpdateChannelCommand(channel,
-			null, 
+			null,
 			description,
 			null,
 			null,
 			null,
-          			null,
+								null,
 			null,
 			null,
-			null, 
+			null,
 			null));
 
 		return new CallState("Channel description has been updated.");

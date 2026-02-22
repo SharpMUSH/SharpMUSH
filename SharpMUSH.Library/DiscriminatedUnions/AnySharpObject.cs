@@ -23,7 +23,7 @@ public class AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>
 		async exit => await exit.Location.WithCancellation(CancellationToken.None),
 		async thing => await thing.Location.WithCancellation(CancellationToken.None)
 	);
-	
+
 	public async ValueTask<AnySharpContainer> OutermostWhere()
 	{
 		var where = await Where();

@@ -175,9 +175,9 @@ public class SortService(ILocateService locateService, IConnectionService connec
 						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
 						.Match(
 							player => connectionService.Get(player.Object.DBRef)
-								          .FirstOrDefaultAsync(ct).AsTask().GetAwaiter().GetResult()?
-								          .Connected ??
-							          TimeSpan.MaxValue,
+													.FirstOrDefaultAsync(ct).AsTask().GetAwaiter().GetResult()?
+													.Connected ??
+												TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue,
 							_ => TimeSpan.MaxValue,

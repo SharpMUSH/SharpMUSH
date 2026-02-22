@@ -1,6 +1,6 @@
-using System.Text.Json;
 using MySqlConnector;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.Json;
 
 namespace SharpMUSH.Library.Services;
 
@@ -69,13 +69,13 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 
 		await using var connection = await source.OpenConnectionAsync();
 		await using var command = new MySqlCommand(query, connection);
-		
+
 		// Add parameters
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			command.Parameters.AddWithValue($"@p{i}", parameters[i] ?? DBNull.Value);
 		}
-		
+
 		await using var reader = await command.ExecuteReaderAsync();
 
 		while (await reader.ReadAsync())
@@ -96,13 +96,13 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 	{
 		await using var connection = await source.OpenConnectionAsync();
 		await using var command = new MySqlCommand(query, connection);
-		
+
 		// Add parameters
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			command.Parameters.AddWithValue($"@p{i}", parameters[i] ?? DBNull.Value);
 		}
-		
+
 		await using var reader = await command.ExecuteReaderAsync();
 		while (await reader.ReadAsync(CancellationToken.None))
 		{
@@ -127,6 +127,6 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 		return string.Join("\n", output);
 	}
 
-	public string Escape(string value) 
+	public string Escape(string value)
 		=> MySqlHelper.EscapeString(value);
 }

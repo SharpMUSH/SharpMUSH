@@ -8,7 +8,7 @@ public record CommandOptions(
 		Group = "Communication",
 		Order = 1)]
 	bool NoisyWhisper,
-	
+
 	[property: SharpConfig(
 		Name = "possessive_get",
 		Category = "Command",
@@ -16,7 +16,7 @@ public record CommandOptions(
 		Group = "Syntax",
 		Order = 1)]
 	bool PossessiveGet,
-	
+
 	[property: SharpConfig(
 		Name = "possessive_get_d",
 		Category = "Command",
@@ -24,7 +24,7 @@ public record CommandOptions(
 		Group = "Syntax",
 		Order = 2)]
 	bool PossessiveGetD,
-	
+
 	[property: SharpConfig(
 		Name = "link_to_object",
 		Category = "Command",
@@ -32,7 +32,7 @@ public record CommandOptions(
 		Group = "Building",
 		Order = 1)]
 	bool LinkToObject,
-	
+
 	[property: SharpConfig(
 		Name = "owner_queues",
 		Category = "Command",
@@ -40,7 +40,7 @@ public record CommandOptions(
 		Group = "Security",
 		Order = 1)]
 	bool OwnerQueues,
-	
+
 	[property: SharpConfig(
 		Name = "full_invis",
 		Category = "Command",
@@ -48,7 +48,7 @@ public record CommandOptions(
 		Group = "Security",
 		Order = 2)]
 	bool FullInvisibility,
-	
+
 	[property: SharpConfig(
 		Name = "wiz_noaenter",
 		Category = "Command",
@@ -56,7 +56,7 @@ public record CommandOptions(
 		Group = "Security",
 		Order = 3)]
 	bool WizardNoAEnter,
-	
+
 	[property: SharpConfig(
 		Name = "really_safe",
 		Category = "Command",
@@ -64,7 +64,7 @@ public record CommandOptions(
 		Group = "Security",
 		Order = 4)]
 	bool ReallySafe,
-	
+
 	[property: SharpConfig(
 		Name = "destroy_possessions",
 		Category = "Command",
@@ -72,7 +72,7 @@ public record CommandOptions(
 		Group = "Building",
 		Order = 2)]
 	bool DestroyPossessions,
-	
+
 	[property: SharpConfig(
 		Name = "probate_judge",
 		Category = "Command",

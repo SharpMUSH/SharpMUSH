@@ -8,7 +8,7 @@ public record LogOptions(
 		Group = "Log Destination",
 		Order = 1)]
 	bool UseSyslog,
-	
+
 	[property: SharpConfig(
 		Name = "log_commands",
 		Category = "Log",
@@ -16,7 +16,7 @@ public record LogOptions(
 		Group = "Log Content",
 		Order = 1)]
 	bool LogCommands,
-	
+
 	[property: SharpConfig(
 		Name = "log_forces",
 		Category = "Log",
@@ -24,7 +24,7 @@ public record LogOptions(
 		Group = "Log Content",
 		Order = 2)]
 	bool LogForces,
-	
+
 	[property: SharpConfig(
 		Name = "error_log",
 		Category = "Log",
@@ -32,7 +32,7 @@ public record LogOptions(
 		Group = "Log Files",
 		Order = 1)]
 	string ErrorLog,
-	
+
 	[property: SharpConfig(
 		Name = "command_log",
 		Category = "Log",
@@ -40,7 +40,7 @@ public record LogOptions(
 		Group = "Log Files",
 		Order = 2)]
 	string CommandLog,
-	
+
 	[property: SharpConfig(
 		Name = "wizard_log",
 		Category = "Log",
@@ -48,7 +48,7 @@ public record LogOptions(
 		Group = "Log Files",
 		Order = 3)]
 	string WizardLog,
-	
+
 	[property: SharpConfig(
 		Name = "chkpt_log",
 		Category = "Log",
@@ -56,7 +56,7 @@ public record LogOptions(
 		Group = "Log Files",
 		Order = 4)]
 	string CheckpointLog,
-	
+
 	[property: SharpConfig(
 		Name = "trace_log",
 		Category = "Log",
@@ -64,7 +64,7 @@ public record LogOptions(
 		Group = "Log Files",
 		Order = 5)]
 	string TraceLog,
-	
+
 	[property: SharpConfig(
 		Name = "connect_log",
 		Category = "Log",
@@ -72,7 +72,7 @@ public record LogOptions(
 		Group = "Log Files",
 		Order = 6)]
 	string ConnectLog,
-	
+
 	[property: SharpConfig(
 		Name = "mem_check",
 		Category = "Log",
@@ -80,7 +80,7 @@ public record LogOptions(
 		Group = "Diagnostics",
 		Order = 1)]
 	bool MemoryCheck,
-	
+
 	[property: SharpConfig(
 		Name = "use_connlog",
 		Category = "Log",

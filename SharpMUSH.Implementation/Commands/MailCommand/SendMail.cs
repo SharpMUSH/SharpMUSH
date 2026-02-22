@@ -15,7 +15,7 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 public static class SendMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IPermissionService permissionService,
-		IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, 
+		IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService,
 		IAttributeService attributeService, IOptionsWrapper<SharpMUSHOptions> configuration,
 		MString nameList, MString subjectAndMessage, string[] switches)
 	{
@@ -96,10 +96,10 @@ public static class SendMail
 				var amailAttr = await attributeService.GetAttributeAsync(
 					playerAsAny,  // executor is the player themselves
 					playerAsAny,  // object is also the player
-					"AMAIL", 
+					"AMAIL",
 					IAttributeService.AttributeMode.Read,
 					false);
-					
+
 				if (amailAttr.IsAttribute)
 				{
 					var attribute = amailAttr.AsAttribute.Last();

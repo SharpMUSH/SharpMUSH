@@ -42,7 +42,7 @@ public static class Configurable
 	};
 
 	public static Dictionary<string, string[]> CommandRestrictions { get; private set; } = new();
-	
+
 	public static Dictionary<string, string[]> FunctionRestrictions { get; private set; } = new();
 
 	/// <summary>

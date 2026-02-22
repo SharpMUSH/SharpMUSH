@@ -1,13 +1,11 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using System.Threading;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -19,7 +17,7 @@ public class MailFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	
+
 	// Unique test identifier to ensure we don't conflict with other test runs
 	private static readonly string TestRunId = Guid.NewGuid().ToString("N")[..8];
 	private static int _setupComplete = 0;
@@ -36,76 +34,76 @@ public class MailFunctionUnitTests
 		{
 			// Check again after acquiring the lock
 			if (Interlocked.CompareExchange(ref _setupComplete, 0, 0) == 1) return;
-		
+
 			// Perform setup
-		// Get the current player (executor)
-		var executor = await Parser.CurrentState.KnownExecutorObject(Mediator);
-		var testPlayer = executor.AsPlayer;
-		
-		// Clear any existing mail to ensure clean state
-		var existingMail = Mediator.CreateStream(new GetAllMailListQuery(testPlayer));
-		
-		await foreach (var mail in existingMail)
-		{
-			await Mediator.Send(new DeleteMailCommand(mail));
-		}
-		
-		// Create test mail messages with unique content tied to this test run
-		var testMail1 = new SharpMail
-		{
-			DateSent = DateTimeOffset.UtcNow.AddHours(-2),
-			Fresh = false,
-			Read = true,
-			Tagged = false,
-			Urgent = false,
-			Cleared = false,
-			Forwarded = false,
-			Folder = "INBOX",
-			Content = MModule.single($"TESTMAIL-{TestRunId}-MSG1-Content"),
-			Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject1"),
-			From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
-				async _ => await ValueTask.FromResult(executor.WithNoneOption()))
-		};
+			// Get the current player (executor)
+			var executor = await Parser.CurrentState.KnownExecutorObject(Mediator);
+			var testPlayer = executor.AsPlayer;
 
-		var testMail2 = new SharpMail
-		{
-			DateSent = DateTimeOffset.UtcNow.AddHours(-1),
-			Fresh = true,
-			Read = false,
-			Tagged = true,
-			Urgent = true,
-			Cleared = false,
-			Forwarded = false,
-			Folder = "INBOX",
-			Content = MModule.single($"TESTMAIL-{TestRunId}-MSG2-Content with more text"),
-			Subject = MModule.single($"TESTMAIL-{TestRunId}-UrgentSubject2"),
-			From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
-				async _ => await ValueTask.FromResult(executor.WithNoneOption()))
-		};
+			// Clear any existing mail to ensure clean state
+			var existingMail = Mediator.CreateStream(new GetAllMailListQuery(testPlayer));
 
-		var testMail3 = new SharpMail
-		{
-			DateSent = DateTimeOffset.UtcNow.AddMinutes(-30),
-			Fresh = false,
-			Read = false,
-			Tagged = false,
-			Urgent = false,
-			Cleared = true,
-			Forwarded = false,
-			Folder = "INBOX",
-			Content = MModule.single($"TESTMAIL-{TestRunId}-MSG3-Content"),
-			Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject3"),
-			From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
-				async _ => await ValueTask.FromResult(executor.WithNoneOption()))
-		};
+			await foreach (var mail in existingMail)
+			{
+				await Mediator.Send(new DeleteMailCommand(mail));
+			}
 
-		// Send the test mail to the player
-		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail1));
-		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail2));
-		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail3));
-		
-		// Mark setup as complete
-		Interlocked.Exchange(ref _setupComplete, 1);
+			// Create test mail messages with unique content tied to this test run
+			var testMail1 = new SharpMail
+			{
+				DateSent = DateTimeOffset.UtcNow.AddHours(-2),
+				Fresh = false,
+				Read = true,
+				Tagged = false,
+				Urgent = false,
+				Cleared = false,
+				Forwarded = false,
+				Folder = "INBOX",
+				Content = MModule.single($"TESTMAIL-{TestRunId}-MSG1-Content"),
+				Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject1"),
+				From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
+					async _ => await ValueTask.FromResult(executor.WithNoneOption()))
+			};
+
+			var testMail2 = new SharpMail
+			{
+				DateSent = DateTimeOffset.UtcNow.AddHours(-1),
+				Fresh = true,
+				Read = false,
+				Tagged = true,
+				Urgent = true,
+				Cleared = false,
+				Forwarded = false,
+				Folder = "INBOX",
+				Content = MModule.single($"TESTMAIL-{TestRunId}-MSG2-Content with more text"),
+				Subject = MModule.single($"TESTMAIL-{TestRunId}-UrgentSubject2"),
+				From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
+					async _ => await ValueTask.FromResult(executor.WithNoneOption()))
+			};
+
+			var testMail3 = new SharpMail
+			{
+				DateSent = DateTimeOffset.UtcNow.AddMinutes(-30),
+				Fresh = false,
+				Read = false,
+				Tagged = false,
+				Urgent = false,
+				Cleared = true,
+				Forwarded = false,
+				Folder = "INBOX",
+				Content = MModule.single($"TESTMAIL-{TestRunId}-MSG3-Content"),
+				Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject3"),
+				From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
+					async _ => await ValueTask.FromResult(executor.WithNoneOption()))
+			};
+
+			// Send the test mail to the player
+			await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail1));
+			await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail2));
+			await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail3));
+
+			// Mark setup as complete
+			Interlocked.Exchange(ref _setupComplete, 1);
 		}
 		finally
 		{
@@ -224,13 +222,13 @@ public class MailFunctionUnitTests
 		var received = int.Parse(parts[3]);
 		var receivedUnread = int.Parse(parts[4]);
 		var receivedCleared = int.Parse(parts[5]);
-		
+
 		// Validate all counts match our setup: 3 sent, 2 unread, 1 cleared
 		await Assert.That(sent).IsEqualTo(3);
 		await Assert.That(received).IsEqualTo(3);
 		await Assert.That(receivedUnread).IsEqualTo(2); // mail 2 and 3 are unread
 		await Assert.That(receivedCleared).IsEqualTo(1); // mail 3 is cleared
-		// Also validate sent mail stats (we sent to ourselves)
+																										 // Also validate sent mail stats (we sent to ourselves)
 		await Assert.That(sentUnread).IsEqualTo(2); // Same as received unread
 		await Assert.That(sentCleared).IsEqualTo(1); // Same as received cleared
 	}
@@ -252,7 +250,7 @@ public class MailFunctionUnitTests
 		var sent = int.Parse(parts[0]);
 		var received = int.Parse(parts[4]);
 		var receivedBytes = int.Parse(parts[7]);
-		
+
 		await Assert.That(sent).IsEqualTo(3);
 		await Assert.That(received).IsEqualTo(3);
 		// Byte count should be sum of all message content lengths
@@ -278,7 +276,7 @@ public class MailFunctionUnitTests
 		// Get all mail statuses and check if any have urgent flag
 		var allMail = (await Parser.FunctionParse(MModule.single("maillist()")))?.Message!;
 		var mailList = allMail.ToPlainText()!.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		
+
 		bool foundUrgent = false;
 		foreach (var mailId in mailList)
 		{
@@ -294,7 +292,7 @@ public class MailFunctionUnitTests
 				}
 			}
 		}
-		
+
 		// We created one urgent message in setup
 		await Assert.That(foundUrgent).IsTrue();
 	}
@@ -377,7 +375,7 @@ public class MailFunctionUnitTests
 		var read = int.Parse(parts[0]);
 		var unread = int.Parse(parts[1]);
 		var cleared = int.Parse(parts[2]);
-		
+
 		// From mail() test we know there are 3 messages total
 		// So read + unread should equal the total messages
 		// But folder stats might return 0 if called before mail is properly set up
