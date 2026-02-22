@@ -282,7 +282,12 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
-		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
+		var arguments = context.functionArg().Select(x => x?.evaluationString()).ToArray();
+
+		if(arguments.Length == 1 && arguments[0] is null)
+		{
+			arguments = [];
+		}
 
 		var executor = await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
@@ -355,7 +360,7 @@ public class SharpMUSHParserVisitor(
 	/// <param name="visitor"></param>
 	/// <returns>The resulting CallState.</returns>
 	public async ValueTask<CallState> CallFunction(string name, MString src,
-		FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
+		FunctionContext context, EvaluationStringContext?[] args, SharpMUSHParserVisitor visitor)
 	{
 		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var success = true;
@@ -447,7 +452,7 @@ public class SharpMUSHParserVisitor(
 			/* Validation, this should probably go into its own function! */
 			if (args.Length > attribute.MaxArgs)
 			{
-				return new CallState(Errors.ErrorArgRange, context.Depth());
+				return new CallState(string.Format(Errors.ErrorTooManyArguments, name, attribute.MaxArgs, args.Length), context.Depth());
 			}
 
 			if (args.Length < attribute.MinArgs)
@@ -491,10 +496,11 @@ public class SharpMUSHParserVisitor(
 			{
 				refinedArguments = await args
 					.ToAsyncEnumerable()
-					.Select<EvaluationStringContext, CallState>(async (x, ct) => new CallState(
-						stripAnsi
-							? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
-							: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
+					.Select<EvaluationStringContext?, CallState>(async (x, ct) => x == null 
+						? CallState.Empty 
+						: new CallState(stripAnsi
+								? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
+								: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 					.ToListAsync();
 			}
@@ -512,6 +518,7 @@ public class SharpMUSHParserVisitor(
 				// For NoParse functions with multiple arguments, store unevaluated text with deferred evaluation
 				refinedArguments = args.Select(x =>
 				{
+					if (x is null) return CallState.Empty;
 					var text = GetContextText(x);
 					var evalText = stripAnsi ? MModule.plainText2(text) : text;
 					return new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi));
@@ -1690,6 +1697,9 @@ public class SharpMUSHParserVisitor(
 	/// <return>The visitor result.</return>
 	public override async ValueTask<CallState?> VisitSingleCommandArg([NotNull] SingleCommandArgContext context)
 	{
+		if (context.evaluationString() is null)
+			return CallState.Empty;
+
 		var visitedChildren = await VisitChildren(context);
 
 		return new CallState(
@@ -1718,7 +1728,7 @@ public class SharpMUSHParserVisitor(
 	public override async ValueTask<CallState?> VisitStartEqSplitCommandArgs(
 		[NotNull] StartEqSplitCommandArgsContext context)
 	{
-		var baseArg = await VisitChildren(context.singleCommandArg());
+		var baseArg = await VisitChildren(context.singleCommandArg()) ?? CallState.Empty;
 		var commaArgs = await VisitChildren(context.commaCommandArgs());
 		// Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(), commaArgs?.ToString());
 		return new CallState(null,
@@ -1740,7 +1750,7 @@ public class SharpMUSHParserVisitor(
 		[NotNull] StartEqSplitCommandContext context)
 	{
 		var singleCommandArg = context.singleCommandArg();
-		var baseArg = await VisitChildren(singleCommandArg[0]);
+		var baseArg = await VisitChildren(singleCommandArg[0]) ?? CallState.Empty;
 		var rsArg = singleCommandArg.Length > 1 ? await VisitChildren(singleCommandArg[1]) : null;
 		MString[] args = singleCommandArg.Length > 1
 			? [baseArg!.Message!, rsArg!.Message!]

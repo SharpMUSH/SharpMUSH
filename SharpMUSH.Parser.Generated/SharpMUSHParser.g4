@@ -59,7 +59,9 @@ commaCommandArgs:
 ;
 
 
-singleCommandArg: evaluationString;
+singleCommandArg: 
+    evaluationString?
+;
 
 evaluationString:
       function explicitEvaluationString?
@@ -84,9 +86,13 @@ bracketPattern:
     OBRACK evaluationString CBRACK
 ;
 
+functionArg:
+    evaluationString?
+;
+
 function: 
     FUNCHAR {++inFunction;} 
-    (evaluationString ({inBraceDepth == 0}? COMMAWS evaluationString)*)?
+    (functionArg ({inBraceDepth == 0}? COMMAWS functionArg)*)?
     CPAREN {--inFunction;} 
 ;
 
