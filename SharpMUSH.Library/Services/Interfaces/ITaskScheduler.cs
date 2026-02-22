@@ -144,4 +144,13 @@ public interface ITaskScheduler
 	/// <param name="pid">Process ID</param>
 	/// <returns>True if task was found and halted, false otherwise</returns>
 	ValueTask<bool> HaltByPid(long pid);
+
+	/// <summary>
+	/// Enqueue a pre-built action to the immediate execution channel.
+	/// Used to route Quartz-triggered work through the serialized command queue.
+	/// </summary>
+	/// <param name="action">The action to execute</param>
+	/// <param name="triggerName">Trigger identifier for tracking</param>
+	/// <param name="group">Group identifier for categorization</param>
+	ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
 }

@@ -1,9 +1,10 @@
 using Quartz;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Models.SchedulerModels;
 
-internal class SemaphoreTask(IMUSHCodeParser parser) : IJob
+internal class SemaphoreTask(IMUSHCodeParser parser, ITaskScheduler taskScheduler) : IJob
 {
 	public async Task Execute(IJobExecutionContext context)
 	{
@@ -11,7 +12,14 @@ internal class SemaphoreTask(IMUSHCodeParser parser) : IJob
 		var command = context.MergedJobDataMap.Get("Command") as MString;
 
 		await context.Scheduler.UnscheduleJob(context.Trigger.Key);
-		await parser.FromState(state!).CommandListParse(command!);
 		await context.Scheduler.DeleteJob(context.JobDetail.Key);
+
+		if (state != null && command != null)
+		{
+			await taskScheduler.EnqueueWork(
+				() => parser.FromState(state).CommandListParse(command),
+				context.Trigger.Key.Name,
+				context.Trigger.Key.Group);
+		}
 	}
 }
