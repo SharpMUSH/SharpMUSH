@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Configuration.Generated;
+using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Configuration;
 

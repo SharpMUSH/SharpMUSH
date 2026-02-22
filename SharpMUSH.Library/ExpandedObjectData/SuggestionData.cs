@@ -8,12 +8,12 @@ namespace SharpMUSH.Library.ExpandedObjectData;
 public record SuggestionData : AbstractExpandedData
 {
 	public Dictionary<string, HashSet<string>>? Categories { get; init; }
-	
+
 	/// <summary>
 	/// Default constructor with empty categories.
 	/// </summary>
 	public SuggestionData() : this(new Dictionary<string, HashSet<string>>()) { }
-	
+
 	/// <summary>
 	/// Constructor with categories.
 	/// </summary>

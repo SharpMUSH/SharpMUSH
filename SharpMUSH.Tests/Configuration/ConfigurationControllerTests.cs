@@ -24,7 +24,7 @@ public class ConfigurationControllerTests
 		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
 		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
-		
+
 		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
 		const string configContent = """
@@ -37,10 +37,10 @@ public class ConfigurationControllerTests
 		var result = await controller.ImportConfiguration(configContent);
 
 		await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
-		
+
 		var okResult = (OkObjectResult)result.Result!;
 		var response = (ConfigurationResponse)okResult.Value!;
-		
+
 		await Assert.That(response.Configuration.Net.MudName).IsEqualTo("Test MUSH API Return");
 		await Assert.That(response.Configuration.Net.Port).IsEqualTo((uint)4207);
 		await Assert.That(response.Configuration.Net.SslPort).IsEqualTo((uint)4206);
@@ -53,7 +53,7 @@ public class ConfigurationControllerTests
 		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
 		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
-		
+
 		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
 		const string configContent = "";
@@ -71,16 +71,16 @@ public class ConfigurationControllerTests
 		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
 		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
-		
+
 		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
 
 		var result = controller.GetConfiguration();
 
 		await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
-		
+
 		var okResult = (OkObjectResult)result.Result!;
 		var response = (ConfigurationResponse)okResult.Value!;
-		
+
 		await Assert.That(response.Configuration).IsNotNull();
 		await Assert.That(response.Metadata).IsNotNull();
 	}
@@ -91,12 +91,12 @@ public class ConfigurationControllerTests
 		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
 		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
-		
+
 		var optionsMonitor = WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>();
-		
+
 		bool changeDetected = false;
 		string? newMudName = null;
-		
+
 		var disposable = optionsMonitor.OnChange((options, name) =>
 		{
 			changeDetected = true;
@@ -124,7 +124,7 @@ public class ConfigurationControllerTests
 			await Task.Delay(200);
 
 			await Assert.That(changeDetected).IsTrue();
-			
+
 			await Assert.That(newMudName).IsNotNull();
 		}
 		finally

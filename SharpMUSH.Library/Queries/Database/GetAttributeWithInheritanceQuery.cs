@@ -29,7 +29,7 @@ public record GetAttributeWithInheritanceQuery(
 	: IStreamQuery<AttributeWithInheritance>, ICacheable
 {
 	public string CacheKey => $"attribute-inheritance:{DBRef}:{string.Join("`", Attribute)}:{CheckParent}";
-	
+
 	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }
 
@@ -44,6 +44,6 @@ public record GetLazyAttributeWithInheritanceQuery(
 	: IStreamQuery<LazyAttributeWithInheritance>, ICacheable
 {
 	public string CacheKey => $"lazy-attribute-inheritance:{DBRef}:{string.Join("`", Attribute)}:{CheckParent}";
-	
+
 	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }

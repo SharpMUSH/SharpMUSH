@@ -11,7 +11,7 @@ public static class RetractMail
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, ILocateService locateService, IMediator mediator, INotifyService notifyService, string target, string msgList)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var maybeLocate = await locateService.LocateAndNotifyIfInvalid(parser, 
+		var maybeLocate = await locateService.LocateAndNotifyIfInvalid(parser,
 			executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 
@@ -21,12 +21,12 @@ public static class RetractMail
 		}
 
 		var sentMails = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MModule.single(msgList), maybeLocate.AsPlayer);
-		
+
 		if (sentMails.IsError)
 		{
 			return MModule.single(sentMails.AsError);
 		}
-		
+
 		var foundMailList = sentMails.AsMailList;
 
 		var length = 0;

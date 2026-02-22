@@ -8,7 +8,7 @@ public class CommandDiscoveryServiceTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private ICommandDiscoveryService CommandDiscoveryService => 
+	private ICommandDiscoveryService CommandDiscoveryService =>
 		WebAppFactoryArg.Services.GetRequiredService<ICommandDiscoveryService>();
 
 	[Test]

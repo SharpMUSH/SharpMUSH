@@ -1,8 +1,8 @@
-﻿using System.Linq.Expressions;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Linq.Expressions;
 
 namespace SharpMUSH.Implementation;
 
@@ -47,7 +47,7 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 
 		return valid;
 	}
-	
+
 	/// <summary>
 	/// Normalizes a lock expression by converting bare dbrefs to objids.
 	/// This ensures locks reference specific object instances and won't match recycled dbrefs.
@@ -62,9 +62,9 @@ public class BooleanExpressionParser(IMediator mediator) : IBooleanExpressionPar
 		SharpMUSHBoolExpParser sharpParser = new(commonTokenStream);
 		var chatContext = sharpParser.@lock();
 		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(mediator);
-		
+
 		var normalized = visitor.Visit(chatContext);
-		
+
 		return normalized;
 	}
 }

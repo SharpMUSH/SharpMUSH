@@ -13,9 +13,9 @@ public class HealthMonitoringService(ITelemetryService telemetryService, ILogger
 	{
 		// Set initial healthy state
 		telemetryService.SetServerHealthState(true);
-		
+
 		logger.LogInformation("Health monitoring service started - Server is healthy");
-		
+
 		while (!stoppingToken.IsCancellationRequested)
 		{
 			try
@@ -23,7 +23,7 @@ public class HealthMonitoringService(ITelemetryService telemetryService, ILogger
 				// In a real implementation, you might check database connectivity,
 				// message queue connectivity, etc. For now, we assume healthy if running.
 				telemetryService.SetServerHealthState(true);
-				
+
 				await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
 			}
 			catch (OperationCanceledException)
@@ -35,7 +35,7 @@ public class HealthMonitoringService(ITelemetryService telemetryService, ILogger
 			{
 				logger.LogError(ex, "Error in health monitoring service");
 				telemetryService.SetServerHealthState(false);
-				
+
 				try
 				{
 					await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
@@ -46,7 +46,7 @@ public class HealthMonitoringService(ITelemetryService telemetryService, ILogger
 				}
 			}
 		}
-		
+
 		logger.LogInformation("Health monitoring service stopped");
 	}
 	/// <summary>

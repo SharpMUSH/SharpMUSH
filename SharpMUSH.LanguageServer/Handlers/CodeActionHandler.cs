@@ -2,7 +2,6 @@ using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
 using SharpMUSH.LanguageServer.Services;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -19,7 +18,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 	private readonly IMUSHCodeParser _underlyingParser;
 
 	public CodeActionHandler(
-		DocumentManager documentManager, 
+		DocumentManager documentManager,
 		LSPMUSHCodeParser parser,
 		IMUSHCodeParser underlyingParser)
 	{
@@ -29,7 +28,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 	}
 
 	public override Task<CommandOrCodeActionContainer?> Handle(
-		CodeActionParams request, 
+		CodeActionParams request,
 		CancellationToken cancellationToken)
 	{
 		var uri = request.TextDocument.Uri.ToString();
@@ -45,7 +44,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 		try
 		{
 			var diagnostics = _parser.GetDiagnostics(document.Text, ParseType.Function);
-			
+
 			// Process diagnostics to suggest fixes
 			foreach (var diagnostic in diagnostics)
 			{
@@ -143,9 +142,9 @@ public class CodeActionHandler : CodeActionHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error generating code actions: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		if (codeActions.Count > 0)
@@ -164,7 +163,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 	}
 
 	private static List<CodeAction> GetCodeActionsForDiagnostic(
-		Library.Models.Diagnostic diagnostic, 
+		Library.Models.Diagnostic diagnostic,
 		DocumentUri uri,
 		string documentText)
 	{
@@ -206,7 +205,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 	}
 
 	protected override CodeActionRegistrationOptions CreateRegistrationOptions(
-		CodeActionCapability capability, 
+		CodeActionCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new CodeActionRegistrationOptions

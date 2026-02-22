@@ -28,17 +28,17 @@ public class EventService(
 		{
 			// Get the event_handler config option
 			var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
-			
+
 			// If no event handler is configured, return early
 			if (eventHandlerDbRef is null or 0)
 			{
 				return;
 			}
-			
+
 			// Get the event handler object from the database
 			var eventHandlerRef = new DBRef((int)eventHandlerDbRef.Value, null);
 			var eventHandlerResult = await mediator.Send(new GetObjectNodeQuery(eventHandlerRef));
-			
+
 			// If the event handler object doesn't exist, log warning and return
 			if (eventHandlerResult.IsNone)
 			{
@@ -48,9 +48,9 @@ public class EventService(
 					eventName);
 				return;
 			}
-			
+
 			var eventHandler = eventHandlerResult.Known;
-			
+
 			// Check if the event handler has an attribute matching the event name
 			var attributeResult = await attributeService.GetAttributeAsync(
 				eventHandler,
@@ -58,14 +58,14 @@ public class EventService(
 				eventName,
 				IAttributeService.AttributeMode.Execute,
 				parent: false);
-			
+
 			// If the attribute doesn't exist, return early (no handler for this event)
 			// This is not an error - not all events need handlers
 			if (!attributeResult.IsAttribute)
 			{
 				return;
 			}
-			
+
 			// Build the arguments dictionary for the attribute execution
 			// Arguments are passed as %0, %1, %2, etc. in the attribute code
 			var argsDict = new Dictionary<string, CallState>();
@@ -73,11 +73,11 @@ public class EventService(
 			{
 				argsDict[i.ToString()] = new CallState(args[i]);
 			}
-			
+
 			// Determine the enactor for the event
 			// PennMUSH uses #-1 for system events (no player enactor)
 			var eventEnactor = enactor ?? new DBRef(-1, null);
-			
+
 			// Get the enactor object for passing to EvaluateAttributeFunctionAsync
 			AnySharpObject enactorObject;
 			if (eventEnactor.Number == -1)
@@ -102,12 +102,13 @@ public class EventService(
 					enactorObject = enactorResult.Known;
 				}
 			}
-			
+
 			// Execute the event handler attribute with modified parser state
 			// Set executor to event handler and enactor as determined above
-			await parser.With(state => state with { 
+			await parser.With(state => state with
+			{
 				Executor = eventHandler.Object().DBRef,
-				Enactor = eventEnactor 
+				Enactor = eventEnactor
 			}, async newParser =>
 			{
 				// Execute the event handler attribute
@@ -121,7 +122,7 @@ public class EventService(
 					evalParent: false,
 					ignorePermissions: true);
 			});
-			
+
 			logger.LogDebug(
 				"Triggered event {EventName} with {ArgCount} arguments",
 				eventName,

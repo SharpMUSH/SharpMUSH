@@ -5,7 +5,6 @@ using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -32,8 +31,8 @@ public class FlagAndPowerCommandTests
 		// Verify that a notification was sent with the flag list
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -58,8 +57,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' created")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' created")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
@@ -95,9 +94,9 @@ public class FlagAndPowerCommandTests
 
 		// Create the flag first time
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
-		
+
 		// Clear received calls to reset NSubstitute tracking
-		
+
 
 		// Try to create it again
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
@@ -105,8 +104,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "already exists")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "already exists")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
@@ -137,8 +136,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' deleted")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' deleted")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -152,8 +151,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Cannot delete system flag")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot delete system flag")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -169,8 +168,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "not found")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "not found")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -184,8 +183,8 @@ public class FlagAndPowerCommandTests
 		// Verify that a notification was sent with the power list
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Object Powers:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Powers:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -210,8 +209,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' created")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' created")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
@@ -261,8 +260,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' deleted")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' deleted")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -280,8 +279,8 @@ public class FlagAndPowerCommandTests
 			// Verify error notification was sent
 			await NotifyService
 				.Received(Quantity.Exactly(1))
-				.Notify(Arg.Any<AnySharpObject>(), 
-					Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Cannot delete system power")),
+				.Notify(Arg.Any<AnySharpObject>(),
+					Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot delete system power")),
 					Arg.Any<AnySharpObject>(),
 					Arg.Any<INotifyService.NotificationType>());
 		}
@@ -298,8 +297,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "not found")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "not found")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -313,8 +312,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "requires flag name and symbol")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "requires flag name and symbol")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -328,8 +327,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "requires power name and alias")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "requires power name and alias")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -355,8 +354,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' disabled")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' disabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
@@ -386,8 +385,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' enabled")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' enabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
@@ -405,8 +404,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Cannot disable system flag")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot disable system flag")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -432,8 +431,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' disabled")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' disabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
@@ -464,8 +463,8 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' enabled")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' enabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
@@ -483,8 +482,8 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Cannot disable system power")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot disable system power")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}

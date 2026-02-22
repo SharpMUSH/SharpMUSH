@@ -6,9 +6,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Notifications;
 
 public record ChannelMessageNotification(
-	SharpChannel Channel, 
+	SharpChannel Channel,
 	AnyOptionalSharpObject Source,
-	INotifyService.NotificationType MessageType, 
+	INotifyService.NotificationType MessageType,
 	MString Message,
 	MString Title,
 	MString PlayerName,

@@ -1,6 +1,5 @@
 using System.Net.WebSockets;
 using System.Text;
-using Microsoft.Extensions.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -43,7 +42,7 @@ public class WebSocketClientService : IWebSocketClientService
 
 			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", serverUri);
 			await _webSocket.ConnectAsync(new Uri(serverUri), _cancellationTokenSource.Token);
-			
+
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);
 			_logger.LogInformation("Connected to WebSocket server");
 
@@ -97,7 +96,7 @@ public class WebSocketClientService : IWebSocketClientService
 					WebSocketCloseStatus.NormalClosure,
 					"Client disconnecting",
 					CancellationToken.None);
-				
+
 				ConnectionStateChanged?.Invoke(this, _webSocket.State);
 			}
 			catch (Exception ex)

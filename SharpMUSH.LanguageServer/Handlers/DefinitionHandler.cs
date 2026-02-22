@@ -62,7 +62,7 @@ public class DefinitionHandler : DefinitionHandlerBase
 			for (int i = 0; i < lines.Length; i++)
 			{
 				var currentLine = lines[i];
-				
+
 				// Check for &<attribute> pattern
 				if (currentLine.Contains($"&{word}"))
 				{
@@ -104,9 +104,9 @@ public class DefinitionHandler : DefinitionHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error finding definition: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		return Task.FromResult<LocationOrLocationLinks?>(null);
@@ -118,7 +118,7 @@ public class DefinitionHandler : DefinitionHandlerBase
 	}
 
 	protected override DefinitionRegistrationOptions CreateRegistrationOptions(
-		DefinitionCapability capability, 
+		DefinitionCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new DefinitionRegistrationOptions

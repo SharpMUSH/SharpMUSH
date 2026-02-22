@@ -20,9 +20,9 @@ public class SuggestionController(
 	{
 		try
 		{
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			return Ok(suggestionData);
 		}
 		catch (Exception ex)
@@ -40,19 +40,19 @@ public class SuggestionController(
 	{
 		try
 		{
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			if (suggestionData.Categories == null || !suggestionData.Categories.ContainsKey(category.ToLower()))
 			{
 				return NotFound($"Category '{category}' not found");
 			}
-			
+
 			return Ok(suggestionData.Categories[category.ToLower()].OrderBy(w => w));
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error retrieving category {Category}", category);
+			logger.LogError(ex, "Error retrieving category {Category}", SanitizeUserLogInput(category));
 			return StatusCode(500, $"Error retrieving category '{category}'");
 		}
 	}
@@ -70,25 +70,25 @@ public class SuggestionController(
 				return BadRequest("Word cannot be empty");
 			}
 
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			if (suggestionData.Categories == null)
 			{
-				suggestionData = suggestionData with { Categories = new Dictionary<string, HashSet<string>>() };
+				suggestionData = suggestionData with { Categories = [] };
 			}
-			
+
 			var categoryKey = category.ToLower();
 			if (!suggestionData.Categories.ContainsKey(categoryKey))
 			{
-				suggestionData.Categories[categoryKey] = new HashSet<string>();
+				suggestionData.Categories[categoryKey] = [];
 			}
-			
+
 			var normalizedWord = word.ToLower().Trim();
 			if (suggestionData.Categories[categoryKey].Add(normalizedWord))
 			{
 				await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-				logger.LogInformation("Added word '{Word}' to category '{Category}'", normalizedWord, categoryKey);
+				logger.LogInformation("Added word '{Word}' to category '{Category}'", SanitizeUserLogInput(normalizedWord), SanitizeUserLogInput(categoryKey));
 				return Ok(new { message = $"Added '{normalizedWord}' to category '{categoryKey}'" });
 			}
 			else
@@ -98,7 +98,7 @@ public class SuggestionController(
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error adding word to category {Category}", category);
+			logger.LogError(ex, "Error adding word to category {Category}", SanitizeUserLogInput(category));
 			return StatusCode(500, $"Error adding word to category '{category}'");
 		}
 	}
@@ -111,15 +111,15 @@ public class SuggestionController(
 	{
 		try
 		{
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			var categoryKey = category.ToLower();
 			if (suggestionData.Categories == null || !suggestionData.Categories.ContainsKey(categoryKey))
 			{
 				return NotFound($"Category '{category}' not found");
 			}
-			
+
 			var normalizedWord = word.ToLower().Trim();
 			if (suggestionData.Categories[categoryKey].Remove(normalizedWord))
 			{
@@ -128,9 +128,9 @@ public class SuggestionController(
 				{
 					suggestionData.Categories.Remove(categoryKey);
 				}
-				
+
 				await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-				logger.LogInformation("Removed word '{Word}' from category '{Category}'", normalizedWord, categoryKey);
+				logger.LogInformation("Removed word '{Word}' from category '{Category}'", SanitizeUserLogInput(normalizedWord), SanitizeUserLogInput(categoryKey));
 				return Ok(new { message = $"Removed '{normalizedWord}' from category '{categoryKey}'" });
 			}
 			else
@@ -140,7 +140,7 @@ public class SuggestionController(
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error deleting word from category {Category}", category);
+			logger.LogError(ex, "Error deleting word from category {Category}", SanitizeUserLogInput(category));
 			return StatusCode(500, $"Error deleting word from category '{category}'");
 		}
 	}
@@ -153,23 +153,23 @@ public class SuggestionController(
 	{
 		try
 		{
-			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>() 
+			var suggestionData = await objectDataService.GetExpandedServerDataAsync<SuggestionData>()
 				?? new SuggestionData();
-			
+
 			var categoryKey = category.ToLower();
 			if (suggestionData.Categories == null || !suggestionData.Categories.ContainsKey(categoryKey))
 			{
 				return NotFound($"Category '{category}' not found");
 			}
-			
+
 			suggestionData.Categories.Remove(categoryKey);
 			await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-			logger.LogInformation("Deleted category '{Category}'", categoryKey);
+			logger.LogInformation("Deleted category '{Category}'", SanitizeUserLogInput(categoryKey));
 			return Ok(new { message = $"Deleted category '{categoryKey}'" });
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error deleting category {Category}", category);
+			logger.LogError(ex, "Error deleting category {Category}", SanitizeUserLogInput(category));
 			return StatusCode(500, $"Error deleting category '{category}'");
 		}
 	}
@@ -188,7 +188,7 @@ public class SuggestionController(
 			}
 
 			await objectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-			logger.LogInformation("Updated suggestion data with {CategoryCount} categories", 
+			logger.LogInformation("Updated suggestion data with {CategoryCount} categories",
 				suggestionData.Categories?.Count ?? 0);
 			return Ok(new { message = "Suggestion data updated successfully" });
 		}
@@ -197,5 +197,10 @@ public class SuggestionController(
 			logger.LogError(ex, "Error updating suggestion data");
 			return StatusCode(500, "Error updating suggestion data");
 		}
+	}
+
+	private string SanitizeUserLogInput(string input)
+	{
+		return input.Replace("\r", "").Replace("\n", "");
 	}
 }

@@ -11,8 +11,8 @@ public static class ReadMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser,
 		IExpandedObjectDataService objectDataService,
-		IMediator mediator, 
-		INotifyService notifyService, 
+		IMediator mediator,
+		INotifyService notifyService,
 		int messageNumber, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);

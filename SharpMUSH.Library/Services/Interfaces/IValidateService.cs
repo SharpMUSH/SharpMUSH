@@ -10,25 +10,25 @@ public interface IValidateService
 	enum ValidationType
 	{
 		Invalid = 0,
-		Name, 
-		AttributeName, 
-		AttributeValue, 
-		PlayerName, 
+		Name,
+		AttributeName,
+		AttributeValue,
+		PlayerName,
 		PlayerAlias,
 		Password,
-		CommandName, 
-		FunctionName, 
-		FlagName, 
-		PowerName, 
+		CommandName,
+		FunctionName,
+		FlagName,
+		PowerName,
 		QRegisterName,
-		ColorName, 
-		AnsiCode, 
+		ColorName,
+		AnsiCode,
 		ChannelName,
 		Timezone,
 		LockType,
 		LockKey,
 		BoolExp
 	}
-	
+
 	ValueTask<bool> Valid(ValidationType type, MString value, OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target);
 }

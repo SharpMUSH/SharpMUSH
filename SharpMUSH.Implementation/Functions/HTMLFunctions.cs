@@ -2,11 +2,10 @@
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Services.Interfaces;
-using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
+using SharpMUSH.Library.ParserInterfaces;
 using static MarkupString.MarkupImplementation;
+using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -213,14 +212,14 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["html", "player"])]
 	public static async ValueTask<CallState> WebSocketHTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Send HTML data via websocket - similar to wshtml()
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		AnySharpObject target;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
 		{

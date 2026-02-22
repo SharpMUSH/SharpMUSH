@@ -1,11 +1,4 @@
-﻿using System.Drawing;
-using System.Globalization;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Web;
-using ANSILibrary;
+﻿using ANSILibrary;
 using DotNext.Collections.Generic;
 using Humanizer;
 using Microsoft.FSharp.Core;
@@ -20,8 +13,15 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.MarkupString;
-using static MarkupString.MarkupImplementation;
+using System.Drawing;
+using System.Globalization;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Web;
 using static ANSILibrary.ANSI;
+using static MarkupString.MarkupImplementation;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -54,7 +54,7 @@ public partial class Functions
 			parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message)));
 	}
 
-	[SharpFunction(Name = "speak", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "speak", MinArgs = 2, MaxArgs = 7, Flags = FunctionFlags.Regular,
 		ParameterNames = ["speaker", "string", "say-string", "transform-attr", "isnull-attr", "open", "close"])]
 	public static async ValueTask<CallState> Speak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -89,7 +89,7 @@ public partial class Functions
 		// Determine message type and strip prefix using helper
 		var plainSpeak = speakString.ToPlainText();
 		var messageType = MessageHelpers.DetermineMessageType(plainSpeak);
-		
+
 		// Strip the prefix (including quotes)
 		speakString = plainSpeak switch
 		{
@@ -521,7 +521,7 @@ public partial class Functions
 		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, MModule.single("\n"));
 
 		var widthSpecs = widths.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		
+
 		if (widthSpecs.Length == 0)
 		{
 			return "#-1 INVALID ALIGN STRING";
@@ -595,7 +595,7 @@ public partial class Functions
 
 		// Todo: Turn into compiled regexs.
 		if (new[] { "^e[uw]", "^onc?e\b", "^uni([^nmd]|mo)", "^u[bcfhjkqrst][aeiou]" }
-		    .Any(regex => Regex.IsMatch(wordLower, regex)))
+				.Any(regex => Regex.IsMatch(wordLower, regex)))
 		{
 			return "a";
 		}
@@ -673,7 +673,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "case", MinArgs = 3, MaxArgs = int.MaxValue,
-		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly, 
+		Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly,
 		ParameterNames = ["expression", "case...|result...", "default"])]
 	public static async ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -838,24 +838,24 @@ public partial class Functions
 	public static async ValueTask<CallState> CondAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		// Special case: if called with 3 args like condall(list, yes, no)
 		// First arg is a space-separated list to check if ALL are truthy
 		if (args.Count == 3)
 		{
 			var listArg = await parser.FunctionParse(args["0"].Message!);
 			var elements = listArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-			var allTruthy = elements.All(e => 
-				!string.IsNullOrEmpty(e) && 
-				e != "0" && 
+			var allTruthy = elements.All(e =>
+				!string.IsNullOrEmpty(e) &&
+				e != "0" &&
 				!e.StartsWith("#-1") &&
 				!e.Equals("false", StringComparison.OrdinalIgnoreCase));
-			
+
 			var resultArg = allTruthy ? args["1"] : args["2"];
 			var result = await parser.FunctionParse(resultArg.Message!);
 			return result ?? CallState.Empty;
 		}
-		
+
 		// Original multi-pair logic for other cases
 		var hasDefault = args.Count % 2 == 1;
 		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
@@ -1032,15 +1032,15 @@ public partial class Functions
 
 	// Escape angle brackets for HTML safety
 	[SharpFunction(Name = "decomposeweb", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
-	public static ValueTask<CallState> DecomposeWeb(IMUSHCodeParser parser, SharpFunctionAttribute _2) 
+	public static ValueTask<CallState> DecomposeWeb(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(
-			MModule.evaluateWith((markupType, innerText) 
+			MModule.evaluateWith((markupType, innerText)
 				=> markupType switch
 				{
 					MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
 						=> ReconstructWebCall(ansiMarkup.Details, WebEncodeAngleBrackets(innerText)),
 					_ => WebEncodeAngleBrackets(innerText)
-				}, 
+				},
 				parser.CurrentState.Arguments["0"].Message!));
 
 	[SharpFunction(Name = "decompose", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1088,7 +1088,7 @@ public partial class Functions
 	internal static string ReconstructAnsiCall(AnsiStructure ansiDetails, string innerText)
 	{
 		var attributes = new List<string>();
-		
+
 		// Build formatting prefix (h for bold, u for underline, f for blink, i for invert)
 		var formatPrefix = "";
 		if (ansiDetails.Bold) formatPrefix += "h";
@@ -1166,7 +1166,7 @@ public partial class Functions
 	{
 		Color foregroundColor = Color.Empty;
 		Color backgroundColor = Color.Empty;
-		
+
 		if (!ansiDetails.Foreground.Equals(AnsiColor.NoAnsi))
 		{
 			foregroundColor = ConvertAnsiColorToRGB(ansiDetails.Foreground);
@@ -1179,18 +1179,13 @@ public partial class Functions
 
 		return
 			$"<span style=\"color:{(
-				foregroundColor != Color.Empty 
-					? ColorTranslator.ToHtml(foregroundColor) 
-					: "inherit")
-			};background-color:{
-				(backgroundColor != Color.Empty 
-					? ColorTranslator.ToHtml(backgroundColor) 
-					: "inherit")
-			};text-decoration:{
-				(ansiDetails.Underlined
+				foregroundColor != Color.Empty
+					? ColorTranslator.ToHtml(foregroundColor)
+					: "inherit")};background-color:{(backgroundColor != Color.Empty
+					? ColorTranslator.ToHtml(backgroundColor)
+					: "inherit")};text-decoration:{(ansiDetails.Underlined
 				? "underline"
-				: "inherit")
-			}\">{innerText}</span>";
+				: "inherit")}\">{innerText}</span>";
 	}
 
 	/// <summary>
@@ -1200,7 +1195,7 @@ public partial class Functions
 	{
 		return color switch
 		{
-			ANSI.AnsiColor.RGB rgb => isBackground 
+			ANSI.AnsiColor.RGB rgb => isBackground
 				? $"/{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}"
 				: $"{rgb.Item.R:X2}{rgb.Item.G:X2}{rgb.Item.B:X2}",
 			AnsiColor.ANSI ansi
@@ -1479,8 +1474,8 @@ public partial class Functions
 		var length = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 
 		if (!int.TryParse(first, out var firstInt)
-		    || firstInt < 0
-		    || !int.TryParse(length, out var lengthInt))
+				|| firstInt < 0
+				|| !int.TryParse(length, out var lengthInt))
 		{
 			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
 		}
@@ -1499,12 +1494,12 @@ public partial class Functions
 
 		// Process pairs: (condition, expression), (condition, expression), ...
 		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
-		
+
 		for (int i = 0; i < pairCount; i++)
 		{
 			var conditionIndex = i * 2;
 			var exprIndex = i * 2 + 1;
-			
+
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
 			// Return expression when condition is TRUTHY
 			if (condition != null && Predicates.Truthy(condition.Message!))
@@ -1533,24 +1528,24 @@ public partial class Functions
 
 		// Process pairs: (condition, expression), (condition, expression), ...
 		var pairCount = hasDefault ? (args.Count - 1) / 2 : args.Count / 2;
-		
+
 		for (int i = 0; i < pairCount; i++)
 		{
 			var conditionIndex = i * 2;
 			var exprIndex = i * 2 + 1;
-			
+
 			var condition = await parser.FunctionParse(args[conditionIndex.ToString()].Message!);
 			// Check if ALL elements in the condition (space-separated list) are truthy
 			if (condition != null)
 			{
 				var conditionText = condition.Message!.ToPlainText();
 				var elements = conditionText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				var allTruthy = elements.All(e => 
-					!string.IsNullOrEmpty(e) && 
-					e != "0" && 
+				var allTruthy = elements.All(e =>
+					!string.IsNullOrEmpty(e) &&
+					e != "0" &&
 					!e.StartsWith("#-1") &&
 					!e.Equals("false", StringComparison.OrdinalIgnoreCase));
-				
+
 				if (allTruthy)
 				{
 					var expr = await parser.FunctionParse(args[exprIndex.ToString()].Message!);
@@ -2048,7 +2043,7 @@ public partial class Functions
 		var strlen = str.Length;
 
 		if (!int.TryParse(width, out var widthInt)
-		    || !int.TryParse(firstLineWidth, out var firstLineInt))
+				|| !int.TryParse(firstLineWidth, out var firstLineInt))
 		{
 			return Errors.ErrorInteger;
 		}
@@ -2078,7 +2073,7 @@ public partial class Functions
 		var len = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 
 		if (!int.TryParse(first, out var index)
-		    || !int.TryParse(len, out var length))
+				|| !int.TryParse(len, out var length))
 		{
 			return Errors.ErrorInteger;
 		}
@@ -2086,7 +2081,7 @@ public partial class Functions
 		return MModule.remove(str, index, length);
 	}
 
-	[SharpFunction(Name = "DELETE", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "DELETE", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular,
 		ParameterNames = ["list", "position", "delimiter", "output-separator"])]
 	public static ValueTask<CallState> Delete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -2094,7 +2089,7 @@ public partial class Functions
 		return ListDelete(parser, _2);
 	}
 
-	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
 		ParameterNames = ["list", "position", "new-item", "delim"])]
 	public static ValueTask<CallState> Insert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -2102,7 +2097,7 @@ public partial class Functions
 		return ListInsert(parser, _2);
 	}
 
-	[SharpFunction(Name = "LCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
+	[SharpFunction(Name = "LCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["string"])]
 	public static ValueTask<CallState> LCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -2111,7 +2106,7 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(str.ToLowerInvariant()));
 	}
 
-	[SharpFunction(Name = "UCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
+	[SharpFunction(Name = "UCSTR2", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["string"])]
 	public static ValueTask<CallState> UCStr2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -2120,7 +2115,7 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(str.ToUpperInvariant()));
 	}
 
-	[SharpFunction(Name = "SHA0", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "SHA0", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
 		ParameterNames = ["text"])]
 	public static ValueTask<CallState> SHA0(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

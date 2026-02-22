@@ -31,7 +31,7 @@ public class BuildingCommandTests
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
-		
+
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObject - Test Object");
 	}
 
@@ -43,10 +43,10 @@ public class BuildingCommandTests
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
-		
+
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("CreateObjectWithCost - Test Object");
 	}
-	
+
 	[Test]
 	[DependsOn(nameof(CreateObjectWithCost))]
 	public async ValueTask DoDigForCommandListCheck()
@@ -54,33 +54,33 @@ public class BuildingCommandTests
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
 		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
-		
+
 		var newRoom = await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dig DoDigTestRoom=DoDigTestExit;DoDigTestExitAlias,DoDigTestExitBack;DoDigTestExitAliasBack"));
 
 		var newDb = DBRef.Parse(newRoom.Message!.ToPlainText()!);
-		
+
 		// Use unique room name in assertions to avoid pollution from other tests
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number #{newDb.Number}")));
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
-					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number+1}") && mstr.ToString().Contains($"#{newDb.Number}"),
-					str => str.Contains($"Linked exit #{newDb.Number+1}") && str.Contains($"#{newDb.Number}")
+					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 1}") && mstr.ToString().Contains($"#{newDb.Number}"),
+					str => str.Contains($"Linked exit #{newDb.Number + 1}") && str.Contains($"#{newDb.Number}")
 				)));
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
-					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number+2}") && mstr.ToString().Contains($"#{currentLocationDbRef.Number}"),
-					str => str.Contains($"Linked exit #{newDb.Number+2}") && str.Contains($"#{currentLocationDbRef.Number}")
+					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 2}") && mstr.ToString().Contains($"#{currentLocationDbRef.Number}"),
+					str => str.Contains($"Linked exit #{newDb.Number + 2}") && str.Contains($"#{currentLocationDbRef.Number}")
 				)));
 	}
 
@@ -91,11 +91,11 @@ public class BuildingCommandTests
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
 		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
-		
+
 		var newRoom = await Parser.CommandListParse(MModule.single("@dig Foo Room={Exit;ExitAlias},{ExitBack;ExitAliasBack}"));
 
 		var newDb = DBRef.Parse(newRoom!.Message!.ToPlainText()!);
-		
+
 		// Use Received() instead of Received(Quantity.Exactly()) to make tests more robust
 		// The important thing is that these specific messages were sent, not the exact count
 		await NotifyService
@@ -103,13 +103,13 @@ public class BuildingCommandTests
 			.Notify(Arg.Any<DBRef>(), $"Foo Room created with room number #{newDb.Number}.");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number+1} to #{newDb.Number}");
+			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number + 1} to #{newDb.Number}");
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), "Trying to link...");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number+2} to #{currentLocationDbRef.Number}");
+			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}");
 	}
 
 
@@ -139,12 +139,12 @@ public class BuildingCommandTests
 	{
 		// Create an object first
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DigAndMoveTest - Rename Test"));
-		
+
 		// Rename it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@name DigAndMoveTest - Rename Test=DigAndMoveTest - New Name"));
 
 		var newObject = (await Parser.FunctionParse(MModule.single("name(DigAndMoveTest - New Name)")))!.Message!.ToPlainText();
-		
+
 		await Assert.That(newObject).IsEqualTo("DigAndMoveTest - New Name");
 	}
 
@@ -156,7 +156,7 @@ public class BuildingCommandTests
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
-		
+
 		await Assert.That(newObject.Object()!.Name).IsEqualTo("DigRoom - Test Room");
 	}
 
@@ -168,7 +168,7 @@ public class BuildingCommandTests
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
-		
+
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), $"Room With Exits created with room number #{newObject.Object()!.DBRef.Number}.");
@@ -182,16 +182,16 @@ public class BuildingCommandTests
 		// Create room and exit with unique names
 		var roomResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig LinkExitTestRoom"));
 		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!);
-		
+
 		var exitResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@open LinkExitTestExit"));
 		var exitDbRef = DBRef.Parse(exitResult.Message!.ToPlainText()!.Split("with dbref ")[1].TrimEnd('.'));
-		
+
 		// Link them
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@link {exitDbRef}={roomDbRef}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Linked") && mstr.ToString().Contains($"#{exitDbRef.Number}") && mstr.ToString().Contains($"#{roomDbRef.Number}"),
 					str => str.Contains("Linked") && str.Contains($"#{exitDbRef.Number}") && str.Contains($"#{roomDbRef.Number}")
@@ -206,13 +206,13 @@ public class BuildingCommandTests
 		// Create an object with unique name
 		var sourceResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CloneObjectTestSource"));
 		var sourceDbRef = DBRef.Parse(sourceResult.Message!.ToPlainText()!);
-		
+
 		// Clone it
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@clone {sourceDbRef}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Cloned") && mstr.ToString().Contains("CloneObjectTestSource"),
 					str => str.Contains("Cloned") && str.Contains("CloneObjectTestSource")
@@ -225,23 +225,23 @@ public class BuildingCommandTests
 		// Create two objects
 		var parentResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ParentTestObject"));
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
-		
+
 		var childResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ChildTestObject"));
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
-		
+
 		// Verify both objects exist
 		var parentObj = await Mediator.Send(new GetObjectNodeQuery(parentDbRef));
 		var childObj = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
 		await Assert.That(parentObj.IsNone).IsFalse();
 		await Assert.That(childObj.IsNone).IsFalse();
-		
+
 		// Verify child has no parent initially
 		var initialParent = await childObj.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(initialParent.IsNone).IsTrue();
-		
+
 		// Set parent using @parent command
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
-		
+
 		// Verify parent was set by querying database directly
 		var updatedChild = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
 		var setParent = await updatedChild.Known.Object().Parent.WithCancellation(CancellationToken.None);
@@ -256,21 +256,21 @@ public class BuildingCommandTests
 		// Create two objects
 		var parentResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ParentUnsetTest_Parent"));
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
-		
+
 		var childResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ParentUnsetTest_Child"));
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
-		
+
 		// Set parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
-		
+
 		// Verify parent was set
 		var childWithParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
 		var parentSet = await childWithParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentSet.IsNone).IsFalse();
-		
+
 		// Unset parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}=none"));
-		
+
 		// Verify parent was cleared
 		var childNoParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
 		var parentCleared = await childNoParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
@@ -284,27 +284,27 @@ public class BuildingCommandTests
 		// Create two objects A and B
 		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CycleTest_A"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
-		
+
 		var objBResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CycleTest_B"));
 		var objBDbRef = DBRef.Parse(objBResult.Message!.ToPlainText()!);
-		
+
 		// Set A's parent to B
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objADbRef}={objBDbRef}"));
-		
+
 		// Verify A's parent is B
 		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
 		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfA.IsNone).IsFalse();
 		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
-		
+
 		// Try to set B's parent to A (would create direct cycle: A -> B -> A)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objBDbRef}={objADbRef}"));
-		
+
 		// Verify B's parent was NOT set (cycle prevention)
 		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
 		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfB.IsNone).IsTrue();
-		
+
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
@@ -318,36 +318,36 @@ public class BuildingCommandTests
 		// Create three objects A, B, and C
 		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_A"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
-		
+
 		var objBResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_B"));
 		var objBDbRef = DBRef.Parse(objBResult.Message!.ToPlainText()!);
-		
+
 		var objCResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_C"));
 		var objCDbRef = DBRef.Parse(objCResult.Message!.ToPlainText()!);
-		
+
 		// Create chain: A -> B -> C
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objADbRef}={objBDbRef}"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objBDbRef}={objCDbRef}"));
-		
+
 		// Verify the chain is established
 		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
 		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfA.IsNone).IsFalse();
 		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
-		
+
 		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
 		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfB.IsNone).IsFalse();
 		await Assert.That(parentOfB.Known.Object().DBRef.Number).IsEqualTo(objCDbRef.Number);
-		
+
 		// Try to set C's parent to A (would create indirect cycle: A -> B -> C -> A)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objCDbRef}={objADbRef}"));
-		
+
 		// Verify C's parent was NOT set (cycle prevention)
 		var objC = await Mediator.Send(new GetObjectNodeQuery(objCDbRef));
 		var parentOfC = await objC.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfC.IsNone).IsTrue();
-		
+
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
@@ -361,15 +361,15 @@ public class BuildingCommandTests
 		// Create object
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create SelfParentTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
-		
+
 		// Try to set object as its own parent (self-cycle)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objDbRef}={objDbRef}"));
-		
+
 		// Verify parent was NOT set (self-cycle prevention)
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsTrue();
-		
+
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
@@ -387,13 +387,13 @@ public class BuildingCommandTests
 			var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create LongChain_{i}"));
 			objDbRefs.Add(DBRef.Parse(result.Message!.ToPlainText()!));
 		}
-		
+
 		// Create chain: 0 -> 1 -> 2 -> 3 -> 4
 		for (int i = 0; i < 4; i++)
 		{
 			await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objDbRefs[i]}={objDbRefs[i + 1]}"));
 		}
-		
+
 		// Verify the chain is established
 		for (int i = 0; i < 4; i++)
 		{
@@ -402,15 +402,15 @@ public class BuildingCommandTests
 			await Assert.That(parent.IsNone).IsFalse();
 			await Assert.That(parent.Known.Object().DBRef.Number).IsEqualTo(objDbRefs[i + 1].Number);
 		}
-		
+
 		// Try to set 4's parent to 0 (would create long cycle: 0 -> 1 -> 2 -> 3 -> 4 -> 0)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {objDbRefs[4]}={objDbRefs[0]}"));
-		
+
 		// Verify 4's parent was NOT set (cycle prevention)
 		var obj4 = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[4]));
 		var parentOf4 = await obj4.Known.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOf4.IsNone).IsTrue();
-		
+
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
@@ -425,7 +425,7 @@ public class BuildingCommandTests
 		// Create two objects
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Parent Object"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Child Object"));
-		
+
 		// Set parent
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@parent #9=#8"));
 
@@ -440,14 +440,14 @@ public class BuildingCommandTests
 	{
 		// Create an object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Chown Test"));
-		
+
 		// Change ownership (to self in this case)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chown #10=#1"));
 
 		// Verify command executed without permission error
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "PERMISSION DENIED")));
 	}
 
@@ -458,16 +458,16 @@ public class BuildingCommandTests
 		// Create objects
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zone Object"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
-		
+
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zoned Object"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
-		
+
 		// Set zone
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Zoned")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -477,13 +477,13 @@ public class BuildingCommandTests
 	{
 		// Create an object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Recycle Test"));
-		
+
 		// Recycle it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@recycle #13"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Marked for destruction")));
 	}
 
@@ -495,13 +495,13 @@ public class BuildingCommandTests
 		// Create and link an exit
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Unlink Room"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@open Unlink Exit=#14"));
-		
+
 		// Unlink it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@unlink Unlink Exit"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Unlinked")));
 	}
 
@@ -524,7 +524,7 @@ public class BuildingCommandTests
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LockObjectTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
-		
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock {objDbRef}=#TRUE"));
 
 		await NotifyService
@@ -539,10 +539,10 @@ public class BuildingCommandTests
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create UnlockObjectTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
-		
+
 		// Lock first
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock {objDbRef}=#TRUE"));
-		
+
 		// Then unlock
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@unlock {objDbRef}"));
 

@@ -10,7 +10,7 @@ public record DatabaseOptions(
 		Order = 1,
 		Min = 0)]
 	uint PlayerStart,
-	
+
 	[property: SharpConfig(
 		Name = "master_room",
 		Category = "Database",
@@ -20,7 +20,7 @@ public record DatabaseOptions(
 		Order = 2,
 		Min = 0)]
 	uint MasterRoom,
-	
+
 	[property: SharpConfig(
 		Name = "base_room",
 		Category = "Database",
@@ -30,7 +30,7 @@ public record DatabaseOptions(
 		Order = 3,
 		Min = 0)]
 	uint BaseRoom,
-	
+
 	[property: SharpConfig(
 		Name = "default_home",
 		Category = "Database",
@@ -40,7 +40,7 @@ public record DatabaseOptions(
 		Order = 4,
 		Min = 0)]
 	uint DefaultHome,
-	
+
 	[property: SharpConfig(
 		Name = "exits_connect_rooms",
 		Category = "Database",
@@ -48,7 +48,7 @@ public record DatabaseOptions(
 		Group = "Behavior",
 		Order = 1)]
 	bool ExitsConnectRooms,
-	
+
 	[property: SharpConfig(
 		Name = "zone_control_zmp_only",
 		Category = "Database",
@@ -56,7 +56,7 @@ public record DatabaseOptions(
 		Group = "Behavior",
 		Order = 2)]
 	bool ZoneControlZmpOnly,
-	
+
 	[property: SharpConfig(
 		Name = "ancestor_room",
 		Category = "Database",
@@ -67,7 +67,7 @@ public record DatabaseOptions(
 		Min = 0,
 		Tooltip = "Leave empty for no ancestor")]
 	uint? AncestorRoom,
-	
+
 	[property: SharpConfig(
 		Name = "ancestor_exit",
 		Category = "Database",
@@ -78,7 +78,7 @@ public record DatabaseOptions(
 		Min = 0,
 		Tooltip = "Leave empty for no ancestor")]
 	uint? AncestorExit,
-	
+
 	[property: SharpConfig(
 		Name = "ancestor_thing",
 		Category = "Database",
@@ -89,7 +89,7 @@ public record DatabaseOptions(
 		Min = 0,
 		Tooltip = "Leave empty for no ancestor")]
 	uint? AncestorThing,
-	
+
 	[property: SharpConfig(
 		Name = "ancestor_player",
 		Category = "Database",
@@ -100,7 +100,7 @@ public record DatabaseOptions(
 		Min = 0,
 		Tooltip = "Leave empty for no ancestor")]
 	uint? AncestorPlayer,
-	
+
 	[property: SharpConfig(
 		Name = "event_handler",
 		Category = "Database",
@@ -110,7 +110,7 @@ public record DatabaseOptions(
 		Order = 1,
 		Min = 0)]
 	uint? EventHandler,
-	
+
 	[property: SharpConfig(
 		Name = "http_handler",
 		Category = "Database",
@@ -120,7 +120,7 @@ public record DatabaseOptions(
 		Order = 2,
 		Min = 0)]
 	uint? HttpHandler,
-	
+
 	[property: SharpConfig(
 		Name = "http_per_second",
 		Category = "Database",

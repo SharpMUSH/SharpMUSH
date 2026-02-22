@@ -1,13 +1,13 @@
-﻿using System.Text;
-using MarkupString;
+﻿using MarkupString;
 using Serilog;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Text;
 using A = MarkupString.MarkupStringModule;
 using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class StringFunctionUnitTests 
+public class StringFunctionUnitTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -45,41 +45,41 @@ public class StringFunctionUnitTests
 				.IsEqualTo(bt.Second);
 		}
 	}
-	
+
 	[Test]
 	[Arguments("digest(md5,rawr)", "56742fd94d4e8f8b22d592186c12a9c5")]
 	public async Task Digest(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);		
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
-	
-	
+
+
 	[Test]
-	[Arguments("align(30 30,a,b)", 
+	[Arguments("align(30 30,a,b)",
 		"a                              b                             ")]
-	[Arguments("align(5 5,a1%ra2,b1)", 
+	[Arguments("align(5 5,a1%ra2,b1)",
 		"a1    b1   \na2         ")]
-	[Arguments("align(5 5,a1%ra2,b1%rb2%rb3)", 
+	[Arguments("align(5 5,a1%ra2,b1%rb2%rb3)",
 		"a1    b1   \na2    b2   \n      b3   ")]
-	[Arguments("align(1. 5 1.,|,this is a test,|)", 
+	[Arguments("align(1. 5 1.,|,this is a test,|)",
 		"| this  |\n| is a  |\n| test  |")]
-	[Arguments("align(5 >5,a1%ra2,b1%rb2%rb3)", 
+	[Arguments("align(5 >5,a1%ra2,b1%rb2%rb3)",
 		"a1       b1\na2       b2\n         b3")]
-	[Arguments("align(5. >5,a1,b1%rb2%rb3)", 
+	[Arguments("align(5. >5,a1,b1%rb2%rb3)",
 		"a1       b1\na1       b2\na1       b3")]
-	[Arguments("align(5 >5.,a1%ra2%ra3,b1)", 
+	[Arguments("align(5 >5.,a1%ra2%ra3,b1)",
 		"a1       b1\na2       b1\na3       b1")]
-	[Arguments("align(>30 30,a,b)", 
+	[Arguments("align(>30 30,a,b)",
 		"                             a b                             ")]
-	[Arguments("align(>30 >30,a,b)", 
+	[Arguments("align(>30 >30,a,b)",
 		"                             a                              b")]
-	[Arguments("align(3,123 1 1 1 1)", 
+	[Arguments("align(3,123 1 1 1 1)",
 		"123\n1 1\n1 1")]
 	public async Task Align(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);		
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
 	[Test]
@@ -258,7 +258,7 @@ public class StringFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
-	
+
 	[Test]
 	// TODO: Fix decomposeweb, and then fix this test.
 	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color:Red;background-color:inherit;text-decoration:inherit"">red</span>")]

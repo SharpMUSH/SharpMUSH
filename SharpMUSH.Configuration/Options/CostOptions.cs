@@ -11,7 +11,7 @@ public record CostOptions(
 		Min = 0,
 		Max = 100000)]
 	uint ObjectCost,
-	
+
 	[property: SharpConfig(
 		Name = "exit_cost",
 		Category = "Cost",
@@ -22,7 +22,7 @@ public record CostOptions(
 		Min = 0,
 		Max = 100000)]
 	uint ExitCost,
-	
+
 	[property: SharpConfig(
 		Name = "link_cost",
 		Category = "Cost",
@@ -33,7 +33,7 @@ public record CostOptions(
 		Min = 0,
 		Max = 100000)]
 	uint LinkCost,
-	
+
 	[property: SharpConfig(
 		Name = "room_cost",
 		Category = "Cost",
@@ -44,7 +44,7 @@ public record CostOptions(
 		Min = 0,
 		Max = 100000)]
 	uint RoomCost,
-	
+
 	[property: SharpConfig(
 		Name = "queue_cost",
 		Category = "Cost",
@@ -55,7 +55,7 @@ public record CostOptions(
 		Min = 0,
 		Max = 1000)]
 	uint QueueCost,
-	
+
 	[property: SharpConfig(
 		Name = "quota_cost",
 		Category = "Cost",
@@ -66,7 +66,7 @@ public record CostOptions(
 		Min = 0,
 		Max = 100000)]
 	uint QuotaCost,
-	
+
 	[property: SharpConfig(
 		Name = "find_cost",
 		Category = "Cost",

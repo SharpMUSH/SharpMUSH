@@ -1,10 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NSubstitute;
 using Quartz;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
@@ -19,9 +16,9 @@ public class ScheduledTaskManagementServiceTests
 		// Use reflection to access the private ParseTimeInterval method
 		var method = typeof(ScheduledTaskManagementService).GetMethod("ParseTimeInterval",
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		
+
 		var result = (TimeSpan)method!.Invoke(null, ["1h"])!;
-		
+
 		await Assert.That(result).IsEqualTo(TimeSpan.FromHours(1));
 	}
 
@@ -30,9 +27,9 @@ public class ScheduledTaskManagementServiceTests
 	{
 		var method = typeof(ScheduledTaskManagementService).GetMethod("ParseTimeInterval",
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		
+
 		var result = (TimeSpan)method!.Invoke(null, ["30m"])!;
-		
+
 		await Assert.That(result).IsEqualTo(TimeSpan.FromMinutes(30));
 	}
 
@@ -41,9 +38,9 @@ public class ScheduledTaskManagementServiceTests
 	{
 		var method = typeof(ScheduledTaskManagementService).GetMethod("ParseTimeInterval",
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		
+
 		var result = (TimeSpan)method!.Invoke(null, ["2d"])!;
-		
+
 		await Assert.That(result).IsEqualTo(TimeSpan.FromDays(2));
 	}
 
@@ -52,10 +49,10 @@ public class ScheduledTaskManagementServiceTests
 	{
 		var method = typeof(ScheduledTaskManagementService).GetMethod("ParseTimeInterval",
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		
+
 		// "1h30m" = 1 hour + 30 minutes = 90 minutes
 		var result = (TimeSpan)method!.Invoke(null, ["1h30m"])!;
-		
+
 		await Assert.That(result).IsEqualTo(TimeSpan.FromMinutes(90));
 	}
 
@@ -64,9 +61,9 @@ public class ScheduledTaskManagementServiceTests
 	{
 		var method = typeof(ScheduledTaskManagementService).GetMethod("ParseTimeInterval",
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		
+
 		var result = (TimeSpan)method!.Invoke(null, ["0"])!;
-		
+
 		await Assert.That(result).IsEqualTo(TimeSpan.Zero);
 	}
 
@@ -75,9 +72,9 @@ public class ScheduledTaskManagementServiceTests
 	{
 		var method = typeof(ScheduledTaskManagementService).GetMethod("ParseTimeInterval",
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-		
+
 		var result = (TimeSpan)method!.Invoke(null, [""])!;
-		
+
 		await Assert.That(result).IsEqualTo(TimeSpan.Zero);
 	}
 
@@ -242,7 +239,7 @@ public class ScheduledTaskManagementServiceTests
 	{
 		// This integration test verifies the service can start with the ServerWebAppFactory
 		var schedulerFactory = factory.Services.GetService<ISchedulerFactory>();
-		
+
 		// The fact that the factory initialized successfully and has a scheduler means the service can work
 		await Assert.That(schedulerFactory).IsNotNull();
 	}

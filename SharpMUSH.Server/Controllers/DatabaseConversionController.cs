@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using System.Collections.Concurrent;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -29,7 +29,7 @@ public class DatabaseConversionController(
 		{
 			// Create a temporary file to store the uploaded database
 			var tempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
-			
+
 			await using (var stream = System.IO.File.Create(tempPath))
 			{
 				await file.CopyToAsync(stream, cancellationToken);
@@ -39,7 +39,7 @@ public class DatabaseConversionController(
 
 			// Start conversion in background and return a session ID
 			var sessionId = Guid.NewGuid().ToString();
-			
+
 			// Store the conversion task in a static dictionary for progress tracking
 			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, logger, cancellationToken);
 
@@ -198,10 +198,10 @@ public static class DatabaseConversionSession
 				try
 				{
 					_sessions.TryRemove(sessionId, out var removedSession);
-					
+
 					// Dispose of cancellation token source
 					removedSession?.CancellationSource?.Dispose();
-					
+
 					// Clean up any remaining temp files
 					if (removedSession != null && File.Exists(removedSession.TempFilePath))
 					{
@@ -224,8 +224,8 @@ public static class DatabaseConversionSession
 
 	public static ConversionProgress? GetProgress(string sessionId)
 	{
-		return _sessions.TryGetValue(sessionId, out var session) 
-			? session.CurrentProgress 
+		return _sessions.TryGetValue(sessionId, out var session)
+			? session.CurrentProgress
 			: null;
 	}
 
@@ -270,7 +270,7 @@ public static class DatabaseConversionSession
 		}
 
 		session.CancellationSource.Cancel();
-		
+
 		// Clean up temp file - ignore specific expected exceptions during cleanup
 		try
 		{

@@ -67,7 +67,7 @@ public record ParseError
 	public override string ToString()
 	{
 		var msg = $"Parse error at line {Line}, column {Column}: {Message}";
-		
+
 		if (OffendingToken is not null)
 		{
 			msg += $"\n  Unexpected token: '{OffendingToken}'";

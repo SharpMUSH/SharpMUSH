@@ -1,9 +1,7 @@
 using Bunit;
-using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
-using NSubstitute;
 using SharpMUSH.Client.Pages.Admin;
 using SharpMUSH.Library.ExpandedObjectData;
 using System.Net;
@@ -113,11 +111,11 @@ public class SuggestionManagementTests
 		// Act
 		var cut = ctx.Render<SuggestionManagement>();
 		await Task.Delay(200);
-		
+
 		// Find and click refresh button
 		var refreshButton = cut.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Refresh"));
 		await Assert.That(refreshButton).IsNotNull();
-		
+
 		refreshButton!.Click();
 		await Task.Delay(100);
 
@@ -224,7 +222,7 @@ public class SuggestionManagementTests
 		// Assert
 		var panelTitles = cut.FindAll(".panel-title, .mud-expand-panel-text");
 		var categoryNames = panelTitles.Select(p => p.TextContent.ToLower()).ToList();
-		
+
 		await Assert.That(categoryNames.Any(c => c.Contains("commands"))).IsTrue();
 		await Assert.That(categoryNames.Any(c => c.Contains("functions"))).IsTrue();
 		await Assert.That(categoryNames.Any(c => c.Contains("help"))).IsTrue();
@@ -253,7 +251,7 @@ public class SuggestionManagementTests
 		// Assert
 		var chips = cut.FindAll(".mud-chip");
 		var wordCountChip = chips.FirstOrDefault(c => c.TextContent.Contains("words"));
-		
+
 		await Assert.That(wordCountChip).IsNotNull();
 		await Assert.That(wordCountChip!.TextContent).Contains("4");
 	}

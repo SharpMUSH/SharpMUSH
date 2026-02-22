@@ -1,4 +1,3 @@
-using Bogus.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
@@ -152,15 +151,15 @@ public class ClearAndWipeAttributeTests
 		var afterRoot = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		var afterRootList = await afterRoot.ToListAsync();
 		await Assert.That(afterRootList).IsEmpty();
-		
+
 		var afterChild1 = Database.GetAttributeAsync(playerOneDBRef, [baseName, "CHILD1"]);
 		var afterChild1List = await afterChild1.ToListAsync();
 		await Assert.That(afterChild1List).IsEmpty();
-		
+
 		var afterGrandchild1 = Database.GetAttributeAsync(playerOneDBRef, [baseName, "CHILD1", "GRANDCHILD1"]);
 		var afterGrandchild1List = await afterGrandchild1.ToListAsync();
 		await Assert.That(afterGrandchild1List).IsEmpty();
-		
+
 		var afterChild2 = Database.GetAttributeAsync(playerOneDBRef, [baseName, "CHILD2"]);
 		var afterChild2List = await afterChild2.ToListAsync();
 		await Assert.That(afterChild2List).IsEmpty();
@@ -186,23 +185,23 @@ public class ClearAndWipeAttributeTests
 
 		// Assert: BRANCH1 and its children should be gone, but root and BRANCH2 should remain
 		await Assert.That(result).IsTrue();
-		
+
 		var rootAfter = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		await Assert.That(rootAfter).IsNotNull();
-		
+
 		var branch1After = Database.GetAttributeAsync(playerOneDBRef, [baseName, "BRANCH1"]);
 		var branch1AfterList = await branch1After.ToListAsync();
 		await Assert.That(branch1AfterList).IsEmpty();
-		
+
 		var leaf1After = Database.GetAttributeAsync(playerOneDBRef, [baseName, "BRANCH1", "LEAF1"]);
 		var leaf1AfterList = await leaf1After.ToListAsync();
 		await Assert.That(leaf1AfterList).IsEmpty();
-		
+
 		var branch2After = Database.GetAttributeAsync(playerOneDBRef, [baseName, "BRANCH2"]);
 		await Assert.That(branch2After).IsNotNull();
 		var branch2List = await branch2After!.ToListAsync();
 		await Assert.That(branch2List.Last().Value.ToString()).IsEqualTo("Branch2");
-		
+
 		var leaf2After = Database.GetAttributeAsync(playerOneDBRef, [baseName, "BRANCH2", "LEAF2"]);
 		await Assert.That(leaf2After).IsNotNull();
 		var leaf2List = await leaf2After!.ToListAsync();
@@ -250,7 +249,7 @@ public class ClearAndWipeAttributeTests
 		var afterL1 = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		var afterL1List = await afterL1.ToListAsync();
 		await Assert.That(afterL1List).IsEmpty();
-		
+
 		var afterL5 = Database.GetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4", "L5"]);
 		var afterL5List = await afterL5.ToListAsync();
 		await Assert.That(afterL5List).IsEmpty();

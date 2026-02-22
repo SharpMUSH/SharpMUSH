@@ -101,7 +101,7 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("eq(1,2)", "0")]
 	[Arguments("eq(1,1)", "1")]
@@ -114,7 +114,7 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("gt(1,2)", "0")]
 	[Arguments("gt(1,1)", "0")]
@@ -131,7 +131,7 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("lt(1,2)", "1")]
 	[Arguments("lt(1,1)", "0")]
@@ -148,7 +148,7 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("lte(1,2)", "1")]
 	[Arguments("lte(1,1)", "1")]

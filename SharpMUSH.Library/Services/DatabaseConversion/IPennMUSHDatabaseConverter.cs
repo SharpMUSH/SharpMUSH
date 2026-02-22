@@ -1,6 +1,3 @@
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
-
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
 /// <summary>
@@ -32,7 +29,7 @@ public interface IPennMUSHDatabaseConverter
 	/// <param name="cancellationToken">Cancellation token</param>
 	/// <returns>Conversion statistics</returns>
 	Task<ConversionResult> ConvertDatabaseAsync(
-		string databaseFilePath, 
+		string databaseFilePath,
 		IProgress<ConversionProgress> progress,
 		CancellationToken cancellationToken = default);
 
@@ -44,7 +41,7 @@ public interface IPennMUSHDatabaseConverter
 	/// <param name="cancellationToken">Cancellation token</param>
 	/// <returns>Conversion statistics</returns>
 	Task<ConversionResult> ConvertDatabaseAsync(
-		PennMUSHDatabase pennDatabase, 
+		PennMUSHDatabase pennDatabase,
 		IProgress<ConversionProgress> progress,
 		CancellationToken cancellationToken = default);
 }

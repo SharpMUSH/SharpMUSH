@@ -6,9 +6,9 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface ILockService
 {
 	Dictionary<string, (string, LockService.LockFlags)> LockPrivileges { get; }
-	
+
 	Dictionary<string, LockService.LockFlags> SystemLocks { get; }
-	
+
 	bool Evaluate(string lockString, AnySharpObject gated, AnySharpObject unlocker);
 
 	bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker);

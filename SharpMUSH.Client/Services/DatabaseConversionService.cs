@@ -16,7 +16,7 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 			var response = await httpClient
 				.CreateClient("api")
 				.PostAsync("/api/databaseconversion/upload", content, cancellationToken);
-			
+
 			response.EnsureSuccessStatusCode();
 
 			var result = await response.Content.ReadFromJsonAsync<UploadResponse>(cancellationToken: cancellationToken);

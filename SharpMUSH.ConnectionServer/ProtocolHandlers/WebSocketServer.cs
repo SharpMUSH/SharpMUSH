@@ -1,9 +1,8 @@
-using System.Net.WebSockets;
-using System.Text;
-using SharpMUSH.Messaging.Abstractions;
-using Microsoft.AspNetCore.Http;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Abstractions;
+using System.Net.WebSockets;
+using System.Text;
 
 namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 
@@ -102,7 +101,7 @@ public class WebSocketServer
 				if (result.MessageType == WebSocketMessageType.Text)
 				{
 					var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-					
+
 					// Publish user input to MainProcess
 					await _publishEndpoint.Publish(
 						new WebSocketInputMessage(nextPort, message), ct);

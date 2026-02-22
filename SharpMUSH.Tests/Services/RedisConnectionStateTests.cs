@@ -1,5 +1,3 @@
-using System.Text;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
@@ -28,7 +26,7 @@ public class RedisConnectionStateTests
 
 		var redis = ConnectionMultiplexer.Connect(configuration);
 		var logger = new LoggerFactory().CreateLogger<RedisConnectionStateStore>();
-		
+
 		return new RedisConnectionStateStore(redis, logger);
 	}
 
@@ -203,14 +201,14 @@ public class RedisConnectionStateTests
 
 		// Assert
 		await Assert.That(connectionsList.Count).IsGreaterThanOrEqualTo(2);
-		
+
 		var conn1 = connectionsList.FirstOrDefault(c => c.Handle == handle1);
 		var conn2 = connectionsList.FirstOrDefault(c => c.Handle == handle2);
-		
+
 		await Assert.That(conn1.Data).IsNotNull();
 		await Assert.That(conn1.Data.PlayerRef).IsEqualTo(new DBRef(300));
 		await Assert.That(conn1.Data.Metadata["User"]).IsEqualTo("Alice");
-		
+
 		await Assert.That(conn2.Data).IsNotNull();
 		await Assert.That(conn2.Data.PlayerRef).IsEqualTo(new DBRef(301));
 		await Assert.That(conn2.Data.Metadata["User"]).IsEqualTo("Bob");
@@ -285,7 +283,7 @@ public class RedisConnectionStateTests
 		// Arrange - Simulate two different processes (ConnectionServer and Server)
 		var storeProcess1 = CreateStateStore();
 		var storeProcess2 = CreateStateStore();
-		
+
 		var handle = 78901L;
 		var connectionData = new ConnectionStateData
 		{
@@ -302,18 +300,18 @@ public class RedisConnectionStateTests
 
 		// Act - Process 1 writes
 		await storeProcess1.SetConnectionAsync(handle, connectionData);
-		
+
 		var retrieved = await storeProcess2.GetConnectionAsync(handle);
 
 		await storeProcess2.SetPlayerBindingAsync(handle, new DBRef(500));
-		
+
 		var updated = await storeProcess1.GetConnectionAsync(handle);
 
 		// Assert
 		await Assert.That(retrieved).IsNotNull();
 		await Assert.That(retrieved!.Handle).IsEqualTo(handle);
 		await Assert.That(retrieved.IpAddress).IsEqualTo("192.168.100.1");
-		
+
 		await Assert.That(updated).IsNotNull();
 		await Assert.That(updated!.PlayerRef).IsEqualTo(new DBRef(500));
 		await Assert.That(updated.State).IsEqualTo("LoggedIn");
@@ -340,7 +338,7 @@ public class RedisConnectionStateTests
 
 		// Act - Store data with first connection
 		await store1.SetConnectionAsync(handle, connectionData);
-		
+
 		// Simulate disconnect/reconnect by creating new store instance
 		var store2 = CreateStateStore();
 		var retrieved = await store2.GetConnectionAsync(handle);

@@ -17,7 +17,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 		}
 
 		var defaultSettings = Default();
-			
+
 		database.SetExpandedServerData(nameof(SharpMUSHOptions), defaultSettings)
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 

@@ -1,11 +1,9 @@
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 
 namespace SharpMUSH.Configuration.Generated;
 
@@ -51,12 +49,12 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 			  public class ValidateSharpMUSHOptions : IValidateOptions<SharpMUSH.Configuration.Options.SharpMUSHOptions>
 			  {
 			    {{string.Join("\n  ", regexFieldsAndNames
-				    .Select(x => x.Field))}}
+						.Select(x => x.Field))}}
 
 			    public ValidateOptionsResult Validate(string name, SharpMUSH.Configuration.Options.SharpMUSHOptions options)
 			    {
 			  {{string.Join("\n\n", SelectCategoryProperties(optionsSymbol)
-				      .Select(category => GetSourceForCategories(category, regexFieldNames)))}}
+							.Select(category => GetSourceForCategories(category, regexFieldNames)))}}
 			      
 			      return ValidateOptionsResult.Success;
 			    }
@@ -73,9 +71,9 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 		              // Category: {{{category.Name}}}
 		              var {{category.Name}}Value = options.{{category.Name}};
 		              {{string.Join("\n\n", SelectConfigProperties(category)
-			          .Select(prop => GetValidationBodyForProperty(prop, regexFieldNames, category))
-			          .Where(x => !string.IsNullOrWhiteSpace(x))
-		          )}}
+								.Select(prop => GetValidationBodyForProperty(prop, regexFieldNames, category))
+								.Where(x => !string.IsNullOrWhiteSpace(x))
+							)}}
 		          """;
 	}
 

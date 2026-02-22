@@ -7,12 +7,12 @@ namespace SharpMUSH.Library.ExpandedObjectData;
 public record PollData : AbstractExpandedData
 {
 	public string? Message { get; init; }
-	
+
 	/// <summary>
 	/// Default constructor with null message.
 	/// </summary>
 	public PollData() : this((string?)null) { }
-	
+
 	/// <summary>
 	/// Constructor with message.
 	/// </summary>

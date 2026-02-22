@@ -158,7 +158,7 @@ public partial class Commands
 			channel,
 			executor.WithNoneOption(),
 			canNoSpoof
-				? INotifyService.NotificationType.NSEmit 
+				? INotifyService.NotificationType.NSEmit
 				: INotifyService.NotificationType.Emit,
 			message,
 			status.Title ?? MModule.empty(),
@@ -169,7 +169,7 @@ public partial class Commands
 
 		return new CallState(string.Empty);
 	}
-	
+
 	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["channel", "alias"])]
 	public static async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -296,18 +296,18 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// @clist is an alias for @channel/list, with /full switch being ignored
-		var switches = parser.CurrentState.Switches.Contains("FULL") 
-			? new[] { "LIST" } 
+		var switches = parser.CurrentState.Switches.Contains("FULL")
+			? new[] { "LIST" }
 			: new[] { "LIST" };
-		
+
 		return await ChannelCommand.ChannelList.Handle(
-			parser, 
-			LocateService!, 
-			PermissionService!, 
-			Mediator!, 
-			NotifyService!, 
-			MModule.empty(), 
-			MModule.empty(), 
+			parser,
+			LocateService!,
+			PermissionService!,
+			Mediator!,
+			NotifyService!,
+			MModule.empty(),
+			MModule.empty(),
 			switches);
 	}
 
@@ -403,7 +403,7 @@ public partial class Commands
 			var attrName = attr.Name;
 			var aliasName = attrName.StartsWith("CHANALIAS`") ? attrName.AsSpan(10).ToString() : attrName;
 			var channelName = attr.Value;
-			
+
 			outputLines.Add(MModule.concat(
 				MModule.single($"{aliasName.ToLower()} : "),
 				channelName

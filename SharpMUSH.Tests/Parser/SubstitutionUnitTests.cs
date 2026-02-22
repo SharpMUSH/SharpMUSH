@@ -15,7 +15,7 @@ public class SubstitutionUnitTests
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>(); 
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
 	[Test]
 	[Arguments("think %t", "\t")]
@@ -43,9 +43,9 @@ public class SubstitutionUnitTests
 
 		if (expected is not null)
 		{
-			await NotifyService.Notify(Arg.Any<AnySharpObject>(), 
-				expected, 
-				null, 
+			await NotifyService.Notify(Arg.Any<AnySharpObject>(),
+				expected,
+				null,
 				INotifyService.NotificationType.Announce);
 		}
 	}

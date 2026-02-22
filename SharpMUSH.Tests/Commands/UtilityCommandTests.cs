@@ -23,7 +23,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains("ThinkBasic Test output")));
 	}
 
@@ -34,9 +34,9 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(x 
-					=> x.Value.ToString()!.Contains("ThinkWithFunction 5")) );
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(x
+					=> x.Value.ToString()!.Contains("ThinkWithFunction 5")));
 	}
 
 	[Test]
@@ -48,7 +48,7 @@ public class UtilityCommandTests
 		// Comment should not produce any output
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains("This is a comment")));
 	}
 
@@ -82,7 +82,7 @@ public class UtilityCommandTests
 		// Verify notify was called (exact count may vary based on object attributes)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -93,7 +93,7 @@ public class UtilityCommandTests
 		// /brief should show header info but skip attributes
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -104,7 +104,7 @@ public class UtilityCommandTests
 		// /opaque should skip contents display
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -116,7 +116,7 @@ public class UtilityCommandTests
 		// Should display matching attributes
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -128,7 +128,7 @@ public class UtilityCommandTests
 		// Should display current location
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString,string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -205,8 +205,8 @@ public class UtilityCommandTests
 		// Should receive notifications for decompiled output
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Any<OneOf.OneOf<MString,string>>(),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Any<OneOf.OneOf<MString, string>>(),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}

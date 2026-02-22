@@ -1,9 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Integration;
@@ -36,7 +34,7 @@ public class HookIntegrationTests
 		// 3. Set up the hook
 		// 4. Execute a command
 		// 5. Verify hook was executed first
-		
+
 		// For now, just verify the hook service works
 		var hookExists = await HookService.GetHookAsync("HOOKTEST_BEFORE", "BEFORE");
 		await Assert.That(hookExists.IsNone()).IsTrue();
@@ -52,7 +50,7 @@ public class HookIntegrationTests
 		// 3. Set up the hook
 		// 4. Execute a command
 		// 5. Verify hook was executed after command
-		
+
 		// For now, just verify the hook service works
 		var hookExists = await HookService.GetHookAsync("HOOKTEST_AFTER", "AFTER");
 		await Assert.That(hookExists.IsNone()).IsTrue();
@@ -68,7 +66,7 @@ public class HookIntegrationTests
 		// 2. Set up the /ignore hook
 		// 3. Execute a command
 		// 4. Verify command was not executed
-		
+
 		// For now, just verify the hook service works
 		var hookExists = await HookService.GetHookAsync("HOOKTEST_IGNORE", "IGNORE");
 		await Assert.That(hookExists.IsNone()).IsTrue();
@@ -84,7 +82,7 @@ public class HookIntegrationTests
 		// 2. Set up the /override hook
 		// 3. Execute the command
 		// 4. Verify custom code executed instead of built-in
-		
+
 		// For now, just verify the hook service works
 		var hookExists = await HookService.GetHookAsync("HOOKTEST_OVERRIDE", "OVERRIDE");
 		await Assert.That(hookExists.IsNone()).IsTrue();
@@ -100,7 +98,7 @@ public class HookIntegrationTests
 		// 2. Set up the /extend hook
 		// 3. Execute command with invalid switch
 		// 4. Verify $-command executed instead of error
-		
+
 		// For now, just verify the hook service works
 		var hookExists = await HookService.GetHookAsync("HOOKTEST_EXTEND", "EXTEND");
 		await Assert.That(hookExists.IsNone()).IsTrue();
@@ -115,7 +113,7 @@ public class HookIntegrationTests
 		// 1. Create hook with /inline modifier
 		// 2. Track execution order
 		// 3. Verify immediate execution vs queued
-		
+
 		// Use unique command name to avoid test interference
 		var testCommand = $"HOOKTEST_INLINE_{Guid.NewGuid():N}";
 		await HookService.SetHookAsync(testCommand, "BEFORE", new DBRef(1), "test_attr", inline: true);
@@ -137,7 +135,7 @@ public class HookIntegrationTests
 		// 1. Set q-registers to known values
 		// 2. Execute hook with /localize that modifies registers
 		// 3. Verify registers were restored after hook
-		
+
 		// Use unique command name to avoid test interference
 		var testCommand = $"HOOKTEST_LOCALIZE_{Guid.NewGuid():N}";
 		await HookService.SetHookAsync(testCommand, "BEFORE", new DBRef(1), "test_attr", localize: true);
@@ -159,7 +157,7 @@ public class HookIntegrationTests
 		// 1. Set q-registers to known values
 		// 2. Execute hook with /clearregs
 		// 3. Verify registers were cleared before hook execution
-		
+
 		// Use unique command name to avoid test interference
 		var testCommand = $"HOOKTEST_CLEARREGS_{Guid.NewGuid():N}";
 		await HookService.SetHookAsync(testCommand, "BEFORE", new DBRef(1), "test_attr", clearregs: true);
@@ -182,7 +180,7 @@ public class HookIntegrationTests
 		// 1. Create hook for HUH_COMMAND
 		// 2. Execute an undefined command
 		// 3. Verify custom response instead of default "Huh?"
-		
+
 		// Use unique command name to avoid test interference
 		var testCommand = $"HOOKTEST_HUHCOMMAND_{Guid.NewGuid():N}";
 		await HookService.SetHookAsync(testCommand, "OVERRIDE", new DBRef(1), "test_attr");
@@ -201,7 +199,7 @@ public class HookIntegrationTests
 		// 1. Create hook that echoes register values
 		// 2. Execute command with specific arguments
 		// 3. Verify register values match expected
-		
+
 		// This is a placeholder for future implementation
 	}
 }
@@ -233,7 +231,7 @@ public class MogrifierIntegrationTests
 		// 3. Send channel message
 		// 4. Verify only speaker received block message
 		// 5. Verify message was not broadcast
-		
+
 		// This is a placeholder for future implementation
 	}
 
@@ -247,7 +245,7 @@ public class MogrifierIntegrationTests
 		// 3. Set player's CHATFORMAT`<channel>
 		// 4. Send message
 		// 5. Verify player's @chatformat was skipped
-		
+
 		// This is a placeholder for future implementation
 	}
 
@@ -260,7 +258,7 @@ public class MogrifierIntegrationTests
 		// 2. Set MOGRIFY`FORMAT to custom format
 		// 3. Send message
 		// 4. Verify message uses custom format
-		
+
 		// This is a placeholder for future implementation
 	}
 
@@ -273,7 +271,7 @@ public class MogrifierIntegrationTests
 		// 2. Set MOGRIFY`CHANNAME, PLAYERNAME, MESSAGE, etc.
 		// 3. Send message
 		// 4. Verify each component was modified
-		
+
 		// This is a placeholder for future implementation
 	}
 
@@ -286,7 +284,7 @@ public class MogrifierIntegrationTests
 		// 2. Set Use lock to fail for speaker
 		// 3. Send message
 		// 4. Verify mogrification was skipped
-		
+
 		// This is a placeholder for future implementation
 	}
 
@@ -299,7 +297,7 @@ public class MogrifierIntegrationTests
 		// 1. Create channel with mogrifier
 		// 2. Send messages with different chat types
 		// 3. Verify each type is formatted correctly
-		
+
 		// This is a placeholder for future implementation
 	}
 
@@ -313,7 +311,7 @@ public class MogrifierIntegrationTests
 		// 3. Send message
 		// 4. Verify player sees custom format
 		// 5. Verify other players see default format
-		
+
 		// This is a placeholder for future implementation
 	}
 
@@ -327,7 +325,7 @@ public class MogrifierIntegrationTests
 		// 3. Set player's CHATFORMAT`<channel>
 		// 4. Send message
 		// 5. Verify mogrifier applied first, then player's format
-		
+
 		// This is a placeholder for future implementation
 	}
 }

@@ -1,6 +1,6 @@
-﻿using System.Text.Json.Serialization;
-using DotNext.Threading;
+﻿using DotNext.Threading;
 using SharpMUSH.Library.DiscriminatedUnions;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
 
@@ -24,9 +24,9 @@ public class SharpPlayer
 	public required AsyncLazy<AnySharpContainer> Home { get; set; }
 
 	public required string PasswordHash { get; set; }
-	
+
 	public string? PasswordSalt { get; set; }
-	
+
 	/// <summary>
 	/// The player's build quota - maximum number of objects they can own.
 	/// </summary>

@@ -1,4 +1,3 @@
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Parser;
@@ -15,7 +14,7 @@ public class ParserErrorTests
 	{
 		// Valid function call
 		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2)"), ParseType.Function);
-		
+
 		await Assert.That(errors).IsEmpty();
 	}
 
@@ -24,7 +23,7 @@ public class ParserErrorTests
 	{
 		// Missing closing parenthesis
 		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
-		
+
 		await Assert.That(errors).IsNotEmpty();
 		await Assert.That(errors[0].Message).Contains("end of input");
 	}
@@ -34,7 +33,7 @@ public class ParserErrorTests
 	{
 		// Missing closing bracket
 		var errors = Parser.ValidateAndGetErrors(MModule.single("test[function"), ParseType.Function);
-		
+
 		await Assert.That(errors).IsNotEmpty();
 	}
 
@@ -43,7 +42,7 @@ public class ParserErrorTests
 	{
 		// Missing closing brace
 		var errors = Parser.ValidateAndGetErrors(MModule.single("test{brace"), ParseType.Function);
-		
+
 		await Assert.That(errors).IsNotEmpty();
 	}
 
@@ -52,9 +51,9 @@ public class ParserErrorTests
 	{
 		// Error at a specific position
 		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
-		
+
 		await Assert.That(errors).IsNotEmpty();
-		
+
 		// Error should be reported at or near the end
 		var firstError = errors[0];
 		await Assert.That(firstError.Line).IsGreaterThanOrEqualTo(1);
@@ -67,7 +66,7 @@ public class ParserErrorTests
 		// Complex nested structure that is valid
 		var input = "strcat(add(1,2),[sub(5,3)],{concat})";
 		var errors = Parser.ValidateAndGetErrors(MModule.single(input), ParseType.Function);
-		
+
 		await Assert.That(errors).IsEmpty();
 	}
 
@@ -76,7 +75,7 @@ public class ParserErrorTests
 	{
 		// Valid command
 		var errors = Parser.ValidateAndGetErrors(MModule.single("@emit Hello"), ParseType.Command);
-		
+
 		// Commands might have different validation rules, 
 		// but this shouldn't throw an exception
 		await Assert.That(errors).IsNotNull();
@@ -87,7 +86,7 @@ public class ParserErrorTests
 	{
 		var input = "add(1,2";
 		var errors = Parser.ValidateAndGetErrors(MModule.single(input), ParseType.Function);
-		
+
 		await Assert.That(errors).IsNotEmpty();
 		await Assert.That(errors[0].InputText).IsEqualTo(input);
 	}

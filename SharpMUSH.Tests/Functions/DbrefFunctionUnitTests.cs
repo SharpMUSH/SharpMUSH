@@ -85,7 +85,7 @@ public class DbrefFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("create(some-silly-object)", "locate(%#,some-silly-object,*)")]
 	// TODO: Enable when tel() is implemented
@@ -94,7 +94,7 @@ public class DbrefFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(create)))?.Message!;
 		var located = (await Parser.FunctionParse(MModule.single(locate)))?.Message!;
-		
+
 		await Assert.That(result.ToPlainText()).IsEqualTo(located.ToPlainText());
 	}
 
@@ -234,11 +234,11 @@ public class DbrefFunctionUnitTests
 		// nextdbref() should return a valid dbref for the next object to be created
 		var result = (await Parser.FunctionParse(MModule.single("nextdbref()")))?.Message!;
 		var dbrefStr = result.ToPlainText();
-		
+
 		// Should start with # and contain a colon
 		await Assert.That(dbrefStr).StartsWith("#");
 		await Assert.That(dbrefStr).Contains(":");
-		
+
 		// Should be parseable as a dbref format
 		var parts = dbrefStr.TrimStart('#').Split(':');
 		await Assert.That(parts.Length).IsEqualTo(2);
@@ -250,12 +250,12 @@ public class DbrefFunctionUnitTests
 	{
 		// Create an object with a specific name pattern for testing
 		await Parser.FunctionParse(MModule.single("create(TestObject123)"));
-		
+
 		// lsearchr() should support regex matching on names
 		// Search for objects with names matching the pattern "TestObject[0-9]+"
 		var result = (await Parser.FunctionParse(MModule.single("lsearchr(%#,NAME=TestObject[0-9]+)")))?.Message!;
 		var dbrefs = result.ToPlainText();
-		
+
 		// Should find at least the object we created (if not empty)
 		// The result can be empty if the object wasn't visible or permissions prevented it
 		await Assert.That(dbrefs).IsNotNull();
@@ -267,7 +267,7 @@ public class DbrefFunctionUnitTests
 		// lsearchr() should work the same as lsearch() for simple patterns
 		var lsearchResult = (await Parser.FunctionParse(MModule.single("lsearch(%#,TYPE=PLAYER)")))?.Message!;
 		var lsearchrResult = (await Parser.FunctionParse(MModule.single("lsearchr(%#,TYPE=PLAYER)")))?.Message!;
-		
+
 		// Both should return the same results for non-regex patterns
 		await Assert.That(lsearchrResult.ToPlainText()).IsEqualTo(lsearchResult.ToPlainText());
 	}

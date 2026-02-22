@@ -34,7 +34,7 @@ public enum LocateFlags
 	OnlyMatchLookerControlledObjects = NoPartialMatches << 1,
 
 	All = (MatchMeForLooker | MatchHereForLookerLocation | AbsoluteMatch | MatchOptionalWildCardForPlayerName |
-	       MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching)
+				 MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching)
 }
 
 public interface ILocateService

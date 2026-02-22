@@ -23,7 +23,7 @@ public partial class Commands
 
 		await parser.With(s => s with { ParseMode = ParseMode.NoEval },
 			async np => await np.CommandParse(oldCommand));
-		
+
 		return new CallState(string.Empty);
 	}
 

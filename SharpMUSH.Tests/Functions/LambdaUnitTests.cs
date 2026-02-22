@@ -2,7 +2,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class LambdaUnitTests 
+public class LambdaUnitTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -13,7 +13,7 @@ public class LambdaUnitTests
 	[Arguments(@"ulambda(#lambda/add\(1\,2\))", "3")]
 	// vv CONSIDER: 3) is not the correct return value. This should just be: 3 vv
 	// vv However, this is how our parser should handle this vv
-	[Arguments("ulambda(lit(#lambda/add(1,2)))", "3)")] 
+	[Arguments("ulambda(lit(#lambda/add(1,2)))", "3)")]
 	[Arguments("ulambda(#lambda/[add(1,2)])", "3")]
 	[Arguments("ulambda(#lambda/3)", "3")]
 	public async Task BasicLambdaTest(string call, string expected)

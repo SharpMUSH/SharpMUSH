@@ -26,5 +26,5 @@ public class ConfigurationTests
 	{
 		await Assert.That(Configuration.CurrentValue.Chat.ChatTokenAlias).IsEqualTo('+');
 		await Assert.That(Configuration.CurrentValue.Net.MudName).IsEqualTo("PennMUSH Emulation by SharpMUSH");
-	} 
+	}
 }

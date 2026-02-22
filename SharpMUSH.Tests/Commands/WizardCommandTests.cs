@@ -34,7 +34,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "All objects halted")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "All objects halted")));
 	}
 
 	[Test]
@@ -76,7 +76,7 @@ public class WizardCommandTests
 	{
 		// Set an attribute first
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TRIGGER_TEST #1=think Triggered!"));
-		
+
 		// Trigger it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger #1/TRIGGER_TEST"));
 
@@ -215,7 +215,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "poll") || TestHelpers.MessageContains(s, "Poll")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "poll") || TestHelpers.MessageContains(s, "Poll")));
 	}
 
 	[Test]
@@ -223,27 +223,27 @@ public class WizardCommandTests
 	public async ValueTask Hide_NoSwitch_TogglesHidden()
 	{
 		// Test that @hide without switches toggles the DARK flag
-		
-		
+
+
 		// First call should hide (set DARK)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide"));
-		
+
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "hidden")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "hidden")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
-		
-		
-		
+
+
+
 		// Second call should unhide (unset DARK)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide"));
-		
+
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -252,37 +252,37 @@ public class WizardCommandTests
 	public async ValueTask Hide_YesSwitch_SetsHidden()
 	{
 		// Test that @hide/yes sets the DARK flag
-		
-		
+
+
 		// Ensure we start unhidden (call @hide/off first)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
-		
-		
+
+
 		// Now test @hide/yes
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/yes"));
-		
+
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "hidden")));
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "hidden")));
 	}
 
 	[Test]
 	public async ValueTask Hide_OnSwitch_SetsHidden()
 	{
 		// Test that @hide/on sets the DARK flag
-		
-		
+
+
 		// Ensure we start unhidden
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
-		
-		
+
+
 		// Now test @hide/on
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
-		
+
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s
 				=> s.Value.ToString()!.Contains("hidden")));
 	}
 
@@ -290,18 +290,18 @@ public class WizardCommandTests
 	public async ValueTask Hide_NoSwitch_UnsetsHidden()
 	{
 		// Test that @hide/no unsets the DARK flag
-		
-		
+
+
 		// Ensure we start hidden
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
-		
-		
+
+
 		// Now test @hide/no
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/no"));
-		
+
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s
 				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")));
 	}
 
@@ -310,18 +310,18 @@ public class WizardCommandTests
 	public async ValueTask Hide_OffSwitch_UnsetsHidden()
 	{
 		// Test that @hide/off unsets the DARK flag
-		
-		
+
+
 		// Ensure we start hidden
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
-		
-		
+
+
 		// Now test @hide/off
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
-		
+
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s
 				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")));
 	}
 
@@ -329,18 +329,18 @@ public class WizardCommandTests
 	public async ValueTask Hide_AlreadyHidden_ShowsAppropriateMessage()
 	{
 		// Test that @hide/on when already hidden shows appropriate message
-		
-		
+
+
 		// Set hidden
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
-		
-		
+
+
 		// Try to set hidden again
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
-		
+
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s
 				=> s.Value.ToString()!.Contains("already hidden")));
 	}
 
@@ -349,18 +349,18 @@ public class WizardCommandTests
 	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
 	{
 		// Test that @hide/off when already visible shows appropriate message
-		
-		
+
+
 		// Ensure unhidden
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
-		
-		
+
+
 		// Try to set visible again
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
-		
+
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s
 				=> s.Value.ToString()!.Contains("already visible")));
 	}
 
@@ -371,7 +371,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Purge complete") || TestHelpers.MessageContains(s, "GOING_TWICE")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Purge complete") || TestHelpers.MessageContains(s, "GOING_TWICE")));
 	}
 
 	[Test]
@@ -381,7 +381,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Reindexing text files") || TestHelpers.MessageContains(s, "Text file cache rebuilt")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Reindexing text files") || TestHelpers.MessageContains(s, "Text file cache rebuilt")));
 	}
 
 	[Test]
@@ -391,7 +391,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "SHUTDOWN") || TestHelpers.MessageContains(s, "web") || TestHelpers.MessageContains(s, "orchestration")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SHUTDOWN") || TestHelpers.MessageContains(s, "web") || TestHelpers.MessageContains(s, "orchestration")));
 	}
 
 	[Test]
@@ -401,7 +401,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "REBOOT") || TestHelpers.MessageContains(s, "web") || TestHelpers.MessageContains(s, "orchestration")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "REBOOT") || TestHelpers.MessageContains(s, "web") || TestHelpers.MessageContains(s, "orchestration")));
 	}
 
 	[Test]
@@ -413,7 +413,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Permission denied") || TestHelpers.MessageContains(s, "objects") || TestHelpers.MessageContains(s, "ownership")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Permission denied") || TestHelpers.MessageContains(s, "objects") || TestHelpers.MessageContains(s, "ownership")));
 	}
 
 	[Test]
@@ -424,7 +424,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Suggestion categories") || TestHelpers.MessageContains(s, "No suggestion categories")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Suggestion categories") || TestHelpers.MessageContains(s, "No suggestion categories")));
 	}
 
 	[Test]
@@ -435,7 +435,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Added 'testword923' to category 'testcat547'")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Added 'testword923' to category 'testcat547'")));
 	}
 
 	[Test]
@@ -446,7 +446,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Poll message set") || TestHelpers.MessageContains(s, "Permission")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Poll message set") || TestHelpers.MessageContains(s, "Permission")));
 	}
 
 	[Test]
@@ -457,7 +457,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Poll message cleared") || TestHelpers.MessageContains(s, "Permission")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Poll message cleared") || TestHelpers.MessageContains(s, "Permission")));
 	}
 
 

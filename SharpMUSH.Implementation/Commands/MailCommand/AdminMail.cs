@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -25,7 +24,7 @@ public static class AdminMail
 				shouldNotify: true);
 			return errorResult.Message!;
 		}
-		
+
 		switch (switches)
 		{
 			case [.., "DEBUG"]:
@@ -41,7 +40,7 @@ public static class AdminMail
 				{
 					await mediator.Send(new DeleteMailCommand(mail));
 					totalCount++;
-					
+
 					// Provide progress feedback for large deletions
 					if (totalCount % 100 == 0)
 					{
@@ -50,7 +49,7 @@ public static class AdminMail
 				}
 				await notifyService!.Notify(executor, $"MAIL: All mail deleted from system. Total: {totalCount}");
 				return MModule.single(totalCount.ToString());
-			default: 
+			default:
 				await notifyService!.Notify(executor, "Invalid arguments for @mail admin command.");
 				return MModule.single("#-1 Invalid arguments for @mail admin command.");
 		}

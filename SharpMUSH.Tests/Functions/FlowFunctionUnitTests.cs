@@ -20,7 +20,7 @@ public class FlowFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 
 	[Test]
 	[Arguments("if(1,True,False)", "True")]
@@ -33,5 +33,5 @@ public class FlowFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 }

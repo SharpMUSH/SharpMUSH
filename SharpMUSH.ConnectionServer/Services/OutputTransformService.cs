@@ -1,6 +1,6 @@
+using SharpMUSH.ConnectionServer.Models;
 using System.Text;
 using System.Text.RegularExpressions;
-using SharpMUSH.ConnectionServer.Models;
 
 namespace SharpMUSH.ConnectionServer.Services;
 

@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using SharpMUSH.Library.Extensions;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Common;
 

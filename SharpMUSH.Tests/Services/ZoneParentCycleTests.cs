@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -224,7 +223,7 @@ public class ZoneParentCycleTests
 	{
 		// Clear player zone to avoid inheritance issues
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
-		
+
 		// Create two objects
 		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChzoneCycle1"));
 		var zone1DbRefParsed = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
@@ -243,7 +242,7 @@ public class ZoneParentCycleTests
 		Console.WriteLine($"First command: {firstCommand}");
 		var firstResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single(firstCommand));
 		Console.WriteLine($"First @chzone result: '{firstResult.Message?.ToPlainText()}'");
-		
+
 		// Verify zone1.zone was set to zone2 (use parsed DBRef for query)
 		var zone1Obj = await Mediator.Send(new GetObjectNodeQuery(zone1DbRefParsed));
 		var zone1Zone = await zone1Obj.Known.Object().Zone.WithCancellation(CancellationToken.None);
@@ -270,7 +269,7 @@ public class ZoneParentCycleTests
 
 		// The key assertion: zone2's zone should NOT be set (cycle was prevented)
 		await Assert.That(zone2Zone.IsNone).IsTrue();
-		
+
 		// If the command was executed (not echoed), it should have an error message about cycle
 		var message = result.Message?.ToPlainText()?.ToLowerInvariant() ?? "";
 		// Only check for cycle message if the command was actually executed (not echoed)
@@ -306,29 +305,29 @@ public class ZoneParentCycleTests
 	{
 		// Clear player zone
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
-		
+
 		// Create two objects
 		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DebugObj1"));
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
-		
+
 		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DebugObj2"));
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
-		
+
 		// Set obj1's zone to obj2
 		var chzoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj1DbRef}={obj2DbRef}"));
 		Console.WriteLine($"Chzone result: '{chzoneResult.Message?.ToPlainText()}'");
-		
+
 		// Verify zone was set
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
 		var obj1Zone = await obj1.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		
+
 		Console.WriteLine($"obj1.zone IsNone: {obj1Zone.IsNone}");
 		if (!obj1Zone.IsNone)
 		{
 			Console.WriteLine($"obj1.zone DBRef: {obj1Zone.Known.Object().DBRef}");
 			Console.WriteLine($"Expected: {obj2DbRef}");
 		}
-		
+
 		await Assert.That(obj1Zone.IsNone).IsFalse();
 		await Assert.That(obj1Zone.Known.Object().DBRef.Number).IsEqualTo(obj2DbRef.Number);
 	}

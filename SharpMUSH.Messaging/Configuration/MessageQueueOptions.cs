@@ -79,4 +79,28 @@ public class MessageQueueOptions
 	/// Combined with producer batching (8ms), provides ~16ms total latency (approaching 60fps)
 	/// </summary>
 	public TimeSpan BatchTimeLimit { get; set; } = TimeSpan.FromMilliseconds(8);
+
+	/// <summary>
+	/// Number of partitions for auto-created topics.
+	/// Default: 1 for single-broker setups. Increase for multi-broker clusters.
+	/// </summary>
+	public int TopicPartitions { get; set; } = 1;
+
+	/// <summary>
+	/// Replication factor for auto-created topics.
+	/// Default: 1 for single-broker setups. Increase for multi-broker clusters.
+	/// </summary>
+	public short TopicReplicationFactor { get; set; } = 1;
+
+	/// <summary>
+	/// librdkafka debug contexts to enable (e.g. "broker,topic,msg").
+	/// Null disables debug logging. Only enable when troubleshooting.
+	/// </summary>
+	public string? KafkaDebugContexts { get; set; }
+
+	/// <summary>
+	/// Interval in milliseconds for librdkafka statistics collection.
+	/// 0 disables statistics (default). Only enable when troubleshooting.
+	/// </summary>
+	public int KafkaStatisticsIntervalMs { get; set; } = 0;
 }

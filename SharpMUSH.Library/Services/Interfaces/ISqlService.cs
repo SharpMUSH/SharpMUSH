@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
@@ -14,7 +11,7 @@ public interface ISqlService
 	/// <param name="query">The SQL query to execute</param>
 	/// <returns>A list of rows, where each row is a dictionary of column names to values</returns>
 	ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query);
-	
+
 	/// <summary>
 	/// Executes a SQL query and returns the results as a list of rows
 	/// </summary>

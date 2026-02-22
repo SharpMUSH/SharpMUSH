@@ -1,5 +1,5 @@
-using System.Drawing;
 using MarkupString;
+using System.Drawing;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 
@@ -15,10 +15,10 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 		var emptyMarkup = A.empty();
-		
+
 		// Act
 		var result = emptyMarkup; // msOptimize is private, would need to be exposed or tested indirectly
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		await Assert.That(result.Length).IsEqualTo(0);
@@ -29,10 +29,10 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 		const string testText = "Hello, World!";
-		
+
 		// Act
 		var markupString = A.single(testText);
-		
+
 		// Assert
 		await Assert.That(markupString.ToPlainText()).IsEqualTo(testText);
 		await Assert.That(markupString.Length).IsEqualTo(testText.Length);
@@ -45,14 +45,14 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		const string testText = "Colored Text";
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		
+
 		// Act
 		var markupString = A.markupSingle(redMarkup, testText);
-		
+
 		// Assert
 		await Assert.That(markupString.ToPlainText()).IsEqualTo(testText);
 		await Assert.That(markupString.Length).IsEqualTo(testText.Length);
-		
+
 		// The toString should contain ANSI codes
 		var stringRepresentation = markupString.ToString();
 		await Assert.That(stringRepresentation).Contains(testText);
@@ -65,10 +65,10 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var first = A.single("Hello, ");
 		var second = A.single("World!");
-		
+
 		// Act
 		var result = A.concat(first, second);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello, World!");
 		await Assert.That(result.Length).IsEqualTo(13);
@@ -81,10 +81,10 @@ public class MarkupStringOptimizationTests
 		var first = A.single("Hello");
 		var second = A.single("World");
 		var separator = A.single(", ");
-		
+
 		// Act
 		var result = A.concat(first, second, separator);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello, World");
 		await Assert.That(result.Length).IsEqualTo(12);
@@ -96,17 +96,17 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		
+
 		var redText = A.markupSingle(redMarkup, "Red");
 		var blueText = A.markupSingle(blueMarkup, "Blue");
-		
+
 		// Act
 		var result = A.concat(redText, blueText);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("RedBlue");
 		await Assert.That(result.Length).IsEqualTo(7);
-		
+
 		// The string representation should contain both markup elements
 		var stringOutput = result.ToString();
 		await Assert.That(stringOutput).Contains("Red");
@@ -118,10 +118,10 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 		var markupString = A.single("Hello, World!");
-		
+
 		// Act
 		var result = A.substring(7, 5, markupString);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("World");
 		await Assert.That(result.Length).IsEqualTo(5);
@@ -133,14 +133,14 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var markupString = A.markupSingle(redMarkup, "Hello, World!");
-		
+
 		// Act
 		var result = A.substring(7, 5, markupString);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("World");
 		await Assert.That(result.Length).IsEqualTo(5);
-		
+
 		// The substring should preserve the markup
 		var stringOutput = result.ToString();
 		await Assert.That(stringOutput).Contains("World");
@@ -153,10 +153,10 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var markupString = A.single("Hello, World!");
 		var searchString = A.single("World");
-		
+
 		// Act
 		var index = A.indexOf(markupString, searchString);
-		
+
 		// Assert
 		await Assert.That(index).IsEqualTo(7);
 	}
@@ -167,10 +167,10 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var markupString = A.single("Hello, World!");
 		var searchString = A.single("xyz");
-		
+
 		// Act
 		var index = A.indexOf(markupString, searchString);
-		
+
 		// Assert
 		await Assert.That(index).IsEqualTo(-1);
 	}
@@ -180,10 +180,10 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 		var markupString = A.single("one,two,three");
-		
+
 		// Act
 		var result = A.split(",", markupString);
-		
+
 		// Assert
 		await Assert.That(result.Length).IsEqualTo(3);
 		await Assert.That(result[0].ToPlainText()).IsEqualTo("one");
@@ -198,7 +198,7 @@ public class MarkupStringOptimizationTests
 		var first = A.single("Hello");
 		var second = A.single("Hello");
 		var different = A.single("World");
-		
+
 		// Act & Assert
 		await Assert.That(first.Equals(second)).IsTrue();
 		await Assert.That(first.Equals("Hello")).IsTrue();
@@ -213,7 +213,7 @@ public class MarkupStringOptimizationTests
 		var first = A.single("Hello");
 		var second = A.single("Hello");
 		var different = A.single("World");
-		
+
 		// Act & Assert
 		await Assert.That(first.GetHashCode()).IsEqualTo(second.GetHashCode());
 		await Assert.That(first.GetHashCode()).IsNotEqualTo(different.GetHashCode());
@@ -223,16 +223,16 @@ public class MarkupStringOptimizationTests
 	public async Task MultipleMarkupStrings_CombinesCorrectly()
 	{
 		// Arrange
-		var markupStrings = new[] 
+		var markupStrings = new[]
 		{
 			A.single("one"),
-			A.single("two"), 
+			A.single("two"),
 			A.single("three")
 		};
-		
+
 		// Act
 		var result = A.multiple(markupStrings);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("onetwothree");
 		await Assert.That(result.Length).IsEqualTo(11);
@@ -242,17 +242,17 @@ public class MarkupStringOptimizationTests
 	public async Task MultipleMarkupStringsWithDelimiter_CombinesCorrectly()
 	{
 		// Arrange
-		var markupStrings = new[] 
+		var markupStrings = new[]
 		{
 			A.single("one"),
-			A.single("two"), 
+			A.single("two"),
 			A.single("three")
 		};
 		var delimiter = A.single(", ");
-		
+
 		// Act
 		var result = A.multipleWithDelimiter(delimiter, markupStrings);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("one, two, three");
 		await Assert.That(result.Length).IsEqualTo(15);
@@ -264,10 +264,10 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var original = A.single("Hello World");
 		var insert = A.single("Beautiful ");
-		
+
 		// Act
 		var result = A.insertAt(original, insert, 6);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello Beautiful World");
 		await Assert.That(result.Length).IsEqualTo(21);
@@ -279,11 +279,11 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var original = A.markupSingle(redMarkup, "Test Text");
-		
+
 		// Act
 		var serialized = A.serialize(original);
 		var deserialized = A.deserialize(serialized);
-		
+
 		// Assert
 		await Assert.That(deserialized.ToPlainText()).IsEqualTo(original.ToPlainText());
 		await Assert.That(deserialized.Length).IsEqualTo(original.Length);
@@ -296,7 +296,7 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var markupString = A.markupSingle(redMarkup, "Test");
-		
+
 		// Custom evaluator that wraps marked up text in brackets
 		Func<MarkupStringModule.MarkupTypes, string, string> evaluator = (markupType, text) =>
 		{
@@ -306,10 +306,10 @@ public class MarkupStringOptimizationTests
 				_ => text
 			};
 		};
-		
+
 		// Act
 		var result = A.evaluateWith(evaluator, markupString);
-		
+
 		// Assert
 		await Assert.That(result).IsEqualTo("[Test]");
 	}
@@ -319,10 +319,10 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 		var markupString = A.single("Hello World");
-		
+
 		// Act
 		var optimized = A.optimize(markupString);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo(markupString.ToPlainText());
 		await Assert.That(optimized.Length).IsEqualTo(markupString.Length);
@@ -335,10 +335,10 @@ public class MarkupStringOptimizationTests
 		// Arrange
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var markupString = A.markupSingle(redMarkup, "Hello World");
-		
+
 		// Act
 		var optimized = A.optimize(markupString);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo(markupString.ToPlainText());
 		await Assert.That(optimized.Length).IsEqualTo(markupString.Length);
@@ -352,14 +352,14 @@ public class MarkupStringOptimizationTests
 		var first = A.markupSingle(redMarkup, "Hello ");
 		var second = A.markupSingle(redMarkup, "World");
 		var combined = A.concat(first, second);
-		
+
 		// Act
 		var optimized = A.optimize(combined);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
 		await Assert.That(optimized.Length).IsEqualTo(11);
-		
+
 		// The optimized version should have fewer nested structures
 		// but produce the same output
 		await Assert.That(optimized.ToString()).IsEqualTo(combined.ToString());
@@ -374,14 +374,14 @@ public class MarkupStringOptimizationTests
 		var first = A.markupSingle(redMarkup, "Hello ");
 		var second = A.markupSingle(blueMarkup, "World");
 		var combined = A.concat(first, second);
-		
+
 		// Act
 		var optimized = A.optimize(combined);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
 		await Assert.That(optimized.Length).IsEqualTo(11);
-		
+
 		// Different markups should not be merged
 		await Assert.That(optimized.ToString()).IsEqualTo(combined.ToString());
 	}
@@ -390,18 +390,18 @@ public class MarkupStringOptimizationTests
 	public async Task OptimizeMarkupString_NestedSameMarkup_LiftsContent()
 	{
 		// Arrange
-		
+
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var innerMarkup = A.markupSingle(redMarkup, "Hello");
 		var outerMarkup = A.markupSingle2(redMarkup, innerMarkup);
-		
+
 		// Act
 		var optimized = A.optimize(outerMarkup);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello");
 		await Assert.That(optimized.Length).IsEqualTo(5);
-		
+
 		// The nested structure should be lifted
 		await Assert.That(optimized.ToString()).IsEqualTo(outerMarkup.ToString());
 	}
@@ -414,14 +414,14 @@ public class MarkupStringOptimizationTests
 		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
 		var innerMarkup = A.markupSingle(blueMarkup, "Hello");
 		var outerMarkup = A.markupSingle2(redMarkup, innerMarkup);
-		
+
 		// Act
 		var optimized = A.optimize(outerMarkup);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello");
 		await Assert.That(optimized.Length).IsEqualTo(5);
-		
+
 		// Different nested markups should not be lifted
 		await Assert.That(optimized.MarkupDetails).IsEqualTo(outerMarkup.MarkupDetails);
 	}
@@ -431,22 +431,22 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		
+
 		// Create a complex nested structure with same markup
 		var inner1 = A.markupSingle(redMarkup, "Hello ");
 		var inner2 = A.markupSingle(redMarkup, "Beautiful ");
 		var inner3 = A.markupSingle(redMarkup, "World");
-		
+
 		var combined = A.concat(A.concat(inner1, inner2), inner3);
 		var wrapped = A.markupSingle2(redMarkup, combined);
-		
+
 		// Act
 		var optimized = A.optimize(wrapped);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello Beautiful World");
 		await Assert.That(optimized.Length).IsEqualTo(21);
-		
+
 		// Should produce same output but be optimized internally
 		await Assert.That(optimized.ToString()).IsEqualTo(wrapped.ToString());
 	}
@@ -459,16 +459,16 @@ public class MarkupStringOptimizationTests
 		var plainText = A.single("Plain ");
 		var redText = A.markupSingle(redMarkup, "Red ");
 		var moreRedText = A.markupSingle(redMarkup, "Text");
-		
+
 		var combined = A.concat(A.concat(plainText, redText), moreRedText);
-		
+
 		// Act
 		var optimized = A.optimize(combined);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Plain Red Text");
 		await Assert.That(optimized.Length).IsEqualTo(14);
-		
+
 		// Should handle mixed content correctly
 		await Assert.That(optimized).IsEqualTo(combined);
 	}
@@ -480,10 +480,10 @@ public class MarkupStringOptimizationTests
 		var emptyMarkup = A.empty();
 		var textMarkup = A.single("Hello");
 		var combined = A.concat(emptyMarkup, textMarkup);
-		
+
 		// Act
 		var optimized = A.optimize(combined);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello");
 		await Assert.That(optimized.Length).IsEqualTo(5);
@@ -494,20 +494,20 @@ public class MarkupStringOptimizationTests
 	{
 		// Arrange
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		
+
 		// Create deeply nested structure
 		var level1 = A.markupSingle(redMarkup, "Deep");
 		var level2 = A.markupSingle2(redMarkup, level1);
 		var level3 = A.markupSingle2(redMarkup, level2);
 		var level4 = A.markupSingle2(redMarkup, level3);
-		
+
 		// Act
 		var optimized = A.optimize(level4);
-		
+
 		// Assert
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Deep");
 		await Assert.That(optimized.Length).IsEqualTo(4);
-		
+
 		// Deep nesting of same markup should be flattened
 		await Assert.That(optimized.ToString()).IsEqualTo(level4.ToString());
 	}

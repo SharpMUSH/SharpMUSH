@@ -5,5 +5,5 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Queries.Database;
 
-public record GetExitsQuery(OneOf<DBRef, AnySharpContainer> DBRef) 
+public record GetExitsQuery(OneOf<DBRef, AnySharpContainer> DBRef)
 	: IStreamQuery<SharpExit>;

@@ -25,8 +25,8 @@ public record SharpChannelCreateRequest(
 );
 
 public record SharpChannelMemberListQueryResult(
-	[property:JsonPropertyName("Id")]string Id,
-	[property:JsonPropertyName("Status")]SharpChannelUserStatusQueryResult Status);
+	[property: JsonPropertyName("Id")] string Id,
+	[property: JsonPropertyName("Status")] SharpChannelUserStatusQueryResult Status);
 
 public record SharpChannelUserStatusQueryResult(
 	bool? Gagged,

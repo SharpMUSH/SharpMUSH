@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Commands.ChannelCommand;
+﻿using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -9,7 +10,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -66,14 +66,14 @@ public partial class Functions
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
-		using (Logger!.BeginScope("<{DbRef}> {Category}: {Channel}.", 
-			       executor.Object().ToString(), 
-			       "Channel",
-			       channel.Name.ToPlainText()))
+		using (Logger!.BeginScope("<{DbRef}> {Category}: {Channel}.",
+						 executor.Object().ToString(),
+						 "Channel",
+						 channel.Name.ToPlainText()))
 		{
 			Logger!.LogInformation("{ChatMessage}", message);
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -118,12 +118,12 @@ public partial class Functions
 			MModule.single("says"),
 			[]
 		));
-		
-		
-		using (Logger!.BeginScope("<{DbRef} {Category}: {Channel}.", 
-			       executor.Object().DBRef.ToString(), 
-			       "Channel", 
-			       channel.Name.ToPlainText()))
+
+
+		using (Logger!.BeginScope("<{DbRef} {Category}: {Channel}.",
+						 executor.Object().DBRef.ToString(),
+						 "Channel",
+						 channel.Name.ToPlainText()))
 		{
 			Logger!.LogInformation("{ChatMessage}", message);
 		}
@@ -202,7 +202,7 @@ public partial class Functions
 		// Get player argument (default to executor)
 		var player = executor;
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0) &&
-		    !string.IsNullOrWhiteSpace(arg0.Message!.ToPlainText()))
+				!string.IsNullOrWhiteSpace(arg0.Message!.ToPlainText()))
 		{
 			var maybePlayer = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				arg0.Message!.ToPlainText(), LocateFlags.All);
@@ -408,7 +408,7 @@ public partial class Functions
 		// Get optional arguments
 		var lines = 10;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1) &&
-		    int.TryParse(arg1.Message!.ToPlainText(), out var parsedLines))
+				int.TryParse(arg1.Message!.ToPlainText(), out var parsedLines))
 		{
 			lines = parsedLines;
 		}
@@ -417,7 +417,7 @@ public partial class Functions
 		var messages = await Mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines))
 			.Select(x => x.Message)
 			.ToListAsync();
-			
+
 		return new CallState(MModule.multiple(messages));
 	}
 
@@ -622,7 +622,7 @@ public partial class Functions
 		// Query the actual message count from the database
 		var count = await Mediator!.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
 			.CountAsync();
-			
+
 		return new CallState(count.ToString());
 	}
 
@@ -648,7 +648,7 @@ public partial class Functions
 		return new CallState(memberCount.ToString());
 	}
 
-	[SharpFunction(Name = "CINFO", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
+	[SharpFunction(Name = "CINFO", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["channel", "info-type"])]
 	public static async ValueTask<CallState> CInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

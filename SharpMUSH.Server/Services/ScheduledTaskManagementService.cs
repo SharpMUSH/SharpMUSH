@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -6,6 +5,7 @@ using Quartz;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Server.Services;
 
@@ -146,7 +146,7 @@ public partial class ScheduledTaskManagementService(
 			{
 				var interval = TimeSpan.FromSeconds(context.JobDetail.JobDataMap.GetDouble("interval"));
 				var data = await dataService.GetExpandedServerDataAsync<UptimeData>();
-				
+
 				if (data == null)
 				{
 					logger.LogWarning("UptimeData not found - skipping warning time update");
@@ -182,7 +182,7 @@ public partial class ScheduledTaskManagementService(
 			{
 				var interval = TimeSpan.FromSeconds(context.JobDetail.JobDataMap.GetDouble("interval"));
 				var data = await dataService.GetExpandedServerDataAsync<UptimeData>();
-				
+
 				if (data == null)
 				{
 					logger.LogWarning("UptimeData not found - skipping purge time update");

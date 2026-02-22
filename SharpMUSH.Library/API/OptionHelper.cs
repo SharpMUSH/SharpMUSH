@@ -1,6 +1,5 @@
-﻿using SharpMUSH.Configuration;
+﻿using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Configuration.Generated;
 
 namespace SharpMUSH.Library.API;
 

@@ -1,4 +1,4 @@
-	using Antlr4.Runtime;
+using Antlr4.Runtime;
 using SharpMUSH.Library.Models;
 using LspRange = SharpMUSH.Library.Models.Range;
 
@@ -38,7 +38,7 @@ public class ParserErrorListener : BaseErrorListener
 	{
 		// Extract expected tokens if available
 		List<string>? expectedTokens = null;
-		
+
 		if (recognizer is Parser parser && e is not null)
 		{
 			expectedTokens = GetExpectedTokens(parser, e);
@@ -100,7 +100,7 @@ public class ParserErrorListener : BaseErrorListener
 			{
 				var symbolicName = vocabulary.GetSymbolicName(tokenType);
 				var literalName = vocabulary.GetLiteralName(tokenType);
-				
+
 				// Prefer literal names (e.g., '[') over symbolic names (e.g., OBRACK)
 				var tokenName = literalName ?? symbolicName ?? $"<token {tokenType}>";
 				expectedTokens.Add(tokenName);
