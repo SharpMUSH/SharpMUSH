@@ -1727,7 +1727,10 @@ public class SharpMUSHParserVisitor(
 	public override async ValueTask<CallState?> VisitStartEqSplitCommandArgs(
 		[NotNull] StartEqSplitCommandArgsContext context)
 	{
-		var baseArg = await VisitChildren(context.singleCommandArg());
+		// Extract evaluationString from commandArgument
+		var singleCommandArg = context.singleCommandArg();
+		var evaluationStr = singleCommandArg?.commandArgument()?.evaluationString();
+		var baseArg = evaluationStr != null ? await VisitChildren(evaluationStr) : null;
 		var commaArgs = await VisitChildren(context.commaCommandArgs());
 		// Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(), commaArgs?.ToString());
 		return new CallState(null,
@@ -1749,8 +1752,13 @@ public class SharpMUSHParserVisitor(
 		[NotNull] StartEqSplitCommandContext context)
 	{
 		var singleCommandArg = context.singleCommandArg();
-		var baseArg = await VisitChildren(singleCommandArg[0]);
-		var rsArg = singleCommandArg.Length > 1 ? await VisitChildren(singleCommandArg[1]) : null;
+		// Extract evaluationString from commandArgument for each arg
+		var baseEvalStr = singleCommandArg.Length > 0 ? singleCommandArg[0].commandArgument()?.evaluationString() : null;
+		var rsEvalStr = singleCommandArg.Length > 1 ? singleCommandArg[1].commandArgument()?.evaluationString() : null;
+		
+		var baseArg = baseEvalStr != null ? await VisitChildren(baseEvalStr) : null;
+		var rsArg = rsEvalStr != null ? await VisitChildren(rsEvalStr) : null;
+		
 		MString[] args = singleCommandArg.Length > 1
 			? [baseArg?.Message ?? MModule.empty(), rsArg?.Message ?? MModule.empty()]
 			: [baseArg?.Message ?? MModule.empty()];

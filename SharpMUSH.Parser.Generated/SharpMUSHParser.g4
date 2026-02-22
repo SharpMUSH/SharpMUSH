@@ -61,9 +61,12 @@ commaCommandArgs:
 ;
 
 
-singleCommandArg: evaluationString?;
+commandArgument:
+    evaluationString
+    | {InputStream.LA(1) == COMMAWS || InputStream.LA(1) == SEMICOLON || InputStream.LA(1) == CBRACE || InputStream.LA(1) == Eof}? /* empty when followed by , or ; or } or EOF */
+;
 
-
+singleCommandArg: commandArgument;
 
 evaluationString:
       function explicitEvaluationString?
