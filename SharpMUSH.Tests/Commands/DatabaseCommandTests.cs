@@ -115,7 +115,7 @@ public class DatabaseCommandTests
 	public async ValueTask DisableCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable TestCommand"));
-
+		
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
@@ -212,6 +212,9 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_basic #1=think Test_MapSql_Basic: %0 - %1 - %2"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
+		// Wait for the channel consumer to process the queued attribute execution
+		await Task.Delay(500);
+
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
@@ -225,6 +228,9 @@ public class DatabaseCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_mr #1=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql #1/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
+
+		// Wait for the channel consumer to process the queued attribute executions
+		await Task.Delay(500);
 
 		await NotifyService
 			.DidNotReceive()
@@ -266,6 +272,9 @@ public class DatabaseCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_test_attr_cn #1=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/colnames #1/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
+
+		// Wait for the channel consumer to process the queued attribute executions
+		await Task.Delay(500);
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -368,6 +377,9 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr_basic #1=think Test_MapSql_PrepareSwitch_Basic: %0 - %1 - %2"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
+		// Wait for the channel consumer to process the queued attribute execution
+		await Task.Delay(500);
+
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
@@ -381,6 +393,9 @@ public class DatabaseCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&mapsql_prepare_test_attr_mr #1=think Test_MapSql_PrepareSwitch_WithMultipleRows: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE #1/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
+
+		// Wait for the channel consumer to process the queued attribute executions
+		await Task.Delay(500);
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))

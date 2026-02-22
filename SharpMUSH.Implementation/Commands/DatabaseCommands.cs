@@ -284,7 +284,7 @@ public partial class Commands
 							MModule.single("@notify me"),
 							parser.CurrentState,
 							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
-							0));
+							-1));
 					}
 
 					// Note: SPOOF switch affects who the queued attributes execute as
