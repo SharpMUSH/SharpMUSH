@@ -93,7 +93,7 @@ public interface ITaskScheduler
 	/// Get all Enqueue tasks for a specific DBRef.
 	/// </summary>
 	/// <param name="obj">DBRef to query enqueue tasks for</param>
-	/// <returns>PIDs of enqueue tasks (currently not tracked, returns 0)</returns>
+	/// <returns>PIDs of enqueue tasks</returns>
 	IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj);
 
 	/// <summary>

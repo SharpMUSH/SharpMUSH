@@ -7,6 +7,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using System.Collections.Concurrent;
+using System.Threading.Channels;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -38,6 +40,52 @@ public class TaskScheduler(
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
 
+	/// <summary>
+	/// Represents a queued command entry for the FIFO immediate-execution queue.
+	/// </summary>
+	private sealed record QueueEntry(
+		long Pid,
+		string TriggerName,
+		string Group,
+		Func<Task> Action,
+		CancellationTokenSource Cts
+	);
+
+	private readonly Channel<QueueEntry> _immediateQueue = Channel.CreateUnbounded<QueueEntry>(
+		new UnboundedChannelOptions { SingleReader = true });
+	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
+	private Task? _consumerTask;
+
+	private void EnsureConsumerStarted()
+	{
+		LazyInitializer.EnsureInitialized(ref _consumerTask, () => Task.Run(ProcessQueueAsync));
+	}
+
+	private async Task ProcessQueueAsync()
+	{
+		await foreach (var entry in _immediateQueue.Reader.ReadAllAsync())
+		{
+			if (entry.Cts.IsCancellationRequested)
+			{
+				_pendingEntries.TryRemove(entry.Pid, out _);
+				continue;
+			}
+
+			try
+			{
+				await entry.Action();
+			}
+			catch (Exception)
+			{
+				// Command execution error - continue processing next queue entry
+			}
+			finally
+			{
+				_pendingEntries.TryRemove(entry.Pid, out _);
+			}
+		}
+	}
+
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
 	public const string DirectInputGroup = "direct-input";
 	public const string EnqueueGroup = "enqueue";
@@ -67,22 +115,37 @@ public class TaskScheduler(
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	public async ValueTask WriteUserCommand(long handle, MString command, ParserState state) =>
-		await _scheduler.ScheduleJob(
+	public ValueTask WriteUserCommand(long handle, MString command, ParserState state)
+	{
+		EnsureConsumerStarted();
+		var pid = NextPid();
+		var entry = new QueueEntry(
+			pid,
+			$"handle:{handle}-{pid}",
+			DirectInputGroup,
 			() => parser.FromState(state).CommandParse(handle, connectionService, command).AsTask(),
-			builder => builder
-				.StartNow()
-				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"handle:{handle}-{Guid.NewGuid()}", DirectInputGroup)
+			new CancellationTokenSource()
 		);
+		_pendingEntries[pid] = entry;
+		_immediateQueue.Writer.TryWrite(entry);
+		return ValueTask.CompletedTask;
+	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState state) =>
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder
-				.StartNow()
-				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", EnqueueGroup)
+	public ValueTask WriteCommandList(MString command, ParserState state)
+	{
+		EnsureConsumerStarted();
+		var pid = NextPid();
+		var entry = new QueueEntry(
+			pid,
+			$"dbref:{state.Executor}-{pid}",
+			EnqueueGroup,
+			() => parser.FromState(state).CommandListParse(command).AsTask(),
+			new CancellationTokenSource()
 		);
+		_pendingEntries[pid] = entry;
+		_immediateQueue.Writer.TryWrite(entry);
+		return ValueTask.CompletedTask;
+	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
 		int oldValue)
@@ -101,7 +164,7 @@ public class TaskScheduler(
 		await _scheduler.ScheduleJob(
 			JobBuilder
 				.CreateForAsync<SemaphoreTask>()
-				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
+				.SetJobData(new((IDictionary<string, object>)new Dictionary<string, object>
 				{
 					{ "Command", command },
 					{ "State", state },
@@ -111,7 +174,6 @@ public class TaskScheduler(
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.StartAt(DateTimeOffset.UtcNow.AddYears(100))  // Far future - will be triggered manually by @notify
 				.WithIdentity(triggerIdentity, triggerGroup).Build());
-		
 	}
 
 	public async ValueTask WriteAsyncAttribute(Func<ValueTask<ParserState>> function,
@@ -315,22 +377,36 @@ public class TaskScheduler(
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{DelayGroup}:{dbRef}"));
 		await _scheduler.UnscheduleJobs(delayed);
 
-		var enqueued = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{EnqueueGroup}:{dbRef}"));
-		await _scheduler.UnscheduleJobs(enqueued);
+		// Cancel pending channel entries for this dbref
+		var dbRefPrefix = $"dbref:{dbRef}-";
+		foreach (var kvp in _pendingEntries)
+		{
+			if (kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
+			{
+				kvp.Value.Cts.Cancel();
+				_pendingEntries.TryRemove(kvp.Key, out _);
+			}
+		}
 	}
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
-		// Search all trigger groups for the specific PID
+		// Check channel entries first
+		if (_pendingEntries.TryRemove(pid, out var entry))
+		{
+			entry.Cts.Cancel();
+			return true;
+		}
+
+		// Fall back to Quartz for semaphore/delay tasks
 		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var pidString = $"-{pid}";
-		
+
 		var matchingKeys = allKeys.Where(key => key.Name.EndsWith(pidString)).ToList();
-		
+
 		if (matchingKeys.Count == 0)
 			return false;
-			
+
 		await _scheduler.UnscheduleJobs(matchingKeys);
 		return true;
 	}
@@ -344,21 +420,33 @@ public class TaskScheduler(
 
 	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
 	{
+		var translate = new Func<string, string>(x =>
+			x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
+				.TakeWhile(c => c != '-').ToString()!);
+
+		// Quartz tasks (semaphore, delay, scheduled)
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
 			.GroupBy(trigger => trigger.JobKey.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers)
 		{
-			var translate = new Func<string, string>(x =>
-				x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
-					.TakeWhile(c => c != '-').ToString()!);
-
 			yield return (key.Key, key.Select(x => (
 				x.Value,
 				DBRef.TryParse(translate(x.Name), out var dbref)
 					? OneOf<string, DBRef>.FromT1(dbref!.Value)
 					: OneOf<string, DBRef>.FromT0(x.Name)
+			)).ToArray());
+		}
+
+		// Channel tasks (enqueue, direct-input)
+		foreach (var group in _pendingEntries.Values.GroupBy(e => e.Group))
+		{
+			yield return (group.Key, group.Select(e => (
+				DateTimeOffset.UtcNow,
+				DBRef.TryParse(translate(e.TriggerName), out var dbref)
+					? OneOf<string, DBRef>.FromT1(dbref!.Value)
+					: OneOf<string, DBRef>.FromT0(e.TriggerName)
 			)).ToArray());
 		}
 	}
@@ -422,19 +510,14 @@ public class TaskScheduler(
 
 	public async IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj)
 	{
-		var keys = await _scheduler.GetTriggerKeys(
-			GroupMatcher<TriggerKey>.GroupEquals(EnqueueGroup));
-		
-		// Filter by dbref in the identity
-		var filtered = keys.Where(k => k.Name.StartsWith($"dbref:{obj}-"));
-		
-		foreach (var key in filtered)
+		await Task.CompletedTask;
+		var dbRefPrefix = $"dbref:{obj}-";
+		foreach (var kvp in _pendingEntries)
 		{
-			// Extract Guid from identity: "dbref:{executor}-{guid}"
-			// For enqueue tasks, we don't have PIDs in the current implementation
-			// We'll need to use a different approach or skip these
-			// For now, we can't return PIDs for enqueue tasks without modification
-			yield return 0; // Placeholder - EnqueueGroup doesn't currently track PIDs
+			if (kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
+			{
+				yield return kvp.Key;
+			}
 		}
 	}
 

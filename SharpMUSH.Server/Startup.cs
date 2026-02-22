@@ -219,6 +219,9 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddQuartz(x =>
 		{
 			x.UseInMemoryStore();
+			// Serial execution ensures FIFO queue ordering, matching PennMUSH behavior
+			// where the command queue processes one entry at a time.
+			x.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 		});
 		services.AddAuthorization();
 		services.AddRazorPages();
