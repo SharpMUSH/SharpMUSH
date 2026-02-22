@@ -221,4 +221,8 @@ Key services available through dependency injection:
 - `IConnectionService`: For managing player connections
 - `IPasswordService`: For password operations
 
+### Logging Configuration
+- Ensure Kafka startup logging remains at `LogTrace`/`Verbose` level, not `LogInformation`.
+- The `Server` and `ConnectionServer` `Program.cs` files are configured with `Serilog MinimumLevel.Verbose()` to ensure Trace-level logs are visible.
+
 Always follow the established patterns for accessing these services in commands and functions.

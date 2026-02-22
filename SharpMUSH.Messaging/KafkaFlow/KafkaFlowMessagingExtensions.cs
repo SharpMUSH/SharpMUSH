@@ -73,6 +73,13 @@ public static class KafkaFlowMessagingExtensions
 			})
 		);
 
+		// Log producer registration
+		var loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
+		var logger = loggerFactory?.CreateLogger("KafkaFlow.Configuration");
+		logger?.LogTrace(
+			"[KAFKA-CONFIG] Registered ConnectionServer producer - Type: {ProducerType}, Broker: {Broker}:{Port}, Compression: {Compression}, Acks: Leader, LingerMs: {LingerMs}, MaxInFlight: {MaxInFlight}",
+			nameof(SharpMushProducer), options.Host, options.Port, options.CompressionType, options.LingerMs, options.MaxInFlightRequests);
+
 		// Register the producer class
 		services.AddSingleton<SharpMushProducer>();
 
@@ -137,6 +144,13 @@ public static class KafkaFlowMessagingExtensions
 				configureConsumers(configurator);
 			})
 		);
+
+		// Log producer registration
+		var loggerFactory = services.BuildServiceProvider().GetService<ILoggerFactory>();
+		var logger = loggerFactory?.CreateLogger("KafkaFlow.Configuration");
+		logger?.LogTrace(
+			"[KAFKA-CONFIG] Registered MainProcess producer - Type: {ProducerType}, Broker: {Broker}:{Port}, Compression: {Compression}, Acks: Leader, LingerMs: {LingerMs}, MaxInFlight: {MaxInFlight}",
+			nameof(SharpMushProducer), options.Host, options.Port, options.CompressionType, options.LingerMs, options.MaxInFlightRequests);
 
 		// Register the producer class
 		services.AddSingleton<SharpMushProducer>();
@@ -224,6 +238,11 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 		logger?.LogTrace("[KAFKA-CONFIG] Registering consumer - ConsumerType: {ConsumerType}, MessageType: {MessageType}, Topic: {Topic}, GroupId: {GroupId}, Workers: {Workers}",
 			typeof(TConsumer).Name, messageType.Name, topic, _options.ConsumerGroupId, _options.WorkerCount);
 
+		// Ensure topic exists (created on bus startup if missing)
+		_clusterBuilder.CreateTopicIfNotExists(topic, _options.TopicPartitions, _options.TopicReplicationFactor);
+		logger?.LogTrace("[KAFKA-CONFIG] Ensuring topic exists - Topic: {Topic}, Partitions: {Partitions}, ReplicationFactor: {ReplicationFactor}",
+			topic, _options.TopicPartitions, _options.TopicReplicationFactor);
+
 		// Register the consumer in DI
 		var consumerServiceType = typeof(IMessageConsumer<>).MakeGenericType(messageType);
 		_services.AddTransient(consumerServiceType, typeof(TConsumer));
@@ -290,6 +309,11 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 
 		logger?.LogTrace("[KAFKA-CONFIG] Registering batch consumer - MiddlewareType: {MiddlewareType}, MessageType: {MessageType}, Topic: {Topic}, GroupId: {GroupId}, BatchSize: {BatchSize}, BatchTimeout: {BatchTimeout}, Workers: {Workers}",
 			typeof(TMiddleware).Name, messageType.Name, topic, _options.ConsumerGroupId, batchSize, batchTimeout, _options.WorkerCount);
+
+		// Ensure topic exists (created on bus startup if missing)
+		_clusterBuilder.CreateTopicIfNotExists(topic, _options.TopicPartitions, _options.TopicReplicationFactor);
+		logger?.LogTrace("[KAFKA-CONFIG] Ensuring topic exists - Topic: {Topic}, Partitions: {Partitions}, ReplicationFactor: {ReplicationFactor}",
+			topic, _options.TopicPartitions, _options.TopicReplicationFactor);
 
 		// Register the middleware in DI
 		_services.AddTransient<TMiddleware>();

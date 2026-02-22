@@ -158,6 +158,62 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddHttpClient();
 		services.AddMediator();
 
+		services.AddArango((_, arango) =>
+		{
+			arango.ConnectionString = arangoConfig.ConnectionString;
+			arango.HttpClient = arangoConfig.HttpClient;
+			arango.Serializer = arangoConfig.Serializer;
+		});
+
+		services.AddLogging(logging =>
+		{
+			logging.ClearProviders();
+
+			// Get standard overrides to use consistently
+			var overrides = LoggingConfiguration.CreateStandardOverrides();
+
+			// Build a single logger configuration with both console and database sinks
+			var loggerConfig = new LoggerConfiguration()
+				.MinimumLevel.Verbose()
+				.Enrich.FromLogContext();
+
+			// Apply standard overrides
+			foreach (var (ns, level) in overrides)
+			{
+				loggerConfig.MinimumLevel.Override(ns, level);
+			}
+
+			// Add console sink (JSON in K8s, plain text elsewhere)
+			if (LoggingConfiguration.IsRunningInKubernetes())
+			{
+				loggerConfig.WriteTo.Console(new CompactJsonFormatter());
+			}
+			else
+			{
+				loggerConfig.WriteTo.Console();
+			}
+
+			// Add database logging sink (batched)
+			loggerConfig.WriteTo.Sink(new PeriodicBatchingSink(
+				new ArangoSerilogSink(
+					logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
+					"CurrentSharpMUSHWorld",
+					DatabaseConstants.Logs,
+					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
+					true,
+					true,
+					true),
+				new PeriodicBatchingSinkOptions
+				{
+					BatchSizeLimit = 1000,
+					QueueLimit = 100000,
+					Period = TimeSpan.FromSeconds(2),
+					EagerlyEmitFirstEvent = true,
+				}));
+
+			logging.AddSerilog(loggerConfig.CreateLogger());
+		});
+
 		// Configure MassTransit with Kafka/RedPanda for message queue integration
 		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
 
@@ -181,12 +237,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 			});
 
 		services.AddFusionCache().TryWithAutoSetup();
-		services.AddArango((_, arango) =>
-		{
-			arango.ConnectionString = arangoConfig.ConnectionString;
-			arango.HttpClient = arangoConfig.HttpClient;
-			arango.Serializer = arangoConfig.Serializer;
-		});
 		services.AddQuartz(x =>
 		{
 			x.UseInMemoryStore();
@@ -202,55 +252,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddHostedService<Services.ScheduledTaskManagementService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
-
-		services.AddLogging(logging =>
-		{
-			logging.ClearProviders();
-			
-			// Get standard overrides to use consistently
-			var overrides = LoggingConfiguration.CreateStandardOverrides();
-			
-			// Build a single logger configuration with both console and database sinks
-			var loggerConfig = new LoggerConfiguration()
-				.MinimumLevel.Verbose()
-				.Enrich.FromLogContext();
-			
-			// Apply standard overrides
-			foreach (var (ns, level) in overrides)
-			{
-				loggerConfig.MinimumLevel.Override(ns, level);
-			}
-			
-			// Add console sink (JSON in K8s, plain text elsewhere)
-			if (LoggingConfiguration.IsRunningInKubernetes())
-			{
-				loggerConfig.WriteTo.Console(new CompactJsonFormatter());
-			}
-			else
-			{
-				loggerConfig.WriteTo.Console();
-			}
-			
-			// Add database logging sink (batched)
-			loggerConfig.WriteTo.Sink(new PeriodicBatchingSink(
-				new ArangoSerilogSink(
-					logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
-					"CurrentSharpMUSHWorld",
-					DatabaseConstants.Logs,
-					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
-					true,
-					true,
-					true),
-				new PeriodicBatchingSinkOptions
-				{
-					BatchSizeLimit = 1000,
-					QueueLimit = 100000,
-					Period = TimeSpan.FromSeconds(2),
-					EagerlyEmitFirstEvent = true,
-				}));
-			
-			logging.AddSerilog(loggerConfig.CreateLogger());
-		});
 
 		// Configure OpenTelemetry Metrics - NO console logging, only Prometheus exporter for metrics endpoint
 		services.AddOpenTelemetry()
