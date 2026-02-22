@@ -153,6 +153,8 @@ public class DatabaseFunctionUnitTests
 		await Assert.That(plainText).StartsWith("#-1 SQL ERROR");
 	}
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async Task Test_Sql_WithRegister()
 	{

@@ -75,6 +75,8 @@ public class AttributeFunctionUnitTests
 	}
 	
 	
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_1,test_string_grep_case1)]" +
@@ -535,6 +537,8 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	[Arguments("valid(name,TestName)", "1")]
 	[Arguments("valid(name,)", "0")]

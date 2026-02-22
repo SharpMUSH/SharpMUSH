@@ -159,6 +159,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
 		
+		if (Configuration.CurrentValue.Debug.ParserStrictMode)
+		{
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
+		
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
@@ -217,7 +222,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)
-		=> ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse));
+	{
+		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse));
+	}
 
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{
@@ -234,6 +241,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			},
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
+		if (Configuration.CurrentValue.Debug.ParserStrictMode)
+		{
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
@@ -306,16 +317,24 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	public ValueTask<CallState?> CommandCommaArgsParse(MString text)
-		=> ParseInternal(text, p => p.commaCommandArgs(), nameof(CommandCommaArgsParse));
+	{
+		return ParseInternal(text, p => p.startPlainCommaCommandArgs(), nameof(CommandCommaArgsParse));
+	}
 
 	public ValueTask<CallState?> CommandSingleArgParse(MString text)
-		=> ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse));
+	{
+		return ParseInternal(text, p => p.startPlainSingleCommandArg(), nameof(CommandSingleArgParse));
+	}
 
 	public ValueTask<CallState?> CommandEqSplitArgsParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse));
+	{
+		return ParseInternal(text, p => p.startEqSplitCommandArgs(), nameof(CommandEqSplitArgsParse));
+	}
 
 	public ValueTask<CallState?> CommandEqSplitParse(MString text)
-		=> ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse));
+	{
+		return ParseInternal(text, p => p.startEqSplitCommand(), nameof(CommandEqSplitParse));
+	}
 
 	/// <summary>
 	/// Tokenizes the input text and returns token information for syntax highlighting.
@@ -368,6 +387,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			},
 			Trace = false // Don't trace during validation
 		};
+		
+		if (Configuration.CurrentValue.Debug.ParserStrictMode)
+		{
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
 		
 		// Create custom error listener to collect errors
 		var errorListener = new ParserErrorListener(plaintext.ToString());
@@ -445,6 +469,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			},
 			Trace = false
 		};
+		
+		if (Configuration.CurrentValue.Debug.ParserStrictMode)
+		{
+			sharpParser.ErrorHandler = new StrictErrorStrategy();
+		}
 		
 		// Remove error listeners to avoid noise during analysis
 		sharpParser.RemoveErrorListeners();

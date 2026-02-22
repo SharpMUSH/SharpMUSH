@@ -283,7 +283,9 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
-		var arguments = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext>().ToArray();
+		// Extract evaluationString from each argument context
+		var arguments = context.argument() ?? Enumerable.Empty<ArgumentContext>().ToArray();
+		var evaluationStringArgs = arguments.Select(arg => arg.evaluationString()).ToArray();
 
 		var executor = await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
@@ -325,7 +327,7 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
-		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
+		var result = await CallFunction(functionName.ToLower(), source, context, evaluationStringArgs, this);
 
 		if (shouldDebug && executorObj != null && indent != null)
 		{
@@ -356,7 +358,7 @@ public class SharpMUSHParserVisitor(
 	/// <param name="visitor"></param>
 	/// <returns>The resulting CallState.</returns>
 	public async ValueTask<CallState> CallFunction(string name, MString src,
-		FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor)
+		FunctionContext context, EvaluationStringContext?[] args, SharpMUSHParserVisitor visitor)
 	{
 		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var success = true;
@@ -492,10 +494,12 @@ public class SharpMUSHParserVisitor(
 			{
 				refinedArguments = await args
 					.ToAsyncEnumerable()
-					.Select<EvaluationStringContext, CallState>(async (x, ct) => new CallState(
-						stripAnsi
-							? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
-							: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
+					.Select<EvaluationStringContext?, CallState>(async (x, ct) => x == null 
+						? new CallState(MModule.empty(), context.Depth())
+						: new CallState(
+							stripAnsi
+								? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
+								: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
 					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
 					.ToListAsync();
 			}
@@ -513,6 +517,10 @@ public class SharpMUSHParserVisitor(
 				// For NoParse functions with multiple arguments, store unevaluated text with deferred evaluation
 				refinedArguments = args.Select(x =>
 				{
+					if (x == null)
+					{
+						return new CallState(MModule.empty(), context.Depth());
+					}
 					var text = GetContextText(x);
 					var evalText = stripAnsi ? MModule.plainText2(text) : text;
 					return new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi));
@@ -1724,7 +1732,7 @@ public class SharpMUSHParserVisitor(
 		// Log.Logger.Information("VisitEqsplitCommandArgs: C1: {Text} - C2: {Text2}", baseArg?.ToString(), commaArgs?.ToString());
 		return new CallState(null,
 			context.Depth(),
-			[baseArg!.Message!, .. commaArgs?.Arguments ?? []],
+			[baseArg?.Message ?? MModule.empty(), .. commaArgs?.Arguments ?? []],
 			() => ValueTask.FromResult<MString?>(null));
 	}
 
@@ -1744,8 +1752,8 @@ public class SharpMUSHParserVisitor(
 		var baseArg = await VisitChildren(singleCommandArg[0]);
 		var rsArg = singleCommandArg.Length > 1 ? await VisitChildren(singleCommandArg[1]) : null;
 		MString[] args = singleCommandArg.Length > 1
-			? [baseArg!.Message!, rsArg!.Message!]
-			: [baseArg!.Message!];
+			? [baseArg?.Message ?? MModule.empty(), rsArg?.Message ?? MModule.empty()]
+			: [baseArg?.Message ?? MModule.empty()];
 
 		// Log.Logger.Information("VisitEqSplitCommand: C1: {Text} - C2: {Text2}", baseArg?.ToString(), rsArg?.ToString());
 		return new CallState(

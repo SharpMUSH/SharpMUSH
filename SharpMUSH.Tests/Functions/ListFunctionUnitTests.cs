@@ -115,6 +115,8 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).Contains("\u001b[");
 	}
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test, NotInParallel]
 	public async Task IterationWithAnsiMarkup()
 	{

@@ -18,6 +18,8 @@ public class CommandUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
+	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
+	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	[Arguments("think add(1,2)1",
 		"31")]
