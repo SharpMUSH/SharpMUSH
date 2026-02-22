@@ -23,7 +23,7 @@ if (!string.IsNullOrEmpty(logDir))
 }
 
 Log.Logger = new LoggerConfiguration()
-	.MinimumLevel.Debug()
+	.MinimumLevel.Verbose()
 	.WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
 	.CreateLogger();
 

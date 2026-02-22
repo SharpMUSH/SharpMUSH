@@ -167,6 +167,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 				options.Host = kafkaHost;
 				options.Port = 9092;
 				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
+				options.ConsumerGroupId = "mainprocess-consumer-group"; // Separate group from ConnectionServer
 			},
 			x =>
 			{
@@ -211,7 +212,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 			
 			// Build a single logger configuration with both console and database sinks
 			var loggerConfig = new LoggerConfiguration()
-				.MinimumLevel.Debug()
+				.MinimumLevel.Verbose()
 				.Enrich.FromLogContext();
 			
 			// Apply standard overrides

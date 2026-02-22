@@ -142,7 +142,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	{
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
-			.MinimumLevel.Debug();
+			.MinimumLevel.Verbose();
 		
 		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");

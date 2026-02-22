@@ -67,17 +67,22 @@ public class ConnectionServerService(
 						{ "HostName", hostname },
 						{ "ConnectionType", connectionType }
 					}
-				});
-			}
+					});
+				}
 
-			// Publish connection established message to MainProcess
-			await publishEndpoint.Publish(new ConnectionEstablishedMessage(
-				handle,
-				ipAddress,
-				hostname,
-				connectionType,
-				DateTimeOffset.UtcNow
-			));
+				// Publish connection established message to MainProcess
+				logger.LogTrace("[KAFKA-PUBLISH] Publishing ConnectionEstablishedMessage - Handle: {Handle}, IP: {IpAddress}, Hostname: {Hostname}, Type: {ConnectionType}, Timestamp: {Timestamp}",
+					handle, ipAddress, hostname, connectionType, DateTimeOffset.UtcNow);
+
+				await publishEndpoint.Publish(new ConnectionEstablishedMessage(
+					handle,
+					ipAddress,
+					hostname,
+					connectionType,
+					DateTimeOffset.UtcNow
+				));
+
+				logger.LogTrace("[KAFKA-PUBLISH] Successfully published ConnectionEstablishedMessage - Handle: {Handle}", handle);
 		}
 		catch(Exception ex)
 		{
@@ -95,14 +100,19 @@ public class ConnectionServerService(
 			// Remove from Redis if available
 			if (stateStore != null)
 			{
-				await stateStore.RemoveConnectionAsync(handle);
-			}
+					await stateStore.RemoveConnectionAsync(handle);
+				}
 
-			// Publish connection closed message to MainProcess
-			await publishEndpoint.Publish(new ConnectionClosedMessage(
-				handle,
-				DateTimeOffset.UtcNow
-			));
+					// Publish connection closed message to MainProcess
+					logger.LogTrace("[KAFKA-PUBLISH] Publishing ConnectionClosedMessage - Handle: {Handle}, Timestamp: {Timestamp}",
+						handle, DateTimeOffset.UtcNow);
+
+					await publishEndpoint.Publish(new ConnectionClosedMessage(
+						handle,
+						DateTimeOffset.UtcNow
+					));
+
+					logger.LogTrace("[KAFKA-PUBLISH] Successfully published ConnectionClosedMessage - Handle: {Handle}", handle);
 		}
 
 		data?.DisconnectFunction();

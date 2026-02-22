@@ -26,7 +26,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		var log = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.MinimumLevel.Debug()
+			.MinimumLevel.Verbose()
 			.CreateLogger();
 
 		Log.Logger = log;

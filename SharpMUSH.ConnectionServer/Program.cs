@@ -2,6 +2,9 @@ using KafkaFlow;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
@@ -12,8 +15,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 using SharpMUSH.Messaging.KafkaFlow;
 using Testcontainers.Redpanda;
-using Serilog;
-using Serilog.Events;
 
 namespace SharpMUSH.ConnectionServer;
 
@@ -26,9 +27,14 @@ public class Program
 	{
 		var app = await CreateHostBuilderAsync(args);
 
+		// Get logger for startup logging
+		var logger = app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
+
 		// Start Kafka bus
+		logger.LogTrace("[KAFKA-STARTUP] Starting Kafka bus...");
 		var bus = app.Services.CreateKafkaBus();
 		await bus.StartAsync();
+		logger.LogInformation("[KAFKA-STARTUP] Kafka bus started successfully");
 
 		try
 		{
@@ -77,12 +83,32 @@ public class Program
 
 		builder.Services.AddLogging(logging =>
 		{
-			// Use standard logging configuration with JSON in K8s, plain text elsewhere
-			var loggerConfig = LoggingConfiguration.CreateStandardConsoleConfiguration(
-				minimumLevel: LogEventLevel.Information,
-				overrides: LoggingConfiguration.CreateStandardOverrides()
-			);
-			
+			logging.ClearProviders();
+
+			// Get standard overrides to use consistently with Server
+			var overrides = LoggingConfiguration.CreateStandardOverrides();
+
+			// Build logger configuration matching Server's pattern
+			var loggerConfig = new LoggerConfiguration()
+				.MinimumLevel.Verbose()
+				.Enrich.FromLogContext();
+
+			// Apply standard overrides
+			foreach (var (ns, level) in overrides)
+			{
+				loggerConfig.MinimumLevel.Override(ns, level);
+			}
+
+			// Add console sink (JSON in K8s, plain text elsewhere)
+			if (LoggingConfiguration.IsRunningInKubernetes())
+			{
+				loggerConfig.WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter());
+			}
+			else
+			{
+				loggerConfig.WriteTo.Console();
+			}
+
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
 

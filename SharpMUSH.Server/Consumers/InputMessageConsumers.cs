@@ -16,10 +16,14 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 {
 	public async Task HandleAsync(TelnetInputMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] TelnetInputMessage received - Handle: {Handle}, Input: {Input}",
+			message.Handle, message.Input);
+
 		try
 		{
 			if (string.IsNullOrWhiteSpace(message.Input))
 			{
+				logger.LogTrace("[KAFKA-RECV] TelnetInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
 				return;
 			}
 
@@ -43,6 +47,9 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 {
 	public Task HandleAsync(GMCPSignalMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] GMCPSignalMessage received - Handle: {Handle}, Package: {Package}, Info: {Info}",
+			message.Handle, message.Package, message.Info);
+
 		logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}",
 			message.Handle, message.Package, message.Info);
 
@@ -96,6 +103,9 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 {
 	public Task HandleAsync(MSDPUpdateMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] MSDPUpdateMessage received - Handle: {Handle}, Variables: {Variables}",
+			message.Handle, string.Join(", ", message.Variables.Select(kv => $"{kv.Key}={kv.Value}")));
+
 		logger.LogDebug("Received MSDP update from handle {Handle} with {Count} variables",
 			message.Handle, message.Variables.Count);
 
@@ -153,6 +163,9 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionS
 {
 	public Task HandleAsync(NAWSUpdateMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] NAWSUpdateMessage received - Handle: {Handle}, Width: {Width}, Height: {Height}",
+			message.Handle, message.Width, message.Height);
+
 		logger.LogDebug("Received NAWS update from handle {Handle}: {Width}x{Height}",
 			message.Handle, message.Width, message.Height);
 
@@ -175,6 +188,9 @@ public class ConnectionEstablishedConsumer(
 {
 	public Task HandleAsync(ConnectionEstablishedMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] ConnectionEstablishedMessage received - Handle: {Handle}, IP: {IpAddress}, Hostname: {Hostname}, Type: {ConnectionType}, Timestamp: {Timestamp}",
+			message.Handle, message.IpAddress, message.Hostname, message.ConnectionType, message.Timestamp);
+
 		logger.LogInformation("Connection established: Handle {Handle}, IP {IpAddress}, Type {ConnectionType}",
 			message.Handle, message.IpAddress, message.ConnectionType);
 
@@ -206,6 +222,9 @@ public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, 
 {
 	public Task HandleAsync(ConnectionClosedMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] ConnectionClosedMessage received - Handle: {Handle}, Timestamp: {Timestamp}",
+			message.Handle, message.Timestamp);
+
 		logger.LogInformation("Connection closed: Handle {Handle}", message.Handle);
 
 		connectionService.Disconnect(message.Handle);

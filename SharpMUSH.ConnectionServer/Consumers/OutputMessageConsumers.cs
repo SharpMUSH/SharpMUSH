@@ -16,6 +16,9 @@ public class TelnetPromptConsumer(
 {
 	public async Task HandleAsync(TelnetPromptMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] TelnetPromptMessage received - Handle: {Handle}, DataLength: {DataLength}",
+			message.Handle, message.Data?.Length ?? 0);
+
 		var connection = connectionService.Get(message.Handle);
 
 		if (connection == null)
@@ -27,7 +30,7 @@ public class TelnetPromptConsumer(
 		try
 		{
 			var transformedData = await transformService.TransformAsync(
-				message.Data,
+				message.Data!,
 				connection.Capabilities,
 				connection.Preferences);
 
@@ -51,6 +54,9 @@ public class BroadcastConsumer(
 {
 	public async Task HandleAsync(BroadcastMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] BroadcastMessage received - DataLength: {DataLength}",
+			message.Data?.Length ?? 0);
+
 		var connections = connectionService.GetAll();
 
 		foreach (var connection in connections)
@@ -59,7 +65,7 @@ public class BroadcastConsumer(
 			{
 // Transform output based on capabilities and preferences
 				var transformedData = await transformService.TransformAsync(
-					message.Data,
+					message.Data!,
 					connection.Capabilities,
 					connection.Preferences);
 
@@ -83,6 +89,9 @@ public class DisconnectConnectionConsumer(
 {
 	public async Task HandleAsync(DisconnectConnectionMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] DisconnectConnectionMessage received - Handle: {Handle}, Reason: {Reason}",
+			message.Handle, message.Reason ?? "None");
+
 		logger.LogInformation("Disconnecting connection {Handle}. Reason: {Reason}",
 			message.Handle, message.Reason ?? "None");
 

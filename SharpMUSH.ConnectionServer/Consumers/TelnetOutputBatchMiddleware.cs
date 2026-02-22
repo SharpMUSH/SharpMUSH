@@ -46,7 +46,10 @@ public class TelnetOutputBatchMiddleware(
 	{
 		// Get the batch of messages as per KafkaFlow's recommended pattern
 		var batch = context.GetMessagesBatch();
-		
+
+		logger.LogTrace("[KAFKA-BATCH] TelnetOutputBatchMiddleware invoked - BatchSize: {BatchSize}",
+			batch?.Count ?? 0);
+
 		if (batch == null || batch.Count == 0)
 		{
 			logger.LogWarning("Received empty batch");
@@ -68,6 +71,9 @@ public class TelnetOutputBatchMiddleware(
 				(key, msgs) => new { Handle = key, Messages = msgs.ToList() })
 			.ToList();
 
+		logger.LogTrace("[KAFKA-BATCH] Processing batch - TotalMessages: {TotalMessages}, UniqueHandles: {UniqueHandles}, Handles: [{Handles}]",
+			batch.Count, messagesByHandle.Count, string.Join(", ", messagesByHandle.Select(g => g.Handle)));
+
 		// Process each connection's messages in parallel (connections are independent)
 		// This improves performance without breaking ordering guarantees
 		await Parallel.ForEachAsync(messagesByHandle, 
@@ -76,6 +82,9 @@ public class TelnetOutputBatchMiddleware(
 		{
 			var handle = group.Handle;
 			var connection = connectionService.Get(handle);
+
+			logger.LogTrace("[KAFKA-BATCH] Processing handle batch - Handle: {Handle}, MessageCount: {MessageCount}, Connection: {ConnectionStatus}",
+				handle, group.Messages.Count, connection != null ? "Found" : "Missing");
 
 			if (connection == null)
 			{

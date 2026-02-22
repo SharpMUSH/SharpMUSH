@@ -13,7 +13,10 @@ public class GMCPOutputConsumer(IConnectionServerService connectionService, ILog
 {
 public async Task HandleAsync(GMCPOutputMessage message, CancellationToken cancellationToken = default)
 {
-var connection = connectionService.Get(message.Handle);
+  logger.LogTrace("[KAFKA-RECV] GMCPOutputMessage received - Handle: {Handle}, Module: {Module}, MessageLength: {MessageLength}",
+    message.Handle, message.Module, message.Message?.Length ?? 0);
+
+  var connection = connectionService.Get(message.Handle);
 
 if (connection == null)
 {
@@ -29,7 +32,7 @@ return;
 
 try
 {
-await connection.GMCPFunction(message.Module, message.Message);
+  await connection.GMCPFunction(message.Module, message.Message!);
 }
 catch (Exception ex)
 {

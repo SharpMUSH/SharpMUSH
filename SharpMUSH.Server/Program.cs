@@ -1,5 +1,7 @@
 ﻿using KafkaFlow;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Redis;
 
@@ -29,10 +31,15 @@ public class Program
 		startup.ConfigureServices(builder.Services);
 		
 		var app = builder.Build();
-		
+
+		// Get logger for startup logging
+		var logger = app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
+
 		// Start Kafka bus
+		logger.LogTrace("[KAFKA-STARTUP] Starting Kafka bus...");
 		var bus = app.Services.CreateKafkaBus();
 		await bus.StartAsync();
+		logger.LogInformation("[KAFKA-STARTUP] Kafka bus started successfully");
 		
 		try
 		{

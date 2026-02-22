@@ -7,17 +7,9 @@ public static class RedisStrategyProvider
 {
 	public static RedisStrategy GetStrategy()
 	{
-		var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION");
-
-		if (string.IsNullOrWhiteSpace(redisConnection))
-		{
-			// No Redis connection configured, use TestContainer for local development
-			return new RedisTestContainerStrategy();
-		}
-		else
-		{
-			// Redis connection is configured (e.g., in Kubernetes or Docker Compose)
-			return new RedisExternalStrategy(redisConnection);
-		}
+		// Connect to REDIS_CONNECTION if set, otherwise default to the instance owned by ConnectionServer.
+		// Mirrors how Server connects to Kafka: KAFKA_HOST defaults to "localhost" without starting a container.
+		var redisConnection = Environment.GetEnvironmentVariable("REDIS_CONNECTION") ?? "localhost:6379";
+		return new RedisExternalStrategy(redisConnection);
 	}
 }
