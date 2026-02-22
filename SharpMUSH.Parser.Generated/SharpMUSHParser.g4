@@ -88,9 +88,14 @@ bracketPattern:
     OBRACK evaluationString CBRACK
 ;
 
+argument:
+    evaluationString
+    | {InputStream.LA(1) == COMMAWS || InputStream.LA(1) == CPAREN}? /* empty when followed by , or ) */
+;
+
 function: 
     FUNCHAR {++inFunction;} 
-    (evaluationString? ({inBraceDepth == 0}? COMMAWS evaluationString?)*)?
+    (argument ({inBraceDepth == 0}? COMMAWS argument)*)?
     CPAREN {--inFunction;} 
 ;
 

@@ -283,7 +283,9 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
-		var evaluationStringArgs = context.evaluationString() ?? Enumerable.Empty<EvaluationStringContext?>().ToArray();
+		// Extract evaluationString from each argument context
+		var arguments = context.argument() ?? Enumerable.Empty<ArgumentContext>().ToArray();
+		var evaluationStringArgs = arguments.Select(arg => arg.evaluationString()).ToArray();
 
 		var executor = await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
