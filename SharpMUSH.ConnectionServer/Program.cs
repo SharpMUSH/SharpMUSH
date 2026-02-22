@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Serilog;
-using Serilog.Events;
-using Serilog.Formatting.Compact;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
@@ -85,29 +83,9 @@ public class Program
 		{
 			logging.ClearProviders();
 
-			// Get standard overrides to use consistently with Server
-			var overrides = LoggingConfiguration.CreateStandardOverrides();
-
-			// Build logger configuration matching Server's pattern
+			// Read Serilog configuration from appsettings.json (MinimumLevel, Overrides, WriteTo, Enrich)
 			var loggerConfig = new LoggerConfiguration()
-				.MinimumLevel.Verbose()
-				.Enrich.FromLogContext();
-
-			// Apply standard overrides
-			foreach (var (ns, level) in overrides)
-			{
-				loggerConfig.MinimumLevel.Override(ns, level);
-			}
-
-			// Add console sink (JSON in K8s, plain text elsewhere)
-			if (LoggingConfiguration.IsRunningInKubernetes())
-			{
-				loggerConfig.WriteTo.Console(new Serilog.Formatting.Compact.CompactJsonFormatter());
-			}
-			else
-			{
-				loggerConfig.WriteTo.Console();
-			}
+				.ReadFrom.Configuration(builder.Configuration);
 
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});

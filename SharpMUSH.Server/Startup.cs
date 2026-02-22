@@ -3,6 +3,7 @@ using Core.Arango.Serilog;
 using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,8 +11,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
-using Serilog.Events;
-using Serilog.Formatting.Compact;
 using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -39,7 +38,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-	public void ConfigureServices(IServiceCollection services)
+	public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 	{
 		services.AddCors(options =>
 		{
@@ -169,31 +168,11 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		{
 			logging.ClearProviders();
 
-			// Get standard overrides to use consistently
-			var overrides = LoggingConfiguration.CreateStandardOverrides();
-
-			// Build a single logger configuration with both console and database sinks
+			// Read Serilog configuration from appsettings.json (MinimumLevel, Overrides, WriteTo, Enrich)
 			var loggerConfig = new LoggerConfiguration()
-				.MinimumLevel.Verbose()
-				.Enrich.FromLogContext();
+				.ReadFrom.Configuration(configuration);
 
-			// Apply standard overrides
-			foreach (var (ns, level) in overrides)
-			{
-				loggerConfig.MinimumLevel.Override(ns, level);
-			}
-
-			// Add console sink (JSON in K8s, plain text elsewhere)
-			if (LoggingConfiguration.IsRunningInKubernetes())
-			{
-				loggerConfig.WriteTo.Console(new CompactJsonFormatter());
-			}
-			else
-			{
-				loggerConfig.WriteTo.Console();
-			}
-
-			// Add database logging sink (batched)
+			// Add database logging sink (batched) - must remain in code due to DI dependency
 			loggerConfig.WriteTo.Sink(new PeriodicBatchingSink(
 				new ArangoSerilogSink(
 					logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),

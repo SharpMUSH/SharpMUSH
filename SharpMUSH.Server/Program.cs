@@ -28,7 +28,7 @@ public class Program
 
 		var startup = new Startup(arangoConfig, colorFile, redisStrategy);
 		
-		startup.ConfigureServices(builder.Services);
+		startup.ConfigureServices(builder.Services, builder.Configuration);
 		
 		var app = builder.Build();
 
