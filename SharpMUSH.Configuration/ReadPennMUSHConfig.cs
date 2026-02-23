@@ -246,7 +246,9 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), false)
 			),
 			Debug = new DebugOptions(
-				Boolean(Get(nameof(DebugOptions.DebugSharpParser)), false)
+				Boolean(Get(nameof(DebugOptions.DebugSharpParser)), false),
+				Enum.TryParse<ParserPredictionMode>(Get(nameof(DebugOptions.ParserPredictionMode)), out var predMode) ? predMode : ParserPredictionMode.LL,
+				Boolean(Get(nameof(DebugOptions.ParserStrictMode)), false)
 			),
 			Alias = new AliasOptions(
 				FunctionAliases: new Dictionary<string, string[]>

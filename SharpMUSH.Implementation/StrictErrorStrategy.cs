@@ -14,6 +14,7 @@ public class StrictErrorStrategy : DefaultErrorStrategy
 	public override void Recover(Parser recognizer, RecognitionException e)
 	{
 		var ruleName = recognizer.RuleNames[recognizer.RuleContext.RuleIndex];
+		Console.WriteLine($"[STRICT MODE] Throwing exception for parse error in rule '{ruleName}': {e.Message}");
 		throw new InvalidOperationException($"Parser error in rule '{ruleName}': {e.Message}", e);
 	}
 
@@ -24,6 +25,7 @@ public class StrictErrorStrategy : DefaultErrorStrategy
 	{
 		var exception = new InputMismatchException(recognizer);
 		var ruleName = recognizer.RuleNames[recognizer.RuleContext.RuleIndex];
+		Console.WriteLine($"[STRICT MODE] Throwing exception for unexpected token in rule '{ruleName}': {exception.Message}");
 		throw new InvalidOperationException($"Unexpected token in rule '{ruleName}': {exception.Message}", exception);
 	}
 
