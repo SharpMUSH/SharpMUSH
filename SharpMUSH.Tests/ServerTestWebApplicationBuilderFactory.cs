@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using OpenTelemetry.Metrics;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
@@ -113,22 +112,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 				{
 					sc.RemoveAll<ArangoHandle>();
 					sc.AddSingleton(new ArangoHandle(databaseName));
-				}
-
-				var enableTelemetry = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_TELEMETRY");
-				var isTelemetryEnabled = !string.IsNullOrEmpty(enableTelemetry) &&
-					(enableTelemetry.Equals("true", StringComparison.OrdinalIgnoreCase) || enableTelemetry == "1");
-
-				if (isTelemetryEnabled)
-				{
-					var outputPath = Environment.GetEnvironmentVariable("SHARPMUSH_TELEMETRY_OUTPUT_PATH") ?? "test-telemetry.md";
-					sc.ConfigureOpenTelemetryMeterProvider(metrics =>
-						// exportIntervalMilliseconds must be > 0 per SDK validation; int.MaxValue (~24 days)
-						// effectively disables periodic export. Export is triggered on-demand via
-						// MeterProvider.ForceFlush() in ServerWebAppFactory.DisposeAsync.
-						metrics.AddReader(new PeriodicExportingMetricReader(
-							new FileMetricExporter(outputPath),
-							exportIntervalMilliseconds: int.MaxValue)));
 				}
 			}
 		);
