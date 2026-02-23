@@ -29,7 +29,18 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureStartupConfiguration(IConfigurationBuilder configurationBuilder)
 	{
-		// No Prometheus configuration needed anymore
+		// Support PARSER_STRICT_MODE environment variable for grammar debugging
+		var parserStrictMode = Environment.GetEnvironmentVariable("PARSER_STRICT_MODE");
+		var isStrictMode = !string.IsNullOrEmpty(parserStrictMode) &&
+											 (parserStrictMode.Equals("true", StringComparison.OrdinalIgnoreCase) || parserStrictMode == "1");
+		
+		if (isStrictMode)
+		{
+			configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				["parser_strict_mode"] = "true"
+			});
+		}
 	}
 
 	/// <summary>

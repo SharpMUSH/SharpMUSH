@@ -16,7 +16,15 @@ public record DebugOptions(
 		Group = "Parser Configuration",
 		Order = 1,
 		Tooltip = "SLL is faster but less powerful; LL handles complex grammars")]
-	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.LL
+	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.LL,
+
+	[property: SharpConfig(
+		Name = "parser_strict_mode",
+		Category = "Debug",
+		Description = "Enable strict parser mode that throws on any syntax error instead of recovering. Useful for grammar debugging.",
+		Group = "Parser Debugging",
+		Order = 2)]
+	bool ParserStrictMode = false
 );
 
 /// <summary>
