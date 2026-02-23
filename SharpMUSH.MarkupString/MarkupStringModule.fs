@@ -13,6 +13,39 @@ open System.Drawing
 /// Provides core types and functions for working with markup-aware strings.
 /// </summary>
 module MarkupStringModule =
+    /// <summary>
+    /// Thread-safe StringBuilder pool to reduce allocations in hot paths.
+    /// Uses ThreadLocal to maintain per-thread pools and avoid cross-thread contention.
+    /// </summary>
+    module StringBuilderPool =
+        open System.Collections.Generic
+        open System.Threading
+
+        let private maxPoolSize = 256
+        let private sbLock = Object()
+        
+        // Thread-local storage for per-thread StringBuilder stacks
+        let private threadLocalPool = new ThreadLocal<Stack<System.Text.StringBuilder>>(fun () -> 
+            new Stack<System.Text.StringBuilder>())
+
+        /// Get a StringBuilder from the pool, or create a new one if pool is empty
+        let getStringBuilder() : System.Text.StringBuilder =
+            let stack = threadLocalPool.Value
+            lock sbLock (fun () ->
+                if stack.Count > 0 then 
+                    stack.Pop() 
+                else 
+                    new System.Text.StringBuilder())
+
+        /// Return a StringBuilder to the pool after clearing it
+        let returnStringBuilder(sb: System.Text.StringBuilder) : unit =
+            if sb.Length > 0 then
+                lock sbLock (fun () ->
+                    sb.Clear() |> ignore
+                    let stack = threadLocalPool.Value
+                    if stack.Count < maxPoolSize then
+                        stack.Push(sb))
+
     type Content =
         | Text of string
         | MarkupText of MarkupString
@@ -62,16 +95,19 @@ module MarkupStringModule =
                     sb.Append(inner) |> ignore
                     accumulate sb tail
 
-            let sb = System.Text.StringBuilder()
-            accumulate sb markupStr.Content
-            let innerText = sb.ToString()
+            let sb = StringBuilderPool.getStringBuilder()
+            try
+                accumulate sb markupStr.Content
+                let innerText = sb.ToString()
 
-            match markupStr.MarkupDetails with
-            | Empty -> innerText
-            | MarkedupText str ->
-                match outerMarkupType with
-                | Empty -> str.Wrap(innerText)
-                | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
+                match markupStr.MarkupDetails with
+                | Empty -> innerText
+                | MarkedupText str ->
+                    match outerMarkupType with
+                    | Empty -> str.Wrap(innerText)
+                    | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
+            finally
+                StringBuilderPool.returnStringBuilder sb
 
         [<TailCall>]
         let rec length () : int =
@@ -131,26 +167,32 @@ module MarkupStringModule =
                     evalContent sb tail
 
             and evalContent2 (markupStr: MarkupString) : string =
-                let innerSb = System.Text.StringBuilder()
-                let rec innerLoop (sb: System.Text.StringBuilder) (content: Content list) : unit =
-                    match content with
-                    | [] -> ()
-                    | Text str :: tail ->
-                        sb.Append(str) |> ignore
-                        innerLoop sb tail
-                    | MarkupText mStr :: tail ->
-                        let text = evalContent2 mStr
-                        sb.Append(text) |> ignore
-                        innerLoop sb tail
-                innerLoop innerSb markupStr.Content
-                let innerText = innerSb.ToString()
-                evaluator markupStr.MarkupDetails innerText
+                let innerSb = StringBuilderPool.getStringBuilder()
+                try
+                    let rec innerLoop (sb: System.Text.StringBuilder) (content: Content list) : unit =
+                        match content with
+                        | [] -> ()
+                        | Text str :: tail ->
+                            sb.Append(str) |> ignore
+                            innerLoop sb tail
+                        | MarkupText mStr :: tail ->
+                            let text = evalContent2 mStr
+                            sb.Append(text) |> ignore
+                            innerLoop sb tail
+                    innerLoop innerSb markupStr.Content
+                    let innerText = innerSb.ToString()
+                    evaluator markupStr.MarkupDetails innerText
+                finally
+                    StringBuilderPool.returnStringBuilder innerSb
 
             // Evaluate content first, then apply evaluator to top-level markup
-            let sb = System.Text.StringBuilder()
-            evalContent sb ms.Content
-            let contentText = sb.ToString()
-            evaluator ms.MarkupDetails contentText
+            let sb = StringBuilderPool.getStringBuilder()
+            try
+                evalContent sb ms.Content
+                let contentText = sb.ToString()
+                evaluator ms.MarkupDetails contentText
+            finally
+                StringBuilderPool.returnStringBuilder sb
 
         let toString () : string =
             let postfix (markupType: MarkupTypes) : string =
@@ -193,9 +235,12 @@ module MarkupStringModule =
                     loop sb mStr.Content
                     loop sb tail
 
-            let sb = System.Text.StringBuilder()
-            loop sb ms.Content
-            sb.ToString()
+            let sb = StringBuilderPool.getStringBuilder()
+            try
+                loop sb ms.Content
+                sb.ToString()
+            finally
+                StringBuilderPool.returnStringBuilder sb
 
         let plainStrVal: Lazy<string> = Lazy<string>(toPlainText)
 
@@ -213,11 +258,12 @@ module MarkupStringModule =
         override this.ToString() : string = strVal.Value
         
         override this.Equals(obj) =
+            let myPlainText = toPlainText()
             match obj with
             | :? MarkupString as other ->
-                toPlainText().Equals(other.ToPlainText())
+                myPlainText.Equals(other.ToPlainText())
             | :? string as other ->
-                toPlainText().Equals(other)
+                myPlainText.Equals(other)
             | _ -> false
         
         override this.GetHashCode() = toPlainText().GetHashCode()
