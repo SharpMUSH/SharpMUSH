@@ -1,0 +1,597 @@
+SharpMUSHParser.g4(84,1): warning ANT01: warning(154): SharpMUSHParser.g4:84:0: rule function contains an optional block with at least one alternative that can match an empty string [/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.Parser.Generated/SharpMUSH.Parser.Generated.csproj]
+/usr/share/dotnet/sdk-manifests/10.0.100/microsoft.net.workload.mono.toolchain.current/10.0.102/WorkloadManifest.targets(124,5): warning : @(NativeFileReference) is not empty, but the native references won't be linked in, because neither $(WasmBuildNative), nor $(RunAOTCompilation) are 'true'. NativeFileReference=/home/runner/.nuget/packages/sqlitepclraw.lib.e_sqlite3/2.1.11/buildTransitive/net9.0/../../runtimes/browser-wasm/nativeassets/net9.0/e_sqlite3.a [/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.Client/SharpMUSH.Client.csproj]
+[33mskipped[m GetOptions_ShouldReturnConfiguration [90m(7ms)[m
+  Skip
+[33mskipped[m ImportFromConfigFileAsync_HttpError_ShouldHandleGracefully [90m(7ms)[m
+  Skip
+[33mskipped[m ImportFromConfigFileAsync_ValidConfig_ShouldNotThrow [90m(7ms)[m
+  Skip
+[33mskipped[m RestartCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ShutdownCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m PcreateCommand [90m(0ms)[m
+  Test infrastructure issue - state pollution from other tests
+[33mskipped[m PurgeCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ChownallCommand [90m(0ms)[m
+  Test infrastructure issue - state pollution from other tests
+[33mskipped[m NewpasswordCommand [90m(0ms)[m
+  Test infrastructure issue - state pollution from other tests
+[33mskipped[m PasswordCommand [90m(0ms)[m
+  Test infrastructure issue - state pollution from other tests
+[33mskipped[m ReadcacheCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ChzoneallCommand [90m(0ms)[m
+  Test infrastructure issue - state pollution from other tests
+[33mskipped[m PoorCommand [90m(0ms)[m
+  Test infrastructure issue - state pollution from other tests
+[33mskipped[m List_Flags_Lowercase_DisplaysLowercaseFlagList [90m(0ms)[m
+  Switch parsing issue with multiple switches - needs investigation
+[33mskipped[m ComlistCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ClistCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ComtitleCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m AddcomCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ChannelCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ChatCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m DelcomCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m TestSingle(think Command3 Arg;think Command4 Arg·;, Command3 Arg, Command4 Arg·) [90m(0ms)[m
+  Known to be working, but for some reason tests are failing now?
+[33mskipped[m TestSingle(think [add(1,2)]6;think add(3,2)7, 36, 57) [90m(0ms)[m
+  Known to be working, but for some reason tests are failing now?
+[33mskipped[m TestSingle(think add(1,2)4;think add(2,3)5, 34, 55) [90m(0ms)[m
+  Known to be working, but for some reason tests are failing now?
+[33mskipped[m TestSingle(think Command1 Arg;think Command2 Arg, Command1 Arg, Command2 Arg) [90m(0ms)[m
+  Known to be working, but for some reason tests are failing now?
+[33mskipped[m TestSingle(think [ansi(hr,red)];think [ansi(hg,green)], ␛[1;31mred␛[0m, ␛[1;32mgreen␛[0m) [90m(0ms)[m
+  Known to be working, but for some reason tests are failing now?
+[33mskipped[m AddComInvalidArgs(addcom test_alias_ADDCOM3=NonExistentChannel, Channel not found·) [90m(0ms)[m
+  TODO
+[33mskipped[m AddComInvalidArgs(addcom=Public, Alias name cannot be empty·) [90m(0ms)[m
+  TODO
+[33mskipped[m NszemitBasic(@nszemit Test nospoof zone) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m NspemitBasic(@nspemit #1=Test nospoof pemit) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m NsoemitBasic(@nsoemit #1=Test nospoof omit) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m NsremitBasic(@nsremit #0=Test nospoof remote) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m NslemitBasic(@nslemit Test nospoof local) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m NsemitBasic(@nsemit Test nospoof emit) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m ZemitBasic(@zemit Test zone emit, Test zone emit) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m OemitBasic(@oemit #1=Test omit emit, Test omit emit) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m RemitBasic(@remit #0=Test remote emit, Test remote emit) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m LemitBasic(@lemit Test local emit, Test local emit) [90m(0ms)[m
+  Not yet implemented
+[33mskipped[m ComTitleBasic(comtitle test_alias_COMTITLE=test_title_COMTITLE) [90m(0ms)[m
+  TOOD
+[33mskipped[m ComListEmpty(comlist) [90m(0ms)[m
+  TODO: Failing Test. Requires investigation.
+[33mskipped[m DoingCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m RejectmotdCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m WizmotdCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m MotdCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m MonikerCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ConfigCommand_CategoryArg_ShowsCategoryOptions [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m ConfigCommand_NoArgs_ListsCategories [90m(0ms)[m
+  TODO
+[33mskipped[m RetryCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SwitchCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SelectCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m BreakCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m AssertCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m IncludeCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Power_Delete_HandlesNonExistentPower [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m Flag_Disable_PreventsSystemFlagDisable [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m Power_Enable_EnablesDisabledPower [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m Power_Disable_PreventsSystemPowerDisable [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m Flag_Delete_HandlesNonExistentFlag [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m BuyCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m TeachCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m FollowCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m UnfollowCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m DesertCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m DismissCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ScoreCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m WithCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m LogwipeCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m MaliasCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m MailCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m MessageOemitSwitch [90m(0ms)[m
+  Requires multiple objects
+[33mskipped[m MessageRemitSwitch [90m(0ms)[m
+  Requires room setup
+[33mskipped[m WhoCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SessionCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m QuitCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m PromptCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m NspromptCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m BriefCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ConnectCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m EditCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SweepCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m VerbCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SlaveCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SocksetCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m MapsqlCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SqlCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m HttpCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SuggestCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m RwallCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m RespondCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m MessageCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m WarningsCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m WcheckCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m PoseCommand [90m(0ms)[m
+  Issue with NotifyService mock, needs investigation
+[33mskipped[m SquotaCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m PageCommand [90m(0ms)[m
+  Issue with NotifyService mock, needs investigation
+[33mskipped[m WhisperCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SemiposeCommand [90m(0ms)[m
+  Issue with NotifyService mock, needs investigation
+[33mskipped[m SayCommand [90m(0ms)[m
+  Issue with NotifyService mock, needs investigation
+[33mskipped[m FlagCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m FirstexitCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m AttributeCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m KickCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m AtrchownCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m AtrlockCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m HookCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m FunctionCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m PowerCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m HideCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m CommandCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SetAndResetCacheTest [90m(0ms)[m
+  Test needs investigation - unrelated to communication commands
+[33mskipped[m FindCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m StatsCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m EntrancesCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m WhereisCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m SearchCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m VerbExecutesAwhat [90m(0ms)[m
+  Requires AWHAT command list execution verification
+[33mskipped[m VerbPermissionDenied [90m(0ms)[m
+  Requires proper permission setup
+[33mskipped[m VerbInsufficientArgs [90m(0ms)[m
+  Test environment issue with notification capture
+[33mskipped[m VerbWithStackArguments [90m(0ms)[m
+  Test environment issue with @verb notification capture
+[33mskipped[m VerbWithAttributes [90m(0ms)[m
+  Test environment issue with @verb notification capture
+[33mskipped[m VerbWithDefaultMessages [90m(0ms)[m
+  Test environment issue with @verb notification capture
+[33mskipped[m PsWithTarget [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m PsCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Hide_OffSwitch_UnsetsHidden [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m Hide_AlreadyVisible_ShowsAppropriateMessage [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m HaltCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m DbckCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m TriggerCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Hide_NoSwitch_TogglesHidden [90m(0ms)[m
+  Failing. Needs Investigation
+[33mskipped[m BootCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m AllquotaCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m QuotaCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m DumpCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m CanIndex(ATTRIBUTE TREES) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m CanIndex(ATTR TREES) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m CanIndex(ATTRIB TREES) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m CanIndex(`) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m CanIndex(@CEMIT) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m CanIndex(@NSCEMIT) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m CanIndex(CEMIT()) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m CanIndex(NSCEMIT()) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m Indexable(sharpattr·md, ATTRIBUTE TREES, ATTR TREES, ATTRIB TREES, `) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m Indexable(sharpchat·md, @CEMIT, @NSCEMIT, CEMIT(), NSCEMIT()) [90m(0ms)[m
+  Moving to different help file system
+[33mskipped[m Valid_AttributeValue(valid(attrvalue,test_value), 1) [90m(0ms)[m
+  Attribute value validation without target attribute requires ValidateService enhancement
+[33mskipped[m Valid_AttributeValue(valid(attrvalue,test_value,NONEXISTENT_ATTR), 1) [90m(0ms)[m
+  Attribute value validation without target attribute requires ValidateService enhancement
+[33mskipped[m Test_Zfun_NotImplemented(zfun(TEST_ATTR), #-1 ZONES NOT YET IMPLEMENTED) [90m(0ms)[m
+  Zones Not Yet Implemented
+[33mskipped[m Regrep(regrep(%#,test,*), ) [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Regrepi(regrepi(%#,test,*), ) [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Regedit(regedit(obj/attr,pattern,replacement), ) [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Zemit(zemit(#0,test message), ) [90m(0ms)[m
+  Zone system not yet implemented
+[33mskipped[m Idle [90m(0ms)[m
+  Is empty. Needs investigation.
+[33mskipped[m ConnectGuest_GuestsDisabled_FailsWithError [90m(0ms)[m
+  Requires guest configuration testing infrastructure
+[33mskipped[m ConnectGuest_MaxGuestsReached_FailsWithError [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m Tag(tag(b,text), <b>text</b>) [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Endtag(endtag(b), </b>) [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Name [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Hidden(hidden(%#), 0) [90m(0ms)[m
+  Test infrastructure issue - intermittent failure, returns '1' instead of '0'
+[33mskipped[m JsonMap(json_map(#lambda/toupper\(%%1\,%%2\),json(object,a,1,b,2)), A:1 B:2) [90m(0ms)[m
+  json_map currently explicitly does not use #lambda. It should evaluate functions later in its loop instead and use the existing method of calling attributes.
+[33mskipped[m Test_Oob_SendsGmcpMessages(oob(me,Package·Name), 1) [90m(0ms)[m
+  Requires connection setup
+[33mskipped[m Test_Oob_SendsGmcpMessages(oob(me,Package·Name,{"key":"test_oob_case1"}), 1) [90m(0ms)[m
+  Requires connection setup
+[33mskipped[m Sort(sort(3 1 2), 1 2 3) [90m(0ms)[m
+  Implementation incomplete - sort function needs full implementation
+[33mskipped[m Sort(sort(foo bar baz), bar baz foo) [90m(0ms)[m
+  Implementation incomplete - sort function needs full implementation
+[33mskipped[m Mix(mix(test/concat,a b c,1 2 3), a 1 b 2 c 3) [90m(0ms)[m
+  User-defined function execution issue - attribute not being called correctly
+[33mskipped[m Matchall(matchall(foo bar baz,ba*), 2 3) [90m(0ms)[m
+  Implementation doesn't match expected behavior - returns wrong indices
+[33mskipped[m Itext(itext(0), #-1 REGISTER OUT OF RANGE) [90m(0ms)[m
+  Error handling outside iteration - should return error but doesn't
+[33mskipped[m Elist(elist(a b c), a, b, and c) [90m(0ms)[m
+  Formatting logic incorrect - same issue as itemize
+[33mskipped[m ListInsert(linsert(a b c,2,x), a x b c) [90m(0ms)[m
+  Indexing issue - 1-based position handling for insert incorrect
+[33mskipped[m Splice(splice(a b c,d e f, ), a d  b e  c f) [90m(0ms)[m
+  Implementation issue - splice logic doesn't handle output separator correctly
+[33mskipped[m FilterBool(filterbool(#lambda/\%0,1 0 1), 1 1) [90m(0ms)[m
+  Lambda function syntax not fully supported - #lambda/\%0 pattern needs implementation
+[33mskipped[m Itemize(itemize(a b c), a, b, and c) [90m(0ms)[m
+  Formatting logic incorrect - conjunction and punctuation not formatted properly
+[33mskipped[m MessageHashHashReplacement [90m(0ms)[m
+  Requires attribute setup
+[33mskipped[m MessageNoSideFxDisabled [90m(0ms)[m
+  Requires configuration setup
+[33mskipped[m MessageRemitSwitch [90m(0ms)[m
+  Requires room setup
+[33mskipped[m MessageOemitSwitch [90m(0ms)[m
+  Requires multiple objects setup
+[33mskipped[m Ctu(ctu(3·5,5), 4) [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m Match(match(a b c,b), 2) [90m(0ms)[m
+  Causes deadlock - implementation triggers existing GetAttributeQueryHandler/GetExitsQueryHandler .GetAwaiter().GetResult() issues
+[33mskipped[m Foreach(foreach(a b c,##), a b c) [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m JsonMap(json_map(obj/attr,{"a":1}), ) [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m CONFIG_ReturnsConfigurationValues(config(money_plural), Pennies) [90m(0ms)[m
+  Config values are dynamic and environment-specific
+[33mskipped[m CONFIG_ReturnsConfigurationValues(config(money_singular), Penny) [90m(0ms)[m
+  Config values are dynamic and environment-specific
+[33mskipped[m Nsearch(nsearch(all,type,PLAYER), 1) [90m(0ms)[m
+  Failing
+[33mskipped[m Nlsearch(nlsearch(all,type,PLAYER), 1) [90m(0ms)[m
+  Failing
+[33mskipped[m Regrep(regrep(#0,*,pattern), ) [90m(0ms)[m
+  Requires attribute service integration
+[33mskipped[m Regrepi(regrepi(#0,*,pattern), ) [90m(0ms)[m
+  Requires attribute service integration
+[33mskipped[m Time [90m(0ms)[m
+  Weird error. Needs investigation: #-2 I DON'T KNOW WHICH ONE YOU MEAN
+[33mskipped[m MeasureActualDoListPerformance [90m(0ms)[m
+  Manual performance validation - requires actual servers running on 127.0.0.1:4201
+[33mskipped[m TriggerEventWithNoHandlerConfigured [90m(0ms)[m
+  Integration test - requires database setup with event_handler configured
+[33mskipped[m TriggerEventWithSystemEnactor [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m TriggerEventWithHandler [90m(0ms)[m
+  Integration test - requires database setup with event_handler and attributes configured
+[33mskipped[m MatchListenPatternsAsync_WithDefaultBehavior_MatchesOnlyForOthers [90m(0ms)[m
+  Integration test - requires database with default ^-listen behavior
+[33mskipped[m MatchListenPatternsAsync_WithAAHEARFlag_MatchesForAnySpeaker [90m(0ms)[m
+  Integration test - requires database with AAHEAR flag
+[33mskipped[m MatchListenPatternsAsync_WithNoMonitorFlag_ReturnsEmpty [90m(0ms)[m
+  Integration test - requires database with objects and ^-listen attributes configured
+[33mskipped[m MatchListenPatternsAsync_WithMatchingPattern_ReturnsMatch [90m(0ms)[m
+  Integration test - requires database with ^-listen patterns
+[33mskipped[m ProcessNotificationAsync_WithMonitorFlag_MatchesListenPatterns [90m(0ms)[m
+  Integration test - requires database with room and objects configured
+[33mskipped[m MatchListenPatternsAsync_WithAMHEARFlag_MatchesOnlyForSelf [90m(0ms)[m
+  Integration test - requires database with AMHEAR flag
+[33mskipped[m ProcessNotificationAsync_WithPuppetFlag_RelaysToOwner [90m(0ms)[m
+  Integration test - requires database with puppet configured
+[33mskipped[m ProcessNotificationAsync_WithListenAttribute_MatchesPattern [90m(0ms)[m
+  Integration test - requires database with @listen attribute
+[33mskipped[m LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits [90m(0ms)[m
+  Skip for now
+[33mskipped[m LocateMatch_PartialMatching_ShouldFindObjectByPartialName [90m(0ms)[m
+  Skip for now
+[33mskipped[m LocateMatch_TypePreference_ShouldRespectPlayerPreference [90m(0ms)[m
+  Skip for now
+[33mskipped[m LocateMatch_MultipleObjects_ShouldHandleAmbiguousMatches [90m(0ms)[m
+  Skip for now
+[33mskipped[m LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom [90m(0ms)[m
+  Skip for now
+[33mskipped[m DetectsIndirectLoop [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m NoLoopIntoRoom [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m ExecuteMoveAsyncWithValidMove [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m NoLoopWithSimpleMove [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m ExecuteMoveAsyncFailsOnPermission [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m ExecuteMoveAsyncTriggersEnterHooks [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m ExecuteMoveAsyncTriggersLeaveHooks [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m ExecuteMoveAsyncTriggersTeleportHooks [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m DetectsDirectLoop [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m ExecuteMoveAsyncFailsOnLoop [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m ConverterUpdatesRoom0Name [90m(0ms)[m
+  Creates objects in shared database that affect other tests - needs isolated database
+[33mskipped[m ConversionResultIncludesStatistics [90m(0ms)[m
+  Creates objects in shared database that affect other tests - needs isolated database
+[33mskipped[m ConverterUpdatesGodPlayerNameAndPassword [90m(0ms)[m
+  Creates objects in shared database that affect other tests - needs isolated database
+[33mskipped[m ConverterSetsParentRelationships [90m(0ms)[m
+  Creates objects in shared database that affect other tests - needs isolated database
+[33mskipped[m ConverterSetsZoneRelationships [90m(0ms)[m
+  Creates objects in shared database that affect other tests - needs isolated database
+[33mskipped[m LockChecks_Integration_MultipleLocks_ChecksAll [90m(0ms)[m
+  Requires database and lock service setup
+[33mskipped[m LockChecks_Integration_ValidLock_NoWarnings [90m(0ms)[m
+  Requires database and lock service setup
+[33mskipped[m LockChecks_Integration_InvalidLock_TriggersWarning [90m(0ms)[m
+  Requires database and lock service setup
+[33mskipped[m LockChecks_Integration_EmptyLock_Skipped [90m(0ms)[m
+  Requires database and lock service setup
+[33mskipped[m LockChecks_Integration_GoingObjectReference_TriggersWarning [90m(0ms)[m
+  Requires database and lock service setup
+[33mskipped[m BackgroundService_DisabledWhenIntervalZero [90m(0ms)[m
+  Integration test - requires service setup
+[33mskipped[m BackgroundService_RunsAtConfiguredInterval [90m(0ms)[m
+  Integration test - requires service setup
+[33mskipped[m WarningService_SkipsObjectsWithOwnerNoWarn [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m WarningService_SkipsObjectsWithNoWarn [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m WarningService_SkipsGoingObjects [90m(0ms)[m
+  Integration test - requires database setup
+[33mskipped[m CheckExitWarnings_MultipleReturnExits_DetectsWarning [90m(0ms)[m
+  Requires full database and exit setup
+[33mskipped[m CheckExitWarnings_UnlinkedExit_DetectsWarning [90m(0ms)[m
+  Requires full database and exit setup
+[33mskipped[m CheckExitWarnings_OnewayExit_DetectsWarning [90m(0ms)[m
+  Requires full database and exit setup
+[33mskipped[m Test_CopyAttribute_Basic [90m(0ms)[m
+  Failing Test - Needs Investigation
+[33mskipped[m Test_CopyAttribute_MultipleDestinations [90m(0ms)[m
+  Failing Test - Needs Investigation
+[33mskipped[m Test_MoveAttribute_Basic [90m(0ms)[m
+  Failing Test - Needs Investigation
+[33mskipped[m Test_WipeAttributes_AllAttributes [90m(0ms)[m
+  Failing Test - Needs Investigation
+[33mskipped[m Test_AtrLock_LockAndUnlock [90m(0ms)[m
+  Failing Test - Needs Investigation
+[33mskipped[m Test_CopyAttribute_Direct [90m(0ms)[m
+  Failing Test - Needs Investigation
+[33mskipped[m CommandAliasRuns(l) [90m(0ms)[m
+  Not yet implemented properly
+[33mskipped[m CreateObject [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m CreateObjectWithCost [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m DoDigForCommandListCheck [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m DoDigForCommandListCheck2 [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m DigAndMoveTest [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m NameObject [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m DigRoom [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m DigRoomWithExits [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m LinkExit [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m CloneObject [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m SetParent [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m ChownObject [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m ChzoneObject [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m RecycleObject [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m UnlinkExit [90m(0ms)[m
+  Skipped due to failed dependencies
+[33mskipped[m UnlockObject [90m(0ms)[m
+  Test infrastructure issue - state pollution from other tests
+[33mskipped[m LockObject [90m(0ms)[m
+  Test infrastructure issue - state pollution from other tests
+[33mskipped[m EnableCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m DisableCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m UnrecycleCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m ListCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug [90m(0ms)[m
+  @trigger command syntax needs investigation - implementation is complete
+[33mskipped[m AttributeNoDebugFlag_SuppressesOutput_EvenWithObjectDebug [90m(0ms)[m
+  @trigger command syntax needs investigation - implementation is complete
+[33mskipped[m DolistCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m PS_ShowsQueueStatus [90m(0ms)[m
+  TODO
+[33mskipped[m Attribute_DisplaysAttributeInfo [90m(0ms)[m
+  TODO: Failing
+[33mskipped[m Halt_ClearsQueue [90m(0ms)[m
+  Test infrastructure issue - NotifyService call count mismatch
+[33mskipped[m Restart_ValidObject_Restarts [90m(0ms)[m
+  TODO
+[33mskipped[m Command_ShowsCommandInfo [90m(0ms)[m
+  TODO: Failing
+[33mskipped[m Function_ListsGlobalFunctions [90m(0ms)[m
+  TODO
+[33mskipped[m Function_ShowsFunctionInfo [90m(0ms)[m
+  TODO
+[33mskipped[m Trigger_QueuesAttribute [90m(0ms)[m
+  TODO
+[33mskipped[m EnterCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m GotoCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m UseCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m NukeCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m DestroyCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m UndestroyCommand [90m(0ms)[m
+  Not Yet Implemented
+[33mskipped[m WCheckCommand_WithMe_ChecksOwnedObjects [90m(0ms)[m
+  Integration test - requires proper object setup
+[33mskipped[m WCheckCommand_WithAll_RequiresWizard [90m(0ms)[m
+  Integration test - requires wizard permissions
+[33mskipped[m PersonalZoneUserDefinedCommandTest [90m(0ms)[m
+  Failing and needs to be fixed.
+[33mskipped[m ZMRUserDefinedCommandTest [90m(0ms)[m
+  Failing and needs to be fixed.
+[33mskipped[m OverwritePartialNullAndGetExpandedData [90m(0ms)[m
+  TODO: Failing Behavior. Needs Investigation.
+[33mskipped[m FilterByOwner_ReturnsOnlyOwnedObjects [90m(0ms)[m
+  Owner filtering via graph traversal needs debugging
+[33mskipped[m ClearMotdData [90m(0ms)[m
+  TODO: Failing test - needs investigation
+[33mskipped[m Test_Pgrep_IncludesParents([attrib_set([parent(me,create(PGREP_PARENT))]/PGREP_PARENT,child_value)][pgrep(%!,PGREP_*,child)], PGREP_PARENT) [90m(0ms)[m
+  Parent Mode not implemented yet.
+[33mskipped[m Test_Pgrep_IncludesParents([attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)], PGREP_CHILD) [90m(0ms)[m
+  Parent Mode not implemented yet.
+[33mskipped[m Test_Regnattrp_CountWithParents([attrib_set(%!/Test_Regnattrp_CountWithParents_001,value1)][attrib_set([parent(me,create(Test_Regnattrp_CountWithParents))]/Test_Regnattrp_CountWithParents_002,value2)][attrib_set(%!/Test_Regnattrp_CountWithParents_100,value3)][regnattrp(%!,Test_Regnattrp_CountWithParents_[0-9]+)], 3) [90m(0ms)[m
+  Parent Mode not implemented yet.
+[33mskipped[m Test_Regxattrp_RangeWithParents([attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)][attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)][attrib_set(%!/Test_Regxattrp_RangeWithParents_100,value3)][regxattrp(%!/Test_Regxattrp_RangeWithParents_[0-9]+,1,2)], TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002) [90m(0ms)[m
+  Parent Mode not implemented yet.
+[33mskipped[m Test_Regxattrp_RangeWithParents([attrib_set(%!/Test_Regxattrp_RangeWithParents2_001,value1)][attrib_set([parent(me,create(Test_Regxattrp_RangeWithParents2))]/Test_Regxattrp_RangeWithParents2_002,value2)][attrib_set(%!/Test_Regxattrp_RangeWithParents2_100,value3)][regxattrp(%!/Test_Regxattrp_RangeWithParents2_[0-9]+,1,2)], TEST_REGXATTRP_RANGEWITHPARENTS2_001 TEST_REGXATTRP_RANGEWITHPARENTS2_002) [90m(0ms)[m
+  Parent Mode not implemented yet.
+[33mskipped[m Test_Reglattrp_IncludesParents([attrib_set(%!/Test_Reglattrp_IncludesParents_001,value1)][attrib_set([parent(me,create(Test_Reglattrp_IncludesParents))]/Test_Reglattrp_IncludesParents_002,value2)][attrib_set(%!/Test_Reglattrp_IncludesParents_100,value3)][reglattrp(%!,Test_Reglattrp_IncludesParents_[0-9]+)], Test_Reglattrp_IncludesParents_001 Test_Reglattrp_IncludesParents_002 Test_Reglattrp_IncludesParents_100) [90m(0ms)[m
+  Parent Mode not implemented yet.
+[33mskipped[m Mail_InvalidMessage_ReturnsError(mail(999), #-1 NO SUCH MAIL) [90m(0ms)[m
+  TODO: Failing test - needs investigation
+[33mskipped[m Mailsubject_InvalidMessage_ReturnsError(mailsubject(999), #-1 NO SUCH MAIL) [90m(0ms)[m
+  Marked for later investigation
+[33mskipped[m Mailstatus_ValidMessage_ReturnsStatusFormat [90m(0ms)[m
+  Test has race condition with parallel test execution - needs investigation
+[33mskipped[m RecursionLimit_IncludeCommand_TracksRecursion [90m(0ms)[m
+  TODO: Commands send notifications via NotifyService, not return values. Need to redesign test to check NotifyService calls for recursion errors.
+[33mskipped[m RecursionLimit_CommandsTrackAttributeRecursion [90m(0ms)[m
+  TODO: Commands send notifications via NotifyService, not return values. Need to redesign test to check NotifyService calls.
+[33mskipped[m RecursionLimit_TriggerCommand_TracksRecursion [90m(0ms)[m
+  TODO: Commands send notifications via NotifyService, not return values. Need to redesign test to check NotifyService calls for recursion errors.
+
+[32mTest run summary: Passed![90m - [m/home/runner/work/SharpMUSH/SharpMUSH/SharpMUSH.Tests/bin/Debug/net10.0/SharpMUSH.Tests.dll (net10.0|x64)
+[m  total: 2337
+  failed: 0
+[32m  succeeded: 2043
+[m  skipped: 294
+  duration: 1m 48s 504ms
