@@ -20,6 +20,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Text;
 using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
@@ -46,6 +47,12 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	public new IServiceProvider Services => _server!.Services;
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
+
+	// Metrics tracking via MeterListener
+	private MeterListener? _meterListener;
+	private readonly ConcurrentDictionary<string, ConcurrentBag<double>> _functionDurations = new(StringComparer.OrdinalIgnoreCase);
+	private readonly ConcurrentDictionary<string, ConcurrentBag<double>> _commandDurations = new(StringComparer.OrdinalIgnoreCase);
+	private readonly ConcurrentDictionary<string, long> _connectionEventCounts = new(StringComparer.OrdinalIgnoreCase);
 
 	// Optional parameters for custom SQL connection
 	protected string? _customSqlConnectionString;
@@ -139,6 +146,27 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 	public virtual async Task InitializeAsync()
 	{
+		// Set up metrics listener before any server activity
+		_meterListener = new MeterListener();
+		_meterListener.InstrumentPublished = (instrument, listener) =>
+		{
+			if (instrument.Meter.Name == "SharpMUSH")
+				listener.EnableMeasurementEvents(instrument, null);
+		};
+		_meterListener.SetMeasurementEventCallback<double>((instrument, measurement, tags, _) =>
+		{
+			if (instrument.Name == "sharpmush.function.invocation.duration")
+				_functionDurations.GetOrAdd(GetTagValue(tags, "function.name"), _ => []).Add(measurement);
+			else if (instrument.Name == "sharpmush.command.invocation.duration")
+				_commandDurations.GetOrAdd(GetTagValue(tags, "command.name"), _ => []).Add(measurement);
+		});
+		_meterListener.SetMeasurementEventCallback<long>((instrument, measurement, tags, _) =>
+		{
+			if (instrument.Name == "sharpmush.connection.events")
+				_connectionEventCounts.AddOrUpdate(GetTagValue(tags, "event.type"), measurement, (_, old) => old + measurement);
+		});
+		_meterListener.Start();
+
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.MinimumLevel.Verbose();
@@ -287,6 +315,15 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		}
 
 		GC.SuppressFinalize(this);
+
+		_meterListener?.Dispose();
+	}
+
+	private static string GetTagValue(ReadOnlySpan<KeyValuePair<string, object?>> tags, string key)
+	{
+		foreach (var tag in tags)
+			if (tag.Key == key) return tag.Value?.ToString() ?? "unknown";
+		return "unknown";
 	}
 
 	private async Task OutputTelemetrySummaryAsync()
@@ -306,5 +343,86 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		{
 			return;
 		}
+
+		var sb = new StringBuilder();
+		sb.AppendLine("## 📊 Test Telemetry Summary");
+		sb.AppendLine();
+
+		if (_connectionEventCounts.Count > 0)
+		{
+			sb.AppendLine("### 🔌 Connection Events");
+			sb.AppendLine();
+			sb.AppendLine("| Event Type | Count |");
+			sb.AppendLine("|------------|-------|");
+			foreach (var (eventType, count) in _connectionEventCounts.OrderByDescending(x => x.Value))
+				sb.AppendLine($"| {eventType} | {count} |");
+			sb.AppendLine();
+		}
+
+		if (_functionDurations.Count > 0)
+		{
+			var byCount = _functionDurations
+				.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
+				.OrderByDescending(x => x.Count)
+				.Take(10)
+				.ToList();
+
+			sb.AppendLine("### ⚡ Most Called Functions (Top 10)");
+			sb.AppendLine();
+			sb.AppendLine("| Function | Calls | Avg Duration (ms) |");
+			sb.AppendLine("|----------|-------|-------------------|");
+			foreach (var (name, count, avgMs) in byCount)
+				sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
+			sb.AppendLine();
+
+			var bySlow = _functionDurations
+				.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
+				.OrderByDescending(x => x.AvgMs)
+				.Take(10)
+				.ToList();
+
+			sb.AppendLine("### 🐌 Slowest Functions (Top 10 by Avg Duration)");
+			sb.AppendLine();
+			sb.AppendLine("| Function | Calls | Avg Duration (ms) |");
+			sb.AppendLine("|----------|-------|-------------------|");
+			foreach (var (name, count, avgMs) in bySlow)
+				sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
+			sb.AppendLine();
+		}
+
+		if (_commandDurations.Count > 0)
+		{
+			var byCount = _commandDurations
+				.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
+				.OrderByDescending(x => x.Count)
+				.Take(10)
+				.ToList();
+
+			sb.AppendLine("### ⚡ Most Called Commands (Top 10)");
+			sb.AppendLine();
+			sb.AppendLine("| Command | Calls | Avg Duration (ms) |");
+			sb.AppendLine("|---------|-------|-------------------|");
+			foreach (var (name, count, avgMs) in byCount)
+				sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
+			sb.AppendLine();
+
+			var bySlow = _commandDurations
+				.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
+				.OrderByDescending(x => x.AvgMs)
+				.Take(10)
+				.ToList();
+
+			sb.AppendLine("### 🐌 Slowest Commands (Top 10 by Avg Duration)");
+			sb.AppendLine();
+			sb.AppendLine("| Command | Calls | Avg Duration (ms) |");
+			sb.AppendLine("|---------|-------|-------------------|");
+			foreach (var (name, count, avgMs) in bySlow)
+				sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
+			sb.AppendLine();
+		}
+
+		var outputPath = "test-telemetry.md";
+		await File.WriteAllTextAsync(outputPath, sb.ToString());
+		Console.WriteLine($"[Telemetry] Summary written to {Path.GetFullPath(outputPath)}");
 	}
 }
