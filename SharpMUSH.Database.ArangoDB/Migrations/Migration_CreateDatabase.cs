@@ -20,8 +20,8 @@ public class Migration_CreateDatabase : IArangoMigration
 	public async Task Up(IArangoMigrator migrator, ArangoHandle handle)
 	{
 		await migrator.ApplyStructureAsync(handle, new ArangoStructure()
-			{
-				Collections =
+		{
+			Collections =
 				[
 					new() {
 						Collection = new ArangoCollection
@@ -73,7 +73,7 @@ public class Migration_CreateDatabase : IArangoMigration
 									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Aliases = new { type = DatabaseConstants.TypeArray, 
+										Aliases = new { type = DatabaseConstants.TypeArray,
 											items = new { type = DatabaseConstants.TypeString } },
 									}
 								}
@@ -128,7 +128,7 @@ public class Migration_CreateDatabase : IArangoMigration
 									type = DatabaseConstants.TypeObject,
 									properties = new
 									{
-										Aliases = new { type = DatabaseConstants.TypeArray, 
+										Aliases = new { type = DatabaseConstants.TypeArray,
 											items = new { type = DatabaseConstants.TypeString } }
 									}
 								}
@@ -404,7 +404,7 @@ public class Migration_CreateDatabase : IArangoMigration
 										Subject = new { type = DatabaseConstants.TypeString },
 									},
 									required = (string[])[
-										nameof(SharpMail.DateSent), 
+										nameof(SharpMail.DateSent),
 										nameof(SharpMail.Fresh),
 										nameof(SharpMail.Read),
 										nameof(SharpMail.Tagged),
@@ -423,7 +423,7 @@ public class Migration_CreateDatabase : IArangoMigration
 							new() { Fields = [nameof(SharpMail.Folder)] },
 						]
 					},
-					
+
 					new()
 					{
 						Collection = new ArangoCollection
@@ -545,7 +545,7 @@ public class Migration_CreateDatabase : IArangoMigration
 							Type = ArangoCollectionType.Edge,
 							WaitForSync = true
 						}
-					}, 
+					},
 					new()
 					{
 						Collection = new ArangoCollection
@@ -616,7 +616,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						}
 					}
 				],
-				Graphs =
+			Graphs =
 				[
 					new()
 					{
@@ -886,7 +886,7 @@ public class Migration_CreateDatabase : IArangoMigration
 						Name = DatabaseConstants.GraphZones
 					}
 				]
-			},
+		},
 			new ArangoMigrationOptions
 			{
 				DryRun = false,
@@ -2248,7 +2248,7 @@ public class Migration_CreateDatabase : IArangoMigration
 				DefaultFlags = (string[])["no_command","prefixmatch"]
 			}),
 	];
-	
+
 	private static async Task<List<ArangoUpdateResult<ArangoVoid>>> CreateInitialPowers(IArangoMigrator migrator,
 		ArangoHandle handle) =>
 	[

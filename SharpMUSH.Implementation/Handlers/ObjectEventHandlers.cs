@@ -1,5 +1,4 @@
 using Mediator;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -13,7 +12,7 @@ public class ObjectEventHandlers(
 	IEventService eventService,
 	IMUSHCodeParser parser)
 	: INotificationHandler<ObjectMovedNotification>,
-	  INotificationHandler<ObjectFlagChangedNotification>
+		INotificationHandler<ObjectFlagChangedNotification>
 {
 	public async ValueTask Handle(ObjectMovedNotification notification, CancellationToken cancellationToken)
 	{

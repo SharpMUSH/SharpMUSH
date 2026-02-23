@@ -1,6 +1,4 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Implementation.Commands.MailCommand;
+﻿using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -129,7 +127,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		// Case 1: mail() - return total count of messages in all folders
 		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText())))
 		{
@@ -184,7 +182,7 @@ public partial class Functions
 
 		// Case 4: mail(player, msg#) or mail(player, folder:msg#) - return text of player's message
 		var arg1 = args["1"].Message!.ToPlainText()!;
-		
+
 		if (!await CanViewOtherPlayerMail(executor))
 		{
 			return new CallState("#-1 PERMISSION DENIED");
@@ -238,7 +236,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		AnySharpObject targetPlayer = executor;
 		string? messageListSpec = null;
 
@@ -258,7 +256,7 @@ public partial class Functions
 			var playerArg = args["0"].Message!.ToPlainText()!;
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
+
 			if (locateResult.IsError || locateResult.IsNone)
 			{
 				return new CallState("#-1 NO SUCH PLAYER");
@@ -279,7 +277,7 @@ public partial class Functions
 		}
 
 		var mailList = filteredList.AsMailList;
-		
+
 		// Build result list by finding each mail's index in its folder using async enumeration
 		var results = new List<string>();
 		await foreach (var mail in mailList)
@@ -304,7 +302,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
 		if (parseResult.IsError)
 		{
@@ -336,19 +334,19 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 		var sender = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var recipientArg = args["0"].Message!.ToPlainText()!;
 		var messageArg = args["1"].Message!;
 
 		// Locate recipient
 		var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 			parser, sender, sender, recipientArg, LocateFlags.PlayersPreference);
-		
+
 		if (locateResult.IsError)
 		{
 			return new CallState(locateResult.AsError.Value);
 		}
-		
+
 		if (locateResult.IsNone)
 		{
 			return new CallState("#-1 NO SUCH PLAYER");
@@ -364,13 +362,13 @@ public partial class Functions
 
 		// Parse subject and message (split on /)
 		var subjectBodySplit = MModule.indexOf(messageArg, MModule.single("/"));
-		
-		var subject = subjectBodySplit > -1 
-			? MModule.substring(0, subjectBodySplit, messageArg) 
+
+		var subject = subjectBodySplit > -1
+			? MModule.substring(0, subjectBodySplit, messageArg)
 			: MModule.substring(0, Math.Min(20, messageArg.Length), messageArg);
-		
+
 		var message = subjectBodySplit > -1
-			? MModule.substring(subjectBodySplit + 1, messageArg.Length - subjectBodySplit - 1, messageArg) 
+			? MModule.substring(subjectBodySplit + 1, messageArg.Length - subjectBodySplit - 1, messageArg)
 			: messageArg;
 
 		// Create mail object
@@ -402,9 +400,9 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var playerArg = args["0"].Message!.ToPlainText()!;
-		
+
 		// Check if querying self or another player
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -421,7 +419,7 @@ public partial class Functions
 
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
+
 			if (locateResult.IsError || locateResult.IsNone)
 			{
 				return new CallState("#-1 NO SUCH PLAYER");
@@ -443,9 +441,9 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var playerArg = args["0"].Message!.ToPlainText()!;
-		
+
 		// Check if querying self or another player
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -462,7 +460,7 @@ public partial class Functions
 
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
+
 			if (locateResult.IsError || locateResult.IsNone)
 			{
 				return new CallState("#-1 NO SUCH PLAYER");
@@ -477,7 +475,7 @@ public partial class Functions
 		var sentCount = allSentMail.Length;
 		var sentUnread = allSentMail.Count(m => !m.Read);
 		var sentCleared = allSentMail.Count(m => m.Cleared);
-		
+
 		var receivedCount = allReceivedMail.Length;
 		var receivedUnread = allReceivedMail.Count(m => !m.Read);
 		var receivedCleared = allReceivedMail.Count(m => m.Cleared);
@@ -489,9 +487,9 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var playerArg = args["0"].Message!.ToPlainText()!;
-		
+
 		// Check if querying self or another player
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -508,7 +506,7 @@ public partial class Functions
 
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
+
 			if (locateResult.IsError || locateResult.IsNone)
 			{
 				return new CallState("#-1 NO SUCH PLAYER");
@@ -524,7 +522,7 @@ public partial class Functions
 		var sentUnread = allSentMail.Count(m => !m.Read);
 		var sentCleared = allSentMail.Count(m => m.Cleared);
 		var sentBytes = allSentMail.Sum(m => m.Content.Length);
-		
+
 		var receivedCount = allReceivedMail.Length;
 		var receivedUnread = allReceivedMail.Count(m => !m.Read);
 		var receivedCleared = allReceivedMail.Count(m => m.Cleared);
@@ -537,7 +535,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
 		if (parseResult.IsError)
 		{
@@ -570,7 +568,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
 		if (parseResult.IsError)
 		{
@@ -596,7 +594,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var parseResult = await ParsePlayerAndMessageArgs(parser, executor, args);
 		if (parseResult.IsError)
 		{

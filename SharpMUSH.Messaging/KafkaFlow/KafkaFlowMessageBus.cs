@@ -1,5 +1,3 @@
-using KafkaFlow;
-using KafkaFlow.Producers;
 using SharpMUSH.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
@@ -15,7 +13,7 @@ public class KafkaFlowMessageBus(SharpMushProducer producer) : IMessageBus
 	{
 		return producer.ProduceAsync(message, cancellationToken);
 	}
-	
+
 	public Task HandlePublish<T>(T message, CancellationToken cancellationToken = default) where T : IHandleMessage
 	{
 		return producer.HandleProduceAsync(message, cancellationToken);

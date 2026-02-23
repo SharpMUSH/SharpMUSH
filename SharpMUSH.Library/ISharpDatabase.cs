@@ -124,7 +124,7 @@ public interface ISharpDatabase
 	/// <param name="lockData">The lock data including string and flags</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetLockAsync(SharpObject target, string lockName, Models.SharpLockData lockData, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Unset the lock of an object.
 	/// </summary>
@@ -147,15 +147,15 @@ public interface ISharpDatabase
 	// IEnumerable<IEnumerable<SharpAttribute>> to represent full paths for each match.
 	IAsyncEnumerable<SharpAttribute> GetAttributesAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
-	
+
 	IAsyncEnumerable<SharpAttribute> GetAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<LazySharpAttribute> GetLazyAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default);
-	
+
 	IAsyncEnumerable<LazySharpAttribute> GetLazyAttributesAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
-	
+
 	IAsyncEnumerable<LazySharpAttribute> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern,
 		CancellationToken cancellationToken = default);
 
@@ -180,7 +180,7 @@ public interface ISharpDatabase
 	/// </summary>
 	IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
 		bool checkParent = true, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Get all attribute entries from the attribute table.
 	/// </summary>
@@ -214,7 +214,7 @@ public interface ISharpDatabase
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> DeleteAttributeEntryAsync(string name, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Get the Object represented by a Database Reference Number.
 	/// Optionally passing either the CreatedSecs or CreatedMilliseconds will do a more specific lookup.
@@ -268,7 +268,7 @@ public interface ISharpDatabase
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Set an Object Power.
 	/// </summary>
@@ -277,7 +277,7 @@ public interface ISharpDatabase
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Unset an Object Power.
 	/// </summary>
@@ -369,7 +369,7 @@ public interface ISharpDatabase
 	/// <param name="home">New Value</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Sets the Location of a content object. 
 	/// </summary>
@@ -377,7 +377,7 @@ public interface ISharpDatabase
 	/// <param name="location">New Value</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Sets the Parent of an object.
 	/// </summary>
@@ -385,7 +385,7 @@ public interface ISharpDatabase
 	/// <param name="parent">New Value</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Sets the Parent of an object.
 	/// </summary>
@@ -400,7 +400,7 @@ public interface ISharpDatabase
 	/// <param name="zone">New Zone</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	ValueTask SetObjectZone(AnySharpObject obj, AnySharpObject? zone, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Unsets the Zone of an object.
 	/// </summary>
@@ -446,7 +446,7 @@ public interface ISharpDatabase
 	/// </summary>
 	/// <returns>All powers</returns>
 	IAsyncEnumerable<SharpPower> GetObjectPowersAsync(CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Get a Power by name, if it exists.
 	/// </summary>
@@ -454,7 +454,7 @@ public interface ISharpDatabase
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>A SharpPower, or null if it does not exist</returns>
 	ValueTask<SharpPower?> GetPowerAsync(string name, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Get the parent of an object.
 	/// </summary>
@@ -620,7 +620,7 @@ public interface ISharpDatabase
 	ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail, CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpMail> GetSentMailsAsync(SharpObject sender, SharpPlayer recipient, CancellationToken cancellationToken = default);
-	
+
 	IAsyncEnumerable<SharpMail> GetAllSentMailsAsync(SharpObject sender, CancellationToken cancellationToken = default);
 
 	ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default);
@@ -634,23 +634,23 @@ public interface ISharpDatabase
 	IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, CancellationToken cancellationToken = default);
 
 	ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id, CancellationToken cancellationToken = default);
-	
+
 	ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail, CancellationToken cancellationToken = default);
-	
+
 	ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail, CancellationToken cancellationToken = default);
-	
+
 	ValueTask DeleteMailAsync(string mailId, CancellationToken cancellationToken = default);
-	
+
 	ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder, CancellationToken cancellationToken = default);
-	
+
 	ValueTask MoveMailFolderAsync(string mailId, string newFolder, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Gets ALL mail in the system regardless of owner or folder.
 	/// WARNING: This bypasses all access controls and should only be used in God-level administrative operations.
 	/// </summary>
 	IAsyncEnumerable<SharpMail> GetAllSystemMailAsync(CancellationToken cancellationToken = default);
-		
+
 	/// <summary>
 	/// Sets expanded data for a SharpObject, that does not fit on the light-weight nature of a SharpObject or Attributes.
 	/// </summary>
@@ -687,13 +687,13 @@ public interface ISharpDatabase
 	ValueTask<T?> GetExpandedServerData<T>(string dataType, CancellationToken cancellationToken = default);
 
 	IAsyncEnumerable<SharpChannel> GetAllChannelsAsync(CancellationToken cancellationToken = default);
-	
+
 	ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default);
-	
+
 	IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, CancellationToken cancellationToken = default);
 
 	ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default);
-	
+
 	ValueTask UpdateChannelAsync(SharpChannel channel,
 		MString? name,
 		MString? description,
@@ -705,17 +705,17 @@ public interface ISharpDatabase
 		string? modLock,
 		string? mogrifier,
 		int? buffer, CancellationToken cancellationToken = default);
-	
+
 	ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner, CancellationToken cancellationToken = default);
-	
+
 	ValueTask DeleteChannelAsync(SharpChannel channel, CancellationToken cancellationToken = default);
 
 	ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default);
-	
+
 	ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default);
-	
+
 	ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status, CancellationToken cancellationToken = default);
-	
+
 	/// <summary>
 	/// Checks if there is a path from startObject to targetObject following parent and/or zone edges.
 	/// Uses graph traversal to detect potential cycles in combined parent/zone chains.

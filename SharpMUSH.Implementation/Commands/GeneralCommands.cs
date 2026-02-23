@@ -1,7 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
@@ -21,17 +21,14 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
-using StringExtensions = ANSILibrary.StringExtensions;
+using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
+using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -73,7 +70,7 @@ public partial class Commands
 		var remainingText = plainListText.Length > spaceIndex + 1
 			? MModule.single(textSpan.Slice(spaceIndex + 1).ToString())
 			: MModule.empty();
-		
+
 		return (paramValue, remainingText);
 	}
 
@@ -90,13 +87,13 @@ public partial class Commands
 		var callDepth = parser.CurrentState.CallDepth;
 		var recursionDepths = parser.CurrentState.FunctionRecursionDepths;
 		var limitExceeded = parser.CurrentState.LimitExceeded;
-		
+
 		// If tracking isn't initialized (shouldn't happen in normal flow), just execute without tracking
 		if (callDepth == null || recursionDepths == null || limitExceeded == null)
 		{
 			return await executeFunc();
 		}
-		
+
 		// Increment tracking
 		callDepth.Increment();
 		if (!recursionDepths.TryGetValue(attributeLongName, out var depth))
@@ -104,7 +101,7 @@ public partial class Commands
 			depth = 0;
 		}
 		recursionDepths[attributeLongName] = ++depth;
-		
+
 		// Check recursion limit
 		if (depth > Configuration!.CurrentValue.Limit.FunctionRecursionLimit)
 		{
@@ -113,7 +110,7 @@ public partial class Commands
 			recursionDepths[attributeLongName] = depth - 1;
 			return new CallState(Errors.ErrorRecursion);
 		}
-		
+
 		try
 		{
 			return await executeFunc();
@@ -235,20 +232,20 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		if (args.Count == 0)
 		{
 			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
-		
+
 		var attributePath = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
 			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
-		
+
 		// Parse object/attribute path
 		var pathSplit = HelperFunctions.SplitDbRefAndOptionalAttr(attributePath);
 		if (!pathSplit.TryPickT0(out var pathDetails, out _))
@@ -256,74 +253,74 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "Invalid object/attribute path format.");
 			return new CallState("#-1 INVALID PATH");
 		}
-		
+
 		var (objSpec, attrName) = pathDetails;
 		if (string.IsNullOrEmpty(attrName))
 		{
 			await NotifyService!.Notify(executor, "You must specify an attribute to map.");
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
-		
+
 		// Handle /DELIMIT switch using helper method
 		var originalListText = args.Count >= 2 ? args["1"].Message! : MModule.empty();
 		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
 		var list = MModule.split(delimiter, listText);
-		
+
 		await NotifyService!.Notify(executor, $"@map: Would iterate over {list.Length} elements and execute {objSpec}/{attrName}");
-		
+
 		if (switches.Contains("INLINE"))
 		{
 			await NotifyService.Notify(executor, "  Mode: Inline execution");
 		}
-		
+
 		if (switches.Contains("NOTIFY"))
 		{
 			await NotifyService.Notify(executor, "  Will queue @notify after completion");
 		}
-		
+
 		if (switches.Contains("CLEARREGS"))
 		{
 			await NotifyService.Notify(executor, "  Will clear Q-registers");
 		}
-		
+
 		if (switches.Contains("LOCALIZE"))
 		{
 			await NotifyService.Notify(executor, "  Will localize Q-registers");
 		}
-		
+
 		// Locate the target object
 		var targetObject = await LocateService!.LocateAndNotifyIfInvalid(
 			parser, executor, executor, objSpec, LocateFlags.All);
-		
+
 		if (!targetObject.IsValid())
 		{
 			return new CallState("#-1 OBJECT NOT FOUND");
 		}
-		
+
 		var target = targetObject.WithoutError().WithoutNone();
-		
+
 		// Get the attribute to execute
 		var attributeResult = await AttributeService!.GetAttributeAsync(
 			executor, target, attrName, IAttributeService.AttributeMode.Read, false);
-		
+
 		if (attributeResult.IsNone || attributeResult.IsError)
 		{
 			await NotifyService.Notify(executor, $"Attribute {attrName} not found on {target.Object().Name}.");
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
-		
+
 		var attribute = attributeResult.AsAttribute.Last();
 		var attributeText = attribute.Value.ToPlainText();
-		
+
 		if (string.IsNullOrWhiteSpace(attributeText))
 		{
 			// Empty attribute - nothing to execute
 			return CallState.Empty;
 		}
-		
+
 		var isInline = switches.Contains("INLINE");
 		var results = new List<string>();
-		
+
 		if (isInline)
 		{
 			// Inline execution - execute immediately for each element
@@ -333,26 +330,26 @@ public partial class Commands
 				var registerDict = new Dictionary<string, MString> { ["0"] = element! };
 				var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
 				registerStack.Push(registerDict);
-				
+
 				var stateForElement = parser.CurrentState with
 				{
 					Registers = registerStack,
 					Executor = target.Object().DBRef
 				};
-				
+
 				// Execute the attribute with the element as %0
 				var result = await parser.With(state => stateForElement, async newParser =>
 				{
 					return await newParser.WithAttributeDebug(attribute,
 						async p => await p.CommandListParse(attribute.Value));
 				});
-				
+
 				if (result != null && result.Message != null)
 				{
 					results.Add(result.Message.ToPlainText() ?? string.Empty);
 				}
 			}
-			
+
 			// If /notify switch is present, queue "@notify" after inline execution
 			if (switches.Contains("NOTIFY"))
 			{
@@ -362,7 +359,7 @@ public partial class Commands
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
-			
+
 			return new CallState(string.Join(" ", results));
 		}
 		else
@@ -374,20 +371,20 @@ public partial class Commands
 				var registerDict = new Dictionary<string, MString> { ["0"] = element! };
 				var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
 				registerStack.Push(registerDict);
-				
+
 				var stateForElement = parser.CurrentState with
 				{
 					Registers = registerStack,
 					Executor = target.Object().DBRef
 				};
-				
+
 				await Mediator!.Send(new QueueCommandListRequest(
 					attribute.Value,
 					stateForElement,
 					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
-			
+
 			// If /notify switch is present, queue "@notify" after all executions
 			if (switches.Contains("NOTIFY"))
 			{
@@ -397,7 +394,7 @@ public partial class Commands
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
-			
+
 			return CallState.Empty;
 		}
 	}
@@ -418,11 +415,11 @@ public partial class Commands
 		// Handle /DELIMIT or /PID switch - extract delimiter or PID from first argument
 		var hasDelimit = switches.Contains("DELIMIT");
 		var hasPid = switches.Contains("PID");
-		
+
 		string delimiter = " ";
 		string? notifyPid = null;
 		MString listText;
-		
+
 		if (hasDelimit)
 		{
 			// Format: @dolist/delimit <delimiter> <list>=<action>
@@ -446,7 +443,7 @@ public partial class Commands
 			// Format: @dolist <list>=<action>
 			listText = parser.CurrentState.Arguments["0"].Message!;
 		}
-		
+
 		var list = MModule.split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
@@ -456,7 +453,7 @@ public partial class Commands
 		{
 			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
 			var wrappedIteration = new IterationWrapper<MString>
-				{ Value = MModule.empty(), Break = false, NoBreak = noBreak, Iteration = 0 };
+			{ Value = MModule.empty(), Break = false, NoBreak = noBreak, Iteration = 0 };
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
 			var lastCallState = CallState.Empty;
@@ -497,11 +494,11 @@ public partial class Commands
 		{
 			var iteration = 0u;
 			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
-			
+
 			foreach (var item in list)
 			{
 				iteration++;
-				
+
 				var iterationWrapper = new IterationWrapper<MString>
 				{
 					Value = item!,
@@ -509,15 +506,15 @@ public partial class Commands
 					NoBreak = noBreak,
 					Iteration = iteration
 				};
-				
+
 				var iterationStack = new ConcurrentStack<IterationWrapper<MString>>();
 				iterationStack.Push(iterationWrapper);
-				
+
 				var stateForIteration = parser.CurrentState with
 				{
 					IterationRegisters = iterationStack
 				};
-				
+
 				await Mediator!.Send(new QueueCommandListRequest(
 					command,
 					stateForIteration,
@@ -557,7 +554,7 @@ public partial class Commands
 		var lookOutside = switches.Contains("OUTSIDE");
 
 		AnyOptionalSharpObject viewing = new None();
-		
+
 		if (lookOutside && executor.IsContent)
 		{
 			var container = await executor.AsContent.Location();
@@ -595,11 +592,11 @@ public partial class Commands
 
 		var realViewing = viewing.Known;
 		var viewingObject = realViewing.Object();
-		
-		var executorLocation = executor.IsContent 
+
+		var executorLocation = executor.IsContent
 			? await executor.AsContent.Location()
 			: null;
-		var viewingFromInside = executorLocation != null 
+		var viewingFromInside = executorLocation != null
 			&& executorLocation.Object().DBRef == viewingObject.DBRef;
 
 		var baseName = viewingObject.Name;
@@ -609,7 +606,7 @@ public partial class Commands
 		var descAttrName = useIdesc ? "IDESCRIBE" : "DESCRIBE";
 		var descResult = await AttributeService!.GetAttributeAsync(executor, realViewing, descAttrName,
 			IAttributeService.AttributeMode.Read, false);
-		
+
 		if (descResult.IsAttribute)
 		{
 			var descAttr = descResult.AsAttribute.Last();
@@ -625,7 +622,7 @@ public partial class Commands
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
 		var defaultFormattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
 			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
-		
+
 		var formattedName = defaultFormattedName;
 		if (realViewing.IsRoom && viewingFromInside)
 		{
@@ -634,9 +631,9 @@ public partial class Commands
 				["0"] = new CallState(viewingObject.DBRef.ToString()),
 				["1"] = new CallState(defaultFormattedName)
 			};
-			
+
 			formattedName = await AttributeHelpers.EvaluateFormatAttribute(
-				AttributeService, parser, executor, realViewing, "NAMEFORMAT", 
+				AttributeService, parser, executor, realViewing, "NAMEFORMAT",
 				nameFormatArgs, defaultFormattedName, checkParents: false);
 		}
 
@@ -645,9 +642,9 @@ public partial class Commands
 		{
 			["0"] = new CallState(baseDesc)
 		};
-		
+
 		var formattedDesc = await AttributeHelpers.EvaluateFormatAttribute(
-			AttributeService, parser, executor, realViewing, formatAttrName, 
+			AttributeService, parser, executor, realViewing, formatAttrName,
 			descFormatArgs, baseDesc, checkParents: false);
 
 		await NotifyService!.Notify(executor, formattedName);
@@ -656,27 +653,27 @@ public partial class Commands
 			await NotifyService.Notify(executor, formattedDesc);
 		}
 
-		var showInventory = realViewing.IsContainer 
-			&& !forceOpaque 
+		var showInventory = realViewing.IsContainer
+			&& !forceOpaque
 			&& !(await realViewing.IsOpaque());
 
 		if (showInventory)
 		{
 			var allContents = await Mediator!.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
-			
+
 			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
 			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
 			var canSeeAll = await executor.IsSee_All();
-			
+
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
-			
+
 			foreach (var item in allContents)
 			{
 				var itemObj = item.WithRoomOption();
 				var isDark = await itemObj.IsDarkLegal();
 				var isLight = await itemObj.IsLight();
-				
+
 				bool visible = false;
 				if (isRoomLight)
 				{
@@ -713,17 +710,17 @@ public partial class Commands
 				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
 				var defaultContents = MModule.single($"{contentsLabel}\n{string.Join("\n", visibleContents.Select(x => x.Object().Name))}");
-				
+
 				var conFormatArgs = new Dictionary<string, CallState>
 				{
 					["0"] = new CallState(contentDbrefs),
 					["1"] = new CallState(contentNames)
 				};
-				
+
 				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
-					AttributeService, parser, executor, realViewing, "CONFORMAT", 
+					AttributeService, parser, executor, realViewing, "CONFORMAT",
 					conFormatArgs, defaultContents, checkParents: false);
-				
+
 				await NotifyService.Notify(executor, formattedContents);
 			}
 
@@ -734,7 +731,7 @@ public partial class Commands
 				{
 					["0"] = new CallState(exitDbrefs)
 				};
-				
+
 				// Build default exit display
 				var isTransparent = await realViewing.IsTransparent();
 				MString defaultExits;
@@ -746,7 +743,7 @@ public partial class Commands
 						var exitObj = exit.WithRoomOption().Object();
 						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
 						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
-						
+
 						if (await exit.WithRoomOption().IsOpaque())
 						{
 							exitDisplays.Add(exitObj.Name);
@@ -763,11 +760,11 @@ public partial class Commands
 					var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
 					defaultExits = MModule.single($"Obvious exits:\n{exitNames}");
 				}
-				
+
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
-					AttributeService, parser, executor, realViewing, "EXITFORMAT", 
+					AttributeService, parser, executor, realViewing, "EXITFORMAT",
 					exitFormatArgs, defaultExits, checkParents: false);
-				
+
 				// If a custom format was applied, send it as a single notification
 				// If using default format in transparent rooms, send one notification per exit to match original behavior
 				if (formattedExits == defaultExits && isTransparent)
@@ -778,7 +775,7 @@ public partial class Commands
 						var exitObj = exit.WithRoomOption().Object();
 						var destination = exit.IsExit ? await exit.AsExit.Home.WithCancellation(CancellationToken.None) : null;
 						var destName = destination != null ? destination.Object().Name : "*UNLINKED*";
-						
+
 						if (await exit.WithRoomOption().IsOpaque())
 						{
 							await NotifyService.Notify(executor, exitObj.Name);
@@ -813,12 +810,12 @@ public partial class Commands
 		{
 			var argText = args["0"].Message!.ToString();
 			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
-			
+
 			if (split.TryPickT0(out var details, out _))
 			{
 				var (objectName, maybeAttributePattern) = details;
 				attributePattern = maybeAttributePattern;
-				
+
 				var locate = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
 					enactor,
@@ -865,14 +862,14 @@ public partial class Commands
 		}
 
 		var viewingKnown = viewing.Known();
-		
+
 		var canExamine = await PermissionService!.CanExamine(executor, viewingKnown);
-		
+
 		if (switches.Contains("MORTAL") && await executor.IsWizard())
 		{
 			canExamine = await PermissionService.Controls(executor, viewingKnown);
 		}
-		
+
 		if (!canExamine)
 		{
 			var limitedObj = viewingKnown.Object();
@@ -910,7 +907,7 @@ public partial class Commands
 		var objPowers = obj.Powers.Value;
 
 		var outputSections = new List<MString>();
-		
+
 		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
 		var nameRow = showFlags
 			? MModule.multiple([
@@ -919,7 +916,7 @@ public partial class Commands
 				MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
 			])
 			: MModule.concat(name.Hilight(), MModule.single($" (#{obj.DBRef.Number})"));
-		
+
 		outputSections.Add(nameRow);
 
 		if (showFlags)
@@ -930,25 +927,25 @@ public partial class Commands
 		{
 			outputSections.Add(MModule.single($"Type: {obj.Type}"));
 		}
-		
+
 		if (!switches.Contains("BRIEF"))
 		{
 			outputSections.Add(description);
 		}
-		
+
 		var ownerRow = showFlags
 			? MModule.single($"Owner: {ownerName.Hilight()}" +
-			                 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
+											 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
 			: MModule.single($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
 		outputSections.Add(ownerRow);
-		
+
 		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
-		
+
 		// Display locks with flags
 		if (obj.Locks.Count > 0)
 		{
 			var lockLines = obj.Locks
-				.Select(kvp => 
+				.Select(kvp =>
 				{
 					var lockName = kvp.Key;
 					var lockData = kvp.Value;
@@ -957,30 +954,30 @@ public partial class Commands
 					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
 				})
 				.ToList();
-			
+
 			outputSections.Add(MModule.single($"Locks:"));
 			foreach (var lockLine in lockLines)
 			{
 				outputSections.Add(MModule.single($"  {lockLine}"));
 			}
 		}
-		
+
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
 		if (powersList.Length > 0)
 		{
 			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
 		}
-		
+
 		// Display warnings if any are set
 		if (obj.Warnings != WarningType.None)
 		{
 			var warningsList = WarningTypeHelper.UnparseWarnings(obj.Warnings);
 			outputSections.Add(MModule.single($"Warnings: {warningsList}"));
 		}
-		
+
 		// Display channels if player is on any (would require channel membership query)
 		// For now, this would need channel service integration
-		
+
 		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
 			outputSections.Add(MModule.single($"Created: {obj.CreationTime} ({DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F})"));
@@ -996,17 +993,17 @@ public partial class Commands
 		if (!switches.Contains("BRIEF"))
 		{
 			var checkParents = switches.Contains("PARENT");
-			
+
 			SharpAttributesOrError atrs;
 			if (!string.IsNullOrEmpty(attributePattern))
 			{
 				var patternMode = IAttributeService.AttributePatternMode.Wildcard;
-				
+
 				atrs = await AttributeService.GetAttributePatternAsync(
-					enactor, 
-					viewingKnown, 
-					attributePattern, 
-					checkParents, 
+					enactor,
+					viewingKnown,
+					attributePattern,
+					checkParents,
 					patternMode);
 			}
 			else
@@ -1018,7 +1015,7 @@ public partial class Commands
 			{
 				var showPublicOnly = Configuration!.CurrentValue.Cosmetic.ExaminePublicAttributes;
 				var showAll = switches.Contains("ALL");
-				
+
 				foreach (var attr in atrs.AsAttributes)
 				{
 					const string VeiledFlagName = "VEILED";
@@ -1030,8 +1027,8 @@ public partial class Commands
 					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
 					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
 
-					if (!await PermissionService.CanViewAttribute(enactor, viewingKnown, attr)) 
-					    // || showPublicOnly && !showAll && !attr.IsVisual())
+					if (!await PermissionService.CanViewAttribute(enactor, viewingKnown, attr))
+					// || showPublicOnly && !showAll && !attr.IsVisual())
 					{
 						continue;
 					}
@@ -1049,29 +1046,29 @@ public partial class Commands
 			// Use CONFORMAT attribute if present, following PennMUSH conventions
 			var conFormatResult = await AttributeService!.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
 				IAttributeService.AttributeMode.Read, false);
-			
+
 			if (conFormatResult.IsAttribute)
 			{
 				// Format with CONFORMAT: %0 = space-separated dbrefs, %1 = pipe-separated names
 				var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
 				var contentNames = string.Join("|", contentKeys);
-				
+
 				var formatArgs = new Dictionary<string, CallState>
 				{
 					["0"] = new CallState(contentDbrefs),
 					["1"] = new CallState(contentNames)
 				};
-				
+
 				var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
 					parser, executor, viewingKnown, "CONFORMAT", formatArgs);
-				
+
 				await NotifyService!.Notify(enactor, formattedContents);
 			}
 			else
 			{
 				// Default format when CONFORMAT is not set
 				await NotifyService!.Notify(enactor, $"Contents:\n" +
-				                                    $"{string.Join("\n", contentKeys)}");
+																						$"{string.Join("\n", contentKeys)}");
 			}
 		}
 
@@ -1080,7 +1077,7 @@ public partial class Commands
 			// Format Home and Location display
 			var homeObj = await viewingKnown.MinusRoom().Home();
 			var locationObj = await viewingKnown.AsContent.Location();
-			
+
 			await NotifyService.Notify(enactor, $"Home: {homeObj.Object().Name}");
 			await NotifyService.Notify(enactor,
 				$"Location: {locationObj.Object().Name}");
@@ -1146,21 +1143,21 @@ public partial class Commands
 		}
 
 		var exitObj = exit.AsExit;
-		
+
 		var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
 		AnySharpContainer destination;
-		
+
 		if (homeLocation.Object().DBRef.Number == -1)
 		{
 			var destAttr = await AttributeService!.GetAttributeAsync(
 				executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
-			
+
 			if (destAttr.IsNone || destAttr.IsError)
 			{
 				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
 				return CallState.Empty;
 			}
-			
+
 			var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
 			var located = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
@@ -1168,20 +1165,20 @@ public partial class Commands
 				executor,
 				destValue!,
 				LocateFlags.All);
-			
+
 			if (!located.IsValid())
 			{
 				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.");
 				return CallState.Empty;
 			}
-			
+
 			var locatedObj = located.WithoutError().WithoutNone();
 			if (!locatedObj.IsContainer)
 			{
 				await NotifyService!.Notify(executor, "That exit doesn't go to a valid location.");
 				return CallState.Empty;
 			}
-			
+
 			destination = locatedObj.AsContainer;
 		}
 		else
@@ -1252,48 +1249,48 @@ public partial class Commands
 			// Teleporting through an exit - resolve the exit's destination using the same logic as @goto
 			var exitObj = validDestination.AsExit;
 			var homeLocation = await exitObj.Home.WithCancellation(CancellationToken.None);
-			
+
 			if (homeLocation.Object().DBRef.Number == -1)
 			{
 				// Exit is unlinked - check for DESTINATION attribute
 				var destAttr = await AttributeService!.GetAttributeAsync(
 					executor, exitObj, "DESTINATION", IAttributeService.AttributeMode.Read, false);
-				
+
 				const string exitUnlinkedMsg = "That exit doesn't go anywhere.";
-				
+
 				if (destAttr.IsNone || destAttr.IsError)
 				{
 					await NotifyService!.Notify(executor, exitUnlinkedMsg);
 					return CallState.Empty;
 				}
-				
+
 				var destValue = destAttr.AsAttribute.Last().Value.ToPlainText();
 				if (string.IsNullOrWhiteSpace(destValue))
 				{
 					await NotifyService!.Notify(executor, exitUnlinkedMsg);
 					return CallState.Empty;
 				}
-				
+
 				var located = await LocateService!.LocateAndNotifyIfInvalid(
 					parser,
 					executor,
 					executor,
 					destValue,
 					LocateFlags.All);
-				
+
 				if (!located.IsValid())
 				{
 					await NotifyService!.Notify(executor, exitUnlinkedMsg);
 					return CallState.Empty;
 				}
-				
+
 				var locatedObj = located.WithoutError().WithoutNone();
 				if (!locatedObj.IsContainer)
 				{
 					await NotifyService!.Notify(executor, "That exit doesn't go to a valid location.");
 					return CallState.Empty;
 				}
-				
+
 				destinationContainer = locatedObj.AsContainer;
 			}
 			else
@@ -1337,26 +1334,26 @@ public partial class Commands
 				executor.Object().DBRef,
 				"teleport",
 				isSilent);
-			
+
 			if (moveResult.IsT1)
 			{
 				await NotifyService!.Notify(executor, moveResult.AsT1.Value);
 				continue;
 			}
-			
+
 			// If the target is a player and not silent, notify them of the teleport
 			if (target.IsPlayer && !isSilent)
 			{
 				// Notify the target player that they were teleported
 				await NotifyService!.Notify(target.Object().DBRef, "You have been teleported.");
-				
+
 				// Show the target player their new location by executing LOOK as them
-				var targetPlayerState = parser.CurrentState with 
-				{ 
+				var targetPlayerState = parser.CurrentState with
+				{
 					Executor = target.Object().DBRef,
 					Enactor = target.Object().DBRef
 				};
-				
+
 				await Mediator!.Send(new QueueCommandListRequest(
 					MModule.single("look"),
 					targetPlayerState,
@@ -1374,16 +1371,16 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
-		
+
 		string? searchName = null;
 		if (args.Count > 0 && args.ContainsKey("0"))
 		{
 			searchName = args["0"].Message?.ToPlainText();
 		}
-		
+
 		int? beginDbref = null;
 		int? endDbref = null;
-		
+
 		if (args.Count >= 2 && args.ContainsKey("1"))
 		{
 			var beginStr = args["1"].Message?.ToPlainText();
@@ -1392,7 +1389,7 @@ public partial class Commands
 				beginDbref = begin;
 			}
 		}
-		
+
 		if (args.Count >= 3 && args.ContainsKey("2"))
 		{
 			var endStr = args["2"].Message?.ToPlainText();
@@ -1401,12 +1398,12 @@ public partial class Commands
 				endDbref = end;
 			}
 		}
-		
+
 		var matchCount = 0;
-		
-		await NotifyService!.Notify(executor, 
+
+		await NotifyService!.Notify(executor,
 			$"@find: Searching for objects{(searchName != null ? $" matching '{searchName}'" : "")}...");
-		
+
 		// Query database for objects matching the criteria
 		var filter = new ObjectSearchFilter
 		{
@@ -1414,9 +1411,9 @@ public partial class Commands
 			MinDbRef = beginDbref,
 			MaxDbRef = endDbref
 		};
-		
+
 		var results = await Mediator!.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
-		
+
 		// Filter to only objects the executor controls
 		var controlledResults = new List<SharpObject>();
 		foreach (var obj in results)
@@ -1427,24 +1424,24 @@ public partial class Commands
 				controlledResults.Add(obj);
 			}
 		}
-		
+
 		matchCount = controlledResults.Count;
-		
+
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
-			await NotifyService.Notify(executor, 
+			await NotifyService.Notify(executor,
 				$"Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
-		
+
 		// Display results
 		foreach (var obj in controlledResults)
 		{
 			await NotifyService.Notify(executor, $"  #{obj.Key} ({obj.Name})");
 		}
-		
-		await NotifyService.Notify(executor, 
+
+		await NotifyService.Notify(executor,
 			$"Found {matchCount} matching objects.");
-		
+
 		return new CallState(matchCount.ToString());
 	}
 
@@ -1455,12 +1452,12 @@ public partial class Commands
 		// @halt[/noeval] <object>[=<action list>] 
 		// @halt/pid <pid>
 		// @halt/all or @allhalt
-		
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-		
+
 		// @halt/all - halt all objects in the game (wizard only)
 		if (switches.Contains("ALL"))
 		{
@@ -1469,17 +1466,17 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			// Halt all objects in the game
 			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 			}
-			
+
 			await NotifyService!.Notify(executor, "All objects halted.");
 			return CallState.Empty;
 		}
-		
+
 		// @halt/pid - halt specific queue entry
 		if (switches.Contains("PID"))
 		{
@@ -1489,13 +1486,13 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "You must specify a process ID.");
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
-			
+
 			if (!long.TryParse(pidStr, out var pid))
 			{
 				await NotifyService!.Notify(executor, "Invalid process ID format.");
 				return new CallState("#-1 INVALID PID");
 			}
-			
+
 			// Halt the specific task by PID
 			var halted = await Mediator!.Send(new HaltByPidRequest(pid));
 			if (halted)
@@ -1507,10 +1504,10 @@ public partial class Commands
 				await NotifyService!.Notify(executor, $"No task found with PID {pid}.");
 				return new CallState("#-1 NOT FOUND");
 			}
-			
+
 			return CallState.Empty;
 		}
-		
+
 		// @halt with no arguments - clear executor's queue without setting HALT flag
 		if (args.Count == 0)
 		{
@@ -1518,7 +1515,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "Halted.");
 			return CallState.Empty;
 		}
-		
+
 		// @halt <object>[=<actions>]
 		var targetName = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(targetName))
@@ -1526,39 +1523,39 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "You must specify a target object.");
 			return new CallState("#-1 NO TARGET SPECIFIED");
 		}
-		
+
 		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
 			executor,
 			executor,
 			targetName,
 			LocateFlags.All);
-		
+
 		if (!maybeTarget.IsValid())
 		{
 			return new CallState("#-1 NOT FOUND");
 		}
-		
+
 		var target = maybeTarget.WithoutError().WithoutNone();
-		
+
 		var hasHaltPower = await executor.HasPower("HALT");
-		var canHalt = await PermissionService!.Controls(executor, target) || 
-		              await executor.IsWizard() || hasHaltPower;
-		
+		var canHalt = await PermissionService!.Controls(executor, target) ||
+									await executor.IsWizard() || hasHaltPower;
+
 		if (!canHalt)
 		{
 			await NotifyService!.Notify(executor, "Permission denied.");
 			return new CallState(Errors.ErrorPerm);
 		}
-		
+
 		var targetObject = target.Object();
 		var hasReplacementActions = args.Count >= 2;
 		var replacementActions = hasReplacementActions ? args["1"].Message : null;
-		
+
 		if (target.IsPlayer)
 		{
 			await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
-			
+
 			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
 			{
 				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
@@ -1567,7 +1564,7 @@ public partial class Commands
 					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 				}
 			}
-			
+
 			if (hasReplacementActions)
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
@@ -1576,13 +1573,13 @@ public partial class Commands
 					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 			}
-			
+
 			await NotifyService!.Notify(executor, $"Halted {targetObject.Name} and all their objects.");
 		}
 		else
 		{
 			await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
-			
+
 			if (hasReplacementActions)
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
@@ -1602,7 +1599,7 @@ public partial class Commands
 				await NotifyService!.Notify(executor, $"Halted {targetObject.Name}.");
 			}
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -1667,7 +1664,7 @@ public partial class Commands
 
 		int oldSemaphoreCount = 0;
 		if (attributeContents.IsAttribute &&
-		    int.TryParse(attributeContents.AsAttribute.Last().Value.ToPlainText(), out var semaphoreCount))
+				int.TryParse(attributeContents.AsAttribute.Last().Value.ToPlainText(), out var semaphoreCount))
 		{
 			oldSemaphoreCount = semaphoreCount;
 		}
@@ -1675,7 +1672,7 @@ public partial class Commands
 		// Check for =<number> parameter or =<qreg>,<value> pairs for /setq
 		int notifyCount = 1;
 		Dictionary<string, MString>? qRegisters = null;
-		
+
 		if (notifyType == "SETQ")
 		{
 			// With CB.RSArgs, each comma-separated value becomes a separate argument
@@ -1685,14 +1682,14 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "You must specify Q-register assignments.");
 				return new CallState("#-1 MISSING QREG ASSIGNMENTS");
 			}
-			
+
 			var qregArgCount = args.Count - 1; // Subtract 1 for arg[0] which is the object
 			if (qregArgCount % 2 != 0)
 			{
 				await NotifyService!.Notify(executor, "Q-register assignments must be in pairs: qreg,value[,qreg,value...]");
 				return new CallState("#-1 INVALID QREG PAIRS");
 			}
-			
+
 			qRegisters = new Dictionary<string, MString>();
 			for (var i = 1; i < args.Count; i += 2)
 			{
@@ -1705,7 +1702,7 @@ public partial class Commands
 		{
 			var countArg = arg1.Message?.ToPlainText();
 			if (!string.IsNullOrEmpty(countArg) &&
-			    (!int.TryParse(countArg, out notifyCount) || notifyCount < 1))
+					(!int.TryParse(countArg, out notifyCount) || notifyCount < 1))
 			{
 				await NotifyService!.Notify(executor, "Invalid number specified.");
 				return new CallState("#-1 INVALID NUMBER");
@@ -1801,14 +1798,14 @@ public partial class Commands
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
 		List<string> runningOutput = [];
-		
+
 		// Helper to check if executor can scan an object
 		// Can scan if executor controls the object OR object has VISUAL flag
 		async Task<bool> CanScan(AnySharpObject obj)
 		{
 			var controls = await PermissionService!.Controls(executor, obj);
 			if (controls) return true;
-			
+
 			var isVisual = await obj.HasFlag("VISUAL");
 			return isVisual;
 		}
@@ -1871,21 +1868,21 @@ public partial class Commands
 			{
 				var location = await executor.AsContent.Location();
 				var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
-				
+
 				if (!locationZone.IsNone)
 				{
 					var zoneObject = locationZone.Known;
-					
+
 					// Get contents of the zone master object
 					var zoneContents = Mediator!.CreateStream(new GetContentsQuery(zoneObject.Object().DBRef))
 						?? AsyncEnumerable.Empty<AnySharpContent>();
-					
+
 					// Match user-defined commands in zone contents
 					var zoneMatched =
 						await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
 							zoneContents.Select(x => x.WithRoomOption()),
 							arg0);
-					
+
 					if (zoneMatched.IsSome())
 					{
 						foreach (var (i, (obj, attr, _)) in zoneMatched.AsValue().Index())
@@ -1907,7 +1904,7 @@ public partial class Commands
 		{
 			var masterRoom = new DBRef(Convert.ToInt32(Configuration!.CurrentValue.Database.MasterRoom));
 			var masterRoomContents = Mediator!.CreateStream(new GetContentsQuery(masterRoom))
-			                         ?? AsyncEnumerable.Empty<AnySharpContent>();
+															 ?? AsyncEnumerable.Empty<AnySharpContent>();
 
 			var masterRoomContent =
 				await CommandDiscoveryService!.MatchUserDefinedCommand(parser,
@@ -2067,18 +2064,18 @@ public partial class Commands
 			// @wait[/until] <object>/<time>=<command_list>
 			// @wait <object>/<attribute>=<command_list>
 			case 2 when switches.Contains("UNTIL"):
-			{
-				if (!double.TryParse(splitBySlashes[1], out untilTime))
 				{
-					await NotifyService!.Notify(executor, "Invalid time argument format");
-					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
+					if (!double.TryParse(splitBySlashes[1], out untilTime))
+					{
+						await NotifyService!.Notify(executor, "Invalid time argument format");
+						return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "TIME ARGUMENT"));
+					}
+
+					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
+
+					await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1);
+					return CallState.Empty;
 				}
-
-				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
-
-				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1);
-				return CallState.Empty;
-			}
 
 			case 2 when double.TryParse(splitBySlashes[1], out untilTime):
 				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1);
@@ -2087,19 +2084,19 @@ public partial class Commands
 			// @wait <object>/<attribute>=<command list>
 			// Validate semaphore attribute follows MUSH rules
 			case 2:
-			{
-				var customSemaphoreAttr = splitBySlashes[1].Split('`');
-				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
-				
-				if (validation.IsT1)
 				{
-					await NotifyService!.Notify(executor, validation.AsT1.Value);
-					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+					var customSemaphoreAttr = splitBySlashes[1].Split('`');
+					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+
+					if (validation.IsT1)
+					{
+						await NotifyService!.Notify(executor, validation.AsT1.Value);
+						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+					}
+
+					await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1);
+					return CallState.Empty;
 				}
-				
-				await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1);
-				return CallState.Empty;
-			}
 
 			// @wait[/until] <object>/<attribute>/<time>=<command list>
 			case 3 when !double.TryParse(splitBySlashes[2], out untilTime):
@@ -2109,36 +2106,36 @@ public partial class Commands
 			// Note: Attribute value validation for semaphore usage is handled in QueueSemaphore/QueueSemaphoreWithDelay
 			// methods. If the attribute value is not a valid integer, an error is returned.
 			case 3 when switches.Contains("UNTIL"):
-			{
-				var customSemaphoreAttr = splitBySlashes[1].Split('`');
-				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
-				
-				if (validation.IsT1)
 				{
-					await NotifyService!.Notify(executor, validation.AsT1.Value);
-					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+					var customSemaphoreAttr = splitBySlashes[1].Split('`');
+					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+
+					if (validation.IsT1)
+					{
+						await NotifyService!.Notify(executor, validation.AsT1.Value);
+						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+					}
+
+					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
+					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1);
+					return CallState.Empty;
 				}
-				
-				var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
-				await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1);
-				return CallState.Empty;
-			}
 
 			case 3:
-			{
-				var customSemaphoreAttr = splitBySlashes[1].Split('`');
-				var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
-				
-				if (validation.IsT1)
 				{
-					await NotifyService!.Notify(executor, validation.AsT1.Value);
-					return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+					var customSemaphoreAttr = splitBySlashes[1].Split('`');
+					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
+
+					if (validation.IsT1)
+					{
+						await NotifyService!.Notify(executor, validation.AsT1.Value);
+						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
+					}
+
+					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr,
+						TimeSpan.FromSeconds(untilTime), arg1);
+					return CallState.Empty;
 				}
-				
-				await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr,
-					TimeSpan.FromSeconds(untilTime), arg1);
-				return CallState.Empty;
-			}
 
 			default:
 				await NotifyService!.Notify(executor, "Invalid first argument format");
@@ -2149,7 +2146,7 @@ public partial class Commands
 	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1)
 	{
-		
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
@@ -2157,15 +2154,15 @@ public partial class Commands
 
 		if (attrValue is null)
 		{
-			
+
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			
+
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
-			
+
 			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
 				dbRefAttr, 0));
-			
+
 			return;
 		}
 
@@ -2177,12 +2174,12 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		
+
 		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
-		
+
 		await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
 			dbRefAttr2, last));
-		
+
 	}
 
 	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
@@ -2295,22 +2292,22 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		if (args.Count == 0)
 		{
 			await NotifyService!.Notify(executor, "You must specify a command name.");
 			return new CallState("#-1 NO COMMAND SPECIFIED");
 		}
-		
+
 		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
 		if (string.IsNullOrEmpty(commandName))
 		{
 			await NotifyService!.Notify(executor, "You must specify a command name.");
 			return new CallState("#-1 NO COMMAND SPECIFIED");
 		}
-		
+
 		var isQuiet = switches.Contains("QUIET");
-		
+
 		// Administrative switches - wizard only (except DELETE which requires God)
 		if (switches.Any(s => new[] { "ADD", "ALIAS", "CLONE", "DELETE", "DISABLE", "ENABLE", "RESTRICT" }.Contains(s)))
 		{
@@ -2319,7 +2316,7 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			// Handle administrative operations
 			if (switches.Contains("ADD"))
 			{
@@ -2329,7 +2326,7 @@ public partial class Commands
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
-			
+
 			if (switches.Contains("ALIAS"))
 			{
 				var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
@@ -2338,14 +2335,14 @@ public partial class Commands
 					await NotifyService!.Notify(executor, "You must specify an alias name.");
 					return new CallState("#-1 NO ALIAS SPECIFIED");
 				}
-				
+
 				if (!isQuiet)
 				{
 					await NotifyService!.Notify(executor, $"@command/alias: Dynamic command aliasing not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
-			
+
 			if (switches.Contains("CLONE"))
 			{
 				var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
@@ -2354,14 +2351,14 @@ public partial class Commands
 					await NotifyService!.Notify(executor, "You must specify a clone name.");
 					return new CallState("#-1 NO CLONE NAME SPECIFIED");
 				}
-				
+
 				if (!isQuiet)
 				{
 					await NotifyService!.Notify(executor, $"@command/clone: Command cloning not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
-			
+
 			if (switches.Contains("DELETE"))
 			{
 				if (!executor.IsGod())
@@ -2369,14 +2366,14 @@ public partial class Commands
 					await NotifyService!.Notify(executor, "Only God can delete commands.");
 					return new CallState(Errors.ErrorPerm);
 				}
-				
+
 				if (!isQuiet)
 				{
 					await NotifyService!.Notify(executor, $"@command/delete: Command deletion not yet implemented.");
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
-			
+
 			if (switches.Contains("DISABLE"))
 			{
 				if (!isQuiet)
@@ -2385,7 +2382,7 @@ public partial class Commands
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
-			
+
 			if (switches.Contains("ENABLE"))
 			{
 				if (!isQuiet)
@@ -2394,7 +2391,7 @@ public partial class Commands
 				}
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
-			
+
 			if (switches.Contains("RESTRICT"))
 			{
 				var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
@@ -2405,34 +2402,34 @@ public partial class Commands
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
 		}
-		
+
 		// No switches - display command information
 		if (CommandLibrary == null)
 		{
 			await NotifyService!.Notify(executor, "Command library unavailable.");
 			return new CallState("#-1 LIBRARY UNAVAILABLE");
 		}
-		
+
 		// Try to find the command in the library
 		if (!CommandLibrary.TryGetValue(commandName, out var commandInfo))
 		{
 			await NotifyService!.Notify(executor, $"Command '{commandName}' not found.");
 			return new CallState("#-1 COMMAND NOT FOUND");
 		}
-		
+
 		var (definition, isSystem) = commandInfo;
 		var attr = definition.Attribute;
-		
+
 		await NotifyService!.Notify(executor, $"Command: {attr.Name}");
 		await NotifyService.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
 		await NotifyService.Notify(executor, $"  Min Args: {attr.MinArgs}");
 		await NotifyService.Notify(executor, $"  Max Args: {attr.MaxArgs}");
-		
+
 		if (attr.Switches != null && attr.Switches.Length > 0)
 		{
 			await NotifyService.Notify(executor, $"  Switches: {string.Join(", ", attr.Switches)}");
 		}
-		
+
 		var behaviors = new List<string>();
 		if ((attr.Behavior & CB.Default) != 0) behaviors.Add("Default");
 		if ((attr.Behavior & CB.EqSplit) != 0) behaviors.Add("EqSplit");
@@ -2441,17 +2438,17 @@ public partial class Commands
 		if ((attr.Behavior & CB.RSNoParse) != 0) behaviors.Add("RSNoParse");
 		if ((attr.Behavior & CB.NoGagged) != 0) behaviors.Add("NoGagged");
 		if ((attr.Behavior & CB.NoParse) != 0) behaviors.Add("NoParse");
-		
+
 		if (behaviors.Count > 0)
 		{
 			await NotifyService.Notify(executor, $"  Behavior: {string.Join(" | ", behaviors)}");
 		}
-		
+
 		if (!string.IsNullOrEmpty(attr.CommandLock))
 		{
 			await NotifyService.Notify(executor, $"  Lock: {attr.CommandLock}");
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -2562,7 +2559,7 @@ public partial class Commands
 		{
 			// Drain specific semaphore (or SEMAPHORE if not specified)
 			var dbRefAttribute = new DbRefAttribute(objectToDrain.Object().DBRef, attribute);
-			
+
 			if (hasAll || !drainCount.HasValue)
 			{
 				// Drain all entries (default if no number specified)
@@ -2801,15 +2798,15 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
-		
+
 		// @search [<player>] [<classN>=<restrictionN>[,...]][,<begin>,<end>]
 		// This is a complex command that searches the database with multiple filters
-		
+
 		string? playerName = null;
 		string? searchCriteria = null;
 		int? beginDbref = null;
 		int? endDbref = null;
-		
+
 		// Parse arguments
 		if (args.Count > 0 && args.ContainsKey("0"))
 		{
@@ -2820,12 +2817,12 @@ public partial class Commands
 				playerName = arg0;
 			}
 		}
-		
+
 		if (args.Count > 1 && args.ContainsKey("1"))
 		{
 			searchCriteria = args["1"].Message?.ToPlainText();
 		}
-		
+
 		if (args.Count > 2 && args.ContainsKey("2"))
 		{
 			var endStr = args["2"].Message?.ToPlainText();
@@ -2834,24 +2831,24 @@ public partial class Commands
 				endDbref = end;
 			}
 		}
-		
+
 		await NotifyService!.Notify(executor, "@search: Advanced database search");
-		
+
 		if (playerName != null)
 		{
 			await NotifyService.Notify(executor, $"  Player filter: {playerName}");
 		}
-		
+
 		if (searchCriteria != null)
 		{
 			await NotifyService.Notify(executor, $"  Criteria: {searchCriteria}");
 		}
-		
+
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
 			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
-		
+
 		// Build search filter from criteria
 		// For now, support basic search - future enhancement can parse complex criteria
 		var filter = new ObjectSearchFilter
@@ -2860,10 +2857,10 @@ public partial class Commands
 			MinDbRef = beginDbref,
 			MaxDbRef = endDbref
 		};
-		
+
 		// Query database with filters
 		var results = await Mediator!.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
-		
+
 		// Display results
 		var count = 0;
 		foreach (var obj in results)
@@ -2872,9 +2869,9 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  #{obj.Key} ({obj.Name}) [{obj.Type}]");
 			count++;
 		}
-		
+
 		await NotifyService.Notify(executor, $"{count} objects found.");
-		
+
 		return new CallState(count.ToString());
 	}
 
@@ -2916,7 +2913,7 @@ public partial class Commands
 
 		var targetPlayer = target.AsPlayer;
 		var targetObject = target.Object();
-		
+
 		// Check if target is UNFINDABLE
 		var targetFlags = await targetObject.Flags.Value.ToListAsync();
 		var isUnfindable = targetFlags.Any(f => f.Symbol == "U" || f.Name.Equals("UNFINDABLE", StringComparison.OrdinalIgnoreCase));
@@ -2924,9 +2921,9 @@ public partial class Commands
 		// Notify the target that someone is trying to find them
 		if (isUnfindable)
 		{
-			await NotifyService!.Notify(target, 
+			await NotifyService!.Notify(target,
 				$"{executor.Object().Name} tried to locate you, but was unable to.");
-			await NotifyService.Notify(executor, 
+			await NotifyService.Notify(executor,
 				$"{targetObject.Name} is UNFINDABLE.");
 			return new CallState("#-1 UNFINDABLE");
 		}
@@ -2936,11 +2933,11 @@ public partial class Commands
 		var locationName = targetLocation.Object().Name;
 
 		// Notify the target that they were found
-		await NotifyService!.Notify(target, 
+		await NotifyService!.Notify(target,
 			$"{executor.Object().Name} has just located your position.");
 
 		// Notify the executor of the target's location
-		await NotifyService.Notify(executor, 
+		await NotifyService.Notify(executor,
 			$"{targetObject.Name} is in {locationName}.");
 
 		return new CallState(targetLocation.Object().DBRef.ToString());
@@ -2996,16 +2993,16 @@ public partial class Commands
 		var getAllOptions = () =>
 		{
 			var options = new List<(string Category, string PropertyName, SharpConfigAttribute ConfigAttr, object? Value)>();
-			
+
 			foreach (var propName in ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys)
 			{
 				var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[propName];
 				var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration!.CurrentValue, propName);
 				var category = ConfigGenerated.ConfigAccessor.GetCategoryForProperty(propName) ?? "";
-				
+
 				options.Add((category, propName, attr, value));
 			}
-			
+
 			return options;
 		};
 
@@ -3145,7 +3142,7 @@ public partial class Commands
 		// With RSArgs, the arguments after = are split by comma
 		var searchArg = args.ElementAtOrDefault(1).Value;
 		var replaceArg = args.ElementAtOrDefault(2).Value;
-		
+
 		if (searchArg == null || searchArg.Message == null)
 		{
 			await NotifyService!.Notify(executor, "You must specify search and replace strings.");
@@ -3229,7 +3226,7 @@ public partial class Commands
 		if (isQuiet || (modifiedCount + unchangedCount > 1))
 		{
 			var checkPrefix = isCheck ? "Would edit" : "Edited";
-			await NotifyService!.Notify(executor, 
+			await NotifyService!.Notify(executor,
 				$"{checkPrefix} {modifiedCount} attribute{(modifiedCount != 1 ? "s" : "")}. {unchangedCount} unchanged.");
 		}
 
@@ -3248,7 +3245,7 @@ public partial class Commands
 		for (int i = 0; i < text.Length; i++)
 		{
 			char c = text[i];
-			
+
 			if (c == '{')
 			{
 				braceDepth++;
@@ -3269,9 +3266,9 @@ public partial class Commands
 				current.Append(c);
 			}
 		}
-		
+
 		parts.Add(current.ToString());
-		
+
 		// Trim and remove outer braces if present
 		for (int i = 0; i < parts.Count; i++)
 		{
@@ -3282,7 +3279,7 @@ public partial class Commands
 			}
 			parts[i] = part;
 		}
-		
+
 		return [.. parts];
 	}
 
@@ -3321,7 +3318,7 @@ public partial class Commands
 	/// <summary>
 	/// Perform regex replacement with evaluation
 	/// </summary>
-	private static async ValueTask<string> PerformRegexEdit(IMUSHCodeParser parser, string text, 
+	private static async ValueTask<string> PerformRegexEdit(IMUSHCodeParser parser, string text,
 		string pattern, string replaceTemplate, bool all, bool nocase)
 	{
 		try
@@ -3366,7 +3363,7 @@ public partial class Commands
 	/// <summary>
 	/// Evaluate replacement template with captured groups
 	/// </summary>
-	private static async ValueTask<string> EvaluateRegexReplacement(IMUSHCodeParser parser, 
+	private static async ValueTask<string> EvaluateRegexReplacement(IMUSHCodeParser parser,
 		Regex regex, Match match, string template)
 	{
 		var replacement = template;
@@ -3400,7 +3397,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		// No arguments - list all user-defined functions
 		if (args.Count == 0)
 		{
@@ -3409,15 +3406,15 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Function library unavailable.");
 				return new CallState("#-1 LIBRARY UNAVAILABLE");
 			}
-			
+
 			await NotifyService!.Notify(executor, "Global user-defined functions:");
-			
+
 			// Check if executor has Functions power or is wizard
 			var canSeeDetails = await executor.IsWizard();
-			
+
 			var userFunctions = FunctionLibrary.Where(kvp => !kvp.Value.IsSystem).ToArray();
 			var builtinFunctions = FunctionLibrary.Where(kvp => kvp.Value.IsSystem).ToArray();
-			
+
 			if (canSeeDetails)
 			{
 				await NotifyService.Notify(executor, $"  User-defined: {userFunctions.Length}");
@@ -3429,7 +3426,7 @@ public partial class Commands
 				{
 					await NotifyService.Notify(executor, $"    ... and {userFunctions.Length - 10} more");
 				}
-				
+
 				await NotifyService.Notify(executor, $"  Built-in: {builtinFunctions.Length}");
 			}
 			else
@@ -3437,17 +3434,17 @@ public partial class Commands
 				await NotifyService.Notify(executor, $"  {userFunctions.Length} user-defined functions");
 				await NotifyService.Notify(executor, $"  {builtinFunctions.Length} built-in functions");
 			}
-			
+
 			return CallState.Empty;
 		}
-		
+
 		var functionName = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(functionName))
 		{
 			await NotifyService!.Notify(executor, "You must specify a function name.");
 			return new CallState("#-1 NO FUNCTION SPECIFIED");
 		}
-		
+
 		// Handle administrative switches
 		if (switches.Contains("ALIAS"))
 		{
@@ -3457,12 +3454,12 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "You must specify an alias name.");
 				return new CallState("#-1 NO ALIAS SPECIFIED");
 			}
-			
+
 			await NotifyService!.Notify(executor, $"@function/alias: Would create alias '{aliasName}' for function '{functionName}'.");
 			await NotifyService.Notify(executor, "Note: Function aliasing not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		if (switches.Contains("CLONE"))
 		{
 			var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
@@ -3471,33 +3468,33 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "You must specify a clone name.");
 				return new CallState("#-1 NO CLONE NAME SPECIFIED");
 			}
-			
+
 			await NotifyService!.Notify(executor, $"@function/clone: Would clone function '{functionName}' as '{cloneName}'.");
 			await NotifyService.Notify(executor, "Note: Function cloning not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		if (switches.Contains("DELETE"))
 		{
 			await NotifyService!.Notify(executor, $"@function/delete: Would delete function '{functionName}'.");
 			await NotifyService.Notify(executor, "Note: Function deletion not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		if (switches.Contains("DISABLE"))
 		{
 			await NotifyService!.Notify(executor, $"@function/disable: Would disable function '{functionName}'.");
 			await NotifyService.Notify(executor, "Note: Function disabling not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		if (switches.Contains("ENABLE"))
 		{
 			await NotifyService!.Notify(executor, $"@function/enable: Would enable function '{functionName}'.");
 			await NotifyService.Notify(executor, "Note: Function enabling not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		if (switches.Contains("RESTRICT"))
 		{
 			var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
@@ -3505,7 +3502,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, "Note: Function restriction not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		// Check if defining a new function: @function <name>=<obj>,<attrib>[,<min>,<max>[,<restrictions>]]
 		if (args.Count >= 2)
 		{
@@ -3514,38 +3511,38 @@ public partial class Commands
 			{
 				// Parse definition: obj, attrib[, min, max[, restrictions]]
 				await NotifyService!.Notify(executor, $"@function: Would define function '{functionName}' as: {defString}");
-				
+
 				// Parse min/max args if provided
 				if (args.Count >= 3)
 				{
 					var minArgs = args.GetValueOrDefault("2")?.Message?.ToPlainText();
 					await NotifyService.Notify(executor, $"  Min args: {minArgs ?? "none"}");
 				}
-				
+
 				if (args.Count >= 4)
 				{
 					var maxArgs = args.GetValueOrDefault("3")?.Message?.ToPlainText();
 					await NotifyService.Notify(executor, $"  Max args: {maxArgs ?? "none"}");
 				}
-				
+
 				if (args.Count >= 5)
 				{
 					var restrictions = args.GetValueOrDefault("4")?.Message?.ToPlainText();
 					await NotifyService.Notify(executor, $"  Restrictions: {restrictions ?? "none"}");
 				}
-				
+
 				await NotifyService.Notify(executor, "Note: Dynamic function definition not yet implemented.");
 				return new CallState("#-1 NOT IMPLEMENTED");
 			}
 		}
-		
+
 		// Single argument - show function information
 		if (FunctionLibrary == null)
 		{
 			await NotifyService!.Notify(executor, "Function library unavailable.");
 			return new CallState("#-1 LIBRARY UNAVAILABLE");
 		}
-		
+
 		// Try to find the function in the library
 		var functionNameUpper = functionName.ToUpper();
 		if (!FunctionLibrary.TryGetValue(functionNameUpper, out var functionInfo))
@@ -3553,32 +3550,32 @@ public partial class Commands
 			await NotifyService!.Notify(executor, $"Function '{functionName}' not found.");
 			return new CallState("#-1 FUNCTION NOT FOUND");
 		}
-		
+
 		var (definition, isSystem) = functionInfo;
 		var attr = definition.Attribute;
-		
+
 		await NotifyService!.Notify(executor, $"Function: {attr.Name}");
 		await NotifyService.Notify(executor, $"  Type: {(isSystem ? "Built-in" : "User-defined")}");
 		await NotifyService.Notify(executor, $"  Min Args: {attr.MinArgs}");
 		await NotifyService.Notify(executor, $"  Max Args: {attr.MaxArgs}");
-		
+
 		var flags = new List<string>();
 		if ((attr.Flags & FunctionFlags.Regular) != 0) flags.Add("Regular");
 		if ((attr.Flags & FunctionFlags.StripAnsi) != 0) flags.Add("StripAnsi");
 		if ((attr.Flags & FunctionFlags.NoParse) != 0) flags.Add("NoParse");
 		if ((attr.Flags & FunctionFlags.Localize) != 0) flags.Add("Localize");
 		if ((attr.Flags & FunctionFlags.Literal) != 0) flags.Add("Literal");
-		
+
 		if (flags.Count > 0)
 		{
 			await NotifyService.Notify(executor, $"  Flags: {string.Join(" | ", flags)}");
 		}
-		
+
 		if (attr.Restrict != null && attr.Restrict.Length > 0)
 		{
 			await NotifyService.Notify(executor, $"  Restrictions: {string.Join(", ", attr.Restrict)}");
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -3629,8 +3626,8 @@ public partial class Commands
 		var message = args["0"].Message!;
 
 		await foreach (var obj in contents
-			               .Where(async (x, _)
-				               => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
+										 .Where(async (x, _)
+											 => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
@@ -3674,10 +3671,10 @@ public partial class Commands
 			{
 				// Find all objects in the zone
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
-				
+
 				// Get all rooms in the zone
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
-				
+
 				// Send message to each room
 				await foreach (var room in rooms)
 				{
@@ -3700,12 +3697,12 @@ public partial class Commands
 	{
 		// @ps[/<switch>] [<player>]
 		// @ps[/debug] <pid>
-		
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-		
+
 		// Check if showing debug info for a specific PID
 		if (switches.Contains("DEBUG"))
 		{
@@ -3715,13 +3712,13 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "You must specify a process ID.");
 				return new CallState("#-1 NO PID SPECIFIED");
 			}
-			
+
 			if (!long.TryParse(pidStr, out var pid))
 			{
 				await NotifyService!.Notify(executor, "Invalid process ID format.");
 				return new CallState("#-1 INVALID PID");
 			}
-			
+
 			// Find the semaphore task with this PID
 			var tasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(pid)).ToArrayAsync();
 			if (tasks.Length == 0)
@@ -3729,7 +3726,7 @@ public partial class Commands
 				await NotifyService!.Notify(executor, $"No task found with PID {pid}.");
 				return new CallState("#-1 NOT FOUND");
 			}
-			
+
 			var task = tasks[0];
 			await NotifyService!.Notify(executor, $"@ps/debug: Task {pid}");
 			await NotifyService.Notify(executor, $"  Owner: {task.Owner}");
@@ -3739,10 +3736,10 @@ public partial class Commands
 			{
 				await NotifyService.Notify(executor, $"  Delay: {task.RunDelay.Value.TotalSeconds:F1}s");
 			}
-			
+
 			return CallState.Empty;
 		}
-		
+
 		// Determine target object
 		AnySharpObject target;
 		if (args.Count > 0)
@@ -3767,14 +3764,14 @@ public partial class Commands
 		{
 			target = executor;
 		}
-		
+
 		var targetDbRef = target.Object().DBRef;
-		
+
 		// Get queue counts
 		var semaphoreTasks = await Mediator!.CreateStream(new ScheduleSemaphoreQuery(targetDbRef)).ToArrayAsync();
 		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
 		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
-		
+
 		// Check for /summary switch
 		if (switches.Contains("SUMMARY"))
 		{
@@ -3785,7 +3782,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, "  Load average: 0.0, 0.0, 0.0");
 			return CallState.Empty;
 		}
-		
+
 		// Check for /quick switch
 		if (switches.Contains("QUICK"))
 		{
@@ -3795,7 +3792,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
 			return CallState.Empty;
 		}
-		
+
 		// Check for /all switch (wizard only)
 		if (switches.Contains("ALL"))
 		{
@@ -3804,26 +3801,26 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			// Get all tasks across the system
 			var allTasks = await Mediator!.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
-			
+
 			await NotifyService!.Notify(executor, "@ps/all: All queued tasks");
 			foreach (var (group, tasks) in allTasks)
 			{
 				await NotifyService.Notify(executor, $"Group: {group} ({tasks.Length} tasks)");
 			}
-			
+
 			return CallState.Empty;
 		}
-		
+
 		// Show detailed queue for target
 		var targetName = target.Object().DBRef.ToString();
 		await NotifyService!.Notify(executor, $"@ps: Queue for {targetName}");
 		await NotifyService.Notify(executor, $"  Command queue: {enqueueTasks.Length}");
 		await NotifyService.Notify(executor, $"  Wait queue: {delayTasks.Length}");
 		await NotifyService.Notify(executor, $"  Semaphore queue: {semaphoreTasks.Length}");
-		
+
 		// List semaphore tasks
 		if (semaphoreTasks.Length > 0)
 		{
@@ -3833,7 +3830,7 @@ public partial class Commands
 			{
 				var delay = task.RunDelay.HasValue ? $"+{task.RunDelay.Value.TotalSeconds:F1}s" : "ready";
 				var commandText = task.Command.ToPlainText();
-				var truncatedCommand = commandText.Length > 40 
+				var truncatedCommand = commandText.Length > 40
 					? commandText[..40]
 					: commandText;
 				await NotifyService.Notify(executor, $"  [{task.Pid}] {task.SemaphoreSource} ({delay}): {truncatedCommand}");
@@ -3843,7 +3840,7 @@ public partial class Commands
 				await NotifyService.Notify(executor, $"  ... and {semaphoreTasks.Length - 10} more");
 			}
 		}
-		
+
 		// List delay tasks
 		if (delayTasks.Length > 0)
 		{
@@ -3860,7 +3857,7 @@ public partial class Commands
 		}
 		// - Permission checks for viewing other players' queues
 		await NotifyService.Notify(executor, "Note: Queue management not yet implemented.");
-		
+
 		return CallState.Empty;
 	}
 
@@ -3871,11 +3868,11 @@ public partial class Commands
 	{
 		// @select <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]
 		// Like @switch but only runs the first matching action
-		
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		var testString = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(testString))
 		{
@@ -3889,17 +3886,17 @@ public partial class Commands
 		try
 		{
 			await NotifyService!.Notify(executor, $"@select: Testing string '{testString}'");
-			
+
 			// Count expression/action pairs (args are: 0=test string, then pairs of expr,action)
 			int pairCount = (args.Count - 1) / 2;
 			bool hasDefault = (args.Count - 1) % 2 == 1;
-			
+
 			await NotifyService.Notify(executor, $"  Expression/action pairs: {pairCount}");
 			if (hasDefault)
 			{
 				await NotifyService.Notify(executor, "  Has default action");
 			}
-			
+
 			// Check switches
 			if (switches.Contains("REGEXP"))
 			{
@@ -3909,21 +3906,21 @@ public partial class Commands
 			{
 				await NotifyService.Notify(executor, "  Mode: Wildcard pattern matching");
 			}
-			
+
 			if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
 			{
 				await NotifyService.Notify(executor, "  Execution: Inline (immediate)");
-				
+
 				if (switches.Contains("NOBREAK"))
 				{
 					await NotifyService.Notify(executor, "  @break won't propagate to caller");
 				}
-				
+
 				if (switches.Contains("LOCALIZE"))
 				{
 					await NotifyService.Notify(executor, "  Q-registers will be localized");
 				}
-				
+
 				if (switches.Contains("CLEARREGS"))
 				{
 					await NotifyService.Notify(executor, "  Q-registers will be cleared");
@@ -3933,28 +3930,28 @@ public partial class Commands
 			{
 				await NotifyService.Notify(executor, "  Execution: Queued");
 			}
-			
+
 			if (switches.Contains("NOTIFY"))
 			{
 				await NotifyService.Notify(executor, "  Will queue @notify after completion");
 			}
-			
+
 			// Pattern matching implementation
 			bool isRegexp = switches.Contains("REGEXP");
 			bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
 			bool localizeRegs = switches.Contains("LOCALIZE");
 			bool clearRegs = switches.Contains("CLEARREGS");
-			
+
 			// Process expression/action pairs
 			bool matchFound = false;
 			for (int i = 0; i < pairCount; i++)
 			{
 				var exprIndex = (i * 2) + 1;
 				var actionIndex = (i * 2) + 2;
-				
+
 				var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
 				var action = args[actionIndex.ToString()].Message;
-				
+
 				// Perform pattern matching
 				bool matches = false;
 				if (isRegexp)
@@ -3978,15 +3975,15 @@ public partial class Commands
 					var regex = new Regex(regexPattern, RegexOptions.None);
 					matches = regex.IsMatch(testString);
 				}
-				
+
 				if (matches && action != null)
 				{
 					matchFound = true;
-					
+
 					// Substitute #$ with test string in action
 					var actionText = action.ToPlainText().Replace("#$", testString);
 					var actionMString = MModule.single(actionText);
-					
+
 					// Execute action (inline for now, queue support can be added later)
 					if (isInline)
 					{
@@ -4001,23 +3998,23 @@ public partial class Commands
 							new DbRefAttribute(executor.Object().DBRef, []),
 							0));
 					}
-					
+
 					// @select only executes first match
 					break;
 				}
 			}
-			
+
 			// Execute default action if no match and default exists
 			if (!matchFound && hasDefault)
 			{
 				var defaultIndex = args.Count - 1;
 				var defaultAction = args[defaultIndex.ToString()].Message;
-				
+
 				if (defaultAction != null)
 				{
 					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
 					var actionMString = MModule.single(actionText);
-					
+
 					if (isInline)
 					{
 						await parser.CommandListParse(actionMString);
@@ -4032,7 +4029,7 @@ public partial class Commands
 					}
 				}
 			}
-			
+
 			return CallState.Empty;
 		}
 		finally
@@ -4049,19 +4046,19 @@ public partial class Commands
 	{
 		// @trigger[/<switches>] <object>/<attribute>[=<arg0>, <arg1>, ...]
 		// @trigger/match[/<switches>] <object>/<attribute>=<string>
-		
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		var attributePath = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
 			await NotifyService!.Notify(executor, "You must specify an object/attribute to trigger.");
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
-		
+
 		// Parse object/attribute
 		var parts = attributePath.Split('/', 2);
 		if (parts.Length < 2)
@@ -4069,59 +4066,59 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "You must specify an object/attribute path.");
 			return new CallState("#-1 INVALID PATH");
 		}
-		
+
 		var objectName = parts[0];
 		var attributeName = parts[1];
-		
+
 		// Locate the target object
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, enactor, objectName, LocateFlags.All);
-			
+
 		if (maybeObject.IsError)
 		{
 			return maybeObject.AsError;
 		}
-		
+
 		var targetObject = maybeObject.AsSharpObject;
-		
+
 		// Check control permissions
 		if (!await PermissionService!.Controls(executor, targetObject))
 		{
 			await NotifyService!.Notify(executor, "Permission denied. You do not control that object.");
 			return new CallState("#-1 PERMISSION DENIED");
 		}
-		
+
 		// Get the attribute - must be visible to enactor
 		var attributeResult = await AttributeService!.GetAttributeAsync(
 			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
-		
+
 		if (attributeResult.IsError)
 		{
 			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
-		
+
 		if (attributeResult.IsNone)
 		{
 			// Empty attribute - nothing to trigger
 			return CallState.Empty;
 		}
-		
+
 		var attribute = attributeResult.AsAttribute.Last();
 		var attributeText = attribute.Value.ToPlainText();
 		var attributeLongName = attribute.LongName!.ToUpper();
-		
+
 		if (string.IsNullOrWhiteSpace(attributeText))
 		{
 			// Empty attribute - nothing to trigger
 			return CallState.Empty;
 		}
-		
+
 		// Determine enactor/executor for execution based on /spoof switch
 		// /spoof: enactor stays the same (original caller)
 		// no /spoof: target object becomes both enactor and executor
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
-		
+
 		// Build argument registers from all provided arguments
 		// Arguments start at index 1 (index 0 is the object/attribute path)
 		// They map to %0, %1, %2, etc. with no upper limit
@@ -4133,13 +4130,13 @@ public partial class Commands
 				registerDict[(i - 1).ToString()] = argValue.Message;
 			}
 		}
-		
+
 		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
 		if (registerDict.Count > 0)
 		{
 			registerStack.Push(registerDict);
 		}
-		
+
 		// Handle /match switch for pattern matching
 		if (switches.Contains("MATCH"))
 		{
@@ -4150,41 +4147,41 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "You must provide a string to match when using /match.");
 				return new CallState("#-1 NO MATCH STRING");
 			}
-			
+
 			var testString = matchArg.Message.ToPlainText();
-			
+
 			// Parse attribute text as pattern list (one pattern per line or space-separated)
 			var patterns = attributeText.Split(new[] { '\n', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-			
+
 			bool matchFound = false;
 			foreach (var pattern in patterns)
 			{
 				var trimmedPattern = pattern.Trim();
 				if (string.IsNullOrEmpty(trimmedPattern)) continue;
-				
+
 				// Use wildcard pattern matching
 				var regexPattern = MModule.getWildcardMatchAsRegex2(trimmedPattern);
 				var regex = new Regex(regexPattern, RegexOptions.None);
-				
+
 				if (regex.IsMatch(testString))
 				{
 					matchFound = true;
 					break;
 				}
 			}
-			
+
 			// Only execute if match was found
 			if (!matchFound)
 			{
 				return CallState.Empty;
 			}
-			
+
 			// Continue with execution below
 		}
-		
+
 		// Note: INLINE switch executes immediately (current default behavior).
 		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements.
-		
+
 		// Execute with recursion tracking and DEBUG/VERBOSE support
 		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 		{
@@ -4194,10 +4191,10 @@ public partial class Commands
 				Enactor = executionEnactor,
 				Registers = registerStack
 			};
-			
+
 			await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
 				async p => await p.CommandListParseVisitor(attribute.Value)()));
-			
+
 			return CallState.Empty;
 		});
 	}
@@ -4229,10 +4226,10 @@ public partial class Commands
 			{
 				// Find all objects in the zone
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
-				
+
 				// Get all rooms in the zone
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
-				
+
 				// Send message to each room
 				await foreach (var room in rooms)
 				{
@@ -4327,52 +4324,52 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		// Parse arguments: object[/attribute pattern][=prefix]
 		if (args.Count == 0)
 		{
 			await NotifyService!.Notify(executor, "You must specify an object to decompile.");
 			return new CallState("#-1 NO OBJECT SPECIFIED");
 		}
-		
+
 		var objectSpec = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(objectSpec))
 		{
 			await NotifyService!.Notify(executor, "You must specify an object to decompile.");
 			return new CallState("#-1 NO OBJECT SPECIFIED");
 		}
-		
+
 		// Parse prefix if provided in arg 1 (from = split)
 		var prefix = args.Count >= 2 ? args["1"].Message?.ToPlainText() ?? "" : "";
-		
+
 		// Handle /tf switch - sets prefix to TFPREFIX attribute or default
 		if (switches.Contains("TF"))
 		{
 			var tfPrefixAttr = await AttributeService!.GetAttributeAsync(executor, executor, "TFPREFIX",
 				IAttributeService.AttributeMode.Read, false);
-			
+
 			prefix = tfPrefixAttr.Match(
 				attr => attr.Last().Value.ToPlainText(),
 				none => "FugueEdit > ",
 				error => "FugueEdit > ");
 		}
-		
+
 		string? attributePattern = null;
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec);
 		AnyOptionalSharpObject target;
-		
+
 		if (split.TryPickT0(out var details, out _))
 		{
 			var (objectName, maybeAttributePattern) = details;
 			attributePattern = maybeAttributePattern;
-			
+
 			var locate = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
 				enactor,
 				enactor,
 				objectName,
 				LocateFlags.All);
-			
+
 			if (locate.IsValid())
 			{
 				target = locate.WithoutError();
@@ -4390,7 +4387,7 @@ public partial class Commands
 				enactor,
 				objectSpec,
 				LocateFlags.All);
-			
+
 			if (locate.IsValid())
 			{
 				target = locate.WithoutError();
@@ -4400,21 +4397,21 @@ public partial class Commands
 				return new None();
 			}
 		}
-		
+
 		if (target.IsNone())
 		{
 			return new None();
 		}
-		
+
 		var targetKnown = target.Known();
-		
+
 		var canExamine = await PermissionService!.CanExamine(executor, targetKnown);
 		if (!canExamine)
 		{
 			await NotifyService!.Notify(executor, "Permission denied.");
 			return new CallState(Errors.ErrorPerm);
 		}
-		
+
 		var obj = targetKnown.Object();
 		var useDbRef = switches.Contains("DB");
 		var useName = switches.Contains("NAME") || !useDbRef; // NAME is default
@@ -4422,16 +4419,16 @@ public partial class Commands
 		var showAttribs = switches.Contains("ATTRIBS") || (!switches.Contains("FLAGS") && string.IsNullOrEmpty(attributePattern)) || !string.IsNullOrEmpty(attributePattern);
 		var skipDefaults = switches.Contains("SKIPDEFAULTS");
 		var isTf = switches.Contains("TF");
-		
+
 		if (!string.IsNullOrEmpty(attributePattern))
 		{
 			showFlags = false;
 			showAttribs = true;
 		}
-		
+
 		var objectRef = useDbRef ? $"#{obj.DBRef.Number}" : obj.Name;
 		var outputs = new List<string>();
-		
+
 		if (showFlags)
 		{
 			// @create command based on object type
@@ -4444,7 +4441,7 @@ public partial class Commands
 				_ => $"@create {objectRef}"
 			};
 			outputs.Add($"{prefix}{createCmd}");
-			
+
 			var flags = await obj.Flags.Value.ToArrayAsync();
 			foreach (var flag in flags)
 			{
@@ -4454,19 +4451,19 @@ public partial class Commands
 				}
 				outputs.Add($"{prefix}@set {objectRef}={flag.Name}");
 			}
-			
+
 			var powers = await obj.Powers.Value.ToArrayAsync();
 			foreach (var power in powers)
 			{
 				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
 			}
-			
+
 			foreach (var lockEntry in obj.Locks)
 			{
 				var lockName = lockEntry.Key;
 				var lockData = lockEntry.Value;
 				var lockValue = lockData.LockString;
-				
+
 				if (lockName.Equals("Basic", StringComparison.OrdinalIgnoreCase))
 				{
 					outputs.Add($"{prefix}@lock {objectRef}={lockValue}");
@@ -4476,7 +4473,7 @@ public partial class Commands
 					outputs.Add($"{prefix}@lock/{lockName} {objectRef}={lockValue}");
 				}
 			}
-			
+
 			// Set parent if not default (default is no parent)
 			var parent = await obj.Parent.WithCancellation(CancellationToken.None);
 			if (!parent.IsNone)
@@ -4485,7 +4482,7 @@ public partial class Commands
 				outputs.Add($"{prefix}@parent {objectRef}={parentObj.DBRef}");
 			}
 		}
-		
+
 		if (showAttribs)
 		{
 			SharpAttributesOrError atrs;
@@ -4502,7 +4499,7 @@ public partial class Commands
 			{
 				atrs = await AttributeService!.GetVisibleAttributesAsync(enactor, targetKnown);
 			}
-			
+
 			if (atrs.IsAttribute)
 			{
 				foreach (var attr in atrs.AsAttributes)
@@ -4513,10 +4510,10 @@ public partial class Commands
 					{
 						continue;
 					}
-					
+
 					// Check if attribute contains ANSI color
 					var hasAnsi = ContainsAnsiMarkup(attr.Value);
-					
+
 					if (hasAnsi)
 					{
 						// Use @set format with decomposed value to ensure evaluation
@@ -4529,7 +4526,7 @@ public partial class Commands
 						var plainValue = attr.Value.ToPlainText();
 						outputs.Add($"{prefix}&{attr.Name} {objectRef}={plainValue}");
 					}
-					
+
 					// Output attribute flags if not in TF mode and not skipdefaults
 					if (!isTf && attr.Flags.Any())
 					{
@@ -4544,16 +4541,16 @@ public partial class Commands
 				}
 			}
 		}
-		
+
 		// Send output to player
 		foreach (var output in outputs)
 		{
 			await NotifyService!.Notify(executor, output);
 		}
-		
+
 		return CallState.Empty;
 	}
-	
+
 	/// <summary>
 	/// Checks if an MString contains ANSI markup
 	/// </summary>
@@ -4570,7 +4567,7 @@ public partial class Commands
 		}, str);
 		return hasAnsi;
 	}
-	
+
 	/// <summary>
 	/// Decomposes an attribute value using the decompose() logic from StringFunctions
 	/// </summary>
@@ -4586,7 +4583,7 @@ public partial class Commands
 				_ => innerText
 			};
 		}, input);
-		
+
 		var result = reconstructed
 			.Replace("\\", @"\\")
 			.Replace("%", "\\%")
@@ -4600,14 +4597,14 @@ public partial class Commands
 			.Replace(",", "\\,")
 			.Replace("^", "\\^")
 			.Replace("$", "\\$");
-		
+
 		result = Regex.Replace(result, @"\s{2,}", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
-		
+
 		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
-		
+
 		return result;
 	}
-	
+
 	/// <summary>
 	/// Checks if a flag is a default flag for the object type
 	/// </summary>
@@ -4622,11 +4619,11 @@ public partial class Commands
 			"EXIT" => Configuration?.CurrentValue.Flag.ExitFlags ?? [],
 			_ => Array.Empty<string>()
 		};
-		
+
 		// Check if the flag is in the default list (case-insensitive comparison)
 		return defaultFlags.Any(f => f.Equals(flagName, StringComparison.OrdinalIgnoreCase));
 	}
-	
+
 	/// <summary>
 	/// Checks if attribute flags are the default for that attribute
 	/// </summary>
@@ -4634,17 +4631,17 @@ public partial class Commands
 	{
 		// Query the attribute entry to check for custom default flags
 		var entry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
-		
+
 		if (entry == null)
 		{
 			// No entry means no custom defaults; empty flags are considered default
 			return !flags.Any();
 		}
-		
+
 		// Convert current flags to names for comparison
 		var currentFlagNames = flags.Select(f => f.Name.ToUpper()).OrderBy(n => n).ToList();
 		var defaultFlagNames = entry.DefaultFlags.Select(f => f.ToUpper()).OrderBy(n => n).ToList();
-		
+
 		// Compare flag lists
 		return currentFlagNames.SequenceEqual(defaultFlagNames);
 	}
@@ -4690,27 +4687,27 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> ListMessageOfTheDay(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		// Check if executor is wizard/royalty to see wizard MOTD
 		var isWizard = await executor.IsWizard();
-		
+
 		// Get MOTD file paths from configuration
 		var motdFile = Configuration!.CurrentValue.Message.MessageOfTheDayFile;
 		var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
-		
+
 		await NotifyService!.Notify(executor, "Current Message of the Day settings:");
 		await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
 		await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
-		
+
 		if (isWizard)
 		{
 			var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
 			var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
-			
+
 			await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
 			await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
 		}
-		
+
 		// Get temporary MOTD data from ExpandedServerData
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		if (motdData != null)
@@ -4718,7 +4715,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, "");
 			await NotifyService.Notify(executor, "Temporary Message of the Day (cleared on restart):");
 			await NotifyService.Notify(executor, $"  Connect MOTD: {(string.IsNullOrEmpty(motdData.ConnectMotd) ? "(not set)" : motdData.ConnectMotd)}");
-			
+
 			if (isWizard)
 			{
 				await NotifyService.Notify(executor, $"  Wizard MOTD:  {(string.IsNullOrEmpty(motdData.WizardMotd) ? "(not set)" : motdData.WizardMotd)}");
@@ -4726,7 +4723,7 @@ public partial class Commands
 				await NotifyService.Notify(executor, $"  Full MOTD:    {(string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd)}");
 			}
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -4790,14 +4787,14 @@ public partial class Commands
 		// This allows emitting to a specific room while excluding specific objects.
 		AnySharpContainer targetRoom;
 		string objectsToExclude;
-		
+
 		// Check if format is "room/objects"
 		if (objects.Contains('/'))
 		{
 			var parts = objects.Split('/', 2);
 			var roomName = parts[0].Trim();
 			objectsToExclude = parts[1].Trim();
-			
+
 			// Locate the target room
 			var roomResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser,
@@ -4805,15 +4802,15 @@ public partial class Commands
 				executor,
 				roomName,
 				LocateFlags.All);
-			
+
 			if (!roomResult.IsValid() || (!roomResult.IsRoom && !roomResult.IsThing))
 			{
 				await NotifyService!.Notify(executor, "Invalid room specified.");
 				return new CallState("#-1 INVALID ROOM");
 			}
-			
-			targetRoom = roomResult.IsRoom 
-				? roomResult.WithoutError().WithoutNone().MinusExit() 
+
+			targetRoom = roomResult.IsRoom
+				? roomResult.WithoutError().WithoutNone().MinusExit()
 				: await roomResult.WithoutError().WithoutNone().Where();
 		}
 		else
@@ -4822,7 +4819,7 @@ public partial class Commands
 			targetRoom = await executor.Where();
 			objectsToExclude = objects;
 		}
-		
+
 		var objectList = ArgHelpers.NameList(objectsToExclude);
 		var excludeObjects = new List<AnySharpObject>();
 
@@ -4908,41 +4905,41 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		// Check for specialized switches
 		if (switches.Contains("TABLES"))
 		{
 			await NotifyService!.Notify(executor, "@stats/tables: Internal table statistics not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		if (switches.Contains("FLAGS"))
 		{
 			await NotifyService!.Notify(executor, "@stats/flags: Flag system statistics not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
-		if (switches.Contains("CHUNKS") || switches.Contains("FREESPACE") || 
-		    switches.Contains("PAGING") || switches.Contains("REGIONS"))
+
+		if (switches.Contains("CHUNKS") || switches.Contains("FREESPACE") ||
+				switches.Contains("PAGING") || switches.Contains("REGIONS"))
 		{
 			await NotifyService!.Notify(executor, "@stats memory switches not yet implemented.");
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		// Basic @stats - show object counts
 		string? playerName = null;
 		if (args.Count > 0 && args.ContainsKey("0"))
 		{
 			playerName = args["0"].Message?.ToPlainText();
 		}
-		
+
 		await NotifyService!.Notify(executor, "Database Statistics:");
-		
+
 		if (playerName != null)
 		{
 			await NotifyService.Notify(executor, $"  For player: {playerName}");
 		}
-		
+
 		// Query actual database statistics
 		var allObjects = await Mediator!.CreateStream(new GetAllObjectsQuery()).ToListAsync();
 		var roomCount = allObjects.Count(o => o.Type == "ROOM");
@@ -4950,13 +4947,13 @@ public partial class Commands
 		var thingCount = allObjects.Count(o => o.Type == "THING");
 		var playerCount = allObjects.Count(o => o.Type == "PLAYER");
 		var totalCount = roomCount + exitCount + thingCount + playerCount;
-		
+
 		await NotifyService.Notify(executor, $"  Rooms: {roomCount}");
 		await NotifyService.Notify(executor, $"  Exits: {exitCount}");
 		await NotifyService.Notify(executor, $"  Things: {thingCount}");
 		await NotifyService.Notify(executor, $"  Players: {playerCount}");
 		await NotifyService.Notify(executor, $"  Total: {totalCount}");
-		
+
 		return CallState.Empty;
 	}
 
@@ -5014,13 +5011,13 @@ public partial class Commands
 
 		var isWizard = await executor.IsWizard();
 		var controlsBoth = await PermissionService!.Controls(executor, actor) &&
-		                   await PermissionService!.Controls(executor, victim);
+											 await PermissionService!.Controls(executor, victim);
 		var enactorIsActor = enactor.Object().DBRef == actor.Object().DBRef;
 		var executorPrivileged = await executor.IsRoyalty();
 		var executorControlsVictim = await PermissionService!.Controls(executor, victim);
 
 		var hasPermission = isWizard || controlsBoth ||
-		                    (enactorIsActor && (executorPrivileged || executorControlsVictim));
+												(enactorIsActor && (executorPrivileged || executorControlsVictim));
 
 		if (!hasPermission)
 		{
@@ -5059,7 +5056,7 @@ public partial class Commands
 						Enactor = actor.Object().DBRef,
 						Arguments = stackArgs
 					},
-					newParser => newParser.WithAttributeDebug(attribute, 
+					newParser => newParser.WithAttributeDebug(attribute,
 						p => p.CommandListParse(attribute.Value)));
 			}
 		}
@@ -5110,12 +5107,12 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		// @entrances[/<switch>] [<object>][=<begin>[, <end>]]
 		// Shows all objects linked to <object>
-		
+
 		AnySharpObject targetObject;
-		
+
 		// Get target object (defaults to current location if not specified)
 		if (args.Count > 0 && args.ContainsKey("0"))
 		{
@@ -5124,12 +5121,12 @@ public partial class Commands
 			{
 				var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
 					parser, executor, executor, targetName, LocateFlags.All);
-				
+
 				if (!maybeTarget.IsValid())
 				{
 					return new CallState("#-1 NOT FOUND");
 				}
-				
+
 				targetObject = maybeTarget.WithoutError().WithoutNone();
 			}
 			else
@@ -5143,11 +5140,11 @@ public partial class Commands
 			var location = await executor.AsContent.Location();
 			targetObject = location.WithRoomOption();
 		}
-		
+
 		// Parse range if specified
 		int? beginDbref = null;
 		int? endDbref = null;
-		
+
 		if (args.Count > 1 && args.ContainsKey("1"))
 		{
 			var beginStr = args["1"].Message?.ToPlainText();
@@ -5156,7 +5153,7 @@ public partial class Commands
 				beginDbref = begin;
 			}
 		}
-		
+
 		if (args.Count > 2 && args.ContainsKey("2"))
 		{
 			var endStr = args["2"].Message?.ToPlainText();
@@ -5165,36 +5162,36 @@ public partial class Commands
 				endDbref = end;
 			}
 		}
-		
+
 		var targetObj = targetObject.Object();
 		await NotifyService!.Notify(executor, $"Entrances to {targetObj.Name}:");
-		
+
 		// Filter by switch type
 		var filterTypes = new List<string>();
 		if (switches.Contains("EXITS")) filterTypes.Add("exits");
 		if (switches.Contains("THINGS")) filterTypes.Add("things");
 		if (switches.Contains("PLAYERS")) filterTypes.Add("players");
 		if (switches.Contains("ROOMS")) filterTypes.Add("rooms");
-		
+
 		if (filterTypes.Count > 0)
 		{
 			await NotifyService.Notify(executor, $"  Filtering for: {string.Join(", ", filterTypes)}");
 		}
-		
+
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
 			await NotifyService.Notify(executor, $"  Range: {beginDbref ?? 0} to {endDbref?.ToString() ?? "end"}");
 		}
-		
+
 		// Query database for exits linked to target
 		var entrances = await Mediator!.CreateStream(new GetEntrancesQuery(targetObj.DBRef)).ToListAsync();
-		
+
 		// Apply type filters if specified
 		if (filterTypes.Count > 0 && !filterTypes.Contains("exits"))
 		{
 			entrances.Clear(); // GetEntrancesQuery only returns exits, so if exits not requested, clear
 		}
-		
+
 		// Apply range filters if specified
 		if (beginDbref.HasValue || endDbref.HasValue)
 		{
@@ -5202,10 +5199,10 @@ public partial class Commands
 			{
 				var key = e.Object.Key;
 				return (!beginDbref.HasValue || key >= beginDbref.Value) &&
-				       (!endDbref.HasValue || key <= endDbref.Value);
+							 (!endDbref.HasValue || key <= endDbref.Value);
 			}).ToList();
 		}
-		
+
 		// Display results
 		if (entrances.Count == 0)
 		{
@@ -5219,7 +5216,7 @@ public partial class Commands
 			}
 			await NotifyService.Notify(executor, $"{entrances.Count} entrance(s) found.");
 		}
-		
+
 		return new CallState(entrances.Count.ToString());
 	}
 
@@ -5274,15 +5271,15 @@ public partial class Commands
 		var checkParents = switches.Contains("PARENT");
 
 		// Get attributes matching the attribute pattern
-		var attributePatternMode = attributePattern == "**" 
-			? IAttributeService.AttributePatternMode.Wildcard 
+		var attributePatternMode = attributePattern == "**"
+			? IAttributeService.AttributePatternMode.Wildcard
 			: IAttributeService.AttributePatternMode.Wildcard;
-		
+
 		var attributes = await AttributeService!.GetAttributePatternAsync(
-			executor, 
-			targetObject, 
-			attributePattern, 
-			checkParents, 
+			executor,
+			targetObject,
+			attributePattern,
+			checkParents,
 			attributePatternMode);
 
 		if (attributes.IsError)
@@ -5293,7 +5290,7 @@ public partial class Commands
 
 		// Filter attributes by pattern match in their values
 		var matchingAttributes = new List<SharpAttribute>();
-		
+
 		foreach (var attr in attributes.AsAttributes)
 		{
 			var attrValue = MModule.plainText(attr.Value);
@@ -5364,7 +5361,7 @@ public partial class Commands
 			foreach (var attr in matchingAttributes)
 			{
 				var attrValue = attr.Value;
-				
+
 				// Highlight matching substrings in the value
 				MString displayValue;
 				if (isRegexp || isWild)
@@ -5378,14 +5375,14 @@ public partial class Commands
 					var plainValue = MModule.plainText(attr.Value);
 					var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 					var index = plainValue.IndexOf(pattern, comparison);
-					
+
 					if (index >= 0)
 					{
 						var valueSpan = plainValue.AsSpan();
 						var before = valueSpan.Slice(0, index).ToString();
 						var match = valueSpan.Slice(index, pattern.Length).ToString();
 						var after = valueSpan.Slice(index + pattern.Length).ToString();
-						
+
 						displayValue = MModule.concat(
 							MModule.concat(
 								MModule.single(before),
@@ -5422,19 +5419,19 @@ public partial class Commands
 	{
 		// @include[/<switches>] <object>/<attribute>[=<arg1>,<arg2>,...]
 		// Inserts attribute contents in-place without adding a new queue entry
-		
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		var attributePath = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
 			await NotifyService!.Notify(executor, "You must specify an object/attribute to include.");
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
-		
+
 		// Parse object/attribute
 		var parts = attributePath.Split('/', 2);
 		if (parts.Length < 2)
@@ -5442,41 +5439,41 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "You must specify an object/attribute path.");
 			return new CallState("#-1 INVALID PATH");
 		}
-		
+
 		var objectName = parts[0];
 		var attributeName = parts[1];
-		
+
 		// Locate the target object
 		var maybeObject = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, enactor, objectName, LocateFlags.All);
-		
+
 		if (maybeObject.IsError)
 		{
 			return maybeObject.AsError;
 		}
-		
+
 		var targetObject = maybeObject.AsSharpObject;
-		
+
 		// Get the attribute - must be visible to enactor
 		var attributeResult = await AttributeService!.GetAttributeAsync(
 			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
-		
+
 		if (attributeResult.IsError)
 		{
 			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
-		
+
 		if (attributeResult.IsNone)
 		{
 			await NotifyService!.Notify(executor, $"Attribute {attributeName} is empty.");
 			return CallState.Empty;
 		}
-		
+
 		var attribute = attributeResult.AsAttribute.Last();
 		var attributeText = attribute.Value.ToPlainText();
 		var attributeLongName = attribute.LongName!.ToUpper();
-		
+
 		// Strip ^...: or $...: prefixes for listen/command patterns using Span
 		if (attributeText.StartsWith("^") || attributeText.StartsWith("$"))
 		{
@@ -5486,24 +5483,24 @@ public partial class Commands
 				attributeText = attributeText.AsSpan(colonIndex + 1).TrimStart().ToString();
 			}
 		}
-		
+
 		// Q-register management is now handled by the hook system
 		// CLEARREGS and LOCALIZE switches are implemented there
-		
+
 		// Environment argument substitution is handled by the hook system
 		// Arguments %0-%9 are properly managed during command execution
-		
+
 		// Execute the attribute content in-place with recursion tracking and DEBUG/VERBOSE support
 		// This evaluates the command list without creating a queue entry
 		try
 		{
 			var hasNoBreak = switches.Contains("NOBREAK");
-			
+
 			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 			{
 				var execResult = await parser.WithAttributeDebug(attribute,
 					p => p.CommandListParse(MModule.single(attributeText)));
-				
+
 				// Handle NOBREAK switch to prevent @break/@assert propagation.
 				// When set, @break/@assert from included code shouldn't propagate to calling list.
 				if (hasNoBreak && parser.CurrentState.ExecutionStack.TryPeek(out var execution) && execution.CommandListBreak)
@@ -5511,10 +5508,10 @@ public partial class Commands
 					// Clear the break flag so it doesn't propagate to the calling context
 					parser.CurrentState.ExecutionStack.TryPop(out _);
 				}
-				
+
 				return execResult ?? CallState.Empty;
 			});
-			
+
 			return result;
 		}
 		catch (Exception ex)
@@ -5595,7 +5592,7 @@ public partial class Commands
 				=> await RetractMail.Handle(parser, ObjectDataService!, LocateService!, Mediator!, NotifyService!,
 					arg0!.ToPlainText(), arg1!.ToPlainText()),
 			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
-			                 (arg1?.Length ?? 0) != 0
+											 (arg1?.Length ?? 0) != 0
 				=> await ForwardMail.Handle(parser, ObjectDataService!, LocateService!, PermissionService!, Mediator!, number,
 					arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
@@ -5603,7 +5600,7 @@ public partial class Commands
 				=> await SendMail.Handle(parser, PermissionService!, ObjectDataService!, Mediator!, NotifyService!, AttributeService!, Configuration!, arg0!,
 					arg1!, switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
-			                        int.TryParse(arg0?.ToPlainText(), out var number)
+															int.TryParse(arg0?.ToPlainText(), out var number)
 				=> await ReadMail.Handle(parser, ObjectDataService!, Mediator!, NotifyService!, Math.Max(0, number - 1),
 					switches),
 			[.., "LIST"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
@@ -5718,7 +5715,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-		
+
 		// Check for /all switch - wizard only
 		if (switches.Contains("ALL"))
 		{
@@ -5727,13 +5724,13 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			// Halt all objects, then trigger @STARTUP on all objects that have it
 			await foreach (var obj in Mediator!.CreateStream(new GetAllObjectsQuery()))
 			{
 				// Halt the object's queue
 				await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
-				
+
 				// Trigger @STARTUP attribute if it exists (non-inherited)
 				try
 				{
@@ -5741,8 +5738,8 @@ public partial class Commands
 					if (!objNode.IsNone)
 					{
 						await AttributeService!.EvaluateAttributeFunctionAsync(
-							parser, executor, objNode.Known, "STARTUP", 
-							new Dictionary<string, CallState>(), 
+							parser, executor, objNode.Known, "STARTUP",
+							new Dictionary<string, CallState>(),
 							evalParent: false);
 					}
 				}
@@ -5751,20 +5748,20 @@ public partial class Commands
 					// Ignore errors from @STARTUP - they're non-fatal
 				}
 			}
-			
+
 			await NotifyService!.Notify(executor, "All objects restarted.");
 			return CallState.Empty;
 		}
-		
+
 		// Get target object
 		if (args.Count == 0)
 		{
 			await NotifyService!.Notify(executor, "You must specify an object to restart.");
 			return new CallState("#-1 NO OBJECT SPECIFIED");
 		}
-		
+
 		var targetName = args["0"].Message!.ToPlainText();
-		
+
 		// Locate the target object
 		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(
 			parser,
@@ -5772,26 +5769,26 @@ public partial class Commands
 			executor,
 			targetName,
 			LocateFlags.All);
-		
+
 		if (!maybeTarget.IsValid())
 		{
 			return new CallState("#-1 NOT FOUND");
 		}
-		
+
 		var target = maybeTarget.WithoutError().WithoutNone();
-		
+
 		// Check control permissions
 		if (!await PermissionService!.Controls(executor, target))
 		{
 			await NotifyService!.Notify(executor, "Permission denied.");
 			return new CallState(Errors.ErrorPerm);
 		}
-		
+
 		var targetObject = target.Object();
-		
+
 		// Halt the object's queue first
 		await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
-		
+
 		// For players, restart all owned objects too
 		if (target.IsPlayer)
 		{
@@ -5802,7 +5799,7 @@ public partial class Commands
 				if (owner.Object.DBRef == targetObject.DBRef)
 				{
 					await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
-					
+
 					// Trigger @STARTUP if it exists
 					try
 					{
@@ -5810,8 +5807,8 @@ public partial class Commands
 						if (!objNode.IsNone)
 						{
 							await AttributeService!.EvaluateAttributeFunctionAsync(
-								parser, executor, objNode.Known, "STARTUP", 
-								new Dictionary<string, CallState>(), 
+								parser, executor, objNode.Known, "STARTUP",
+								new Dictionary<string, CallState>(),
 								evalParent: false);
 						}
 					}
@@ -5821,27 +5818,27 @@ public partial class Commands
 					}
 				}
 			}
-			
+
 			await NotifyService!.Notify(executor, $"Restarted {targetObject.Name} and all their objects.");
 		}
 		else
 		{
 			await NotifyService!.Notify(executor, $"Restarted {targetObject.Name}.");
 		}
-		
+
 		// Trigger @STARTUP attribute if it exists (never inherited per PennMUSH spec)
 		try
 		{
 			await AttributeService!.EvaluateAttributeFunctionAsync(
-				parser, executor, target, "STARTUP", 
-				new Dictionary<string, CallState>(), 
+				parser, executor, target, "STARTUP",
+				new Dictionary<string, CallState>(),
 				evalParent: false);
 		}
 		catch
 		{
 			// Ignore @STARTUP errors - they're non-fatal
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -5885,7 +5882,7 @@ public partial class Commands
 			else
 			{
 				if (await locationAnyObject.IsHearer(ConnectionService!, AttributeService!) ||
-				    await locationAnyObject.IsListener())
+						await locationAnyObject.IsListener())
 				{
 					if (await ConnectionService!.IsConnected(locationAnyObject))
 						await NotifyService.Notify(executor, $"{locationObj.Name} (this room) [speech]. (connected)");
@@ -5999,7 +5996,7 @@ public partial class Commands
 			if (await ConnectionService!.IsConnected(obj)) return true;
 
 			return await obj.IsPuppet()
-			       && await ConnectionService!.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
+						 && await ConnectionService!.IsConnected(await obj.Object().Owner.WithCancellation(CancellationToken.None));
 		}
 	}
 
@@ -6069,11 +6066,11 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var nargs = args.Count;
-		
+
 		// Note: INLINE is default behavior (immediate execution)
 		// QUEUED switch queues the command for later execution via task scheduler
 		var useQueue = switches.Contains("QUEUED");
-		
+
 		switch (nargs)
 		{
 			case 0:
@@ -6088,14 +6085,14 @@ public partial class Commands
 				return args["0"];
 			case 2 when args["0"].Message.Falsy():
 				var command = await args["1"].ParsedMessage();
-				
+
 				if (useQueue)
 				{
 					// Queue the command for later execution
 					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
 					await Mediator!.Send(new QueueCommandListRequest(
-						command!, 
-						parser.CurrentState, 
+						command!,
+						parser.CurrentState,
 						new DbRefAttribute(executor, ["ASSERT"]),
 						-1));
 				}
@@ -6105,7 +6102,7 @@ public partial class Commands
 					var commandList = parser.CommandListParseVisitor(command!);
 					await commandList();
 				}
-				
+
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
 				return args["0"];
@@ -6128,11 +6125,11 @@ public partial class Commands
 		// @attribute/limit <attrib>=<regexp pattern> - Restrict values to pattern
 		// @attribute/enum [<delim>] <attrib>=<list> - Restrict values to list
 		// @attribute/decompile[/retroactive] [<pattern>] - Decompile attribute table
-		
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
-		
+
 		// Check for decompile switch first (can work with 0 or 1 arg)
 		if (switches.Contains("DECOMPILE"))
 		{
@@ -6141,41 +6138,41 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "*";
 			var retroactive = switches.Contains("RETROACTIVE");
-			
+
 			// Get all attribute entries from the database
 			var allEntries = await Mediator!.CreateStream(new GetAllAttributeEntriesQuery()).ToArrayAsync();
-			
+
 			// Filter by pattern (simple wildcard matching)
-			var matchingEntries = allEntries.Where(entry => 
-				pattern == "*" || 
+			var matchingEntries = allEntries.Where(entry =>
+				pattern == "*" ||
 				entry.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
 				(pattern.Contains('*') && MatchesWildcard(entry.Name, pattern))
 			).ToArray();
-			
+
 			if (matchingEntries.Length == 0)
 			{
 				await NotifyService!.Notify(executor, $"No attributes match pattern '{pattern}'.");
 				return CallState.Empty;
 			}
-			
+
 			await NotifyService!.Notify(executor, $"@attribute/decompile: {matchingEntries.Length} attributes match pattern '{pattern}'");
-			
+
 			// Output @attribute/access command for each matching attribute
 			foreach (var entry in matchingEntries.OrderBy(e => e.Name))
 			{
 				var flagList = string.Join(" ", entry.DefaultFlags);
 				var retroFlag = retroactive ? "/retroactive" : "";
 				await NotifyService.Notify(executor, $"@attribute/access{retroFlag} {entry.Name}={flagList}");
-				
+
 				// Include limit pattern if present
 				if (!string.IsNullOrEmpty(entry.Limit))
 				{
 					await NotifyService.Notify(executor, $"@attribute/limit {entry.Name}={entry.Limit}");
 				}
-				
+
 				// Include enum values if present
 				if (entry.Enum != null && entry.Enum.Length > 0)
 				{
@@ -6183,24 +6180,24 @@ public partial class Commands
 					await NotifyService.Notify(executor, $"@attribute/enum {entry.Name}={enumList}");
 				}
 			}
-			
+
 			return CallState.Empty;
 		}
-		
+
 		// All other operations require at least one argument
 		if (args.Count == 0)
 		{
 			await NotifyService!.Notify(executor, "You must specify an attribute.");
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
-		
+
 		var attrName = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attrName))
 		{
 			await NotifyService!.Notify(executor, "You must specify an attribute.");
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
-		
+
 		// Check for various switches
 		if (switches.Contains("ACCESS"))
 		{
@@ -6209,21 +6206,21 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			if (args.Count < 2)
 			{
 				await NotifyService!.Notify(executor, "You must specify attribute flags.");
 				return new CallState("#-1 NO FLAGS SPECIFIED");
 			}
-			
+
 			var flagList = args["1"].Message?.ToPlainText() ?? "none";
 			var retroactive = switches.Contains("RETROACTIVE");
-			
+
 			// Parse the flag list - space-separated flag names
 			var flagNames = flagList.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 				.Select(f => f.ToUpper())
 				.ToArray();
-			
+
 			// Validate that all flags exist
 			var allFlags = await Mediator!.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
 			foreach (var flagName in flagNames)
@@ -6234,7 +6231,7 @@ public partial class Commands
 					return new CallState("#-1 UNKNOWN FLAG");
 				}
 			}
-			
+
 			// Create or update the attribute entry
 			var entry = await Mediator!.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames));
 			if (entry == null)
@@ -6242,9 +6239,9 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Failed to create attribute entry.");
 				return new CallState("#-1 CREATE FAILED");
 			}
-			
+
 			await NotifyService!.Notify(executor, $"Attribute '{attrName}' set with flags: {string.Join(" ", flagNames)}");
-			
+
 			// TODO: Retroactive flag updates to existing attribute instances.
 			// When /retroactive is set, should update flags on all existing copies of this attribute
 			// across all objects in the database. Requires bulk update operation.
@@ -6252,10 +6249,10 @@ public partial class Commands
 			{
 				await NotifyService.Notify(executor, "Note: Retroactive flag updating not yet implemented.");
 			}
-			
+
 			return CallState.Empty;
 		}
-		
+
 		if (switches.Contains("DELETE"))
 		{
 			if (!await executor.IsWizard())
@@ -6263,10 +6260,10 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			// Remove attribute from standard attribute table
 			var deleted = await Mediator!.Send(new DeleteAttributeEntryCommand(attrName.ToUpper()));
-			
+
 			if (deleted)
 			{
 				await NotifyService!.Notify(executor, $"Attribute '{attrName}' removed from standard attribute table.");
@@ -6277,10 +6274,10 @@ public partial class Commands
 				await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in table.");
 				return new CallState("#-1 NOT FOUND");
 			}
-			
+
 			return CallState.Empty;
 		}
-		
+
 		if (switches.Contains("RENAME"))
 		{
 			if (!await executor.IsWizard())
@@ -6288,23 +6285,23 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			if (args.Count < 2)
 			{
 				await NotifyService!.Notify(executor, "You must specify a new name.");
 				return new CallState("#-1 NO NEW NAME SPECIFIED");
 			}
-			
+
 			var newName = args["1"].Message?.ToPlainText();
 			if (string.IsNullOrEmpty(newName))
 			{
 				await NotifyService!.Notify(executor, "You must specify a new name.");
 				return new CallState("#-1 NO NEW NAME SPECIFIED");
 			}
-			
+
 			// Rename attribute in standard attribute table
 			var renamed = await Mediator!.Send(new RenameAttributeEntryCommand(attrName.ToUpper(), newName.ToUpper()));
-			
+
 			if (renamed != null)
 			{
 				await NotifyService!.Notify(executor, $"Attribute '{attrName}' renamed to '{newName}' in standard attribute table.");
@@ -6315,10 +6312,10 @@ public partial class Commands
 				await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in table.");
 				return new CallState("#-1 NOT FOUND");
 			}
-			
+
 			return CallState.Empty;
 		}
-		
+
 		if (switches.Contains("LIMIT"))
 		{
 			if (!await executor.IsWizard())
@@ -6326,28 +6323,28 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			if (args.Count < 2)
 			{
 				await NotifyService!.Notify(executor, "You must specify a regexp pattern.");
 				return new CallState("#-1 NO PATTERN SPECIFIED");
 			}
-			
+
 			var pattern = args["1"].Message?.ToPlainText();
 			await NotifyService!.Notify(executor, $"@attribute/limit: Setting pattern for '{attrName}'");
 			await NotifyService.Notify(executor, $"  Pattern: {pattern}");
 			await NotifyService.Notify(executor, "  New values must match this pattern (case insensitive)");
-			
+
 			// TODO: Attribute validation via regex patterns.
 			// Requirements:
 			// - Store regexp pattern with attribute in table
 			// - Validate all new attribute values against pattern
 			// - Pattern is case insensitive unless (?-i) is used
 			await NotifyService.Notify(executor, "Note: Attribute validation not yet implemented.");
-			
+
 			return new CallState("#-1 NOT IMPLEMENTED");
 		}
-		
+
 		if (switches.Contains("ENUM"))
 		{
 			if (!await executor.IsWizard())
@@ -6355,61 +6352,61 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState(Errors.ErrorPerm);
 			}
-			
+
 			if (args.Count < 2)
 			{
 				await NotifyService!.Notify(executor, "You must specify a list of choices.");
 				return new CallState("#-1 NO CHOICES SPECIFIED");
 			}
-			
+
 			var choices = args["1"].Message?.ToPlainText();
 			var choiceArray = choices?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
-			
+
 			// Validate that after parsing, we have actual choices (not just whitespace)
 			if (choiceArray.Length == 0)
 			{
 				await NotifyService!.Notify(executor, "You must specify at least one choice.");
 				return new CallState("#-1 NO CHOICES SPECIFIED");
 			}
-			
+
 			// Get existing entry to preserve flags and limit
 			var existingEntry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
 			var defaultFlags = existingEntry?.DefaultFlags ?? [];
 			var limit = existingEntry?.Limit;
-			
+
 			// Create or update the attribute entry with enum values
 			// Note: Command parameter is EnumValues, model property is Enum
 			var enumAttrEntry = await Mediator!.Send(new CreateAttributeEntryCommand(
-				attrName.ToUpper(), 
+				attrName.ToUpper(),
 				defaultFlags,
 				Limit: limit,
 				EnumValues: choiceArray));
-			
+
 			if (enumAttrEntry == null)
 			{
 				await NotifyService!.Notify(executor, "Failed to update attribute entry.");
 				return new CallState("#-1 UPDATE FAILED");
 			}
-			
+
 			await NotifyService!.Notify(executor, $"@attribute/enum: Set choices for '{attrName}'");
 			await NotifyService.Notify(executor, $"  Choices: {string.Join(" ", choiceArray)}");
 			await NotifyService.Notify(executor, "  New values must match one of these choices");
-			
+
 			return CallState.Empty;
 		}
-		
+
 		// No switches - display attribute information
 		var attrEntry = await Mediator!.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
-		
+
 		if (attrEntry == null)
 		{
 			await NotifyService!.Notify(executor, $"Attribute '{attrName}' not found in standard attribute table.");
 			await NotifyService.Notify(executor, "This is not an error - the attribute may still be used on objects.");
 			return CallState.Empty;
 		}
-		
+
 		await NotifyService!.Notify(executor, $"@attribute: Information for '{attrEntry.Name}'");
-		
+
 		// Display default flags if any
 		if (attrEntry.DefaultFlags.Any())
 		{
@@ -6419,18 +6416,18 @@ public partial class Commands
 		{
 			await NotifyService.Notify(executor, "  Default flags: none");
 		}
-		
+
 		// Show validation rules if set
 		if (!string.IsNullOrEmpty(attrEntry.Limit))
 		{
 			await NotifyService.Notify(executor, $"  Limit pattern: {attrEntry.Limit}");
 		}
-		
+
 		if (attrEntry.Enum != null && attrEntry.Enum.Any())
 		{
 			await NotifyService.Notify(executor, $"  Enum values: {string.Join(" ", attrEntry.Enum)}");
 		}
-		
+
 		return CallState.Empty;
 	}
 
@@ -6488,17 +6485,17 @@ public partial class Commands
 		return result;
 	}
 
-/// <summary>
-/// Simple wildcard matching helper for attribute name patterns.
-/// Supports * as wildcard character.
-/// </summary>
-private static bool MatchesWildcard(string text, string pattern)
-{
-// Convert wildcard pattern to regex
-var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
-.Replace("\\*", ".*") + "$";
+	/// <summary>
+	/// Simple wildcard matching helper for attribute name patterns.
+	/// Supports * as wildcard character.
+	/// </summary>
+	private static bool MatchesWildcard(string text, string pattern)
+	{
+		// Convert wildcard pattern to regex
+		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+		.Replace("\\*", ".*") + "$";
 
-return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern, 
-System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-}
+		return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern,
+		System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+	}
 }

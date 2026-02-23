@@ -55,7 +55,7 @@ public class ManipulateSharpObjectService(
 				var tryFindPlayerByName = await (mediator.CreateStream(new GetPlayerQuery(name.ToPlainText())))
 					.ToArrayAsync();
 				if (tryFindPlayerByName.Any(x =>
-					    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
+							x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
 				{
 					if (notify)
 					{
@@ -77,9 +77,9 @@ public class ManipulateSharpObjectService(
 				var aliases = playerSplit.Skip(1).Select(x => x.ToPlainText()).ToArray();
 
 				if (tryFindPlayerByName
-				    .SelectMany(x => x.Aliases ?? [])
-				    .Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
-				    .Any())
+						.SelectMany(x => x.Aliases ?? [])
+						.Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
+						.Any())
 				{
 					if (notify)
 					{
@@ -175,7 +175,7 @@ public class ManipulateSharpObjectService(
 
 			return Errors.InvalidFlag;
 		}
-		
+
 		// Check flag set/unset permissions
 		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
 		if (requiredPermissions is not null && requiredPermissions.Length > 0)
@@ -190,7 +190,7 @@ public class ManipulateSharpObjectService(
 					break;
 				}
 			}
-			
+
 			if (!hasPermission)
 			{
 				if (notify)
@@ -198,7 +198,7 @@ public class ManipulateSharpObjectService(
 					var action = unset ? "unset" : "set";
 					await notifyService.Notify(executor, $"Permission denied: You lack the required permissions to {action} flag {realFlag.Name}.");
 				}
-				
+
 				return Errors.ErrorPerm;
 			}
 		}
@@ -206,42 +206,42 @@ public class ManipulateSharpObjectService(
 		switch (unset)
 		{
 			case true when !await obj.HasFlag(realFlag.Name):
-			{
-				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Unset.");
-				}
+					if (notify)
+					{
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Unset.");
+					}
 
-				break;
-			}
+					break;
+				}
 			case true:
-			{
-				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag.Name} Unset.");
+					if (notify)
+					{
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} Unset.");
+					}
+
+					await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
+
+					// Publish notification for OBJECT`FLAG event
+					await publisher.Publish(new ObjectFlagChangedNotification(
+						obj,
+						realFlag.Name,
+						"FLAG",
+						false, // IsSet = false (clearing)
+						executor.Object().DBRef));
+
+					break;
 				}
-
-				await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
-
-				// Publish notification for OBJECT`FLAG event
-				await publisher.Publish(new ObjectFlagChangedNotification(
-					obj,
-					realFlag.Name,
-					"FLAG",
-					false, // IsSet = false (clearing)
-					executor.Object().DBRef));
-
-				break;
-			}
 			case false when await obj.HasFlag(realFlag.Name):
-			{
-				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Set.");
-				}
+					if (notify)
+					{
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Set.");
+					}
 
-				break;
-			}
+					break;
+				}
 			case false:
 				if (notify)
 				{
@@ -284,12 +284,12 @@ public class ManipulateSharpObjectService(
 			}
 			return true;
 		}
-		
+
 		var allPowers = mediator.CreateStream(new GetPowersQuery());
-		
+
 		var found = await allPowers
-			.FirstOrDefaultAsync(x => 
-				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)  
+			.FirstOrDefaultAsync(x =>
+				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
 				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
 
 		if (found is null)
@@ -315,7 +315,7 @@ public class ManipulateSharpObjectService(
 			"POWER",
 			true, // IsSet = true (setting)
 			executor.Object().DBRef));
-		
+
 		return true;
 	}
 
@@ -339,12 +339,12 @@ public class ManipulateSharpObjectService(
 			}
 			return true;
 		}
-		
+
 		var allPowers = mediator.CreateStream(new GetPowersQuery());
-		
+
 		var found = await allPowers
-			.FirstOrDefaultAsync(x => 
-				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)  
+			.FirstOrDefaultAsync(x =>
+				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
 				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
 
 		if (found is null)
@@ -370,7 +370,7 @@ public class ManipulateSharpObjectService(
 			"POWER",
 			false, // IsSet = false (clearing)
 			executor.Object().DBRef));
-		
+
 		return true;
 	}
 
@@ -399,7 +399,7 @@ public class ManipulateSharpObjectService(
 		{
 			// Unset each power
 			await mediator.Send(new UnsetObjectPowerCommand(obj, power));
-			
+
 			// Publish notification for each power cleared
 			await publisher.Publish(new ObjectFlagChangedNotification(
 				obj,
@@ -407,7 +407,7 @@ public class ManipulateSharpObjectService(
 				"POWER",
 				false, // IsSet = false (clearing)
 				executor.Object().DBRef));
-			
+
 			powersCleared++;
 		}
 
@@ -421,8 +421,8 @@ public class ManipulateSharpObjectService(
 
 	public async ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj) 
-		    || !await permissionService.Controls(executor, newOwner))
+		if (!await permissionService.Controls(executor, obj)
+				|| !await permissionService.Controls(executor, newOwner))
 		{
 			if (notify)
 			{
@@ -430,14 +430,14 @@ public class ManipulateSharpObjectService(
 			}
 			return Errors.ErrorPerm;
 		}
-		
+
 		// Ownership transfer logic confirmed:
 		// - Executor must control the object being transferred (prevents unauthorized changes)
 		// - Executor must control the new owner (prevents forcing ownership on others)
 		// This matches PennMUSH behavior where @chown requires control of both parties
-		
+
 		await mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
-		
+
 		return true;
 	}
 
@@ -449,7 +449,7 @@ public class ManipulateSharpObjectService(
 		var controls = await permissionService.Controls(executor, newParent);
 		var hasLinkOk = await obj.HasFlag("LINK_OK");
 		var passesLock = permissionService.PassesLock(executor, newParent, LockType.Parent);
-		
+
 		if (!controls && !hasLinkOk && !passesLock)
 		{
 			if (notify)
@@ -461,7 +461,7 @@ public class ManipulateSharpObjectService(
 		}
 
 		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
-		
+
 		if (!safeToAdd)
 		{
 			if (notify)
@@ -489,9 +489,9 @@ public class ManipulateSharpObjectService(
 			await notifyService.Notify(executor, "Permission denied.");
 			return Errors.ErrorPerm;
 		}
-		
+
 		await mediator.Send(new UnsetObjectParentCommand(obj));
-		
+
 		return true;
 	}
 
@@ -510,7 +510,7 @@ public class ManipulateSharpObjectService(
 		}
 
 		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, database, obj, newZone);
-		
+
 		if (!safeToAdd)
 		{
 			if (notify)
@@ -541,14 +541,14 @@ public class ManipulateSharpObjectService(
 			}
 			return Errors.ErrorPerm;
 		}
-		
+
 		await mediator.Send(new UnsetObjectZoneCommand(obj));
-		
+
 		if (notify)
 		{
 			await notifyService.Notify(executor, "Zone cleared.");
 		}
-		
+
 		return true;
 	}
 }

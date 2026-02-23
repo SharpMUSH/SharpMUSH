@@ -8,7 +8,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Server;
 
 public class StartupHandler(
-	ILogger<StartupHandler> logger, 
+	ILogger<StartupHandler> logger,
 	IExpandedObjectDataService data,
 	IOptionsWrapper<SharpMUSHOptions> options)
 	: IHostedService

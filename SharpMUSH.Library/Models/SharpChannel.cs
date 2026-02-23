@@ -1,13 +1,13 @@
-﻿using System.Text.Json.Serialization;
-using DotNext.Threading;
+﻿using DotNext.Threading;
 using SharpMUSH.Library.DiscriminatedUnions;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
 
 public class SharpChannel
 {
 	public record MemberAndStatus(AnySharpObject Member, SharpChannelStatus Status);
-	
+
 	[JsonIgnore] public string? Id { get; set; }
 	public required MString Name { get; set; }
 	public MString Description { get; set; } = MModule.empty();

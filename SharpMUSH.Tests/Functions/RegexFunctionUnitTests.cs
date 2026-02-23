@@ -125,8 +125,8 @@ public class RegexFunctionUnitTests
 
 	[Test]
 	[Arguments("regeditall(test,t,T)", "TesT")] // All matches
-	// Note: The capstr function would need to be implemented for this test to work fully
-	// [Arguments("regeditall(this test is the best string,(.)est,capstr($1)rash)", "this Trash is the Brash string")]
+																							// Note: The capstr function would need to be implemented for this test to work fully
+																							// [Arguments("regeditall(this test is the best string,(.)est,capstr($1)rash)", "this Trash is the Brash string")]
 	public async Task Regeditall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

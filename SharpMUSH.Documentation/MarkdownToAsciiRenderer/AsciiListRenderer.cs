@@ -1,5 +1,3 @@
-using System.Drawing;
-using ANSILibrary;
 using Markdig.Syntax;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -11,7 +9,7 @@ public class AsciiListRenderer : AsciiObjectRenderer<ListBlock>
 		var listItemIndex = 1;
 		// Create a dimmed style for list bullets/numbers
 		var bulletStyle = Ansi.Create(faint: true);
-		
+
 		foreach (var item in obj)
 		{
 			if (item is ListItemBlock listItem)
@@ -27,20 +25,20 @@ public class AsciiListRenderer : AsciiObjectRenderer<ListBlock>
 				{
 					prefix = MModule.markupSingle(bulletStyle, "- ");
 				}
-				
+
 				// Write the prefix with markup
 				renderer.Write(prefix);
-				
+
 				// Indent subsequent lines of multi-line list items
 				var indent = new string(' ', prefix.ToPlainText().Length);
 				renderer.PushIndent(indent);
-				
+
 				// Write the list item content
 				renderer.WriteChildren(listItem);
-				
+
 				// Pop the indent
 				renderer.PopIndent();
-				
+
 				// Ensure we're on a new line for the next item
 				renderer.EnsureLine();
 			}

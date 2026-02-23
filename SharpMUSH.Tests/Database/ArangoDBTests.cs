@@ -1,8 +1,8 @@
-﻿using System.Drawing;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using System.Drawing;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -15,7 +15,7 @@ public class ArangoDBTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	
+
 	[Test]
 	public async Task TestRoomZero()
 	{
@@ -90,7 +90,7 @@ public class ArangoDBTests
 		var flags = await Database.GetAttributeFlagsAsync().ToArrayAsync();
 		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
-	
+
 	[Test]
 	public async Task SettingAKnownAttributeSetsFlags()
 	{
@@ -99,7 +99,7 @@ public class ArangoDBTests
 		await Database.SetAttributeAsync(playerOneDbRef, ["TZ"], MModule.single("America/Chicago"), playerOne);
 		var result = Database.GetAttributeAsync(playerOneDbRef, ["TZ"]);
 		var realResult = await result!.FirstOrDefaultAsync();
-		
+
 		await Assert.That(realResult).IsNotNull();
 		await Assert.That(realResult!.Flags).IsNotNull();
 		await Assert.That(realResult.Flags).Count().IsEqualTo(2);
@@ -131,9 +131,9 @@ public class ArangoDBTests
 		var existingSingle = await (Database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))!.ToListAsync();
 		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
 		var existingLeaf = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves"]))!.ToListAsync();
-		var existingLeaf2 =await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]))!.ToListAsync();
-		var existingDeep1 =await (Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))!.ToListAsync();
-		var existingDeep2 =await (Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))!.ToListAsync();
+		var existingLeaf2 = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]))!.ToListAsync();
+		var existingDeep1 = await (Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))!.ToListAsync();
+		var existingDeep2 = await (Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))!.ToListAsync();
 
 		var obj = await Database.GetObjectNodeAsync(playerOneDBRef);
 
@@ -174,24 +174,24 @@ public class ArangoDBTests
 	{
 		// Create a parent chain: Parent1 -> Parent2 -> ChildRoom
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		
+
 		// Create Parent1
 		var parent1Dbref = await Database.CreateRoomAsync("Parent1", playerOne);
 		var parent1 = (await Database.GetObjectNodeAsync(parent1Dbref)).AsRoom;
-		
+
 		// Create Parent2 with Parent1 as its parent
 		var parent2Dbref = await Database.CreateRoomAsync("Parent2", playerOne);
 		var parent2 = (await Database.GetObjectNodeAsync(parent2Dbref)).AsRoom;
 		await Database.SetObjectParent(parent2, parent1);
-		
+
 		// Create ChildRoom with Parent2 as its parent
 		var childDbref = await Database.CreateRoomAsync("ChildRoom", playerOne);
 		var child = (await Database.GetObjectNodeAsync(childDbref)).AsRoom;
 		await Database.SetObjectParent(child, parent2);
-		
+
 		// Get the full parent chain using Object ID (not Room ID)
 		var parents = await (Database.GetParentsAsync(child.Object.Id!, CancellationToken.None)).ToListAsync();
-		
+
 		// Should get Parent2 and Parent1 in order
 		await Assert.That(parents).Count().IsEqualTo(2);
 		await Assert.That(parents[0].Key).IsEqualTo(parent2.Object.Key);

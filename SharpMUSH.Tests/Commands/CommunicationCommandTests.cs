@@ -233,7 +233,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' added for channel Public")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))),
 				null);
 	}
 
@@ -250,7 +250,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(expected)) ||
-				(msg.IsT1 && msg.AsT1.Contains(expected))), 
+				(msg.IsT1 && msg.AsT1.Contains(expected))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -262,7 +262,7 @@ public class CommunicationCommandTests
 		var alias = command.Split(' ')[1];
 		// First add an alias
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
-		
+
 		// Now delete it
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -272,7 +272,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' deleted")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' deleted"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' deleted"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -289,7 +289,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -305,7 +305,7 @@ public class CommunicationCommandTests
 		// The exact format depends on ChannelList.Handle, but it should send something
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -318,10 +318,10 @@ public class CommunicationCommandTests
 		var parts = command.Split('=');
 		var alias = parts[0].Split(' ')[1];
 		var title = parts[1];
-		
+
 		// First add an alias
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
-		
+
 		// Now set title
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -332,7 +332,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"for alias '{alias}'")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -349,7 +349,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -361,7 +361,7 @@ public class CommunicationCommandTests
 		// First add some aliases
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST2=Public"));
-		
+
 		// Now list them
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -371,9 +371,9 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				msg.IsT0 && 
-				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist1") && 
-				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist2")), 
+				msg.IsT0 &&
+				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist1") &&
+				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist2")),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -391,7 +391,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains("no channel aliases")) ||
-				(msg.IsT1 && msg.AsT1.Contains("no channel aliases"))), 
+				(msg.IsT1 && msg.AsT1.Contains("no channel aliases"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 }

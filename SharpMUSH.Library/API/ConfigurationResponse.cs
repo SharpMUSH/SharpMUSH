@@ -1,6 +1,6 @@
-﻿using System.Text.Json.Serialization;
-using SharpMUSH.Configuration;
+﻿using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.API;
 
@@ -11,13 +11,13 @@ public class ConfigurationResponse
 	/// </summary>
 	[JsonPropertyName("configuration")]
 	public SharpMUSHOptions Configuration { get; set; } = null!;
-	
+
 	/// <summary>
 	/// Basic metadata (legacy format)
 	/// </summary>
 	[JsonPropertyName("metadata")]
 	public Dictionary<string, SharpConfigAttribute> Metadata { get; set; } = [];
-	
+
 	/// <summary>
 	/// Enhanced metadata for rich UI rendering
 	/// </summary>
@@ -35,7 +35,7 @@ public class ConfigurationSchema
 	/// </summary>
 	[JsonPropertyName("categories")]
 	public List<CategoryMetadata> Categories { get; set; } = new();
-	
+
 	/// <summary>
 	/// All properties with enhanced metadata
 	/// </summary>

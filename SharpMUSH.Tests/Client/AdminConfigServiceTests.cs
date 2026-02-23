@@ -1,10 +1,8 @@
-using System.Net;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Client.Services;
+using System.Net;
+using System.Text;
 
 namespace SharpMUSH.Tests.Client;
 

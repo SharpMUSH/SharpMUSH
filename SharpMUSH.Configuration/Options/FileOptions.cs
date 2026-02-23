@@ -35,7 +35,7 @@ Description  = "Program used to decompress database files")] string UnCompressPr
 		Group = "Security Files",
 		Order = 1)]
 	string AccessFile,
-	
+
 	[property: SharpConfig(
 		Name = "names_file",
 		Category = "File",
@@ -61,7 +61,7 @@ Description  = "Amount of memory allocated for chunk caching")] string ChunkCach
 		Group = "SSL Configuration",
 		Order = 1)]
 	string? SSLPrivateKeyFile,
-	
+
 	[property: SharpConfig(
 		Name = "ssl_certificate_file",
 		Category = "File",
@@ -69,7 +69,7 @@ Description  = "Amount of memory allocated for chunk caching")] string ChunkCach
 		Group = "SSL Configuration",
 		Order = 2)]
 	string? SSLCertificateFile,
-	
+
 	[property: SharpConfig(
 		Name = "ssl_ca_file",
 		Category = "File",
@@ -77,7 +77,7 @@ Description  = "Amount of memory allocated for chunk caching")] string ChunkCach
 		Group = "SSL Configuration",
 		Order = 3)]
 	string? SSLCAFile,
-	
+
 	[property: SharpConfig(
 		Name = "ssl_ca_dir",
 		Category = "File",
@@ -85,7 +85,7 @@ Description  = "Amount of memory allocated for chunk caching")] string ChunkCach
 		Group = "SSL Configuration",
 		Order = 4)]
 	string? SSLCADirectory,
-	
+
 	[property: SharpConfig(
 		Name = "dict_file",
 		Category = "File",
@@ -93,7 +93,7 @@ Description  = "Amount of memory allocated for chunk caching")] string ChunkCach
 		Group = "Resource Files",
 		Order = 1)]
 	string? DictionaryFile,
-	
+
 	[property: SharpConfig(
 		Name = "colors_file",
 		Category = "File",

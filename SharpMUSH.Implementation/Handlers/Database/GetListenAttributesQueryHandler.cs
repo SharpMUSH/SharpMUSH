@@ -1,7 +1,5 @@
 using Mediator;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
@@ -33,21 +31,21 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 
 			var plainValue = attr.Value.ToPlainText();
 			var match = ListenPatternRegex.Match(plainValue);
-			
+
 			if (!match.Success)
 				continue;
 
 			// Extract listen pattern
 			var pattern = match.Groups[1].Value;
 			var isRegex = attr.Flags.Any(flag => flag.Name == "REGEX");
-			
+
 			// Determine behavior based on attribute flags
 			var behavior = ListenBehavior.AHear; // Default
 			if (attr.Flags.Any(flag => flag.Name == "AAHEAR"))
 				behavior = ListenBehavior.AAHear;
 			else if (attr.Flags.Any(flag => flag.Name == "AMHEAR"))
 				behavior = ListenBehavior.AMHear;
-			
+
 			try
 			{
 				// Pre-compile the regex pattern

@@ -37,8 +37,6 @@ public class MathFunctionUnitTests
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
-	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
-	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	[Arguments("lnum(0)", "")]
 	[Arguments("lnum(1)", "0")]
@@ -103,7 +101,7 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("eq(1,2)", "0")]
 	[Arguments("eq(1,1)", "1")]
@@ -116,7 +114,7 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("gt(1,2)", "0")]
 	[Arguments("gt(1,1)", "0")]
@@ -133,7 +131,7 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("lt(1,2)", "1")]
 	[Arguments("lt(1,1)", "0")]
@@ -150,7 +148,7 @@ public class MathFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("lte(1,2)", "1")]
 	[Arguments("lte(1,1)", "1")]

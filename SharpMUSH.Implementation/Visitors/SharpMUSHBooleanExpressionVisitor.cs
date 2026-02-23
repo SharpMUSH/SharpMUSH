@@ -1,6 +1,4 @@
-﻿using System.Linq.Expressions;
-using System.Text.RegularExpressions;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -8,6 +6,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Visitors;
 
@@ -26,13 +26,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 	ParameterExpression unlocker) : SharpMUSHBoolExpParserBaseVisitor<Expression>
 {
 	protected override Expression AggregateResult(Expression aggregate, Expression nextResult)
-		=> new Expression[] { aggregate, nextResult }.FirstOrDefault(x => x is not null) 
+		=> new Expression[] { aggregate, nextResult }.FirstOrDefault(x => x is not null)
 			?? Expression.Constant(false);
 
 	// Compiled expressions for bit checks (flag, power, type)
 	// Note: These use .GetAwaiter().GetResult() which is necessary for Expression trees
 	// that cannot be async. This is acceptable technical debt in this context.
-	
+
 	private readonly Expression<Func<AnySharpObject, string, bool>> _hasFlag = (dbRef, flag)
 		=> dbRef.Object().Flags.Value
 			.AnyAsync(x => x.Name == flag || x.Symbol == flag, CancellationToken.None).AsTask().GetAwaiter().GetResult();
@@ -106,7 +106,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 	public override Expression VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
 		var targetName = context.@string().GetText();
-		
+
 		// For owner locks, check if the unlocker is owned by the owner of the named object
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
@@ -115,14 +115,14 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// Get the owner of the unlocker
 				var unlockerOwner = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
 				var unlockerOwnerDbRef = unlockerOwner.Object.DBRef;
-				
+
 				// If target is "me", check if unlocker is owned by gated object's owner
 				if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
 				{
 					var gatedOwner = gatedObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
 					return unlockerOwnerDbRef == gatedOwner.Object.DBRef;
 				}
-				
+
 				// If target is a DBRef like "#123", compare owner DBRefs
 				if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
 				{
@@ -132,15 +132,15 @@ public class SharpMUSHBooleanExpressionVisitor(
 							CancellationToken.None)
 						.AsTask()
 						.ConfigureAwait(false).GetAwaiter().GetResult();
-					
+
 					if (targetObjResult.IsNone())
 						return false;
-						
+
 					var targetObj = targetObjResult.Known();
 					var targetOwner = targetObj.Object().Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
 					return unlockerOwnerDbRef == targetOwner.Object.DBRef;
 				}
-				
+
 				// Name-based lookup using mediator query
 				// Note: Parser is null as substitutions should have been pre-evaluated
 				var locateResult = med.Send(
@@ -148,7 +148,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					CancellationToken.None)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
-				
+
 				return locateResult.Match(
 					player =>
 					{
@@ -187,18 +187,18 @@ public class SharpMUSHBooleanExpressionVisitor(
 	public override Expression VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 	{
 		var targetName = context.@string().GetText();
-		
+
 		// For carry locks, check if the unlocker is carrying the named object or IS the object
 		Func<AnySharpObject, string, bool> func = (unlockerObj, target) =>
 		{
 			// Check if unlocker IS the target object (name match)
 			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
 				return true;
-			
+
 			// Check aliases too
 			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
 				return true;
-			
+
 			// If target is a DBRef, check if carrying that specific object
 			if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
 			{
@@ -218,7 +218,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				}
 				return false;
 			}
-			
+
 			// For name-based object lookup in inventory
 			try
 			{
@@ -228,7 +228,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					CancellationToken.None)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
-				
+
 				return locateResult.Match(
 					player => true,  // Found object in inventory
 					room => true,
@@ -242,7 +242,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 			{
 				// Catch any errors during locate operation
 			}
-			
+
 			return false;
 		};
 
@@ -258,14 +258,14 @@ public class SharpMUSHBooleanExpressionVisitor(
 	public override Expression VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)
 	{
 		var typeText = context.objectType().GetText().ToUpper().Trim();
-		
+
 		// Validate that the type is one of the four valid MUSH object types
 		if (typeText != "PLAYER" && typeText != "THING" && typeText != "EXIT" && typeText != "ROOM")
 		{
 			// Return false constant if type is invalid
 			return Expression.Constant(false);
 		}
-		
+
 		return Expression.Invoke(_isType, unlocker, Expression.Constant(typeText));
 	}
 
@@ -284,7 +284,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				var result = med.Send(isOnChannelQuery, CancellationToken.None)
 					.GetAwaiter()
 					.GetResult();
-				
+
 				return result;
 			}
 			catch (Exception)
@@ -315,11 +315,11 @@ public class SharpMUSHBooleanExpressionVisitor(
 				{
 					if (!attributes.Any())
 						return false;
-						
+
 					var listValue = MModule.plainText(attributes.First().Value);
 					var dbrefs = listValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 					var unlockerDbRef = unlockerObj.Object().DBRef;
-					
+
 					// Check if unlocker's dbref is in the list
 					foreach (var dbrefStr in dbrefs)
 					{
@@ -328,13 +328,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 						if (parsedDbRef.IsSome())
 						{
 							var lockDbRef = parsedDbRef.AsValue();
-							
+
 							// If lock specifies creation time (objid format), both number and timestamp must match
 							// This prevents locks from matching recycled dbrefs after objects are destroyed
 							if (lockDbRef.CreationMilliseconds.HasValue)
 							{
-								if ((lockDbRef.Number == unlockerDbRef.Number) 
-								    && (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds))
+								if ((lockDbRef.Number == unlockerDbRef.Number)
+										&& (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds))
 								{
 									return true;
 								}
@@ -349,7 +349,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 							}
 						}
 					}
-					
+
 					return false;
 				},
 				none => false,
@@ -372,7 +372,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// Get the owner of the unlocker
 				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
-				
+
 				// Get the LASTIP attribute from the owner
 				var attrResult = med.Send(
 						new GetAttributeServiceQuery(owner, owner, "LASTIP", IAttributeService.AttributeMode.Execute, true),
@@ -385,9 +385,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 					{
 						if (!attributes.Any())
 							return false;
-							
+
 						var actualIp = MModule.plainText(attributes.First().Value);
-						
+
 						// Use wildcard matching for IP pattern
 						var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
 						return Regex.IsMatch(actualIp, regexPattern, RegexOptions.IgnoreCase);
@@ -418,7 +418,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// Get the owner of the unlocker
 				var ownerTask = unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
 				var owner = ownerTask.GetAwaiter().GetResult();
-				
+
 				// Get the LASTSITE attribute from the owner
 				var attrResult = med.Send(
 						new GetAttributeServiceQuery(owner, owner, "LASTSITE", IAttributeService.AttributeMode.Execute, true),
@@ -431,9 +431,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 					{
 						if (!attributes.Any())
 							return false;
-							
+
 						var actualHost = MModule.plainText(attributes.First().Value);
-						
+
 						// Use wildcard matching for hostname pattern
 						var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
 						return Regex.IsMatch(actualHost, regexPattern, RegexOptions.IgnoreCase);
@@ -455,19 +455,19 @@ public class SharpMUSHBooleanExpressionVisitor(
 	public override Expression VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
 	{
 		var pattern = context.@string().GetText();
-		
+
 		// Create a lambda that calls our MatchesName method
 		// We can't use Expression.Invoke with a method call directly, so we create a Func
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, pat) =>
 			MatchesName(unlockerObj, pat);
-		
+
 		return Expression.Invoke(Expression.Constant(func), gated, unlocker, Expression.Constant(pattern));
 	}
 
 	public override Expression VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
 		var targetIdentifier = context.@string().GetText();
-		
+
 		// Check if unlocker matches the exact target object
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
@@ -478,20 +478,20 @@ public class SharpMUSHBooleanExpressionVisitor(
 				var owner = ownerTask.GetAwaiter().GetResult();
 				return unlockerObj.Object().DBRef == owner.Object.DBRef;
 			}
-			
+
 			// Try to parse as DBRef (supports both #123 and #123:timestamp formats)
 			var parsedDbRef = HelperFunctions.ParseDbRef(target);
 			if (parsedDbRef.IsSome())
 			{
 				var lockDbRef = parsedDbRef.AsValue();
 				var unlockerDbRef = unlockerObj.Object().DBRef;
-				
+
 				// If lock specifies creation time (objid format), both number and timestamp must match
 				// This prevents locks from matching recycled dbrefs after objects are destroyed
 				if (lockDbRef.CreationMilliseconds.HasValue)
 				{
-					return (lockDbRef.Number == unlockerDbRef.Number) 
-					       && (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds);
+					return (lockDbRef.Number == unlockerDbRef.Number)
+								 && (lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds);
 				}
 				// If lock doesn't specify creation time (bare dbref), only match number for backward compatibility
 				else
@@ -499,16 +499,16 @@ public class SharpMUSHBooleanExpressionVisitor(
 					return lockDbRef.Number == unlockerDbRef.Number;
 				}
 			}
-			
+
 			// Otherwise try exact name match
 			// Check if the unlocker itself matches
 			if (unlockerObj.Object().Name.Equals(target, StringComparison.OrdinalIgnoreCase))
 				return true;
-			
+
 			// Check aliases
 			if (unlockerObj.Aliases != null && unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
 				return true;
-			
+
 			return false;
 		};
 
@@ -533,9 +533,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 				{
 					if (!attributes.Any())
 						return false;
-						
+
 					var actualValue = MModule.plainText(attributes.First().Value);
-					
+
 					// Handle comparison operators
 					if (expectedValue.StartsWith('>'))
 					{
@@ -590,14 +590,14 @@ public class SharpMUSHBooleanExpressionVisitor(
 				{
 					if (!attributes.Any())
 						return false;
-						
+
 					// Get the attribute value and evaluate it
 					// NOTE: For full PennMUSH compatibility, the attribute should be evaluated with:
 					// %# = unlocker (the object trying to pass the lock)
 					// %! = gated object (the object being locked)
 					// This would require parser context injection
 					var actualValue = MModule.plainText(attributes.First().Value);
-					
+
 					// Compare with expected value (case-insensitive)
 					return actualValue.Equals(expected, StringComparison.OrdinalIgnoreCase);
 				},
@@ -622,7 +622,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 			try
 			{
 				AnySharpObject? targetObj = null;
-				
+
 				// If target is a DBRef like "#123", resolve it
 				if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
 				{
@@ -631,10 +631,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 							CancellationToken.None)
 						.AsTask()
 						.ConfigureAwait(false).GetAwaiter().GetResult();
-					
+
 					if (targetObjResult.IsNone())
 						return false;
-						
+
 					targetObj = targetObjResult.Known();
 				}
 				else
@@ -645,7 +645,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 						CancellationToken.None)
 						.AsTask()
 						.ConfigureAwait(false).GetAwaiter().GetResult();
-					
+
 					var found = locateResult.Match(
 						player => { targetObj = player; return true; },
 						room => { targetObj = room; return true; },
@@ -653,20 +653,20 @@ public class SharpMUSHBooleanExpressionVisitor(
 						thing => { targetObj = thing; return true; },
 						none => false,
 						error => false);
-					
+
 					if (!found)
 					{
 						return false;
 					}
 				}
-				
+
 				if (targetObj == null)
 					return false;
-					
+
 				// Get the lock from the target object
 				var lockData = targetObj.Object().Locks.GetValueOrDefault(lockType, new Library.Models.SharpLockData("#TRUE"));
 				var lockString = lockData.LockString;
-				
+
 				// Use mediator query to recursively evaluate the lock
 				// This breaks the circular dependency between parser and lock service
 				var evaluateResult = med.Send(
@@ -674,7 +674,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					CancellationToken.None)
 					.AsTask()
 					.ConfigureAwait(false).GetAwaiter().GetResult();
-				
+
 				return evaluateResult;
 			}
 			catch (Exception)

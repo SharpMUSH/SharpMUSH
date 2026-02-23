@@ -1,9 +1,9 @@
-using System.Collections.Concurrent;
-using System.Text;
-using SharpMUSH.Messaging.Abstractions;
+using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
-using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.Messaging.Abstractions;
+using System.Collections.Concurrent;
+using System.Text;
 
 namespace SharpMUSH.ConnectionServer.Services;
 
@@ -11,7 +11,7 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// Manages active connections in the ConnectionServer
 /// </summary>
 public class ConnectionServerService(
-	ILogger<ConnectionServerService> logger, 
+	ILogger<ConnectionServerService> logger,
 	IMessageBus publishEndpoint,
 	IConnectionStateStore? stateStore = null) : IConnectionServerService
 {
@@ -45,32 +45,42 @@ public class ConnectionServerService(
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
-		logger.LogInformation("Registered connection handle {Handle} from {IpAddress} ({Type})", handle, ipAddress, connectionType);
+			logger.LogInformation("Registered connection handle {Handle} from {IpAddress} ({Type})", handle, ipAddress, connectionType);
 			// Store in Redis if available
 			if (stateStore != null)
 			{
-				await stateStore.SetConnectionAsync(handle, new ConnectionStateData
+				try
 				{
-					Handle = handle,
-					PlayerRef = null,
-					State = "Connected",
-					IpAddress = ipAddress,
-					Hostname = hostname,
-					ConnectionType = connectionType,
-					ConnectedAt = DateTimeOffset.UtcNow,
-					LastSeen = DateTimeOffset.UtcNow,
-					Metadata = new Dictionary<string, string>
+					await stateStore.SetConnectionAsync(handle, new ConnectionStateData
 					{
-						{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-						{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-						{ "InternetProtocolAddress", ipAddress },
-						{ "HostName", hostname },
-						{ "ConnectionType", connectionType }
-					}
-				});
+						Handle = handle,
+						PlayerRef = null,
+						State = "Connected",
+						IpAddress = ipAddress,
+						Hostname = hostname,
+						ConnectionType = connectionType,
+						ConnectedAt = DateTimeOffset.UtcNow,
+						LastSeen = DateTimeOffset.UtcNow,
+						Metadata = new Dictionary<string, string>
+						{
+							{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+							{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+							{ "InternetProtocolAddress", ipAddress },
+							{ "HostName", hostname },
+							{ "ConnectionType", connectionType }
+						}
+					});
+				}
+				catch (Exception ex)
+				{
+					logger.LogWarning(ex, "Failed to persist connection state to Redis for handle {Handle}; continuing with publish", handle);
+				}
 			}
 
 			// Publish connection established message to MainProcess
+			logger.LogTrace("[KAFKA-PUBLISH] Publishing ConnectionEstablishedMessage - Handle: {Handle}, IP: {IpAddress}, Hostname: {Hostname}, Type: {ConnectionType}, Timestamp: {Timestamp}",
+				handle, ipAddress, hostname, connectionType, DateTimeOffset.UtcNow);
+
 			await publishEndpoint.Publish(new ConnectionEstablishedMessage(
 				handle,
 				ipAddress,
@@ -78,8 +88,10 @@ public class ConnectionServerService(
 				connectionType,
 				DateTimeOffset.UtcNow
 			));
+
+			logger.LogTrace("[KAFKA-PUBLISH] Successfully published ConnectionEstablishedMessage - Handle: {Handle}", handle);
 		}
-		catch(Exception ex)
+		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error registering connection handle: {Handle}", handle);
 			await outputFunction(Encoding.UTF8.GetBytes(ex.ToString()));
@@ -95,14 +107,26 @@ public class ConnectionServerService(
 			// Remove from Redis if available
 			if (stateStore != null)
 			{
-				await stateStore.RemoveConnectionAsync(handle);
+				try
+				{
+					await stateStore.RemoveConnectionAsync(handle);
+				}
+				catch (Exception ex)
+				{
+					logger.LogWarning(ex, "Failed to remove connection state from Redis for handle {Handle}; continuing with publish", handle);
+				}
 			}
 
 			// Publish connection closed message to MainProcess
+			logger.LogTrace("[KAFKA-PUBLISH] Publishing ConnectionClosedMessage - Handle: {Handle}, Timestamp: {Timestamp}",
+				handle, DateTimeOffset.UtcNow);
+
 			await publishEndpoint.Publish(new ConnectionClosedMessage(
 				handle,
 				DateTimeOffset.UtcNow
 			));
+
+			logger.LogTrace("[KAFKA-PUBLISH] Successfully published ConnectionClosedMessage - Handle: {Handle}", handle);
 		}
 
 		data?.DisconnectFunction();
@@ -164,7 +188,7 @@ public interface IConnectionServerService
 		Action disconnectFunction,
 		Func<string, string, ValueTask>? gmcpFunction = null,
 		SharpMUSH.ConnectionServer.Models.ProtocolCapabilities? capabilities = null);
-	
+
 	Task DisconnectAsync(long handle);
 
 	ConnectionServerService.ConnectionData? Get(long handle);

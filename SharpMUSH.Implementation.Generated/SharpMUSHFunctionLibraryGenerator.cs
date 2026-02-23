@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Immutable;
 using System.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace SharpMUSH.Implementation.Generated;
 
@@ -12,7 +11,7 @@ using FunctionInformation = (string Name, string ClassName, string MethodName, s
 public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 {
 	private const string ATTRIBUTENAME = "SharpMUSH.Library.Attributes.SharpFunctionAttribute";
-	
+
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
 		var provider = context.SyntaxProvider.ForAttributeWithMetadataName(ATTRIBUTENAME,
@@ -39,7 +38,7 @@ public sealed class SharpMUSHFunctionLibraryGenerator : IIncrementalGenerator
 		var minArgs = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "MinArgs").Value.Value?.ToString() ?? "0";
 		var maxArgs = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "MaxArgs").Value.Value?.ToString() ?? "32";
 		var flags = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Flags").Value.Value?.ToString() ??
-		            "FunctionFlags.Regular";
+								"FunctionFlags.Regular";
 		var restrictArg = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Restrict").Value;
 		var restrict = restrictArg.Kind == TypedConstantKind.Array
 			? restrictArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()

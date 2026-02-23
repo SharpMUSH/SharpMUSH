@@ -1,10 +1,6 @@
-using System.Drawing;
 using Markdig;
 using Markdig.Extensions.AutoIdentifiers;
-using Markdig.Extensions.Tables;
-using MarkupString;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
-using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Documentation;
 
@@ -32,7 +28,7 @@ public class MarkdownToAsciiRendererTests
 		var pipeline = CreatePipeline();
 		var renderer = new MarkdownToAsciiRenderer(container);
 		pipeline.Setup(renderer);
-		
+
 		var doc = Markdown.Parse(markdown, pipeline);
 		return renderer.RenderToMarkupString(doc);
 	}
@@ -42,10 +38,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "Simple plain text";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Simple plain text");
 	}
@@ -55,10 +51,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "**bold text**";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("bold text");
 		// Should contain ANSI codes for bold
@@ -70,10 +66,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "*italic text*";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("italic text");
 		// Should contain ANSI codes
@@ -85,10 +81,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "# Heading 1";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Heading 1\n");
 		// Should contain ANSI codes for underline and bold
@@ -101,10 +97,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "## Heading 2";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Heading 2\n");
 		await Assert.That(result.ToString()).Contains(ANSILibrary.ANSI.Underlined);
@@ -116,10 +112,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "### Heading 3";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Heading 3\n");
 		await Assert.That(result.ToString()).Contains(ANSILibrary.ANSI.Underlined);
@@ -130,10 +126,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "Some `inline code` here";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Some inline code here");
 	}
@@ -143,10 +139,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "```\ncode line 1\ncode line 2\n```";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).Contains("code line 1");
 		await Assert.That(result.ToPlainText()).Contains("code line 2");
@@ -157,10 +153,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "[link text](https://example.com)";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("link text");
 		// Note: Link URL storage in markup is a TODO - for now we just render the text
@@ -171,10 +167,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "<https://example.com>";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("https://example.com");
 	}
@@ -184,10 +180,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange - two spaces at end of line creates line break
 		var markdown = "Line 1  \nLine 2";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).Contains("Line 1");
 		await Assert.That(result.ToPlainText()).Contains("Line 2");
@@ -198,10 +194,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "Paragraph 1\n\nParagraph 2";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).Contains("Paragraph 1");
 		await Assert.That(result.ToPlainText()).Contains("Paragraph 2");
@@ -212,10 +208,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "***bold and italic***";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("bold and italic");
 	}
@@ -225,10 +221,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "Test &amp; entity";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).Contains("&");
 	}
@@ -238,10 +234,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "- Item 1\n- Item 2\n- Item 3";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).Contains("- Item 1");
 		await Assert.That(result.ToPlainText()).Contains("- Item 2");
@@ -253,10 +249,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "1. First item\n2. Second item\n3. Third item";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).Contains("1. First item");
 		await Assert.That(result.ToPlainText()).Contains("2. Second item");
@@ -268,10 +264,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "> This is a quote";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		await Assert.That(result.ToPlainText()).Contains("This is a quote");
 		// Should be indented with 2 spaces
@@ -286,10 +282,10 @@ public class MarkdownToAsciiRendererTests
 | --- | --- |
 | Cell 1 | Cell 2 |
 | Cell 3 | Cell 4 |";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		var plainText = result.ToPlainText();
 		await Assert.That(plainText).Contains("Header 1");
@@ -311,10 +307,10 @@ public class MarkdownToAsciiRendererTests
 		var markdown = @"| Left | Center | Right |
 | :--- | :---: | ---: |
 | L1 | C1 | R1 |";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		var plainText = result.ToPlainText();
 		await Assert.That(plainText).Contains("Left");
@@ -327,10 +323,10 @@ public class MarkdownToAsciiRendererTests
 	{
 		// Arrange
 		var markdown = "- Item 1\n  - Nested 1\n  - Nested 2\n- Item 2";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		var plainText = result.ToPlainText();
 		await Assert.That(plainText).Contains("Item 1");
@@ -353,10 +349,10 @@ Some text here.
 | Col1 | Col2 |
 | --- | --- |
 | A | B |";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		var plainText = result.ToPlainText();
 		await Assert.That(plainText).Contains("Header");
@@ -373,16 +369,16 @@ Some text here.
 		var markdown = @"| Header |
 | --- |
 | Cell |";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		// The result should contain ANSI formatting codes (not just plain text)
 		// This verifies that the borders are styled with markup
 		var stringOutput = result.ToString();
 		var plainText = result.ToPlainText();
-		
+
 		// The string representation should be longer due to ANSI codes
 		await Assert.That(stringOutput.Length).IsGreaterThan(plainText.Length);
 		// Should contain the SGR escape sequence for faint/dim
@@ -394,16 +390,16 @@ Some text here.
 	{
 		// Arrange
 		var markdown = "- Item 1\n- Item 2";
-		
+
 		// Act
 		var result = RenderMarkdown(markdown);
-		
+
 		// Assert
 		// The result should contain ANSI formatting codes (not just plain text)
 		// This verifies that the bullets are styled with markup
 		var stringOutput = result.ToString();
 		var plainText = result.ToPlainText();
-		
+
 		// The string representation should be longer due to ANSI codes
 		await Assert.That(stringOutput.Length).IsGreaterThan(plainText.Length);
 		// Should contain the SGR escape sequence for faint/dim

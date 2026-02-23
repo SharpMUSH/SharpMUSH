@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Definitions;
-using TUnit.Core;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -62,7 +61,7 @@ public class WarningLockChecksTests
 		// Test that "all !lock-checks" removes LockProbs from All
 		var parsed = WarningTypeHelper.ParseWarnings("all !lock-checks");
 		await Assert.That(parsed.HasFlag(WarningType.LockProbs)).IsEqualTo(false);
-		
+
 		// But should still have other flags from All
 		await Assert.That(parsed.HasFlag(WarningType.ExitUnlinked)).IsEqualTo(true);
 	}
@@ -83,7 +82,7 @@ public class WarningLockChecksTests
 		var original = WarningType.LockProbs;
 		var unparsed = WarningTypeHelper.UnparseWarnings(original);
 		var reparsed = WarningTypeHelper.ParseWarnings(unparsed);
-		
+
 		await Assert.That(reparsed).IsEqualTo(original);
 	}
 

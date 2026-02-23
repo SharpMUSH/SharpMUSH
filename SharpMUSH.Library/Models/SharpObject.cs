@@ -1,8 +1,8 @@
-﻿using System.Collections.Immutable;
-using System.Text.Json.Serialization;
-using DotNext.Threading;
+﻿using DotNext.Threading;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
 
@@ -42,14 +42,14 @@ public class SharpObject
 	// RELATIONSHIP
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpAttribute>> Attributes { get; set; }
-	
+
 	// RELATIONSHIP
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<LazySharpAttribute>> LazyAttributes { get; set; }
 
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpAttribute>> AllAttributes { get; set; }
-	
+
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<LazySharpAttribute>> LazyAllAttributes { get; set; }
 
@@ -60,11 +60,11 @@ public class SharpObject
 	// RELATIONSHIP
 	[JsonIgnore]
 	public required AsyncLazy<AnyOptionalSharpObject> Parent { get; set; }
-	
+
 	// RELATIONSHIP
 	[JsonIgnore]
 	public required AsyncLazy<AnyOptionalSharpObject> Zone { get; set; }
-	
+
 	// RELATIONSHIP
 	[JsonIgnore]
 	public required Lazy<IAsyncEnumerable<SharpObject>?> Children { get; set; }

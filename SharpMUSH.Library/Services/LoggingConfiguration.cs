@@ -19,11 +19,11 @@ public static class LoggingConfiguration
 		// Check for Kubernetes-specific environment variables
 		var kubernetesServiceHost = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
 		var dotnetRunningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER");
-		
+
 		// KUBERNETES_SERVICE_HOST is set by Kubernetes
 		// DOTNET_RUNNING_IN_CONTAINER is set to "1" by the .NET runtime when in a container
-		return !string.IsNullOrEmpty(kubernetesServiceHost) || 
-		       !string.IsNullOrEmpty(dotnetRunningInContainer);
+		return !string.IsNullOrEmpty(kubernetesServiceHost) ||
+					 !string.IsNullOrEmpty(dotnetRunningInContainer);
 	}
 
 	/// <summary>

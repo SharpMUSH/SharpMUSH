@@ -1,9 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -99,8 +97,6 @@ public class HttpCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), "(HTTP): Content-Type set to text/html", Arg.Any<AnySharpObject>());
 	}
 
-	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
-	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async ValueTask Test_Respond_Type_Empty()
 	{
@@ -143,8 +139,6 @@ public class HttpCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), "Cannot set Content-Length header.", Arg.Any<AnySharpObject>());
 	}
 
-	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
-	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async ValueTask Test_Respond_Header_EmptyName()
 	{

@@ -69,7 +69,7 @@ public partial class Functions
 			? (await switchArg.ParsedMessage())?.ToPlainText() ?? ""
 			: "";
 		var switchesList = switchesText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		
+
 		var isRemit = switchesList.Contains("remit", StringComparer.OrdinalIgnoreCase);
 		var isOemit = switchesList.Contains("oemit", StringComparer.OrdinalIgnoreCase);
 		var isNospoof = switchesList.Contains("nospoof", StringComparer.OrdinalIgnoreCase);
@@ -96,8 +96,8 @@ public partial class Functions
 		var contents = executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
-			               .Where(async (x, _)
-				               => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
+										 .Where(async (x, _)
+											 => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
@@ -121,8 +121,8 @@ public partial class Functions
 		var contents = executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
-			               .Where(async (x, _)
-				               => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
+										 .Where(async (x, _)
+											 => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
@@ -402,10 +402,10 @@ public partial class Functions
 			{
 				// Find all objects in the zone
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
-				
+
 				// Get all rooms in the zone
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
-				
+
 				// Send message to each room
 				await foreach (var room in rooms)
 				{
@@ -674,10 +674,10 @@ public partial class Functions
 			{
 				// Find all objects in the zone
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
-				
+
 				// Get all rooms in the zone
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
-				
+
 				// Send message to each room
 				await foreach (var room in rooms)
 				{

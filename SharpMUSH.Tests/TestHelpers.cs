@@ -1,5 +1,5 @@
-using System.Runtime.CompilerServices;
 using OneOf;
+using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Tests;
 

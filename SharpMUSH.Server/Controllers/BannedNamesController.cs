@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
@@ -79,7 +78,7 @@ public class BannedNamesController(
 			var currentOptions = options.CurrentValue;
 			var currentNames = currentOptions.BannedNames.BannedNames.ToList();
 
-			var removed = currentNames.RemoveAll(n => 
+			var removed = currentNames.RemoveAll(n =>
 				n.Equals(name, StringComparison.OrdinalIgnoreCase)) > 0;
 
 			if (!removed)

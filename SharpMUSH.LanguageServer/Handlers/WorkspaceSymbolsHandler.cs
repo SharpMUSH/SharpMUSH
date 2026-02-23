@@ -20,7 +20,7 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 	}
 
 	public override Task<Container<WorkspaceSymbol>?> Handle(
-		WorkspaceSymbolParams request, 
+		WorkspaceSymbolParams request,
 		CancellationToken cancellationToken)
 	{
 		var symbols = new List<WorkspaceSymbol>();
@@ -28,7 +28,7 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 		try
 		{
 			var query = request.Query?.ToLower() ?? string.Empty;
-			
+
 			// Search through all documents
 			foreach (var (uri, document) in _documentManager.GetAllDocuments())
 			{
@@ -114,9 +114,9 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error searching workspace symbols: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		if (symbols.Count > 0)
@@ -128,7 +128,7 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 	}
 
 	protected override WorkspaceSymbolRegistrationOptions CreateRegistrationOptions(
-		WorkspaceSymbolCapability capability, 
+		WorkspaceSymbolCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new WorkspaceSymbolRegistrationOptions();

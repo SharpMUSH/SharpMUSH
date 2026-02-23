@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using DotNext;
+﻿using DotNext;
 using Mediator;
 using NaturalSort.Extension;
 using OneOf;
@@ -12,7 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using AsyncEnumerable = System.Linq.AsyncEnumerable;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Library.Services;
 
@@ -20,13 +19,13 @@ public class AttributeService(
 	IMediator mediator,
 	IPermissionService ps,
 	ILocateService locateService,
-	IValidateService validateService, 
+	IValidateService validateService,
 	INotifyService notifyService,
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IAttributeService
 {
 	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
-	
+
 	public async ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(
 		AnySharpObject executor,
 		AnySharpObject obj,
@@ -40,7 +39,7 @@ public class AttributeService(
 		{
 			return new Error<string>(Errors.ErrorObjectAttributeString);
 		}
-		
+
 		Func<AnySharpObject, AnySharpObject, SharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
 		{
 			IAttributeService.AttributeMode.Read => ps.CanViewAttribute,
@@ -60,14 +59,14 @@ public class AttributeService(
 
 		var attributeResult = mediator.CreateStream(
 			new GetAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent));
-		
+
 		var result = await attributeResult.FirstOrDefaultAsync();
-		
+
 		if (result == null)
 		{
 			return new None();
 		}
-		
+
 		return await permissionPredicate(executor, obj, result.Attributes)
 			? result.Attributes
 			: new Error<string>(permissionFailureType);
@@ -99,14 +98,14 @@ public class AttributeService(
 
 		var attributeResult = mediator.CreateStream(
 			new GetLazyAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent));
-		
+
 		var result = await attributeResult.FirstOrDefaultAsync();
-		
+
 		if (result == null)
 		{
 			return new None();
 		}
-		
+
 		return await permissionPredicate(executor, obj, result.Attributes)
 			? result.Attributes
 			: new Error<string>(permissionFailureType);
@@ -120,7 +119,7 @@ public class AttributeService(
 		{
 			return MModule.single(Errors.ErrorObjectAttributeString);
 		}
-		
+
 		var realExecutor = executor;
 
 		if (ignorePermissions)
@@ -142,7 +141,7 @@ public class AttributeService(
 		}
 
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
-		
+
 		// Use shared tracking collections from parser state.
 		// These are guaranteed to be non-null because:
 		// - CommandParse creates them for each command evaluation
@@ -151,21 +150,21 @@ public class AttributeService(
 		var callDepth = parser.CurrentState.CallDepth!;
 		var recursionDepths = parser.CurrentState.FunctionRecursionDepths!;
 		var limitExceeded = parser.CurrentState.LimitExceeded!;
-		
+
 		callDepth.Increment();
 		if (!recursionDepths.TryGetValue(attributeName, out var depth))
 		{
 			depth = 0;
 		}
 		recursionDepths[attributeName] = ++depth;
-		
+
 		// Check recursion limit for attributes (same as built-in functions)
 		if (depth > configuration.CurrentValue.Limit.FunctionRecursionLimit)
 		{
 			limitExceeded.IsExceeded = true;
 			return MModule.single(Errors.ErrorRecursion);
 		}
-		
+
 		try
 		{
 			var result = await parser.With(s =>
@@ -234,15 +233,15 @@ public class AttributeService(
 		{
 			return MModule.single(Errors.ErrorObjectAttributeString);
 		}
-		
+
 		var realExecutor = executor;
-		
+
 		if (ignorePermissions)
 		{
 			var maybeOne = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 			realExecutor = maybeOne.Known;
 		}
-		
+
 		// #apply evaluations. 
 		if (applyPredicate && !ignoreLambda)
 		{
@@ -261,7 +260,7 @@ public class AttributeService(
 			{
 				// Check function permission flags
 				var functionFlags = applyFunction.LibraryInformation.Attribute.Flags;
-				
+
 				// Check wizard/admin/god restrictions
 				if (functionFlags.HasFlag(FunctionFlags.GodOnly) && !await realExecutor.IsRoyalty())
 				{
@@ -279,7 +278,7 @@ public class AttributeService(
 				{
 					return MModule.single(Errors.ErrorAttrEvalPermissions);
 				}
-				
+
 				// Check custom restrictions
 				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
 				{
@@ -297,10 +296,11 @@ public class AttributeService(
 						return MModule.single(Errors.ErrorAttrEvalPermissions);
 					}
 				}
-				
+
 				var result = await parser.With(
-					s => s with { 
-						Arguments = slimArgs, 
+					s => s with
+					{
+						Arguments = slimArgs,
 						EnvironmentRegisters = slimArgs,
 						CallDepth = s.CallDepth,
 						FunctionRecursionDepths = s.FunctionRecursionDepths,
@@ -324,7 +324,8 @@ public class AttributeService(
 		// LAMBDA.
 		if (lambdaPredicate && !ignoreLambda)
 		{
-			var result = await parser.With(s => s with { 
+			var result = await parser.With(s => s with
+			{
 				Arguments = args,
 				CallDepth = s.CallDepth,
 				FunctionRecursionDepths = s.FunctionRecursionDepths,
@@ -585,11 +586,11 @@ public class AttributeService(
 		}
 
 		var attr = mediator.CreateStream(new GetAttributesQuery(obj.Object().DBRef, attributePattern, false, patternMode));
-		
+
 		var attrArr = await attr.ToArrayAsync();
-		
-		if (attrArr.IsNullOrEmpty() 
-		    || !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
+
+		if (attrArr.IsNullOrEmpty()
+				|| !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}

@@ -3,6 +3,7 @@ using KafkaFlow.Configuration;
 using KafkaFlow.Consumers.DistributionStrategies;
 using KafkaFlow.Serializer;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Configuration;
 using ConfluentCompressionType = Confluent.Kafka.CompressionType;
@@ -43,14 +44,11 @@ public static class KafkaFlowMessagingExtensions
 							.WithLingerMs(options.LingerMs) // Producer-level batching
 							.WithProducerConfig(new Confluent.Kafka.ProducerConfig
 							{
-								// Critical for message ordering: limit in-flight requests
-								// With max.in.flight.requests.per.connection = 1, messages are sent
-								// one batch at a time, guaranteeing ordering within a partition
 								MaxInFlight = options.MaxInFlightRequests,
-								
-								// Disable idempotence for better performance (acks=1 instead of acks=all)
-								// For MUSH game state, leader acknowledgment provides sufficient durability
-								EnableIdempotence = false
+								EnableIdempotence = false,
+								Debug = options.KafkaDebugContexts,
+								LogConnectionClose = options.KafkaDebugContexts != null,
+								StatisticsIntervalMs = options.KafkaStatisticsIntervalMs
 							})
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
@@ -63,7 +61,7 @@ public static class KafkaFlowMessagingExtensions
 
 		// Register the producer class
 		services.AddSingleton<SharpMushProducer>();
-		
+
 		// Register IMessageBus implementation
 		services.AddSingleton<IMessageBus, KafkaFlowMessageBus>();
 
@@ -97,14 +95,11 @@ public static class KafkaFlowMessagingExtensions
 							.WithLingerMs(options.LingerMs) // Producer-level batching
 							.WithProducerConfig(new Confluent.Kafka.ProducerConfig
 							{
-								// Critical for message ordering: limit in-flight requests
-								// With max.in.flight.requests.per.connection = 1, messages are sent
-								// one batch at a time, guaranteeing ordering within a partition
 								MaxInFlight = options.MaxInFlightRequests,
-								
-								// Disable idempotence for better performance (acks=1 instead of acks=all)
-								// For MUSH game state, leader acknowledgment provides sufficient durability
-								EnableIdempotence = false
+								EnableIdempotence = false,
+								Debug = options.KafkaDebugContexts,
+								LogConnectionClose = options.KafkaDebugContexts != null,
+								StatisticsIntervalMs = options.KafkaStatisticsIntervalMs
 							})
 							.AddMiddlewares(m => m.AddSerializer<JsonCoreSerializer>())
 					);
@@ -117,7 +112,7 @@ public static class KafkaFlowMessagingExtensions
 
 		// Register the producer class
 		services.AddSingleton<SharpMushProducer>();
-		
+
 		// Register IMessageBus implementation
 		services.AddSingleton<IMessageBus, KafkaFlowMessageBus>();
 
@@ -156,7 +151,7 @@ public interface IKafkaFlowConsumerConfigurator
 	/// <typeparam name="TMessage">The message type to consume and batch</typeparam>
 	/// <param name="batchSize">Maximum number of messages to batch</param>
 	/// <param name="batchTimeout">Maximum time to wait for a full batch</param>
-	void AddBatchConsumer<TMiddleware, TMessage>(int batchSize, TimeSpan batchTimeout) 
+	void AddBatchConsumer<TMiddleware, TMessage>(int batchSize, TimeSpan batchTimeout)
 		where TMiddleware : class, IMessageMiddleware
 		where TMessage : class;
 }
@@ -194,6 +189,9 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 		var messageType = consumerInterface.GetGenericArguments()[0];
 		var topic = GetTopicFromMessageType(messageType);
 
+		// Ensure topic exists (created on bus startup if missing)
+		_clusterBuilder.CreateTopicIfNotExists(topic, _options.TopicPartitions, _options.TopicReplicationFactor);
+
 		// Register the consumer in DI
 		var consumerServiceType = typeof(IMessageConsumer<>).MakeGenericType(messageType);
 		_services.AddTransient(consumerServiceType, typeof(TConsumer));
@@ -208,7 +206,12 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 			.WithGroupId(_options.ConsumerGroupId)
 			.WithBufferSize(_options.BatchMaxSize)
 			.WithWorkersCount(_options.WorkerCount) // Multiple workers for parallel processing
-			.WithAutoOffsetReset(KFAutoOffsetReset.Latest)
+			.WithAutoOffsetReset(KFAutoOffsetReset.Latest) // Start from current position on first start
+			.WithConsumerConfig(new Confluent.Kafka.ConsumerConfig
+			{
+				Debug = _options.KafkaDebugContexts,
+				StatisticsIntervalMs = _options.KafkaStatisticsIntervalMs
+			})
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()
 				.AddTypedHandlers(h =>
@@ -238,12 +241,15 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 		);
 	}
 
-	public void AddBatchConsumer<TMiddleware, TMessage>(int batchSize, TimeSpan batchTimeout) 
+	public void AddBatchConsumer<TMiddleware, TMessage>(int batchSize, TimeSpan batchTimeout)
 		where TMiddleware : class, IMessageMiddleware
 		where TMessage : class
 	{
 		var messageType = typeof(TMessage);
 		var topic = GetTopicFromMessageType(messageType);
+
+		// Ensure topic exists (created on bus startup if missing)
+		_clusterBuilder.CreateTopicIfNotExists(topic, _options.TopicPartitions, _options.TopicReplicationFactor);
 
 		// Register the middleware in DI
 		_services.AddTransient<TMiddleware>();
@@ -262,7 +268,12 @@ public class KafkaFlowConsumerConfigurator : IKafkaFlowConsumerConfigurator
 			.WithBufferSize(_options.BatchMaxSize)
 			.WithWorkersCount(_options.WorkerCount)
 			.WithWorkerDistributionStrategy<BytesSumDistributionStrategy>()
-			.WithAutoOffsetReset(KFAutoOffsetReset.Latest)
+			.WithAutoOffsetReset(KFAutoOffsetReset.Latest) // Start from current position on first start
+			.WithConsumerConfig(new Confluent.Kafka.ConsumerConfig
+			{
+				Debug = _options.KafkaDebugContexts,
+				StatisticsIntervalMs = _options.KafkaStatisticsIntervalMs
+			})
 			.AddMiddlewares(middlewares => middlewares
 				.AddDeserializer<JsonCoreDeserializer>()
 				.AddBatching(batchSize, batchTimeout) // Accumulate messages into a batch

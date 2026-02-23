@@ -34,18 +34,18 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
-		
+
 		if (location.IsNone || location.IsExit)
 		{
-		return await NotifyService!.NotifyAndReturn(
-			executor.Object().DBRef,
-			errorReturn: ErrorMessages.Returns.NotARoom,
-			notifyMessage: "Default home location is invalid.",
-			shouldNotify: true);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.NotARoom,
+				notifyMessage: "Default home location is invalid.",
+				shouldNotify: true);
 		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
@@ -56,12 +56,12 @@ public partial class Commands
 				notifyMessage: ErrorMessages.Notifications.InvalidNameThing,
 				shouldNotify: true);
 		}
-		
+
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
-		
+
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
@@ -75,7 +75,7 @@ public partial class Commands
 				}
 			}
 		}
-		
+
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
 		await EventService!.TriggerEventAsync(
@@ -128,7 +128,7 @@ public partial class Commands
 			{
 				var oldName = found.Object().Name;
 				var result = await ManipulateSharpObjectService!.SetName(executor, found, name, true);
-				
+
 				// If rename was successful, trigger OBJECT`RENAME event
 				// PennMUSH spec: object`rename (objid, new name, old name)
 				if (result.ToString() != ErrorMessages.Returns.PermissionDenied)
@@ -141,7 +141,7 @@ public partial class Commands
 						name.ToPlainText(),
 						oldName);
 				}
-				
+
 				return result;
 			}
 		);
@@ -255,15 +255,15 @@ public partial class Commands
 					{
 						if (!newOwnerObj.IsPlayer)
 						{
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.InvalidPlayer,
-						notifyMessage: ErrorMessages.Notifications.MustBePlayer,
-						shouldNotify: true);
+							return await NotifyService!.NotifyAndReturn(
+								executor.Object().DBRef,
+								errorReturn: ErrorMessages.Returns.InvalidPlayer,
+								notifyMessage: ErrorMessages.Notifications.MustBePlayer,
+								shouldNotify: true);
 						}
 
 						var result = await ManipulateSharpObjectService!.SetOwner(executor, obj, newOwnerObj.AsPlayer, true);
-						
+
 						if (!preserve)
 						{
 							if (await obj.HasFlag("WIZARD"))
@@ -307,18 +307,18 @@ public partial class Commands
 
 				if (await obj.HasFlag("SAFE") && !override_)
 				{
-				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.SafeObject,
-					notifyMessage: "That object is SAFE. Use @nuke to override.",
-					shouldNotify: true);
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.SafeObject,
+						notifyMessage: "That object is SAFE. Use @nuke to override.",
+						shouldNotify: true);
 				}
 
 				if (await obj.HasFlag("GOING"))
 				{
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
 					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
-					
+
 					// NOTE: Actual object deletion from database requires a garbage collection system.
 					// Objects marked GOING_TWICE will be cleaned up by a future purge process.
 					return CallState.Empty;
@@ -326,7 +326,7 @@ public partial class Commands
 
 				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
 				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
-				
+
 				try
 				{
 					await AttributeService!.EvaluateAttributeFunctionAsync(
@@ -336,7 +336,7 @@ public partial class Commands
 				{
 					// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
 				}
-				
+
 				return CallState.Empty;
 			}
 		);
@@ -379,29 +379,29 @@ public partial class Commands
 						await NotifyService!.Notify(executor, "Linked to variable.");
 						return CallState.Empty;
 					}
-					
+
 					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidDestination,
-							notifyMessage: "Invalid destination for exit.",
-							shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: "Invalid destination for exit.",
+									shouldNotify: true);
 							}
 
 							var destinationRoom = destObj.AsRoom;
-							
+
 							bool canLink = await PermissionService!.Controls(executor, destObj);
-							
+
 							if (!canLink)
 							{
 								var destFlags = await destinationRoom.Object.Flags.Value.ToArrayAsync();
 								var hasLinkOk = destFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
-								
+
 								if (!hasLinkOk)
 								{
 									return await NotifyService!.NotifyAndReturn(
@@ -411,16 +411,16 @@ public partial class Commands
 										shouldNotify: true);
 								}
 							}
-							
+
 							// Get exit owner and check if it's owned by someone else
 							var exitOwner = await exitObj.Object().Owner.WithCancellation(CancellationToken.None);
 							var executorObj = executor.Object();
 							var executorOwner = await executorObj.Owner.WithCancellation(CancellationToken.None);
-							
+
 							// Check if exit is owned by someone else and executor doesn't control it
 							var exitNotControlled = !await PermissionService!.Controls(executor, exitObj);
 							var isOwnedByOther = exitOwner.Object.Id != executorOwner.Object.Id;
-							
+
 							// When linking an exit owned by someone else that executor doesn't control:
 							// Check @lock/link, transfer ownership, and set HALT flag
 							if (isOwnedByOther && exitNotControlled)
@@ -435,7 +435,7 @@ public partial class Commands
 										notifyMessage: "You don't pass the link lock.",
 										shouldNotify: true);
 								}
-								
+
 								// Transfer ownership to the linker (with error handling)
 								if (executor.IsPlayer)
 								{
@@ -452,13 +452,13 @@ public partial class Commands
 											shouldNotify: true);
 									}
 								}
-								
+
 								// Set HALT flag to prevent looping
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, exitObj, "HALT", true);
 							}
 
-			await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
-							
+							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
+
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
 							await NotifyService!.Notify(executor, "Linked.");
@@ -474,11 +474,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidDestination,
-							notifyMessage: "Home must be a room.",
-							shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: "Home must be a room.",
+									shouldNotify: true);
 							}
 
 							// Convert to AnySharpContent for SetObjectHomeCommand
@@ -498,11 +498,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidDestination,
-							notifyMessage: "Drop-to must be a room.",
-							shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: "Drop-to must be a room.",
+									shouldNotify: true);
 							}
 
 							// Link the room to its drop-to
@@ -551,7 +551,7 @@ public partial class Commands
 					// Mark as GOING_TWICE for immediate destruction
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
 					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
-					
+
 					// NOTE: Actual object deletion from database requires a garbage collection system
 					// Objects marked GOING_TWICE will be cleaned up by a future purge process
 					return CallState.Empty;
@@ -560,7 +560,7 @@ public partial class Commands
 				// Mark as GOING
 				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
 				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
-				
+
 				// Trigger @adestroy attribute if it exists
 				try
 				{
@@ -571,7 +571,7 @@ public partial class Commands
 				{
 					// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
 				}
-				
+
 				return CallState.Empty;
 			}
 		);
@@ -600,11 +600,11 @@ public partial class Commands
 				// Check if marked for destruction
 				if (!await obj.HasFlag("GOING"))
 				{
-				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.NotGoing,
-					notifyMessage: "That object is not marked for destruction.",
-					shouldNotify: true);
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.NotGoing,
+						notifyMessage: "That object is not marked for destruction.",
+						shouldNotify: true);
 				}
 
 				// Remove GOING and GOING_TWICE flags
@@ -618,7 +618,7 @@ public partial class Commands
 				}
 
 				await NotifyService!.Notify(executor, $"Spared from destruction: {obj.Object().Name}");
-				
+
 				// Trigger @startup attribute if it exists
 				try
 				{
@@ -629,7 +629,7 @@ public partial class Commands
 				{
 					// Ignore errors from @startup evaluation - attribute may not exist or may fail
 				}
-				
+
 				return CallState.Empty;
 			}
 		);
@@ -672,7 +672,7 @@ public partial class Commands
 					{
 						// Check if executor can control the zone or passes ChZone lock
 						bool canZone = await PermissionService!.Controls(executor, zoneObj);
-						
+
 						// If not controlled, check ChZone lock
 						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
@@ -702,7 +702,7 @@ public partial class Commands
 						{
 							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
 						}
-						
+
 						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve && !obj.IsPlayer)
 						{
@@ -719,7 +719,7 @@ public partial class Commands
 							{
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
-							
+
 							// Strip all powers from the object
 							var allPowers = obj.Object().Powers.Value;
 							await foreach (var power in allPowers)
@@ -1021,7 +1021,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
-		
+
 		// Parse exit name and aliases
 		var exitParts = exitName.Split(";");
 		var primaryName = exitParts[0];
@@ -1034,7 +1034,7 @@ public partial class Commands
 			var sourceRoomName = args["2"].Message!.ToPlainText();
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, sourceRoomName, LocateFlags.All);
-			
+
 			if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
 			{
 				await NotifyService!.Notify(executor, "Source must be a room.");
@@ -1084,7 +1084,7 @@ public partial class Commands
 			var destName = args["1"].Message!.ToPlainText();
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, destName, LocateFlags.All);
-			
+
 			if (!locateResult.IsError && locateResult.AsSharpObject.IsRoom)
 			{
 				var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
@@ -1104,18 +1104,18 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
-		
+
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
-		
+
 		if (location.IsNone || location.IsExit)
 		{
-		return await NotifyService!.NotifyAndReturn(
-			executor.Object().DBRef,
-			errorReturn: ErrorMessages.Returns.NotARoom,
-			notifyMessage: "Default home location is invalid.",
-			shouldNotify: true);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.NotARoom,
+				notifyMessage: "Default home location is invalid.",
+				shouldNotify: true);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1314,7 +1314,7 @@ public partial class Commands
 				{
 					// Clear special link type attribute if it exists
 					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
-					
+
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
 					await NotifyService!.Notify(executor, "Unlinked.");
 					return CallState.Empty;
@@ -1327,11 +1327,11 @@ public partial class Commands
 					return CallState.Empty;
 				}
 
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.InvalidObjectType,
-						notifyMessage: "Invalid object type.",
-						shouldNotify: true);
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.InvalidObjectType,
+					notifyMessage: "Invalid object type.",
+					shouldNotify: true);
 			}
 		);
 	}

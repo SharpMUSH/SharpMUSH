@@ -29,18 +29,18 @@ public readonly struct DbRefAttribute(DBRef dbref, string[] attribute)
 		switch (HelperFunctions.SplitDBRefAndAttr(parse))
 		{
 			case { IsT0: true } split:
-			{
-				output = split.AsT0;
-				return true;
-			}
+				{
+					output = split.AsT0;
+					return true;
+				}
 			default:
-			{
-				output = null;
-				return false;
-			}
+				{
+					output = null;
+					return false;
+				}
 		}
 	}
-	
-	public static DbRefAttribute Parse(string parse) 
+
+	public static DbRefAttribute Parse(string parse)
 		=> HelperFunctions.SplitDBRefAndAttr(parse).AsValue();
 }

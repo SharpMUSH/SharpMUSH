@@ -1,8 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
-using TUnit.Core.Interfaces;
-using TUnit.AspNetCore;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using TUnit.AspNetCore;
+using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
 
@@ -17,7 +16,7 @@ public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH
 
 	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedPandaTestServer RedPandaTestServer { get; init; }
-	
+
 	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedisTestServer RedisTestServer { get; init; }
 
@@ -42,15 +41,15 @@ public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH
 	{
 		// Format can be: "//127.0.0.1:9092/", "kafka://127.0.0.1:9092", or "127.0.0.1:9092"
 		var cleanedAddress = bootstrapServers;
-		
+
 		if (cleanedAddress.Contains("://"))
 		{
 			cleanedAddress = cleanedAddress.Substring(cleanedAddress.IndexOf("://") + 3);
 		}
-		
+
 		cleanedAddress = cleanedAddress.TrimStart('/');
 		cleanedAddress = cleanedAddress.TrimEnd('/');
-		
+
 		var config = new AdminClientConfig
 		{
 			BootstrapServers = cleanedAddress,
@@ -84,7 +83,7 @@ public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH
 		try
 		{
 			await adminClient.CreateTopicsAsync(topicSpecifications);
-			
+
 			await Task.Delay(2000);
 		}
 		catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists || r.Error.Code == ErrorCode.NoError))

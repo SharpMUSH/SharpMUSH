@@ -1,5 +1,5 @@
 using KafkaFlow;
-using KafkaFlow.Producers;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Messages;
 
 namespace SharpMUSH.Messaging.KafkaFlow;
@@ -9,7 +9,7 @@ namespace SharpMUSH.Messaging.KafkaFlow;
 /// Following KafkaFlow's type-based producer pattern, this class encapsulates
 /// the message production logic and can be injected where needed.
 /// </summary>
-public class SharpMushProducer(IMessageProducer<SharpMushProducer> producer)
+public class SharpMushProducer(IMessageProducer<SharpMushProducer> producer, ILogger<SharpMushProducer> logger)
 {
 	/// <summary>
 	/// Produces a message to the appropriate topic
@@ -17,7 +17,13 @@ public class SharpMushProducer(IMessageProducer<SharpMushProducer> producer)
 	public async Task ProduceAsync<T>(T message, CancellationToken cancellationToken = default) where T : class
 	{
 		var topic = GetTopicForMessageType<T>();
+		logger.LogTrace("[KAFKA-SEND] Publishing message to topic {Topic} - Type: {MessageType}",
+			topic, typeof(T).Name);
+
 		await producer.ProduceAsync(topic, null, message);
+
+		logger.LogTrace("[KAFKA-SEND] Successfully published message to topic {Topic} - Type: {MessageType}",
+			topic, typeof(T).Name);
 	}
 
 	/// <summary>
@@ -27,8 +33,14 @@ public class SharpMushProducer(IMessageProducer<SharpMushProducer> producer)
 	{
 		var topic = GetTopicForMessageType<T>();
 		var partitionKey = message.Handle.ToString();
-		
+
+		logger.LogTrace("[KAFKA-SEND] Publishing handle-based message to topic {Topic} - Type: {MessageType}, Handle: {Handle}, PartitionKey: {PartitionKey}",
+			topic, typeof(T).Name, message.Handle, partitionKey);
+
 		await producer.ProduceAsync(topic, partitionKey, message);
+
+		logger.LogTrace("[KAFKA-SEND] Successfully published handle-based message to topic {Topic} - Type: {MessageType}, Handle: {Handle}",
+			topic, typeof(T).Name, message.Handle);
 	}
 
 	private static string GetTopicForMessageType<T>()

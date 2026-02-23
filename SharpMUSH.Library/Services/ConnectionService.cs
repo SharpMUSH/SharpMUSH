@@ -1,14 +1,14 @@
-﻿using System.Collections.Concurrent;
-using System.Text;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
+using System.Text;
 
 namespace SharpMUSH.Library.Services;
 
 public class ConnectionService(
-	IPublisher publisher, 
+	IPublisher publisher,
 	IConnectionStateStore? stateStore = null,
 	ITelemetryService? telemetryService = null) : IConnectionService
 {
@@ -30,13 +30,13 @@ public class ConnectionService(
 			IConnectionService.ConnectionState.Disconnected));
 
 		_sessionState.Remove(handle, out _);
-		
+
 		// Remove from Redis if available
 		if (stateStore != null)
 		{
 			await stateStore.RemoveConnectionAsync(handle);
 		}
-		
+
 		// Record disconnection event
 		telemetryService?.RecordConnectionEvent("disconnected");
 		UpdateConnectionMetrics();
@@ -44,7 +44,7 @@ public class ConnectionService(
 
 	public IConnectionService.ConnectionData? Get(long handle) =>
 		_sessionState.GetValueOrDefault(handle);
-	
+
 	public IAsyncEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
 		_sessionState.Values
 			.ToAsyncEnumerable()
@@ -77,7 +77,7 @@ public class ConnectionService(
 		{
 			handler(new ValueTuple<long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState>(handle, player, get.State, IConnectionService.ConnectionState.LoggedIn));
 		}
-		
+
 		// Record login event
 		telemetryService?.RecordConnectionEvent("logged_in");
 		UpdateConnectionMetrics();
@@ -131,7 +131,7 @@ public class ConnectionService(
 		});
 
 		_sessionState.AddOrUpdate(handle,
-			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected, 
+			_ => new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected,
 				outputFunction, promptOutputFunction, encoding, metadata),
 			(_, _) => throw new InvalidDataException("Tried to replace an existing handle during Register."));
 
@@ -159,12 +159,12 @@ public class ConnectionService(
 
 		// Publish notification for Mediator handlers
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, null, IConnectionService.ConnectionState.None, IConnectionService.ConnectionState.Connected));
-		
+
 		// Record connection event
 		telemetryService?.RecordConnectionEvent("connected");
 		UpdateConnectionMetrics();
 	}
-	
+
 	/// <summary>
 	/// Reconcile state from Redis on startup.
 	/// Should be called during application initialization.
@@ -177,7 +177,7 @@ public class ConnectionService(
 		if (stateStore == null) return;
 
 		var connections = await stateStore.GetAllConnectionsAsync();
-		
+
 		foreach (var (handle, data) in connections)
 		{
 			// Skip if already in memory (shouldn't happen on startup)
@@ -206,12 +206,12 @@ public class ConnectionService(
 
 		UpdateConnectionMetrics();
 	}
-	
+
 	private void UpdateConnectionMetrics()
 	{
 		var activeConnections = _sessionState.Count(x => x.Value.State is IConnectionService.ConnectionState.Connected or IConnectionService.ConnectionState.LoggedIn);
 		var loggedInPlayers = _sessionState.Count(x => x.Value.State is IConnectionService.ConnectionState.LoggedIn);
-		
+
 		telemetryService?.SetActiveConnectionCount(activeConnections);
 		telemetryService?.SetLoggedInPlayerCount(loggedInPlayers);
 	}

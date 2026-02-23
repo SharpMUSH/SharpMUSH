@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Client.Services;
-using System.Net.WebSockets;
 
 namespace SharpMUSH.Tests.Client.Services;
 
@@ -30,7 +29,7 @@ public class WebSocketClientServiceTests
 
 		// Act 
 		await service.DisconnectAsync();
-		
+
 		// Assert - Verify still disconnected
 		await Assert.That(service.IsConnected).IsFalse();
 	}

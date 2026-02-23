@@ -1,12 +1,12 @@
-﻿using System.Globalization;
-using System.Numerics;
-using MoreLinq;
+﻿using MoreLinq;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Globalization;
+using System.Numerics;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -58,24 +58,24 @@ public partial class Functions
 	public static ValueTask<CallState> Bound(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
-		    !decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var min))
+				!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var min))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		if (args.Count == 2)
 		{
 			// If only 2 args, just return max(value, min)
 			return ValueTask.FromResult<CallState>(Math.Max(value, min));
 		}
-		
+
 		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var max))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		// Clamp the value between min and max
 		return ValueTask.FromResult<CallState>(Math.Clamp(value, min, max));
 	}
@@ -89,7 +89,7 @@ public partial class Functions
 	{
 		var input = parser.CurrentState.Arguments["0"].Message;
 		var inputText = MModule.plainText(input);
-		
+
 		try
 		{
 			var bytes = Convert.FromBase64String(inputText);
@@ -109,26 +109,26 @@ public partial class Functions
 		var encrypted = MModule.plainText(args["0"].Message);
 		var password = MModule.plainText(args["1"].Message);
 		var isEncoded = args.Count == 3 && MModule.plainText(args["2"].Message) != "0";
-		
+
 		if (string.IsNullOrEmpty(password))
 		{
 			return ValueTask.FromResult<CallState>("#-1 PASSWORD REQUIRED");
 		}
-		
+
 		try
 		{
-			var encryptedBytes = isEncoded 
-				? Convert.FromBase64String(encrypted) 
+			var encryptedBytes = isEncoded
+				? Convert.FromBase64String(encrypted)
 				: System.Text.Encoding.GetEncoding("ISO-8859-1").GetBytes(encrypted);
-			
+
 			var passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
 			var decrypted = new byte[encryptedBytes.Length];
-			
+
 			for (int i = 0; i < encryptedBytes.Length; i++)
 			{
 				decrypted[i] = (byte)(encryptedBytes[i] ^ passwordBytes[i % passwordBytes.Length]);
 			}
-			
+
 			return ValueTask.FromResult<CallState>(System.Text.Encoding.UTF8.GetString(decrypted));
 		}
 		catch (Exception ex) when (ex is FormatException || ex is ArgumentException)
@@ -141,15 +141,15 @@ public partial class Functions
 	public static ValueTask<CallState> Distance2d(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var x1) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var y1) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var x2) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["3"].Message)), out var y2))
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var y1) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var x2) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["3"].Message)), out var y2))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		var distance = Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2));
 		return ValueTask.FromResult<CallState>(distance);
 	}
@@ -158,17 +158,17 @@ public partial class Functions
 	public static ValueTask<CallState> Distance3d(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var x1) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var y1) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var z1) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["3"].Message)), out var x2) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["4"].Message)), out var y2) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["5"].Message)), out var z2))
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var y1) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var z1) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["3"].Message)), out var x2) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["4"].Message)), out var y2) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["5"].Message)), out var z2))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		var distance = Math.Sqrt(Math.Pow(x2 - x1, 2) + Math.Pow(y2 - y1, 2) + Math.Pow(z2 - z1, 2));
 		return ValueTask.FromResult<CallState>(distance);
 	}
@@ -190,25 +190,25 @@ public partial class Functions
 		var plaintext = MModule.plainText(args["0"].Message);
 		var password = MModule.plainText(args["1"].Message);
 		var shouldEncode = args.Count == 3 && MModule.plainText(args["2"].Message) != "0";
-		
+
 		if (string.IsNullOrEmpty(password))
 		{
 			return ValueTask.FromResult<CallState>("#-1 PASSWORD REQUIRED");
 		}
-		
+
 		var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
 		var passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
 		var encrypted = new byte[plaintextBytes.Length];
-		
+
 		for (int i = 0; i < plaintextBytes.Length; i++)
 		{
 			encrypted[i] = (byte)(plaintextBytes[i] ^ passwordBytes[i % passwordBytes.Length]);
 		}
-		
-		var result = shouldEncode 
-			? Convert.ToBase64String(encrypted) 
+
+		var result = shouldEncode
+			? Convert.ToBase64String(encrypted)
 			: System.Text.Encoding.GetEncoding("ISO-8859-1").GetString(encrypted);
-		
+
 		return ValueTask.FromResult<CallState>(result);
 	}
 
@@ -216,12 +216,12 @@ public partial class Functions
 	public static ValueTask<CallState> Fraction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		var showWhole = false;
 		if (args.Count == 2)
 		{
@@ -231,28 +231,28 @@ public partial class Functions
 			}
 			showWhole = wholeFlag != 0;
 		}
-		
+
 		var wholePart = Math.Truncate(value);
 		var fractionalPart = Math.Abs(value - wholePart);
-		
+
 		// If it's a whole number, just return it
 		if (fractionalPart < 0.000001m)
 		{
 			return ValueTask.FromResult<CallState>(((int)wholePart).ToString());
 		}
-		
+
 		// Convert fractional part to a fraction using Fractions library
 		var fraction = Fractions.Fraction.FromDecimal(fractionalPart);
-		
+
 		// Adjust for negative numbers
 		var numerator = fraction.Numerator;
 		var denominator = fraction.Denominator;
-		
+
 		if (value < 0 && wholePart == 0)
 		{
 			numerator = -numerator;
 		}
-		
+
 		// If we have a whole part and showWhole is true
 		if (Math.Abs(wholePart) >= 1 && showWhole)
 		{
@@ -280,11 +280,11 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		var operation = MModule.plainText(args["0"].Message).ToLower();
 		var delimiter = args.Count == 3 ? args["2"].Message : MModule.single(" ");
 		var list = MModule.split2(delimiter, args["1"].Message).ToList();
-		
+
 		var values = new List<decimal>();
 		foreach (var item in list)
 		{
@@ -294,19 +294,19 @@ public partial class Functions
 			}
 			values.Add(parsedValue);
 		}
-		
+
 		if (values.Count == 0)
 		{
 			return new CallState("0");
 		}
-		
+
 		// Check for division by zero for operations that divide
-		if ((operation == "div" || operation == "fdiv" || operation == "modulo" || operation == "remainder") 
-		    && values.Skip(1).Any(v => v == 0))
+		if ((operation == "div" || operation == "fdiv" || operation == "modulo" || operation == "remainder")
+				&& values.Skip(1).Any(v => v == 0))
 		{
 			return Errors.ErrorDivideByZero;
 		}
-		
+
 		string result = operation switch
 		{
 			// Arithmetic operations
@@ -317,7 +317,7 @@ public partial class Functions
 			"fdiv" => values.Aggregate((acc, val) => acc / val).ToString(CultureInfo.InvariantCulture),
 			"modulo" => values.Aggregate((acc, val) => acc % val).ToString(CultureInfo.InvariantCulture),
 			"remainder" => values.Aggregate((acc, val) => acc % val).ToString(CultureInfo.InvariantCulture),
-			
+
 			// Comparison operations
 			"max" => values.Max().ToString(CultureInfo.InvariantCulture),
 			"min" => values.Min().ToString(CultureInfo.InvariantCulture),
@@ -327,38 +327,38 @@ public partial class Functions
 			"gte" => (values.Zip(values.Skip(1), (a, b) => a >= b).All(x => x) ? 1 : 0).ToString(),
 			"lt" => (values.Zip(values.Skip(1), (a, b) => a < b).All(x => x) ? 1 : 0).ToString(),
 			"lte" => (values.Zip(values.Skip(1), (a, b) => a <= b).All(x => x) ? 1 : 0).ToString(),
-			
+
 			// Logical operations (treat non-zero as true)
 			"and" => (values.All(v => v != 0) ? 1 : 0).ToString(),
 			"or" => (values.Any(v => v != 0) ? 1 : 0).ToString(),
 			"xor" => (values.Count(v => v != 0) == 1 ? 1 : 0).ToString(),
 			"nand" => (!values.All(v => v != 0) ? 1 : 0).ToString(),
 			"nor" => (!values.Any(v => v != 0) ? 1 : 0).ToString(),
-			
+
 			// Bitwise operations (convert to int)
 			"band" => values.Select(v => (int)v).Aggregate((acc, val) => acc & val).ToString(),
 			"bor" => values.Select(v => (int)v).Aggregate((acc, val) => acc | val).ToString(),
 			"bxor" => values.Select(v => (int)v).Aggregate((acc, val) => acc ^ val).ToString(),
-			
+
 			// Statistical operations
 			"mean" => values.Average().ToString(CultureInfo.InvariantCulture),
 			"median" => CalculateMedian(values).ToString(CultureInfo.InvariantCulture),
 			"stddev" => CalculateStdDev(values).ToString(CultureInfo.InvariantCulture),
-			
+
 			// Distance operations (requires exactly 4 or 6 values)
-			"dist2d" when values.Count == 4 
+			"dist2d" when values.Count == 4
 				=> ((decimal)Math.Sqrt((double)((values[2] - values[0]) * (values[2] - values[0]) + (values[3] - values[1]) * (values[3] - values[1])))).ToString(CultureInfo.InvariantCulture),
 			"dist2d" => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath"),
 			"dist3d" when values.Count == 6
 				=> ((decimal)Math.Sqrt((double)((values[3] - values[0]) * (values[3] - values[0]) + (values[4] - values[1]) * (values[4] - values[1]) + (values[5] - values[2]) * (values[5] - values[2])))).ToString(CultureInfo.InvariantCulture),
 			"dist3d" => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath"),
-			
+
 			_ => Errors.ErrorBadArgumentFormat.Replace("{0}", "lmath")
 		};
-		
+
 		return new CallState(result);
 	}
-	
+
 	private static decimal CalculateMedian(List<decimal> values)
 	{
 		var sorted = values.OrderBy(x => x).ToList();
@@ -372,7 +372,7 @@ public partial class Functions
 			return (sorted[count / 2 - 1] + sorted[count / 2]) / 2.0m;
 		}
 	}
-	
+
 	private static decimal CalculateStdDev(List<decimal> values)
 	{
 		var mean = values.Average();
@@ -421,7 +421,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
-		
+
 		foreach (var arg in args)
 		{
 			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
@@ -430,7 +430,7 @@ public partial class Functions
 			}
 			values.Add(value);
 		}
-		
+
 		var mean = values.Average();
 		return ValueTask.FromResult<CallState>(mean);
 	}
@@ -441,7 +441,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
-		
+
 		foreach (var arg in args)
 		{
 			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
@@ -450,15 +450,15 @@ public partial class Functions
 			}
 			values.Add(value);
 		}
-		
+
 		if (values.Count == 0)
 		{
 			return ValueTask.FromResult<CallState>(0);
 		}
-		
+
 		var sorted = values.OrderBy(x => x).ToList();
 		var count = sorted.Count;
-		
+
 		if (count % 2 == 1)
 		{
 			// Odd number of elements, return middle element
@@ -488,22 +488,22 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
-		
+
 		foreach (var arg in args)
 		{
 			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
 			{
 				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 			}
-			
+
 			if (values.Count > 0 && value == 0)
 			{
 				return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
 			}
-			
+
 			values.Add(value);
 		}
-		
+
 		var result = values.Aggregate((acc, val) => acc % val);
 		return ValueTask.FromResult<CallState>(result);
 	}
@@ -512,13 +512,13 @@ public partial class Functions
 	public static ValueTask<CallState> Root(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var root))
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var root))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		return ValueTask.FromResult<CallState>(Math.Pow(value, 1.0 / root));
 	}
 
@@ -538,7 +538,7 @@ public partial class Functions
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
-		
+
 		if (!double.TryParse(angleArg, out var angle))
 		{
 			return Errors.ErrorNumber;
@@ -555,7 +555,7 @@ public partial class Functions
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
-		
+
 		if (!double.TryParse(angleArg, out var angle))
 		{
 			return Errors.ErrorNumber;
@@ -572,7 +572,7 @@ public partial class Functions
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
-		
+
 		if (!double.TryParse(angleArg, out var angle))
 		{
 			return Errors.ErrorNumber;
@@ -586,15 +586,15 @@ public partial class Functions
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var y) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var x))
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var x))
 		{
 			return Errors.ErrorNumbers;
 		}
-		
+
 		var angleType = args.Count == 3 ? MModule.plainText(args["2"].Message) : null;
-		
+
 		return AngleTypeMath(angleType, Math.Atan2(y, x), angle => angle);
 	}
 
@@ -610,7 +610,7 @@ public partial class Functions
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
-		
+
 		if (!double.TryParse(angleArg, out var angle))
 		{
 			return Errors.ErrorNumber;
@@ -623,15 +623,15 @@ public partial class Functions
 	public static ValueTask<CallState> CTU(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var angle))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
 		}
-		
+
 		var from = MModule.plainText(args["1"].Message).ToLower();
 		var to = MModule.plainText(args["2"].Message).ToLower();
-		
+
 		double radians = from switch
 		{
 			"r" => angle,
@@ -639,7 +639,7 @@ public partial class Functions
 			"g" => angle * (Math.PI / 200.0),
 			_ => angle
 		};
-		
+
 		double result = to switch
 		{
 			"r" => radians,
@@ -647,7 +647,7 @@ public partial class Functions
 			"g" => radians * (200.0 / Math.PI),
 			_ => radians
 		};
-		
+
 		return ValueTask.FromResult<CallState>(result);
 	}
 
@@ -666,18 +666,18 @@ public partial class Functions
 	public static ValueTask<CallState> FMod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var arg0) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var arg1))
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var arg1))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		if (arg1 == 0)
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
 		}
-		
+
 		return ValueTask.FromResult<CallState>(arg0 % arg1);
 	}
 
@@ -689,23 +689,23 @@ public partial class Functions
 	public static ValueTask<CallState> Log(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		if (args.Count == 1)
 		{
 			// Base 10 logarithm
 			return ValueTask.FromResult<CallState>(Math.Log10(value));
 		}
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var baseNum))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		return ValueTask.FromResult<CallState>(Math.Log(value, baseNum));
 	}
 
@@ -722,13 +722,13 @@ public partial class Functions
 	public static ValueTask<CallState> Power(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var baseNum) ||
-		    !double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var exponent))
+				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var exponent))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		return ValueTask.FromResult<CallState>(Math.Pow(baseNum, exponent));
 	}
 
@@ -736,29 +736,29 @@ public partial class Functions
 	public static ValueTask<CallState> Round(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
-		    !int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var decimals))
+				!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var decimals))
 		{
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
-		
+
 		var rounded = Math.Round(value, decimals);
-		
+
 		if (args.Count == 3)
 		{
 			if (!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var padZeros))
 			{
 				return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 			}
-			
+
 			// Third argument indicates whether to pad with zeros
 			if (padZeros != 0)
 			{
 				return ValueTask.FromResult<CallState>(rounded.ToString($"F{decimals}"));
 			}
 		}
-		
+
 		return ValueTask.FromResult<CallState>(rounded);
 	}
 
@@ -770,7 +770,7 @@ public partial class Functions
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
-		
+
 		if (!double.TryParse(angleArg, out var angle))
 		{
 			return Errors.ErrorNumber;
@@ -789,7 +789,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
-		
+
 		foreach (var arg in args)
 		{
 			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
@@ -798,17 +798,17 @@ public partial class Functions
 			}
 			values.Add(value);
 		}
-		
+
 		if (values.Count == 0)
 		{
 			return ValueTask.FromResult<CallState>(0);
 		}
-		
+
 		var mean = values.Average();
 		var sumOfSquaredDifferences = values.Select(val => Math.Pow(val - mean, 2)).Sum();
 		var variance = sumOfSquaredDifferences / values.Count;
 		var stdDev = Math.Sqrt(variance);
-		
+
 		return ValueTask.FromResult<CallState>(stdDev);
 	}
 
@@ -820,7 +820,7 @@ public partial class Functions
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
-		
+
 		if (!double.TryParse(angleArg, out var angle))
 		{
 			return Errors.ErrorNumber;
@@ -919,26 +919,26 @@ public partial class Functions
 			? tmpDelimiter.Message
 			: MModule.single(" ");
 		var sep = args.TryGetValue("3", out var tmpSep) ? tmpSep.Message : delimiter;
-		
+
 		var list1 = MModule.split2(delimiter, args["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 		var list2 = MModule.split2(delimiter, args["1"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		
+
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
-		
+
 		if (list1.Length != 3 || list2.Length != 3)
 		{
 			return ValueTask.FromResult(new CallState("#-1 VECTORS MUST BE 3-DIMENSIONAL"));
 		}
-		
+
 		var x = list1[1].result * list2[2].result - list2[1].result * list1[2].result;
 		var y = list1[2].result * list2[0].result - list2[2].result * list1[0].result;
 		var z = list1[0].result * list2[1].result - list2[0].result * list1[1].result;
-		
+
 		var output = new[] { x, y, z }.Select(v => MModule.single(v.ToString(CultureInfo.InvariantCulture)));
 		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(sep, output)));
 	}
@@ -970,18 +970,18 @@ public partial class Functions
 		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
 			? tmpDelimiter.Message
 			: MModule.single(" ");
-		
+
 		var list = MModule.split2(delimiter, args["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		
+
 		if (list.Any(x => !x.Item1))
 		{
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
-		
+
 		var sumOfSquares = list.Sum(x => (double)(x.result * x.result));
 		var magnitude = Math.Sqrt(sumOfSquares);
-		
+
 		return ValueTask.FromResult<CallState>(magnitude);
 	}
 
@@ -996,8 +996,8 @@ public partial class Functions
 				ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MModule.single(" ")),
 				parser.CurrentState.Arguments["0"].Message).Length.ToString()
 			));
-	
-	private static CallState AngleTypeMath(string? angleType, double angle, Func<double,double> func)
+
+	private static CallState AngleTypeMath(string? angleType, double angle, Func<double, double> func)
 	{
 		var radianAngle = angleType switch
 		{
@@ -1006,16 +1006,16 @@ public partial class Functions
 			"d" => angle * (double.Pi / 180),
 			_ => angle
 		};
-		
+
 		var result = func(radianAngle);
-		
+
 		// Round very small numbers (floating point errors) to 0
 		// This handles cases like cos(90 degrees) which should be 0 but gives tiny values
 		if (Math.Abs(result) < 1e-6)
 		{
 			return new CallState("0");
 		}
-		
+
 		// Round very close to 1 or -1 to exactly 1 or -1
 		if (Math.Abs(result - 1.0) < 1e-10)
 		{
@@ -1025,21 +1025,21 @@ public partial class Functions
 		{
 			return new CallState("-1");
 		}
-		
+
 		// Format without scientific notation using default ToString which gives appropriate precision
 		var formatted = result.ToString(CultureInfo.InvariantCulture);
-		
+
 		// If it has scientific notation, convert to decimal format
 		if (formatted.Contains('E') || formatted.Contains('e'))
 		{
 			// For very small/large numbers, use fixed-point with appropriate precision
 			formatted = result.ToString("F15", CultureInfo.InvariantCulture).TrimEnd('0').TrimEnd('.');
 		}
-		
+
 		return new CallState(formatted);
 	}
 
-	[SharpFunction(Name = "RNUM", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "RNUM", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["container", "object"])]
 	public static async ValueTask<CallState> RNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

@@ -9,7 +9,7 @@ namespace SharpMUSH.Library.Commands.Database;
 public record CreateExitCommand(string Name, string[] Aliases, AnySharpContainer Location, SharpPlayer Creator)
 	: ICommand<DBRef>, ICacheInvalidating
 {
-	public string[] CacheKeys => [$"object-contents:{Location.Object().DBRef}",$"object:{Creator.Object.DBRef}"];
+	public string[] CacheKeys => [$"object-contents:{Location.Object().DBRef}", $"object:{Creator.Object.DBRef}"];
 
 	public string[] CacheTags =>
 	[

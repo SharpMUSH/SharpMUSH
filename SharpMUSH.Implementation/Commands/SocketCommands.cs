@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using DotNext.Collections.Generic;
+﻿using DotNext.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
@@ -13,6 +12,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Messages;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -28,14 +28,14 @@ public partial class Commands
 		var everyone = ConnectionService!.GetAll();
 		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
 		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
-		
+
 		var filteredPlayers = await everyone
 			.Where(player => player.Ref.HasValue)
-			.Select(async (player,i,ct) =>
+			.Select(async (player, i, ct) =>
 			{
 				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
 				var doingText = await Commands.GetDoingText(executor, obj.Known);
-				
+
 				return (string.Format(
 					fmt,
 					obj.Known.Object().Name,
@@ -47,7 +47,7 @@ public partial class Commands
 			.ToListAsync();
 
 		var sortedPlayers = filteredPlayers.Select(x => x.Item1).ToArray();
-		
+
 		var footer = $"{sortedPlayers.Length} players logged in.";
 
 		var message = $"{header}\n{string.Join('\n', sortedPlayers)}\n{footer}";
@@ -105,13 +105,13 @@ public partial class Commands
 				"invalid player name",
 				"#-1", // no valid player
 				username);
-			
+
 			await NotifyService!.Notify(handle, "Could not find that player.");
 			return new CallState("#-1 PLAYER NOT FOUND");
 		}
 
 		var nameItem = nameItems.First();
-		
+
 		var foundDB = await nameItem.Match(
 			async dbref => (await Mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
 				? player
@@ -132,7 +132,7 @@ public partial class Commands
 				"player not found",
 				"#-1", // no valid player
 				username);
-			
+
 			await NotifyService!.Notify(handle, "Could not find that player.");
 			return new CallState("#-1 PLAYER NOT FOUND");
 		}
@@ -154,7 +154,7 @@ public partial class Commands
 				"invalid password",
 				$"#{foundDB.Object.Key}", // valid player objid
 				foundDB.Object.Name);
-			
+
 			await NotifyService!.Notify(handle, "Invalid Password.");
 			return new CallState("#-1 INVALID PASSWORD");
 		}
@@ -234,7 +234,7 @@ public partial class Commands
 			{
 				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
 				var guestConnectionCount = await ConnectionService!.Get(guestDbRef).CountAsync();
-				
+
 				if (guestConnectionCount == 0)
 				{
 					selectedGuest = guest;
@@ -302,7 +302,7 @@ public partial class Commands
 			{
 				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
 				var guestConnections = await ConnectionService!.Get(guestDbRef).CountAsync();
-				
+
 				if (guestConnections < minConnections)
 				{
 					minConnections = guestConnections;
@@ -359,14 +359,14 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
-		
+
 		// Display Disconnect Banner (DownMotd) if configured
 		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
 		if (!string.IsNullOrWhiteSpace(motdData?.DownMotd))
 		{
 			await NotifyService!.Notify(executor, motdData.DownMotd);
 		}
-		
+
 		await ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
 		return new None();
 	}

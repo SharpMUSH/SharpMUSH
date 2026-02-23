@@ -19,7 +19,7 @@ public static class DatabaseConstants
 	public const string Channels = "node_channels";
 	public const string Mails = "node_mails";
 	public const string Logs = "logs";
-	
+
 	public static readonly string[] verticesContainer = [Rooms, Players, Things];
 	public static readonly string[] verticesContent = [Players, Exits, Things];
 	public static readonly string[] verticesAll = [Rooms, Players, Exits, Things];

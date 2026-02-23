@@ -22,7 +22,7 @@ public class DatabaseFunctionUnitTests
 	{
 		// Use unique table names for function tests to avoid interference with command tests
 		var connectionString = MySqlTestServer.Instance.GetConnectionString();
-		
+
 		await using var connection = new MySqlConnection(connectionString);
 		await connection.OpenAsync();
 
@@ -153,8 +153,6 @@ public class DatabaseFunctionUnitTests
 		await Assert.That(plainText).StartsWith("#-1 SQL ERROR");
 	}
 
-	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
-	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	public async Task Test_Sql_WithRegister()
 	{
@@ -276,8 +274,8 @@ public class DatabaseFunctionUnitTests
 			?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution2: Row 1 has value 100" +
-		                                                  "\nTest_Mapsql_BasicExecution2: Row 2 has value 200" +
-		                                                  "\nTest_Mapsql_BasicExecution2: Row 3 has value 300");
+																											"\nTest_Mapsql_BasicExecution2: Row 2 has value 200" +
+																											"\nTest_Mapsql_BasicExecution2: Row 3 has value 300");
 	}
 
 	[Test]

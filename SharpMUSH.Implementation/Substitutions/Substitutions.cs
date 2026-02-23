@@ -1,6 +1,5 @@
 using Humanizer;
 using Mediator;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Definitions;
@@ -102,7 +101,7 @@ public static partial class Substitutions
 		ComplexSubstitutionSymbolContext context)
 	{
 		ArgumentNullException.ThrowIfNull(symbol);
-		
+
 		if (context.REG_NUM() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
 		if (context.ITEXT_LAST() is not null) return HandleITextTop(symbol, parser);

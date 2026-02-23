@@ -1,15 +1,12 @@
-﻿using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.ParserInterfaces;
-using System.Data.Common;
-using SharpMUSH.Implementation.Common;
-using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Requests;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Data.Common;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -68,7 +65,7 @@ public partial class Functions
 						parameters.Add(paramValue);
 					}
 				}
-				
+
 				results = await SqlService.ExecutePreparedQueryAsync(query, [.. parameters]);
 			}
 			else
@@ -144,8 +141,8 @@ public partial class Functions
 			: MModule.single(" ");
 
 		var doFieldNames = args.Count > 3
-		                   && args.TryGetValue("3", out var fieldNameArg)
-		                   && fieldNameArg.Message.Truthy();
+											 && args.TryGetValue("3", out var fieldNameArg)
+											 && fieldNameArg.Message.Truthy();
 
 		// If more than 4 arguments, treat remaining arguments as prepared statement parameters
 		var isPreparedStatement = args.Count > 4;

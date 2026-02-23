@@ -2,6 +2,7 @@ using Core.Arango;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
@@ -26,7 +27,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		var log = new LoggerConfiguration()
 			.Enrich.FromLogContext()
 			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.MinimumLevel.Debug()
+			.MinimumLevel.Verbose()
 			.CreateLogger();
 
 		Log.Logger = log;
@@ -40,7 +41,15 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
 
-		builder.ConfigureServices(startup.ConfigureServices);
+		builder.ConfigureServices(services =>
+		{
+			// Build a minimal configuration for Serilog to read from
+			var configuration = new ConfigurationBuilder()
+				.SetBasePath(AppContext.BaseDirectory)
+				.AddJsonFile("appsettings.json", optional: true)
+				.Build();
+			startup.ConfigureServices(services, configuration);
+		});
 		builder.ConfigureTestServices(sc =>
 			{
 				sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();

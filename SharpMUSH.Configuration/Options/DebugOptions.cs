@@ -8,7 +8,7 @@ public record DebugOptions(
 		Group = "Parser Debugging",
 		Order = 1)]
 	bool DebugSharpParser,
-	
+
 	[property: SharpConfig(
 		Name = "parser_prediction_mode",
 		Category = "Debug",
@@ -16,16 +16,7 @@ public record DebugOptions(
 		Group = "Parser Configuration",
 		Order = 1,
 		Tooltip = "SLL is faster but less powerful; LL handles complex grammars")]
-	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.LL,
-	
-	[property: SharpConfig(
-		Name = "parser_strict_mode",
-		Category = "Debug",
-		Description = "Enable strict parser mode that throws exceptions on unexpected tokens. Use for testing/debugging only.",
-		Group = "Parser Configuration",
-		Order = 2,
-		Tooltip = "When enabled, parser will throw exceptions instead of recovering from errors")]
-	bool ParserStrictMode = false
+	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.LL
 );
 
 /// <summary>
@@ -37,7 +28,7 @@ public enum ParserPredictionMode
 	/// Strong LL parsing - faster but less powerful. Use for simpler grammars.
 	/// </summary>
 	SLL,
-	
+
 	/// <summary>
 	/// Full LL(*) parsing - slower but more powerful. Can handle complex grammars.
 	/// Default mode.

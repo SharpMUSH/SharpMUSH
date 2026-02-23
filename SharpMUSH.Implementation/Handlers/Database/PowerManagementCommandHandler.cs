@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class CreatePowerCommandHandler(ISharpDatabase database) 
+public class CreatePowerCommandHandler(ISharpDatabase database)
 	: ICommandHandler<CreatePowerCommand, SharpPower?>
 {
 	public async ValueTask<SharpPower?> Handle(CreatePowerCommand request, CancellationToken cancellationToken)
@@ -21,7 +21,7 @@ public class CreatePowerCommandHandler(ISharpDatabase database)
 	}
 }
 
-public class DeletePowerCommandHandler(ISharpDatabase database) 
+public class DeletePowerCommandHandler(ISharpDatabase database)
 	: ICommandHandler<DeletePowerCommand, bool>
 {
 	public async ValueTask<bool> Handle(DeletePowerCommand request, CancellationToken cancellationToken)

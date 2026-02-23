@@ -110,9 +110,9 @@ public class HoverHandler : HoverHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error generating hover info: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		return Task.FromResult<Hover?>(null);
@@ -130,7 +130,7 @@ public class HoverHandler : HoverHandlerBase
 		markdown += $"**Arguments:**\n";
 		markdown += $"- Minimum: {attr.MinArgs}\n";
 		markdown += $"- Maximum: {attr.MaxArgs}\n\n";
-		
+
 		if (attr.Flags != 0)
 		{
 			markdown += $"**Flags:** {attr.Flags}\n\n";
@@ -147,7 +147,7 @@ public class HoverHandler : HoverHandlerBase
 	private static string BuildCommandHover(string name, Library.Attributes.SharpCommandAttribute attr)
 	{
 		var markdown = $"### Command: `{name}`\n\n";
-		
+
 		if (attr.Switches != null && attr.Switches.Length > 0)
 		{
 			markdown += $"**Switches:** {string.Join(", ", attr.Switches)}\n\n";
@@ -174,7 +174,7 @@ public class HoverHandler : HoverHandlerBase
 		if (minArgs == maxArgs)
 			return string.Join(", ", Enumerable.Range(1, minArgs).Select(i => $"arg{i}"));
 		return string.Join(", ", Enumerable.Range(1, minArgs).Select(i => $"arg{i}")) +
-		       (maxArgs > minArgs ? ", [optional...]" : "");
+					 (maxArgs > minArgs ? ", [optional...]" : "");
 	}
 
 	private static string? GetPatternInfo(string word)
@@ -186,7 +186,7 @@ public class HoverHandler : HoverHandlerBase
 			"%@" => "**Calling object** - The #dbref of the object that called this code",
 			"%N" or "%n" => "**Player name** - The name of the player executing the code",
 			"%l" or "%L" => "**Location** - The location of the executing object",
-			"%" when word.Length == 2 && char.IsDigit(word[1]) => 
+			"%" when word.Length == 2 && char.IsDigit(word[1]) =>
 				$"**Argument {word[1]}** - The {word[1]}th argument passed to this function/command",
 			"%" when word.Length == 3 && word[1] == 'q' && char.IsLetter(word[2]) =>
 				$"**Q-register {word[2]}** - Q-register storage",
@@ -199,7 +199,7 @@ public class HoverHandler : HoverHandlerBase
 	}
 
 	protected override HoverRegistrationOptions CreateRegistrationOptions(
-		HoverCapability capability, 
+		HoverCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new HoverRegistrationOptions

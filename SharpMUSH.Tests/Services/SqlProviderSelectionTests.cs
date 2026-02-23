@@ -3,7 +3,6 @@ using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -12,10 +11,10 @@ public class SqlProviderSelectionTests
 	private static IOptionsMonitor<SharpMUSHOptions> CreateTestConfig(string? sqlHost, string? sqlDatabase, string? sqlUsername, string? sqlPassword, string sqlPlatform)
 	{
 		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
-		
+
 		// Start with default config from test file
 		var baseConfig = ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst");
-		
+
 		// Override with test SQL settings
 		var config = baseConfig with
 		{
@@ -28,7 +27,7 @@ public class SqlProviderSelectionTests
 				SqlPlatform = sqlPlatform
 			}
 		};
-		
+
 		options.CurrentValue.Returns(config);
 		return options;
 	}
@@ -38,7 +37,7 @@ public class SqlProviderSelectionTests
 	{
 		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "mysql");
 		var service = new SqlService(optionsMonitor);
-		
+
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
 
@@ -47,7 +46,7 @@ public class SqlProviderSelectionTests
 	{
 		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "mariadb");
 		var service = new SqlService(optionsMonitor);
-		
+
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
 
@@ -56,7 +55,7 @@ public class SqlProviderSelectionTests
 	{
 		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "postgresql");
 		var service = new SqlService(optionsMonitor);
-		
+
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
 
@@ -65,7 +64,7 @@ public class SqlProviderSelectionTests
 	{
 		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "postgres");
 		var service = new SqlService(optionsMonitor);
-		
+
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
 
@@ -74,7 +73,7 @@ public class SqlProviderSelectionTests
 	{
 		var optionsMonitor = CreateTestConfig("", "test.db", "", "", "sqlite");
 		var service = new SqlService(optionsMonitor);
-		
+
 		await Assert.That(service.IsAvailable).IsTrue();
 	}
 
@@ -82,7 +81,7 @@ public class SqlProviderSelectionTests
 	public async Task Test_UnsupportedProvider_ThrowsException()
 	{
 		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "unsupported");
-		
+
 		await Assert.That(() => new SqlService(optionsMonitor).IsAvailable)
 			.Throws<NotSupportedException>()
 			.WithMessage("SQL platform 'unsupported' is not supported. Supported platforms: mysql, postgresql, sqlite");
@@ -93,9 +92,9 @@ public class SqlProviderSelectionTests
 	{
 		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "mysql");
 		var service = new SqlService(optionsMonitor);
-		
+
 		var escaped = service.Escape("test'string");
-		
+
 		await Assert.That(escaped).IsEqualTo("test\\'string");
 	}
 
@@ -104,9 +103,9 @@ public class SqlProviderSelectionTests
 	{
 		var optionsMonitor = CreateTestConfig("localhost", "test", "test", "test", "postgresql");
 		var service = new SqlService(optionsMonitor);
-		
+
 		var escaped = service.Escape("test'string");
-		
+
 		await Assert.That(escaped).IsEqualTo("test''string");
 	}
 
@@ -115,9 +114,9 @@ public class SqlProviderSelectionTests
 	{
 		var optionsMonitor = CreateTestConfig("", "test.db", "", "", "sqlite");
 		var service = new SqlService(optionsMonitor);
-		
+
 		var escaped = service.Escape("test'string");
-		
+
 		await Assert.That(escaped).IsEqualTo("test''string");
 	}
 }

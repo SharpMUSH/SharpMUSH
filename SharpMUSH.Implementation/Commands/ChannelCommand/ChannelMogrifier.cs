@@ -36,18 +36,18 @@ public static class ChannelMogrifier
 			LocateFlags.All,
 			async locate =>
 			{
-				await Mediator.Send(new UpdateChannelCommand(channel, 
-					null, 
-					null, 
-					null, 
-					null, 
-					null, 
-					null, 
+				await Mediator.Send(new UpdateChannelCommand(channel,
 					null,
 					null,
-					locate.Object().DBRef.ToString(), 
+					null,
+					null,
+					null,
+					null,
+					null,
+					null,
+					locate.Object().DBRef.ToString(),
 					null));
-		
+
 				return new CallState("Channel Mogrifier has been updated.");
 			});
 	}

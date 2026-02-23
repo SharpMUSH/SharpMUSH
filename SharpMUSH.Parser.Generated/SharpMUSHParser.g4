@@ -26,26 +26,24 @@ startCommandString:
 ;
 
 // Start looking for a pattern with comma separated arguments.
-// Can be completely empty (no arguments)
-startPlainCommaCommandArgs: commaCommandArgs? EOF;
+startPlainCommaCommandArgs: commaCommandArgs EOF;
 
 // Start looking for a pattern with an '=' split, followed by comma separated arguments.
 startEqSplitCommandArgs:
-    {lookingForCommandArgEquals = true;} (singleCommandArg (
+    {lookingForCommandArgEquals = true;} evaluationString? (
       EQUALS {lookingForCommandArgEquals = false;} commaCommandArgs
-    ))? EOF
+    )? EOF
 ;
 
 // Start looking for a pattern, with a '=' split, but without comma separated arguments.
 startEqSplitCommand:
-    {lookingForCommandArgEquals = true;} (singleCommandArg (
-        EQUALS {lookingForCommandArgEquals = false;} singleCommandArg
-    ))? EOF
+    {lookingForCommandArgEquals = true;} evaluationString? (
+        EQUALS {lookingForCommandArgEquals = false;} evaluationString?
+    )? EOF
 ; 
 
 // Start looking for a single-argument command value, by parsing the argument.
-// Can be empty (no argument)
-startPlainSingleCommandArg: singleCommandArg? EOF;
+startPlainSingleCommandArg: evaluationString? EOF;
 
 // Start looking for a plain string. These may start with a function call.
 startPlainString: evaluationString EOF;
@@ -55,18 +53,10 @@ commandList: command ({inBraceDepth == 0}? SEMICOLON command)*;
 command: evaluationString;
 
 commaCommandArgs:
-    {lookingForCommandArgCommas = true;} (singleCommandArg (
-        {inBraceDepth == 0}? COMMAWS singleCommandArg
-    )*)? {lookingForCommandArgCommas = false;}
+    {lookingForCommandArgCommas = true;} evaluationString? (
+        {inBraceDepth == 0}? COMMAWS evaluationString?
+    )* {lookingForCommandArgCommas = false;}
 ;
-
-
-commandArgument:
-    evaluationString
-    | {InputStream.LA(1) == COMMAWS || InputStream.LA(1) == SEMICOLON || InputStream.LA(1) == CBRACE || InputStream.LA(1) == Eof}? /* empty when followed by , or ; or } or EOF */
-;
-
-singleCommandArg: commandArgument;
 
 evaluationString:
       function explicitEvaluationString?
@@ -91,14 +81,9 @@ bracketPattern:
     OBRACK evaluationString CBRACK
 ;
 
-argument:
-    evaluationString
-    | {InputStream.LA(1) == COMMAWS || InputStream.LA(1) == CPAREN}? /* empty when followed by , or ) */
-;
-
 function: 
     FUNCHAR {++inFunction;} 
-    (argument ({inBraceDepth == 0}? COMMAWS argument)*)?
+    (evaluationString? ({inBraceDepth == 0}? COMMAWS evaluationString?)*)?
     CPAREN {--inFunction;} 
 ;
 
@@ -154,7 +139,6 @@ beginGenericText:
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | { inBraceDepth == 0 }? CBRACK
     | (escapedText|OPAREN|OTHER|ansi) 
 ;
 

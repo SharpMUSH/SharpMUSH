@@ -9,7 +9,7 @@ public class ListenPatternMatcherTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private IListenPatternMatcher ListenPatternMatcher => 
+	private IListenPatternMatcher ListenPatternMatcher =>
 		WebAppFactoryArg.Services.GetRequiredService<IListenPatternMatcher>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 

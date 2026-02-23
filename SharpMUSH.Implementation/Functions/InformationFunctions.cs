@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using SharpMUSH.Configuration;
-using SharpMUSH.Configuration.Options;
-using SharpMUSH.Implementation.Common;
+﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -58,7 +55,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		AnySharpObject targetPlayer = executor;
 		string? folderSpec = null;
 
@@ -70,7 +67,7 @@ public partial class Functions
 		else if (args.Count == 1)
 		{
 			var arg = args["0"].Message!.ToPlainText()!;
-			
+
 			// Try to determine if it's a folder number/name or a player
 			// Folders are typically numbers (0-15) or uppercase names (INBOX)
 			if (int.TryParse(arg, out var folderNum) && folderNum >= 0 && folderNum <= 15)
@@ -94,7 +91,7 @@ public partial class Functions
 				// Try to locate as player
 				var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 					parser, executor, executor, arg, LocateFlags.PlayersPreference);
-				
+
 				if (locateResult.IsError || locateResult.IsNone)
 				{
 					// Not a player, try as folder name anyway
@@ -119,7 +116,7 @@ public partial class Functions
 			var playerArg = args["0"].Message!.ToPlainText()!;
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-			
+
 			if (locateResult.IsError || locateResult.IsNone)
 			{
 				return new CallState("#-1 NO SUCH PLAYER");
@@ -132,7 +129,7 @@ public partial class Functions
 		// Get mail for the folder
 		var folderMail = Mediator!.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, folderSpec ?? "INBOX"));
 		var mailArray = await folderMail.ToArrayAsync();
-		
+
 		var read = mailArray.Count(m => m.Read);
 		var unread = mailArray.Count(m => !m.Read);
 		var cleared = mailArray.Count(m => m.Cleared);
@@ -162,13 +159,13 @@ public partial class Functions
 		// Format: pidinfo(<pid>[, <field>][, <delimiter>])
 		var args = parser.CurrentState.Arguments;
 		var pidStr = args["0"].Message!.ToPlainText();
-		
+
 		if (!long.TryParse(pidStr, out var pid))
 		{
 			return new CallState("#-1 INVALID PID");
 		}
 
-		var field = args.TryGetValue("1", out var fieldArg) 
+		var field = args.TryGetValue("1", out var fieldArg)
 			? fieldArg.Message!.ToPlainText().ToLowerInvariant()
 			: null;
 		var delimiter = args.TryGetValue("2", out var delimArg)
@@ -317,7 +314,7 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(
 					string.Join(" ", found switch
 					{
-						{ IsExit: true, AsExit: var exit } => [name, ..exit.Aliases ?? []],
+						{ IsExit: true, AsExit: var exit } => [name, .. exit.Aliases ?? []],
 						_ => [name]
 					})));
 			});
@@ -370,11 +367,11 @@ public partial class Functions
 		switch (parser.CurrentState.Arguments.Count)
 		{
 			case 0:
-			{
-				var allPowers = (Mediator!.CreateStream(new GetPowersQuery()))
-					.Select(x => MModule.single(x.Name));
-				return MModule.multipleWithDelimiter(MModule.single(" "), await allPowers.ToArrayAsync());
-			}
+				{
+					var allPowers = (Mediator!.CreateStream(new GetPowersQuery()))
+						.Select(x => MModule.single(x.Name));
+					return MModule.multipleWithDelimiter(MModule.single(" "), await allPowers.ToArrayAsync());
+				}
 
 			case 1:
 				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -385,17 +382,17 @@ public partial class Functions
 							.Select(x => MModule.single(x.Name)).ToArrayAsync()));
 
 			default:
-			{
-				if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
 				{
-					return Errors.ErrorNoSideFx;
-				}
+					if (!Configuration!.CurrentValue.Function.FunctionSideEffects)
+					{
+						return Errors.ErrorNoSideFx;
+					}
 
-				return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-					parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
-					async found =>
-						await ManipulateSharpObjectService!.SetPower(executor, found, power!.Message!.ToPlainText(), true));
-			}
+					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+						parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
+						async found =>
+							await ManipulateSharpObjectService!.SetPower(executor, found, power!.Message!.ToPlainText(), true));
+				}
 		}
 	}
 
@@ -466,7 +463,7 @@ public partial class Functions
 		var target = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "me");
 		var queueTypesStr = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "wait semaphore").ToPlainText()
 			.ToUpperInvariant();
-		
+
 		var queueTypes = queueTypesStr.Split(" ", StringSplitOptions.RemoveEmptyEntries).Distinct().ToList();
 
 		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))
@@ -535,8 +532,8 @@ public partial class Functions
 		// lstats() returns statistics about objects in the database
 		// Format: <players> <things> <exits> <rooms> <garbage>
 		var args = parser.CurrentState.Arguments;
-		var typeFilter = args.TryGetValue("0", out var typeArg) 
-			? typeArg.Message!.ToPlainText().ToUpperInvariant() 
+		var typeFilter = args.TryGetValue("0", out var typeArg)
+			? typeArg.Message!.ToPlainText().ToUpperInvariant()
 			: null;
 
 		// Get all objects from the database
@@ -695,16 +692,16 @@ public partial class Functions
 			{
 				// Get the player owner of the object
 				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
-				
+
 				// Object has no owner - return "0 0" (0 objects owned, 0 quota limit)
 				if (owner is null)
 				{
 					return new CallState("0 0");
 				}
-				
+
 				// Get the actual count of objects owned by the player
 				var ownedCount = await Mediator!.Send(new GetOwnedObjectCountQuery(owner));
-				
+
 				// Return "owned quota" format (e.g., "42 100" means 42 objects owned of 100 quota)
 				return new CallState($"{ownedCount} {owner.Quota}");
 			});
@@ -729,8 +726,8 @@ public partial class Functions
 
 		var classArg = args["0"].Message!.ToPlainText();
 		var pattern = args["1"].Message!.ToPlainText();
-		var attributePattern = args.TryGetValue("2", out var attrArg) 
-			? attrArg.Message!.ToPlainText() 
+		var attributePattern = args.TryGetValue("2", out var attrArg)
+			? attrArg.Message!.ToPlainText()
 			: "*";
 
 		// Get all objects to search
@@ -764,7 +761,7 @@ public partial class Functions
 
 			// Get attributes and search
 			var attributes = obj.Attributes.Value;
-			
+
 			await foreach (var attr in attributes)
 			{
 				// Check if attribute name matches pattern (simple contains for now)
@@ -791,7 +788,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var colorsConfig = ColorConfiguration?.CurrentValue;
-		
+
 		if (colorsConfig == null || colorsConfig.Colors.Length == 0)
 		{
 			return ValueTask.FromResult(new CallState(string.Empty));
@@ -804,7 +801,7 @@ public partial class Functions
 				.Select(c => c.name)
 				.Distinct()
 				.ToList();
-			
+
 			return ValueTask.FromResult(new CallState(string.Join(" ", allColors)));
 		}
 
@@ -817,7 +814,7 @@ public partial class Functions
 				.Select(c => c.name)
 				.Distinct()
 				.ToList();
-			
+
 			return ValueTask.FromResult(new CallState(string.Join(" ", matchingColors)));
 		}
 
@@ -858,7 +855,7 @@ public partial class Functions
 		var stylesBuilder = new System.Text.StringBuilder();
 
 		var parts = spec.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		
+
 		foreach (var part in parts)
 		{
 			// Check if it's a background color (starts with /)
@@ -895,12 +892,12 @@ public partial class Functions
 
 	private static bool IsAnsiControlChar(char ch)
 	{
-		return ch is 'f' or 'u' or 'i' or 'h' or 
-		       'x' or 'r' or 'g' or 'y' or 'b' or 'm' or 'c' or 'w' or 
-		       'X' or 'R' or 'G' or 'Y' or 'B' or 'M' or 'C' or 'W';
+		return ch is 'f' or 'u' or 'i' or 'h' or
+					 'x' or 'r' or 'g' or 'y' or 'b' or 'm' or 'c' or 'w' or
+					 'X' or 'R' or 'G' or 'Y' or 'B' or 'M' or 'C' or 'W';
 	}
 
-	private static string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles, 
+	private static string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles,
 		SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
 		var result = new List<string>();
@@ -1161,7 +1158,7 @@ public partial class Functions
 		// Map to 16-color ANSI codes
 		// Basic ANSI colors: x=black, r=red, g=green, y=yellow, b=blue, m=magenta, c=cyan, w=white
 		// Add 'h' prefix for highlight (bright) versions
-		
+
 		var xterm = ConvertColorToXterm(colorSpec, config);
 		if (xterm == null)
 		{
@@ -1279,7 +1276,7 @@ public partial class Functions
 		}
 
 		// Try xterm format
-		if (int.TryParse(colorSpec, out var xtermNum) || 
+		if (int.TryParse(colorSpec, out var xtermNum) ||
 			(colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out xtermNum)))
 		{
 			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum).ToList();
@@ -1329,15 +1326,15 @@ public partial class Functions
 		return new CallState(motdData?.FullMotd ?? string.Empty);
 	}
 
-	[SharpFunction(Name = "CONFIG", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "CONFIG", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular,
 		ParameterNames = ["option"])]
 	public static ValueTask<CallState> Config(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		
+
 		// Use generated ConfigMetadata to get all option names
 		var allOptionNames = ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys;
-		
+
 		if (!args.TryGetValue("0", out var optionArg) || string.IsNullOrWhiteSpace(optionArg.Message?.ToPlainText()))
 		{
 			// Return list of config option names
@@ -1348,17 +1345,17 @@ public partial class Functions
 		}
 
 		var searchTerm = optionArg.Message!.ToPlainText();
-		
+
 		// Find matching property by attribute name (case-insensitive)
 		var matchingProperty = ConfigGenerated.ConfigMetadata.PropertyToAttributeName
 			.FirstOrDefault(kvp => kvp.Value.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
-		
+
 		if (matchingProperty.Key != null)
 		{
 			var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration!.CurrentValue, matchingProperty.Key);
 			return ValueTask.FromResult<CallState>(value?.ToString() ?? "");
 		}
-		
+
 		return ValueTask.FromResult<CallState>("#-1 NO SUCH OPTION");
 	}
 }

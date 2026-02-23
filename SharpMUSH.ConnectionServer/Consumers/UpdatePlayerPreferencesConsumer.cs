@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;

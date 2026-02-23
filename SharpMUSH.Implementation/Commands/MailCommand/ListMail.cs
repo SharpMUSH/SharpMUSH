@@ -1,11 +1,10 @@
-﻿using System.Globalization;
-using DotNext;
-using Humanizer;
+﻿using Humanizer;
 using Mediator;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Globalization;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -36,8 +35,8 @@ public static class ListMail
 				MModule.PadType.Center,
 				MModule.TruncationType.Truncate);
 
-			var folderTasks = await folder.ToAsyncEnumerable().Select((x,y,_) => DisplayMailLine(x,y)).ToArrayAsync();
-			
+			var folderTasks = await folder.ToAsyncEnumerable().Select((x, y, _) => DisplayMailLine(x, y)).ToArrayAsync();
+
 			MString[] builder =
 			[
 				center,

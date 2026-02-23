@@ -13,7 +13,7 @@ namespace SharpMUSH.Library.Queries;
 /// <param name="Name">The name to search for</param>
 /// <param name="Flags">Locate flags to control search behavior</param>
 public record LocateObjectQuery(
-	AnySharpObject Looker, 
+	AnySharpObject Looker,
 	AnySharpObject Executor,
 	string Name,
 	LocateFlags Flags) : IQuery<AnyOptionalSharpObjectOrError>;

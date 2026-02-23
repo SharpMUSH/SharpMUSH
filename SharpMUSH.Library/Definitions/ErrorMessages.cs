@@ -26,7 +26,7 @@ public static class ErrorMessages
 		public const string NotVisible = "#-1 NO SUCH OBJECT VISIBLE";
 		public const string CantSeeThat = "#-1 CAN'T SEE THAT HERE";
 		public const string InvalidDbref = "#-1 INVALID DBREF";
-		
+
 		// Object type errors
 		public const string NotARoom = "#-1 NOT A ROOM";
 		public const string NotAnExit = "#-1 NOT AN EXIT";
@@ -36,7 +36,7 @@ public static class ErrorMessages
 		public const string InvalidRoom = "#-1 INVALID ROOM";
 		public const string InvalidDestination = "#-1 INVALID DESTINATION";
 		public const string InvalidObjectType = "#-1 INVALID OBJECT TYPE";
-		
+
 		// Permission errors
 		public const string PermissionDenied = "#-1 PERMISSION DENIED";
 		public const string AttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";
@@ -44,7 +44,7 @@ public static class ErrorMessages
 		public const string AttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
 		public const string AttrWipPermissions = "#-1 NO PERMISSION TO WIPE ATTRIBUTE";
 		public const string CannotTeleport = "#-1 NO PERMISSION TO TELEPORT OBJECT";
-		
+
 		// Argument and validation errors
 		public const string InvalidArgument = "#-1 INVALID ARGUMENT";
 		public const string Integer = "#-1 ARGUMENT MUST BE INTEGER";
@@ -62,10 +62,10 @@ public static class ErrorMessages
 		public const string BadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
 		public const string ArgRange = "#-1 ARGUMENT OUT OF RANGE";
 		public const string TimeInteger = "#-1 TIME INTEGER OUT OF RANGE";
-		
+
 		// Attribute errors
 		public const string NoSuchAttribute = "#-1 NO SUCH ATTRIBUTE";
-		
+
 		// Function and feature errors
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NoSuchFunction = "#-1 COULD NOT FIND FUNCTION: {0}";
@@ -74,7 +74,7 @@ public static class ErrorMessages
 		public const string NoSuchTimezone = "#-1 NO SUCH TIMEZONE";
 		public const string FunctionDisabled = "#-1 FUNCTION DISABLED";
 		public const string NoSideFx = "#-1 SIDE EFFECTS DISABLED FOR THIS FUNCTION";
-		
+
 		// Limits and recursion
 		public const string Invoke = "#-1 FUNCTION INVOCATION LIMIT EXCEEDED";
 		public const string Recursion = "#-1 FUNCTION RECURSION LIMIT EXCEEDED";
@@ -84,14 +84,14 @@ public static class ErrorMessages
 		public const string TooManyRegs = "#-1 TOO MANY REGISTERS";
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
 		public const string OutOfRange = "#-1 OUT OF RANGE";
-		
+
 		// Configuration and database errors
 		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
 		public const string InvalidZone = "#-1 INVALID ZONE";
 		public const string SeparatorMustBeOneChar = "#-1 SEPARATOR MUST BE ONE CHARACTER";
 		public const string MissingArguments = "#-1 MISSING ARGUMENTS";
 		public const string NoSuchRecord = "#-1 NO SUCH RECORD";
-		
+
 		// SQL/Database errors (for future SQL support)
 		public const string SqlNoConnection = "#-1 SQL ERROR: NO DATABASE CONNECTED";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -99,10 +99,10 @@ public static class ErrorMessages
 		public const string SqliteError = "#-1 SQLITE ERROR";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SqliteErrorDetail = "#-1 SQLITE ERROR: {0}";
-		
+
 		// Channel errors
 		public const string AmbiguousChannelName = "#-2 AMBIGUOUS CHANNEL NAME";
-		
+
 		// Function argument errors
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string TooFewArguments = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
@@ -114,7 +114,7 @@ public static class ErrorMessages
 		public const string GotUnEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN EVEN NUMBER OF ARGUMENTS";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
-		
+
 		// State and operation errors
 		public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 		public const string NothingToDo = "#-1 NOTHING TO DO";
@@ -150,7 +150,7 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontSeeThatHereFormat = "I don't see {0} here.";
 		public const string DontKnowWhoYouMean = "I don't know who you mean!";
-		
+
 		// Object type notifications
 		public const string NotARoom = "That's not a room.";
 		public const string NotAnExit = "That's not an exit.";
@@ -159,7 +159,7 @@ public static class ErrorMessages
 		public const string MustBePlayer = "New owner must be a player.";
 		public const string InvalidDestinationExit = "Invalid destination for exit.";
 		public const string HomeMustBeRoom = "Home must be a room.";
-		
+
 		// Permission notifications
 		public const string PermissionDenied = "Permission denied.";
 		public const string NoPermission = "You don't have permission to do that.";
@@ -173,7 +173,7 @@ public static class ErrorMessages
 		public const string CannotDoWhileGagged = "You cannot do that while gagged.";
 		public const string CantTeleportToNothing = "You can't teleport to nothing!";
 		public const string HavenFlagSet = "Your HAVEN flag is set. You cannot receive pages.";
-		
+
 		// Argument and validation notifications
 		public const string InvalidArgument = "Invalid argument.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -189,15 +189,15 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontKnowThat = "I don't know that {0}.";
 		public const string DontKnowThatAttribute = "I don't know that attribute.";
-		
+
 		// Name and alias notifications
 		public const string PlayerNameInUse = "That player name is already in use.";
 		public const string PlayerAliasInUse = "That player alias is already in use.";
-		
+
 		// Function notifications
 		public const string RecursionLimit = "That caused too much recursion.";
 		public const string FunctionDisabled = "That function is disabled.";
-		
+
 		// Operation result notifications
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string Created = "Created {0} ({1}).";
@@ -207,28 +207,28 @@ public static class ErrorMessages
 		public const string CouldNotFindNewOwner = "Could not find new owner.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CouldNotFindDestination = "Could not find destination: {0}";
-		
+
 		// Channel notifications
 		public const string DontRecognizeThatChannel = "I don't recognise that channel.";
 		public const string DontKnowWhichChannel = "I don't know which channel you mean.";
-		
+
 		// Mail and communication notifications
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontThinkWantsToHearFrom = "I don't think #{0} wants to hear from {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DontThinkWantsMail = "I don't think #{0} wants {1}'s mail.";
-		
+
 		// Economic notifications
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NotEnoughMoneyToLink = "You don't have enough {0} to link.";
 		public const string CantBuyThingsByTakingMoney = "You can't buy things by taking money.";
-		
+
 		// Administrative notifications
 		public const string DontLookLikeGod = "You don't look like God.";
 		public const string NotAnAdmin = "You don't look like an admin to me.";
 		public const string CantAliasCommandToThat = "I can't alias a command to that!";
 		public const string CantMakeMultipleRequests = "You can't make multiple requests at the same time!";
-		
+
 		// HTTP/Network notifications
 		public const string CannotSetContentLengthHeader = "You cannot set Content-Length header.";
 	}

@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using SharpMUSH.Implementation.Common;
+﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -10,7 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using AsyncEnumerable = System.Linq.AsyncEnumerable;
+using System.Globalization;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -22,8 +21,8 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		if (!await executor.HasFlag("WIZARD") &&
-		    !await executor.HasFlag("ROYALTY") &&
-		    !await executor.HasPower("SEE_ALL"))
+				!await executor.HasFlag("ROYALTY") &&
+				!await executor.HasPower("SEE_ALL"))
 		{
 			return new CallState(Errors.ErrorPerm);
 		}
@@ -74,9 +73,9 @@ public partial class Functions
 				};
 
 				if (addressValue != null
-				    && MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
-				    && uniqueAddresses.Add(addressValue)
-				    && !isCount)
+						&& MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
+						&& uniqueAddresses.Add(addressValue)
+						&& !isCount)
 				{
 					results.Add(
 						$"{log.Properties.GetValueOrDefault("InternetProtocolAddress", "UNKNOWN")} {log.Properties.GetValueOrDefault("HostName", "UNKNOWN")}");
@@ -181,7 +180,7 @@ public partial class Functions
 			var specValue = args[(i + 1).ToString()].Message!.ToPlainText();
 
 			if (specType != "after" && specType != "before" && specType != "ip" &&
-			    specType != "hostname" && specType != "count")
+					specType != "hostname" && specType != "count")
 			{
 				return new CallState("#-1 INVALID SPEC TYPE");
 			}
@@ -208,14 +207,14 @@ public partial class Functions
 						matches = false;
 						break;
 					default:
-					{
-						if (filter.StartsWith("#") && log.Properties.GetValueOrDefault("DBRef") != filter)
 						{
-							matches = false;
-						}
+							if (filter.StartsWith("#") && log.Properties.GetValueOrDefault("DBRef") != filter)
+							{
+								matches = false;
+							}
 
-						break;
-					}
+							break;
+						}
 				}
 
 				foreach (var (type, value) in specs.Where(s => s.type != "count"))
@@ -223,34 +222,34 @@ public partial class Functions
 					switch (type)
 					{
 						case "after" when long.TryParse(value, out var afterTime):
-						{
-							if (log.Timestamp <= DateTimeOffset.FromUnixTimeSeconds(afterTime).DateTime)
 							{
-								matches = false;
-							}
+								if (log.Timestamp <= DateTimeOffset.FromUnixTimeSeconds(afterTime).DateTime)
+								{
+									matches = false;
+								}
 
-							break;
-						}
+								break;
+							}
 						case "before" when long.TryParse(value, out var beforeTime):
-						{
-							if (log.Timestamp >= DateTimeOffset.FromUnixTimeSeconds(beforeTime).DateTime)
 							{
-								matches = false;
-							}
+								if (log.Timestamp >= DateTimeOffset.FromUnixTimeSeconds(beforeTime).DateTime)
+								{
+									matches = false;
+								}
 
-							break;
-						}
+								break;
+							}
 						case "ip":
-						{
-							if (!MModule.isWildcardMatch2(
-								    MModule.single(log.Properties.GetValueOrDefault("InternetProtocolAddress", "")),
-								    value))
 							{
-								matches = false;
-							}
+								if (!MModule.isWildcardMatch2(
+											MModule.single(log.Properties.GetValueOrDefault("InternetProtocolAddress", "")),
+											value))
+								{
+									matches = false;
+								}
 
-							break;
-						}
+								break;
+							}
 						case "hostname" when
 							!MModule.isWildcardMatch2(MModule.single(log.Properties.GetValueOrDefault("HostName", "")), value):
 							matches = false;
@@ -509,9 +508,9 @@ public partial class Functions
 		}
 
 		var connectionData = await ConnectionService!.Get(located.Object.DBRef).FirstOrDefaultAsync();
-		
-		return connectionData is null 
-			? new CallState("#-1") 
+
+		return connectionData is null
+			? new CallState("#-1")
 			: new CallState(connectionData.InternetProtocolAddress);
 	}
 
@@ -555,8 +554,8 @@ public partial class Functions
 
 		var allConnections = ConnectionService!.GetAll()
 			.Where(x => status == "all" ||
-			            (status == "online" && x.State == IConnectionService.ConnectionState.LoggedIn) ||
-			            (status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn));
+									(status == "online" && x.State == IConnectionService.ConnectionState.LoggedIn) ||
+									(status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn));
 
 		// Filter connections viewer can see
 		var visibleConnections = new List<long>();
@@ -761,7 +760,7 @@ public partial class Functions
 			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
 			.Where(async (x, _) => isWizard || !await x.HasFlag("DARK"))
 			.Select(player => $"#{player.Object().DBRef.Number}");
-		
+
 		return new CallState(string.Join(" ", await nonHiddenConnections.ToArrayAsync()));
 	}
 
@@ -771,7 +770,7 @@ public partial class Functions
 		// Mortal viewer context - can't see hidden (DARK) players unless executor is a wizard
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var isWizard = await executor.IsWizard();
-		
+
 		var nonHiddenConnectionsObjIds = ConnectionService!
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
@@ -1096,7 +1095,7 @@ public partial class Functions
 			}
 
 			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) ||
-			    !int.TryParse(args["2"].Message!.ToPlainText(), out count))
+					!int.TryParse(args["2"].Message!.ToPlainText(), out count))
 			{
 				return new CallState(Errors.ErrorIntegers);
 			}
@@ -1105,7 +1104,7 @@ public partial class Functions
 		{
 			// xwho(<start>, <count>)
 			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) ||
-			    !int.TryParse(args["1"].Message!.ToPlainText(), out count))
+					!int.TryParse(args["1"].Message!.ToPlainText(), out count))
 			{
 				return new CallState(Errors.ErrorIntegers);
 			}
@@ -1153,7 +1152,7 @@ public partial class Functions
 			}
 
 			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) ||
-			    !int.TryParse(args["2"].Message!.ToPlainText(), out count))
+					!int.TryParse(args["2"].Message!.ToPlainText(), out count))
 			{
 				return new CallState(Errors.ErrorIntegers);
 			}
@@ -1162,7 +1161,7 @@ public partial class Functions
 		{
 			// xwhoid(<start>, <count>)
 			if (!int.TryParse(args["0"].Message!.ToPlainText(), out start) ||
-			    !int.TryParse(args["1"].Message!.ToPlainText(), out count))
+					!int.TryParse(args["1"].Message!.ToPlainText(), out count))
 			{
 				return new CallState(Errors.ErrorIntegers);
 			}
@@ -1211,7 +1210,7 @@ public partial class Functions
 		// Get all players in rooms that are in this zone (excluding dark/hidden players)
 		var playersInZone = new List<string>();
 		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
-		
+
 		await foreach (var player in allPlayers)
 		{
 			// Skip dark/hidden players unless executor has SEE_ALL
@@ -1224,14 +1223,14 @@ public partial class Functions
 					continue;
 				}
 			}
-			
+
 			// Get player's location
 			var playerLocation = await player.Location.WithCancellation(CancellationToken.None);
-			
+
 			// Check if the location's zone matches
 			var locationObj = playerLocation.WithExitOption();
 			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
-			
+
 			if (!locationZone.IsNone)
 			{
 				if (locationZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
@@ -1273,16 +1272,16 @@ public partial class Functions
 		// Get all players in rooms that are in this zone
 		var playersInZone = new List<string>();
 		var allPlayers = Mediator!.CreateStream(new GetAllPlayersQuery())!;
-		
+
 		await foreach (var player in allPlayers)
 		{
 			// Get player's location
 			var playerLocation = await player.Location.WithCancellation(CancellationToken.None);
-			
+
 			// Check if the location's zone matches
 			var locationObj = playerLocation.WithExitOption();
 			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
-			
+
 			if (!locationZone.IsNone)
 			{
 				if (locationZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
@@ -1335,7 +1334,7 @@ public partial class Functions
 		// Get all objects in the zone
 		var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
 		var objectList = new List<string>();
-		
+
 		await foreach (var obj in zoneObjects)
 		{
 			// Get the full object to check permissions
@@ -1344,7 +1343,7 @@ public partial class Functions
 			{
 				continue;
 			}
-			
+
 			// Check if executor can see this object
 			if (hasSeeAll || await PermissionService!.CanExamine(executor, fullObj.Known))
 			{
@@ -1470,7 +1469,7 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		var canSeeHidden = await executor.HasFlag("WIZARD") || await executor.HasFlag("ROYALTY") ||
-		                   await executor.HasPower("SEE_ALL");
+											 await executor.HasPower("SEE_ALL");
 
 		if (!canSeeHidden)
 		{
@@ -1512,8 +1511,8 @@ public partial class Functions
 		}
 
 		return await executor.HasFlag("WIZARD") ||
-		       await executor.HasFlag("ROYALTY") ||
-		       await executor.HasPower("SEE_ALL");
+					 await executor.HasFlag("ROYALTY") ||
+					 await executor.HasPower("SEE_ALL");
 	}
 
 	/// <summary>
@@ -1570,7 +1569,7 @@ public partial class Functions
 		return string.Join(" ", terminfo);
 	}
 
-	[SharpFunction(Name = "IDLESECS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, 
+	[SharpFunction(Name = "IDLESECS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["player"])]
 	public static async ValueTask<CallState> IdleSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1579,7 +1578,7 @@ public partial class Functions
 		if (!parser.CurrentState.Arguments.ContainsKey("0"))
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-			
+
 			// Find executor's connection
 			var data = ConnectionService!.Get(executor.Object().DBRef);
 			var idleSeconds = await data
@@ -1587,7 +1586,7 @@ public partial class Functions
 				.MinAsync();
 			return new CallState(((int)idleSeconds).ToString());
 		}
-		
+
 		// With argument, delegate to idle()
 		return await IdleSeconds(parser, _2);
 	}

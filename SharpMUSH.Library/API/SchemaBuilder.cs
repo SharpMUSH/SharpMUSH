@@ -12,19 +12,19 @@ public static class SchemaBuilder
 	public static ConfigurationSchema BuildSchema(SharpMUSHOptions options)
 	{
 		var schema = new ConfigurationSchema();
-		
+
 		// Build from reflection + attributes
 		schema.Properties = BuildPropertiesFromReflection(options);
 		schema.Categories = BuildCategoriesFromProperties(schema.Properties);
-		
+
 		return schema;
 	}
-	
+
 	private static List<CategoryMetadata> BuildCategoriesFromProperties(Dictionary<string, PropertyMetadata> properties)
 	{
 		var categories = new Dictionary<string, CategoryMetadata>();
 		var groups = new Dictionary<string, HashSet<GroupMetadata>>();
-		
+
 		foreach (var prop in properties.Values)
 		{
 			// Ensure category exists
@@ -41,7 +41,7 @@ public static class SchemaBuilder
 				};
 				groups[prop.Category] = new HashSet<GroupMetadata>(new GroupMetadataComparer());
 			}
-			
+
 			// Add group if specified
 			if (!string.IsNullOrEmpty(prop.Group))
 			{
@@ -53,7 +53,7 @@ public static class SchemaBuilder
 				});
 			}
 		}
-		
+
 		// Convert groups to lists and sort
 		foreach (var category in categories.Values)
 		{
@@ -62,37 +62,37 @@ public static class SchemaBuilder
 				category.Groups = categoryGroups.OrderBy(g => g.Order).ToList();
 			}
 		}
-		
+
 		return categories.Values.OrderBy(c => c.Order).ToList();
 	}
-	
+
 	private static Dictionary<string, PropertyMetadata> BuildPropertiesFromReflection(SharpMUSHOptions options)
 	{
 		var properties = new Dictionary<string, PropertyMetadata>();
 		var optionsType = typeof(SharpMUSHOptions);
-		
+
 		// Iterate through all option category properties (Net, Chat, Limit, etc.)
 		foreach (var categoryProp in optionsType.GetProperties())
 		{
 			var categoryValue = categoryProp.GetValue(options);
 			if (categoryValue == null) continue;
-			
+
 			var categoryType = categoryProp.PropertyType;
 			var categoryName = categoryProp.Name;
-			
+
 			// Get the default instance to extract default values
 			var defaultInstance = GetDefaultInstance(categoryType);
-			
+
 			// Iterate through properties in this category
 			foreach (var prop in categoryType.GetProperties())
 			{
 				var attr = prop.GetCustomAttribute<SharpConfigAttribute>();
 				if (attr == null) continue;
-				
+
 				var path = $"{categoryName}.{prop.Name}";
 				var currentValue = prop.GetValue(categoryValue);
 				var defaultValue = defaultInstance != null ? prop.GetValue(defaultInstance) : null;
-				
+
 				properties[path] = new PropertyMetadata
 				{
 					Name = prop.Name,
@@ -114,31 +114,31 @@ public static class SchemaBuilder
 				};
 			}
 		}
-		
+
 		return properties;
 	}
-	
+
 	private static string FormatPropertyDisplayName(string name)
 	{
 		if (string.IsNullOrEmpty(name)) return name;
-		
+
 		// Handle snake_case: mud_name -> Mud Name, player_creation -> Player Creation
 		if (name.Contains('_'))
 		{
 			return string.Join(" ", name.Split('_')
 				.Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
 		}
-		
+
 		// Handle all-lowercase words: logins -> Logins, guests -> Guests
 		if (name.All(char.IsLower))
 		{
 			return char.ToUpper(name[0]) + name.Substring(1);
 		}
-		
+
 		// Handle PascalCase/camelCase: MudName -> Mud Name, mudName -> Mud Name
 		return System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
 	}
-	
+
 	private static object? GetDefaultInstance(Type type)
 	{
 		try
@@ -152,43 +152,43 @@ public static class SchemaBuilder
 			return null;
 		}
 	}
-	
+
 	private static string GetPropertyTypeName(Type type)
 	{
 		var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-		
+
 		if (underlyingType == typeof(bool)) return "boolean";
-		if (underlyingType == typeof(int) || underlyingType == typeof(uint) || 
-		    underlyingType == typeof(long) || underlyingType == typeof(ulong) ||
-		    underlyingType == typeof(short) || underlyingType == typeof(ushort)) return "integer";
-		if (underlyingType == typeof(float) || underlyingType == typeof(double) || 
-		    underlyingType == typeof(decimal)) return "number";
+		if (underlyingType == typeof(int) || underlyingType == typeof(uint) ||
+				underlyingType == typeof(long) || underlyingType == typeof(ulong) ||
+				underlyingType == typeof(short) || underlyingType == typeof(ushort)) return "integer";
+		if (underlyingType == typeof(float) || underlyingType == typeof(double) ||
+				underlyingType == typeof(decimal)) return "number";
 		if (underlyingType == typeof(string)) return "string";
 		if (underlyingType.IsEnum) return "enum";
-		
+
 		return "string";
 	}
-	
+
 	private static string InferComponentType(Type type)
 	{
 		var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
-		
+
 		if (underlyingType == typeof(bool)) return "switch";
-		if (underlyingType == typeof(int) || underlyingType == typeof(uint) || 
-		    underlyingType == typeof(long) || underlyingType == typeof(ulong) ||
-		    underlyingType == typeof(short) || underlyingType == typeof(ushort) ||
-		    underlyingType == typeof(float) || underlyingType == typeof(double) || 
-		    underlyingType == typeof(decimal)) return "numeric";
+		if (underlyingType == typeof(int) || underlyingType == typeof(uint) ||
+				underlyingType == typeof(long) || underlyingType == typeof(ulong) ||
+				underlyingType == typeof(short) || underlyingType == typeof(ushort) ||
+				underlyingType == typeof(float) || underlyingType == typeof(double) ||
+				underlyingType == typeof(decimal)) return "numeric";
 		if (underlyingType.IsEnum) return "select";
-		
+
 		return "text";
 	}
-	
+
 	private static bool IsNullable(Type type)
 	{
 		return !type.IsValueType || Nullable.GetUnderlyingType(type) != null;
 	}
-	
+
 	private static string FormatCategoryDisplayName(string categoryName)
 	{
 		// Remove "Options" suffix if present
@@ -196,11 +196,11 @@ public static class SchemaBuilder
 		{
 			categoryName = categoryName.Substring(0, categoryName.Length - 7);
 		}
-		
+
 		// Add spaces before capital letters
 		return System.Text.RegularExpressions.Regex.Replace(categoryName, "([A-Z])", " $1").Trim();
 	}
-	
+
 	private static string? GetCategoryDescription(string categoryName)
 	{
 		return categoryName switch
@@ -215,7 +215,7 @@ public static class SchemaBuilder
 			_ => null
 		};
 	}
-	
+
 	private static string? GetCategoryIcon(string categoryName)
 	{
 		return categoryName switch
@@ -230,7 +230,7 @@ public static class SchemaBuilder
 			_ => "mdi-cog"
 		};
 	}
-	
+
 	private static int GetCategoryOrder(string categoryName)
 	{
 		return categoryName switch
@@ -245,7 +245,7 @@ public static class SchemaBuilder
 			_ => 99
 		};
 	}
-	
+
 	private class GroupMetadataComparer : IEqualityComparer<GroupMetadata>
 	{
 		public bool Equals(GroupMetadata? x, GroupMetadata? y)
@@ -253,7 +253,7 @@ public static class SchemaBuilder
 			if (x == null || y == null) return false;
 			return x.Name == y.Name;
 		}
-		
+
 		public int GetHashCode(GroupMetadata obj)
 		{
 			return obj.Name.GetHashCode();

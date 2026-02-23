@@ -1,12 +1,12 @@
-using System.Buffers;
-using System.Text;
-using System.Text.RegularExpressions;
 using DotNext.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Buffers;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Services;
 
@@ -24,7 +24,7 @@ public class TextFileService : ITextFileService
 {
 	private readonly IOptions<SharpMUSHOptions> _options;
 	private readonly ILogger<TextFileService> _logger;
-	
+
 	// Category -> (EntryName -> IndexEntry with file position)
 	private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _indexLock = new();
@@ -68,9 +68,9 @@ public class TextFileService : ITextFileService
 	public async Task<string> ListEntriesAsync(string fileReference, string separator = " ")
 	{
 		await _initializationTask.WithCancellation(CancellationToken.None);
-		
+
 		var (category, _) = ParseFileReference(fileReference);
-		
+
 		lock (_indexLock)
 		{
 			if (category != null && _categoryIndexes.TryGetValue(category, out var entries))
@@ -83,7 +83,7 @@ public class TextFileService : ITextFileService
 				.SelectMany(dict => dict.Keys)
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.OrderBy(k => k);
-			
+
 			return string.Join(separator, allEntries);
 		}
 	}
@@ -91,9 +91,9 @@ public class TextFileService : ITextFileService
 	public async Task<string?> GetEntryAsync(string fileReference, string entryName)
 	{
 		await _initializationTask.WithCancellation(CancellationToken.None);
-		
+
 		var (category, _) = ParseFileReference(fileReference);
-		
+
 		IndexEntry? indexEntry = null;
 		lock (_indexLock)
 		{
@@ -125,7 +125,7 @@ public class TextFileService : ITextFileService
 	public Task<IEnumerable<string>> ListFilesAsync(string? category = null)
 	{
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
-		
+
 		if (category != null)
 		{
 			var categoryPath = Path.Combine(baseDir, category);
@@ -155,7 +155,7 @@ public class TextFileService : ITextFileService
 	{
 		var (category, fileName) = ParseFileReference(fileReference);
 		var filePath = FindFilePath(category, fileName);
-		
+
 		if (filePath == null || !File.Exists(filePath))
 		{
 			return null;
@@ -168,7 +168,7 @@ public class TextFileService : ITextFileService
 	public async Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern)
 	{
 		await _initializationTask.WithCancellation(CancellationToken.None);
-		
+
 		var (category, _) = ParseFileReference(fileReference);
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
 		var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -176,7 +176,7 @@ public class TextFileService : ITextFileService
 		lock (_indexLock)
 		{
 			IEnumerable<string> entries;
-			
+
 			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
 			{
 				entries = categoryEntries.Keys;
@@ -195,7 +195,7 @@ public class TextFileService : ITextFileService
 	public async Task ReindexAsync()
 	{
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
-		
+
 		if (!Directory.Exists(baseDir))
 		{
 			_logger.LogWarning("Text files directory does not exist: {Directory}", baseDir);
@@ -209,7 +209,7 @@ public class TextFileService : ITextFileService
 		}
 
 		var categories = await ListCategoriesAsync();
-		
+
 		foreach (var category in categories)
 		{
 			await IndexCategoryAsync(category);
@@ -222,14 +222,14 @@ public class TextFileService : ITextFileService
 	{
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
 		var categoryPath = Path.Combine(baseDir, category);
-		
+
 		if (!Directory.Exists(categoryPath))
 		{
 			return;
 		}
 
 		var categoryIndex = new Dictionary<string, IndexEntry>(StringComparer.OrdinalIgnoreCase);
-		
+
 		// Index only .md files
 		var mdFiles = Directory.GetFiles(categoryPath, "*.md");
 
@@ -250,7 +250,7 @@ public class TextFileService : ITextFileService
 	{
 		var fileInfo = new FileInfo(filePath);
 		var result = Helpfiles.IndexMarkdown(fileInfo);
-		
+
 		if (result.IsT1)
 		{
 			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsT1.Value);
@@ -259,20 +259,20 @@ public class TextFileService : ITextFileService
 
 		var entries = result.AsT0;
 		var content = await File.ReadAllTextAsync(filePath);
-		
+
 		foreach (var (entryName, entryContent) in entries)
 		{
 			// For markdown files, find the position of the header
 			var headerPattern = $"# {Regex.Escape(entryName)}";
 			var match = Regex.Match(content, headerPattern, RegexOptions.Multiline | RegexOptions.IgnoreCase);
-			
+
 			if (match.Success)
 			{
 				var startPos = match.Index;
 				// Find next header or end of file
 				var nextHeaderMatch = Regex.Match(content.Substring(startPos + match.Length), @"^# ", RegexOptions.Multiline);
-				var endPos = nextHeaderMatch.Success 
-					? startPos + match.Length + nextHeaderMatch.Index 
+				var endPos = nextHeaderMatch.Success
+					? startPos + match.Length + nextHeaderMatch.Index
 					: content.Length;
 
 				var entry = new IndexEntry(
@@ -336,7 +336,7 @@ public class TextFileService : ITextFileService
 		}
 
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
-		
+
 		if (category != null)
 		{
 			var categoryPath = Path.Combine(baseDir, category);

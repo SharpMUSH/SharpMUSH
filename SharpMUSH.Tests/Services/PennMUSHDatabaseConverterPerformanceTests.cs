@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using System.Diagnostics;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -33,7 +33,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	{
 		// Generate a large fake database (10MB+)
 		var databaseFilePath = await PennMUSHDatabaseGenerator.GenerateLargeDatabaseFileAsync(10 * 1024 * 1024);
-		
+
 		try
 		{
 			var parser = GetParser();
@@ -53,7 +53,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			// Log performance metrics
 			var fileSize = new FileInfo(databaseFilePath).Length;
 			var fileSizeMB = fileSize / (1024.0 * 1024.0);
-			
+
 			Console.WriteLine($"=== Performance Metrics ===");
 			Console.WriteLine($"Database file size: {fileSizeMB:F2} MB");
 			Console.WriteLine($"Total objects: {result.TotalObjects}");
@@ -97,7 +97,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	{
 		// Generate a database with exactly 1000 objects
 		var databaseFilePath = await PennMUSHDatabaseGenerator.GenerateDatabaseWithObjectCountAsync(1000);
-		
+
 		try
 		{
 			var parser = GetParser();
@@ -150,7 +150,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 		foreach (var count in objectCounts)
 		{
 			var databaseFilePath = await PennMUSHDatabaseGenerator.GenerateDatabaseWithObjectCountAsync(count);
-			
+
 			try
 			{
 				var parser = GetParser();
@@ -192,7 +192,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 		var time1000 = results.First(r => r.Objects == 1000).Seconds;
 		var time5000 = results.First(r => r.Objects == 5000).Seconds;
 		var scalingRatio = time5000 / time1000;
-		
+
 		await Assert.That(scalingRatio).IsLessThan(6.0)
 			.Because($"5000 objects should not take more than 6x the time of 1000 objects (actual: {scalingRatio:F2}x)");
 	}

@@ -1,14 +1,14 @@
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Documentation;
 
 public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logger = null)
 {
 	public Dictionary<string, string> IndexedHelp { get; } = new(StringComparer.OrdinalIgnoreCase);
-	
+
 	/// <summary>
 	/// Finds a help entry by exact match or wildcard pattern
 	/// </summary>
@@ -19,10 +19,10 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		{
 			return content;
 		}
-		
+
 		return null;
 	}
-	
+
 	/// <summary>
 	/// Finds all help entries that match a wildcard pattern
 	/// </summary>
@@ -31,10 +31,10 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		// Convert wildcard pattern to regex
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
 		var compiledRegex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-		
+
 		return IndexedHelp.Keys.Where(k => compiledRegex.IsMatch(k));
 	}
-	
+
 	/// <summary>
 	/// Searches help content for entries containing the search term
 	/// </summary>
@@ -50,7 +50,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		// Index .md files recursively
 		IndexMarkdownFilesRecursive(directory);
 	}
-	
+
 	private void IndexMarkdownFilesRecursive(DirectoryInfo dir)
 	{
 		var mdFiles = dir.GetFiles("*.md");
@@ -64,7 +64,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 			}
 
 			var indexedFile = maybeIndexedFile.AsT0;
-			
+
 			foreach (var kv in indexedFile)
 			{
 				if (IndexedHelp.ContainsKey(kv.Key))
@@ -75,7 +75,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 				IndexedHelp.Add(kv.Key, kv.Value);
 			}
 		}
-		
+
 		// Recursively index subdirectories
 		foreach (var subDir in dir.GetDirectories())
 		{
@@ -83,7 +83,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		}
 	}
 
-	public static OneOf<Dictionary<string,string>, Error<string>> Index(FileInfo file)
+	public static OneOf<Dictionary<string, string>, Error<string>> Index(FileInfo file)
 	{
 		if (!file.Exists)
 		{
@@ -93,8 +93,8 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		var dict = new Dictionary<string, string>();
 
 		using var openText = file.OpenText();
-		
-		var textBody = openText.ReadToEnd().Replace("\r\n","\n");
+
+		var textBody = openText.ReadToEnd().Replace("\r\n", "\n");
 		var matches = Indexes().Matches(textBody);
 
 		foreach (Match match in matches)
@@ -113,7 +113,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 
 	[GeneratedRegex(@"(?:^& (?<Indexes>.+)\n)+(?<Body>(?:[^&].*\n)+)", RegexOptions.Compiled | RegexOptions.Multiline)]
 	private static partial Regex Indexes();
-	
+
 	public static OneOf<Dictionary<string, string>, Error<string>> IndexMarkdown(FileInfo file)
 	{
 		if (!file.Exists)
@@ -125,7 +125,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 
 		using var openText = file.OpenText();
 		var textBody = openText.ReadToEnd().Replace("\r\n", "\n");
-		
+
 		// Match markdown headers: # Topic Name
 		var matches = MarkdownHeaders().Matches(textBody);
 
@@ -133,23 +133,23 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		{
 			var topicName = match.Groups["Topic"].Value.Trim();
 			var startIndex = match.Index + match.Length;
-			
+
 			// Find the end of this topic (next header or end of file)
 			var nextMatch = match.NextMatch();
 			var endIndex = nextMatch.Success ? nextMatch.Index : textBody.Length;
-			
+
 			// Extract the content between this header and the next
 			var content = textBody.Substring(startIndex, endIndex - startIndex).Trim();
-			
+
 			// Include the header in the content
 			var fullContent = match.Value + content;
-			
+
 			dict[topicName] = fullContent;
 		}
 
 		return dict;
 	}
-	
+
 	[GeneratedRegex(@"^# (?<Topic>.+)$", RegexOptions.Compiled | RegexOptions.Multiline)]
 	private static partial Regex MarkdownHeaders();
 }

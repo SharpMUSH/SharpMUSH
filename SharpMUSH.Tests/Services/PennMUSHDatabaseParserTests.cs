@@ -27,7 +27,7 @@ public class PennMUSHDatabaseParserTests
 	{
 		var parser = GetParser();
 		var databaseContent = "V:PennMUSH v1.8.8p0\n";
-		
+
 		using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(databaseContent));
 		var database = await parser.ParseAsync(stream);
 
@@ -58,13 +58,13 @@ TYPE_ROOM VISUAL
 1234567890
 1234567890
 ";
-		
+
 		using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(databaseContent));
 		var database = await parser.ParseAsync(stream);
 
 		await Assert.That(database).IsNotNull();
 		await Assert.That(database.Objects.Count).IsEqualTo(1);
-		
+
 		var room = database.Objects[0];
 		await Assert.That(room.DBRef).IsEqualTo(0);
 		await Assert.That(room.Name).IsEqualTo("Room Zero");
@@ -96,19 +96,19 @@ TYPE_PLAYER
 <DESCRIBE>^-1^visual^0
 This is the description.
 ";
-		
+
 		using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(databaseContent));
 		var database = await parser.ParseAsync(stream);
 
 		await Assert.That(database).IsNotNull();
 		await Assert.That(database.Objects.Count).IsEqualTo(1);
-		
+
 		var player = database.Objects[0];
 		await Assert.That(player.DBRef).IsEqualTo(1);
 		await Assert.That(player.Name).IsEqualTo("Player One");
 		await Assert.That(player.Type).IsEqualTo(PennMUSHObjectType.Player);
 		await Assert.That(player.Attributes.Count).IsEqualTo(1);
-		
+
 		var attr = player.Attributes[0];
 		await Assert.That(attr.Name).IsEqualTo("DESCRIBE");
 		await Assert.That(attr.Value).Contains("description");
@@ -152,7 +152,7 @@ TYPE_PLAYER
 1234567890
 1234567890
 ";
-		
+
 		using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(databaseContent));
 		var database = await parser.ParseAsync(stream);
 

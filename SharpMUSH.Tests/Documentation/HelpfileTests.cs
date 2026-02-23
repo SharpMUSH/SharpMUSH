@@ -1,9 +1,9 @@
-﻿using System.Drawing;
-using Markdig;
+﻿using Markdig;
 using Markdig.Extensions.AutoIdentifiers;
 using MarkupString;
 using SharpMUSH.Documentation;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+using System.Drawing;
 using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Documentation;
@@ -72,15 +72,15 @@ public class HelpfileTests
 		var pipeline = new MarkdownPipelineBuilder().UseAutoIdentifiers(AutoIdentifierOptions.GitHub).Build();
 		var renderer = new MarkdownToAsciiRenderer(container);
 		pipeline.Setup(renderer);
-		
+
 		var markdown = "# Header1 *Bolded*\nNewline?";
 		var headerStyle = MarkupImplementation.AnsiMarkup.Create(underlined: true, bold: true);
 		var boldStyle = MarkupImplementation.AnsiMarkup.Create(bold: true, foreground: StringExtensions.rgb(Color.White));
-		
-		var header = MModule.markupMultiple(headerStyle, 
+
+		var header = MModule.markupMultiple(headerStyle,
 			[
-				MModule.single("Header1 "), 
-				MModule.markupMultiple(boldStyle, 
+				MModule.single("Header1 "),
+				MModule.markupMultiple(boldStyle,
 					[
 						MModule.single("Bolded")
 					])
@@ -89,9 +89,9 @@ public class HelpfileTests
 		var expectedResult = MModule.multipleWithDelimiter(MModule.single("\n"), [header, body]);
 		var doc = Markdown.Parse(markdown, pipeline);
 		var finalResult = renderer.RenderToMarkupString(doc);
-		
+
 		Console.WriteLine(finalResult.ToString());
-		
+
 		await Assert.That(finalResult.ToString()).IsEqualTo(expectedResult.ToString());
 	}
 }

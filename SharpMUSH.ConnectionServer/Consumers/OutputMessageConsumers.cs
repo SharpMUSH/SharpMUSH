@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messages;
 using SharpMUSH.Messaging.Abstractions;
@@ -16,6 +15,9 @@ public class TelnetPromptConsumer(
 {
 	public async Task HandleAsync(TelnetPromptMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] TelnetPromptMessage received - Handle: {Handle}, DataLength: {DataLength}",
+			message.Handle, message.Data?.Length ?? 0);
+
 		var connection = connectionService.Get(message.Handle);
 
 		if (connection == null)
@@ -26,6 +28,12 @@ public class TelnetPromptConsumer(
 
 		try
 		{
+			if (message.Data is null)
+			{
+				logger.LogWarning("Received TelnetPromptMessage with null data for handle: {Handle}", message.Handle);
+				return;
+			}
+
 			var transformedData = await transformService.TransformAsync(
 				message.Data,
 				connection.Capabilities,
@@ -51,13 +59,22 @@ public class BroadcastConsumer(
 {
 	public async Task HandleAsync(BroadcastMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogTrace("[KAFKA-RECV] BroadcastMessage received - DataLength: {DataLength}",
+			message.Data?.Length ?? 0);
+
 		var connections = connectionService.GetAll();
+
+		if (message.Data is null)
+		{
+			logger.LogWarning("Received BroadcastMessage with null data");
+			return;
+		}
 
 		foreach (var connection in connections)
 		{
 			try
 			{
-// Transform output based on capabilities and preferences
+				// Transform output based on capabilities and preferences
 				var transformedData = await transformService.TransformAsync(
 					message.Data,
 					connection.Capabilities,
@@ -83,7 +100,7 @@ public class DisconnectConnectionConsumer(
 {
 	public async Task HandleAsync(DisconnectConnectionMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogInformation("Disconnecting connection {Handle}. Reason: {Reason}",
+		logger.LogInformation("[KAFKA-RECV] Disconnecting connection {Handle}. Reason: {Reason}",
 			message.Handle, message.Reason ?? "None");
 
 		await connectionService.DisconnectAsync(message.Handle);

@@ -1,11 +1,8 @@
-﻿using System.Text.RegularExpressions;
-using System.Linq;
-using OneOf;
+﻿using OneOf;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -13,6 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -218,9 +216,9 @@ public partial class Functions
 			}
 
 			return await parser.With(s => s with
-				{
-					Enactor = parser.CurrentState.Executor
-				},
+			{
+				Enactor = parser.CurrentState.Executor
+			},
 				async newParser => await AttributeService.EvaluateAttributeFunctionAsync(
 					newParser,
 					executor,
@@ -242,9 +240,9 @@ public partial class Functions
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, dbref,
 			LocateFlags.All,
 			async actualObject => await parser.With(s => s with
-					{
-						Enactor = parser.CurrentState.Executor
-					},
+			{
+				Enactor = parser.CurrentState.Executor
+			},
 					async newParser => await AttributeService!.EvaluateAttributeFunctionAsync(
 						newParser,
 						executor,
@@ -348,9 +346,9 @@ public partial class Functions
 			async actualObject =>
 			{
 				return await parser.With(s => s with
-					{
-						Enactor = parser.CurrentState.Executor
-					},
+				{
+					Enactor = parser.CurrentState.Executor
+				},
 					async newParser => await AttributeService!.EvaluateAttributeFunctionAsync(
 						newParser,
 						executor,
@@ -404,8 +402,8 @@ public partial class Functions
 				}
 
 				var matchingAttrs = new List<string>();
-				var comparison = caseInsensitive 
-					? StringComparison.OrdinalIgnoreCase 
+				var comparison = caseInsensitive
+					? StringComparison.OrdinalIgnoreCase
 					: StringComparison.Ordinal;
 
 				foreach (var attr in attributes.AsAttributes)
@@ -784,9 +782,9 @@ public partial class Functions
 			async found =>
 			{
 				var sideFxRequirement = sideFxEnabled
-				                        && await PermissionService!.Controls(executor, found);
+																&& await PermissionService!.Controls(executor, found);
 				var noSideFxRequirement = !sideFxEnabled
-				                          && (await PermissionService!.Controls(executor, found) || await executor.IsSee_All());
+																	&& (await PermissionService!.Controls(executor, found) || await executor.IsSee_All());
 
 				if (sideFxRequirement || noSideFxRequirement)
 				{
@@ -928,30 +926,30 @@ public partial class Functions
 		var stringArg = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var mstr = stringArg!;
 		var str = mstr.ToPlainText(); // For regex matching only
-		
+
 		// Get pattern/replacement pairs (remaining args after the first)
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).ToList();
-		
+
 		var options = RegexOptions.None;
 		if (caseInsensitive)
 		{
 			options |= RegexOptions.IgnoreCase;
 		}
-		
+
 		// Process pattern/replacement pairs (every 2 elements)
 		for (int i = 0; i < args.Count - 1; i += 2)
 		{
 			var patternKv = args[i];
 			var replaceKv = args[i + 1];
-			
+
 			var pattern = await patternKv.Value.ParsedMessage();
 			var patternStr = pattern!.ToPlainText();
 			var replaceTemplate = replaceKv.Value.Message!.ToPlainText();
-			
+
 			try
 			{
 				var regex = new Regex(patternStr, options);
-				
+
 				if (all)
 				{
 					// Replace all matches manually, working backwards to maintain indices
@@ -986,7 +984,7 @@ public partial class Functions
 				return new CallState("#-1 REGEXP ERROR: Invalid regular expression");
 			}
 		}
-		
+
 		return new CallState(mstr);
 	}
 
@@ -996,13 +994,13 @@ public partial class Functions
 	private static async ValueTask<string> EvaluateReplacement(IMUSHCodeParser parser, Regex regex, Match match, string template)
 	{
 		var replacement = template;
-		
+
 		// Replace $0, $1, etc. with captured groups
 		for (int j = 0; j < match.Groups.Count; j++)
 		{
 			replacement = replacement.Replace($"${j}", match.Groups[j].Value);
 		}
-		
+
 		// Replace named captures
 		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
 		{
@@ -1012,7 +1010,7 @@ public partial class Functions
 				replacement = replacement.Replace($"$<{groupName}>", group.Value);
 			}
 		}
-		
+
 		// Evaluate the replacement
 		var evaluatedReplacement = await parser.FunctionParse(MModule.single(replacement));
 		return evaluatedReplacement?.Message?.ToPlainText() ?? replacement;
@@ -1028,7 +1026,7 @@ public partial class Functions
 		var attrsPattern = args["1"].Message!.ToPlainText();
 		var regexpPattern = args["2"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		try
 		{
 			var options = RegexOptions.None;
@@ -1036,9 +1034,9 @@ public partial class Functions
 			{
 				options |= RegexOptions.IgnoreCase;
 			}
-			
+
 			var regex = new Regex(regexpPattern, options);
-			
+
 			// 1. Parse the object reference
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, objectStr, LocateFlags.All,
@@ -1046,19 +1044,19 @@ public partial class Functions
 				{
 					// 2. Get all attributes matching the attrsPattern (using wildcard pattern)
 					var attributes = await AttributeService!.GetAttributePatternAsync(
-						executor, 
+						executor,
 						found,
-						attrsPattern, 
+						attrsPattern,
 						false,
 						IAttributeService.AttributePatternMode.Wildcard);
-					
+
 					if (!attributes.IsAttribute)
 					{
 						return CallState.Empty;
 					}
-					
+
 					var matchingAttributes = new List<string>();
-					
+
 					// 3. Filter attributes whose values match the regexpPattern
 					foreach (var attr in attributes.AsAttributes)
 					{
@@ -1068,7 +1066,7 @@ public partial class Functions
 							matchingAttributes.Add(attr.Name);
 						}
 					}
-					
+
 					// 4. Return the list of matching attribute names (space-separated)
 					return new CallState(string.Join(" ", matchingAttributes));
 				});
@@ -1387,7 +1385,7 @@ public partial class Functions
 				async found =>
 				{
 					var result = await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, found, arg1.ToPlainText(), false);
-					
+
 					// Return empty string on success, error message on failure
 					return result.Message switch
 					{
@@ -1460,11 +1458,11 @@ public partial class Functions
 					.ToArrayAsync();
 
 				return (await parser.With(s => s with
-					{
-						CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-						Arguments = arguments.ToDictionary(),
-						EnvironmentRegisters = arguments.ToDictionary(),
-					},
+				{
+					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
+					Arguments = arguments.ToDictionary(),
+					EnvironmentRegisters = arguments.ToDictionary(),
+				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
 	}
@@ -1513,12 +1511,12 @@ public partial class Functions
 					.ToArrayAsync();
 
 				return (await parser.With(s => s with
-					{
-						CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
-						Arguments = arguments.ToDictionary(),
-						EnvironmentRegisters = arguments.ToDictionary(),
-						Registers = []
-					},
+				{
+					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
+					Arguments = arguments.ToDictionary(),
+					EnvironmentRegisters = arguments.ToDictionary(),
+					Registers = []
+				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
 	}
@@ -1658,7 +1656,7 @@ public partial class Functions
 		{
 			IValidateService.ValidationType.AttributeValue when target is not null
 				=> new CallState(await ValidateService!.Valid(validationType, str, await GetAttributeEntry(target)) ? "1" : "0"),
-			IValidateService.ValidationType.AttributeValue 
+			IValidateService.ValidationType.AttributeValue
 				=> new CallState(await ValidateService!.Valid(validationType, str, new None()) ? "1" : "0"),
 
 			IValidateService.ValidationType.PlayerName when target is null
@@ -1669,7 +1667,7 @@ public partial class Functions
 				=> new CallState(await ValidateService!.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName => Errors.ErrorCantSeeThat,
 
-			IValidateService.ValidationType.ChannelName 
+			IValidateService.ValidationType.ChannelName
 				=> new CallState(await ValidateService!.Valid(validationType, str, await GetChannel(target ?? string.Empty)) ? "1" : "0"),
 
 			IValidateService.ValidationType.LockType when target is null
@@ -1794,7 +1792,7 @@ public partial class Functions
 					{
 						var valueToMatch = caseInsensitive ? value.ToLower() : value;
 						var patternToMatch = caseInsensitive ? valuePattern!.ToLower() : valuePattern;
-						
+
 						if (MModule.isWildcardMatch(MModule.single(valueToMatch), MModule.single(patternToMatch!)))
 						{
 							matchingAttrs.Add(attr.LongName!);
@@ -1930,15 +1928,15 @@ public partial class Functions
 	public static async ValueTask<CallState> ZoneFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
-		
+
 		// Get the zone object from enactor
 		var zone = await enactor.Object().Zone.WithCancellation(CancellationToken.None);
-		
+
 		if (zone.IsNone)
 		{
 			return new CallState("#-1 NO ZONE SET");
 		}
-		
+
 		// Evaluate the attribute function on the zone object
 		var result = await AttributeService!.EvaluateAttributeFunctionAsync(
 			parser,
@@ -1948,7 +1946,7 @@ public partial class Functions
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary(),
 			ignoreLambda: true);
-		
+
 		return new CallState(result);
 	}
 }

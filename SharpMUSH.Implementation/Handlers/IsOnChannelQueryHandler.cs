@@ -16,7 +16,7 @@ public class IsOnChannelQueryHandler(IMediator mediator) : IQueryHandler<IsOnCha
 		// Check if the object (or its owner) is on the channel
 		// GetOnChannelQuery returns all channels the object is on
 		var requestedChannelName = request.ChannelName;
-		
+
 		await foreach (var memberChannel in mediator.CreateStream(new GetOnChannelQuery(request.Object), cancellationToken))
 		{
 			// Compare channel names (MString comparison)
@@ -25,7 +25,7 @@ public class IsOnChannelQueryHandler(IMediator mediator) : IQueryHandler<IsOnCha
 				return true;
 			}
 		}
-		
+
 		// Object is not on the channel (or channel doesn't exist)
 		return false;
 	}

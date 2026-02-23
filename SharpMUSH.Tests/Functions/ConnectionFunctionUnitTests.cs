@@ -87,7 +87,7 @@ public class ConnectionFunctionUnitTests
 			"doing(0)",
 			"doing(1)"
 		};
-		
+
 		foreach (var testCase in testCases)
 		{
 			var result = (await Parser.FunctionParse(MModule.single(testCase)))?.Message!;

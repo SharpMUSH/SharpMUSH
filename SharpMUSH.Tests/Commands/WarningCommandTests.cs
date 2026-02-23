@@ -2,13 +2,9 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using OneOf;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -35,9 +31,9 @@ public class WarningCommandTests
 		// Assert - should notify user
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Warnings set to")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Warnings set to")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -50,9 +46,9 @@ public class WarningCommandTests
 		// Assert - should notify user
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Warnings set to")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Warnings set to")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -65,9 +61,9 @@ public class WarningCommandTests
 		// Assert - should notify user about clearing
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "cleared") || TestHelpers.MessageContains(s, "none")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "cleared") || TestHelpers.MessageContains(s, "none")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -80,9 +76,9 @@ public class WarningCommandTests
 		// Assert - should notify user
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Warnings set to")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Warnings set to")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -95,9 +91,9 @@ public class WarningCommandTests
 		// Assert - should notify about unknown warning
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Unknown warning")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Unknown warning")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -110,9 +106,9 @@ public class WarningCommandTests
 		// Assert - should show usage
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Usage")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Usage")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -125,9 +121,9 @@ public class WarningCommandTests
 		// Assert - should complete check
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "@wcheck complete") || TestHelpers.MessageContains(s, "Warning")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@wcheck complete") || TestHelpers.MessageContains(s, "Warning")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -140,9 +136,9 @@ public class WarningCommandTests
 		// Assert - should show usage
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Usage")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Usage")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -156,9 +152,9 @@ public class WarningCommandTests
 		// Assert - should complete check
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Checking objects")),
-				Arg.Any<AnySharpObject?>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Checking objects")),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 

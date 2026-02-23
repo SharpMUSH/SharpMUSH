@@ -1,7 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
-using Core.Arango;
+﻿using Core.Arango;
 using Core.Arango.Migration;
 using Core.Arango.Protocol;
 using DotNext.Threading;
@@ -18,7 +15,9 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Linq;
+using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 namespace SharpMUSH.Database.ArangoDB;
 
 public partial class ArangoDatabase(
@@ -98,8 +97,8 @@ public partial class ArangoDatabase(
 
 		// If salt is provided (imported password), use the password as-is (it's already hashed)
 		// Otherwise, hash the password for new players
-		var hashedPassword = salt != null 
-			? password 
+		var hashedPassword = salt != null
+			? password
 			: passwordService.HashPassword($"#{obj.New.Key}:{obj.New.CreationTime}", password);
 
 		var playerResult = await arangoDb.Document.CreateAsync<SharpPlayerCreateRequest, SharpPlayerQueryResult>(
@@ -411,7 +410,7 @@ public partial class ArangoDatabase(
 	{
 		var fromId = obj.Object().Id!;
 		var toId = parent?.Object().Id;
-		
+
 		var response = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphParents} RETURN e",
 			new Dictionary<string, object> { { StartVertex, fromId } }, cancellationToken: ct);
@@ -1053,8 +1052,8 @@ public partial class ArangoDatabase(
 	{
 		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e",
-			new Dictionary<string, object> 
-			{ 
+			new Dictionary<string, object>
+			{
 				{ StartVertex, obj.Object().Id! }
 			}, cancellationToken: ct);
 
@@ -1276,12 +1275,12 @@ public partial class ArangoDatabase(
 				cancellationToken: ct))
 			.FirstOrDefault();
 
-	public async ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags, 
+	public async ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags,
 		string? limit = null, string[]? enumValues = null, CancellationToken ct = default)
 	{
 		// Check if entry already exists
 		var existing = await GetSharpAttributeEntry(name, ct);
-		
+
 		if (existing != null)
 		{
 			// Update existing entry - build document System.Text.Json.JsonElementally to omit null fields
@@ -1291,19 +1290,19 @@ public partial class ArangoDatabase(
 				{ "Name", name },
 				{ "DefaultFlags", defaultFlags }
 			};
-			
+
 			if (limit != null)
 				document["Limit"] = limit;
 			if (enumValues != null)
 				document["Enum"] = enumValues;
-			
-			var updated = await arangoDb.Document.UpdateAsync<Dictionary<string, object>, SharpAttributeEntry>(handle, 
+
+			var updated = await arangoDb.Document.UpdateAsync<Dictionary<string, object>, SharpAttributeEntry>(handle,
 				DatabaseConstants.AttributeEntries,
 				document,
 				waitForSync: true,
 				cancellationToken: ct,
 				returnNew: true);
-			
+
 			return updated.New;
 		}
 		else
@@ -1315,19 +1314,19 @@ public partial class ArangoDatabase(
 				{ "Name", name },
 				{ "DefaultFlags", defaultFlags }
 			};
-			
+
 			if (limit != null)
 				document["Limit"] = limit;
 			if (enumValues != null)
 				document["Enum"] = enumValues;
-			
+
 			var created = await arangoDb.Document.CreateAsync<Dictionary<string, object>, SharpAttributeEntry>(handle,
 				DatabaseConstants.AttributeEntries,
 				document,
 				waitForSync: true,
 				cancellationToken: ct,
 				returnNew: true);
-			
+
 			return created.New;
 		}
 	}
@@ -1342,7 +1341,7 @@ public partial class ArangoDatabase(
 
 		await arangoDb.Document.DeleteAsync<object>(handle, DatabaseConstants.AttributeEntries, existing.Id!.Split('/')[1],
 			waitForSync: true, cancellationToken: ct);
-		
+
 		return true;
 	}
 
@@ -1361,8 +1360,8 @@ public partial class ArangoDatabase(
 		}
 
 		if (obj is null
-		    || dbref.CreationMilliseconds is not null
-		    && obj.CreationTime != dbref.CreationMilliseconds)
+				|| dbref.CreationMilliseconds is not null
+				&& obj.CreationTime != dbref.CreationMilliseconds)
 			return new None();
 
 		var startVertex = obj.Id;
@@ -1381,32 +1380,32 @@ public partial class ArangoDatabase(
 		{
 			DatabaseConstants.TypeThing => new SharpThing
 			{
-				Id = id, 
+				Id = id,
 				Object = convertObject,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.TypePlayer => new SharpPlayer
-					{
-						Id = id, 
-						Object = convertObject,
-						Aliases = res.Aliases,
-						Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-						Home = new(async ct => await GetHomeAsync(id, ct)),
-						PasswordHash = res.PasswordHash,
-						PasswordSalt = res.PasswordSalt,
-						Quota = res.Quota
-					},
-			DatabaseConstants.TypeRoom => new SharpRoom 
-			{ 
-				Id = id, 
+			{
+				Id = id,
+				Object = convertObject,
+				Aliases = res.Aliases,
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Home = new(async ct => await GetHomeAsync(id, ct)),
+				PasswordHash = res.PasswordHash,
+				PasswordSalt = res.PasswordSalt,
+				Quota = res.Quota
+			},
+			DatabaseConstants.TypeRoom => new SharpRoom
+			{
+				Id = id,
 				Object = convertObject,
 				Location = new(async ct => await GetDropToAsync(id, ct))
 			},
 			DatabaseConstants.TypeExit => new SharpExit
 			{
-				Id = id, 
-				Object = convertObject, 
+				Id = id,
+				Object = convertObject,
 				Aliases = res.Aliases,
 				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
 				Home = new(async ct => await GetHomeAsync(id, ct))
@@ -1450,17 +1449,17 @@ public partial class ArangoDatabase(
 				Home = new(async ct => await GetHomeAsync(id, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
-				{
-					Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
-					Home = new(async ct => await GetHomeAsync(id, ct)), 
-					PasswordHash = res.GetProperty("PasswordHash").GetString()!,
-					PasswordSalt = res.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
-					Quota = res.GetProperty("Quota").GetInt32()
-				},
-			DatabaseConstants.Rooms => new SharpRoom 
-			{ 
-				Id = id, 
+			{
+				Id = id, Object = convertObject, Aliases = res.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
+				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id), ct)),
+				Home = new(async ct => await GetHomeAsync(id, ct)),
+				PasswordHash = res.GetProperty("PasswordHash").GetString()!,
+				PasswordSalt = res.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
+				Quota = res.GetProperty("Quota").GetInt32()
+			},
+			DatabaseConstants.Rooms => new SharpRoom
+			{
+				Id = id,
 				Object = convertObject,
 				Location = new(async ct => await GetDropToAsync(id, ct))
 			},
@@ -1700,14 +1699,14 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, 
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
 				$"FOR v IN 1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v",
 				new Dictionary<string, object>
 				{
 					{ StartVertex, startVertex }
 				}, cache: true,
 				cancellationToken: ct);
-		
+
 		var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 		{
 			"**" => ".*",
@@ -1727,7 +1726,7 @@ public partial class ArangoDatabase(
 			$"FOR v IN 1..99999 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributes} FILTER v.LongName =~ @pattern  RETURN v";
 
 		// FILTER v.LongName =~ @pattern 
-		
+
 		var queryResult = arangoDb.Query.ExecuteStreamAsync<SharpAttributeQueryResult>(handle, query,
 			new Dictionary<string, object>
 			{
@@ -1746,7 +1745,7 @@ public partial class ArangoDatabase(
 	{
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
 		var result =
-			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle, 
+			await arangoDb.Query.ExecuteAsync<SharpObjectQueryResult>(handle,
 				$"FOR v IN 1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphObjects} RETURN v",
 				new Dictionary<string, object>
 				{
@@ -1891,7 +1890,7 @@ public partial class ArangoDatabase(
 			LockString = lockData.LockString,
 			Flags = lockData.Flags.ToString()
 		};
-		
+
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects, new
 		{
 			_key = target.Key.ToString(),
@@ -1985,7 +1984,7 @@ public partial class ArangoDatabase(
 				{ "max", attribute.Length }
 			}, cancellationToken: ct);
 
-		return result?.Select(SharpAttributeQueryToLazySharpAttribute) 
+		return result?.Select(SharpAttributeQueryToLazySharpAttribute)
 			?? AsyncEnumerable.Empty<LazySharpAttribute>();
 	}
 
@@ -2045,7 +2044,7 @@ public partial class ArangoDatabase(
 			var longName = string.Join('`', attribute.SkipLast(remaining.Length - 1 - nextAttr.i));
 
 			var sharpAttributeEntry = await GetSharpAttributeEntry(longName, ct);
-			
+
 			// Get flags from the attribute entry and resolve them
 			var flagNames = sharpAttributeEntry?.DefaultFlags ?? [];
 			var resolvedFlags = new List<SharpAttributeFlag>();
@@ -2239,12 +2238,12 @@ public partial class ArangoDatabase(
 		var location = await self.Where();
 
 		yield return self;
-		
+
 		await foreach (var item in GetContentsAsync(self.Object().DBRef, ct))
 		{
 			yield return item.WithRoomOption();
 		}
-		
+
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, ct))
 		{
 			yield return item.WithRoomOption();
@@ -2257,12 +2256,12 @@ public partial class ArangoDatabase(
 		var location = await obj.Where();
 
 		yield return obj;
-		
+
 		await foreach (var item in GetContentsAsync(obj.Object().DBRef, ct))
 		{
 			yield return item.WithRoomOption();
 		}
-		
+
 		await foreach (var item in GetContentsAsync(location.Object().DBRef, ct))
 		{
 			yield return item.WithRoomOption();
@@ -2387,7 +2386,7 @@ public partial class ArangoDatabase(
 		SharpExitQueryResult Exit,
 		SharpObjectQueryResult Obj
 	);
-	
+
 	public async IAsyncEnumerable<SharpExit> GetExitsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		// This is bad code. We can't use graphExits for this.
@@ -2399,7 +2398,7 @@ public partial class ArangoDatabase(
 			FOR exit IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits}
 			FOR obj IN 0..1 OUTBOUND exit GRAPH {DatabaseConstants.GraphObjects}
 			RETURN {{exit: exit, obj: obj}}";
-		
+
 		var query = arangoDb.Query.ExecuteStreamAsync<SharpExitQuery>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
@@ -2410,7 +2409,7 @@ public partial class ArangoDatabase(
 		{
 			var exit = exitData.Exit;
 			var convertObject = SharpObjectQueryToSharpObject(exitData.Obj);
-			
+
 			yield return new SharpExit
 			{
 				Id = exit.Id,
@@ -2433,7 +2432,7 @@ public partial class ArangoDatabase(
 			FOR exit IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits}
 			FOR obj IN 0..1 OUTBOUND exit GRAPH {DatabaseConstants.GraphObjects}
 			RETURN {{exit: exit, obj: obj}}";
-		
+
 		var query = arangoDb.Query.ExecuteStreamAsync<SharpExitQuery>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
@@ -2446,7 +2445,7 @@ public partial class ArangoDatabase(
 				var exit = exitData.Exit;
 				var obj = exitData.Obj;
 				var convertObject = SharpObjectQueryToSharpObject(obj);
-				
+
 				return new SharpExit
 				{
 					Id = exit.Id,
@@ -2573,7 +2572,7 @@ public partial class ArangoDatabase(
 
 		// Build the complete query
 		var filterClause = filters.Count > 0 ? $"FILTER {string.Join(" AND ", filters)}" : "";
-		
+
 		// Add LIMIT clause for pagination (START/COUNT)
 		var limitClause = "";
 		if (filter.Skip.HasValue || filter.Limit.HasValue)
@@ -2591,10 +2590,10 @@ public partial class ArangoDatabase(
 				limitClause = $"LIMIT {skip}, 999999999";
 			}
 		}
-		
+
 		var query = $"FOR v IN {DatabaseConstants.Objects:@} {filterClause} {limitClause} RETURN v._id".Trim();
 
-		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle, query, bindVars, cancellationToken: ct) 
+		var objectIds = arangoDb.Query.ExecuteStreamAsync<string>(handle, query, bindVars, cancellationToken: ct)
 			?? AsyncEnumerable.Empty<string>();
 
 		await foreach (var id in objectIds.WithCancellation(ct))
@@ -2705,8 +2704,8 @@ public partial class ArangoDatabase(
 	{
 		// If salt is provided (imported password), use the password as-is (it's already hashed)
 		// Otherwise, hash the password for new passwords
-		var hashed = salt != null 
-			? password 
+		var hashed = salt != null
+			? password
 			: passwordService.HashPassword(player.Object.DBRef.ToString(), password);
 
 		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Players, new
@@ -2743,8 +2742,8 @@ public partial class ArangoDatabase(
 		};
 
 		var result = await arangoDb.Query.ExecuteAsync<int>(
-			handle, 
-			query, 
+			handle,
+			query,
 			bindVars: bindVars,
 			cache: false,
 			cancellationToken: ct);
@@ -2752,8 +2751,8 @@ public partial class ArangoDatabase(
 		return result.FirstOrDefault();
 	}
 
-	public async ValueTask<SharpObjectFlag?> CreateObjectFlagAsync(string name, string[]? aliases, string symbol, 
-		bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
+	public async ValueTask<SharpObjectFlag?> CreateObjectFlagAsync(string name, string[]? aliases, string symbol,
+		bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken ct = default)
 	{
 		// Create the flag document in the database
@@ -2767,14 +2766,14 @@ public partial class ArangoDatabase(
 			unsetPermissions,
 			typeRestrictions
 		);
-		
+
 		var result = await arangoDb.Document.CreateAsync(
-			handle, 
-			DatabaseConstants.ObjectFlags, 
-			request, 
+			handle,
+			DatabaseConstants.ObjectFlags,
+			request,
 			cancellationToken: ct
 		);
-		
+
 		if (result != null)
 		{
 			// Return the created flag
@@ -2790,7 +2789,7 @@ public partial class ArangoDatabase(
 				TypeRestrictions = typeRestrictions
 			};
 		}
-		
+
 		return null;
 	}
 
@@ -2802,13 +2801,13 @@ public partial class ArangoDatabase(
 		{
 			return false;
 		}
-		
+
 		// Prevent deletion of system flags
 		if (flag.System)
 		{
 			return false;
 		}
-		
+
 		// Delete the flag document using collection and key
 		await arangoDb.Document.DeleteAsync<object>(
 			handle,
@@ -2816,12 +2815,12 @@ public partial class ArangoDatabase(
 			flag.Id!.Split('/')[1], // Extract key from ID (format: collection/key)
 			cancellationToken: ct
 		);
-		
+
 		return true;
 	}
 
-	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system, 
-		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
+	public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, bool system,
+		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken ct = default)
 	{
 		// Create the power document in the database
@@ -2834,14 +2833,14 @@ public partial class ArangoDatabase(
 			unsetPermissions,
 			typeRestrictions
 		);
-		
+
 		var result = await arangoDb.Document.CreateAsync(
-			handle, 
-			DatabaseConstants.ObjectPowers, 
-			request, 
+			handle,
+			DatabaseConstants.ObjectPowers,
+			request,
 			cancellationToken: ct
 		);
-		
+
 		if (result != null)
 		{
 			// Return the created power
@@ -2856,7 +2855,7 @@ public partial class ArangoDatabase(
 				TypeRestrictions = typeRestrictions
 			};
 		}
-		
+
 		return null;
 	}
 
@@ -2868,13 +2867,13 @@ public partial class ArangoDatabase(
 		{
 			return false;
 		}
-		
+
 		// Prevent deletion of system powers
 		if (power.System)
 		{
 			return false;
 		}
-		
+
 		// Delete the power document using collection and key
 		await arangoDb.Document.DeleteAsync<object>(
 			handle,
@@ -2882,7 +2881,7 @@ public partial class ArangoDatabase(
 			power.Id!.Split('/')[1], // Extract key from ID (format: collection/key)
 			cancellationToken: ct
 		);
-		
+
 		return true;
 	}
 
@@ -2899,8 +2898,8 @@ public partial class ArangoDatabase(
 			.Select(SharpPowerQueryToSharpPower)
 			.FirstOrDefaultAsync(cancellationToken: ct);
 
-	public async ValueTask<bool> UpdateObjectFlagAsync(string name, string[]? aliases, string symbol, 
-		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
+	public async ValueTask<bool> UpdateObjectFlagAsync(string name, string[]? aliases, string symbol,
+		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken ct = default)
 	{
 		// Get the flag to update
@@ -2909,13 +2908,13 @@ public partial class ArangoDatabase(
 		{
 			return false;
 		}
-		
+
 		// Prevent modification of system flags
 		if (flag.System)
 		{
 			return false;
 		}
-		
+
 		// Update the flag document - need to extract the Key from the ID
 		var key = flag.Id!.Split('/')[1];
 		await arangoDb.Document.UpdateAsync(
@@ -2933,12 +2932,12 @@ public partial class ArangoDatabase(
 			mergeObjects: true,
 			cancellationToken: ct
 		);
-		
+
 		return true;
 	}
 
-	public async ValueTask<bool> UpdatePowerAsync(string name, string alias, 
-		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions, 
+	public async ValueTask<bool> UpdatePowerAsync(string name, string alias,
+		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken ct = default)
 	{
 		// Get the power to update
@@ -2947,13 +2946,13 @@ public partial class ArangoDatabase(
 		{
 			return false;
 		}
-		
+
 		// Prevent modification of system powers
 		if (power.System)
 		{
 			return false;
 		}
-		
+
 		// Update the power document - need to extract the Key from the ID
 		var key = power.Id!.Split('/')[1];
 		await arangoDb.Document.UpdateAsync(
@@ -2970,11 +2969,11 @@ public partial class ArangoDatabase(
 			mergeObjects: true,
 			cancellationToken: ct
 		);
-		
+
 		return true;
 	}
 
-	public async ValueTask<bool> SetObjectFlagDisabledAsync(string name, bool disabled, 
+	public async ValueTask<bool> SetObjectFlagDisabledAsync(string name, bool disabled,
 		CancellationToken ct = default)
 	{
 		// Get the flag to update
@@ -2983,13 +2982,13 @@ public partial class ArangoDatabase(
 		{
 			return false;
 		}
-		
+
 		// Prevent disabling system flags
 		if (flag.System)
 		{
 			return false;
 		}
-		
+
 		// Update the flag document - need to extract the Key from the ID
 		var key = flag.Id!.Split('/')[1];
 		await arangoDb.Document.UpdateAsync(
@@ -3003,11 +3002,11 @@ public partial class ArangoDatabase(
 			mergeObjects: true,
 			cancellationToken: ct
 		);
-		
+
 		return true;
 	}
 
-	public async ValueTask<bool> SetPowerDisabledAsync(string name, bool disabled, 
+	public async ValueTask<bool> SetPowerDisabledAsync(string name, bool disabled,
 		CancellationToken ct = default)
 	{
 		// Get the power to update
@@ -3016,13 +3015,13 @@ public partial class ArangoDatabase(
 		{
 			return false;
 		}
-		
+
 		// Prevent disabling system powers
 		if (power.System)
 		{
 			return false;
 		}
-		
+
 		// Update the power document - need to extract the Key from the ID
 		var key = power.Id!.Split('/')[1];
 		await arangoDb.Document.UpdateAsync(
@@ -3036,25 +3035,25 @@ public partial class ArangoDatabase(
 			mergeObjects: true,
 			cancellationToken: ct
 		);
-		
+
 		return true;
 	}
 
-	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, 
+	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone,
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var zoneId = zone.Object().Id!;
-		
+
 		// Query to find all objects that have this zone set
 		const string zoneQuery =
 			$"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphZones} RETURN v._id";
-		
+
 		var queryIds = await arangoDb.Query.ExecuteAsync<string>(handle, zoneQuery,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, zoneId }
 			}, cancellationToken: ct);
-		
+
 		await foreach (var id in queryIds.ToAsyncEnumerable().WithCancellation(ct))
 		{
 			// Parse the id safely - format should be "collection/key"
@@ -3078,7 +3077,7 @@ public partial class ArangoDatabase(
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
-		
+
 		var query = $@"
 			LET startObj = DOCUMENT(@startVertex)
 			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
@@ -3149,7 +3148,7 @@ public partial class ArangoDatabase(
 			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
 			RETURN FIRST(filtered)
 		";
-		
+
 		var bindVars = new Dictionary<string, object>
 		{
 			{ "attr", attribute },
@@ -3157,17 +3156,17 @@ public partial class ArangoDatabase(
 			{ "max", attribute.Length },
 			{ "checkParent", checkParent }
 		};
-		
+
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
-		
+
 		if (result == null || result.attributes == null)
 		{
 			yield break;
 		}
-		
+
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
-		
+
 		var sourceType = result.source switch
 		{
 			"Self" => AttributeSource.Self,
@@ -3175,26 +3174,26 @@ public partial class ArangoDatabase(
 			"Zone" => AttributeSource.Zone,
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
-		
+
 		var attrs = new SharpAttribute[result.attributes.Count];
 		for (int i = 0; i < result.attributes.Count; i++)
 		{
 			attrs[i] = await SharpAttributeQueryToSharpAttribute(result.attributes[i], ct);
 		}
-		
+
 		var lastAttr = attrs.Last();
-		var flags = result.filterFlags 
+		var flags = result.filterFlags
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
-		
+
 		yield return new AttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
-	
+
 	private async ValueTask<SharpAttribute> SharpAttributeQueryToSharpAttributeSimple(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 	{
 		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
-		
+
 		return new SharpAttribute(
 			x.Id,
 			x.Key,
@@ -3209,14 +3208,14 @@ public partial class ArangoDatabase(
 			Value = MarkupStringModule.deserialize(x.Value)
 		};
 	}
-	
+
 	private record QueryResult(
 		List<SharpAttributeQueryResult>? attributes,
 		string sourceId,
 		string source,
 		bool filterFlags
 	);
-	
+
 	private static DBRef ParseDbRefFromId(string key)
 	{
 		if (int.TryParse(key, out var number))
@@ -3233,9 +3232,9 @@ public partial class ArangoDatabase(
 		[EnumeratorCancellation] CancellationToken ct = default)
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
-		
+
 		var startVertex = $"{DatabaseConstants.Objects}/{dbref.Number}";
-		
+
 		var query = $@"
 			LET startObj = DOCUMENT(@startVertex)
 			LET startThing = FIRST(FOR v IN 1..1 INBOUND startObj GRAPH {DatabaseConstants.GraphObjects} RETURN v)
@@ -3306,7 +3305,7 @@ public partial class ArangoDatabase(
 			LET filtered = (FOR r IN allResults FILTER r != null RETURN r)
 			RETURN FIRST(filtered)
 		";
-		
+
 		var bindVars = new Dictionary<string, object>
 		{
 			{ "attr", attribute },
@@ -3314,17 +3313,17 @@ public partial class ArangoDatabase(
 			{ "max", attribute.Length },
 			{ "checkParent", checkParent }
 		};
-		
+
 		var results = await arangoDb.Query.ExecuteAsync<QueryResult>(handle, query, bindVars, cancellationToken: ct);
 		var result = results.FirstOrDefault();
-		
+
 		if (result == null || result.attributes == null)
 		{
 			yield break;
 		}
-		
+
 		var sourceDbRef = ParseDbRefFromId(result.sourceId);
-		
+
 		var sourceType = result.source switch
 		{
 			"Self" => AttributeSource.Self,
@@ -3332,26 +3331,26 @@ public partial class ArangoDatabase(
 			"Zone" => AttributeSource.Zone,
 			_ => throw new InvalidOperationException($"Unknown source type: {result.source}")
 		};
-		
+
 		var attrs = new LazySharpAttribute[result.attributes.Count];
 		for (int i = 0; i < result.attributes.Count; i++)
 		{
 			attrs[i] = await SharpAttributeQueryToLazySharpAttribute(result.attributes[i], ct);
 		}
-		
+
 		var lastAttr = attrs.Last();
-		var flags = result.filterFlags 
+		var flags = result.filterFlags
 			? lastAttr.Flags.Where(f => f.Inheritable)
 			: lastAttr.Flags;
-		
+
 		yield return new LazyAttributeWithInheritance(attrs, sourceDbRef, sourceType, flags);
 	}
-	
+
 	private async ValueTask<LazySharpAttribute> SharpAttributeQueryToLazySharpAttributeSimple(SharpAttributeQueryResult x,
 		CancellationToken cancellationToken = default)
 	{
 		var flags = await GetAttributeFlagsAsync(x.Id, cancellationToken).ToArrayAsync(cancellationToken);
-		
+
 		return new LazySharpAttribute(
 			x.Id,
 			x.Key,

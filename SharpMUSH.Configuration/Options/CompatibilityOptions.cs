@@ -8,7 +8,7 @@ public record CompatibilityOptions(
 		Group = "Numeric Behavior",
 		Order = 1)]
 	bool NullEqualsZero,
-	
+
 	[property: SharpConfig(
 		Name = "tiny_booleans",
 		Category = "Compatibility",
@@ -16,7 +16,7 @@ public record CompatibilityOptions(
 		Group = "TinyMUSH Compatibility",
 		Order = 1)]
 	bool TinyBooleans,
-	
+
 	[property: SharpConfig(
 		Name = "tiny_trim_fun",
 		Category = "Compatibility",
@@ -24,7 +24,7 @@ public record CompatibilityOptions(
 		Group = "TinyMUSH Compatibility",
 		Order = 2)]
 	bool TinyTrimFun,
-	
+
 	[property: SharpConfig(
 		Name = "tiny_math",
 		Category = "Compatibility",
@@ -32,7 +32,7 @@ public record CompatibilityOptions(
 		Group = "TinyMUSH Compatibility",
 		Order = 3)]
 	bool TinyMath,
-	
+
 	[property: SharpConfig(
 		Name = "silent_pemit",
 		Category = "Compatibility",

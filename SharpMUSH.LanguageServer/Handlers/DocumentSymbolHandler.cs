@@ -19,7 +19,7 @@ public class DocumentSymbolHandler : DocumentSymbolHandlerBase
 	}
 
 	public override Task<SymbolInformationOrDocumentSymbolContainer?> Handle(
-		DocumentSymbolParams request, 
+		DocumentSymbolParams request,
 		CancellationToken cancellationToken)
 	{
 		var uri = request.TextDocument.Uri.ToString();
@@ -119,9 +119,9 @@ public class DocumentSymbolHandler : DocumentSymbolHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error extracting document symbols: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		if (symbols.Count > 0)
@@ -134,7 +134,7 @@ public class DocumentSymbolHandler : DocumentSymbolHandlerBase
 	}
 
 	protected override DocumentSymbolRegistrationOptions CreateRegistrationOptions(
-		DocumentSymbolCapability capability, 
+		DocumentSymbolCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new DocumentSymbolRegistrationOptions

@@ -1,13 +1,9 @@
-﻿using System.Collections.Immutable;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Json.Patch;
+﻿using Json.Patch;
 using Json.Path;
 using Json.Pointer;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
-using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -15,6 +11,9 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Immutable;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -101,7 +100,7 @@ public partial class Functions
 
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
-		
+
 		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToString();
 		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 
@@ -168,13 +167,13 @@ public partial class Functions
 
 				case JsonValueKind.Object:
 					foreach (var objArgs in rootElement
-						         .EnumerateObject()
-						         .Select(property => new Dictionary<string, CallState>
-					         {
-						         { "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
-						         { "1", new CallState(property.Value.GetRawText()) },
-						         { "2", new CallState(property.Name) }
-					         }))
+										 .EnumerateObject()
+										 .Select(property => new Dictionary<string, CallState>
+									 {
+										 { "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
+										 { "1", new CallState(property.Value.GetRawText()) },
+										 { "2", new CallState(property.Name) }
+									 }))
 					{
 						foreach (var ua in userArgs)
 						{
@@ -216,7 +215,7 @@ public partial class Functions
 		{
 			var jsonDoc = JsonNode.Parse(json);
 			var jsonPath = JsonPath.Parse(path);
-			
+
 			// Evaluate the JSON Path against the document to find matching locations.
 			// This is the proper way to use JsonPath.Net library instead of directly
 			// converting a path string to a pointer, which can be ambiguous.
@@ -226,15 +225,15 @@ public partial class Functions
 			{
 				return new CallState("#-1 PATH NOT FOUND");
 			}
-			
+
 			// For modification operations, we need a singular path (single result)
 			if (pathResult.Matches.Count > 1)
 			{
 				return new CallState("#-1 PATH MUST BE SINGULAR");
 			}
-			
+
 			var match = pathResult.Matches[0];
-			
+
 			// Extract the JsonPointer from the evaluated match's location.
 			// The Location property is a JsonPath representing the canonical location in bracket notation,
 			// which we convert to a JsonPointer string for use with JsonPatch operations.
@@ -260,13 +259,13 @@ public partial class Functions
 				var mergedNode = ApplyMergePatch(target, jsonDoc2!);
 				var patchOp = new JsonPatch(PatchOperation.Replace(jsonPointer, mergedNode));
 				var patched = patchOp.Apply(jsonDoc);
-				
-				return patched.IsSuccess 
-					? new CallState(patched.Result!.ToString()) 
+
+				return patched.IsSuccess
+					? new CallState(patched.Result!.ToString())
 					: new CallState($"#-1 PATCH FAILED: {patched.Error}");
 			}
 
-			OneOf<JsonPatch,Error<string>> operation = action switch
+			OneOf<JsonPatch, Error<string>> operation = action switch
 			{
 				"insert" => new JsonPatch(PatchOperation.Add(jsonPointer, jsonDoc2)),
 				"replace" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc2!)),
@@ -276,15 +275,15 @@ public partial class Functions
 				_ => new Error<string>("Invalid Operation"),
 			};
 
-			if(operation.IsT1)
+			if (operation.IsT1)
 			{
 				return new CallState("#-1 INVALID OPERATION");
 			}
 
 			var patchResult = operation.AsT0.Apply(jsonDoc);
-			
-			return patchResult.IsSuccess 
-				? new CallState(patchResult.Result!.ToString()) 
+
+			return patchResult.IsSuccess
+				? new CallState(patchResult.Result!.ToString())
 				: new CallState($"#-1 PATCH FAILED: {patchResult.Error}");
 		}
 		catch (JsonException)
@@ -373,10 +372,10 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
-		
+
 		var playersArg = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
 		var package = MModule.plainText(parser.CurrentState.Arguments["1"].Message!);
-		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState) 
+		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState)
 			? msgState.Message?.ToString() ?? ""
 			: "";
 
@@ -438,7 +437,7 @@ public partial class Functions
 					connection.Handle,
 					package,
 					message));
-				
+
 				sentCount++;
 			}
 		}
@@ -446,14 +445,14 @@ public partial class Functions
 		return new CallState(sentCount.ToString());
 	}
 
-	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["json", "player"])]
 	public static async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Send JSON data via websocket - similar to wsjson()
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		AnySharpObject target;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
 		{

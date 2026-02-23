@@ -18,8 +18,6 @@ public class CommandUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
-	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	[Arguments("think add(1,2)1",
 		"31")]
@@ -65,12 +63,12 @@ public class CommandUnitTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x 
-				=> x.Value.ToString()!.Contains(expected1)) );
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
+				=> x.Value.ToString()!.Contains(expected1)));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x 
-				=> x.Value.ToString()!.Contains(expected2)) );
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
+				=> x.Value.ToString()!.Contains(expected2)));
 	}
 }

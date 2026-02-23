@@ -76,7 +76,7 @@ public partial class Commands
 			async () =>
 			{
 				var client = HttpClientFactory!.CreateClient("api");
-				
+
 				var response = await client.SendAsync(message);
 
 				parser.CurrentState.AddRegister("status",
@@ -188,12 +188,12 @@ public partial class Commands
 			}
 
 			var fullStatusText = statusArg.Message?.ToPlainText() ?? string.Empty;
-			
+
 			// Split on first space to separate code from text
 			var spaceIndex = fullStatusText.IndexOf(' ');
 			string statusCodeText;
 			string statusText;
-			
+
 			if (spaceIndex > 0)
 			{
 				statusCodeText = fullStatusText[..spaceIndex].Trim();
@@ -213,8 +213,8 @@ public partial class Commands
 			}
 
 			// Build the full status line
-			var statusLine = string.IsNullOrWhiteSpace(statusText) 
-				? statusCodeText 
+			var statusLine = string.IsNullOrWhiteSpace(statusText)
+				? statusCodeText
 				: $"{statusCodeText} {statusText}";
 
 			// Validate total length < 40 characters as per documentation

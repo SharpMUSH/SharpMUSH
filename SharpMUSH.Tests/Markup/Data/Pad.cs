@@ -62,7 +62,7 @@ public static class Pad
 			MModule.TruncationType.Overflow,
 			A.single("...Centered....")
 		);
-		
+
 		yield return () => new(
 			A.single("Centered"),
 			A.single("."),

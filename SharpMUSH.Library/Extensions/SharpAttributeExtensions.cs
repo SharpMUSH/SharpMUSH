@@ -27,7 +27,7 @@ public static class SharpAttributeExtensions
 
 	public static bool IsVisual(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name is "VISUAL" or "PUBLIC");
-	
+
 	public static bool IsVisual(this LazySharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name is "VISUAL" or "PUBLIC");
 

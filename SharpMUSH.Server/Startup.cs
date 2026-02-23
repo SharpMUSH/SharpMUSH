@@ -1,8 +1,7 @@
 ﻿using Core.Arango;
-using Core.Arango.Serilog;
-using SharpMUSH.Messaging.Abstractions;
 using Mediator;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,9 +9,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Quartz;
 using Serilog;
-using Serilog.Events;
-using Serilog.Formatting.Compact;
-using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
@@ -28,7 +24,6 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.KafkaFlow;
-using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Redis;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
@@ -39,7 +34,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
-	public void ConfigureServices(IServiceCollection services)
+	public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 	{
 		services.AddCors(options =>
 		{
@@ -62,37 +57,37 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 			return db;
 		});
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
-			/*
-			 * PennMUSH Password Compatibility - IMPLEMENTED
-			 * 
-			 * SharpMUSH uses PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations
-			 * for new passwords.
-			 *
-			 * PennMUSH uses SHA1 in password_hash, stored as: V:ALGO:HASH:TIMESTAMP
-			 * - V: Version number (Currently 2)
-			 * - ALGO: Digest algorithm (Default is SHA1)
-			 * - HASH: Salted hash (first 2 chars are salt prepended to plaintext before hashing)
-			 * - TIMESTAMP: Unix timestamp when password was set
-			 *
-			 * Salt characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
-			 *
-			 * The PasswordService now supports both formats:
-			 * - Verification: Detects PennMUSH format and uses SHA1/SHA256 verification as needed
-			 * - New passwords: Always use modern PBKDF2 (more secure)
-			 * 
-			 * Users with imported PennMUSH passwords should reset their passwords for better security,
-			 * but can still log in with their old passwords until they do.
-			 */
+		/*
+		 * PennMUSH Password Compatibility - IMPLEMENTED
+		 * 
+		 * SharpMUSH uses PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations
+		 * for new passwords.
+		 *
+		 * PennMUSH uses SHA1 in password_hash, stored as: V:ALGO:HASH:TIMESTAMP
+		 * - V: Version number (Currently 2)
+		 * - ALGO: Digest algorithm (Default is SHA1)
+		 * - HASH: Salted hash (first 2 chars are salt prepended to plaintext before hashing)
+		 * - TIMESTAMP: Unix timestamp when password was set
+		 *
+		 * Salt characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+		 *
+		 * The PasswordService now supports both formats:
+		 * - Verification: Detects PennMUSH format and uses SHA1/SHA256 verification as needed
+		 * - New passwords: Always use modern PBKDF2 (more secure)
+		 * 
+		 * Users with imported PennMUSH passwords should reset their passwords for better security,
+		 * but can still log in with their old passwords until they do.
+		 */
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
-		
+
 		// Configure Redis connection using strategy pattern
 		services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
-			
+
 			try
 			{
 				var multiplexer = redisStrategy.GetConnectionAsync().AsTask().GetAwaiter().GetResult();
@@ -105,10 +100,10 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 				throw;
 			}
 		});
-		
+
 		// Add Redis-backed connection state store
 		services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>();
-		
+
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
@@ -131,15 +126,15 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddSingleton<IListenerRoutingService, ListenerRoutingService>();
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
-		
+
 		// Initialize TextFileService
 		services.AddSingleton<ITextFileService, Implementation.Services.TextFileService>();
-		
+
 		services.AddSingleton<ILibraryProvider<FunctionDefinition>, Functions>();
 		services.AddSingleton<ILibraryProvider<CommandDefinition>, Commands>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
-		
+
 		services.AddSingleton<IOptionsFactory<SharpMUSHOptions>, OptionsService>();
 		services.AddSingleton<IOptionsFactory<ColorsOptions>, ReadColorsOptionsFactory>();
 		services.AddSingleton<ConfigurationReloadService>();
@@ -158,6 +153,24 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddHttpClient();
 		services.AddMediator();
 
+		services.AddArango((_, arango) =>
+		{
+			arango.ConnectionString = arangoConfig.ConnectionString;
+			arango.HttpClient = arangoConfig.HttpClient;
+			arango.Serializer = arangoConfig.Serializer;
+		});
+
+		services.AddLogging(logging =>
+		{
+			logging.ClearProviders();
+
+			// Read Serilog configuration from appsettings.json (MinimumLevel, Overrides, WriteTo, Enrich)
+			var loggerConfig = new LoggerConfiguration()
+				.ReadFrom.Configuration(configuration);
+
+			logging.AddSerilog(loggerConfig.CreateLogger());
+		});
+
 		// Configure MassTransit with Kafka/RedPanda for message queue integration
 		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
 
@@ -167,6 +180,7 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 				options.Host = kafkaHost;
 				options.Port = 9092;
 				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
+				options.ConsumerGroupId = "mainprocess-consumer-group"; // Separate group from ConnectionServer
 			},
 			x =>
 			{
@@ -180,15 +194,12 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 			});
 
 		services.AddFusionCache().TryWithAutoSetup();
-		services.AddArango((_, arango) =>
-		{
-			arango.ConnectionString = arangoConfig.ConnectionString;
-			arango.HttpClient = arangoConfig.HttpClient;
-			arango.Serializer = arangoConfig.Serializer;
-		});
 		services.AddQuartz(x =>
 		{
 			x.UseInMemoryStore();
+			// Serial execution ensures FIFO queue ordering, matching PennMUSH behavior
+			// where the command queue processes one entry at a time.
+			x.UseDefaultThreadPool(tp => tp.MaxConcurrency = 1);
 		});
 		services.AddAuthorization();
 		services.AddRazorPages();
@@ -201,55 +212,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddHostedService<Services.ScheduledTaskManagementService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
-
-		services.AddLogging(logging =>
-		{
-			logging.ClearProviders();
-			
-			// Get standard overrides to use consistently
-			var overrides = LoggingConfiguration.CreateStandardOverrides();
-			
-			// Build a single logger configuration with both console and database sinks
-			var loggerConfig = new LoggerConfiguration()
-				.MinimumLevel.Debug()
-				.Enrich.FromLogContext();
-			
-			// Apply standard overrides
-			foreach (var (ns, level) in overrides)
-			{
-				loggerConfig.MinimumLevel.Override(ns, level);
-			}
-			
-			// Add console sink (JSON in K8s, plain text elsewhere)
-			if (LoggingConfiguration.IsRunningInKubernetes())
-			{
-				loggerConfig.WriteTo.Console(new CompactJsonFormatter());
-			}
-			else
-			{
-				loggerConfig.WriteTo.Console();
-			}
-			
-			// Add database logging sink (batched)
-			loggerConfig.WriteTo.Sink(new PeriodicBatchingSink(
-				new ArangoSerilogSink(
-					logging.Services.BuildServiceProvider().GetRequiredService<IArangoContext>(),
-					"CurrentSharpMUSHWorld",
-					DatabaseConstants.Logs,
-					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
-					true,
-					true,
-					true),
-				new PeriodicBatchingSinkOptions
-				{
-					BatchSizeLimit = 1000,
-					QueueLimit = 100000,
-					Period = TimeSpan.FromSeconds(2),
-					EagerlyEmitFirstEvent = true,
-				}));
-			
-			logging.AddSerilog(loggerConfig.CreateLogger());
-		});
 
 		// Configure OpenTelemetry Metrics - NO console logging, only Prometheus exporter for metrics endpoint
 		services.AddOpenTelemetry()

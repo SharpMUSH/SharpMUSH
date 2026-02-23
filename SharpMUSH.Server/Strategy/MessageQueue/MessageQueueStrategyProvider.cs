@@ -10,7 +10,8 @@ public static class MessageQueueStrategyProvider
 		{
 			return new RedPandaTestContainerStrategy();
 		}
-		else {
+		else
+		{
 			return new RedPandaContainerStrategy();
 		}
 	}

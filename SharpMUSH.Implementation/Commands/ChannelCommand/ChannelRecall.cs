@@ -40,7 +40,7 @@ public static class ChannelRecall
 		var messages = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, linesInt))
 			.Select(x => x.Message)
 			.ToListAsync();
-			
+
 		var message = MModule.multiple(messages);
 
 		if (switches.Contains("QUIET"))

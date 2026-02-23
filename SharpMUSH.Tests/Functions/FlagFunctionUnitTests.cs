@@ -41,8 +41,6 @@ public class FlagFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
-	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	[Arguments("andlpowers(%#,)", "")]
 	public async Task Andlpowers(string str, string expected)
@@ -51,8 +49,6 @@ public class FlagFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
-	// PARSER ISSUE: This test has unexpected token issues with PARSER_STRICT_MODE=true.
-	// The parser throws an exception instead of recovering from syntax errors.
 	[Test]
 	[Arguments("orlpowers(%#,)", "")]
 	public async Task Orlpowers(string str, string expected)

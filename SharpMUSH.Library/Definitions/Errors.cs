@@ -1,6 +1,4 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
-
-namespace SharpMUSH.Library.Definitions;
+﻿namespace SharpMUSH.Library.Definitions;
 
 /// <summary>
 /// Legacy error constants class.

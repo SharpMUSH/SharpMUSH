@@ -8,7 +8,7 @@ public record AliasOptions(
 		Group = "Function Aliases",
 		Order = 1)]
 	Dictionary<string, string[]> FunctionAliases,
-	
+
 	[property: SharpConfig(
 		Name = "command_aliases",
 		Category = "Alias",

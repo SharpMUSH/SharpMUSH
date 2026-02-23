@@ -27,10 +27,9 @@ public class RedisTestContainerStrategy : RedisStrategy
 	public override async ValueTask InitializeAsync()
 	{
 		_container = new ContainerBuilder("redis:7-alpine")
-			.WithPortBinding(RedisPort, true) // Random host port
+			.WithPortBinding(RedisPort, RedisPort) // Fixed host port for cross-process sharing
 			.WithCommand("redis-server", "--appendonly", "yes")
 			.WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("redis-cli", "ping"))
-			.WithReuse(false)
 			.Build();
 
 		await _container.StartAsync();
@@ -38,7 +37,8 @@ public class RedisTestContainerStrategy : RedisStrategy
 		// Get the mapped port and create connection
 		var port = _container.GetMappedPublicPort(RedisPort);
 		var connectionString = $"localhost:{port}";
-		
+
+
 		var configuration = ConfigurationOptions.Parse(connectionString);
 		configuration.AbortOnConnectFail = false;
 		configuration.ConnectRetry = 3;

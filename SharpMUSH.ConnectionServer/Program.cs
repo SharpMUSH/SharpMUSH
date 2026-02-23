@@ -2,18 +2,18 @@ using KafkaFlow;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Serilog;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.ConnectionServer.Strategy;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 using SharpMUSH.Messaging.KafkaFlow;
 using Testcontainers.Redpanda;
-using Serilog;
-using Serilog.Events;
 
 namespace SharpMUSH.ConnectionServer;
 
@@ -26,9 +26,14 @@ public class Program
 	{
 		var app = await CreateHostBuilderAsync(args);
 
+		// Get logger for startup logging
+		var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
 		// Start Kafka bus
+		logger.LogTrace("[KAFKA-STARTUP] Starting Kafka bus...");
 		var bus = app.Services.CreateKafkaBus();
 		await bus.StartAsync();
+		logger.LogInformation("[KAFKA-STARTUP] Kafka bus started successfully");
 
 		try
 		{
@@ -77,12 +82,12 @@ public class Program
 
 		builder.Services.AddLogging(logging =>
 		{
-			// Use standard logging configuration with JSON in K8s, plain text elsewhere
-			var loggerConfig = LoggingConfiguration.CreateStandardConsoleConfiguration(
-				minimumLevel: LogEventLevel.Information,
-				overrides: LoggingConfiguration.CreateStandardOverrides()
-			);
-			
+			logging.ClearProviders();
+
+			// Read Serilog configuration from appsettings.json (MinimumLevel, Overrides, WriteTo, Enrich)
+			var loggerConfig = new LoggerConfiguration()
+				.ReadFrom.Configuration(builder.Configuration);
+
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
 
@@ -95,7 +100,7 @@ public class Program
 				.WithPortBinding(9092, 9092)
 				.Build();
 			await _container.StartAsync();
-			
+
 			kafkaHost = "localhost";
 		}
 
@@ -110,7 +115,7 @@ public class Program
 		builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
-			
+
 			try
 			{
 				// Note: This is executed when IConnectionMultiplexer is first requested from DI
@@ -155,8 +160,8 @@ public class Program
 				options.Port = 9092;
 				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
 				options.ConsumerGroupId = "connectionserver-consumer-group"; // Separate group from main server
-				options.BatchMaxSize = 100; 
-				options.BatchTimeLimit = TimeSpan.FromMilliseconds(8); 
+				options.BatchMaxSize = 100;
+				options.BatchTimeLimit = TimeSpan.FromMilliseconds(8);
 			},
 			x =>
 			{
@@ -167,7 +172,7 @@ public class Program
 				// - Buffer settings
 				//
 				// This means batch processing for TelnetOutputMessage does NOT affect other message types.
-				
+
 				// TelnetOutputMessage: Uses BATCH PROCESSING
 				// - Middleware: TelnetOutputBatchMiddleware (IMessageMiddleware)
 				// - Pipeline: Deserialize → AddBatching(100, 10ms) → TelnetOutputBatchMiddleware
@@ -176,7 +181,7 @@ public class Program
 				// - BytesSum distribution: Messages with same Handle go to same worker (ordering)
 				// - Multiple workers (Environment.ProcessorCount): Different connections processed in parallel
 				x.AddBatchConsumer<TelnetOutputBatchMiddleware, TelnetOutputMessage>(100, TimeSpan.FromMilliseconds(10));
-				
+
 				// All other messages: Use REGULAR CONSUMERS (individual message processing)
 				// - Pipeline: Deserialize → TypedHandler (processes each message individually)
 				x.AddConsumer<TelnetPromptConsumer>();
@@ -184,7 +189,7 @@ public class Program
 				x.AddConsumer<DisconnectConnectionConsumer>();
 				x.AddConsumer<GMCPOutputConsumer>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer>();
-				
+
 				x.AddConsumer<WebSocketOutputConsumer>();
 				x.AddConsumer<WebSocketPromptConsumer>();
 			});
