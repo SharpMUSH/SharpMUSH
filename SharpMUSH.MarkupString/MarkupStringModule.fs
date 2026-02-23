@@ -733,13 +733,13 @@ module MarkupStringModule =
             if start = -1 || start + trimStrLen > len then
                 markupStr
             else
-                substring start trimStrLen markupStr
+                substring (start + trimStrLen) (len - (start + trimStrLen)) markupStr
         | TrimEnd ->
             let start = indexOfLast markupStr trimStr
             if start = -1 || start < 0 then
                 markupStr
             else
-                substring 0 (start + trimStrLen) markupStr
+                substring 0 start markupStr
         | TrimBoth ->
             let startIdx = indexOf markupStr trimStr
             if startIdx = -1 then
@@ -749,7 +749,7 @@ module MarkupStringModule =
                 if endIdx = -1 || endIdx < startIdx then
                     markupStr
                 else
-                    substring startIdx (endIdx - startIdx + trimStrLen) markupStr
+                    substring (startIdx + trimStrLen) (endIdx - (startIdx + trimStrLen)) markupStr
 
     /// <summary>
     /// Repeat a MarkupString a specified number of times, concatenating them to the aggregator.
