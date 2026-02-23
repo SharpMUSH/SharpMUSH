@@ -48,23 +48,22 @@ module MarkupStringModule =
     and MarkupString(markupDetails: MarkupTypes, content: Content list) as ms =
         // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
         let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
-            let sb = System.Text.StringBuilder()
-            
-            let rec accumulate (items: Content list) =
+            let rec accumulate (sb: System.Text.StringBuilder) (items: Content list) =
                 match items with
                 | [] -> ()
                 | Text str :: tail -> 
                     sb.Append(str) |> ignore
-                    accumulate tail
+                    accumulate sb tail
                 | MarkupText mStr :: tail ->
                     let inner =
                         match markupStr.MarkupDetails with
                         | Empty -> getText (mStr, outerMarkupType)
                         | MarkedupText _ -> getText (mStr, markupStr.MarkupDetails)
                     sb.Append(inner) |> ignore
-                    accumulate tail
+                    accumulate sb tail
 
-            accumulate markupStr.Content
+            let sb = System.Text.StringBuilder()
+            accumulate sb markupStr.Content
             let innerText = sb.ToString()
 
             match markupStr.MarkupDetails with
@@ -120,37 +119,36 @@ module MarkupStringModule =
         /// <param name="evaluator">Function that takes (markupType, innerText) and returns reconstructed string</param>
         [<TailCall>]
         let rec evaluateWith (evaluator: MarkupTypes -> string -> string) : string =
-            let sb = System.Text.StringBuilder()
-            
-            let rec evalContent (content: Content list) : unit =
+            let rec evalContent (sb: System.Text.StringBuilder) (content: Content list) : unit =
                 match content with
                 | [] -> ()
                 | Text str :: tail ->
                     sb.Append(str) |> ignore
-                    evalContent tail
+                    evalContent sb tail
                 | MarkupText mStr :: tail ->
                     let innerText = evalContent2 mStr
                     sb.Append(innerText) |> ignore
-                    evalContent tail
+                    evalContent sb tail
 
             and evalContent2 (markupStr: MarkupString) : string =
                 let innerSb = System.Text.StringBuilder()
-                let rec innerLoop (content: Content list) : unit =
+                let rec innerLoop (sb: System.Text.StringBuilder) (content: Content list) : unit =
                     match content with
                     | [] -> ()
                     | Text str :: tail ->
-                        innerSb.Append(str) |> ignore
-                        innerLoop tail
+                        sb.Append(str) |> ignore
+                        innerLoop sb tail
                     | MarkupText mStr :: tail ->
                         let text = evalContent2 mStr
-                        innerSb.Append(text) |> ignore
-                        innerLoop tail
-                innerLoop markupStr.Content
+                        sb.Append(text) |> ignore
+                        innerLoop sb tail
+                innerLoop innerSb markupStr.Content
                 let innerText = innerSb.ToString()
                 evaluator markupStr.MarkupDetails innerText
 
             // Evaluate content first, then apply evaluator to top-level markup
-            evalContent ms.Content
+            let sb = System.Text.StringBuilder()
+            evalContent sb ms.Content
             let contentText = sb.ToString()
             evaluator ms.MarkupDetails contentText
 
@@ -185,19 +183,18 @@ module MarkupStringModule =
 
         [<TailCall>]
         let rec toPlainText () : string =
-            let sb = System.Text.StringBuilder()
-            
-            let rec loop (content: Content list) =
+            let rec loop (sb: System.Text.StringBuilder) (content: Content list) =
                 match content with
                 | [] -> ()
                 | Text str :: tail -> 
                     sb.Append(str) |> ignore
-                    loop tail
+                    loop sb tail
                 | MarkupText mStr :: tail -> 
-                    loop mStr.Content
-                    loop tail
+                    loop sb mStr.Content
+                    loop sb tail
 
-            loop ms.Content
+            let sb = System.Text.StringBuilder()
+            loop sb ms.Content
             sb.ToString()
 
         let plainStrVal: Lazy<string> = Lazy<string>(toPlainText)
