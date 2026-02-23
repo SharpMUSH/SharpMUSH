@@ -512,8 +512,8 @@ public class SharpMUSHParserVisitor(
 			{
 				refinedArguments = await args
 					.ToAsyncEnumerable()
-					.Select<EvaluationStringContext?, CallState>(async (x, ct) => x == null 
-						? CallState.Empty 
+					.Select<EvaluationStringContext?, CallState>(async (x, ct) => x == null
+						? CallState.Empty
 						: new CallState(stripAnsi
 								? MModule.plainText2((await visitor.VisitChildren(x))?.Message ?? MModule.empty())
 								: (await visitor.VisitChildren(x))?.Message ?? MModule.empty(), x.Depth()))
@@ -1757,25 +1757,23 @@ public class SharpMUSHParserVisitor(
 		var evalStrings = context.evaluationString();
 		var equalsToken = context.EQUALS();
 
-		if (equalsToken is not null)
+		if (equalsToken is null)
 		{
-			var equalsPos = equalsToken.Symbol.StartIndex;
-			var lhsExists = evalStrings.Length > 0 && evalStrings[0].Start.StartIndex < equalsPos;
-			var lhsArg = lhsExists ? await Visit(evalStrings[0]) : null;
-			var rsIdx = lhsExists ? 1 : 0;
-			var rhsArg = rsIdx < evalStrings.Length ? await Visit(evalStrings[rsIdx]) : null;
-			return new CallState(null, context.Depth(),
-				[lhsArg?.Message ?? MModule.empty(), rhsArg?.Message ?? MModule.empty()],
+			return new CallState(null, context.Depth(), [
+				evalStrings.Length > 0
+					? (await Visit(evalStrings[0]))?.Message ?? MModule.empty()
+					: MModule.empty()
+					],
 				() => ValueTask.FromResult<MString?>(null));
 		}
-		else
-		{
-			var msg = evalStrings.Length > 0
-				? (await Visit(evalStrings[0]))?.Message ?? MModule.empty()
-				: MModule.empty();
-			return new CallState(null, context.Depth(), [msg],
-				() => ValueTask.FromResult<MString?>(null));
-		}
+
+		var lhsExists = evalStrings.Length > 0 && evalStrings[0].Start.StartIndex < equalsToken.Symbol.StartIndex;
+		var lhsArg = lhsExists ? await Visit(evalStrings[0]) : null;
+		var rsIdx = lhsExists ? 1 : 0;
+		var rhsArg = rsIdx < evalStrings.Length ? await Visit(evalStrings[rsIdx]) : null;
+		return new CallState(null, context.Depth(),
+			[lhsArg?.Message ?? MModule.empty(), rhsArg?.Message ?? MModule.empty()],
+			() => ValueTask.FromResult<MString?>(null));
 	}
 
 	/// <summary>
@@ -1806,8 +1804,7 @@ public class SharpMUSHParserVisitor(
 				arguments[i] = MModule.empty();
 			}
 		}
-		return new CallState(null, context.Depth(), arguments,
-			() => ValueTask.FromResult<MString?>(null));
+		return new CallState(null, context.Depth(), arguments, () => ValueTask.FromResult<MString?>(null));
 	}
 
 	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(
