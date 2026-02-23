@@ -320,19 +320,19 @@ public partial class ArangoDatabase(
 	private async ValueTask<string?> GetObjectFlagEdge(AnySharpObject target, SharpObjectFlag flag,
 		CancellationToken ct = default)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphFlags} FILTER v._id == {flag.Id} RETURN e._id",
 			cancellationToken: ct);
-		return result.FirstOrDefault()?.Id;
+		return result.FirstOrDefault();
 	}
 
 	private async ValueTask<string?> GetObjectPowerEdge(AnySharpObject target, SharpPower flag,
 		CancellationToken ct = default)
 	{
-		var result = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
+		var result = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {target.Object().Id} GRAPH {DatabaseConstants.GraphPowers} FILTER v._id == {flag.Id} RETURN e._id",
 			cancellationToken: ct);
-		return result.FirstOrDefault()?.Id;
+		return result.FirstOrDefault();
 	}
 
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject target, SharpObjectFlag flag,
@@ -387,7 +387,13 @@ public partial class ArangoDatabase(
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphHomes} RETURN e._id",
 			new Dictionary<string, object> { { StartVertex, obj.Id } }, cancellationToken: ct);
 
-		var contentEdge = response.First();
+		var contentEdge = response.FirstOrDefault();
+		if (contentEdge is null)
+		{
+			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
+				new SharpEdgeCreateRequest(obj.Id, home.Id), cancellationToken: ct);
+			return;
+		}
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
 			contentEdge, new { To = home.Id }, cancellationToken: ct);
@@ -400,7 +406,13 @@ public partial class ArangoDatabase(
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} RETURN e._id",
 			new Dictionary<string, object> { { StartVertex, obj.Id } }, cancellationToken: ct);
 
-		var contentEdge = response.First();
+		var contentEdge = response.FirstOrDefault();
+		if (contentEdge is null)
+		{
+			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
+				new SharpEdgeCreateRequest(obj.Id, location.Id), cancellationToken: ct);
+			return;
+		}
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
 			contentEdge, new { To = location.Id }, cancellationToken: ct);
@@ -509,7 +521,13 @@ public partial class ArangoDatabase(
 			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphObjectOwners} RETURN e._id",
 			new Dictionary<string, object> { { StartVertex, obj.Id()! } }, cancellationToken: ct);
 
-		var contentEdge = response.First();
+		var contentEdge = response.FirstOrDefault();
+		if (contentEdge is null)
+		{
+			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
+				new SharpEdgeCreateRequest(obj.Id()!, owner.Id!), cancellationToken: ct);
+			return;
+		}
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 			contentEdge, new { To = owner.Id }, cancellationToken: ct);
@@ -633,29 +651,13 @@ public partial class ArangoDatabase(
 
 	private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string id, CancellationToken ct = default)
 	{
-		// There is an error here. 
-		/*
-		 *Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Cannot convert null to 'long' because it is a non-nullable value type
-   at CallSite.Target(Closure, CallSite, Object)
-   at System.System.Text.Json.JsonElement.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
-   at CallSite.Target(Closure, CallSite, Object)
-   at SharpMUSH.Database.ArangoDB.ArangoDatabase.SharpObjectQueryToSharpObject(Object obj) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 1164
-   at SharpMUSH.Database.ArangoDB.ArangoDatabase.GetObjectNodeAsync(String dbId, CancellationToken cancellationToken) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 1136
-   at SharpMUSH.Database.ArangoDB.ArangoDatabase.MailFromAsync(String id, CancellationToken ct) in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 502
-   at SharpMUSH.Database.ArangoDB.ArangoDatabase.<>c__DisplayClass38_0.<<ConvertMailQueryResult>b__0>d.MoveNext() in D:\\SharpMUSH\\SharpMUSH.Database.ArangoDB\\ArangoDatabase.cs:line 486
---- End of stack trace from previous location ---
-   at SharpMUSH.Implementation.Functions.Functions.mailfrom(IMUSHCodeParser parser, SharpFunctionAttribute _2) in D:\\SharpMUSH\\SharpMUSH.Implementation\\Functions\\MailFunctions.cs:line 326
-   at SharpMUSH.Implementation.Visitors.SharpMUSHParserVisitor.CallFunction(String name, MarkupString src, FunctionContext context, EvaluationStringContext[] args, SharpMUSHParserVisitor visitor) in D:\\SharpMUSH\\SharpMUSH.Implementation\\Visitors\\SharpMUSHParserVisitor.cs:line 264
-		 *
-		 */
-
 		var edges = await arangoDb.Query.ExecuteAsync<SharpEdgeQueryResult>(handle,
 			$"FOR v,e IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphMail} RETURN e", cancellationToken: ct);
 
 		return edges switch
 		{
 			null or [] => new None(),
-			[var edge, ..] => await GetObjectNodeAsync(edge.From, CancellationToken.None)
+			[var edge, ..] => await GetObjectNodeAsync(edge.To, CancellationToken.None)
 		};
 	}
 
@@ -1168,7 +1170,14 @@ public partial class ArangoDatabase(
 	{
 		var owner = (await arangoDb.Query.ExecuteAsync<string>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphObjectOwners} RETURN v._id", cancellationToken: ct))
-			.First();
+			.FirstOrDefault();
+
+		if (owner is null)
+		{
+			// Fallback: try to find God (#1) as default owner
+			var god = await GetObjectNodeAsync("node_objects/1", ct);
+			return god.AsPlayer;
+		}
 
 		var populatedOwner = await GetObjectNodeAsync(owner, CancellationToken.None);
 

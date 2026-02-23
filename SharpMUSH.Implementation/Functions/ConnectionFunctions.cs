@@ -1037,7 +1037,7 @@ public partial class Functions
 			async found =>
 			{
 				var fod = await ConnectionService!.Get(found.Object.DBRef).FirstOrDefaultAsync();
-				return fod?.Metadata["WIDTH"] ?? defaultArg.ToPlainText();
+				return fod?.Metadata.GetValueOrDefault("WIDTH") ?? defaultArg.ToPlainText();
 			});
 	}
 
@@ -1447,7 +1447,7 @@ public partial class Functions
 				async found =>
 				{
 					var fod = await ConnectionService!.Get(found.Object.DBRef).FirstOrDefaultAsync();
-					return fod?.Metadata["HEIGHT"] ?? defaultArg.ToPlainText();
+					return fod?.Metadata.GetValueOrDefault("HEIGHT") ?? defaultArg.ToPlainText();
 				});
 		}
 
