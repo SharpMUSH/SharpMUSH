@@ -580,7 +580,7 @@ module MarkupStringModule =
 
         let rec findDelimiters pos acc =
             if pos < text.Length then
-                match text.IndexOf(srch, pos) with
+                match text.IndexOf(srch, pos, StringComparison.Ordinal) with
                 | -1 -> Seq.rev acc
                 | foundPos ->
                     let newAcc = foundPos :: acc
@@ -604,11 +604,11 @@ module MarkupStringModule =
     let rec indexOf (markupStr: MarkupString) (search: MarkupString) : int =
         let text = plainText markupStr
         let srch = plainText search
-        text.IndexOf(srch)
+        text.IndexOf(srch, StringComparison.Ordinal)
         
     [<TailCall>]
     let rec indexOf2 (markupStr: MarkupString) (search: string) : int =
-        (plainText markupStr).IndexOf(search)
+        (plainText markupStr).IndexOf(search, StringComparison.Ordinal)
         
     /// <summary>
     /// Returns the last index where a search MarkupString occurs.
@@ -619,7 +619,7 @@ module MarkupStringModule =
     let rec indexOfLast (markupStr: MarkupString) (search: MarkupString) : int =
         let text = plainText markupStr
         let srch = plainText search
-        text.LastIndexOf(srch)
+        text.LastIndexOf(srch, StringComparison.Ordinal)
 
     /// <summary>
     /// Splits a MarkupString by a string delimiter.
@@ -637,7 +637,7 @@ module MarkupStringModule =
                 if pos >= text.Length then
                     List.rev acc
                 else
-                    match text.IndexOf(delimiter, pos) with
+                    match text.IndexOf(delimiter, pos, StringComparison.Ordinal) with
                     | -1 -> List.rev acc
                     | idx ->
                         let nextPos = if delimiter.Length > 0 then idx + delimiter.Length else idx + 1
@@ -724,32 +724,32 @@ module MarkupStringModule =
     /// <param name="trimStr">String to trim.</param>
     /// <param name="trimType">Trim type (start, end, both).</param>
     let trim (markupStr: MarkupString) (trimStr: MarkupString) (trimType: TrimType) : MarkupString =
-        let trimStrLen = getLength trimStr
-        let len = markupStr.Length
+        let text = plainText markupStr
+        let trimChars = plainText trimStr
+        let len = text.Length
+
+        let rec countLeft i =
+            if i >= len || not (trimChars.Contains(text.[i])) then i
+            else countLeft (i + 1)
+
+        let rec countRight i =
+            if i < 0 || not (trimChars.Contains(text.[i])) then i + 1
+            else countRight (i - 1)
 
         match trimType with
         | TrimStart ->
-            let start = indexOf markupStr trimStr
-            if start = -1 || start + trimStrLen > len then
-                markupStr
-            else
-                substring (start + trimStrLen) (len - (start + trimStrLen)) markupStr
+            let leftTrim = countLeft 0
+            if leftTrim = 0 then markupStr
+            else substring leftTrim (len - leftTrim) markupStr
         | TrimEnd ->
-            let start = indexOfLast markupStr trimStr
-            if start = -1 || start < 0 then
-                markupStr
-            else
-                substring 0 start markupStr
+            let rightBoundary = countRight (len - 1)
+            if rightBoundary = len then markupStr
+            else substring 0 rightBoundary markupStr
         | TrimBoth ->
-            let startIdx = indexOf markupStr trimStr
-            if startIdx = -1 then
-                markupStr
-            else
-                let endIdx = indexOfLast markupStr trimStr
-                if endIdx = -1 || endIdx < startIdx then
-                    markupStr
-                else
-                    substring (startIdx + trimStrLen) (endIdx - (startIdx + trimStrLen)) markupStr
+            let leftTrim = countLeft 0
+            let rightBoundary = countRight (len - 1)
+            if leftTrim = 0 && rightBoundary = len then markupStr
+            else substring leftTrim (rightBoundary - leftTrim) markupStr
 
     /// <summary>
     /// Repeat a MarkupString a specified number of times, concatenating them to the aggregator.

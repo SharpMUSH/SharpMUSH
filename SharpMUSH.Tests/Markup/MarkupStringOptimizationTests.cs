@@ -191,6 +191,55 @@ public class MarkupStringOptimizationTests
 		await Assert.That(result[2].ToPlainText()).IsEqualTo("three");
 	}
 
+	/// <summary>
+	/// indexOf / indexOfLast / split must use ordinal (byte-by-byte) comparison so that
+	/// results are deterministic regardless of the server's current culture.
+	/// For example, under some locales a culture-sensitive search can fold accented
+	/// characters, but an ordinal search must treat each Unicode code point as distinct.
+	/// </summary>
+	[Test]
+	public async Task IndexOf_UseOrdinalComparison_NotCultureSensitive()
+	{
+		// \u00e9 is 'é' (e with acute accent).  Culture-sensitive search on some
+		// locales may match it against plain 'e', but ordinal comparison must not.
+		var markupString = A.single("caf\u00e9");  // "café"
+		var searchMatch = A.single("caf\u00e9");   // exact match
+		var searchNoMatch = A.single("cafe");      // 'e' != 'é' ordinal
+
+		await Assert.That(A.indexOf(markupString, searchMatch)).IsEqualTo(0);
+		await Assert.That(A.indexOf(markupString, searchNoMatch)).IsEqualTo(-1);
+	}
+
+	[Test]
+	public async Task IndexOfLast_UseOrdinalComparison_NotCultureSensitive()
+	{
+		var markupString = A.single("caf\u00e9-caf\u00e9");
+		var search = A.single("caf\u00e9");
+		var searchNoMatch = A.single("cafe");
+
+		await Assert.That(A.indexOfLast(markupString, search)).IsEqualTo(5);
+		await Assert.That(A.indexOfLast(markupString, searchNoMatch)).IsEqualTo(-1);
+	}
+
+	[Test]
+	public async Task Split_UseOrdinalComparison_NotCultureSensitive()
+	{
+		// Delimiter is a non-ASCII Unicode character (÷, U+00F7).
+		// Ordinal comparison ensures only the exact code point matches, not any
+		// ASCII look-alike that a culture-sensitive comparer might equate it with.
+		var markupString = A.single("a\u00f7b\u00f7c");  // "a÷b÷c"
+		var result = A.split("\u00f7", markupString);
+
+		await Assert.That(result.Length).IsEqualTo(3);
+		await Assert.That(result[0].ToPlainText()).IsEqualTo("a");
+		await Assert.That(result[1].ToPlainText()).IsEqualTo("b");
+		await Assert.That(result[2].ToPlainText()).IsEqualTo("c");
+
+		// ASCII delimiter must not match the Unicode delimiter
+		var resultAscii = A.split("/", markupString);
+		await Assert.That(resultAscii.Length).IsEqualTo(1);
+	}
+
 	[Test]
 	public async Task EqualityComparison_PlainTextMarkupStrings_WorksCorrectly()
 	{
