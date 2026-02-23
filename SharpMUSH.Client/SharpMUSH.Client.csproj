@@ -9,7 +9,6 @@
 		<!-- Disable trimming due to FSharp.Core incompatibility -->
 		<PublishTrimmed>false</PublishTrimmed>
 		<EnablePreviewFeatures>true</EnablePreviewFeatures>
-		<Features>$(Features);runtime-async=on</Features>
 	</PropertyGroup>
 
 	<ItemGroup>

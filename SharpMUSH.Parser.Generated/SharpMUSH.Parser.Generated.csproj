@@ -7,7 +7,6 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
 		<EnablePreviewFeatures>true</EnablePreviewFeatures>
-		<Features>$(Features);runtime-async=on</Features>
   </PropertyGroup>
 
 	<PropertyGroup>

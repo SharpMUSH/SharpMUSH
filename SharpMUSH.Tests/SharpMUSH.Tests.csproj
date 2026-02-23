@@ -9,7 +9,6 @@
     <LangVersion>default</LangVersion>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 		<EnablePreviewFeatures>true</EnablePreviewFeatures>
-		<Features>$(Features);runtime-async=on</Features>
 		<NoWarn>TUnit0038</NoWarn>
 	</PropertyGroup>
 
