@@ -294,7 +294,6 @@ public record ParserState(
 	/// <param name="register">Register string.</param>
 	/// <param name="value">Value.</param>
 	/// <returns>Success if it was a valid register.</returns>
-	/// <exception cref="Exception">If we somehow failed to peek. Fatal.</exception>
 	public bool AddRegister(string register, MString value)
 	{
 		// Validate register pattern: alphanumeric characters, underscores, and hyphens
@@ -307,7 +306,7 @@ public record ParserState(
 		var canPeek = Registers.TryPeek(out var top);
 		if (!canPeek)
 		{
-			throw new Exception("Could not peek!");
+			return false;
 		}
 
 		if (!top!.TryAdd(register, value))

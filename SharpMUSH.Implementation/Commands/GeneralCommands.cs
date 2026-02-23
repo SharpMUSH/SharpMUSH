@@ -2020,7 +2020,7 @@ public partial class Commands
 				convertedTime = TimeSpan.FromSeconds(time);
 			}
 
-			await Mediator!.Publish(new QueueDelayedCommandListRequest(arg1, parser.CurrentState, convertedTime));
+			await Mediator!.Send(new QueueDelayedCommandListRequest(arg1, parser.CurrentState, convertedTime));
 			return CallState.Empty;
 		}
 
@@ -2533,7 +2533,7 @@ public partial class Commands
 				if (hasAll || !drainCount.HasValue)
 				{
 					// Drain all entries and clear attribute
-					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
+					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
 					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
 						MModule.single("0"),
 						one.AsPlayer));
@@ -2541,7 +2541,7 @@ public partial class Commands
 				else
 				{
 					// Drain specified number
-					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
+					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
 					// Adjust semaphore count
 					var currentAttr = await Mediator.CreateStream(
 						new GetAttributeQuery(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute)).LastOrDefaultAsync();
@@ -2563,7 +2563,7 @@ public partial class Commands
 			if (hasAll || !drainCount.HasValue)
 			{
 				// Drain all entries (default if no number specified)
-				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, null));
+				await Mediator!.Send(new DrainSemaphoreRequest(dbRefAttribute, null));
 				if (hasAll)
 				{
 					// /all also clears the semaphore attribute
@@ -2582,7 +2582,7 @@ public partial class Commands
 			else
 			{
 				// Drain specified number
-				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
+				await Mediator!.Send(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
 				// Adjust semaphore count
 				var currentAttr = await Mediator.CreateStream(
 					new GetAttributeQuery(objectToDrain.Object().DBRef, attribute)).LastOrDefaultAsync();
@@ -4311,7 +4311,7 @@ public partial class Commands
 			["DELETE"] => await ChannelDelete.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
 				args["0"].Message!, args["1"].Message!),
 			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, LocateService!, PermissionService!, Mediator!,
-				NotifyService!, args["0"].Message!, args["1"].Message!),
+				NotifyService!, args["0"].Message!, args.GetValueOrDefault("1")?.Message),
 			_ => new CallState("What do you want to do with the channel?")
 		};
 	}

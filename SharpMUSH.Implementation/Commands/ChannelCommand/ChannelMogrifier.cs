@@ -9,7 +9,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelMogrifier
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString obj)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? obj = null)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
@@ -32,7 +32,15 @@ public static class ChannelMogrifier
 			return new CallState("You cannot modify this channel.");
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj.ToPlainText(),
+		var objText = obj?.ToPlainText();
+		if (string.IsNullOrEmpty(objText))
+		{
+			await Mediator.Send(new UpdateChannelCommand(channel,
+				null, null, null, null, null, null, null, null, string.Empty, null));
+			return new CallState("Channel Mogrifier has been cleared.");
+		}
+
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, objText,
 			LocateFlags.All,
 			async locate =>
 			{

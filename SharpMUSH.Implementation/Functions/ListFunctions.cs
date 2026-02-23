@@ -1581,6 +1581,10 @@ public partial class Functions
 		}
 
 		var fieldsPerLine = lineWidth / fieldWidth;
+		if (fieldsPerLine < 1)
+		{
+			return new CallState("#-1 FIELD WIDTH EXCEEDS LINE WIDTH");
+		}
 		var list = MModule.split2(delimiterArg, listArg);
 		var resultFields = list.Select(x =>
 			MModule.pad(x,

@@ -91,13 +91,13 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
 		=> await obj.Object().Powers.Value
-			.AnyAsync(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase)
-										 || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
 		=> await obj.Powers.Value
-			.AnyAsync(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase)
-										 || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
