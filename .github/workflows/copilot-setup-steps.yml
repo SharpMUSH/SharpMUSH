@@ -32,7 +32,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           # Use 'x' to always get the latest stable version
-          dotnet-version: 10.x
+          dotnet-version: 11.x
           dotnet-quality: 'preview'
 
       - name: Restore dependencies
