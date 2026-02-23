@@ -48,11 +48,20 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
-	// Metrics collected via MeterListener (synchronous, no background thread)
+	// Metrics collected via MeterListener — static so they persist across all factory instances
+	// and can be written from the ProcessExit handler regardless of disposal order.
 	private MeterListener? _meterListener;
-	private readonly ConcurrentDictionary<string, ConcurrentBag<double>> _functionDurations = new(StringComparer.OrdinalIgnoreCase);
-	private readonly ConcurrentDictionary<string, ConcurrentBag<double>> _commandDurations = new(StringComparer.OrdinalIgnoreCase);
-	private readonly ConcurrentDictionary<string, long> _connectionEventCounts = new(StringComparer.OrdinalIgnoreCase);
+	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _functionDurations = new(StringComparer.OrdinalIgnoreCase);
+	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _commandDurations = new(StringComparer.OrdinalIgnoreCase);
+	private static readonly ConcurrentDictionary<string, long> _connectionEventCounts = new(StringComparer.OrdinalIgnoreCase);
+
+	static ServerWebAppFactory()
+	{
+		// Register once at process exit to write telemetry regardless of disposal order.
+		// AppDomain.ProcessExit fires reliably when the dotnet process exits normally,
+		// bypassing any IAsyncDisposable interface-dispatch issues in the test framework.
+		AppDomain.CurrentDomain.ProcessExit += (_, _) => WriteTelemetryFile();
+	}
 
 	// Optional parameters for custom SQL connection
 	protected string? _customSqlConnectionString;
@@ -282,18 +291,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 	public new async ValueTask DisposeAsync()
 	{
-		try
-		{
-			await OutputTelemetrySummaryAsync();
-		}
-		catch (Exception ex)
-		{
-			Console.Error.WriteLine($"[Telemetry] Error writing summary: {ex.Message}");
-		}
-		finally
-		{
-			_meterListener?.Dispose();
-		}
+		_meterListener?.Dispose();
 
 		// Shutdown the Quartz scheduler gracefully with a timeout
 		if (_server?.Services != null)
@@ -328,7 +326,12 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		return "unknown";
 	}
 
-	private async Task OutputTelemetrySummaryAsync()
+	/// <summary>
+	/// Writes the telemetry summary file. Called from <see cref="AppDomain.ProcessExit"/> so it
+	/// runs synchronously and is guaranteed to execute even if <see cref="DisposeAsync"/> is
+	/// bypassed by TUnit's interface-based disposal.
+	/// </summary>
+	private static void WriteTelemetryFile()
 	{
 		var enableTelemetry = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_TELEMETRY");
 		if (string.IsNullOrEmpty(enableTelemetry) ||
@@ -337,67 +340,74 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 		var outputPath = Environment.GetEnvironmentVariable("SHARPMUSH_TELEMETRY_OUTPUT_PATH") ?? "test-telemetry.md";
 
-		var sb = new StringBuilder();
-		sb.AppendLine("## 📊 Test Telemetry Summary");
-		sb.AppendLine();
-
-		if (_connectionEventCounts.Count > 0)
+		try
 		{
-			sb.AppendLine("### 🔌 Connection Events");
+			var sb = new StringBuilder();
+			sb.AppendLine("## 📊 Test Telemetry Summary");
 			sb.AppendLine();
-			sb.AppendLine("| Event Type | Count |");
-			sb.AppendLine("|------------|-------|");
-			foreach (var (eventType, count) in _connectionEventCounts.OrderByDescending(x => x.Value))
-				sb.AppendLine($"| {eventType} | {count} |");
-			sb.AppendLine();
-		}
 
-		if (_functionDurations.Count > 0)
+			if (_connectionEventCounts.Count > 0)
+			{
+				sb.AppendLine("### 🔌 Connection Events");
+				sb.AppendLine();
+				sb.AppendLine("| Event Type | Count |");
+				sb.AppendLine("|------------|-------|");
+				foreach (var (eventType, count) in _connectionEventCounts.OrderByDescending(x => x.Value))
+					sb.AppendLine($"| {eventType} | {count} |");
+				sb.AppendLine();
+			}
+
+			if (_functionDurations.Count > 0)
+			{
+				sb.AppendLine("### ⚡ Most Called Functions (Top 10)");
+				sb.AppendLine();
+				sb.AppendLine("| Function | Calls | Avg Duration (ms) |");
+				sb.AppendLine("|----------|-------|-------------------|");
+				foreach (var (name, count, avgMs) in _functionDurations
+					.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
+					.OrderByDescending(x => x.Count).Take(10))
+					sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
+				sb.AppendLine();
+
+				sb.AppendLine("### 🐌 Slowest Functions (Top 10 by Avg Duration)");
+				sb.AppendLine();
+				sb.AppendLine("| Function | Calls | Avg Duration (ms) |");
+				sb.AppendLine("|----------|-------|-------------------|");
+				foreach (var (name, count, avgMs) in _functionDurations
+					.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
+					.OrderByDescending(x => x.AvgMs).Take(10))
+					sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
+				sb.AppendLine();
+			}
+
+			if (_commandDurations.Count > 0)
+			{
+				sb.AppendLine("### ⚡ Most Called Commands (Top 10)");
+				sb.AppendLine();
+				sb.AppendLine("| Command | Calls | Avg Duration (ms) |");
+				sb.AppendLine("|---------|-------|-------------------|");
+				foreach (var (name, count, avgMs) in _commandDurations
+					.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
+					.OrderByDescending(x => x.Count).Take(10))
+					sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
+				sb.AppendLine();
+
+				sb.AppendLine("### 🐌 Slowest Commands (Top 10 by Avg Duration)");
+				sb.AppendLine();
+				sb.AppendLine("| Command | Calls | Avg Duration (ms) |");
+				sb.AppendLine("|---------|-------|-------------------|");
+				foreach (var (name, count, avgMs) in _commandDurations
+					.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
+					.OrderByDescending(x => x.AvgMs).Take(10))
+					sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
+				sb.AppendLine();
+			}
+
+			File.WriteAllText(outputPath, sb.ToString());
+		}
+		catch (Exception ex)
 		{
-			sb.AppendLine("### ⚡ Most Called Functions (Top 10)");
-			sb.AppendLine();
-			sb.AppendLine("| Function | Calls | Avg Duration (ms) |");
-			sb.AppendLine("|----------|-------|-------------------|");
-			foreach (var (name, count, avgMs) in _functionDurations
-				.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
-				.OrderByDescending(x => x.Count).Take(10))
-				sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
-			sb.AppendLine();
-
-			sb.AppendLine("### 🐌 Slowest Functions (Top 10 by Avg Duration)");
-			sb.AppendLine();
-			sb.AppendLine("| Function | Calls | Avg Duration (ms) |");
-			sb.AppendLine("|----------|-------|-------------------|");
-			foreach (var (name, count, avgMs) in _functionDurations
-				.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
-				.OrderByDescending(x => x.AvgMs).Take(10))
-				sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
-			sb.AppendLine();
+			Console.Error.WriteLine($"[Telemetry] Error writing summary to '{outputPath}': {ex.Message}");
 		}
-
-		if (_commandDurations.Count > 0)
-		{
-			sb.AppendLine("### ⚡ Most Called Commands (Top 10)");
-			sb.AppendLine();
-			sb.AppendLine("| Command | Calls | Avg Duration (ms) |");
-			sb.AppendLine("|---------|-------|-------------------|");
-			foreach (var (name, count, avgMs) in _commandDurations
-				.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
-				.OrderByDescending(x => x.Count).Take(10))
-				sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
-			sb.AppendLine();
-
-			sb.AppendLine("### 🐌 Slowest Commands (Top 10 by Avg Duration)");
-			sb.AppendLine();
-			sb.AppendLine("| Command | Calls | Avg Duration (ms) |");
-			sb.AppendLine("|---------|-------|-------------------|");
-			foreach (var (name, count, avgMs) in _commandDurations
-				.Select(kvp => (Name: kvp.Key, Count: kvp.Value.Count, AvgMs: kvp.Value.Average()))
-				.OrderByDescending(x => x.AvgMs).Take(10))
-				sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
-			sb.AppendLine();
-		}
-
-		await File.WriteAllTextAsync(outputPath, sb.ToString());
 	}
 }
