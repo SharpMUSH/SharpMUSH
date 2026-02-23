@@ -1,60 +1,41 @@
-# Persistent Volumes
+# Persistent Volume for the infrastructure pod
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: arangodb-pvc
+  name: sharpmush-infra-pvc
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 3Gi
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: redpanda-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: redis-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
----
-# ArangoDB
+# ArangoDB, RedPanda (Kafka-compatible), and Redis
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: arangodb
+  name: sharpmush-infra
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: arangodb
+      app: sharpmush-infra
   template:
     metadata:
       labels:
-        app: arangodb
+        app: sharpmush-infra
     spec:
+      securityContext:
+        fsGroup: 101
       containers:
         - name: arangodb
           image: arangodb:latest
           ports:
             - containerPort: 8529
           volumeMounts:
-            - name: arangodb-storage
+            - name: infra-storage
               mountPath: /var/lib/arangodb3
+              subPath: arangodb
           resources:
             requests:
               cpu: "500m"
@@ -63,41 +44,6 @@ spec:
           env:
             - name: ARANGO_ROOT_PASSWORD
               value: "password"
-      volumes:
-        - name: arangodb-storage
-          persistentVolumeClaim:
-            claimName: arangodb-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: arangodb
-spec:
-  selector:
-    app: arangodb
-  ports:
-    - port: 8529
-      targetPort: 8529
-  type: ClusterIP
----
-# RedPanda (Kafka-compatible)
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redpanda
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: redpanda
-  template:
-    metadata:
-      labels:
-        app: redpanda
-    spec:
-      securityContext:
-        fsGroup: 101
-      containers:
         - name: redpanda
           image: redpandadata/redpanda:latest
           imagePullPolicy: IfNotPresent
@@ -117,17 +63,46 @@ spec:
             - name: pandaproxy
               containerPort: 8082
           volumeMounts:
-            - name: redpanda-storage
+            - name: infra-storage
               mountPath: /var/lib/redpanda/data
+              subPath: redpanda
           resources:
             requests:
               cpu: "500m"
             limits:
               cpu: "500m"
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--appendonly", "yes"]
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: infra-storage
+              mountPath: /data
+              subPath: redis
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
       volumes:
-        - name: redpanda-storage
+        - name: infra-storage
           persistentVolumeClaim:
-            claimName: redpanda-pvc
+            claimName: sharpmush-infra-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arangodb
+spec:
+  selector:
+    app: sharpmush-infra
+  ports:
+    - port: 8529
+      targetPort: 8529
+  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
@@ -135,7 +110,7 @@ metadata:
   name: redpanda
 spec:
   selector:
-    app: redpanda
+    app: sharpmush-infra
   ports:
     - name: kafka
       port: 9092
@@ -148,49 +123,13 @@ spec:
       targetPort: 8082
   type: ClusterIP
 ---
-# Redis
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redis
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: redis
-  template:
-    metadata:
-      labels:
-        app: redis
-    spec:
-      containers:
-        - name: redis
-          image: redis:7-alpine
-          command: ["redis-server", "--appendonly", "yes"]
-          ports:
-            - containerPort: 6379
-          volumeMounts:
-            - name: redis-storage
-              mountPath: /data
-          resources:
-            requests:
-              cpu: "250m"
-              memory: "256Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-      volumes:
-        - name: redis-storage
-          persistentVolumeClaim:
-            claimName: redis-pvc
----
 apiVersion: v1
 kind: Service
 metadata:
   name: redis
 spec:
   selector:
-    app: redis
+    app: sharpmush-infra
   ports:
     - port: 6379
       targetPort: 6379
