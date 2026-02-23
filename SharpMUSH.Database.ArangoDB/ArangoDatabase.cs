@@ -1175,7 +1175,7 @@ public partial class ArangoDatabase(
 		if (owner is null)
 		{
 			// Fallback: try to find God (#1) as default owner
-			var god = await GetObjectNodeAsync("node_objects/1", ct);
+			var god = await GetObjectNodeAsync(DatabaseConstants.GodObjectId, ct);
 			return god.AsPlayer;
 		}
 

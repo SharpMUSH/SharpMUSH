@@ -976,6 +976,8 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
 		}
 
+		// Math.Sqrt requires double; the cast from decimal to double introduces minimal precision
+		// loss acceptable for vector normalization, consistent with PennMUSH float behavior.
 		var magnitude = (decimal)Math.Sqrt((double)list.Sum(x => x.result * x.result));
 		if (magnitude == 0)
 		{
