@@ -8,7 +8,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 3Gi
+      storage: 30Gi
 ---
 # ArangoDB, RedPanda (Kafka-compatible), and Redis
 apiVersion: apps/v1
@@ -39,8 +39,10 @@ spec:
           resources:
             requests:
               cpu: "500m"
+              memory: "512Mi"
             limits:
-              cpu: "500m"
+              cpu: "1"
+              memory: "1Gi"
           env:
             - name: ARANGO_ROOT_PASSWORD
               value: "password"
@@ -69,8 +71,10 @@ spec:
           resources:
             requests:
               cpu: "500m"
+              memory: "512Mi"
             limits:
-              cpu: "500m"
+              cpu: "1"
+              memory: "1Gi"
         - name: redis
           image: redis:7-alpine
           command: ["redis-server", "--appendonly", "yes"]
@@ -85,8 +89,8 @@ spec:
               cpu: "250m"
               memory: "256Mi"
             limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "1"
+              memory: "1Gi"
       volumes:
         - name: infra-storage
           persistentVolumeClaim:
@@ -179,8 +183,10 @@ spec:
           resources:
             requests:
               cpu: "500m"
+              memory: "512Mi"
             limits:
-              cpu: "500m"
+              cpu: "1"
+              memory: "1Gi"
 ---
 # SharpMUSH Service (for Prometheus scraping and HTTP API)
 apiVersion: v1
@@ -240,8 +246,10 @@ spec:
           resources:
             requests:
               cpu: "500m"
+              memory: "512Mi"
             limits:
-              cpu: "500m"
+              cpu: "1"
+              memory: "1Gi"
 ---
 apiVersion: v1
 kind: Service
