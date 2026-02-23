@@ -47,24 +47,25 @@ module MarkupStringModule =
 
     and MarkupString(markupDetails: MarkupTypes, content: Content list) as ms =
         // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
-        [<TailCall>]
         let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
-            let accumulate (acc: string, items: Content list) =
-                let rec loop (acc: string, items: Content list) =
-                    match items with
-                    | [] -> acc
-                    | Text str :: tail -> loop (acc + str, tail)
-                    | MarkupText mStr :: tail ->
-                        let inner =
-                            match markupStr.MarkupDetails with
-                            | Empty -> getText (mStr, outerMarkupType)
-                            | MarkedupText _ -> getText (mStr, markupStr.MarkupDetails)
+            let sb = System.Text.StringBuilder()
+            
+            let rec accumulate (items: Content list) =
+                match items with
+                | [] -> ()
+                | Text str :: tail -> 
+                    sb.Append(str) |> ignore
+                    accumulate tail
+                | MarkupText mStr :: tail ->
+                    let inner =
+                        match markupStr.MarkupDetails with
+                        | Empty -> getText (mStr, outerMarkupType)
+                        | MarkedupText _ -> getText (mStr, markupStr.MarkupDetails)
+                    sb.Append(inner) |> ignore
+                    accumulate tail
 
-                        loop (acc + inner, tail)
-
-                loop (acc, items)
-
-            let innerText = accumulate (String.Empty, markupStr.Content)
+            accumulate markupStr.Content
+            let innerText = sb.ToString()
 
             match markupStr.MarkupDetails with
             | Empty -> innerText
@@ -119,19 +120,39 @@ module MarkupStringModule =
         /// <param name="evaluator">Function that takes (markupType, innerText) and returns reconstructed string</param>
         [<TailCall>]
         let rec evaluateWith (evaluator: MarkupTypes -> string -> string) : string =
-            let rec evalContent (content: Content list) : string =
-                content
-                |> List.map (function
-                    | Text str -> str
-                    | MarkupText mStr -> evaluateWithMarkup mStr evaluator)
-                |> String.concat ""
+            let sb = System.Text.StringBuilder()
+            
+            let rec evalContent (content: Content list) : unit =
+                match content with
+                | [] -> ()
+                | Text str :: tail ->
+                    sb.Append(str) |> ignore
+                    evalContent tail
+                | MarkupText mStr :: tail ->
+                    let innerText = evalContent2 mStr
+                    sb.Append(innerText) |> ignore
+                    evalContent tail
 
-            and evaluateWithMarkup (markupStr: MarkupString) (evaluator: MarkupTypes -> string -> string) : string =
-                let innerText = evalContent markupStr.Content
+            and evalContent2 (markupStr: MarkupString) : string =
+                let innerSb = System.Text.StringBuilder()
+                let rec innerLoop (content: Content list) : unit =
+                    match content with
+                    | [] -> ()
+                    | Text str :: tail ->
+                        innerSb.Append(str) |> ignore
+                        innerLoop tail
+                    | MarkupText mStr :: tail ->
+                        let text = evalContent2 mStr
+                        innerSb.Append(text) |> ignore
+                        innerLoop tail
+                innerLoop markupStr.Content
+                let innerText = innerSb.ToString()
                 evaluator markupStr.MarkupDetails innerText
 
-            // Start evaluation with this MarkupString's structure
-            evaluateWithMarkup ms evaluator
+            // Evaluate content first, then apply evaluator to top-level markup
+            evalContent ms.Content
+            let contentText = sb.ToString()
+            evaluator ms.MarkupDetails contentText
 
         let toString () : string =
             let postfix (markupType: MarkupTypes) : string =
@@ -164,13 +185,20 @@ module MarkupStringModule =
 
         [<TailCall>]
         let rec toPlainText () : string =
-            let rec loop (content: Content list) (acc: string list) =
+            let sb = System.Text.StringBuilder()
+            
+            let rec loop (content: Content list) =
                 match content with
-                | [] -> List.rev acc
-                | Text str :: tail -> loop tail (str :: acc)
-                | MarkupText mStr :: tail -> loop (mStr.Content @ tail) acc
+                | [] -> ()
+                | Text str :: tail -> 
+                    sb.Append(str) |> ignore
+                    loop tail
+                | MarkupText mStr :: tail -> 
+                    loop mStr.Content
+                    loop tail
 
-            String.Concat(loop ms.Content [])
+            loop ms.Content
+            sb.ToString()
 
         let plainStrVal: Lazy<string> = Lazy<string>(toPlainText)
 
@@ -405,14 +433,12 @@ module MarkupStringModule =
         | Empty ->
             let combinedContent =
                 originalMarkupStr.Content @ separatorContent @ [ MarkupText newMarkupStr ]
-
             MarkupString(Empty, combinedContent)
         | _ ->
             let combinedContent =
                 [ MarkupText originalMarkupStr ]
                 @ separatorContent
                 @ [ MarkupText newMarkupStr ]
-
             MarkupString(Empty, combinedContent)
 
     /// <summary>
@@ -465,35 +491,37 @@ module MarkupStringModule =
                 Some(str.Substring(start, min (str.Length - start) length))
 
         let rec substringAux contents start length acc =
-            match contents, length with
-            | _, 0 -> List.rev acc
-            | [], _ -> List.rev acc
-            | head :: tail, _ ->
-                match head with
-                | Text str when start < str.Length ->
-                    let skip = max start 0
-                    let take = min (str.Length - skip) length
-
-                    match extractText str skip take with
-                    | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
-                    | None -> substringAux tail (start - str.Length) length acc
-                | Text str when start >= str.Length -> substringAux tail (start - str.Length) length acc
-                | MarkupText markupStr ->
-                    let strLen = getLength markupStr
-
-                    if start < strLen then
+            if length <= 0 then
+                List.rev acc
+            else
+                match contents with
+                | [] -> List.rev acc
+                | head :: tail ->
+                    match head with
+                    | Text str when start < str.Length ->
                         let skip = max start 0
-                        let take = min strLen length
-                        let subMarkup = substring skip take markupStr
-                        let subLength = getLength subMarkup
+                        let take = min (str.Length - skip) length
 
-                        if subLength > 0 then
-                            substringAux tail 0 (length - subLength) (MarkupText subMarkup :: acc)
+                        match extractText str skip take with
+                        | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
+                        | None -> substringAux tail (start - str.Length) length acc
+                    | Text str when start >= str.Length -> substringAux tail (start - str.Length) length acc
+                    | MarkupText innerMarkup ->
+                        let strLen = getLength innerMarkup
+
+                        if start < strLen then
+                            let skip = max start 0
+                            let take = min strLen length
+                            let subMarkup = substring skip take innerMarkup
+                            let subLength = getLength subMarkup
+
+                            if subLength > 0 then
+                                substringAux tail 0 (length - subLength) (MarkupText subMarkup :: acc)
+                            else
+                                substringAux tail (start - strLen) length acc
                         else
                             substringAux tail (start - strLen) length acc
-                    else
-                        substringAux tail (start - strLen) length acc
-                | _ -> raise (InvalidOperationException "Encountered unexpected content type in substring operation.")
+                    | _ -> raise (InvalidOperationException "Encountered unexpected content type in substring operation.")
 
         MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
 
@@ -531,15 +559,13 @@ module MarkupStringModule =
     /// <param name="search">Search MarkupString.</param>
     [<TailCall>]
     let rec indexOf (markupStr: MarkupString) (search: MarkupString) : int =
-        let matches = indexesOf markupStr search
-
-        match matches with
-        | _ when Seq.isEmpty matches -> -1
-        | _ -> matches |> Seq.head
+        let text = plainText markupStr
+        let srch = plainText search
+        text.IndexOf(srch)
         
     [<TailCall>]
     let rec indexOf2 (markupStr: MarkupString) (search: string) : int =
-        indexOf markupStr (single search)
+        (plainText markupStr).IndexOf(search)
         
     /// <summary>
     /// Returns the last index where a search MarkupString occurs.
@@ -548,11 +574,9 @@ module MarkupStringModule =
     /// <param name="search">Search MarkupString.</param>
     [<TailCall>]
     let rec indexOfLast (markupStr: MarkupString) (search: MarkupString) : int =
-        let matches = indexesOf markupStr search
-
-        match matches with
-        | _ when Seq.isEmpty matches -> -1
-        | _ -> matches |> Seq.last
+        let text = plainText markupStr
+        let srch = plainText search
+        text.LastIndexOf(srch)
 
     /// <summary>
     /// Splits a MarkupString by a string delimiter.
@@ -561,33 +585,37 @@ module MarkupStringModule =
     /// <param name="markupStr">The MarkupString to split.</param>
     [<TailCall>]
     let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
-        let rec findDelimiters (text: string) (pos: int) =
-            if pos >= text.Length then
-                []
-            else
-                match text.IndexOf(delimiter, pos) with
-                | -1 -> []
-                | idx ->
-                    idx
-                    :: if (delimiter <> String.Empty) then
-                           findDelimiters text (idx + delimiter.Length)
-                       else
-                           findDelimiters text (idx + 1)
+        if markupStr.Length = 0 then
+            [| markupStr |]
+        else
+            let fullText = plainText markupStr
+            
+            let rec findDelimiters (text: string) (pos: int) acc =
+                if pos >= text.Length then
+                    List.rev acc
+                else
+                    match text.IndexOf(delimiter, pos) with
+                    | -1 -> List.rev acc
+                    | idx ->
+                        let nextPos = if delimiter.Length > 0 then idx + delimiter.Length else idx + 1
+                        findDelimiters text nextPos (idx :: acc)
 
-        let fullText = plainText markupStr
-        let delimiterPositions = findDelimiters fullText 0
+            let delimiterPositions = findDelimiters fullText 0 []
 
-        let rec buildSplits positions lastPos segments =
-            match positions with
-            | [] ->
-                let lastSegment = substring lastPos (fullText.Length - lastPos) markupStr
-                List.rev (lastSegment :: segments)
-            | pos :: tail ->
-                let length = pos - lastPos
-                let segment = substring lastPos length markupStr
-                buildSplits tail (pos + delimiter.Length) (segment :: segments)
+            match delimiterPositions with
+            | [] -> [| markupStr |]  // No delimiters found, return original
+            | positions ->
+                let rec buildSplits (positions: int list) (lastPos: int) (segments: MarkupString list) =
+                    match positions with
+                    | [] ->
+                        let lastSegment = substring lastPos (fullText.Length - lastPos) markupStr
+                        List.rev (lastSegment :: segments)
+                    | pos :: tail ->
+                        let length = pos - lastPos
+                        let segment = substring lastPos length markupStr
+                        buildSplits tail (pos + delimiter.Length) (segment :: segments)
 
-        buildSplits delimiterPositions 0 [] |> Array.ofList
+                buildSplits positions 0 [] |> Array.ofList
 
     /// <summary>
     /// Splits a MarkupString by another MarkupString as delimiter.
@@ -647,43 +675,42 @@ module MarkupStringModule =
 
     /// <summary>
     /// Trim a string from the start, end, or both ends based on the specified TrimType.
+    /// Optimized to avoid building sequences of all match positions.
     /// </summary>
     /// <param name="markupStr">Input MarkupString.</param>
     /// <param name="trimStr">String to trim.</param>
     /// <param name="trimType">Trim type (start, end, both).</param>
     let trim (markupStr: MarkupString) (trimStr: MarkupString) (trimType: TrimType) : MarkupString =
         let trimStrLen = getLength trimStr
+        let len = markupStr.Length
 
         match trimType with
         | TrimStart ->
             let start = indexOf markupStr trimStr
-
-            if start = -1 || start > trimStrLen then
+            if start = -1 || start + trimStrLen > len then
                 markupStr
             else
-                substring start (trimStrLen - start) markupStr
+                substring start trimStrLen markupStr
         | TrimEnd ->
-            let markupStrLen = getLength markupStr
             let start = indexOfLast markupStr trimStr
-
-            if start = -1 || start + trimStrLen < markupStrLen then
+            if start = -1 || start < 0 then
                 markupStr
             else
-                substring 0 start markupStr
+                substring 0 (start + trimStrLen) markupStr
         | TrimBoth ->
-            let indexes = indexesOf markupStr trimStr
-
-            markupStr
-            |> (fun x ->
-                match Seq.isEmpty indexes with
-                | true -> x
-                | false -> // TODO: This needs changing. I should also be able to composite these functions.
-                    let start = indexes |> Seq.head
-                    let ed = indexes |> Seq.last
-                    substring start (ed - start) x)
+            let startIdx = indexOf markupStr trimStr
+            if startIdx = -1 then
+                markupStr
+            else
+                let endIdx = indexOfLast markupStr trimStr
+                if endIdx = -1 || endIdx < startIdx then
+                    markupStr
+                else
+                    substring startIdx (endIdx - startIdx + trimStrLen) markupStr
 
     /// <summary>
     /// Repeat a MarkupString a specified number of times, concatenating them to the aggregator.
+    /// Uses exponential growth strategy for O(log n) concat operations instead of O(n).
     /// </summary>
     /// <param name="markupStr">The MarkupString to repeat.</param>
     /// <param name="count">The number of times to repeat.</param>
@@ -693,7 +720,16 @@ module MarkupStringModule =
         if count <= 0 then
             aggregator
         else
-            repeat markupStr (count - 1) (concat aggregator markupStr None)
+            let rec exponentialRepeat acc current remaining =
+                if remaining <= 0 then
+                    acc
+                else if remaining = 1 then
+                    concat acc current None
+                else if remaining % 2 = 0 then
+                    exponentialRepeat acc (concat current current None) (remaining / 2)
+                else
+                    exponentialRepeat (concat acc current None) (concat current current None) (remaining / 2)
+            exponentialRepeat aggregator markupStr count
 
     /// <summary>
     /// Centers a MarkupString within a specified width using a padding string on the right.
@@ -841,6 +877,12 @@ module MarkupStringModule =
     type private KindPatternRegex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\*" >
     type private KindPattern2Regex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\?" >
 
+    // Cache compiled regex instances to avoid repeated allocations
+    let private globPatternRegexInstance = GlobPatternRegex()
+    let private questionPatternRegexInstance = QuestionPatternRegex()
+    let private kindPatternRegexInstance = KindPatternRegex()
+    let private kindPattern2RegexInstance = KindPattern2Regex()
+
     /// <summary>
     /// Converts a wildcard pattern MarkupString to a regex string.
     /// </summary>
@@ -848,24 +890,24 @@ module MarkupStringModule =
     let getWildcardMatchAsRegex (pattern: MarkupString) : string =
         let applyRegexPattern (pat: string) =
             pat
-            |> fun x -> GlobPatternRegex().TypedReplace(x, konst @"(.*?)")
-            |> fun x -> QuestionPatternRegex().TypedReplace(x, konst @"(.)")
-            |> fun x -> KindPatternRegex().TypedReplace(x, konst @"\*")
-            |> fun x -> KindPattern2Regex().TypedReplace(x, konst @"\?")
+            |> fun x -> globPatternRegexInstance.TypedReplace(x, konst @"(.*?)")
+            |> fun x -> questionPatternRegexInstance.TypedReplace(x, konst @"(.)")
+            |> fun x -> kindPatternRegexInstance.TypedReplace(x, konst @"\*")
+            |> fun x -> kindPattern2RegexInstance.TypedReplace(x, konst @"\?")
 
         pattern |> plainText |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
         
     /// <summary>
-    /// Converts a wildcard pattern MarkupString to a regex string.
+    /// Converts a wildcard pattern string to a regex string.
     /// </summary>
-    /// <param name="pattern">The wildcard pattern as a MarkupString.</param>
+    /// <param name="pattern">The wildcard pattern as a string.</param>
     let getWildcardMatchAsRegex2 (pattern: string) : string =
         let applyRegexPattern (pat: string) =
             pat
-            |> fun x -> GlobPatternRegex().TypedReplace(x, konst @"(.*?)")
-            |> fun x -> QuestionPatternRegex().TypedReplace(x, konst @"(.)")
-            |> fun x -> KindPatternRegex().TypedReplace(x, konst @"\*")
-            |> fun x -> KindPattern2Regex().TypedReplace(x, konst @"\?")
+            |> fun x -> globPatternRegexInstance.TypedReplace(x, konst @"(.*?)")
+            |> fun x -> questionPatternRegexInstance.TypedReplace(x, konst @"(.)")
+            |> fun x -> kindPatternRegexInstance.TypedReplace(x, konst @"\*")
+            |> fun x -> kindPattern2RegexInstance.TypedReplace(x, konst @"\?")
 
         pattern |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
 
@@ -937,6 +979,7 @@ module MarkupStringModule =
     /// <summary>
     /// Replaces a value in markupStr with the one in replacementStr,
     /// writing over position 'index' to 'index + length'.
+    /// Optimized to perform single-pass replacement instead of remove+insertAt.
     /// </summary>
     /// <param name="markupStr">Original String</param>
     /// <param name="replacementStr">Replacement String</param>
@@ -950,5 +993,8 @@ module MarkupStringModule =
             concat replacementStr markupStr None
         else
             let trueLength = Math.Min(index + length, markupStr.Length) - index
-            let removed = remove markupStr index trueLength
-            insertAt removed replacementStr index
+            let rightStart = index + trueLength
+            let rightEnd = markupStr.Length - rightStart
+            let left = substring 0 index markupStr
+            let right = substring rightStart rightEnd markupStr
+            concat left replacementStr None |> (fun x -> concat x right None)
