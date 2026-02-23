@@ -121,12 +121,13 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 
 				if (isTelemetryEnabled)
 				{
+					var outputPath = Environment.GetEnvironmentVariable("SHARPMUSH_TELEMETRY_OUTPUT_PATH") ?? "test-telemetry.md";
 					sc.ConfigureOpenTelemetryMeterProvider(metrics =>
 						// exportIntervalMilliseconds must be > 0 per SDK validation; int.MaxValue (~24 days)
 						// effectively disables periodic export. Export is triggered on-demand via
 						// MeterProvider.ForceFlush() in ServerWebAppFactory.DisposeAsync.
 						metrics.AddReader(new PeriodicExportingMetricReader(
-							new FileMetricExporter("test-telemetry.md"),
+							new FileMetricExporter(outputPath),
 							exportIntervalMilliseconds: int.MaxValue)));
 				}
 			}

@@ -49,6 +49,7 @@ jobs:
       - name: Test
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
+          SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
         run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
 
       - name: Publish Telemetry to Summary
