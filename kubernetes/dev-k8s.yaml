@@ -38,10 +38,10 @@ spec:
               subPath: arangodb
           resources:
             requests:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "200m"
+              memory: "1Gi"
             limits:
-              cpu: "1"
+              cpu: "500m"
               memory: "1Gi"
           env:
             - name: ARANGO_ROOT_PASSWORD
@@ -53,7 +53,7 @@ spec:
             - /bin/bash
             - -c
             - |
-              rpk redpanda start --smp 1 --memory 1G --reserve-memory 0M \
+              rpk redpanda start --smp 1 --memory 256M --reserve-memory 0M \
                 --overprovisioned --node-id 0 \
                 --kafka-addr PLAINTEXT://0.0.0.0:9092 \
                 --advertise-kafka-addr PLAINTEXT://redpanda:9092
@@ -70,11 +70,11 @@ spec:
               subPath: redpanda
           resources:
             requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
               cpu: "500m"
               memory: "512Mi"
-            limits:
-              cpu: "1"
-              memory: "1Gi"
         - name: redis
           image: redis:7-alpine
           command: ["redis-server", "--appendonly", "yes"]
@@ -86,11 +86,11 @@ spec:
               subPath: redis
           resources:
             requests:
-              cpu: "250m"
-              memory: "256Mi"
+              cpu: "100m"
+              memory: "64Mi"
             limits:
-              cpu: "1"
-              memory: "1Gi"
+              cpu: "500m"
+              memory: "256Mi"
       volumes:
         - name: infra-storage
           persistentVolumeClaim:
@@ -153,7 +153,31 @@ spec:
     metadata:
       labels:
         app: sharpmush
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
+      initContainers:
+        - name: cert-generator
+          image: alpine/openssl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout /certs/sharpmush.key \
+                -out /certs/sharpmush.crt \
+                -subj "/CN=sharpmush/O=SharpMUSH/C=US" \
+                -addext "subjectAltName=DNS:sharpmush,DNS:localhost,IP:127.0.0.1"
+              openssl pkcs12 -export -out /certs/sharpmush-dev.pfx \
+                -inkey /certs/sharpmush.key \
+                -in /certs/sharpmush.crt \
+                -password pass:DevPassword123!
+              chmod 644 /certs/sharpmush-dev.pfx
+          volumeMounts:
+            - name: cert-volume
+              mountPath: /certs
       containers:
         - name: sharpmush-server
           image: docker.io/sharpmush/sharpmush-server:dev
@@ -165,11 +189,14 @@ spec:
               name: https
             - containerPort: 9092
               name: metrics
+          volumeMounts:
+            - name: cert-volume
+              mountPath: /app/certs
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:8080;https://+:8081"
             - name: ASPNETCORE_Kestrel__Certificates__Default__Path
-              value: "/app/sharpmush-dev.pfx"
+              value: "/app/certs/sharpmush-dev.pfx"
             - name: ASPNETCORE_Kestrel__Certificates__Default__Password
               value: "DevPassword123!"
             - name: ARANGO_CONNECTION_STRING
@@ -182,11 +209,14 @@ spec:
               value: "redis:6379"
           resources:
             requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
               cpu: "500m"
               memory: "512Mi"
-            limits:
-              cpu: "1"
-              memory: "1Gi"
+      volumes:
+        - name: cert-volume
+          emptyDir: {}
 ---
 # SharpMUSH Service (for Prometheus scraping and HTTP API)
 apiVersion: v1
@@ -222,6 +252,10 @@ spec:
     metadata:
       labels:
         app: connectionserver
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4202"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: connectionserver
@@ -245,11 +279,11 @@ spec:
               value: "redis:6379"
           resources:
             requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
               cpu: "500m"
               memory: "512Mi"
-            limits:
-              cpu: "1"
-              memory: "1Gi"
 ---
 apiVersion: v1
 kind: Service
@@ -266,3 +300,31 @@ spec:
       port: 4202
       targetPort: 4202
   type: LoadBalancer
+---
+# PodMonitoring for GKE Managed Prometheus
+# This enables Google Cloud Monitoring to scrape metrics from SharpMUSH pods
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: sharpmush-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: sharpmush
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: connectionserver-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: connectionserver
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

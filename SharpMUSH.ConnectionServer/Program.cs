@@ -2,6 +2,7 @@ using KafkaFlow;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using OpenTelemetry.ResourceDetectors.Container;
 using Serilog;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Consumers;
@@ -212,13 +213,44 @@ public class Program
 		// Add API controllers
 		builder.Services.AddControllers();
 
-		// Configure OpenTelemetry Metrics - NO console logging, only Prometheus exporter for metrics endpoint
+		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
+		// Prometheus exporter is compatible with both GKE Managed Prometheus and standard Prometheus
+		var isGKE = LoggingConfiguration.IsRunningInGKE();
+		var isK8s = LoggingConfiguration.IsRunningInKubernetes();
+
 		builder.Services.AddOpenTelemetry()
-			.ConfigureResource(resource => resource
-				.AddService("SharpMUSH.ConnectionServer", serviceVersion: "1.0.0"))
+			.ConfigureResource(resource =>
+			{
+				resource.AddService(
+					serviceName: "sharpmush-connectionserver",
+					serviceVersion: "1.0.0",
+					serviceInstanceId: Environment.MachineName);
+
+				// Add container resource detection for Kubernetes environments
+				if (isK8s)
+				{
+					resource.AddDetector(new ContainerResourceDetector());
+				}
+
+				// Add GKE-specific attributes for Google Cloud Monitoring compatibility
+				if (isGKE)
+				{
+					var projectId = LoggingConfiguration.GetGoogleCloudProjectId();
+					if (!string.IsNullOrEmpty(projectId))
+					{
+						resource.AddAttributes(new[]
+						{
+							new KeyValuePair<string, object>("cloud.provider", "gcp"),
+							new KeyValuePair<string, object>("cloud.platform", "gcp_kubernetes_engine"),
+							new KeyValuePair<string, object>("gcp.project.id", projectId)
+						});
+					}
+				}
+			})
 			.WithMetrics(metrics => metrics
 				.AddMeter("SharpMUSH")
 				.AddRuntimeInstrumentation()
+				.AddAspNetCoreInstrumentation()
 				.AddPrometheusExporter());
 
 		return builder.Build();

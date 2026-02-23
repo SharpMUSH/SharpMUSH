@@ -27,6 +27,53 @@ public static class LoggingConfiguration
 	}
 
 	/// <summary>
+	/// Detects if the application is running in Google Kubernetes Engine (GKE).
+	/// Checks for GCP-specific environment variables combined with Kubernetes indicators.
+	/// </summary>
+	public static bool IsRunningInGKE()
+	{
+		// First check environment variables for GCP project
+		var projectId = GetGoogleCloudProjectId();
+		if (!string.IsNullOrEmpty(projectId) && IsRunningInKubernetes())
+		{
+			return true;
+		}
+
+		// GKE also exposes project ID via GCE metadata server
+		// Check for metadata server availability (indicates GCP environment)
+		if (IsRunningInKubernetes())
+		{
+			try
+			{
+				var metadataFlavor = Environment.GetEnvironmentVariable("GCE_METADATA_HOST");
+				// In GKE, the metadata server is always available at 169.254.169.254
+				// We don't make an HTTP call here to avoid startup latency, 
+				// but we can check if we're in a GCE-like environment
+				if (!string.IsNullOrEmpty(metadataFlavor))
+				{
+					return true;
+				}
+			}
+			catch
+			{
+				// Ignore - not in GKE
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Gets the Google Cloud Project ID if available from environment variables.
+	/// </summary>
+	public static string? GetGoogleCloudProjectId()
+	{
+		return Environment.GetEnvironmentVariable("GOOGLE_CLOUD_PROJECT") ??
+					 Environment.GetEnvironmentVariable("GCP_PROJECT") ??
+					 Environment.GetEnvironmentVariable("GCLOUD_PROJECT");
+	}
+
+	/// <summary>
 	/// Creates a standard Serilog logger configuration for console output.
 	/// Uses JSON formatting in Kubernetes environments and plain text elsewhere.
 	/// </summary>

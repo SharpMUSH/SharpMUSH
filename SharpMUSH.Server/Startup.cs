@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using OpenTelemetry.ResourceDetectors.Container;
 using Quartz;
 using Serilog;
 using SharpMUSH.Configuration;
@@ -213,13 +214,44 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
-		// Configure OpenTelemetry Metrics - NO console logging, only Prometheus exporter for metrics endpoint
+		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
+		// Prometheus exporter is compatible with both GKE Managed Prometheus and standard Prometheus
+		var isGKE = LoggingConfiguration.IsRunningInGKE();
+		var isK8s = LoggingConfiguration.IsRunningInKubernetes();
+
 		services.AddOpenTelemetry()
-			.ConfigureResource(resource => resource
-				.AddService("SharpMUSH.Server", serviceVersion: "1.0.0"))
+			.ConfigureResource(resource =>
+			{
+				resource.AddService(
+					serviceName: "sharpmush-server",
+					serviceVersion: "1.0.0",
+					serviceInstanceId: Environment.MachineName);
+
+				// Add container resource detection for Kubernetes environments
+				if (isK8s)
+				{
+					resource.AddDetector(new ContainerResourceDetector());
+				}
+
+				// Add GKE-specific attributes for Google Cloud Monitoring compatibility
+				if (isGKE)
+				{
+					var projectId = LoggingConfiguration.GetGoogleCloudProjectId();
+					if (!string.IsNullOrEmpty(projectId))
+					{
+						resource.AddAttributes(new[]
+						{
+							new KeyValuePair<string, object>("cloud.provider", "gcp"),
+							new KeyValuePair<string, object>("cloud.platform", "gcp_kubernetes_engine"),
+							new KeyValuePair<string, object>("gcp.project.id", projectId)
+						});
+					}
+				}
+			})
 			.WithMetrics(metrics => metrics
 				.AddMeter("SharpMUSH")
 				.AddRuntimeInstrumentation()
+				.AddAspNetCoreInstrumentation()
 				.AddPrometheusExporter());
 	}
 }
