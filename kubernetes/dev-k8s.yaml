@@ -328,3 +328,56 @@ spec:
     - port: http
       path: /metrics
       interval: 30s
+---
+# GKE Ingress for external HTTP(S) access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sharpmush-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "true"
+spec:
+  defaultBackend:
+    service:
+      name: connectionserver
+      port:
+        number: 4202
+  rules:
+    - http:
+        paths:
+          - path: /api/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: sharpmush
+                port:
+                  number: 8080
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: sharpmush
+                port:
+                  number: 8080
+          - path: /ready
+            pathType: Exact
+            backend:
+              service:
+                name: sharpmush
+                port:
+                  number: 8080
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service:
+                name: sharpmush
+                port:
+                  number: 8080
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: connectionserver
+                port:
+                  number: 4202
