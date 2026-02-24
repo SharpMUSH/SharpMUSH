@@ -387,13 +387,18 @@ public class RecursiveMarkdownRendererTests
 
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		var ansi = result.ToString();
 
 		// Assert - plain text must be preserved
 		await Assert.That(result.ToPlainText().Trim()).Contains("hello");
 		await Assert.That(result.ToPlainText().Trim()).Contains("42");
 
 		// The rendered output should contain ANSI escape codes (colour applied)
-		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+		await Assert.That(ansi.Contains(ESC)).IsTrue();
+
+		// The opening brace should NOT be colored — it must appear WITHOUT an ANSI prefix.
+		// ColorCode groups the { into the JsonKey token; SplitLeadingStructural strips it back.
+		await Assert.That(ansi.Contains("{" + ESC) || ansi.StartsWith("  {")).IsTrue();
 	}
 
 	[Test]
@@ -439,5 +444,64 @@ public class RecursiveMarkdownRendererTests
 		// Assert - plain text preserved and no ANSI colouring
 		await Assert.That(result.ToPlainText().Trim()).Contains("plain indented code");
 		await Assert.That(result.ToString().Contains(ESC)).IsFalse();
+	}
+}
+
+/// <summary>
+/// Tests for <c>sharp</c> fenced code block syntax highlighting using a real MUSH parser.
+/// These tests require the full server DI stack to produce a <see cref="IMUSHCodeParser"/>.
+/// </summary>
+[NotInParallel]
+public class RecursiveMarkdownRendererWithParserTests
+{
+	private const string ESC = "\u001b";
+	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
+
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+
+	[Test]
+	public async Task RenderSharpCodeBlock_WithRealParser_ShouldApplyFunctionColour()
+	{
+		// Arrange - a sharp block with a built-in function call
+		var markdown = "```sharp\nname(%#)\n```";
+		var parser = WebAppFactoryArg.FunctionParser;
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, 78, parser);
+		var ansi = result.ToString();
+
+		// Assert - plain text preserved
+		await Assert.That(result.ToPlainText()).Contains("name");
+		await Assert.That(result.ToPlainText()).Contains("%#");
+
+		// ANSI codes must be present (function + substitution are both coloured)
+		await Assert.That(ansi.Contains(ESC)).IsTrue();
+
+		// "name" should be coloured with the Function colour (#DCDCAA = rgb(220,220,170))
+		await Assert.That(ansi.Contains(Foreground(0xDC, 0xDC, 0xAA))).IsTrue();
+
+		// "%#" should be coloured with the Substitution colour (#4FC1FF = rgb(79,193,255))
+		await Assert.That(ansi.Contains(Foreground(0x4F, 0xC1, 0xFF))).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderSharpCodeBlock_WithRealParser_ShouldApplyObjectReferenceColour()
+	{
+		// Arrange - sharp block with a dbref object reference
+		var markdown = "```sharp\nget(#1/ATTR)\n```";
+		var parser = WebAppFactoryArg.FunctionParser;
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, 78, parser);
+
+		// Assert - plain text preserved
+		await Assert.That(result.ToPlainText()).Contains("get");
+		await Assert.That(result.ToPlainText()).Contains("#1");
+
+		// ANSI codes must be present
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
 	}
 }

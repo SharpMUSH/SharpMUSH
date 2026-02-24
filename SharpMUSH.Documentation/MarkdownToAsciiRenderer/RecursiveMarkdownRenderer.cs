@@ -214,10 +214,39 @@ public class RecursiveMarkdownRenderer
 			var ansiStyle = Ansi.Create(
 				foreground: StringExtensions.rgb(color.Value),
 				bold: style.Bold);
-			parts.Add(MModule.markupSingle(ansiStyle, text));
+
+			// ColorCode's JSON (and some other language) tokenizers include the preceding
+			// structural delimiter ({, ,, [) in the same token as the key/value it precedes.
+			// Strip any leading characters that are not part of the actual token content
+			// (i.e. not alphanumeric, not a quote, and not the start of a keyword) so that
+			// structural punctuation renders with the terminal default colour.
+			var (leadingPlain, coloredPart) = SplitLeadingStructural(text);
+			if (!string.IsNullOrEmpty(leadingPlain))
+				parts.Add(MModule.single(leadingPlain));
+			if (!string.IsNullOrEmpty(coloredPart))
+				parts.Add(MModule.markupSingle(ansiStyle, coloredPart));
 		});
 
 		return MModule.multiple(parts);
+	}
+
+	/// <summary>
+	/// Splits a text segment into a leading run of structural/punctuation characters
+	/// (which should render in the default terminal colour) and the remainder which
+	/// carries the scope's colour. ColorCode includes delimiters like <c>{</c> and
+	/// <c>,</c> in key/value scopes for some languages (e.g. JSON).
+	/// </summary>
+	private static (string Plain, string Colored) SplitLeadingStructural(string text)
+	{
+		int i = 0;
+		while (i < text.Length &&
+		       !char.IsLetterOrDigit(text[i]) &&
+		       text[i] != '"' &&
+		       text[i] != '\'')
+		{
+			i++;
+		}
+		return (text[..i], text[i..]);
 	}
 
 	/// <summary>
