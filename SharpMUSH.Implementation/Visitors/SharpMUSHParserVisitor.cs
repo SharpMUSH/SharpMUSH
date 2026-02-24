@@ -1103,9 +1103,43 @@ public class SharpMUSHParserVisitor(
 		var equalsIndex = argsPlainText.IndexOf('=');
 		if (equalsIndex < 0)
 		{
-			// No = sign - this is query mode, not setting
-			// For now, just return None to let other handlers try
-			return new None();
+			// No = sign - clear/unset the attribute
+			var objectToClear = argsPlainText.Trim();
+
+			// Get executor for permission checks and notifications
+			var clearExecutor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+
+			// Locate the target object
+			var clearLocateResult = await LocateService.LocateAndNotifyIfInvalid(
+				prs, clearExecutor, clearExecutor, objectToClear, LocateFlags.All);
+
+			if (!clearLocateResult.IsValid())
+			{
+				return CallState.Empty;
+			}
+
+			var clearTargetObject = clearLocateResult.WithoutError().WithoutNone();
+
+			// Clear the attribute
+			var clearResult = await AttributeService.ClearAttributeAsync(
+				clearExecutor, clearTargetObject, matchedEntry.Name,
+				IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+
+			// Notify the user of the result
+			var clearHandle = prs.CurrentState.Handle;
+			if (clearHandle.HasValue)
+			{
+				if (clearResult.TryPickT0(out _, out var clearError))
+				{
+					await NotifyService.Notify(clearHandle.Value, $"{clearTargetObject.Object().Name}/{matchedEntry.Name} - Cleared.");
+				}
+				else
+				{
+					await NotifyService.Notify(clearHandle.Value, $"Error: {clearError.Value}");
+				}
+			}
+
+			return CallState.Empty;
 		}
 
 		var objectPart = argsPlainText[..equalsIndex].Trim();

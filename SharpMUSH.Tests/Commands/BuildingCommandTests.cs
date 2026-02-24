@@ -663,22 +663,25 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// Tests error case: @desc without = shows usage message.
+	/// Tests that @desc without = clears the attribute.
 	/// </summary>
 	[Test]
-	public async ValueTask DescribeCommand_MissingEquals_ShowsUsage()
+	public async ValueTask DescribeCommand_MissingEquals_ClearsAttribute()
 	{
 		// Create an object first
-		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescMissingEqualsTest"));
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescClearTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		// Try @desc without = (query mode, not setting)
-		// This should either show current value or fall through to HUH_COMMAND
+		// Set a description first
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=Initial description"));
+
+		// Now clear it by using @desc without =
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}"));
 
-		// Verify some notification was sent (either usage or HUH)
+		// Verify "Cleared" notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "Cleared")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }
