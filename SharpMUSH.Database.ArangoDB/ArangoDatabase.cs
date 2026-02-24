@@ -828,7 +828,8 @@ public partial class ArangoDatabase(
 		}
 		catch
 		{
-			return default;
+        logger.LogWarning("Failed to retrieve expanded server data for type '{DataType}' from collection '{Collection}'", dataType, DatabaseConstants.ServerData);
+				return default;
 		}
 	}
 
