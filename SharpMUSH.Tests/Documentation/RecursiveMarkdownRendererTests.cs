@@ -508,4 +508,58 @@ public class RecursiveMarkdownRendererWithParserTests
 		// ANSI codes must be present
 		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
 	}
+
+	[Test]
+	public async Task RenderSyntaxHighlightingDemo_WithRealParser_WritesAnsiToFile()
+	{
+		// Arrange - demo markdown covering all three highlighting paths
+		var markdown = """
+			# Syntax Highlighting Demo
+
+			## SharpMUSH code (```sharp tag)
+			```sharp
+			name(%#)
+			get(#1/ATTR)
+			%q<myvar>
+			```
+
+			## JSON (```json tag)
+			```json
+			{"hello": 42, "active": true}
+			```
+
+			## Python (```python tag)
+			```python
+			def greet(name):
+			    return "Hello, " + name
+			```
+
+			## Plain (no tag — fallback)
+			```
+			var x = 42;
+			var y = 100;
+			```
+			""";
+
+		var parser = WebAppFactoryArg.FunctionParser;
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, 78, parser);
+		var ansi = result.ToString();
+
+		// Write ANSI output to a temp file so the snapshot can be captured externally
+		await File.WriteAllTextAsync("/tmp/sharp_demo_ansi.txt", ansi);
+
+		// Assert - all blocks rendered
+		await Assert.That(result.ToPlainText()).Contains("name");
+		await Assert.That(result.ToPlainText()).Contains("hello");
+		await Assert.That(result.ToPlainText()).Contains("def");
+
+		// ANSI codes present (sharp block + json + python all coloured)
+		await Assert.That(ansi.Contains(ESC)).IsTrue();
+
+		// sharp block: "name" should be Function colour (#DCDCAA)
+		await Assert.That(ansi.Contains(Foreground(0xDC, 0xDC, 0xAA))).IsTrue();
+	}
 }
