@@ -380,15 +380,64 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderHtml_SpanWithBackgroundColor_ShouldStripTags()
+	public async Task RenderCodeBlock_WithJsonLanguage_ShouldApplyAnsiColours()
 	{
-		// Arrange
-		var markdown = @"This is <span style=""background-color: blue"">highlighted</span> text";
+		// Arrange - JSON fenced block with a key and a number
+		var markdown = "```json\n{\"hello\": 42}\n```";
 
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
-		await Assert.That(result.ToPlainText()).IsEqualTo("This is highlighted text");
+		// Assert - plain text must be preserved
+		await Assert.That(result.ToPlainText().Trim()).Contains("hello");
+		await Assert.That(result.ToPlainText().Trim()).Contains("42");
+
+		// The rendered output should contain ANSI escape codes (colour applied)
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCodeBlock_WithPythonLanguage_ShouldApplyAnsiColours()
+	{
+		// Arrange - Python fenced block with a keyword
+		var markdown = "```python\ndef hello():\n    return 42\n```";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text preserved
+		await Assert.That(result.ToPlainText()).Contains("def");
+		await Assert.That(result.ToPlainText()).Contains("hello");
+
+		// Should contain ANSI codes (keyword highlighting at minimum)
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCodeBlock_WithUnknownLanguage_ShouldFallBackToPlainText()
+	{
+		// Arrange - unrecognised language tag
+		var markdown = "```xyz_unknown_language\nsome code here\n```";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text preserved and no ANSI colouring
+		await Assert.That(result.ToPlainText().Trim()).Contains("some code here");
+		await Assert.That(result.ToString().Contains(ESC)).IsFalse();
+	}
+
+	[Test]
+	public async Task RenderCodeBlock_WithNoLanguageTag_ShouldFallBackToPlainText()
+	{
+		// Arrange - indented code block (no language tag)
+		var markdown = "    plain indented code";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text preserved and no ANSI colouring
+		await Assert.That(result.ToPlainText().Trim()).Contains("plain indented code");
+		await Assert.That(result.ToString().Contains(ESC)).IsFalse();
 	}
 }

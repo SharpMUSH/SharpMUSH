@@ -1,4 +1,9 @@
 using ANSILibrary;
+using ColorCode;
+using ColorCode.Common;
+using ColorCode.Compilation;
+using ColorCode.Parsing;
+using ColorCode.Styling;
 using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -7,6 +12,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -34,6 +40,18 @@ public class RecursiveMarkdownRenderer
 	private static readonly Regex StyleColorRegex = new(@"color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 	private static readonly Regex StyleBackgroundColorRegex = new(@"background-color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 	private static readonly Regex ColorTagRegex = new(@"<color\s+([^>]+)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+	// ColorCode.Core language parser and style dictionary for standard-language code blocks.
+	// Shared across all renderer instances; lazy-initialised on first use.
+	// The ReaderWriterLockSlim is passed to LanguageCompiler which owns it for the application
+	// lifetime — no disposal is needed for a static resource whose lifetime equals the process.
+	private static readonly Lazy<LanguageParser> ColorCodeParser = new(() =>
+	{
+		var compiler = new LanguageCompiler(new Dictionary<string, CompiledLanguage>(), new ReaderWriterLockSlim());
+		var repo = new LanguageRepository(Languages.All.ToDictionary(l => l.Id, l => l));
+		return new LanguageParser(compiler, repo);
+	});
+	private static readonly StyleDictionary ColorCodeStyles = StyleDictionary.DefaultDark;
 
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
@@ -137,12 +155,99 @@ public class RecursiveMarkdownRenderer
 			return RenderSharpCodeBlock(fenced);
 		}
 
+		// Apply ColorCode syntax highlighting for fenced blocks with a recognised language tag.
+		if (code is FencedCodeBlock fencedStd &&
+			!string.IsNullOrWhiteSpace(fencedStd.Info) &&
+			!string.Equals(fencedStd.Info, "sharp", StringComparison.OrdinalIgnoreCase))
+		{
+			var colored = TryRenderColorCodeBlock(fencedStd);
+			if (colored is not null) return colored;
+		}
+
 		var lines = code.Lines.Lines?
 			.Where(line => line.Slice.Text != null)
 			.Select(line => MModule.single("  " + line.Slice.ToString()))
 			.ToList() ?? new List<MString>();
 
 		return MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+	}
+
+	/// <summary>
+	/// Attempts to render a fenced code block using ColorCode.Core for ANSI syntax colouring.
+	/// Returns <c>null</c> if the language is not recognised.
+	/// </summary>
+	private static MString? TryRenderColorCodeBlock(FencedCodeBlock code)
+	{
+		var language = Languages.FindById(code.Info!);
+		if (language is null) return null;
+
+		var sourceText = string.Join("\n", code.Lines.Lines?
+			.Where(l => l.Slice.Text != null)
+			.Select(l => l.Slice.ToString()) ?? []);
+
+		if (string.IsNullOrEmpty(sourceText)) return MModule.empty();
+
+		var parts = new List<MString> { MModule.single("  ") };
+		ColorCodeParser.Value.Parse(sourceText, language, (text, scopes) =>
+		{
+			// Pick the most specific scope (deepest in the tree = last entry)
+			var scopeName = scopes?.Count > 0 ? scopes[scopes.Count - 1].Name : ScopeName.PlainText;
+
+			var style = ColorCodeStyles.Contains(scopeName) ? ColorCodeStyles[scopeName] : null;
+			if (style?.Foreground is null || scopeName == ScopeName.PlainText)
+			{
+				parts.Add(MModule.single(text));
+				return;
+			}
+
+			// ColorCode foreground is #AARRGGBB (8-digit) or #RRGGBB (6-digit).
+			// Convert to System.Drawing.Color then to our ANSI Ansi style.
+			var color = ParseArgbHex(style.Foreground);
+			if (color is null)
+			{
+				parts.Add(MModule.single(text));
+				return;
+			}
+
+			var ansiStyle = Ansi.Create(
+				foreground: StringExtensions.rgb(color.Value),
+				bold: style.Bold);
+			parts.Add(MModule.markupSingle(ansiStyle, text));
+		});
+
+		return MModule.multiple(parts);
+	}
+
+	/// <summary>
+	/// Parses a CSS hex colour string produced by ColorCode (e.g. <c>#FFRRGGBB</c> or <c>#RRGGBB</c>)
+	/// into a <see cref="Color"/>. Returns <c>null</c> on failure.
+	/// </summary>
+	private static Color? ParseArgbHex(string hex)
+	{
+		if (string.IsNullOrEmpty(hex) || hex[0] != '#') return null;
+		try
+		{
+			return hex.Length switch
+			{
+				// #AARRGGBB — ColorCode DefaultDark emits this 8-digit ARGB format.
+				// The alpha byte (positions 1–2) is discarded: ANSI terminal colours
+				// do not support transparency, so only the RGB components are used.
+				9 => Color.FromArgb(
+					Convert.ToByte(hex.Substring(3, 2), 16),
+					Convert.ToByte(hex.Substring(5, 2), 16),
+					Convert.ToByte(hex.Substring(7, 2), 16)),
+				// #RRGGBB
+				7 => Color.FromArgb(
+					Convert.ToByte(hex.Substring(1, 2), 16),
+					Convert.ToByte(hex.Substring(3, 2), 16),
+					Convert.ToByte(hex.Substring(5, 2), 16)),
+				_ => null
+			};
+		}
+		catch
+		{
+			return null;
+		}
 	}
 
 	/// <summary>
