@@ -55,6 +55,18 @@ public class RecursiveMarkdownRenderer
 	});
 	private static readonly StyleDictionary ColorCodeStyles = StyleDictionary.DefaultDark;
 
+	// Dark-grey background applied to every line of every highlighted code block,
+	// giving a subtle "gutter" effect that visually separates code from prose.
+	// #2D2D2D is slightly lighter than a typical #1E1E1E terminal background.
+	// Including a default foreground (#D4D4D4 light-grey, matching VS Code DefaultDark) is
+	// essential: MString's WrapAndRestore restores the OUTER markup after each inner coloured
+	// span, so if the outer style only has background the foreground from the inner span
+	// bleeds into the following plain-text segment.  With both fg+bg in the outer style,
+	// WrapAndRestore re-applies both after every inner span, keeping colours correct.
+	private static readonly Ansi CodeBackgroundStyle = Ansi.Create(
+		foreground: StringExtensions.rgb(Color.FromArgb(0xD4, 0xD4, 0xD4)),
+		background: StringExtensions.rgb(Color.FromArgb(0x2D, 0x2D, 0x2D)));
+
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
 	/// </summary>
@@ -154,7 +166,7 @@ public class RecursiveMarkdownRenderer
 			string.Equals(fenced.Info, "sharp", StringComparison.OrdinalIgnoreCase) &&
 			_mushParser != null)
 		{
-			return RenderSharpCodeBlock(fenced);
+			return MModule.markupSingle2(CodeBackgroundStyle, RenderSharpCodeBlock(fenced));
 		}
 
 		// Apply ColorCode syntax highlighting for fenced blocks with a recognised language tag.
@@ -163,7 +175,7 @@ public class RecursiveMarkdownRenderer
 			!string.Equals(fencedStd.Info, "sharp", StringComparison.OrdinalIgnoreCase))
 		{
 			var colored = TryRenderColorCodeBlock(fencedStd);
-			if (colored is not null) return colored;
+			if (colored is not null) return MModule.markupSingle2(CodeBackgroundStyle, colored);
 		}
 
 		var lines = code.Lines.Lines?
