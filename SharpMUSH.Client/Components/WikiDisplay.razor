@@ -1,4 +1,5 @@
 @using Markdig
+@using Markdown.ColorCode
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
 @inject WikiService Wiki
@@ -61,7 +62,11 @@
 
     protected override void OnInitialized()
     {
-        MarkdownHtml = (MarkupString)Markdown.ToHtml(Article?.Content ?? string.Empty);
+        var pipeline = new MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .UseColorCode()
+            .Build();
+        MarkdownHtml = (MarkupString)Markdown.ToHtml(Article?.Content ?? string.Empty, pipeline);
         base.OnInitialized();
     }
 

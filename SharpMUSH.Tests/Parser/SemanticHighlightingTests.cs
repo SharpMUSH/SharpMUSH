@@ -25,13 +25,18 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_ObjectReference_IdentifiesCorrectly()
 	{
-		var tokens = Parser.GetSemanticTokens(MModule.single("%#"), ParseType.Function);
+		// %# is the substitution for the current object's dbref.
+		// The '#' token (DBREF) is a child of SubstitutionSymbolContext → Substitution.
+		// Literal object references like #1234 (OTHER token starting with '#') remain ObjectReference.
+		var subTokens = Parser.GetSemanticTokens(MModule.single("%#"), ParseType.Function);
+		await Assert.That(subTokens).IsNotEmpty();
+		var subToken = subTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.Substitution);
+		await Assert.That(subToken).IsNotNull();
 
-		await Assert.That(tokens).IsNotEmpty();
-
-		// Should have object reference token
-		var objToken = tokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.ObjectReference);
-		await Assert.That(objToken).IsNotNull();
+		// A literal dbref in an expression is still ObjectReference
+		var litTokens = Parser.GetSemanticTokens(MModule.single("get(#1/ATTR)"), ParseType.Function);
+		var litObjToken = litTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.ObjectReference);
+		await Assert.That(litObjToken).IsNotNull();
 	}
 
 	[Test]
@@ -131,12 +136,54 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_Operators_IdentifiesCorrectly()
 	{
-		var tokens = Parser.GetSemanticTokens(MModule.single("a=b,c"), ParseType.Function);
+		// Use CommandEqSplit parse type so that the '=' is the actual command split operator,
+		// and CommandCommaArgs so that ',' is a real argument separator — not literal text.
+		var eqTokens = Parser.GetSemanticTokens(MModule.single("a=b"), ParseType.CommandEqSplit);
+		await Assert.That(eqTokens).IsNotEmpty();
+		var eqOp = eqTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.Operator && t.Text.Trim() == "=");
+		await Assert.That(eqOp).IsNotNull();
+
+		// With CommandCommaArgs the comma IS an argument separator → Operator
+		var commaTokens = Parser.GetSemanticTokens(MModule.single("a,b"), ParseType.CommandCommaArgs);
+		var commaOp = commaTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.Operator && t.Text.Trim() == ",");
+		await Assert.That(commaOp).IsNotNull();
+
+		// With CommandList the semicolon is a command separator → Operator
+		var semiTokens = Parser.GetSemanticTokens(MModule.single("a;b"), ParseType.CommandList);
+		var semiOp = semiTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.Operator && t.Text.Trim() == ";");
+		await Assert.That(semiOp).IsNotNull();
+	}
+
+	[Test]
+	public async Task GetSemanticTokens_RegisterCaret_ClosingAngleIsRegisterNotOperator()
+	{
+		// %q<myvar>: the closing '>' should be Register (part of the %q<...> syntax),
+		// not Operator (a standalone '>' comparison).
+		var tokens = Parser.GetSemanticTokens(MModule.single("%q<myvar>"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
-		// Should have operator tokens
+		// The '>' at the end must be Register
+		var caretToken = tokens.LastOrDefault(t => t.Text == ">");
+		await Assert.That(caretToken).IsNotNull();
+		await Assert.That(caretToken!.TokenType).IsEqualTo(SemanticTokenType.Register);
+
+		// No token in this expression should be classified as Operator
 		var operatorTokens = tokens.Where(t => t.TokenType == SemanticTokenType.Operator).ToList();
-		await Assert.That(operatorTokens.Count).IsGreaterThan(0);
+		await Assert.That(operatorTokens).IsEmpty();
+	}
+
+	[Test]
+	public async Task GetSemanticTokens_StandaloneAngleBracket_IsText()
+	{
+		// A bare '>' that is NOT part of %q<...> lives in BeginGenericTextContext → Text.
+		// It is a literal character in MUSH code, not a language operator.
+		var tokens = Parser.GetSemanticTokens(MModule.single("a>b"), ParseType.Function);
+
+		await Assert.That(tokens).IsNotEmpty();
+
+		var caretToken = tokens.FirstOrDefault(t => t.Text == ">");
+		await Assert.That(caretToken).IsNotNull();
+		await Assert.That(caretToken!.TokenType).IsEqualTo(SemanticTokenType.Text);
 	}
 }

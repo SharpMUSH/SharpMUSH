@@ -1,11 +1,18 @@
 using ANSILibrary;
+using ColorCode;
+using ColorCode.Common;
+using ColorCode.Compilation;
+using ColorCode.Parsing;
+using ColorCode.Styling;
 using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Microsoft.FSharp.Core;
+using SharpMUSH.Library.ParserInterfaces;
 using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
@@ -20,6 +27,7 @@ public class RecursiveMarkdownRenderer
 	private readonly Ansi _headingStyle = Ansi.Create(underlined: true, bold: true);
 	private readonly Ansi _heading3Style = Ansi.Create(underlined: true);
 	private readonly int _maxWidth;
+	private readonly IMUSHCodeParser? _mushParser;
 
 	// Table border and separator character counts
 	private const int START_BORDER_WIDTH = 2; // "| "
@@ -33,13 +41,45 @@ public class RecursiveMarkdownRenderer
 	private static readonly Regex StyleBackgroundColorRegex = new(@"background-color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 	private static readonly Regex ColorTagRegex = new(@"<color\s+([^>]+)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+	// ColorCode.Core language parser and style dictionary for standard-language code blocks.
+	// Shared across all renderer instances; lazy-initialised on first use.
+	// The lock is held as a named static field (process lifetime) so the compiler's
+	// CA2000 disposable-not-disposed analysis is satisfied. As a process-lifetime
+	// singleton, it is cleaned up when the process exits.
+	private static readonly ReaderWriterLockSlim _colorCodeLock = new();
+	private static readonly Lazy<LanguageParser> ColorCodeParser = new(() =>
+	{
+		var compiler = new LanguageCompiler(new Dictionary<string, CompiledLanguage>(), _colorCodeLock);
+		var repo = new LanguageRepository(Languages.All.ToDictionary(l => l.Id, l => l));
+		return new LanguageParser(compiler, repo);
+	});
+	private static readonly StyleDictionary ColorCodeStyles = StyleDictionary.DefaultDark;
+
+	// Dark-grey background applied to every line of every highlighted code block,
+	// giving a subtle "gutter" effect that visually separates code from prose.
+	// #2D2D2D is slightly lighter than a typical #1E1E1E terminal background.
+	// Including a default foreground (#D4D4D4 light-grey, matching VS Code DefaultDark) is
+	// essential: MString's WrapAndRestore restores the OUTER markup after each inner coloured
+	// span, so if the outer style only has background the foreground from the inner span
+	// bleeds into the following plain-text segment.  With both fg+bg in the outer style,
+	// WrapAndRestore re-applies both after every inner span, keeping colours correct.
+	private static readonly Ansi CodeBackgroundStyle = Ansi.Create(
+		foreground: StringExtensions.rgb(Color.FromArgb(0xD4, 0xD4, 0xD4)),
+		background: StringExtensions.rgb(Color.FromArgb(0x2D, 0x2D, 0x2D)));
+
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
 	/// </summary>
 	/// <param name="maxWidth">Maximum width for rendered output. Tables will fit to this width with nice column spacing. Default is 78.</param>
-	public RecursiveMarkdownRenderer(int maxWidth = 78)
+	/// <param name="mushParser">
+	/// Optional MUSH code parser used to apply syntax highlighting to
+	/// <c>sharp</c> fenced code blocks. When <c>null</c>, those blocks are
+	/// rendered as plain indented text.
+	/// </param>
+	public RecursiveMarkdownRenderer(int maxWidth = 78, IMUSHCodeParser? mushParser = null)
 	{
 		_maxWidth = maxWidth > 0 ? maxWidth : 78;
+		_mushParser = mushParser;
 	}
 
 	/// <summary>
@@ -121,12 +161,212 @@ public class RecursiveMarkdownRenderer
 
 	protected virtual MString RenderCodeBlock(CodeBlock code)
 	{
+		// Apply syntax highlighting to 'sharp' fenced code blocks when a parser is available.
+		if (code is FencedCodeBlock fenced &&
+			string.Equals(fenced.Info, "sharp", StringComparison.OrdinalIgnoreCase) &&
+			_mushParser != null)
+		{
+			return MModule.markupSingle2(CodeBackgroundStyle, RenderSharpCodeBlock(fenced));
+		}
+
+		// Apply ColorCode syntax highlighting for fenced blocks with a recognised language tag.
+		if (code is FencedCodeBlock fencedStd &&
+			!string.IsNullOrWhiteSpace(fencedStd.Info) &&
+			!string.Equals(fencedStd.Info, "sharp", StringComparison.OrdinalIgnoreCase))
+		{
+			var colored = TryRenderColorCodeBlock(fencedStd);
+			if (colored is not null) return MModule.markupSingle2(CodeBackgroundStyle, colored);
+		}
+
 		var lines = code.Lines.Lines?
 			.Where(line => line.Slice.Text != null)
 			.Select(line => MModule.single("  " + line.Slice.ToString()))
 			.ToList() ?? new List<MString>();
 
 		return MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+	}
+
+	/// <summary>
+	/// Lays out a single code line using <c>align()</c>:
+	/// a 1-wide left-gutter column plus a 1-char column separator gives the standard
+	/// 2-char indent, while the content column is padded with spaces to fill the
+	/// remaining render width so that the background colour spans the full terminal line.
+	/// </summary>
+	private MString AlignCodeLine(MString lineContent)
+	{
+		var contentWidth = Math.Max(1, _maxWidth - 2); // 1 (gutter col) + 1 (separator)
+		return SharpMUSH.MarkupString.TextAlignerModule.align(
+			$"1 <{contentWidth}",
+			[MModule.empty(), lineContent],
+			MModule.single(" "),    // filler = space
+			MModule.single(" "),    // column separator = 1 space → total 2-char indent
+			MModule.single("\n")    // row separator = newline (standard align behaviour; used when a long line wraps)
+		);
+	}
+
+	/// <summary>
+	/// Attempts to render a fenced code block using ColorCode.Core for ANSI syntax colouring.
+	/// Returns <c>null</c> if the language is not recognised.
+	/// Each source line is colourised independently then laid out via <see cref="AlignCodeLine"/>.
+	/// </summary>
+	private MString? TryRenderColorCodeBlock(FencedCodeBlock code)
+	{
+		var language = Languages.FindById(code.Info!);
+		if (language is null) return null;
+
+		var sourceLines = code.Lines.Lines?
+			.Where(l => l.Slice.Text != null)
+			.Select(l => l.Slice.ToString())
+			.ToList() ?? [];
+
+		if (sourceLines.Count == 0) return MModule.empty();
+
+		var renderedLines = sourceLines.Select(line =>
+		{
+			var parts = new List<MString>();
+			ColorCodeParser.Value.Parse(line, language, (text, scopes) =>
+				WriteColorCodeScopes(text, scopes, parts));
+			return AlignCodeLine(MModule.multiple(parts));
+		}).ToList();
+
+		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedLines);
+	}
+
+	/// <summary>
+	/// Mirrors the algorithm used by <c>HtmlFormatter.Write</c> in ColorCode.Core:
+	/// uses <c>Scope.Index</c> and <c>Scope.Length</c> to slice <paramref name="text"/>
+	/// into plain and coloured segments, recursing into <c>Scope.Children</c> for nested grammars.
+	/// The callback <paramref name="text"/> is the FULL regex group-0 match, which can include
+	/// structural delimiters (e.g. <c>{</c> before a JSON key). Only the sub-range identified
+	/// by each scope carries a colour; everything else is emitted as plain text.
+	/// </summary>
+	private static void WriteColorCodeScopes(string text, IList<Scope> scopes, List<MString> parts)
+	{
+		var ordered = scopes.OrderBy(s => s.Index).ToList();
+		int offset = 0;
+
+		foreach (var scope in ordered)
+		{
+			// Plain text before this scope's range
+			if (scope.Index > offset)
+				parts.Add(MModule.single(text[offset..scope.Index]));
+
+			var scopeText = text[scope.Index..(scope.Index + scope.Length)];
+
+			if (scope.Children.Count > 0)
+			{
+				// Nested grammar: recurse so child scopes get their own colours.
+				WriteColorCodeScopes(scopeText, scope.Children, parts);
+			}
+			else
+			{
+				var style = ColorCodeStyles.Contains(scope.Name) ? ColorCodeStyles[scope.Name] : null;
+				// ColorCode foreground is #AARRGGBB (8-digit) or #RRGGBB (6-digit).
+				var color = style?.Foreground is not null ? ParseArgbHex(style.Foreground) : null;
+				if (color is not null && scope.Name != ScopeName.PlainText)
+				{
+					var ansiStyle = Ansi.Create(foreground: StringExtensions.rgb(color.Value), bold: style!.Bold);
+					parts.Add(MModule.markupSingle(ansiStyle, scopeText));
+				}
+				else
+				{
+					parts.Add(MModule.single(scopeText));
+				}
+			}
+
+			offset = scope.Index + scope.Length;
+		}
+
+		// Trailing plain text after all scopes
+		if (offset < text.Length)
+			parts.Add(MModule.single(text[offset..]));
+	}
+
+	/// <summary>
+	/// Parses a CSS hex colour string produced by ColorCode (e.g. <c>#FFRRGGBB</c> or <c>#RRGGBB</c>)
+	/// into a <see cref="Color"/>. Returns <c>null</c> on failure.
+	/// </summary>
+	private static Color? ParseArgbHex(string hex)
+	{
+		if (string.IsNullOrEmpty(hex) || hex[0] != '#') return null;
+		try
+		{
+			return hex.Length switch
+			{
+				// #AARRGGBB — ColorCode DefaultDark emits this 8-digit ARGB format.
+				// The alpha byte (positions 1–2) is discarded: ANSI terminal colours
+				// do not support transparency, so only the RGB components are used.
+				9 => Color.FromArgb(
+					Convert.ToByte(hex.Substring(3, 2), 16),
+					Convert.ToByte(hex.Substring(5, 2), 16),
+					Convert.ToByte(hex.Substring(7, 2), 16)),
+				// #RRGGBB
+				7 => Color.FromArgb(
+					Convert.ToByte(hex.Substring(1, 2), 16),
+					Convert.ToByte(hex.Substring(3, 2), 16),
+					Convert.ToByte(hex.Substring(5, 2), 16)),
+				_ => null
+			};
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Renders a <c>sharp</c>-tagged fenced code block with MUSH semantic token colours.
+	/// Each source line is tokenised independently so that multi-line code blocks
+	/// are handled safely regardless of parser line-tracking behaviour.
+	/// </summary>
+	private MString RenderSharpCodeBlock(FencedCodeBlock code)
+	{
+		var sourceLines = code.Lines.Lines?
+			.Where(l => l.Slice.Text != null)
+			.Select(l => l.Slice.ToString())
+			.ToList() ?? [];
+
+		if (sourceLines.Count == 0)
+			return MModule.empty();
+
+		var renderedLines = sourceLines.Select(RenderSharpLine).ToList();
+		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedLines);
+	}
+
+	/// <summary>
+	/// Applies MUSH semantic token colours to a single source line, then lays it out
+	/// via <see cref="AlignCodeLine"/> so the background fills the full render width.
+	/// </summary>
+	/// <remarks>
+	/// Parse type is auto-detected: lines whose first non-whitespace character is
+	/// <c>&amp;</c> (attribute), <c>@</c> (command), or <c>$</c> (trigger pattern) are
+	/// command-list lines and are passed to the parser as <see cref="ParseType.CommandList"/>;
+	/// everything else is treated as a function expression (<see cref="ParseType.Function"/>).
+	/// </remarks>
+	private MString RenderSharpLine(string line)
+	{
+		var trimmed = line.TrimStart();
+		var parseType = trimmed.Length > 0 && (trimmed[0] == '&' || trimmed[0] == '@' || trimmed[0] == '$')
+			? ParseType.CommandList
+			: ParseType.Function;
+		var tokens = _mushParser!.GetSemanticTokens(MModule.single(line), parseType);
+		var sortedTokens = tokens
+			.OrderBy(t => t.Range.Start.Line)
+			.ThenBy(t => t.Range.Start.Character)
+			.ToList();
+
+		if (sortedTokens.Count == 0)
+			return AlignCodeLine(MModule.single(line));
+
+		var parts = new List<MString>();
+		foreach (var token in sortedTokens)
+		{
+			var style = SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
+			parts.Add(style is null
+				? MModule.single(token.Text)
+				: MModule.markupSingle(style, token.Text));
+		}
+		return AlignCodeLine(MModule.multiple(parts));
 	}
 
 	private MString RenderList(ListBlock list)

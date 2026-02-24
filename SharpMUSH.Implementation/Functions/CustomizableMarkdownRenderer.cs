@@ -22,7 +22,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		AnySharpObject executor,
 		AnySharpObject templateObject,
 		IAttributeService attributeService,
-		int maxWidth = 78) : base(maxWidth)
+		int maxWidth = 78) : base(maxWidth, parser)
 	{
 		_parser = parser;
 		_executor = executor;

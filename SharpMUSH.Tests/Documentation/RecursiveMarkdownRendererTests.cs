@@ -380,15 +380,219 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderHtml_SpanWithBackgroundColor_ShouldStripTags()
+	public async Task RenderCodeBlock_WithJsonLanguage_ShouldApplyAnsiColours()
 	{
-		// Arrange
-		var markdown = @"This is <span style=""background-color: blue"">highlighted</span> text";
+		// Arrange - JSON fenced block with a key and a number
+		var markdown = "```json\n{\"hello\": 42}\n```";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		var ansi = result.ToString();
+
+		// Assert - plain text must be preserved
+		await Assert.That(result.ToPlainText().Trim()).Contains("hello");
+		await Assert.That(result.ToPlainText().Trim()).Contains("42");
+
+		// ANSI codes must be present (at least the key "hello" and number 42 get coloured)
+		await Assert.That(ansi.Contains(ESC)).IsTrue();
+
+		// The opening brace must appear without an immediately preceding ANSI colour code.
+		// Previously SplitLeadingStructural tried to strip it; now the correct Scope.Index/Length
+		// walk ensures text[0..scope.Index] (i.e. "{") is emitted as plain before the coloured key.
+		await Assert.That(ansi).Contains("{");
+		// The brace must NOT be inside an ANSI colour sequence — it should appear either right
+		// after the 2-space indent or right after a reset code, never inside a colour span.
+		await Assert.That(ansi).DoesNotContain(Foreground(0xFF, 0x87, 0x00) + "{");
+	}
+
+	[Test]
+	public async Task RenderCodeBlock_WithPythonLanguage_ShouldApplyAnsiColours()
+	{
+		// Arrange - Python fenced block with a keyword
+		var markdown = "```python\ndef hello():\n    return 42\n```";
 
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
-		await Assert.That(result.ToPlainText()).IsEqualTo("This is highlighted text");
+		// Assert - plain text preserved
+		await Assert.That(result.ToPlainText()).Contains("def");
+		await Assert.That(result.ToPlainText()).Contains("hello");
+
+		// Should contain ANSI codes (keyword highlighting at minimum)
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCodeBlock_WithUnknownLanguage_ShouldFallBackToPlainText()
+	{
+		// Arrange - unrecognised language tag
+		var markdown = "```xyz_unknown_language\nsome code here\n```";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text preserved and no ANSI colouring
+		await Assert.That(result.ToPlainText().Trim()).Contains("some code here");
+		await Assert.That(result.ToString().Contains(ESC)).IsFalse();
+	}
+
+	[Test]
+	public async Task RenderCodeBlock_WithNoLanguageTag_ShouldFallBackToPlainText()
+	{
+		// Arrange - indented code block (no language tag)
+		var markdown = "    plain indented code";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text preserved and no ANSI colouring
+		await Assert.That(result.ToPlainText().Trim()).Contains("plain indented code");
+		await Assert.That(result.ToString().Contains(ESC)).IsFalse();
+	}
+}
+
+/// <summary>
+/// Tests for <c>sharp</c> fenced code block syntax highlighting using a real MUSH parser.
+/// These tests require the full server DI stack to produce a <see cref="IMUSHCodeParser"/>.
+/// </summary>
+[NotInParallel]
+public class RecursiveMarkdownRendererWithParserTests
+{
+	private const string ESC = "\u001b";
+	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
+
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+
+	[Test]
+	public async Task RenderSharpCodeBlock_WithRealParser_ShouldApplyFunctionColour()
+	{
+		// Arrange - a sharp block with a built-in function call
+		var markdown = "```sharp\nname(%#)\n```";
+		var parser = WebAppFactoryArg.FunctionParser;
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, 78, parser);
+		var ansi = result.ToString();
+
+		// Assert - plain text preserved
+		await Assert.That(result.ToPlainText()).Contains("name");
+		await Assert.That(result.ToPlainText()).Contains("%#");
+
+		// ANSI codes must be present (function + substitution are both coloured)
+		await Assert.That(ansi.Contains(ESC)).IsTrue();
+
+		// "name" should be coloured with the Function colour (#DCDCAA = rgb(220,220,170))
+		await Assert.That(ansi.Contains(Foreground(0xDC, 0xDC, 0xAA))).IsTrue();
+
+		// "%#" should be coloured with the Substitution colour (#4FC1FF = rgb(79,193,255))
+		await Assert.That(ansi.Contains(Foreground(0x4F, 0xC1, 0xFF))).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderSharpCodeBlock_WithRealParser_ShouldApplyObjectReferenceColour()
+	{
+		// Arrange - sharp block with a dbref object reference
+		var markdown = "```sharp\nget(#1/ATTR)\n```";
+		var parser = WebAppFactoryArg.FunctionParser;
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, 78, parser);
+
+		// Assert - plain text preserved
+		await Assert.That(result.ToPlainText()).Contains("get");
+		await Assert.That(result.ToPlainText()).Contains("#1");
+
+		// ANSI codes must be present
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCommandLines_WithRealParser_WritesAnsiToFile()
+	{
+		// Arrange – the exact code block from the problem statement
+		var markdown = """
+			# SharpMUSH Command Highlighting Demo
+
+			```sharp
+			&CHECKS me=@assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
+			&CMD1 me=$cmd *: @include me/CHECKS; @pemit %#=You passed.
+			&CMD2 me=$othercmd *: @include me/CHECKS; @@ Do something else...
+			```
+			""";
+
+		var parser = WebAppFactoryArg.FunctionParser;
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, 78, parser);
+		var ansi = result.ToString();
+
+		// Write ANSI output so the terminal screenshot can be taken
+		await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "sharp_commands_demo.txt"), ansi);
+
+		// Assert – all command tokens rendered
+		await Assert.That(result.ToPlainText()).Contains("@assert");
+		await Assert.That(result.ToPlainText()).Contains("@break");
+		await Assert.That(result.ToPlainText()).Contains("@pemit");
+
+		// Command tokens should be coloured (#C586C0 purple)
+		await Assert.That(ansi.Contains(ESC)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderSyntaxHighlightingDemo_WithRealParser_WritesAnsiToFile()
+	{
+		// Arrange - demo markdown covering all three highlighting paths
+		var markdown = """
+			# Syntax Highlighting Demo
+
+			## SharpMUSH code (```sharp tag)
+			```sharp
+			name(%#)
+			get(#1/ATTR)
+			%q<myvar>
+			```
+
+			## JSON (```json tag)
+			```json
+			{"hello": 42, "active": true}
+			```
+
+			## Python (```python tag)
+			```python
+			def greet(name):
+			    return "Hello, " + name
+			```
+
+			## Plain (no tag — fallback)
+			```
+			var x = 42;
+			var y = 100;
+			```
+			""";
+
+		var parser = WebAppFactoryArg.FunctionParser;
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, 78, parser);
+		var ansi = result.ToString();
+
+		// Write ANSI output to a temp file so the snapshot can be captured externally
+		await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "sharp_demo_ansi.txt"), ansi);
+
+		// Assert - all blocks rendered
+		await Assert.That(result.ToPlainText()).Contains("name");
+		await Assert.That(result.ToPlainText()).Contains("hello");
+		await Assert.That(result.ToPlainText()).Contains("def");
+
+		// ANSI codes present (sharp block + json + python all coloured)
+		await Assert.That(ansi.Contains(ESC)).IsTrue();
+
+		// sharp block: "name" should be Function colour (#DCDCAA)
+		await Assert.That(ansi.Contains(Foreground(0xDC, 0xDC, 0xAA))).IsTrue();
 	}
 }

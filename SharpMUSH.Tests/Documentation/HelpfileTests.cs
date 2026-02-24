@@ -87,7 +87,7 @@ public class HelpfileTests
 			]);
 		var body = MModule.single("Newline?");
 		var expectedResult = MModule.multipleWithDelimiter(MModule.single("\n"), [header, body]);
-		var doc = Markdown.Parse(markdown, pipeline);
+		var doc = Markdig.Markdown.Parse(markdown, pipeline);
 		var finalResult = renderer.RenderToMarkupString(doc);
 
 		Console.WriteLine(finalResult.ToString());
