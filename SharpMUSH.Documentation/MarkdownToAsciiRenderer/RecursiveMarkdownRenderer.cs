@@ -187,25 +187,49 @@ public class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
+	/// Lays out a single code line using <c>align()</c>:
+	/// a 1-wide left-gutter column plus a 1-char column separator gives the standard
+	/// 2-char indent, while the content column is padded with spaces to fill the
+	/// remaining render width so that the background colour spans the full terminal line.
+	/// </summary>
+	private MString AlignCodeLine(MString lineContent)
+	{
+		var contentWidth = Math.Max(1, _maxWidth - 2); // 1 (gutter col) + 1 (separator)
+		return SharpMUSH.MarkupString.TextAlignerModule.align(
+			$"1 <{contentWidth}",
+			[MModule.empty(), lineContent],
+			MModule.single(" "),    // filler = space
+			MModule.single(" "),    // column separator = 1 space → total 2-char indent
+			MModule.single("\n")    // row separator = newline (standard align behaviour; used when a long line wraps)
+		);
+	}
+
+	/// <summary>
 	/// Attempts to render a fenced code block using ColorCode.Core for ANSI syntax colouring.
 	/// Returns <c>null</c> if the language is not recognised.
+	/// Each source line is colourised independently then laid out via <see cref="AlignCodeLine"/>.
 	/// </summary>
-	private static MString? TryRenderColorCodeBlock(FencedCodeBlock code)
+	private MString? TryRenderColorCodeBlock(FencedCodeBlock code)
 	{
 		var language = Languages.FindById(code.Info!);
 		if (language is null) return null;
 
-		var sourceText = string.Join("\n", code.Lines.Lines?
+		var sourceLines = code.Lines.Lines?
 			.Where(l => l.Slice.Text != null)
-			.Select(l => l.Slice.ToString()) ?? []);
+			.Select(l => l.Slice.ToString())
+			.ToList() ?? [];
 
-		if (string.IsNullOrEmpty(sourceText)) return MModule.empty();
+		if (sourceLines.Count == 0) return MModule.empty();
 
-		var parts = new List<MString> { MModule.single("  ") };
-		ColorCodeParser.Value.Parse(sourceText, language, (text, scopes) =>
-			WriteColorCodeScopes(text, scopes, parts));
+		var renderedLines = sourceLines.Select(line =>
+		{
+			var parts = new List<MString>();
+			ColorCodeParser.Value.Parse(line, language, (text, scopes) =>
+				WriteColorCodeScopes(text, scopes, parts));
+			return AlignCodeLine(MModule.multiple(parts));
+		}).ToList();
 
-		return MModule.multiple(parts);
+		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedLines);
 	}
 
 	/// <summary>
@@ -310,7 +334,8 @@ public class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
-	/// Applies MUSH semantic token colours to a single source line.
+	/// Applies MUSH semantic token colours to a single source line, then lays it out
+	/// via <see cref="AlignCodeLine"/> so the background fills the full render width.
 	/// </summary>
 	private MString RenderSharpLine(string line)
 	{
@@ -321,9 +346,9 @@ public class RecursiveMarkdownRenderer
 			.ToList();
 
 		if (sortedTokens.Count == 0)
-			return MModule.single("  " + line);
+			return AlignCodeLine(MModule.single(line));
 
-		var parts = new List<MString> { MModule.single("  ") };
+		var parts = new List<MString>();
 		foreach (var token in sortedTokens)
 		{
 			var style = SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
@@ -331,7 +356,7 @@ public class RecursiveMarkdownRenderer
 				? MModule.single(token.Text)
 				: MModule.markupSingle(style, token.Text));
 		}
-		return MModule.multiple(parts);
+		return AlignCodeLine(MModule.multiple(parts));
 	}
 
 	private MString RenderList(ListBlock list)
