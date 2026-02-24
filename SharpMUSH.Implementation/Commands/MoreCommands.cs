@@ -636,7 +636,7 @@ public partial class Commands
 			var targetOwner = await targetObj.Owner.WithCancellation(CancellationToken.None);
 
 			// Check permissions - must own or have see_all
-			if (!(await executor.HasPower("SEE_ALL") || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
+			if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
 			{
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState("#-1 PERMISSION DENIED");
@@ -2979,7 +2979,7 @@ public partial class Commands
 		// Check if executor is admin (can see hidden players)
 		var isAdmin = await executor.IsWizard() ||
 									await executor.IsRoyalty() ||
-									await executor.HasPower("SEE_ALL");
+									await executor.IsSee_All();
 
 		// Get optional pattern argument
 		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;
