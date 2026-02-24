@@ -1044,40 +1044,17 @@ public class SharpMUSHParserVisitor(
 			return new None();
 		}
 
-		// Get all standard attribute entries and find a match
-		var allAttributeEntries = await Mediator.CreateStream(new GetAllAttributeEntriesQuery())
-			.ToListAsync();
-
-		// First try exact match
-		var matchedEntry = allAttributeEntries
-			.FirstOrDefault(entry => entry.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase));
-
-		// If no exact match, try prefix matching for entries with "prefixmatch" flag
-		if (matchedEntry == null)
-		{
-			var prefixMatches = allAttributeEntries
-				.Where(entry =>
-					entry.DefaultFlags.Contains("prefixmatch", StringComparer.OrdinalIgnoreCase) &&
-					entry.Name.StartsWith(potentialAttrName, StringComparison.OrdinalIgnoreCase))
-				.ToList();
-
-			// Only use prefix match if exactly one entry matches
-			if (prefixMatches.Count == 1)
-			{
-				matchedEntry = prefixMatches[0];
-			}
-			else if (prefixMatches.Count > 1)
-			{
-				// Ambiguous match - multiple attributes start with the same prefix
-				var handle = prs.CurrentState.Handle;
-				if (handle.HasValue)
-				{
-					var matchNames = string.Join(", ", prefixMatches.Select(e => e.Name));
-					await NotifyService.Notify(handle.Value, $"Ambiguous attribute name: {potentialAttrName} matches {matchNames}");
-				}
-				return CallState.Empty;
-			}
-		}
+		// Find matching standard attribute entry: exact match first, then shortest prefix match
+		// Uses a single streaming query without materializing the full list
+		var matchedEntry = await Mediator.CreateStream(new GetAllAttributeEntriesQuery())
+			.Where(entry =>
+				entry.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase) ||
+				(entry.DefaultFlags.Contains("prefixmatch", StringComparer.OrdinalIgnoreCase) &&
+				 entry.Name.StartsWith(potentialAttrName, StringComparison.OrdinalIgnoreCase)))
+			.OrderByDescending(entry => entry.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase)) // Exact matches first
+			.ThenBy(entry => entry.Name.Length)  // Then prefer shorter names (DESCRIBE over DESCFORMAT)
+			.ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)  // Alphabetical tiebreaker
+			.FirstOrDefaultAsync();
 
 		// No matching standard attribute found
 		if (matchedEntry == null)

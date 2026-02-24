@@ -552,11 +552,11 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// Tests that @describe (and other @attribute commands) evaluate their argument before storing.
+	/// Tests that @desc (and other @attribute commands) evaluate their argument before storing.
 	/// This confirms PennMUSH-compatible behavior:
-	/// - @describe me=[add(1,2)] should store "3" (not "[add(1,2)]")
+	/// - @desc me=[add(1,2)] should store "3" (not "[add(1,2)]")
 	/// - look should display "3" (no re-evaluation)
-	/// Note: Using @describe (not @desc) because @desc is ambiguous with DESCFORMAT.
+	/// Using @desc to verify prefix matching correctly chooses DESCRIBE over DESCFORMAT (shorter match wins).
 	/// </summary>
 	[Test]
 	public async ValueTask DescribeCommand_EvaluatesBeforeStoring()
@@ -569,9 +569,9 @@ public class BuildingCommandTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
 
-		// Use @describe with a function that should be evaluated
-		// Note: Using @describe (not @desc) to avoid ambiguity with DESCFORMAT
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@describe {objDbRef}=[add(1,2)]"));
+		// Use @desc with a function that should be evaluated
+		// @desc should match DESCRIBE (not DESCFORMAT) due to length sorting in prefix matching
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[add(1,2)]"));
 
 		// Verify the notification shows it was set
 		await NotifyService
@@ -591,21 +591,21 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// Tests that @describe (full name with prefix matching) works the same as @desc.
+	/// Tests that @desc (prefix) works and correctly matches DESCRIBE over DESCFORMAT.
 	/// </summary>
 	[Test]
-	public async ValueTask DescribeCommand_FullName_Works()
+	public async ValueTask DescribeCommand_PrefixMatch_Works()
 	{
 		// Create an object for testing
-		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescFullNameTestObject"));
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescPrefixMatchTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Get the object for attribute service
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
 
-		// Use @describe (full name) with a value
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@describe {objDbRef}=Test description text"));
+		// Use @desc (prefix) - should match DESCRIBE, not DESCFORMAT, due to shorter name
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=Test description text"));
 
 		// Verify the attribute was set
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
@@ -620,7 +620,7 @@ public class BuildingCommandTests
 
 	/// <summary>
 	/// Tests that look displays the pre-evaluated DESCRIBE value without re-evaluating.
-	/// If DESCRIBE contained "[mul(2,5)]" and was set via @describe, look should show "10".
+	/// If DESCRIBE contained "[mul(2,5)]" and was set via @desc, look should show "10".
 	/// </summary>
 	[Test]
 	public async ValueTask Look_DisplaysStoredDescribe_NoReEvaluation()
@@ -629,8 +629,8 @@ public class BuildingCommandTests
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LookDescTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		// Use @describe with a function - this should be evaluated to "10"
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@describe {objDbRef}=[mul(2,5)]"));
+		// Use @desc with a function - this should be evaluated to "10"
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[mul(2,5)]"));
 
 		// Look at the object
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"look {objDbRef}"));
