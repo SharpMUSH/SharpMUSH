@@ -502,61 +502,33 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>
 	/// Analyzes the parse tree to extract semantic tokens.
 	/// </summary>
-	/// <summary>
-	/// Walks the parse tree once and returns the token-stream indices of every CCARET terminal
-	/// that is the closing '>' of a <c>%q&lt;register&gt;</c> expression (i.e. a direct child of
-	/// <see cref="SharpMUSHParser.ComplexSubstitutionSymbolContext"/> with a REG_STARTCARET sibling).
-	/// All other CCARET tokens are standalone '>' operators.
-	/// </summary>
-	private static HashSet<int> FindRegisterCaretIndices(Antlr4.Runtime.Tree.IParseTree tree)
-	{
-		var result = new HashSet<int>();
-		CollectRegisterCaretIndices(tree, result);
-		return result;
-	}
-
-	private static void CollectRegisterCaretIndices(Antlr4.Runtime.Tree.IParseTree tree, HashSet<int> result)
-	{
-		if (tree is SharpMUSHParser.ComplexSubstitutionSymbolContext cctx)
-		{
-			var caretTerminal = cctx.CCARET();
-			if (caretTerminal != null)
-				result.Add(caretTerminal.Symbol.TokenIndex);
-		}
-		for (var i = 0; i < tree.ChildCount; i++)
-			CollectRegisterCaretIndices(tree.GetChild(i), result);
-	}
-
 	private IReadOnlyList<SemanticToken> AnalyzeSemanticTokens(
 		ParserRuleContext context,
 		BufferedTokenSpanStream tokenStream,
 		string sourceText)
 	{
+		// Single tree walk: classify every terminal by its immediate parse-tree parent context.
+		// This is the canonical correct approach — it handles all tokens that appear in multiple
+		// grammatical roles (CCARET, EQUALS, COMMAWS, SEMICOLON, FUNCHAR, …) without per-symbol
+		// special-case pre-walks.
+		var classifications = new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>();
+		CollectTerminalClassifications(context, classifications, sourceText);
+
 		var semanticTokens = new List<SemanticToken>();
-
-		// Access the internal token list from BufferedTokenSpanStream
-		var tokenList = tokenStream.tokens;
-
-		// Pre-walk the parse tree once to find CCARET tokens that close %q<...> — these are
-		// Register tokens, not Operator tokens. All other CCARET are standalone '>' operators.
-		var registerCaretIndices = FindRegisterCaretIndices(context);
-
-		foreach (var token in tokenList.Where(t => t.Type != TokenConstants.EOF))
+		foreach (var token in tokenStream.tokens.Where(t => t.Type != TokenConstants.EOF))
 		{
-			var semanticType = ClassifyToken(token, context, sourceText, registerCaretIndices);
-			var modifiers = GetTokenModifiers(token, semanticType);
-
-			var range = new LspRange
-			{
-				Start = new Position(token.Line - 1, token.Column),
-				End = new Position(token.Line - 1, token.Column + token.Text.Length)
-			};
+			if (!classifications.TryGetValue(token.TokenIndex, out var info))
+				info = (SemanticTokenType.Text, SemanticTokenModifier.None);
 
 			semanticTokens.Add(new SemanticToken
 			{
-				Range = range,
-				TokenType = semanticType,
-				Modifiers = modifiers,
+				Range = new LspRange
+				{
+					Start = new Position(token.Line - 1, token.Column),
+					End = new Position(token.Line - 1, token.Column + token.Text.Length)
+				},
+				TokenType = info.Type,
+				Modifiers = info.Mod,
 				Text = token.Text
 			});
 		}
@@ -565,30 +537,126 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	/// <summary>
-	/// Classifies a token to determine its semantic type.
+	/// Walks the parse tree and records the semantic classification for every terminal node.
+	/// Each terminal is classified by its immediate parent rule context, not by token type alone.
+	/// This is the single authoritative classification pass — no pre-walks or per-symbol workarounds.
 	/// </summary>
-	private SemanticTokenType ClassifyToken(IToken token, ParserRuleContext context, string sourceText, HashSet<int> registerCaretIndices)
+	private void CollectTerminalClassifications(
+		Antlr4.Runtime.Tree.IParseTree tree,
+		Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)> map,
+		string sourceText)
 	{
-		var tokenType = token.Type;
-		var vocabulary = new SharpMUSHLexer(new AntlrInputStreamSpan(ReadOnlyMemory<char>.Empty, "")).Vocabulary;
-		var symbolicName = vocabulary.GetSymbolicName(tokenType);
-
-		return symbolicName switch
+		if (tree is Antlr4.Runtime.Tree.ITerminalNode terminal)
 		{
-			"FUNCHAR" => ClassifyFunction(token.Text),
-			"PERCENT" => SemanticTokenType.Substitution,
+			var token = terminal.Symbol;
+			if (token.Type == TokenConstants.EOF) return;
+
+			var type = ClassifyTerminalInContext(token, terminal.Parent, sourceText);
+			var mod = GetTokenModifiers(token, type);
+			map[token.TokenIndex] = (type, mod);
+			return;
+		}
+
+		for (var i = 0; i < tree.ChildCount; i++)
+			CollectTerminalClassifications(tree.GetChild(i), map, sourceText);
+	}
+
+	/// <summary>
+	/// Derives the semantic type for a terminal token from its immediate parse-tree parent.
+	/// Covers every grammatical role a token may play — structural text, operator, substitution, etc.
+	/// Falls back to <see cref="ClassifyByTokenType"/> only for tokens whose meaning is
+	/// context-independent (e.g., <c>OBRACK</c>, <c>ESCAPE</c>, <c>OANSI</c>).
+	/// </summary>
+	private SemanticTokenType ClassifyTerminalInContext(IToken token, Antlr4.Runtime.Tree.IParseTree parentCtx, string sourceText)
+	{
+		return parentCtx switch
+		{
+			// ── Structural characters used as *literal text* (not as operators) ──────────────
+			// CCARET (>), EQUALS (=), COMMAWS (,), SEMICOLON (;), CPAREN ()) appear here when
+			// they are NOT serving as argument separators, delimiters or register-close markers.
+			// OTHER inside beginGenericText still needs content-based classification
+			// (e.g. #1234 is ObjectReference, "42" is Number).
+			SharpMUSHParser.BeginGenericTextContext when token.Type != SharpMUSHParser.OTHER
+				=> SemanticTokenType.Text,
+			SharpMUSHParser.BeginGenericTextContext
+				=> ClassifyOther(token.Text, sourceText),
+
+			// A FUNCHAR appearing in genericText (not inside a function call) is plain text.
+			SharpMUSHParser.GenericTextContext
+				=> SemanticTokenType.Text,
+
+			// ── Function ──────────────────────────────────────────────────────────────────────
+			// FUNCHAR is the open-paren+name; COMMAWS and CPAREN inside the function are operators.
+			SharpMUSHParser.FunctionContext when token.Type == SharpMUSHParser.FUNCHAR
+				=> ClassifyFunction(token.Text),
+			SharpMUSHParser.FunctionContext
+				=> SemanticTokenType.Operator,
+
+			// ── Bracket [ ] substitution ──────────────────────────────────────────────────────
+			SharpMUSHParser.BracketPatternContext
+				=> SemanticTokenType.BracketSubstitution,
+
+			// ── Brace { } group ───────────────────────────────────────────────────────────────
+			SharpMUSHParser.BracePatternContext
+				=> SemanticTokenType.BraceGroup,
+
+			// ── ANSI escape codes ─────────────────────────────────────────────────────────────
+			SharpMUSHParser.AnsiContext
+				=> SemanticTokenType.AnsiCode,
+
+			// ── Backslash escape sequences ────────────────────────────────────────────────────
+			SharpMUSHParser.EscapedTextContext
+				=> SemanticTokenType.EscapeSequence,
+
+			// ── %q<register> — opening token (q<) and closing > are both Register ────────────
+			SharpMUSHParser.ComplexSubstitutionSymbolContext
+				=> SemanticTokenType.Register,
+
+			// ── %x substitution codes — all single-char codes including %=, %# etc. ──────────
+			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.
+			SharpMUSHParser.SubstitutionSymbolContext
+				=> SemanticTokenType.Substitution,
+
+			// ── The leading % of any %x substitution ─────────────────────────────────────────
+			// PERCENT is the only direct terminal child of ExplicitEvaluationStringContext.
+			SharpMUSHParser.ExplicitEvaluationStringContext
+				=> SemanticTokenType.Substitution,
+
+			// ── Structural operators — separators that act at command/argument scope ─────────
+			SharpMUSHParser.StartEqSplitCommandContext
+			or SharpMUSHParser.StartEqSplitCommandArgsContext
+				=> SemanticTokenType.Operator,   // EQUALS acting as command split
+
+			SharpMUSHParser.CommaCommandArgsContext
+				=> SemanticTokenType.Operator,   // COMMAWS acting as argument separator
+
+			SharpMUSHParser.CommandListContext
+				=> SemanticTokenType.Operator,   // SEMICOLON acting as command separator
+
+			// ── Fallback for context-independent tokens ───────────────────────────────────────
+			_ => ClassifyByTokenType(token, sourceText)
+		};
+	}
+
+	/// <summary>
+	/// Classifies tokens whose semantic meaning does not depend on parse-tree context.
+	/// Called only as a fallback from <see cref="ClassifyTerminalInContext"/>.
+	/// </summary>
+	private SemanticTokenType ClassifyByTokenType(IToken token, string sourceText)
+	{
+		var vocabulary = new SharpMUSHLexer(new AntlrInputStreamSpan(ReadOnlyMemory<char>.Empty, "")).Vocabulary;
+		return vocabulary.GetSymbolicName(token.Type) switch
+		{
 			"ARG_NUM" or "VWX" or "REG_NUM" or "REG_STARTCARET" => SemanticTokenType.Register,
 			"ENACTOR_NAME" or "CAP_ENACTOR_NAME" or "ACCENT_NAME" or "MONIKER_NAME" => SemanticTokenType.Substitution,
 			"SUB_PRONOUN" or "OBJ_PRONOUN" or "POS_PRONOUN" or "ABS_POS_PRONOUN" => SemanticTokenType.Substitution,
-			"CALLED_DBREF" or "EXECUTOR_DBREF" or "LOCATION_DBREF" or "DBREF" => SemanticTokenType.ObjectReference,
+			"CALLED_DBREF" or "EXECUTOR_DBREF" or "LOCATION_DBREF" or "DBREF" => SemanticTokenType.Substitution,
 			"OBRACK" or "CBRACK" => SemanticTokenType.BracketSubstitution,
 			"OBRACE" or "CBRACE" => SemanticTokenType.BraceGroup,
 			"ESCAPE" => SemanticTokenType.EscapeSequence,
 			"OANSI" or "CANSI" or "ANSICHARACTER" => SemanticTokenType.AnsiCode,
-			"CCARET" => registerCaretIndices.Contains(token.TokenIndex)
-				? SemanticTokenType.Register
-				: SemanticTokenType.Operator,
-			"EQUALS" or "COMMAWS" or "SEMICOLON" => SemanticTokenType.Operator,
+			"PERCENT" => SemanticTokenType.Substitution,
+			"FUNCHAR" => ClassifyFunction(token.Text),
 			"OTHER" => ClassifyOther(token.Text, sourceText),
 			_ => SemanticTokenType.Text
 		};
