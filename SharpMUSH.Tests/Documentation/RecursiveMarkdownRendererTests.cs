@@ -393,12 +393,16 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.ToPlainText().Trim()).Contains("hello");
 		await Assert.That(result.ToPlainText().Trim()).Contains("42");
 
-		// The rendered output should contain ANSI escape codes (colour applied)
+		// ANSI codes must be present (at least the key "hello" and number 42 get coloured)
 		await Assert.That(ansi.Contains(ESC)).IsTrue();
 
-		// The opening brace should NOT be colored — it must appear WITHOUT an ANSI prefix.
-		// ColorCode groups the { into the JsonKey token; SplitLeadingStructural strips it back.
-		await Assert.That(ansi.Contains("{" + ESC) || ansi.StartsWith("  {")).IsTrue();
+		// The opening brace must appear without an immediately preceding ANSI colour code.
+		// Previously SplitLeadingStructural tried to strip it; now the correct Scope.Index/Length
+		// walk ensures text[0..scope.Index] (i.e. "{") is emitted as plain before the coloured key.
+		await Assert.That(ansi).Contains("{");
+		// The brace must NOT be inside an ANSI colour sequence — it should appear either right
+		// after the 2-space indent or right after a reset code, never inside a colour span.
+		await Assert.That(ansi).DoesNotContain(Foreground(0xFF, 0x87, 0x00) + "{");
 	}
 
 	[Test]

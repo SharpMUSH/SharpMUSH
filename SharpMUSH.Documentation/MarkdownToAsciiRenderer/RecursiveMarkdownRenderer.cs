@@ -191,62 +191,59 @@ public class RecursiveMarkdownRenderer
 
 		var parts = new List<MString> { MModule.single("  ") };
 		ColorCodeParser.Value.Parse(sourceText, language, (text, scopes) =>
-		{
-			// Pick the most specific scope (deepest in the tree = last entry)
-			var scopeName = scopes?.Count > 0 ? scopes[scopes.Count - 1].Name : ScopeName.PlainText;
-
-			var style = ColorCodeStyles.Contains(scopeName) ? ColorCodeStyles[scopeName] : null;
-			if (style?.Foreground is null || scopeName == ScopeName.PlainText)
-			{
-				parts.Add(MModule.single(text));
-				return;
-			}
-
-			// ColorCode foreground is #AARRGGBB (8-digit) or #RRGGBB (6-digit).
-			// Convert to System.Drawing.Color then to our ANSI Ansi style.
-			var color = ParseArgbHex(style.Foreground);
-			if (color is null)
-			{
-				parts.Add(MModule.single(text));
-				return;
-			}
-
-			var ansiStyle = Ansi.Create(
-				foreground: StringExtensions.rgb(color.Value),
-				bold: style.Bold);
-
-			// ColorCode's JSON (and some other language) tokenizers include the preceding
-			// structural delimiter ({, ,, [) in the same token as the key/value it precedes.
-			// Strip any leading characters that are not part of the actual token content
-			// (i.e. not alphanumeric, not a quote, and not the start of a keyword) so that
-			// structural punctuation renders with the terminal default colour.
-			var (leadingPlain, coloredPart) = SplitLeadingStructural(text);
-			if (!string.IsNullOrEmpty(leadingPlain))
-				parts.Add(MModule.single(leadingPlain));
-			if (!string.IsNullOrEmpty(coloredPart))
-				parts.Add(MModule.markupSingle(ansiStyle, coloredPart));
-		});
+			WriteColorCodeScopes(text, scopes, parts));
 
 		return MModule.multiple(parts);
 	}
 
 	/// <summary>
-	/// Splits a text segment into a leading run of structural/punctuation characters
-	/// (which should render in the default terminal colour) and the remainder which
-	/// carries the scope's colour. ColorCode includes delimiters like <c>{</c> and
-	/// <c>,</c> in key/value scopes for some languages (e.g. JSON).
+	/// Mirrors the algorithm used by <c>HtmlFormatter.Write</c> in ColorCode.Core:
+	/// uses <c>Scope.Index</c> and <c>Scope.Length</c> to slice <paramref name="text"/>
+	/// into plain and coloured segments, recursing into <c>Scope.Children</c> for nested grammars.
+	/// The callback <paramref name="text"/> is the FULL regex group-0 match, which can include
+	/// structural delimiters (e.g. <c>{</c> before a JSON key). Only the sub-range identified
+	/// by each scope carries a colour; everything else is emitted as plain text.
 	/// </summary>
-	private static (string Plain, string Colored) SplitLeadingStructural(string text)
+	private static void WriteColorCodeScopes(string text, IList<Scope> scopes, List<MString> parts)
 	{
-		int i = 0;
-		while (i < text.Length &&
-		       !char.IsLetterOrDigit(text[i]) &&
-		       text[i] != '"' &&
-		       text[i] != '\'')
+		var ordered = scopes.OrderBy(s => s.Index).ToList();
+		int offset = 0;
+
+		foreach (var scope in ordered)
 		{
-			i++;
+			// Plain text before this scope's range
+			if (scope.Index > offset)
+				parts.Add(MModule.single(text[offset..scope.Index]));
+
+			var scopeText = text[scope.Index..(scope.Index + scope.Length)];
+
+			if (scope.Children.Count > 0)
+			{
+				// Nested grammar: recurse so child scopes get their own colours.
+				WriteColorCodeScopes(scopeText, scope.Children, parts);
+			}
+			else
+			{
+				var style = ColorCodeStyles.Contains(scope.Name) ? ColorCodeStyles[scope.Name] : null;
+				// ColorCode foreground is #AARRGGBB (8-digit) or #RRGGBB (6-digit).
+				var color = style?.Foreground is not null ? ParseArgbHex(style.Foreground) : null;
+				if (color is not null && scope.Name != ScopeName.PlainText)
+				{
+					var ansiStyle = Ansi.Create(foreground: StringExtensions.rgb(color.Value), bold: style!.Bold);
+					parts.Add(MModule.markupSingle(ansiStyle, scopeText));
+				}
+				else
+				{
+					parts.Add(MModule.single(scopeText));
+				}
+			}
+
+			offset = scope.Index + scope.Length;
 		}
-		return (text[..i], text[i..]);
+
+		// Trailing plain text after all scopes
+		if (offset < text.Length)
+			parts.Add(MModule.single(text[offset..]));
 	}
 
 	/// <summary>
