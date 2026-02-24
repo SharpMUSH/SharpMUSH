@@ -3,6 +3,7 @@ using Markdig.Extensions.Tables;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Microsoft.FSharp.Core;
+using SharpMUSH.Library.ParserInterfaces;
 using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,6 +21,7 @@ public class RecursiveMarkdownRenderer
 	private readonly Ansi _headingStyle = Ansi.Create(underlined: true, bold: true);
 	private readonly Ansi _heading3Style = Ansi.Create(underlined: true);
 	private readonly int _maxWidth;
+	private readonly IMUSHCodeParser? _mushParser;
 
 	// Table border and separator character counts
 	private const int START_BORDER_WIDTH = 2; // "| "
@@ -37,9 +39,15 @@ public class RecursiveMarkdownRenderer
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
 	/// </summary>
 	/// <param name="maxWidth">Maximum width for rendered output. Tables will fit to this width with nice column spacing. Default is 78.</param>
-	public RecursiveMarkdownRenderer(int maxWidth = 78)
+	/// <param name="mushParser">
+	/// Optional MUSH code parser used to apply syntax highlighting to
+	/// <c>sharp</c> fenced code blocks. When <c>null</c>, those blocks are
+	/// rendered as plain indented text.
+	/// </param>
+	public RecursiveMarkdownRenderer(int maxWidth = 78, IMUSHCodeParser? mushParser = null)
 	{
 		_maxWidth = maxWidth > 0 ? maxWidth : 78;
+		_mushParser = mushParser;
 	}
 
 	/// <summary>
@@ -121,12 +129,64 @@ public class RecursiveMarkdownRenderer
 
 	protected virtual MString RenderCodeBlock(CodeBlock code)
 	{
+		// Apply syntax highlighting to 'sharp' fenced code blocks when a parser is available.
+		if (code is FencedCodeBlock fenced &&
+			string.Equals(fenced.Info, "sharp", StringComparison.OrdinalIgnoreCase) &&
+			_mushParser != null)
+		{
+			return RenderSharpCodeBlock(fenced);
+		}
+
 		var lines = code.Lines.Lines?
 			.Where(line => line.Slice.Text != null)
 			.Select(line => MModule.single("  " + line.Slice.ToString()))
 			.ToList() ?? new List<MString>();
 
 		return MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+	}
+
+	/// <summary>
+	/// Renders a <c>sharp</c>-tagged fenced code block with MUSH semantic token colours.
+	/// Each source line is tokenised independently so that multi-line code blocks
+	/// are handled safely regardless of parser line-tracking behaviour.
+	/// </summary>
+	private MString RenderSharpCodeBlock(FencedCodeBlock code)
+	{
+		var sourceLines = code.Lines.Lines?
+			.Where(l => l.Slice.Text != null)
+			.Select(l => l.Slice.ToString())
+			.ToList() ?? [];
+
+		if (sourceLines.Count == 0)
+			return MModule.empty();
+
+		var renderedLines = sourceLines.Select(RenderSharpLine).ToList();
+		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedLines);
+	}
+
+	/// <summary>
+	/// Applies MUSH semantic token colours to a single source line.
+	/// </summary>
+	private MString RenderSharpLine(string line)
+	{
+		var tokens = _mushParser!.GetSemanticTokens(MModule.single(line));
+		var sortedTokens = tokens
+			.OrderBy(t => t.Range.Start.Line)
+			.ThenBy(t => t.Range.Start.Character)
+			.ToList();
+
+		if (sortedTokens.Count == 0)
+			return MModule.single("  " + line);
+
+		var parts = new List<MString> { MModule.single("  ") };
+		foreach (var token in sortedTokens)
+		{
+			var style = SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
+			parts.Add(style is null
+				? MModule.single(token.Text)
+				: MModule.markupSingle(style, token.Text));
+		}
+		return MModule.multiple(parts);
 	}
 
 	private MString RenderList(ListBlock list)

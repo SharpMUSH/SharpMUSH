@@ -144,7 +144,7 @@ fit for the Blazor wiki client.
 // WikiDisplay.razor or a shared Markdown service
 var pipeline = new MarkdownPipelineBuilder()
     .UseAdvancedExtensions()
-    .AddColorCode()          // ← Markdown.ColorCode extension
+    .UseColorCode()          // ← Markdown.ColorCode extension
     .Build();
 
 var html = Markdown.ToHtml(markdownText, pipeline);
@@ -243,7 +243,7 @@ help files.
 1. **Add `Markdown.ColorCode` 3.0.1** to `SharpMUSH.Client.csproj`.
 
 2. **Update the Markdig pipeline** in `WikiDisplay.razor` (or a shared wiki service)
-   to include `.AddColorCode()`.
+   to include `.UseColorCode()`.
 
 3. **Optional CSS class mode**: `Markdown.ColorCode` supports a CSS-class mode
    (`SyntaxHighlightingTheme`) if inline styles are undesirable; a bundled stylesheet
@@ -253,9 +253,13 @@ help files.
 
 ## MUSH-Specific Language Support
 
-SharpMUSH help files use fenced code blocks tagged as `mush` or `mushcode` (suggested
-convention). The language server already provides everything needed for high-fidelity
-MUSH highlighting — this should be the primary approach.
+SharpMUSH help files use fenced code blocks tagged as **`sharp`** as the conventional
+language identifier for all SharpMUSH / MUSHcode examples. All `.md` files in the
+SharpMUSH repository (help files, wiki articles, documentation) should use ` ```sharp `
+as their code fence tag when showing MUSH code.
+
+The language server already provides everything needed for high-fidelity highlighting
+of `sharp` blocks — this should be the primary approach.
 
 ### Recommended: Use `IMUSHCodeParser.GetSemanticTokens()` directly
 
@@ -283,8 +287,7 @@ Each `SemanticToken` carries:
 ```csharp
 // In RenderCodeBlock (RecursiveMarkdownRenderer.cs):
 if (code is FencedCodeBlock fenced &&
-    (fenced.Info?.Equals("mush", StringComparison.OrdinalIgnoreCase) == true ||
-     fenced.Info?.Equals("mushcode", StringComparison.OrdinalIgnoreCase) == true) &&
+    string.Equals(fenced.Info, "sharp", StringComparison.OrdinalIgnoreCase) &&
     _mushParser != null)
 {
     // Use the semantic token pipeline (same pipeline as the language server)
@@ -369,7 +372,7 @@ project is undesirable.
 | `SharpMUSH.Documentation/MarkdownToAsciiRenderer/RecursiveMarkdownRenderer.cs` | Modify `RenderCodeBlock`: detect language, route to ColorCode or MUSH semantic tokenizer; accept optional `IMUSHCodeParser` |
 | `SharpMUSH.Implementation/Functions/MarkdownFunctions.cs` | Pass `IMUSHCodeParser` (available via DI) into the renderer |
 | `SharpMUSH.Client/SharpMUSH.Client.csproj` | Add `Markdown.ColorCode` 3.0.1 |
-| `SharpMUSH.Client/Components/WikiDisplay.razor` | Update Markdig pipeline with `.AddColorCode()` for standard languages; add custom MUSH extension |
+| `SharpMUSH.Client/Components/WikiDisplay.razor` | Update Markdig pipeline with `.UseColorCode()` for standard languages; add custom MUSH extension |
 
 ---
 

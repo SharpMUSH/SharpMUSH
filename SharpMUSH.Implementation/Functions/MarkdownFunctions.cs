@@ -40,7 +40,7 @@ public partial class Functions
 
 		try
 		{
-			var result = RecursiveMarkdownHelper.RenderMarkdown(markdown, width);
+			var result = RecursiveMarkdownHelper.RenderMarkdown(markdown, width, parser);
 			return ValueTask.FromResult(new CallState(result));
 		}
 		catch (Exception ex)

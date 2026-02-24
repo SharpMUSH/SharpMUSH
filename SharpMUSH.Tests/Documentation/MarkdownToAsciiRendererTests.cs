@@ -29,7 +29,7 @@ public class MarkdownToAsciiRendererTests
 		var renderer = new MarkdownToAsciiRenderer(container);
 		pipeline.Setup(renderer);
 
-		var doc = Markdown.Parse(markdown, pipeline);
+		var doc = Markdig.Markdown.Parse(markdown, pipeline);
 		return renderer.RenderToMarkupString(doc);
 	}
 
