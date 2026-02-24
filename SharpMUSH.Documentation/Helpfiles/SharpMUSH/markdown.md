@@ -13,9 +13,40 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 - **Links**: `[text](url)` or `<url>` (rendered as ANSI OSC 8 hyperlinks, clickable in compatible terminals)
 - **Lists**: Ordered (`1. Item`) and unordered (`- Item`) with proper indentation and ANSI-styled bullets
 - **Tables**: Pipe-delimited tables with column alignment (`:---` left, `:---:` center, `---:` right)
-- **Code Blocks**: Triple-backtick code blocks with 2-space indentation
+- **Code Blocks**: Triple-backtick fenced code blocks with optional language tag for syntax highlighting (see below)
 - **Block Quotes**: `> Quote` rendered with 2-space indentation
 - **HTML Entities**: `&amp;`, `&lt;`, etc.
+
+**Syntax Highlighting in Code Blocks:**
+
+Fenced code blocks support ANSI syntax highlighting when a language tag is specified.
+
+Use `` ```sharp `` for SharpMUSH/MUSH softcode — the full semantic token pipeline
+(functions, substitutions, object references, registers, etc.) is used:
+
+```sharp
+name(%#)              -- function call + substitution
+get(#1/ATTR)          -- object reference
+%q<myvar>             -- register read
+```
+
+Standard programming languages are also supported via ColorCode and render with
+`StyleDictionary.DefaultDark` colours:
+
+```json
+{"hello": 42, "active": true}
+```
+
+```python
+def greet(name):
+    return "Hello, " + name
+```
+
+Other supported language tags: `csharp`, `javascript`, `typescript`, `sql`, `xml`,
+`html`, `css`, `java`, `powershell`, `fsharp`, `python`, `json`, `cpp`.
+
+Blocks without a language tag, or with an unrecognised tag, fall back to plain
+2-space-indented text with no colour.
 
 **MUSH Special Character Escaping:**
 When using markdown features with square brackets `[` `]` or parentheses `(` `)`, you must escape them using `%`:
@@ -85,7 +116,19 @@ Output:
 ```
 (table fits within 50 character width)
 
-Code blocks:
+Code blocks with syntax highlighting (use `sharp` tag for SharpMUSH softcode):
+```
+think rendermarkdown(``````sharp%rname(%#)%rget(#1/ATTR)%r```````)
+```
+Output (with ANSI colour):
+```
+  name(                    <- yellow (function call)
+  %#                       <- bright blue (substitution)
+  )
+  get(#1/ATTR)             <- yellow / light blue (function + object ref)
+```
+
+Code blocks (plain, no language tag):
 ```
 think rendermarkdown(``````%rvar x = 42;%rvar y = 100;%r```````)
 ```
@@ -94,7 +137,7 @@ Output:
   var x = 42;
   var y = 100;
 ```
-(2-space indentation on all code lines)
+(2-space indentation, no colour)
 
 Ordered lists:
 ```

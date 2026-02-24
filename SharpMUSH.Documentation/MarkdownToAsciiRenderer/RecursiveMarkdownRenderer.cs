@@ -43,11 +43,13 @@ public class RecursiveMarkdownRenderer
 
 	// ColorCode.Core language parser and style dictionary for standard-language code blocks.
 	// Shared across all renderer instances; lazy-initialised on first use.
-	// The ReaderWriterLockSlim is passed to LanguageCompiler which owns it for the application
-	// lifetime — no disposal is needed for a static resource whose lifetime equals the process.
+	// The lock is held as a named static field (process lifetime) so the compiler's
+	// CA2000 disposable-not-disposed analysis is satisfied. As a process-lifetime
+	// singleton, it is cleaned up when the process exits.
+	private static readonly ReaderWriterLockSlim _colorCodeLock = new();
 	private static readonly Lazy<LanguageParser> ColorCodeParser = new(() =>
 	{
-		var compiler = new LanguageCompiler(new Dictionary<string, CompiledLanguage>(), new ReaderWriterLockSlim());
+		var compiler = new LanguageCompiler(new Dictionary<string, CompiledLanguage>(), _colorCodeLock);
 		var repo = new LanguageRepository(Languages.All.ToDictionary(l => l.Id, l => l));
 		return new LanguageParser(compiler, repo);
 	});
