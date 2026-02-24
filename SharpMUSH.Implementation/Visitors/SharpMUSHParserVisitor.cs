@@ -1072,9 +1072,10 @@ public class SharpMUSHParserVisitor(
 				var handle = prs.CurrentState.Handle;
 				if (handle.HasValue)
 				{
-					await NotifyService.Notify(handle.Value, $"Ambiguous attribute name: {potentialAttrName}");
+					var matchNames = string.Join(", ", prefixMatches.Select(e => e.Name));
+					await NotifyService.Notify(handle.Value, $"Ambiguous attribute name: {potentialAttrName} matches {matchNames}");
 				}
-				return new None();
+				return CallState.Empty;
 			}
 		}
 
@@ -1097,11 +1098,28 @@ public class SharpMUSHParserVisitor(
 			return CallState.Empty;
 		}
 
-		// Get the source text from the evaluation string
-		var argsText = MModule.substring(
+		// Get the full text from the evaluation string (includes the command name)
+		var fullText = MModule.substring(
 			evalString.Start.StartIndex,
 			evalString.Stop.StopIndex - evalString.Start.StartIndex + 1,
 			src);
+
+		// Skip past the command name to get just the arguments
+		// The command format is: @attrname object=value
+		var spaceIndex = MModule.indexOf(fullText, MModule.single(" "));
+		if (spaceIndex == -1)
+		{
+			// No space, no arguments - show usage
+			var handle = prs.CurrentState.Handle;
+			if (handle.HasValue)
+			{
+				await NotifyService.Notify(handle.Value, $"Usage: @{matchedEntry.Name.ToLower()} <object>=<value>");
+			}
+			return CallState.Empty;
+		}
+
+		// Get the arguments (everything after the space following the command)
+		var argsText = MModule.substring(spaceIndex + 1, MModule.getLength(fullText) - spaceIndex - 1, fullText);
 		var argsPlainText = argsText.ToPlainText();
 
 		// Split on = to get object and value
@@ -1118,12 +1136,11 @@ public class SharpMUSHParserVisitor(
 			? argsPlainText[(equalsIndex + 1)..]
 			: string.Empty;
 
-		// Get the MString value (preserve markup)
-		var valueStartIndex = evalString.Start.StartIndex + equalsIndex + 1;
-		var valueEndIndex = evalString.Stop.StopIndex;
-		var valueLength = valueEndIndex - valueStartIndex + 1;
-		var valueMString = valueLength > 0 && valueStartIndex + valueLength <= MModule.getLength(src)
-			? MModule.substring(valueStartIndex, valueLength, src)
+		// Get the MString value from argsText (preserve markup)
+		// The equals sign is at equalsIndex in argsText, so value starts at equalsIndex + 1
+		var valueLength = MModule.getLength(argsText) - equalsIndex - 1;
+		var valueMString = valueLength > 0
+			? MModule.substring(equalsIndex + 1, valueLength, argsText)
 			: MModule.single(valuePart);
 
 		// Get executor for permission checks and notifications

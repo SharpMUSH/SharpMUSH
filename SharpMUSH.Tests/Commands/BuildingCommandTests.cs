@@ -552,10 +552,11 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// Tests that @desc (and other @attribute commands) evaluate their argument before storing.
+	/// Tests that @describe (and other @attribute commands) evaluate their argument before storing.
 	/// This confirms PennMUSH-compatible behavior:
-	/// - @desc me=[add(1,2)] should store "3" (not "[add(1,2)]")
+	/// - @describe me=[add(1,2)] should store "3" (not "[add(1,2)]")
 	/// - look should display "3" (no re-evaluation)
+	/// Note: Using @describe (not @desc) because @desc is ambiguous with DESCFORMAT.
 	/// </summary>
 	[Test]
 	public async ValueTask DescribeCommand_EvaluatesBeforeStoring()
@@ -568,13 +569,14 @@ public class BuildingCommandTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
 
-		// Use @desc with a function that should be evaluated
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[add(1,2)]"));
+		// Use @describe with a function that should be evaluated
+		// Note: Using @describe (not @desc) to avoid ambiguity with DESCFORMAT
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@describe {objDbRef}=[add(1,2)]"));
 
 		// Verify the notification shows it was set
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "DESCRIBE") && TestHelpers.MessageContains(msg, "Set")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 
 		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
@@ -618,7 +620,7 @@ public class BuildingCommandTests
 
 	/// <summary>
 	/// Tests that look displays the pre-evaluated DESCRIBE value without re-evaluating.
-	/// If DESCRIBE contained "[add(1,2)]" and was set via @desc, look should show "3".
+	/// If DESCRIBE contained "[mul(2,5)]" and was set via @describe, look should show "10".
 	/// </summary>
 	[Test]
 	public async ValueTask Look_DisplaysStoredDescribe_NoReEvaluation()
@@ -627,8 +629,8 @@ public class BuildingCommandTests
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LookDescTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		// Use @desc with a function - this should be evaluated to "3"
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[mul(2,5)]"));
+		// Use @describe with a function - this should be evaluated to "10"
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@describe {objDbRef}=[mul(2,5)]"));
 
 		// Look at the object
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"look {objDbRef}"));
