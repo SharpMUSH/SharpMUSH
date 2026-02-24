@@ -184,7 +184,8 @@ public partial class Commands
 		// Query player flags and send preferences to ConnectionServer for protocol-aware output formatting
 		await SyncPlayerOutputPreferences(parser.CurrentState.Handle!.Value, foundDB.Object);
 
-		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
+		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
+		await ShowPostLoginMessages(parser, parser.CurrentState.Handle!.Value, new AnySharpObject(foundDB));
 		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new CallState(playerDbRef);
 	}
@@ -349,7 +350,8 @@ public partial class Commands
 		// Query player flags and send preferences to ConnectionServer for protocol-aware output formatting
 		await SyncPlayerOutputPreferences(handle, selectedGuest.Object);
 
-		await NotifyService!.Notify(handle, "Connected!");
+		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
+		await ShowPostLoginMessages(parser, handle, new AnySharpObject(selectedGuest), isGuest: true);
 		Logger?.LogDebug("Successful guest login for {@guest}", selectedGuest.Object);
 		return new CallState(playerDbRef);
 	}
@@ -360,11 +362,11 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
 
-		// Display Disconnect Banner (DownMotd) if configured
-		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
-		if (!string.IsNullOrWhiteSpace(motdData?.DownMotd))
+		// Display quit file if configured
+		var quitText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.QuitFile);
+		if (!string.IsNullOrWhiteSpace(quitText))
 		{
-			await NotifyService!.Notify(executor, motdData.DownMotd);
+			await NotifyService!.Notify(executor, quitText);
 		}
 
 		await ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
@@ -397,6 +399,63 @@ public partial class Commands
 			Logger?.LogDebug("Synced output preferences for handle {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}",
 				handle, ansiEnabled, colorEnabled, xterm256Enabled);
 		}
+	}
+
+	/// <summary>
+	/// Reads a message file by path, returning its content or null if the file does not exist.
+	/// </summary>
+	private static async Task<string?> ReadMessageFileAsync(string? filePath)
+	{
+		if (string.IsNullOrEmpty(filePath)) return null;
+		if (!File.Exists(filePath)) return null;
+		return await File.ReadAllTextAsync(filePath);
+	}
+
+	/// <summary>
+	/// Shows post-login messages (MOTD, wizard MOTD, guest file) and performs an auto-look.
+	/// Matches PennMUSH login experience.
+	/// </summary>
+	private static async Task ShowPostLoginMessages(IMUSHCodeParser parser, long handle, AnySharpObject player, bool isGuest = false)
+	{
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+
+		// Show MOTD (from database, fallback to motd.txt file)
+		var motdText = motdData?.ConnectMotd;
+		if (string.IsNullOrWhiteSpace(motdText))
+		{
+			motdText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.MessageOfTheDayFile);
+		}
+		if (!string.IsNullOrWhiteSpace(motdText))
+		{
+			await NotifyService!.Notify(handle, motdText);
+		}
+
+		// Show wizard MOTD for wizards/royalty
+		if (await player.IsWizard() || await player.IsRoyalty())
+		{
+			var wizmotdText = motdData?.WizardMotd;
+			if (string.IsNullOrWhiteSpace(wizmotdText))
+			{
+				wizmotdText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.WizMessageOfTheDayFile);
+			}
+			if (!string.IsNullOrWhiteSpace(wizmotdText))
+			{
+				await NotifyService!.Notify(handle, wizmotdText);
+			}
+		}
+
+		// Show guest file for guest players
+		if (isGuest)
+		{
+			var guestText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.GuestFile);
+			if (!string.IsNullOrWhiteSpace(guestText))
+			{
+				await NotifyService!.Notify(handle, guestText);
+			}
+		}
+
+		// Auto-look at the player's current location
+		await parser.CommandParse(handle, ConnectionService!, MModule.single("look"));
 	}
 
 	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]

@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -20,7 +21,9 @@ namespace SharpMUSH.Implementation.Handlers;
 public class ConnectionStateEventHandler(
 	IConnectionService connectionService,
 	IEventService eventService,
-	IMUSHCodeParser parser)
+	IMUSHCodeParser parser,
+	INotifyService notifyService,
+	IOptionsWrapper<SharpMUSHOptions> configuration)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
@@ -35,6 +38,17 @@ public class ConnectionStateEventHandler(
 			{
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
+
+				// Show connect screen (connect.txt) to new connections
+				var connectFile = configuration.CurrentValue.Message.ConnectFile;
+				if (!string.IsNullOrEmpty(connectFile) && File.Exists(connectFile))
+				{
+					var connectText = await File.ReadAllTextAsync(connectFile, cancellationToken);
+					if (!string.IsNullOrWhiteSpace(connectText))
+					{
+						await notifyService.Notify(notification.Handle, connectText);
+					}
+				}
 
 				// EventService handles all exception logging, so no try-catch needed here
 				await eventService.TriggerEventAsync(
