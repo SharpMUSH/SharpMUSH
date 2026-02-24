@@ -55,6 +55,15 @@ public interface ITextFileService
 	Task<IEnumerable<string>> SearchEntriesAsync(string fileReference, string pattern);
 
 	/// <summary>
+	/// Searches entry bodies for content containing the search term (case-insensitive substring match).
+	/// This matches PennMUSH's help/search behavior.
+	/// </summary>
+	/// <param name="fileReference">File reference: "filename" or "category/filename"</param>
+	/// <param name="searchTerm">Term to search for in entry bodies</param>
+	/// <returns>List of entry names whose bodies contain the search term</returns>
+	Task<IEnumerable<string>> SearchContentAsync(string fileReference, string searchTerm);
+
+	/// <summary>
 	/// Re-indexes all text files (rebuilds all category indexes)
 	/// Called by @readcache command or on startup
 	/// </summary>

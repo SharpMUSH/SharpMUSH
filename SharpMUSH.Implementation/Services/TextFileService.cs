@@ -192,6 +192,42 @@ public class TextFileService : ITextFileService
 		}
 	}
 
+	public async Task<IEnumerable<string>> SearchContentAsync(string fileReference, string searchTerm)
+	{
+		await _initializationTask.WithCancellation(CancellationToken.None);
+
+		var (category, _) = ParseFileReference(fileReference);
+
+		IEnumerable<KeyValuePair<string, IndexEntry>> entries;
+		lock (_indexLock)
+		{
+			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
+			{
+				entries = categoryEntries.ToList();
+			}
+			else
+			{
+				entries = _categoryIndexes.Values
+					.SelectMany(dict => dict)
+					.GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+					.Select(g => g.First())
+					.ToList();
+			}
+		}
+
+		var results = new List<string>();
+		foreach (var (entryName, indexEntry) in entries)
+		{
+			var content = await ReadEntryFromFileAsync(indexEntry);
+			if (content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+			{
+				results.Add(entryName);
+			}
+		}
+
+		return results;
+	}
+
 	public async Task ReindexAsync()
 	{
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
