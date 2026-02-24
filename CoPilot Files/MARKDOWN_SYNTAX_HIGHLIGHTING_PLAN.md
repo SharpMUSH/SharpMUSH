@@ -232,11 +232,11 @@ help files.
    - If a language is found, use `CodeColorizer` + `AnsiStyleSheet` to get coloured
      `MString` segments; otherwise fall back to plain text.
 
-4. **Register a MUSH language** using `ColorCode.ILanguage` / regex-based rules for
-   common MUSH constructs (`[function()]`, `%substitutions`, `@commands`, etc.).
-   This is optional but valuable since help files frequently contain MUSH code examples.
-   Alternatively, the existing `IMUSHCodeParser.Tokenize()` method can be used to
-   tokenise MUSH code blocks, bypassing ColorCode entirely.
+4. **MUSH code blocks** (`Info == "mush"` or `"mushcode"`) — instead of a regex-based
+   ColorCode language, use `IMUSHCodeParser.GetSemanticTokens()` directly (see
+   _MUSH-specific language support_ section below). This bypasses ColorCode entirely
+   for MUSH code and reuses the same semantic classification already in use by the
+   language server.
 
 ### Phase 2 — Blazor HTML highlighting (`SharpMUSH.Client`)
 
@@ -254,30 +254,108 @@ help files.
 ## MUSH-Specific Language Support
 
 SharpMUSH help files use fenced code blocks tagged as `mush` or `mushcode` (suggested
-convention). Two approaches are viable:
+convention). The language server already provides everything needed for high-fidelity
+MUSH highlighting — this should be the primary approach.
 
-### Option A — Custom ColorCode language (simpler)
+### Recommended: Use `IMUSHCodeParser.GetSemanticTokens()` directly
 
-Register a `ColorCode.ILanguage` instance with regex rules matching:
-- Function calls: `\w+\(` → Keyword colour
-- Bracket substitutions: `\[…\]` → Special colour
-- Percent substitutions: `%[0-9a-zA-Z#!@?]+` or `%q<\w+>` → Variable colour  
-- ANSI codes: `\e\[…m` → Comment colour (dimmed)
-- `@commands` → Command colour
+The `IMUSHCodeParser` interface (in `SharpMUSH.Library`) exposes two methods that are
+already used by the language server (`SemanticTokensHandler`):
 
-This integrates transparently into both the ANSI and HTML pipelines.
+```csharp
+// High-fidelity semantic tokens (same API the LSP uses)
+IReadOnlyList<SemanticToken> GetSemanticTokens(MString text, ParseType parseType)
 
-### Option B — Use existing ANTLR tokenizer (higher fidelity)
+// Lower-level syntactic tokens from the ANTLR lexer
+IReadOnlyList<TokenInfo> Tokenize(MString text)
+```
 
-The `IMUSHCodeParser.Tokenize()` method already produces `TokenInfo` records with
-`Type`, `Text`, `StartIndex`, and `EndIndex`. A specialised branch in
-`RenderCodeBlock` can detect `Info == "mush"` and call the MUSH parser directly,
-mapping ANTLR token types to ANSI colours using the mapping from
-`PARSER_ERROR_SYNTAX_HIGHLIGHTING.md`.
+Each `SemanticToken` carries:
+- `SemanticTokenType` — covers all MUSH constructs: `Function`, `UserFunction`,
+  `ObjectReference`, `Substitution`, `Register`, `Command`, `BracketSubstitution`,
+  `BraceGroup`, `EscapeSequence`, `AnsiCode`, `Operator`, `Number`, `Text`, etc.
+- `SemanticTokenModifier` — e.g. `DefaultLibrary` distinguishes built-in functions
+  from user-defined ones.
+- `Range` — start/end positions for each token.
 
-This option produces the most accurate MUSH highlighting but requires a dependency
-on the parser from the Documentation project. Given the current project structure,
-Option A is preferred for loose coupling.
+**Integration pattern for terminal rendering:**
+
+```csharp
+// In RenderCodeBlock (RecursiveMarkdownRenderer.cs):
+if (code is FencedCodeBlock fenced &&
+    (fenced.Info?.Equals("mush", StringComparison.OrdinalIgnoreCase) == true ||
+     fenced.Info?.Equals("mushcode", StringComparison.OrdinalIgnoreCase) == true) &&
+    _mushParser != null)
+{
+    // Use the semantic token pipeline (same pipeline as the language server)
+    var sourceText = string.Join("\n",
+        code.Lines.Lines
+            ?.Where(l => l.Slice.Text != null)
+            .Select(l => l.Slice.ToString()) ?? []);
+    var tokens = _mushParser.GetSemanticTokens(MModule.single(sourceText));
+    return RenderMushHighlighted(tokens, sourceText);
+}
+```
+
+The `SemanticTokenType` → ANSI colour mapping is a single new class
+(`SemanticTokenAnsiPalette`) that can also be referenced by any future tooling:
+
+```csharp
+// Suggested palette (aligned with VS Code dark theme conventions)
+Function         → #DCDCAA  (yellow)
+UserFunction     → #4EC9B0  (teal)
+ObjectReference  → #9CDCFE  (light blue)
+Substitution     → #4FC1FF  (bright blue)
+Register         → #9CDCFE  (light blue)
+Command          → #C586C0  (purple)  
+BracketSubstitution → #569CD6 (blue bracket)
+EscapeSequence   → #D7BA7D  (orange)
+AnsiCode         → #808080  (grey, dimmed)
+Operator         → #D4D4D4  (light grey)
+Number           → #B5CEA8  (light green)
+Text             → (default foreground, no colour override)
+```
+
+**Dependency path:**
+- `SharpMUSH.Documentation` references `SharpMUSH.MarkupString` (already exists).
+- Add a project reference to `SharpMUSH.Library` (lightweight — contains only models
+  and interfaces, no runtime/DI services).
+- `RecursiveMarkdownRenderer` accepts an optional `IMUSHCodeParser` parameter; when
+  `null` (the library is used standalone without the parser), MUSH code blocks fall
+  back to plain text.
+- `MarkdownFunctions.cs` in `SharpMUSH.Implementation` already has access to
+  `IMUSHCodeParser` via DI and can pass it through to the renderer.
+
+**Advantages over regex-based approaches:**
+- Already tested and used in production by the language server.
+- Understands MUSH semantics (built-in vs user functions, dbref formats, register
+  syntax, etc.).
+- No ReDoS risk — uses the same ANTLR4 lexer already in the pipeline.
+- `SemanticTokenType` enum is already defined in `SharpMUSH.Library.Models` — no
+  duplication required.
+
+### Blazor wiki client (HTML path)
+
+The Blazor client does not have access to the MUSH parser at render time (it is a
+WebAssembly app). For MUSH code blocks in the wiki, two options are available:
+
+1. **Server-side pre-rendering** — before returning the wiki page, run the MUSH
+   semantic tokenizer and convert to highlighted HTML server-side, then serve the
+   pre-coloured HTML to the client.
+
+2. **Custom Markdig extension** — add a server-side Markdig extension that intercepts
+   `FencedCodeBlock` with `Info == "mush"` and emits inline-styled HTML using
+   `IMUSHCodeParser.GetSemanticTokens()`, similar to how `Markdown.ColorCode` works
+   for other languages. This is the cleanest long-term approach and reuses the
+   same palette as the terminal renderer.
+
+### Legacy Option — Custom ColorCode language (not recommended for MUSH)
+
+A regex-based `ColorCode.ILanguage` was originally considered for MUSH support.
+This approach is **not recommended** because the existing semantic token infrastructure
+provides far higher accuracy without additional maintenance burden. However, it remains
+a valid fallback if introducing a `SharpMUSH.Library` reference to the Documentation
+project is undesirable.
 
 ---
 
@@ -285,12 +363,13 @@ Option A is preferred for loose coupling.
 
 | File | Change |
 |---|---|
-| `SharpMUSH.Documentation/SharpMUSH.Documentation.csproj` | Add `ColorCode.Core` 2.0.15 |
-| `SharpMUSH.Documentation/MarkdownToAsciiRenderer/AnsiStyleSheet.cs` | New — ANSI colour mapping for ColorCode tokens |
-| `SharpMUSH.Documentation/MarkdownToAsciiRenderer/MushLanguage.cs` | New — Custom ColorCode language for MUSH code |
-| `SharpMUSH.Documentation/MarkdownToAsciiRenderer/RecursiveMarkdownRenderer.cs` | Modify `RenderCodeBlock` to use ColorCode |
+| `SharpMUSH.Documentation/SharpMUSH.Documentation.csproj` | Add `ColorCode.Core` 2.0.15; add project ref to `SharpMUSH.Library` |
+| `SharpMUSH.Documentation/MarkdownToAsciiRenderer/AnsiStyleSheet.cs` | New — ANSI colour mapping for ColorCode tokens (standard languages) |
+| `SharpMUSH.Documentation/MarkdownToAsciiRenderer/SemanticTokenAnsiPalette.cs` | New — `SemanticTokenType` → ANSI colour mapping for MUSH code blocks |
+| `SharpMUSH.Documentation/MarkdownToAsciiRenderer/RecursiveMarkdownRenderer.cs` | Modify `RenderCodeBlock`: detect language, route to ColorCode or MUSH semantic tokenizer; accept optional `IMUSHCodeParser` |
+| `SharpMUSH.Implementation/Functions/MarkdownFunctions.cs` | Pass `IMUSHCodeParser` (available via DI) into the renderer |
 | `SharpMUSH.Client/SharpMUSH.Client.csproj` | Add `Markdown.ColorCode` 3.0.1 |
-| `SharpMUSH.Client/Components/WikiDisplay.razor` | Update Markdig pipeline with `.AddColorCode()` |
+| `SharpMUSH.Client/Components/WikiDisplay.razor` | Update Markdig pipeline with `.AddColorCode()` for standard languages; add custom MUSH extension |
 
 ---
 
@@ -301,8 +380,8 @@ Option A is preferred for loose coupling.
 - Language detection relies on the user-supplied fenced code block tag (`Info` field).
   ColorCode's `FindById` returns `null` for unknown identifiers; the code must fall
   back safely.
-- Custom MUSH language regex patterns should be reviewed to avoid ReDoS. Use
-  possessive quantifiers or fixed-length patterns where possible.
+- MUSH code highlighting uses `IMUSHCodeParser.GetSemanticTokens()` which drives the
+  ANTLR4 lexer — no ReDoS risk and already tested by the language server test suite.
 
 ---
 
@@ -314,3 +393,7 @@ Option A is preferred for loose coupling.
 - [Markdig pipeline extensions](https://github.com/xoofx/markdig/blob/master/src/Markdig/MarkdownExtensions.cs)
 - [SharpMUSH parser syntax highlighting](./PARSER_ERROR_SYNTAX_HIGHLIGHTING.md)
 - [SharpMUSH LSP semantic highlighting](./LSP_SEMANTIC_HIGHLIGHTING.md)
+- [SharpMUSH LSP implementation summary](./LSP_IMPLEMENTATION_SUMMARY.md)
+- `SharpMUSH.Library/Models/SemanticTokenType.cs` — `SemanticTokenType` / `SemanticTokenModifier` enums
+- `SharpMUSH.Implementation/MUSHCodeParser.cs` — `GetSemanticTokens()` / `Tokenize()` implementations
+- `SharpMUSH.LanguageServer/Handlers/SemanticTokensHandler.cs` — reference usage of `GetSemanticTokens()`
