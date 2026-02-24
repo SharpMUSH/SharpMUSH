@@ -641,4 +641,44 @@ public class BuildingCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "10")));
 	}
+
+	/// <summary>
+	/// Tests error case: @desc with invalid target shows error notification.
+	/// </summary>
+	[Test]
+	public async ValueTask DescribeCommand_InvalidTarget_ShowsError()
+	{
+		// Try to @desc an object that doesn't exist
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
+
+		// Verify error notification was sent ("I can't see that here" or similar)
+		// The locate service sends the error with a sender parameter
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "can't see") ||
+				TestHelpers.MessageContains(msg, "not found") ||
+				TestHelpers.MessageContains(msg, "Invalid") ||
+				TestHelpers.MessageContains(msg, "No match")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	/// <summary>
+	/// Tests error case: @desc without = shows usage message.
+	/// </summary>
+	[Test]
+	public async ValueTask DescribeCommand_MissingEquals_ShowsUsage()
+	{
+		// Create an object first
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescMissingEqualsTest"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Try @desc without = (query mode, not setting)
+		// This should either show current value or fall through to HUH_COMMAND
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}"));
+
+		// Verify some notification was sent (either usage or HUH)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+	}
 }

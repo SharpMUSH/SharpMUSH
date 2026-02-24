@@ -1146,9 +1146,14 @@ public class SharpMUSHParserVisitor(
 		var handle2 = prs.CurrentState.Handle;
 		if (handle2.HasValue)
 		{
-			setResult.Switch(
-				_ => NotifyService.Notify(handle2.Value, $"{targetObject.Object().Name}/{matchedEntry.Name} - Set."),
-				error => NotifyService.Notify(handle2.Value, $"Error: {error.Value}"));
+			if (setResult.TryPickT0(out _, out var error))
+			{
+				await NotifyService.Notify(handle2.Value, $"{targetObject.Object().Name}/{matchedEntry.Name} - Set.");
+			}
+			else
+			{
+				await NotifyService.Notify(handle2.Value, $"Error: {error.Value}");
+			}
 		}
 
 		return CallState.Empty;
