@@ -550,4 +550,93 @@ public class BuildingCommandTests
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), "Unlocked.");
 	}
+
+	/// <summary>
+	/// Tests that @desc (and other @attribute commands) evaluate their argument before storing.
+	/// This confirms PennMUSH-compatible behavior:
+	/// - @desc me=[add(1,2)] should store "3" (not "[add(1,2)]")
+	/// - look should display "3" (no re-evaluation)
+	/// </summary>
+	[Test]
+	public async ValueTask DescribeCommand_EvaluatesBeforeStoring()
+	{
+		// Create an object for testing
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescEvalTestObject"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Get the object for attribute service
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Assert.That(obj.IsNone).IsFalse();
+
+		// Use @desc with a function that should be evaluated
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[add(1,2)]"));
+
+		// Verify the notification shows it was set
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "DESCRIBE") && TestHelpers.MessageContains(msg, "Set")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+
+		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var descAttr = await attributeService.GetAttributeAsync(
+			obj.Known, obj.Known, "DESCRIBE",
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(descAttr.IsAttribute).IsTrue();
+		var storedValue = descAttr.AsAttribute.Last().Value.ToPlainText();
+		await Assert.That(storedValue).IsEqualTo("3");
+	}
+
+	/// <summary>
+	/// Tests that @describe (full name with prefix matching) works the same as @desc.
+	/// </summary>
+	[Test]
+	public async ValueTask DescribeCommand_FullName_Works()
+	{
+		// Create an object for testing
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescFullNameTestObject"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Get the object for attribute service
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Assert.That(obj.IsNone).IsFalse();
+
+		// Use @describe (full name) with a value
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@describe {objDbRef}=Test description text"));
+
+		// Verify the attribute was set
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var descAttr = await attributeService.GetAttributeAsync(
+			obj.Known, obj.Known, "DESCRIBE",
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(descAttr.IsAttribute).IsTrue();
+		var storedValue = descAttr.AsAttribute.Last().Value.ToPlainText();
+		await Assert.That(storedValue).IsEqualTo("Test description text");
+	}
+
+	/// <summary>
+	/// Tests that look displays the pre-evaluated DESCRIBE value without re-evaluating.
+	/// If DESCRIBE contained "[add(1,2)]" and was set via @desc, look should show "3".
+	/// </summary>
+	[Test]
+	public async ValueTask Look_DisplaysStoredDescribe_NoReEvaluation()
+	{
+		// Create an object for testing
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LookDescTestObject"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Use @desc with a function - this should be evaluated to "3"
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[mul(2,5)]"));
+
+		// Look at the object
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"look {objDbRef}"));
+
+		// Verify look displayed "10" (the evaluated result of [mul(2,5)])
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "10")));
+	}
 }

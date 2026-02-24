@@ -809,9 +809,16 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 6: Check @attribute setting
-			// Note: @attribute syntax for setting attributes (e.g., @NAME me=value) is handled
-			// elsewhere in the codebase. This step is reserved for future enhancements.
-			// For now, this is handled elsewhere and we'll skip to step 7
+			// Standard attributes (e.g., DESCRIBE) can be set using @attrname object=value syntax
+			// This supports prefix matching when the attribute has the "prefixmatch" flag
+			if (rootCommand.StartsWith('@') && context.evaluationString() != null)
+			{
+				var attrCommandResult = await HandleStandardAttributeCommand(parser, src, context, rootCommand);
+				if (attrCommandResult.IsSome())
+				{
+					return attrCommandResult;
+				}
+			}
 
 			// Step 7: Enter Aliases
 			// Step 8: Leave Aliases
@@ -1009,6 +1016,148 @@ public class SharpMUSHParserVisitor(
 		});
 
 		return await newParser.CommandLibrary["GOTO"].LibraryInformation.Command.Invoke(newParser);
+	}
+
+	/// <summary>
+	/// Handles standard attribute commands like @describe, @success, @failure, etc.
+	/// These commands set the named standard attribute on the target object.
+	/// Supports prefix matching when the attribute has the "prefixmatch" flag.
+	/// </summary>
+	/// <param name="prs">The parser instance</param>
+	/// <param name="src">The source MString being parsed</param>
+	/// <param name="context">The command context</param>
+	/// <param name="rootCommand">The root command (e.g., @DESCRIBE, @DESC)</param>
+	/// <returns>Some(CallState) if handled, None if not a standard attribute command</returns>
+	private async ValueTask<Option<CallState>> HandleStandardAttributeCommand(
+		IMUSHCodeParser prs, MString src, CommandContext context, string rootCommand)
+	{
+		// Root command must start with @ to be a standard attribute command
+		if (!rootCommand.StartsWith('@'))
+		{
+			return new None();
+		}
+
+		// Strip the @ prefix and get the potential attribute name
+		var potentialAttrName = rootCommand[1..].ToUpperInvariant();
+		if (string.IsNullOrEmpty(potentialAttrName))
+		{
+			return new None();
+		}
+
+		// Get all standard attribute entries and find a match
+		var allAttributeEntries = await Mediator.CreateStream(new GetAllAttributeEntriesQuery())
+			.ToListAsync();
+
+		// First try exact match
+		var matchedEntry = allAttributeEntries
+			.FirstOrDefault(entry => entry.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase));
+
+		// If no exact match, try prefix matching for entries with "prefixmatch" flag
+		if (matchedEntry == null)
+		{
+			var prefixMatches = allAttributeEntries
+				.Where(entry =>
+					entry.DefaultFlags.Contains("prefixmatch", StringComparer.OrdinalIgnoreCase) &&
+					entry.Name.StartsWith(potentialAttrName, StringComparison.OrdinalIgnoreCase))
+				.ToList();
+
+			// Only use prefix match if exactly one entry matches
+			if (prefixMatches.Count == 1)
+			{
+				matchedEntry = prefixMatches[0];
+			}
+			else if (prefixMatches.Count > 1)
+			{
+				// Ambiguous match - multiple attributes start with the same prefix
+				var handle = prs.CurrentState.Handle;
+				if (handle.HasValue)
+				{
+					await NotifyService.Notify(handle.Value, $"Ambiguous attribute name: {potentialAttrName}");
+				}
+				return new None();
+			}
+		}
+
+		// No matching standard attribute found
+		if (matchedEntry == null)
+		{
+			return new None();
+		}
+
+		// Parse arguments: expecting "object = value" format
+		var evalString = context.evaluationString();
+		if (evalString == null || evalString.IsEmpty)
+		{
+			// No arguments - show current value (query mode)
+			var handle = prs.CurrentState.Handle;
+			if (handle.HasValue)
+			{
+				await NotifyService.Notify(handle.Value, $"Usage: @{matchedEntry.Name.ToLower()} <object>=<value>");
+			}
+			return CallState.Empty;
+		}
+
+		// Get the source text from the evaluation string
+		var argsText = MModule.substring(
+			evalString.Start.StartIndex,
+			evalString.Stop.StopIndex - evalString.Start.StartIndex + 1,
+			src);
+		var argsPlainText = argsText.ToPlainText();
+
+		// Split on = to get object and value
+		var equalsIndex = argsPlainText.IndexOf('=');
+		if (equalsIndex < 0)
+		{
+			// No = sign - this is query mode, not setting
+			// For now, just return None to let other handlers try
+			return new None();
+		}
+
+		var objectPart = argsPlainText[..equalsIndex].Trim();
+		var valuePart = equalsIndex + 1 < argsPlainText.Length
+			? argsPlainText[(equalsIndex + 1)..]
+			: string.Empty;
+
+		// Get the MString value (preserve markup)
+		var valueStartIndex = evalString.Start.StartIndex + equalsIndex + 1;
+		var valueEndIndex = evalString.Stop.StopIndex;
+		var valueLength = valueEndIndex - valueStartIndex + 1;
+		var valueMString = valueLength > 0 && valueStartIndex + valueLength <= MModule.getLength(src)
+			? MModule.substring(valueStartIndex, valueLength, src)
+			: MModule.single(valuePart);
+
+		// Get executor for permission checks and notifications
+		var executor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+
+		// Locate the target object
+		var locateResult = await LocateService.LocateAndNotifyIfInvalid(
+			prs, executor, executor, objectPart, LocateFlags.All);
+
+		if (!locateResult.IsValid())
+		{
+			return CallState.Empty;
+		}
+
+		var targetObject = locateResult.WithoutError().WithoutNone();
+
+		// Evaluate the value before setting (standard command behavior)
+		// This allows @desc me=[add(1,2)] to store "3" rather than "[add(1,2)]"
+		var evaluatedValue = (await prs.FunctionParse(valueMString))?.Message ?? valueMString;
+
+		// Set the attribute
+		var setResult = await AttributeService.SetAttributeAsync(
+			executor, targetObject, matchedEntry.Name, evaluatedValue);
+
+		// Notify the user of the result
+		var handle2 = prs.CurrentState.Handle;
+		if (handle2.HasValue)
+		{
+			setResult.Switch(
+				_ => NotifyService.Notify(handle2.Value, $"{targetObject.Object().Name}/{matchedEntry.Name} - Set."),
+				error => NotifyService.Notify(handle2.Value, $"Error: {error.Value}"));
+		}
+
+		return CallState.Empty;
 	}
 
 	private async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser prs, MString src,
