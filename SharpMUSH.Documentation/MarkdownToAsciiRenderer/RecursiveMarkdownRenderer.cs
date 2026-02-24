@@ -337,9 +337,19 @@ public class RecursiveMarkdownRenderer
 	/// Applies MUSH semantic token colours to a single source line, then lays it out
 	/// via <see cref="AlignCodeLine"/> so the background fills the full render width.
 	/// </summary>
+	/// <remarks>
+	/// Parse type is auto-detected: lines whose first non-whitespace character is
+	/// <c>&amp;</c> (attribute), <c>@</c> (command), or <c>$</c> (trigger pattern) are
+	/// command-list lines and are passed to the parser as <see cref="ParseType.CommandList"/>;
+	/// everything else is treated as a function expression (<see cref="ParseType.Function"/>).
+	/// </remarks>
 	private MString RenderSharpLine(string line)
 	{
-		var tokens = _mushParser!.GetSemanticTokens(MModule.single(line));
+		var trimmed = line.TrimStart();
+		var parseType = trimmed.Length > 0 && (trimmed[0] == '&' || trimmed[0] == '@' || trimmed[0] == '$')
+			? ParseType.CommandList
+			: ParseType.Function;
+		var tokens = _mushParser!.GetSemanticTokens(MModule.single(line), parseType);
 		var sortedTokens = tokens
 			.OrderBy(t => t.Range.Start.Line)
 			.ThenBy(t => t.Range.Start.Character)

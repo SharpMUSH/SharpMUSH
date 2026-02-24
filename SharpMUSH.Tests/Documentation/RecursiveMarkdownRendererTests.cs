@@ -510,6 +510,39 @@ public class RecursiveMarkdownRendererWithParserTests
 	}
 
 	[Test]
+	public async Task RenderCommandLines_WithRealParser_WritesAnsiToFile()
+	{
+		// Arrange – the exact code block from the problem statement
+		var markdown = """
+			# SharpMUSH Command Highlighting Demo
+
+			```sharp
+			&CHECKS me=@assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
+			&CMD1 me=$cmd *: @include me/CHECKS; @pemit %#=You passed.
+			&CMD2 me=$othercmd *: @include me/CHECKS; @@ Do something else...
+			```
+			""";
+
+		var parser = WebAppFactoryArg.FunctionParser;
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
+			.RenderMarkdown(markdown, 78, parser);
+		var ansi = result.ToString();
+
+		// Write ANSI output so the terminal screenshot can be taken
+		await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "sharp_commands_demo.txt"), ansi);
+
+		// Assert – all command tokens rendered
+		await Assert.That(result.ToPlainText()).Contains("@assert");
+		await Assert.That(result.ToPlainText()).Contains("@break");
+		await Assert.That(result.ToPlainText()).Contains("@pemit");
+
+		// Command tokens should be coloured (#C586C0 purple)
+		await Assert.That(ansi.Contains(ESC)).IsTrue();
+	}
+
+	[Test]
 	public async Task RenderSyntaxHighlightingDemo_WithRealParser_WritesAnsiToFile()
 	{
 		// Arrange - demo markdown covering all three highlighting paths
@@ -549,7 +582,7 @@ public class RecursiveMarkdownRendererWithParserTests
 		var ansi = result.ToString();
 
 		// Write ANSI output to a temp file so the snapshot can be captured externally
-		await File.WriteAllTextAsync("/tmp/sharp_demo_ansi.txt", ansi);
+		await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "sharp_demo_ansi.txt"), ansi);
 
 		// Assert - all blocks rendered
 		await Assert.That(result.ToPlainText()).Contains("name");
