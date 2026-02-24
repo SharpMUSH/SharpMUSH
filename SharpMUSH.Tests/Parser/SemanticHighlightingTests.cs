@@ -139,4 +139,36 @@ public class SemanticHighlightingTests
 		var operatorTokens = tokens.Where(t => t.TokenType == SemanticTokenType.Operator).ToList();
 		await Assert.That(operatorTokens.Count).IsGreaterThan(0);
 	}
+
+	[Test]
+	public async Task GetSemanticTokens_RegisterCaret_ClosingAngleIsRegisterNotOperator()
+	{
+		// %q<myvar>: the closing '>' should be Register (part of the %q<...> syntax),
+		// not Operator (a standalone '>' comparison).
+		var tokens = Parser.GetSemanticTokens(MModule.single("%q<myvar>"), ParseType.Function);
+
+		await Assert.That(tokens).IsNotEmpty();
+
+		// The '>' at the end must be Register
+		var caretToken = tokens.LastOrDefault(t => t.Text == ">");
+		await Assert.That(caretToken).IsNotNull();
+		await Assert.That(caretToken!.TokenType).IsEqualTo(SemanticTokenType.Register);
+
+		// No token in this expression should be classified as Operator
+		var operatorTokens = tokens.Where(t => t.TokenType == SemanticTokenType.Operator).ToList();
+		await Assert.That(operatorTokens).IsEmpty();
+	}
+
+	[Test]
+	public async Task GetSemanticTokens_StandaloneAngleBracket_IsOperator()
+	{
+		// A bare '>' that is NOT part of %q<...> must remain Operator
+		var tokens = Parser.GetSemanticTokens(MModule.single("a>b"), ParseType.Function);
+
+		await Assert.That(tokens).IsNotEmpty();
+
+		var caretToken = tokens.FirstOrDefault(t => t.Text == ">");
+		await Assert.That(caretToken).IsNotNull();
+		await Assert.That(caretToken!.TokenType).IsEqualTo(SemanticTokenType.Operator);
+	}
 }

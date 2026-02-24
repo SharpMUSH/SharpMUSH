@@ -502,6 +502,31 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>
 	/// Analyzes the parse tree to extract semantic tokens.
 	/// </summary>
+	/// <summary>
+	/// Walks the parse tree once and returns the token-stream indices of every CCARET terminal
+	/// that is the closing '>' of a <c>%q&lt;register&gt;</c> expression (i.e. a direct child of
+	/// <see cref="SharpMUSHParser.ComplexSubstitutionSymbolContext"/> with a REG_STARTCARET sibling).
+	/// All other CCARET tokens are standalone '>' operators.
+	/// </summary>
+	private static HashSet<int> FindRegisterCaretIndices(Antlr4.Runtime.Tree.IParseTree tree)
+	{
+		var result = new HashSet<int>();
+		CollectRegisterCaretIndices(tree, result);
+		return result;
+	}
+
+	private static void CollectRegisterCaretIndices(Antlr4.Runtime.Tree.IParseTree tree, HashSet<int> result)
+	{
+		if (tree is SharpMUSHParser.ComplexSubstitutionSymbolContext cctx)
+		{
+			var caretTerminal = cctx.CCARET();
+			if (caretTerminal != null)
+				result.Add(caretTerminal.Symbol.TokenIndex);
+		}
+		for (var i = 0; i < tree.ChildCount; i++)
+			CollectRegisterCaretIndices(tree.GetChild(i), result);
+	}
+
 	private IReadOnlyList<SemanticToken> AnalyzeSemanticTokens(
 		ParserRuleContext context,
 		BufferedTokenSpanStream tokenStream,
@@ -512,9 +537,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Access the internal token list from BufferedTokenSpanStream
 		var tokenList = tokenStream.tokens;
 
+		// Pre-walk the parse tree once to find CCARET tokens that close %q<...> — these are
+		// Register tokens, not Operator tokens. All other CCARET are standalone '>' operators.
+		var registerCaretIndices = FindRegisterCaretIndices(context);
+
 		foreach (var token in tokenList.Where(t => t.Type != TokenConstants.EOF))
 		{
-			var semanticType = ClassifyToken(token, context, sourceText);
+			var semanticType = ClassifyToken(token, context, sourceText, registerCaretIndices);
 			var modifiers = GetTokenModifiers(token, semanticType);
 
 			var range = new LspRange
@@ -538,7 +567,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>
 	/// Classifies a token to determine its semantic type.
 	/// </summary>
-	private SemanticTokenType ClassifyToken(IToken token, ParserRuleContext context, string sourceText)
+	private SemanticTokenType ClassifyToken(IToken token, ParserRuleContext context, string sourceText, HashSet<int> registerCaretIndices)
 	{
 		var tokenType = token.Type;
 		var vocabulary = new SharpMUSHLexer(new AntlrInputStreamSpan(ReadOnlyMemory<char>.Empty, "")).Vocabulary;
@@ -556,7 +585,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			"OBRACE" or "CBRACE" => SemanticTokenType.BraceGroup,
 			"ESCAPE" => SemanticTokenType.EscapeSequence,
 			"OANSI" or "CANSI" or "ANSICHARACTER" => SemanticTokenType.AnsiCode,
-			"EQUALS" or "COMMAWS" or "SEMICOLON" or "CCARET" => SemanticTokenType.Operator,
+			"CCARET" => registerCaretIndices.Contains(token.TokenIndex)
+				? SemanticTokenType.Register
+				: SemanticTokenType.Operator,
+			"EQUALS" or "COMMAWS" or "SEMICOLON" => SemanticTokenType.Operator,
 			"OTHER" => ClassifyOther(token.Text, sourceText),
 			_ => SemanticTokenType.Text
 		};
