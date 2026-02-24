@@ -64,15 +64,15 @@ public class HelpCommandTests
 	[Test]
 	public async ValueTask HelpSearchWorks()
 	{
-		// Test help/search switch - should find topics containing the search term
+		// Test help/search switch - should find topics whose body CONTAINS the search term (content search)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help/search newbie"));
 
-		// Verify that NotifyService was called with search results
+		// Verify that NotifyService was called with "Matches:" format (content search result)
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("newbie")) ||
-				(msg.IsT1 && msg.AsT1.Contains("newbie"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT0 && msg.AsT0.ToString().Contains("Matches:")) ||
+				(msg.IsT1 && msg.AsT1.Contains("Matches:"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -81,11 +81,25 @@ public class HelpCommandTests
 		// Test help with a topic that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("help nonexistenttopicxyz123"));
 
-		// Verify that NotifyService was called with "No help available"
+		// Verify that NotifyService was called with "No entry for" (PennMUSH-compatible message)
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("No help available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No help available"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT0 && msg.AsT0.ToString().Contains("No entry for")) ||
+				(msg.IsT1 && msg.AsT1.Contains("No entry for"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async ValueTask HelpWithPrefixMatchWorks()
+	{
+		// Test that a prefix match finds the topic (PennMUSH behavior: 'help newb' finds 'newbie')
+		await Parser.CommandParse(1, ConnectionService, MModule.single("help newb"));
+
+		// Should show the 'newbie' entry content (contains "MUSHing")
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
+				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }
