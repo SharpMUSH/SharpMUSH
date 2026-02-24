@@ -129,6 +129,12 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		// Match markdown headers: # Topic Name
 		var matches = MarkdownHeaders().Matches(textBody);
 
+		// Track consecutive headers (aliases) that share the same content block.
+		// When a header has no content before the next header, it is treated as an
+		// alias for the next topic that does have content.
+		var pendingTopics = new List<string>();
+		var firstPendingHeaderText = (string?)null;
+
 		foreach (Match match in matches)
 		{
 			var topicName = match.Groups["Topic"].Value.Trim();
@@ -141,10 +147,29 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 			// Extract the content between this header and the next
 			var content = textBody.Substring(startIndex, endIndex - startIndex).Trim();
 
-			// Include the header in the content
-			var fullContent = match.Value + content;
+			pendingTopics.Add(topicName);
+			firstPendingHeaderText ??= match.Value;
 
-			dict[topicName] = fullContent;
+			if (!string.IsNullOrEmpty(content))
+			{
+				// Include the first pending header in the content so that looking up any
+				// alias shows the primary topic name at the top.
+				var fullContent = firstPendingHeaderText + content;
+
+				foreach (var topic in pendingTopics)
+				{
+					dict[topic] = fullContent;
+				}
+
+				pendingTopics.Clear();
+				firstPendingHeaderText = null;
+			}
+		}
+
+		// Any remaining pending topics had no content; store just the header for them.
+		foreach (var topic in pendingTopics)
+		{
+			dict[topic] = "# " + topic;
 		}
 
 		return dict;

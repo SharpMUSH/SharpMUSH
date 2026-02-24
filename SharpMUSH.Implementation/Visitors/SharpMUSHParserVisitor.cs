@@ -809,9 +809,16 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Step 6: Check @attribute setting
-			// Note: @attribute syntax for setting attributes (e.g., @NAME me=value) is handled
-			// elsewhere in the codebase. This step is reserved for future enhancements.
-			// For now, this is handled elsewhere and we'll skip to step 7
+			// Standard attributes (e.g., DESCRIBE) can be set using @attrname object=value syntax
+			// This supports prefix matching when the attribute has the "prefixmatch" flag
+			if (rootCommand.StartsWith('@') && context.evaluationString() != null)
+			{
+				var attrCommandResult = await HandleStandardAttributeCommand(parser, src, context, rootCommand);
+				if (attrCommandResult.IsSome())
+				{
+					return attrCommandResult;
+				}
+			}
 
 			// Step 7: Enter Aliases
 			// Step 8: Leave Aliases
@@ -1009,6 +1016,181 @@ public class SharpMUSHParserVisitor(
 		});
 
 		return await newParser.CommandLibrary["GOTO"].LibraryInformation.Command.Invoke(newParser);
+	}
+
+	/// <summary>
+	/// Handles standard attribute commands like @describe, @success, @failure, etc.
+	/// These commands set the named standard attribute on the target object.
+	/// Supports prefix matching when the attribute has the "prefixmatch" flag.
+	/// </summary>
+	/// <param name="prs">The parser instance</param>
+	/// <param name="src">The source MString being parsed</param>
+	/// <param name="context">The command context</param>
+	/// <param name="rootCommand">The root command (e.g., @DESCRIBE, @DESC)</param>
+	/// <returns>Some(CallState) if handled, None if not a standard attribute command</returns>
+	private async ValueTask<Option<CallState>> HandleStandardAttributeCommand(
+		IMUSHCodeParser prs, MString src, CommandContext context, string rootCommand)
+	{
+		// Root command must start with @ to be a standard attribute command
+		if (!rootCommand.StartsWith('@'))
+		{
+			return new None();
+		}
+
+		// Strip the @ prefix and get the potential attribute name
+		var potentialAttrName = rootCommand[1..].ToUpperInvariant();
+		if (string.IsNullOrEmpty(potentialAttrName))
+		{
+			return new None();
+		}
+
+		// Find matching standard attribute entry: exact match first, then shortest prefix match
+		// Uses a single streaming query without materializing the full list
+		var matchedEntry = await Mediator.CreateStream(new GetAllAttributeEntriesQuery())
+			.Where(entry =>
+				entry.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase) ||
+				(entry.DefaultFlags.Contains("prefixmatch", StringComparer.OrdinalIgnoreCase) &&
+				 entry.Name.StartsWith(potentialAttrName, StringComparison.OrdinalIgnoreCase)))
+			.OrderByDescending(entry => entry.Name.Equals(potentialAttrName, StringComparison.OrdinalIgnoreCase)) // Exact matches first
+			.ThenBy(entry => entry.Name.Length)  // Then prefer shorter names (DESCRIBE over DESCFORMAT)
+			.ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)  // Alphabetical tiebreaker
+			.FirstOrDefaultAsync();
+
+		// No matching standard attribute found
+		if (matchedEntry == null)
+		{
+			return new None();
+		}
+
+		// Parse arguments: expecting "object = value" format
+		var evalString = context.evaluationString();
+		if (evalString == null || evalString.IsEmpty)
+		{
+			// No arguments - show current value (query mode)
+			var handle = prs.CurrentState.Handle;
+			if (handle.HasValue)
+			{
+				await NotifyService.Notify(handle.Value, $"Usage: @{matchedEntry.Name.ToLower()} <object>=<value>");
+			}
+			return CallState.Empty;
+		}
+
+		// Get the full text from the evaluation string (includes the command name)
+		var fullText = MModule.substring(
+			evalString.Start.StartIndex,
+			evalString.Stop.StopIndex - evalString.Start.StartIndex + 1,
+			src);
+
+		// Skip past the command name to get just the arguments
+		// The command format is: @attrname object=value
+		var spaceIndex = MModule.indexOf(fullText, MModule.single(" "));
+		if (spaceIndex == -1)
+		{
+			// No space, no arguments - show usage
+			var handle = prs.CurrentState.Handle;
+			if (handle.HasValue)
+			{
+				await NotifyService.Notify(handle.Value, $"Usage: @{matchedEntry.Name.ToLower()} <object>=<value>");
+			}
+			return CallState.Empty;
+		}
+
+		// Get the arguments (everything after the space following the command)
+		var argsText = MModule.substring(spaceIndex + 1, MModule.getLength(fullText) - spaceIndex - 1, fullText);
+		var argsPlainText = argsText.ToPlainText();
+
+		// Split on = to get object and value
+		var equalsIndex = argsPlainText.IndexOf('=');
+		if (equalsIndex < 0)
+		{
+			// No = sign - clear/unset the attribute
+			var objectToClear = argsPlainText.Trim();
+
+			// Get executor for permission checks and notifications
+			var clearExecutor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+
+			// Locate the target object
+			var clearLocateResult = await LocateService.LocateAndNotifyIfInvalid(
+				prs, clearExecutor, clearExecutor, objectToClear, LocateFlags.All);
+
+			if (!clearLocateResult.IsValid())
+			{
+				return CallState.Empty;
+			}
+
+			var clearTargetObject = clearLocateResult.WithoutError().WithoutNone();
+
+			// Clear the attribute
+			var clearResult = await AttributeService.ClearAttributeAsync(
+				clearExecutor, clearTargetObject, matchedEntry.Name,
+				IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
+
+			// Notify the user of the result
+			var clearHandle = prs.CurrentState.Handle;
+			if (clearHandle.HasValue)
+			{
+				if (clearResult.TryPickT0(out _, out var clearError))
+				{
+					await NotifyService.Notify(clearHandle.Value, $"{clearTargetObject.Object().Name}/{matchedEntry.Name} - Cleared.");
+				}
+				else
+				{
+					await NotifyService.Notify(clearHandle.Value, $"Error: {clearError.Value}");
+				}
+			}
+
+			return CallState.Empty;
+		}
+
+		var objectPart = argsPlainText[..equalsIndex].Trim();
+		var valuePart = equalsIndex + 1 < argsPlainText.Length
+			? argsPlainText[(equalsIndex + 1)..]
+			: string.Empty;
+
+		// Get the MString value from argsText (preserve markup)
+		// The equals sign is at equalsIndex in argsText, so value starts at equalsIndex + 1
+		var valueLength = MModule.getLength(argsText) - equalsIndex - 1;
+		var valueMString = valueLength > 0
+			? MModule.substring(equalsIndex + 1, valueLength, argsText)
+			: MModule.single(valuePart);
+
+		// Get executor for permission checks and notifications
+		var executor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+
+		// Locate the target object
+		var locateResult = await LocateService.LocateAndNotifyIfInvalid(
+			prs, executor, executor, objectPart, LocateFlags.All);
+
+		if (!locateResult.IsValid())
+		{
+			return CallState.Empty;
+		}
+
+		var targetObject = locateResult.WithoutError().WithoutNone();
+
+		// Evaluate the value before setting (standard command behavior)
+		// This allows @desc me=[add(1,2)] to store "3" rather than "[add(1,2)]"
+		var evaluatedValue = (await prs.FunctionParse(valueMString))?.Message ?? valueMString;
+
+		// Set the attribute
+		var setResult = await AttributeService.SetAttributeAsync(
+			executor, targetObject, matchedEntry.Name, evaluatedValue);
+
+		// Notify the user of the result
+		var handle2 = prs.CurrentState.Handle;
+		if (handle2.HasValue)
+		{
+			if (setResult.TryPickT0(out _, out var error))
+			{
+				await NotifyService.Notify(handle2.Value, $"{targetObject.Object().Name}/{matchedEntry.Name} - Set.");
+			}
+			else
+			{
+				await NotifyService.Notify(handle2.Value, $"Error: {error.Value}");
+			}
+		}
+
+		return CallState.Empty;
 	}
 
 	private async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser prs, MString src,

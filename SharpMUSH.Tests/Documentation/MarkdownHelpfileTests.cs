@@ -86,6 +86,48 @@ The look command allows you to see your surroundings.
 	}
 
 	[Test]
+	public async Task ConsecutiveHeadersAreAliasesWithSharedContent()
+	{
+		var currentDirectory = Directory.GetCurrentDirectory();
+		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelpAliases.md");
+
+		// Consecutive headers with no content between them are aliases for the same body.
+		var testContent = @"# look
+# read
+`look [<object>]`
+
+Displays the description of an object.
+";
+		await File.WriteAllTextAsync(testFilePath, testContent);
+
+		try
+		{
+			var fileInfo = new FileInfo(testFilePath);
+			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
+
+			await Assert.That(maybeIndexes.IsT0).IsTrue();
+
+			var indexes = maybeIndexes.AsT0;
+
+			// Both 'look' and 'read' should be present.
+			await Assert.That(indexes.Count).IsEqualTo(2);
+			await Assert.That(indexes).ContainsKey("look");
+			await Assert.That(indexes).ContainsKey("read");
+
+			// Both entries should include the shared content, not just the header.
+			await Assert.That(indexes["look"]).Contains("Displays the description of an object.");
+			await Assert.That(indexes["read"]).Contains("Displays the description of an object.");
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+			{
+				File.Delete(testFilePath);
+			}
+		}
+	}
+
+	[Test]
 	public async Task FindEntryCaseInsensitive()
 	{
 		var currentDirectory = Directory.GetCurrentDirectory();

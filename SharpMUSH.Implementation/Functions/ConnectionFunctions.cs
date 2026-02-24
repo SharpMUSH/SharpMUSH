@@ -20,9 +20,9 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		if (!await executor.HasFlag("WIZARD") &&
-				!await executor.HasFlag("ROYALTY") &&
-				!await executor.HasPower("SEE_ALL"))
+		if (!await executor.IsWizard() &&
+				!await executor.IsRoyalty() &&
+				!await executor.IsSee_All())
 		{
 			return new CallState(Errors.ErrorPerm);
 		}
@@ -520,7 +520,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		if (!await executor.HasPower("SEE_ALL"))
+		if (!await executor.IsSee_All())
 		{
 			return new CallState(Errors.ErrorPerm);
 		}
@@ -563,7 +563,7 @@ public partial class Functions
 		{
 			if (conn.Ref is null)
 			{
-				if (await viewer.HasPower("SEE_ALL"))
+				if (await viewer.IsSee_All())
 				{
 					visibleConnections.Add(conn.Handle);
 				}
@@ -617,7 +617,7 @@ public partial class Functions
 		}
 
 		// Check if looker has See_All permission for offline/all status
-		var hasSeeAll = await looker.HasPower("SEE_ALL");
+		var hasSeeAll = await looker.IsSee_All();
 		if ((status == "offline" || status == "all") && !hasSeeAll)
 		{
 			return new CallState(Errors.ErrorPerm);
@@ -700,7 +700,7 @@ public partial class Functions
 		}
 
 		// Check if looker has See_All permission for offline/all status
-		var hasSeeAll = await looker.HasPower("SEE_ALL");
+		var hasSeeAll = await looker.IsSee_All();
 		if ((status == "offline" || status == "all") && !hasSeeAll)
 		{
 			return new CallState(Errors.ErrorPerm);
@@ -935,7 +935,7 @@ public partial class Functions
 
 			if (data.Ref != executor.Object().DBRef)
 			{
-				if (!await executor.HasPower("SEE_ALL"))
+				if (!await executor.IsSee_All())
 				{
 					return new CallState(Errors.ErrorPerm);
 				}
@@ -953,7 +953,7 @@ public partial class Functions
 
 		var located = maybeLocate.AsPlayer;
 
-		if (located.Object.DBRef != executor.Object().DBRef && !await executor.HasPower("SEE_ALL"))
+		if (located.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
 		{
 			return new CallState(Errors.ErrorPerm);
 		}
@@ -970,7 +970,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var hasSeeAll = await executor.HasPower("SEE_ALL");
+		var hasSeeAll = await executor.IsSee_All();
 
 		if (long.TryParse(arg0, out var port))
 		{
@@ -1197,7 +1197,7 @@ public partial class Functions
 
 		var zone = maybeZone.AsAnyObject;
 
-		var hasSeeAll = await executor.HasPower("SEE_ALL");
+		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
@@ -1259,7 +1259,7 @@ public partial class Functions
 
 		var zone = maybeZone.AsAnyObject;
 
-		var hasSeeAll = await executor.HasPower("SEE_ALL");
+		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
@@ -1321,7 +1321,7 @@ public partial class Functions
 
 		var zone = maybeZone.AsAnyObject;
 
-		var hasSeeAll = await executor.HasPower("SEE_ALL");
+		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
 			// Check if executor passes the zone lock
@@ -1390,7 +1390,7 @@ public partial class Functions
 
 		if (target.Object.DBRef != executor.Object().DBRef)
 		{
-			if (!await executor.HasPower("SEE_ALL"))
+			if (!await executor.IsSee_All())
 			{
 				return new CallState(Errors.ErrorPerm);
 			}
@@ -1421,7 +1421,7 @@ public partial class Functions
 			return new CallState($"#{executor.Object().DBRef.Number}");
 		}
 
-		if (await executor.HasFlag("WIZARD") || await executor.HasFlag("ROYALTY") || await executor.HasPower("SEE_ALL"))
+		if (await executor.IsWizard() || await executor.IsRoyalty() || await executor.IsSee_All())
 		{
 			return data is null
 				? new CallState("#-1 INVALID PORT")
@@ -1468,8 +1468,8 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		var canSeeHidden = await executor.HasFlag("WIZARD") || await executor.HasFlag("ROYALTY") ||
-											 await executor.HasPower("SEE_ALL");
+		var canSeeHidden = await executor.IsWizard() || await executor.IsRoyalty() ||
+											 await executor.IsSee_All();
 
 		if (!canSeeHidden)
 		{
@@ -1510,9 +1510,9 @@ public partial class Functions
 			return true;
 		}
 
-		return await executor.HasFlag("WIZARD") ||
-					 await executor.HasFlag("ROYALTY") ||
-					 await executor.HasPower("SEE_ALL");
+		return await executor.IsWizard() ||
+					 await executor.IsRoyalty() ||
+					 await executor.IsSee_All();
 	}
 
 	/// <summary>
