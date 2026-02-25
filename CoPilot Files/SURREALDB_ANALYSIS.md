@@ -419,8 +419,9 @@ This is the core differentiator. ArangoDB uses AQL with explicit graph traversal
 | **Variable depth** | `@.{1..999}->edge_has_parent->node_objects` | Recursive path syntax (v2.1.0+) |
 | **PRUNE condition** | ❌ **No direct equivalent** | Must use recursive queries with conditional logic or multi-step queries |
 | **Multi-edge traversal** | `$start.{1..100}(->edge_has_parent->node_objects, ->edge_has_zone->node_objects)` | Multiple edge types in recursive path |
-| **BFS with dedup** | ❌ **No direct equivalent** | SurrealDB doesn't expose traversal order options; would need application-level dedup |
-| **ALL_SHORTEST_PATH** | ❌ **No direct equivalent** | No shortest-path algorithm in SurrealQL; would need application-level path-finding |
+| **BFS with dedup** | ✅ `$start.{..+collect}->edge->target` | `+collect` collects all unique nodes walked (BFS-like order, closest first) — available since v2.2.0 |
+| **ALL_SHORTEST_PATH** | ✅ `$start.{..+shortest=record:id}->edge->target` | `+shortest=record:id` finds shortest path to target — available since v2.2.0 |
+| **All paths enumeration** | ✅ `$start.{..+path}->edge->target` | `+path` collects all walked paths as array of arrays — available since v2.2.0 |
 
 **Critical Gap — PRUNE**:
 ArangoDB's `PRUNE` is essential for attribute tree traversal. It allows early termination of branches that don't match the attribute path. The `GetAttributeAsync` and `GetAttributeWithInheritanceAsync` methods (the most complex queries in the codebase) rely heavily on this.
@@ -438,13 +439,15 @@ Or use recursive paths with filtering:
 $start.{1..5}(->edge_has_attribute->node_attributes WHERE Name = $currentLevel)
 ```
 
-**Critical Gap — ALL_SHORTEST_PATH**:
-Used only in mail queries (`GetSentMailsAsync`, `GetSentMailAsync`). Could be replaced with a simpler query pattern since the mail graph is not deeply nested:
+**Critical Gap — ALL_SHORTEST_PATH** *(CORRECTED — no longer a gap)*:
+SurrealDB v2.2.0+ supports shortest path via `{..+shortest=record:id}` recursive path syntax. The ArangoDB `ALL_SHORTEST_PATH` used in mail queries (`GetSentMailsAsync`, `GetSentMailAsync`) can be directly replaced:
 ```sql
-SELECT * FROM edge_mail_sender WHERE in = $mailId AND out = $senderId
+-- SurrealDB shortest path equivalent
+$recipient.{..+shortest=$sender}->edge_mail_sender->node_objects;
 ```
+Additionally, `{..+collect}` provides BFS-like unique node collection, and `{..+path}` enumerates all paths — both available since v2.2.0.
 
-**Verdict**: ⚠️ **ArangoDB has more powerful graph traversal** — PRUNE, BFS options, and shortest-path algorithms have no direct SurrealDB equivalents. However, most SharpMUSH traversals are simple 1-hop operations that map cleanly. The complex attribute inheritance queries would need significant rewriting.
+**Verdict**: ⚠️ **ArangoDB has more powerful graph traversal in some areas** — PRUNE has no direct SurrealDB equivalent. However, SurrealDB v2.2.0+ **does** support shortest path (`+shortest`), unique node collection/BFS-like traversal (`+collect`), and all-path enumeration (`+path`). Most SharpMUSH traversals are simple 1-hop operations that map cleanly. The complex attribute inheritance queries (PRUNE-based) would need significant rewriting.
 
 ---
 
@@ -549,7 +552,7 @@ This is a significant architectural difference but not a blocker — the query c
 | Bind variables | `@name`, `@@collection` | `$name` |
 | Dynamic collection | `FOR v IN @@C1` | Via string interpolation in query |
 
-**Verdict**: ✅ **Roughly equivalent** — both languages are SQL-like with graph extensions. SurrealQL is arguably more readable for simple queries. AQL has more specialized graph operators (PRUNE, shortest path).
+**Verdict**: ✅ **Roughly equivalent** — both languages are SQL-like with graph extensions. SurrealQL is arguably more readable for simple queries. AQL has `PRUNE` for early branch termination; SurrealDB v2.2.0+ has `+shortest`, `+collect`, and `+path` graph algorithms.
 
 ---
 
@@ -623,7 +626,7 @@ DEFINE INDEX longname_idx ON TABLE node_attributes COLUMNS LongName;
 | `UnsetObjectZone()` | Query edge → remove | `RawQuery("DELETE edge_has_zone WHERE in = $obj")` | 🟢 Low |
 | `SetObjectOwner()` | Query edge key → update | `RawQuery("UPDATE edge_has_object_owner SET out = $owner WHERE in = $obj")` | 🟢 Low |
 | `MoveObjectAsync()` | Query edge key → update `To` field | `RawQuery("UPDATE edge_at_location SET out = $dest WHERE in = $obj")` | 🟢 Low |
-| `IsReachableViaParentOrZoneAsync()` | Multi-edge BFS traversal with dedup | `RawQuery` with recursive path or multi-step query | 🔴 High — no BFS/dedup option |
+| `IsReachableViaParentOrZoneAsync()` | Multi-edge BFS traversal with dedup | `RawQuery` with `{..+collect}` recursive path for unique node collection, or `{..+shortest=target}` | 🟡 Medium — SurrealDB v2.2.0 `+collect`/`+shortest` provides equivalent |
 
 ### Object Retrieval Methods
 
@@ -708,9 +711,9 @@ DEFINE INDEX longname_idx ON TABLE node_attributes COLUMNS LongName;
 | `GetIncomingMailsAsync()` | 1-hop INBOUND on GraphMail | `RawQuery("SELECT <-edge_received_mail<-node_mails FROM $player WHERE Folder = $f")` | 🟢 Low |
 | `GetAllIncomingMailsAsync()` | 1-hop INBOUND | `RawQuery("SELECT <-edge_received_mail<-node_mails FROM $player")` | 🟢 Low |
 | `GetIncomingMailAsync()` | INBOUND + LIMIT skip, 1 | `RawQuery` with LIMIT/START | 🟢 Low |
-| `GetSentMailsAsync()` | ALL_SHORTEST_PATH | `RawQuery` with simple edge query (no shortest path needed) | 🟡 Medium — rewrite |
+| `GetSentMailsAsync()` | ALL_SHORTEST_PATH | `RawQuery` with `{..+shortest=target}` recursive path or simple edge query | 🟢 Low — SurrealDB `+shortest` is direct equivalent |
 | `GetAllSentMailsAsync()` | INBOUND traversal | `RawQuery` reverse traversal | 🟢 Low |
-| `GetSentMailAsync()` | ALL_SHORTEST_PATH + filter | Simple edge query | 🟡 Medium |
+| `GetSentMailAsync()` | ALL_SHORTEST_PATH + filter | `{..+shortest=target}` recursive path or simple edge query | 🟢 Low — SurrealDB `+shortest` is direct equivalent |
 | `UpdateMailAsync()` | `Document.UpdateAsync()` | `client.Merge()` | 🟢 Low |
 | `DeleteMailAsync()` | `Document.DeleteAsync()` | `client.Delete()` | 🟢 Low |
 | `GetMailFoldersAsync()` | INBOUND + DISTINCT | `RawQuery` with SELECT DISTINCT | 🟢 Low |
@@ -767,15 +770,14 @@ DEFINE INDEX longname_idx ON TABLE node_attributes COLUMNS LongName;
 - Methods that need transactions (CreatePlayer, CreateThing, CreateExit, SendMail, CreateChannel)
 - Methods requiring dynamic query building (GetFilteredObjectsAsync)
 - Methods returning `IAsyncEnumerable` (need pagination wrapper)
-- Mail queries using ALL_SHORTEST_PATH (need simpler rewrite)
+- IsReachableViaParentOrZoneAsync (use `+collect` or `+shortest` recursive paths)
 - GetParentsAsync (variable depth)
 
-**🔴 High (5 methods)** — Significant rewriting required:
+**🔴 High (4 methods)** — Significant rewriting required:
 - `Migrate()` — Need custom migration framework
 - `GetAttributeAsync()` — PRUNE-based tree traversal needs multi-step query
 - `GetAttributeWithInheritanceAsync()` — Complex multi-graph inheritance query
 - `GetLazyAttributeWithInheritanceAsync()` — Same complexity as above
-- `IsReachableViaParentOrZoneAsync()` — Multi-edge BFS with dedup
 
 ---
 
@@ -806,10 +808,16 @@ DEFINE INDEX longname_idx ON TABLE node_attributes COLUMNS LongName;
 **Impact**: ArangoDB allows multiple API calls within a transaction scope. SurrealDB requires all statements in a single query.  
 **Mitigation**: Compose SurrealQL transaction strings using `LET` bindings. More verbose but functionally equivalent.
 
-### 11.6 No BFS/Shortest-Path Algorithms
-**Risk**: Low  
-**Impact**: Only used in `IsReachableViaParentOrZoneAsync()` and mail queries. Not critical path operations.  
-**Mitigation**: Implement application-level BFS or use SurrealDB's recursive path with a visited set. Mail queries can be simplified.
+### ~~11.6 No BFS/Shortest-Path Algorithms~~ *(CORRECTED)*
+**Risk**: ~~Low~~ **Resolved**  
+**Status**: SurrealDB v2.2.0+ **does** support these algorithms via recursive path syntax:
+- `{..+shortest=record:id}` — finds shortest path to a specified record
+- `{..+collect}` — collects all unique nodes walked (BFS-like order, closest first)
+- `{..+path}` — enumerates all walked paths as arrays
+- `+inclusive` modifier — includes the originating record in results
+- Bounded variants (e.g., `{..3+shortest=record:id}`) — limit traversal depth
+
+These map directly to ArangoDB's `ALL_SHORTEST_PATH` and `OPTIONS {uniqueVertices: 'global', order: 'bfs'}` patterns used in `IsReachableViaParentOrZoneAsync()` and mail queries.
 
 ### 11.7 SDK Maturity
 **Risk**: Medium  
@@ -840,11 +848,10 @@ DEFINE INDEX longname_idx ON TABLE node_attributes COLUMNS LongName;
 3. **No Auto-Increment Keys**: Must simulate with counter documents
 4. **No PRUNE Equivalent**: Complex attribute traversal needs rewriting
 5. **No API-Level Transactions**: Must compose transaction as single query string
-6. **No BFS/Shortest-Path**: Graph algorithms limited to recursive paths
-7. **SDK at 0.9.0**: Not yet stable release
-8. **No Named Graphs**: Graph topology not formally declared (no validation that edges connect correct types)
-9. **No Explicit Lock Control**: Relies on MVCC — no fine-grained locking
-10. **Less Mature Ecosystem**: Fewer .NET community resources compared to ArangoDB
+6. **SDK at 0.9.0**: Not yet stable release
+7. **No Named Graphs**: Graph topology not formally declared (no validation that edges connect correct types)
+8. **No Explicit Lock Control**: Relies on MVCC — no fine-grained locking
+9. **Less Mature Ecosystem**: Fewer .NET community resources compared to ArangoDB
 
 ---
 
@@ -852,7 +859,7 @@ DEFINE INDEX longname_idx ON TABLE node_attributes COLUMNS LongName;
 
 ### Feasibility: **YES — SurrealDB can replace ArangoDB for SharpMUSH**
 
-The embedded mode is a compelling reason to migrate. Approximately **74% of methods (55/75)** map directly with low complexity. The remaining methods require moderate to significant rewriting, primarily:
+The embedded mode is a compelling reason to migrate. Approximately **76% of methods (57/75)** map directly with low complexity. The remaining methods require moderate to significant rewriting, primarily:
 - Attribute tree traversal (PRUNE replacement)
 - Inheritance resolution (multi-graph → multi-step queries)
 - Transaction composition (API-level → query-level)
@@ -875,10 +882,9 @@ The embedded mode is a compelling reason to migrate. Approximately **74% of meth
    - Dynamic query builders
    - Mail and channel systems
 
-4. **Phase 4**: Implement complex methods (5 methods)
+4. **Phase 4**: Implement complex methods (4 methods)
    - Attribute tree traversal (new algorithm)
    - Inheritance resolution (new algorithm)
-   - Reachability check
 
 5. **Phase 5**: Testing and optimization
    - Port all existing ArangoDB tests
@@ -971,8 +977,8 @@ The embedded mode is a compelling reason to migrate. Approximately **74% of meth
 | ArangoKeyType.Autoincrement | Sequential DBRef IDs | Counter document pattern |
 | ExecuteStreamAsync (IAsyncEnumerable) | 30+ streaming methods | Pagination wrapper |
 | AQL PRUNE | Attribute tree traversal | Multi-step queries |
-| AQL ALL_SHORTEST_PATH | Mail sender queries | Simple edge queries |
-| OPTIONS {uniqueVertices, order: 'bfs'} | Reachability check | Application-level dedup |
+| AQL ALL_SHORTEST_PATH | Mail sender queries | ✅ `{..+shortest=record:id}` (v2.2.0+) |
+| OPTIONS {uniqueVertices, order: 'bfs'} | Reachability check | ✅ `{..+collect}` for unique nodes in BFS order (v2.2.0+) |
 | ArangoTransactionScope (Exclusive/Read locks) | 7+ transactional methods | MVCC (automatic) |
 | mergeObjects / keepNull | Partial updates | `Merge()` method |
 | Cache: true/false | Query caching | Not available |
