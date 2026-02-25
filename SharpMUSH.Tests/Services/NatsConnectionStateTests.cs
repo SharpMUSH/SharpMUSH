@@ -265,7 +265,7 @@ public class NatsConnectionStateTests
 	}
 
 	[Test]
-	public async Task StatePersiststAcrossReconnection()
+	public async Task StatePersistsAcrossReconnection()
 	{
 		// Arrange
 		var store1 = await CreateStateStoreAsync();
