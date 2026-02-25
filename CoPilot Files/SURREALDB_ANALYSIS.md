@@ -4,7 +4,9 @@
 
 This document provides a comprehensive, method-by-method analysis of whether SurrealDB (via the official .NET SDK `SurrealDb.Net`) can replace ArangoDB as the database backend for SharpMUSH. The analysis covers every capability currently used in the ArangoDB implementation (`ArangoDatabase.cs`, 3355 lines) against what SurrealDB's .NET SDK and SurrealQL language offer.
 
-**Key Finding**: SurrealDB is a viable candidate with significant advantages (embedded mode, native graph model, simpler schema) but has notable gaps in the .NET SDK — particularly the lack of native `IAsyncEnumerable` streaming and the absence of a migration framework. The graph model is different (RELATE-based vs named graph definitions) but is functionally equivalent for SharpMUSH's use cases.
+**Key Finding**: SurrealDB is a viable candidate with significant advantages (embedded mode, native graph model, simpler schema) but has notable gaps in the .NET SDK — particularly the lack of native `IAsyncEnumerable` streaming, the absence of a migration framework, and no client-side transaction API. The graph model is different (RELATE-based vs named graph definitions) but is functionally equivalent for SharpMUSH's use cases.
+
+**SurrealDB v3 Status** (as of Feb 25, 2026): SurrealDB server v3.0.0 was released Feb 17, 2026. The .NET SDK added v3 compatibility ([PR #222](https://github.com/surrealdb/surrealdb.net/pull/222), merged Feb 23, 2026) but no new NuGet release has been published (latest is v0.9.0). The JavaScript SDK supports client-side transactions via `db.beginTransaction()`, but the .NET SDK does **not** yet implement this — transactions remain query-level only via `RawQuery()`.
 
 ---
 
@@ -24,6 +26,7 @@ This document provides a comprehensive, method-by-method analysis of whether Sur
 - **Protocol**: HTTP, WebSocket, or native Rust FFI (embedded)
 - **Dependency**: Embedded mode eliminates the need for a separate server process
 - **.NET 10 Support**: Yes, the SDK targets .NET 8, 9, 10 and .NET Standard 2.1
+- **SurrealDB v3 Support**: SurrealDB v3.0.0 was released Feb 17, 2026. The .NET SDK added v3 compatibility via [PR #222](https://github.com/surrealdb/surrealdb.net/pull/222) (merged Feb 23, 2026), but no new NuGet release has been published yet (latest is v0.9.0 targeting SurrealDB v2.x)
 
 **Verdict**: ✅ **SurrealDB wins decisively** — embedded mode (`SurrealKv`) eliminates Docker/server dependency entirely, which is a major architectural simplification for SharpMUSH.
 
@@ -504,10 +507,12 @@ var response = await client.RawQuery(@"
 ", parameters, ct);
 ```
 
+> **Note on client-side transactions**: The SurrealDB JavaScript SDK (`surrealdb.js`) introduced `db.beginTransaction()` which returns a transaction object supporting `tx.create()`, `tx.update()`, `tx.commit()`, and `tx.cancel()` — true client-side API-level transactions. However, the .NET SDK (`SurrealDb.Net`) **does not yet implement this pattern**. The `ISurrealDbClient` interface has no `BeginTransaction()` method as of v0.9.0 (Feb 2026). Transactions in the .NET SDK remain query-level only via `RawQuery()`.
+
 **Key Differences**:
 | Feature | ArangoDB | SurrealDB |
 |---------|----------|-----------|
-| **API-level transactions** | ✅ `BeginAsync`/`CommitAsync` with separate operations | ❌ Not in .NET SDK |
+| **API-level transactions** | ✅ `BeginAsync`/`CommitAsync` with separate operations | ❌ Not in .NET SDK (⚠️ exists in JS SDK as `beginTransaction()`) |
 | **Query-level transactions** | ✅ AQL within transaction handles | ✅ `BEGIN`/`COMMIT` in SurrealQL |
 | **Collection-level locks** | ✅ Explicit Exclusive/Read locks | ❌ Automatic MVCC, no explicit locks |
 | **Timeout control** | ✅ `LockTimeout` parameter | ❌ Not configurable |
@@ -515,11 +520,11 @@ var response = await client.RawQuery(@"
 | **Intermediate results** | ✅ Can read results between operations | ⚠️ Only within `LET` bindings in query |
 
 **Transaction Impact**:
-SurrealDB's transaction model is **query-level only** — all statements must be submitted as a single `RawQuery` call. This means complex transactional operations like `CreatePlayerAsync` (which creates objects, edges, and players in separate API calls within a transaction) must be rewritten as a single SurrealQL query string.
+SurrealDB's transaction model in the .NET SDK is **query-level only** — all statements must be submitted as a single `RawQuery` call. This means complex transactional operations like `CreatePlayerAsync` (which creates objects, edges, and players in separate API calls within a transaction) must be rewritten as a single SurrealQL query string.
 
-This is a significant architectural difference but not a blocker — the query can be composed as a SurrealQL string with `LET` bindings to capture intermediate results.
+This is a significant architectural difference but not a blocker — the query can be composed as a SurrealQL string with `LET` bindings to capture intermediate results. If the .NET SDK adds `BeginTransaction()` support in the future (mirroring the JS SDK), this limitation would be resolved.
 
-**Verdict**: ⚠️ **ArangoDB has more flexible transactions** — API-level Begin/Commit allows mixing SDK calls with transaction context. SurrealDB requires bundling all operations into a single query string.
+**Verdict**: ⚠️ **ArangoDB has more flexible transactions** — API-level Begin/Commit allows mixing SDK calls with transaction context. SurrealDB's .NET SDK requires bundling all operations into a single query string. The JS SDK's `beginTransaction()` shows that client-side transactions are architecturally supported by SurrealDB, but this feature has not yet been ported to the .NET SDK.
 
 ---
 
@@ -821,8 +826,13 @@ These map directly to ArangoDB's `ALL_SHORTEST_PATH` and `OPTIONS {uniqueVertice
 
 ### 11.7 SDK Maturity
 **Risk**: Medium  
-**Impact**: SurrealDB .NET SDK is at version 0.9.0 — not yet 1.0. API may change.  
-**Mitigation**: Pin to specific version; most functionality is stable.
+**Impact**: SurrealDB .NET SDK is at version 0.9.0 — not yet 1.0. API may change. SurrealDB server v3.0.0 was released Feb 17, 2026, and the .NET SDK added v3 compatibility via [PR #222](https://github.com/surrealdb/surrealdb.net/pull/222) (merged Feb 23, 2026), but no new NuGet release has been published yet.  
+**Mitigation**: Pin to specific version; most functionality is stable. Monitor for a new NuGet release incorporating v3 support.
+
+### 11.8 No Client-Side Transactions in .NET SDK
+**Risk**: Medium  
+**Impact**: The JavaScript SDK (`surrealdb.js`) supports `db.beginTransaction()` for true client-side API-level transactions (individual SDK calls within a transaction scope with commit/cancel). The .NET SDK does **not** have this feature — `ISurrealDbClient` has no `BeginTransaction()` method. All transactions must be composed as a single `RawQuery()` string.  
+**Mitigation**: Use `RawQuery()` with `BEGIN TRANSACTION; ... COMMIT TRANSACTION;` and `LET` bindings for intermediate results. Monitor the .NET SDK for `BeginTransaction()` support — the JS SDK's implementation proves the server-side protocol supports it.
 
 ---
 
@@ -847,8 +857,8 @@ These map directly to ArangoDB's `ALL_SHORTEST_PATH` and `OPTIONS {uniqueVertice
 2. **No Migration Framework**: Must build custom solution
 3. **No Auto-Increment Keys**: Must simulate with counter documents
 4. **No PRUNE Equivalent**: Complex attribute traversal needs rewriting
-5. **No API-Level Transactions**: Must compose transaction as single query string
-6. **SDK at 0.9.0**: Not yet stable release
+5. **No Client-Side Transactions in .NET SDK**: Must compose transaction as single query string (JS SDK has `beginTransaction()` but .NET SDK does not yet)
+6. **SDK at 0.9.0**: Not yet stable release; v3 compatibility merged but not yet published to NuGet
 7. **No Named Graphs**: Graph topology not formally declared (no validation that edges connect correct types)
 8. **No Explicit Lock Control**: Relies on MVCC — no fine-grained locking
 9. **Less Mature Ecosystem**: Fewer .NET community resources compared to ArangoDB
@@ -903,7 +913,9 @@ The embedded mode is a compelling reason to migrate. Approximately **76% of meth
 
 ## Appendix A: SurrealDB .NET SDK Complete Method Reference
 
-### ISurrealDbClient Methods (v0.9.0)
+### ISurrealDbClient Methods (v0.9.0, with v3 compat pending NuGet release)
+
+> **Note**: SurrealDB v3.0.0 compatibility was added to the .NET SDK via [PR #222](https://github.com/surrealdb/surrealdb.net/pull/222) (merged Feb 23, 2026) but has not been published as a NuGet release yet. The JS SDK's `beginTransaction()` for client-side transactions is not yet available in the .NET SDK.
 
 | Category | Method | Description |
 |----------|--------|-------------|
