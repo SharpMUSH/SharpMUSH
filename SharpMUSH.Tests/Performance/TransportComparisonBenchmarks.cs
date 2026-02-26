@@ -37,14 +37,17 @@ public class TransportComparisonBenchmarks
 
 	// ── helpers ─────────────────────────────────────────────────────────────
 
+	// Single factory instance shared by all helper methods to avoid repeated allocations.
+	private static readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(_ => { });
+
 	private IMessageBus KafkaBus => WebAppFactory.Services.GetRequiredService<IMessageBus>();
 
 	private async Task<NatsJetStreamMessageBus> CreateNatsBusAsync()
 	{
 		var port = NatsTestServer.Instance.GetMappedPublicPort(4222);
 		var options = new NatsOptions { Url = $"nats://localhost:{port}" };
-		var logger = new LoggerFactory().CreateLogger<NatsJetStreamMessageBus>();
-		return await NatsJetStreamMessageBus.CreateAsync(options, logger);
+		return await NatsJetStreamMessageBus.CreateAsync(options,
+			_loggerFactory.CreateLogger<NatsJetStreamMessageBus>());
 	}
 
 	private IConnectionStateStore CreateRedisStore()
@@ -55,15 +58,16 @@ public class TransportComparisonBenchmarks
 		configuration.ConnectRetry = 3;
 		configuration.ConnectTimeout = 5000;
 		var redis = ConnectionMultiplexer.Connect(configuration);
-		var logger = new LoggerFactory().CreateLogger<RedisConnectionStateStore>();
-		return new RedisConnectionStateStore(redis, logger);
+		return new RedisConnectionStateStore(redis,
+			_loggerFactory.CreateLogger<RedisConnectionStateStore>());
 	}
 
 	private async Task<IConnectionStateStore> CreateNatsStoreAsync()
 	{
 		var port = NatsTestServer.Instance.GetMappedPublicPort(4222);
-		var logger = new LoggerFactory().CreateLogger<NatsConnectionStateStore>();
-		return await NatsConnectionStateStore.CreateAsync($"nats://localhost:{port}", logger);
+		return await NatsConnectionStateStore.CreateAsync(
+			$"nats://localhost:{port}",
+			_loggerFactory.CreateLogger<NatsConnectionStateStore>());
 	}
 
 	private static ConnectionStateData MakeState(long handle) => new()
@@ -239,8 +243,12 @@ public class TransportComparisonBenchmarks
 		kafkaSamples.Sort();
 		natsSamples.Sort();
 
-		long Percentile(List<long> sorted, double pct) =>
-			sorted[(int)Math.Ceiling(pct / 100.0 * sorted.Count) - 1];
+		long Percentile(List<long> sorted, double pct)
+		{
+			if (sorted.Count == 0) return 0;
+			var idx = (int)Math.Ceiling(pct / 100.0 * sorted.Count) - 1;
+			return sorted[Math.Max(0, idx)];
+		}
 
 		Console.WriteLine($"  Kafka p50={Percentile(kafkaSamples, 50),4}ms  p95={Percentile(kafkaSamples, 95),4}ms  avg={(double)kafkaSamples.Sum() / sampleCount:F1}ms");
 		Console.WriteLine($"  NATS  p50={Percentile(natsSamples,  50),4}ms  p95={Percentile(natsSamples,  95),4}ms  avg={(double)natsSamples.Sum()  / sampleCount:F1}ms");
