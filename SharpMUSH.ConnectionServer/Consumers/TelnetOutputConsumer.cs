@@ -5,8 +5,9 @@ using SharpMUSH.Messaging.Abstractions;
 namespace SharpMUSH.ConnectionServer.Consumers;
 
 /// <summary>
-/// Consumes <see cref="TelnetOutputMessage"/> from NATS JetStream and writes transformed
-/// bytes directly to the corresponding TCP connection.
+/// Consumes <see cref="TelnetOutputMessage"/> from NATS JetStream, applies output
+/// transformations based on connection capabilities, and writes the resulting bytes
+/// to the corresponding TCP connection.
 /// </summary>
 public class TelnetOutputConsumer(
 	IConnectionServerService connectionService,

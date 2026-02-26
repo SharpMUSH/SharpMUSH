@@ -12,7 +12,8 @@ namespace SharpMUSH.Messaging.NATS;
 public static class NatsMessagingExtensions
 {
 	/// <summary>
-	/// Adds NATS JetStream messaging for the ConnectionServer role (publishing only).
+	/// Adds NATS JetStream messaging for the ConnectionServer role (publisher only, no consumers).
+	/// Use the overload with <paramref name="configureConsumers"/> to also register consumers.
 	/// </summary>
 	public static IServiceCollection AddNatsConnectionServerMessaging(
 		this IServiceCollection services,
@@ -29,7 +30,8 @@ public static class NatsMessagingExtensions
 		=> services.AddNatsMessagingCore(configureOptions, configureConsumers, "connectionserver");
 
 	/// <summary>
-	/// Adds NATS JetStream messaging for the main Server (game engine) role (publishing only).
+	/// Adds NATS JetStream messaging for the main Server (game engine) role (publisher only, no consumers).
+	/// Use the overload with <paramref name="configureConsumers"/> to also register consumers.
 	/// </summary>
 	public static IServiceCollection AddNatsMainProcessMessaging(
 		this IServiceCollection services,
@@ -125,15 +127,16 @@ public sealed class NatsConsumerConfigurator : INatsConsumerConfigurator
 		_services.AddTransient(consumerInterface, typeof(TConsumer));
 
 		// Build a handler delegate that resolves the consumer from the DI scope and invokes it.
-		// The concrete method call is compiled once via reflection and cached in the closure.
+		// The MethodInfo is closed once at registration time; calling the compiled delegate on every
+		// message avoids repeated MethodInfo.Invoke overhead.
 		var invokeHelper = typeof(NatsConsumerConfigurator)
 			.GetMethod(nameof(InvokeConsumerHelper), BindingFlags.Static | BindingFlags.NonPublic)!
 			.MakeGenericMethod(messageType);
 
-		Func<IServiceProvider, object, CancellationToken, Task> handler =
-			(sp, msg, ct) => (Task)invokeHelper.Invoke(null, [sp, msg, ct])!;
+		var compiled = (Func<IServiceProvider, object, CancellationToken, Task>)
+			Delegate.CreateDelegate(typeof(Func<IServiceProvider, object, CancellationToken, Task>), invokeHelper);
 
-		_registry.Registrations.Add(new NatsConsumerRegistration(messageType, subject, durableName, handler));
+		_registry.Registrations.Add(new NatsConsumerRegistration(messageType, subject, durableName, compiled));
 	}
 
 	private static Task InvokeConsumerHelper<TMessage>(IServiceProvider sp, object msg, CancellationToken ct)
