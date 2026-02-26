@@ -92,7 +92,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 		try
 		{
 			var consumer = await js.CreateOrUpdateConsumerAsync(
-				_options.StreamName,
+				_options.GetConsumeStreamName(),
 				new ConsumerConfig(reg.DurableName)
 				{
 					FilterSubject = reg.Subject,
