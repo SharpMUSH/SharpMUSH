@@ -10,7 +10,7 @@ spec:
     requests:
       storage: 30Gi
 ---
-# ArangoDB, RedPanda (Kafka-compatible), and Redis
+# ArangoDB and NATS (JetStream)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -46,44 +46,26 @@ spec:
           env:
             - name: ARANGO_ROOT_PASSWORD
               value: "password"
-        - name: redpanda
-          image: redpandadata/redpanda:latest
-          imagePullPolicy: IfNotPresent
-          command:
-            - /bin/bash
-            - -c
-            - |
-              rpk redpanda start --smp 1 --memory 256M --reserve-memory 0M \
-                --overprovisioned --node-id 0 \
-                --kafka-addr PLAINTEXT://0.0.0.0:9092 \
-                --advertise-kafka-addr PLAINTEXT://redpanda:9092
+        - name: nats
+          image: nats:2-alpine
+          args: ["-js", "-m", "8222"]
           ports:
-            - name: kafka
-              containerPort: 9092
-            - name: admin
-              containerPort: 9644
-            - name: pandaproxy
-              containerPort: 8082
-          volumeMounts:
-            - name: infra-storage
-              mountPath: /var/lib/redpanda/data
-              subPath: redpanda
-          resources:
-            requests:
-              cpu: "200m"
-              memory: "256Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-        - name: redis
-          image: redis:7-alpine
-          command: ["redis-server", "--appendonly", "yes"]
-          ports:
-            - containerPort: 6379
-          volumeMounts:
-            - name: infra-storage
-              mountPath: /data
-              subPath: redis
+            - name: client
+              containerPort: 4222
+            - name: monitoring
+              containerPort: 8222
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8222
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8222
+            initialDelaySeconds: 5
+            periodSeconds: 10
           resources:
             requests:
               cpu: "100m"
@@ -111,32 +93,17 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: redpanda
+  name: nats
 spec:
   selector:
     app: sharpmush-infra
   ports:
-    - name: kafka
-      port: 9092
-      targetPort: 9092
-    - name: admin
-      port: 9644
-      targetPort: 9644
-    - name: pandaproxy
-      port: 8082
-      targetPort: 8082
-  type: ClusterIP
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-spec:
-  selector:
-    app: sharpmush-infra
-  ports:
-    - port: 6379
-      targetPort: 6379
+    - name: client
+      port: 4222
+      targetPort: 4222
+    - name: monitoring
+      port: 8222
+      targetPort: 8222
   type: ClusterIP
 ---
 # SharpMUSH
@@ -201,12 +168,8 @@ spec:
               value: "DevPassword123!"
             - name: ARANGO_CONNECTION_STRING
               value: "Server=http://arangodb:8529;User=root;Password=password;UseUnixSocket=false"
-            - name: KAFKA_HOST
-              value: redpanda
-            - name: KAFKA_PORT
-              value: "9092"
-            - name: REDIS_CONNECTION
-              value: "redis:6379"
+            - name: NATS_URL
+              value: "nats://nats:4222"
           resources:
             requests:
               cpu: "200m"
@@ -269,14 +232,10 @@ spec:
             - containerPort: 9091
               name: metrics
           env:
-            - name: KAFKA_HOST
-              value: redpanda
-            - name: KAFKA_PORT
-              value: "9092"
+            - name: NATS_URL
+              value: "nats://nats:4222"
             - name: SHARPMUSH_HOST
               value: sharpmush
-            - name: REDIS_CONNECTION
-              value: "redis:6379"
           resources:
             requests:
               cpu: "200m"
