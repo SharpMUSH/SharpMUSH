@@ -1,5 +1,3 @@
-using Confluent.Kafka;
-using Confluent.Kafka.Admin;
 using Core.Arango;
 using Core.Arango.Serialization.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,14 +33,11 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
 
-	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
-	public required RedPandaTestServer RedPandaTestServer { get; init; }
+	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerTestSession)]
+	public required NatsTestServer NatsTestServer { get; init; }
 
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
-
-	[ClassDataSource<RedisTestServer>(Shared = SharedType.PerTestSession)]
-	public required RedisTestServer RedisTestServer { get; init; }
 
 	public new IServiceProvider Services => _server!.Services;
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
@@ -202,14 +197,9 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
-		var redisPort = RedisTestServer.Instance.GetMappedPublicPort(6379);
-		var redisConnection = $"localhost:{redisPort}";
-		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
-
-		var kafkaHost = RedPandaTestServer.Instance.GetBootstrapAddress();
-		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
-
-		await CreateKafkaTopicsAsync(kafkaHost);
+		var natsPort = NatsTestServer.Instance.GetMappedPublicPort(4222);
+		var natsUrl = $"nats://localhost:{natsPort}";
+		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
@@ -235,57 +225,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		if (!scheduler.IsStarted)
 		{
 			await scheduler.Start();
-		}
-	}
-
-	private static async Task CreateKafkaTopicsAsync(string bootstrapServers)
-	{
-		// Format can be: "//127.0.0.1:9092/", "kafka://127.0.0.1:9092", or "127.0.0.1:9092"
-		var cleanedAddress = bootstrapServers;
-
-		if (cleanedAddress.Contains("://"))
-		{
-			cleanedAddress = cleanedAddress.Substring(cleanedAddress.IndexOf("://") + 3);
-		}
-
-		cleanedAddress = cleanedAddress.TrimStart('/');
-		cleanedAddress = cleanedAddress.TrimEnd('/');
-
-		var config = new AdminClientConfig
-		{
-			BootstrapServers = cleanedAddress,
-			SocketTimeoutMs = 10000,
-			ApiVersionRequestTimeoutMs = 10000
-		};
-
-		using var adminClient = new AdminClientBuilder(config).Build();
-
-		var topics = new List<string>
-		{
-			"telnet-input",
-			"telnet-output",
-			"telnet-prompt",
-			"websocket-input",
-			"websocket-output",
-			"websocket-prompt"
-		};
-
-		var topicSpecifications = topics.Select(topic => new TopicSpecification
-		{
-			Name = topic,
-			NumPartitions = 1,
-			ReplicationFactor = 1
-		}).ToList();
-
-		try
-		{
-			await adminClient.CreateTopicsAsync(topicSpecifications);
-
-			await Task.Delay(2000);
-		}
-		catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists || r.Error.Code == ErrorCode.NoError))
-		{
-			// Topics already exist or were created successfully, which is fine
 		}
 	}
 

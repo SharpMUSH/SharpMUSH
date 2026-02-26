@@ -1,4 +1,3 @@
-using KafkaFlow;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -9,32 +8,17 @@ using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.ConnectionServer.Strategy;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
-using SharpMUSH.Messaging.KafkaFlow;
-using Testcontainers.Redpanda;
+using SharpMUSH.Messaging.NATS;
 
 namespace SharpMUSH.ConnectionServer;
 
 public class Program
 {
-	private static RedpandaContainer? _container;
-	private static RedisStrategy? _redisStrategy;
-
 	public static async Task Main(string[] args)
 	{
 		var app = await CreateHostBuilderAsync(args);
-
-		// Get logger for startup logging
-		var logger = app.Services.GetRequiredService<ILogger<Program>>();
-
-		// Start Kafka bus
-		logger.LogTrace("[KAFKA-STARTUP] Starting Kafka bus...");
-		var bus = app.Services.CreateKafkaBus();
-		await bus.StartAsync();
-		logger.LogInformation("[KAFKA-STARTUP] Kafka bus started successfully");
 
 		try
 		{
@@ -56,15 +40,7 @@ public class Program
 		}
 		finally
 		{
-			await bus.StopAsync();
-			if (_redisStrategy is not null)
-			{
-				await _redisStrategy.DisposeAsync();
-			}
-			if (_container is not null)
-			{
-				await _container.DisposeAsync();
-			}
+			// NATS consumer service stops automatically via IHostedService lifecycle
 		}
 	}
 
@@ -92,48 +68,15 @@ public class Program
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
 
-		// Get Kafka/RedPanda configuration from environment or configuration
-		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST");
+		// Get NATS URL from environment or default
+		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
 
-		if (string.IsNullOrEmpty(kafkaHost))
+		// Add NATS-backed connection state store
+		builder.Services.AddSingleton<IConnectionStateStore>(sp =>
 		{
-			_container = new RedpandaBuilder("docker.redpanda.com/redpandadata/redpanda:latest")
-				.WithPortBinding(9092, 9092)
-				.Build();
-			await _container.StartAsync();
-
-			kafkaHost = "localhost";
-		}
-
-		// Initialize Redis strategy
-		_redisStrategy = RedisStrategyProvider.GetStrategy();
-		await _redisStrategy.InitializeAsync();
-
-		// Capture the strategy for use in the factory delegate
-		var redisStrategy = _redisStrategy;
-
-		// Configure Redis connection using strategy pattern
-		builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
-		{
-			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
-
-			try
-			{
-				// Note: This is executed when IConnectionMultiplexer is first requested from DI
-				// The connection is already initialized above, so this should be fast
-				var multiplexer = redisStrategy.GetConnectionAsync().AsTask().GetAwaiter().GetResult();
-				logger.LogInformation("Connected to Redis successfully");
-				return multiplexer;
-			}
-			catch (Exception ex)
-			{
-				logger.LogWarning(ex, "Failed to connect to Redis. Connection state will not be shared.");
-				throw;
-			}
+			var logger = sp.GetRequiredService<ILogger<NatsConnectionStateStore>>();
+			return NatsConnectionStateStore.CreateAsync(natsUrl, logger).GetAwaiter().GetResult();
 		});
-
-		// Add Redis-backed connection state store
-		builder.Services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>();
 
 		// Add ConnectionService
 		builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
@@ -153,44 +96,20 @@ public class Program
 		// Add health monitoring service
 		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
 
-		// Configure MassTransit with Kafka/RedPanda
-		builder.Services.AddConnectionServerMessaging(
+		// Configure NATS messaging
+		builder.Services.AddNatsConnectionServerMessaging(
 			options =>
 			{
-				options.Host = kafkaHost;
-				options.Port = 9092;
-				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
-				options.ConsumerGroupId = "connectionserver-consumer-group"; // Separate group from main server
-				options.BatchMaxSize = 100;
-				options.BatchTimeLimit = TimeSpan.FromMilliseconds(8);
+				options.Url = natsUrl;
 			},
 			x =>
 			{
-				// Each consumer registration creates an INDEPENDENT KafkaFlow consumer with its own:
-				// - Topic subscription
-				// - Middleware pipeline  
-				// - Worker configuration
-				// - Buffer settings
-				//
-				// This means batch processing for TelnetOutputMessage does NOT affect other message types.
-
-				// TelnetOutputMessage: Uses BATCH PROCESSING
-				// - Middleware: TelnetOutputBatchMiddleware (IMessageMiddleware)
-				// - Pipeline: Deserialize → AddBatching(100, 10ms) → TelnetOutputBatchMiddleware
-				// - Groups messages by Handle, concatenates data IN ORDER, sends batched output
-				// - Batch timeout: 10ms for good performance with low latency
-				// - BytesSum distribution: Messages with same Handle go to same worker (ordering)
-				// - Multiple workers (Environment.ProcessorCount): Different connections processed in parallel
-				x.AddBatchConsumer<TelnetOutputBatchMiddleware, TelnetOutputMessage>(100, TimeSpan.FromMilliseconds(10));
-
-				// All other messages: Use REGULAR CONSUMERS (individual message processing)
-				// - Pipeline: Deserialize → TypedHandler (processes each message individually)
+				x.AddConsumer<TelnetOutputConsumer>();
 				x.AddConsumer<TelnetPromptConsumer>();
 				x.AddConsumer<BroadcastConsumer>();
 				x.AddConsumer<DisconnectConnectionConsumer>();
 				x.AddConsumer<GMCPOutputConsumer>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer>();
-
 				x.AddConsumer<WebSocketOutputConsumer>();
 				x.AddConsumer<WebSocketPromptConsumer>();
 			});

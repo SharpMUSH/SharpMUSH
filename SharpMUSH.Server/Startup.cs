@@ -24,14 +24,13 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messaging.KafkaFlow;
-using SharpMUSH.Server.Strategy.Redis;
+using SharpMUSH.Messaging.NATS;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisStrategy redisStrategy)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -84,26 +83,13 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
 
-		// Configure Redis connection using strategy pattern
-		services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
+		// Add NATS-backed connection state store
+		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+		services.AddSingleton<IConnectionStateStore>(sp =>
 		{
-			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
-
-			try
-			{
-				var multiplexer = redisStrategy.GetConnectionAsync().AsTask().GetAwaiter().GetResult();
-				logger.LogInformation("Connected to Redis successfully");
-				return multiplexer;
-			}
-			catch (Exception ex)
-			{
-				logger.LogWarning(ex, "Failed to connect to Redis. Connection state will not be shared.");
-				throw;
-			}
+			var logger = sp.GetRequiredService<ILogger<NatsConnectionStateStore>>();
+			return NatsConnectionStateStore.CreateAsync(natsUrl, logger).GetAwaiter().GetResult();
 		});
-
-		// Add Redis-backed connection state store
-		services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>();
 
 		services.AddSingleton<INotifyService, NotifyService>();
 		services.AddSingleton<ILocateService, LocateService>();
@@ -172,16 +158,13 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
 
-		// Configure MassTransit with Kafka/RedPanda for message queue integration
-		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST") ?? "localhost";
+		// Configure NATS messaging for message queue integration
+		var natsUrlForMessaging = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
 
-		services.AddMainProcessMessaging(
+		services.AddNatsMainProcessMessaging(
 			options =>
 			{
-				options.Host = kafkaHost;
-				options.Port = 9092;
-				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
-				options.ConsumerGroupId = "mainprocess-consumer-group"; // Separate group from ConnectionServer
+				options.Url = natsUrlForMessaging;
 			},
 			x =>
 			{

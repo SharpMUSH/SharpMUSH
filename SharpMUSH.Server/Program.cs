@@ -1,6 +1,5 @@
 ﻿using Core.Arango;
 using Core.Arango.Serilog;
-using KafkaFlow;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,7 +7,6 @@ using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Database;
 using SharpMUSH.Server.Strategy.ArangoDB;
-using SharpMUSH.Server.Strategy.Redis;
 
 namespace SharpMUSH.Server;
 
@@ -20,10 +18,6 @@ public class Program
 
 		var arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
 
-		// Initialize Redis strategy
-		var redisStrategy = RedisStrategyProvider.GetStrategy();
-		await redisStrategy.InitializeAsync();
-
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
 		if (!File.Exists(colorFile))
@@ -31,7 +25,7 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(arangoConfig, colorFile, redisStrategy);
+		var startup = new Startup(arangoConfig, colorFile);
 
 		startup.ConfigureServices(builder.Services, builder.Configuration);
 
@@ -62,20 +56,12 @@ public class Program
 		// Get logger for startup logging
 		var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-		// Start Kafka bus
-		logger.LogTrace("[KAFKA-STARTUP] Starting Kafka bus...");
-		var bus = app.Services.CreateKafkaBus();
-		await bus.StartAsync();
-		logger.LogInformation("[KAFKA-STARTUP] Kafka bus started successfully");
-
 		try
 		{
 			await ConfigureApp(app).RunAsync();
 		}
 		finally
 		{
-			await bus.StopAsync();
-			await redisStrategy.DisposeAsync();
 			await Log.CloseAndFlushAsync();
 		}
 	}
