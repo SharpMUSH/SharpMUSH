@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Database;
+using SharpMUSH.Messaging.NATS.Strategy;
 using SharpMUSH.Server.Strategy.ArangoDB;
 
 namespace SharpMUSH.Server;
@@ -14,9 +15,10 @@ public class Program
 {
 	public static async Task Main(params string[] args)
 	{
-		var builder = WebApplication.CreateBuilder(args);
-
 		var arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
+
+		var natsStrategy = NatsStrategyProvider.GetStrategy();
+		var natsUrl = await natsStrategy.GetUrlAsync();
 
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 
@@ -25,8 +27,8 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(arangoConfig, colorFile);
-
+		var builder = WebApplication.CreateBuilder(args);
+		var startup = new Startup(arangoConfig, colorFile, natsUrl);
 		startup.ConfigureServices(builder.Services, builder.Configuration);
 
 		var app = builder.Build();
@@ -55,6 +57,7 @@ public class Program
 
 		// Get logger for startup logging
 		var logger = app.Services.GetRequiredService<ILogger<Program>>();
+		logger.LogInformation("[NATS] Connected to NATS at {NatsUrl}", natsUrl);
 
 		try
 		{
@@ -62,6 +65,7 @@ public class Program
 		}
 		finally
 		{
+			await natsStrategy.DisposeAsync();
 			await Log.CloseAndFlushAsync();
 		}
 	}

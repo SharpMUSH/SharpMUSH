@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.NATS;
+using SharpMUSH.Messaging.NATS.Strategy;
 
 namespace SharpMUSH.ConnectionServer;
 
@@ -18,7 +19,10 @@ public class Program
 {
 	public static async Task Main(string[] args)
 	{
-		var app = await CreateHostBuilderAsync(args);
+		var natsStrategy = NatsStrategyProvider.GetStrategy();
+		var natsUrl = await natsStrategy.GetUrlAsync();
+
+		var app = await CreateHostBuilderAsync(args, natsUrl);
 
 		try
 		{
@@ -36,11 +40,14 @@ public class Program
 			// Prometheus metrics endpoint (for scraping, not for logging to console)
 			app.MapPrometheusScrapingEndpoint();
 
+			var logger = app.Services.GetRequiredService<ILogger<Program>>();
+			logger.LogInformation("[NATS] Connected to NATS at {NatsUrl}", natsUrl);
+
 			await app.RunAsync();
 		}
 		finally
 		{
-			// NATS consumer service stops automatically via IHostedService lifecycle
+			await natsStrategy.DisposeAsync();
 		}
 	}
 
@@ -48,7 +55,15 @@ public class Program
 	/// Creates and configures the WebApplication host.
 	/// This method is used by WebApplicationFactory for testing.
 	/// </summary>
-	public static async Task<WebApplication> CreateHostBuilderAsync(string[] args)
+	/// <param name="args">Application arguments.</param>
+	/// <param name="natsUrl">
+	/// NATS URL to use.  When called from <see cref="Main"/> this is resolved via
+	/// <see cref="NatsStrategyProvider"/> before this method is invoked.  When called
+	/// from a test <c>WebApplicationFactory</c> (with no explicit URL) the value is read
+	/// lazily from <c>NATS_URL</c> inside each DI registration lambda, which executes after
+	/// the factory's <c>ConfigureWebHost</c> callback has set the environment variable.
+	/// </param>
+	public static async Task<WebApplication> CreateHostBuilderAsync(string[] args, string? natsUrl = null)
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
@@ -68,14 +83,14 @@ public class Program
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
 
-		// Get NATS URL from environment or default
-		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-
-		// Add NATS-backed connection state store
+		// Add NATS-backed connection state store.
+		// Resolve the URL lazily so that WebApplicationFactory's ConfigureWebHost (which sets
+		// NATS_URL via Environment.SetEnvironmentVariable) takes effect before the service is built.
 		builder.Services.AddSingleton<IConnectionStateStore>(sp =>
 		{
+			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
 			var logger = sp.GetRequiredService<ILogger<NatsConnectionStateStore>>();
-			return NatsConnectionStateStore.CreateAsync(natsUrl, logger).GetAwaiter().GetResult();
+			return NatsConnectionStateStore.CreateAsync(url, logger).GetAwaiter().GetResult();
 		});
 
 		// Add ConnectionService
@@ -96,11 +111,11 @@ public class Program
 		// Add health monitoring service
 		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
 
-		// Configure NATS messaging
+		// Configure NATS messaging (URL resolved lazily for the same reason as above)
 		builder.Services.AddNatsConnectionServerMessaging(
 			options =>
 			{
-				options.Url = natsUrl;
+				options.Url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
 			},
 			x =>
 			{

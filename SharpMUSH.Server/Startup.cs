@@ -30,7 +30,7 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile)
+public class Startup(ArangoConfiguration arangoConfig, string colorFile, string natsUrl)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -84,7 +84,6 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		services.AddSingleton<ITelemetryService, TelemetryService>();
 
 		// Add NATS-backed connection state store
-		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
 		services.AddSingleton<IConnectionStateStore>(sp =>
 		{
 			var logger = sp.GetRequiredService<ILogger<NatsConnectionStateStore>>();
@@ -159,12 +158,10 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile)
 		});
 
 		// Configure NATS messaging for message queue integration
-		var natsUrlForMessaging = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-
 		services.AddNatsMainProcessMessaging(
 			options =>
 			{
-				options.Url = natsUrlForMessaging;
+				options.Url = natsUrl;
 			},
 			x =>
 			{

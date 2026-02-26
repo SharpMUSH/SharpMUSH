@@ -31,7 +31,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = log;
 
-		var startup = new Startup(acnf, colorFile);
+		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+		var startup = new Startup(acnf, colorFile, natsUrl);
 
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));
