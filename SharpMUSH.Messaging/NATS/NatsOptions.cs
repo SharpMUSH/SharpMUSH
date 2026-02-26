@@ -28,4 +28,20 @@ public class NatsOptions
 	/// After this time messages are evicted from storage.
 	/// </summary>
 	public TimeSpan MaxAge { get; set; } = TimeSpan.FromHours(24);
+
+	/// <summary>
+	/// Name of the JetStream stream to consume from.
+	/// When null the value of <see cref="StreamName"/> is used (publish = consume,
+	/// suitable for single-stream setups or tests).
+	/// </summary>
+	public string? ConsumeStreamName { get; set; }
+
+	/// <summary>
+	/// Subject prefix used for the consuming side (i.e. the publisher's prefix in the
+	/// other application).  When null the value of <see cref="SubjectPrefix"/> is used.
+	/// </summary>
+	public string? ConsumeSubjectPrefix { get; set; }
+
+	internal string GetConsumeStreamName() => ConsumeStreamName ?? StreamName;
+	internal string GetConsumeSubjectPrefix() => ConsumeSubjectPrefix ?? SubjectPrefix;
 }

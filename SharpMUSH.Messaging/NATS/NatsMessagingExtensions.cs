@@ -13,49 +13,91 @@ public static class NatsMessagingExtensions
 {
 	/// <summary>
 	/// Adds NATS JetStream messaging for the ConnectionServer role (publisher only, no consumers).
-	/// Use the overload with <paramref name="configureConsumers"/> to also register consumers.
+	/// The ConnectionServer publishes to stream <c>SHARPMUSH-CS</c> with subject prefix
+	/// <c>sharpmush.cs</c>.
 	/// </summary>
 	public static IServiceCollection AddNatsConnectionServerMessaging(
 		this IServiceCollection services,
 		Action<NatsOptions> configureOptions)
-		=> services.AddNatsMessagingCore(configureOptions);
+	{
+		var options = new NatsOptions
+		{
+			StreamName = "SHARPMUSH-CS",
+			SubjectPrefix = "sharpmush.cs",
+		};
+		configureOptions(options);
+		return services.AddNatsMessagingCore(options);
+	}
 
 	/// <summary>
 	/// Adds NATS JetStream messaging for the ConnectionServer role with consumers.
+	/// <list type="bullet">
+	///   <item>Publishes to stream <c>SHARPMUSH-CS</c> (subject prefix <c>sharpmush.cs</c>)</item>
+	///   <item>Consumes from stream <c>SHARPMUSH-MS</c> (subject prefix <c>sharpmush.ms</c>)</item>
+	/// </list>
 	/// </summary>
 	public static IServiceCollection AddNatsConnectionServerMessaging(
 		this IServiceCollection services,
 		Action<NatsOptions> configureOptions,
 		Action<INatsConsumerConfigurator> configureConsumers)
-		=> services.AddNatsMessagingCore(configureOptions, configureConsumers, "connectionserver");
+	{
+		var options = new NatsOptions
+		{
+			StreamName = "SHARPMUSH-CS",
+			SubjectPrefix = "sharpmush.cs",
+			ConsumeStreamName = "SHARPMUSH-MS",
+			ConsumeSubjectPrefix = "sharpmush.ms",
+		};
+		configureOptions(options);
+		return services.AddNatsMessagingCore(options, configureConsumers, "connectionserver");
+	}
 
 	/// <summary>
 	/// Adds NATS JetStream messaging for the main Server (game engine) role (publisher only, no consumers).
-	/// Use the overload with <paramref name="configureConsumers"/> to also register consumers.
+	/// The Server publishes to stream <c>SHARPMUSH-MS</c> with subject prefix <c>sharpmush.ms</c>.
 	/// </summary>
 	public static IServiceCollection AddNatsMainProcessMessaging(
 		this IServiceCollection services,
 		Action<NatsOptions> configureOptions)
-		=> services.AddNatsMessagingCore(configureOptions);
+	{
+		var options = new NatsOptions
+		{
+			StreamName = "SHARPMUSH-MS",
+			SubjectPrefix = "sharpmush.ms",
+		};
+		configureOptions(options);
+		return services.AddNatsMessagingCore(options);
+	}
 
 	/// <summary>
 	/// Adds NATS JetStream messaging for the main Server (game engine) role with consumers.
+	/// <list type="bullet">
+	///   <item>Publishes to stream <c>SHARPMUSH-MS</c> (subject prefix <c>sharpmush.ms</c>)</item>
+	///   <item>Consumes from stream <c>SHARPMUSH-CS</c> (subject prefix <c>sharpmush.cs</c>)</item>
+	/// </list>
 	/// </summary>
 	public static IServiceCollection AddNatsMainProcessMessaging(
 		this IServiceCollection services,
 		Action<NatsOptions> configureOptions,
 		Action<INatsConsumerConfigurator> configureConsumers)
-		=> services.AddNatsMessagingCore(configureOptions, configureConsumers, "mainprocess");
+	{
+		var options = new NatsOptions
+		{
+			StreamName = "SHARPMUSH-MS",
+			SubjectPrefix = "sharpmush.ms",
+			ConsumeStreamName = "SHARPMUSH-CS",
+			ConsumeSubjectPrefix = "sharpmush.cs",
+		};
+		configureOptions(options);
+		return services.AddNatsMessagingCore(options, configureConsumers, "mainprocess");
+	}
 
 	private static IServiceCollection AddNatsMessagingCore(
 		this IServiceCollection services,
-		Action<NatsOptions> configureOptions,
+		NatsOptions options,
 		Action<INatsConsumerConfigurator>? configureConsumers = null,
 		string groupPrefix = "")
 	{
-		var options = new NatsOptions();
-		configureOptions(options);
-
 		services.AddSingleton(options);
 		services.AddSingleton<NatsJetStreamMessageBus>(sp =>
 		{
@@ -121,7 +163,7 @@ public sealed class NatsConsumerConfigurator : INatsConsumerConfigurator
 				$"{typeof(TConsumer).Name} does not implement IMessageConsumer<T>.");
 
 		var messageType = consumerInterface.GetGenericArguments()[0];
-		var subject = GetSubjectForMessageType(messageType, _options.SubjectPrefix);
+		var subject = GetSubjectForMessageType(messageType, _options.GetConsumeSubjectPrefix());
 		var durableName = GetDurableName(messageType);
 
 		_services.AddTransient(consumerInterface, typeof(TConsumer));

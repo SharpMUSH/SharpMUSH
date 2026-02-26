@@ -47,20 +47,20 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 			_logger.LogInformation("[NATS-CONSUMER] Connecting to NATS at {Url}", _options.Url);
 			nats = new NatsConnection(new NatsOpts { Url = _options.Url });
 			await nats.ConnectAsync();
-			_logger.LogInformation("[NATS-CONSUMER] Connected to NATS. Ensuring stream {Stream} exists.", _options.StreamName);
+			_logger.LogInformation("[NATS-CONSUMER] Connected to NATS. Ensuring stream {Stream} exists.", _options.GetConsumeStreamName());
 
 			var js = new NatsJSContext(nats);
 
 			// Ensure the stream exists (idempotent — mirrors what the publisher does)
 			await js.CreateOrUpdateStreamAsync(
-				new StreamConfig(_options.StreamName, [$"{_options.SubjectPrefix}.>"])
+				new StreamConfig(_options.GetConsumeStreamName(), [$"{_options.GetConsumeSubjectPrefix()}.>"])
 				{
 					MaxAge = _options.MaxAge,
 				},
 				stoppingToken);
 
 			_logger.LogInformation("[NATS-CONSUMER] Starting {Count} consumer(s) on stream {Stream}",
-				_registry.Registrations.Count, _options.StreamName);
+				_registry.Registrations.Count, _options.GetConsumeStreamName());
 
 			var tasks = _registry.Registrations
 				.Select(reg => ConsumeAsync(js, reg, stoppingToken))
