@@ -37,36 +37,56 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 	{
 		if (_registry.Registrations.Count == 0)
 		{
-			_logger.LogDebug("[NATS-CONSUMER] No consumer registrations; service idle.");
+			_logger.LogInformation("[NATS-CONSUMER] No consumer registrations; service idle.");
 			return;
 		}
 
-		var nats = new NatsConnection(new NatsOpts { Url = _options.Url });
-		await nats.ConnectAsync();
-		var js = new NatsJSContext(nats);
+		NatsConnection? nats = null;
+		try
+		{
+			_logger.LogInformation("[NATS-CONSUMER] Connecting to NATS at {Url}", _options.Url);
+			nats = new NatsConnection(new NatsOpts { Url = _options.Url });
+			await nats.ConnectAsync();
+			_logger.LogInformation("[NATS-CONSUMER] Connected to NATS. Ensuring stream {Stream} exists.", _options.StreamName);
 
-		// Ensure the stream exists (idempotent — mirrors what the publisher does)
-		await js.CreateOrUpdateStreamAsync(
-			new StreamConfig(_options.StreamName, [$"{_options.SubjectPrefix}.>"])
-			{
-				MaxAge = _options.MaxAge,
-			},
-			stoppingToken);
+			var js = new NatsJSContext(nats);
 
-		_logger.LogInformation("[NATS-CONSUMER] Starting {Count} consumer(s) on stream {Stream}",
-			_registry.Registrations.Count, _options.StreamName);
+			// Ensure the stream exists (idempotent — mirrors what the publisher does)
+			await js.CreateOrUpdateStreamAsync(
+				new StreamConfig(_options.StreamName, [$"{_options.SubjectPrefix}.>"])
+				{
+					MaxAge = _options.MaxAge,
+				},
+				stoppingToken);
 
-		var tasks = _registry.Registrations
-			.Select(reg => ConsumeAsync(js, reg, stoppingToken))
-			.ToList();
+			_logger.LogInformation("[NATS-CONSUMER] Starting {Count} consumer(s) on stream {Stream}",
+				_registry.Registrations.Count, _options.StreamName);
 
-		await Task.WhenAll(tasks);
-		await nats.DisposeAsync();
+			var tasks = _registry.Registrations
+				.Select(reg => ConsumeAsync(js, reg, stoppingToken))
+				.ToList();
+
+			await Task.WhenAll(tasks);
+		}
+		catch (OperationCanceledException)
+		{
+			_logger.LogInformation("[NATS-CONSUMER] Consumer service shutting down.");
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[NATS-CONSUMER] Consumer service failed during setup or execution.");
+			throw;
+		}
+		finally
+		{
+			if (nats is not null)
+				await nats.DisposeAsync();
+		}
 	}
 
 	private async Task ConsumeAsync(NatsJSContext js, NatsConsumerRegistration reg, CancellationToken ct)
 	{
-		_logger.LogDebug("[NATS-CONSUMER] Consumer starting — subject: {Subject}, durable: {Durable}",
+		_logger.LogInformation("[NATS-CONSUMER] Consumer starting — subject: {Subject}, durable: {Durable}",
 			reg.Subject, reg.DurableName);
 
 		try
@@ -80,6 +100,9 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 					AckPolicy = ConsumerConfigAckPolicy.Explicit,
 				},
 				ct);
+
+			_logger.LogInformation("[NATS-CONSUMER] Consumer active — subject: {Subject}, durable: {Durable}",
+				reg.Subject, reg.DurableName);
 
 			await foreach (var msg in consumer.ConsumeAsync<string>(cancellationToken: ct))
 			{
@@ -100,6 +123,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 						continue;
 					}
 
+					_logger.LogDebug("[NATS-CONSUMER] Received message on subject {Subject} ({Type})", reg.Subject, reg.MessageType.Name);
 					using var scope = _serviceProvider.CreateScope();
 					await reg.Handler(scope.ServiceProvider, message, ct);
 					await msg.AckAsync(cancellationToken: ct);
@@ -113,7 +137,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 		}
 		catch (OperationCanceledException)
 		{
-			_logger.LogDebug("[NATS-CONSUMER] Consumer for subject {Subject} stopped.", reg.Subject);
+			_logger.LogInformation("[NATS-CONSUMER] Consumer for subject {Subject} stopped (cancelled).", reg.Subject);
 		}
 		catch (Exception ex)
 		{

@@ -17,7 +17,7 @@ public class TelnetOutputConsumer(
 {
 	public async Task HandleAsync(TelnetOutputMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogTrace("[NATS-RECV] TelnetOutputMessage received — Handle: {Handle}, DataLength: {DataLength}",
+		logger.LogDebug("[NATS-RECV] TelnetOutputMessage received — Handle: {Handle}, DataLength: {DataLength}",
 			message.Handle, message.Data?.Length ?? 0);
 
 		var connection = connectionService.Get(message.Handle);
