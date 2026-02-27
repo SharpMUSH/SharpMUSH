@@ -788,13 +788,16 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 
 ### 3.10 Kùzu
 
+> ⚠️ **ARCHIVED PROJECT**: Kùzu was archived on GitHub in October 2025. The team announced they are "working on something new." Prior releases (up to v0.11.3) remain usable, but there will be no new features, bug fixes, or security patches. The official extension server has been shut down. **This database is no longer recommended for new projects.**
+
 **Type**: Embedded graph database (property graph, Cypher-compatible)
 **License**: MIT
 **Embedded**: Yes — native C++ library with in-process bindings
 **.NET SDK**: No official .NET SDK; Python, Node.js, Rust, Java, Go bindings available
 **Written in**: C++ (columnar storage, vectorized execution)
+**Status**: ❌ **Archived** — final release v0.11.3
 
-#### Strengths
+#### Strengths (Historical)
 
 1. **True embedded graph**: Runs in-process like SQLite but for graphs — no server needed
 2. **Full Cypher support**: Comprehensive openCypher implementation with extensions
@@ -806,13 +809,13 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 
 #### Weaknesses
 
-1. **No .NET SDK**: This is the critical blocker. Only Python, Node.js, Rust, Java, Go bindings exist. Would need to build C# bindings via P/Invoke or wait for official support
-2. **No standalone server mode**: Embedded only — no Docker deployment, no client-server architecture
-3. **No PRUNE equivalent**: Cypher `WHERE` on paths but no branch pruning
-4. **Young project**: v0.x releases; API may change. Fewer production deployments
+1. **❌ Archived project**: No longer maintained. No future updates, bug fixes, or security patches
+2. **No .NET SDK**: Only Python, Node.js, Rust, Java, Go bindings exist. No official .NET support was ever added
+3. **No standalone server mode**: Embedded only — no Docker deployment, no client-server architecture
+4. **No PRUNE equivalent**: Cypher `WHERE` on paths but no branch pruning
 5. **No transactions API**: Single-statement atomicity; no multi-statement ACID
 6. **No multi-model**: Pure graph — no document collections
-7. **No migration framework**: Must build custom
+7. **Extension server shut down**: Official extension server no longer available; must self-host
 
 #### SharpMUSH-Specific Assessment
 
@@ -823,7 +826,7 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 | R3 Multi-edge traversals | ✅ Yes | Cypher multi-type patterns |
 | R4 Shortest path | ✅ Yes | `shortestPath()` function |
 | R5 Transactions | ❌ No | Single-statement atomicity only |
-| R6 .NET SDK | ❌ No | No .NET bindings; P/Invoke needed |
+| R6 .NET SDK | ❌ No | No .NET bindings; never added before archival |
 | R7 Auto-increment keys | ❌ No | Must simulate |
 | R8 Schema validation | ⚠️ Partial | Table definitions with types |
 | R9 Embedded mode | ✅ Excellent | Native C++ in-process |
@@ -832,10 +835,10 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 | R12 Cross-graph joins | ✅ Yes | Multi-MATCH Cypher |
 | R13 Regex matching | ✅ Yes | Cypher `=~` |
 | R14 Document CRUD | ❌ No | Structured tables, not documents |
-| R15 Active community | ⚠️ Growing | Active development; small but engaged |
+| R15 Active community | ❌ Archived | Project archived October 2025; no further development |
 | R16 License | ✅ MIT | Most permissive |
 
-**Migration effort**: EXTREME — No .NET SDK is an absolute blocker. If .NET bindings were added, the Cypher compatibility would make it MEDIUM effort. Watch this project for future .NET support.
+**Migration effort**: NOT VIABLE — Project is archived. Even setting aside the missing .NET SDK, adopting an archived database with no future maintenance is not advisable for a long-lived project like SharpMUSH.
 
 #### Resource Requirements
 
@@ -922,7 +925,7 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 **Type**: Strongly-typed knowledge graph database with inference engine
 **License**: Mozilla Public License 2.0 (MPL 2.0)
 **Embedded**: No — standalone server only (was Java-based, now Rust core since TypeDB 3.x)
-**.NET SDK**: No official .NET SDK; Java, Python, Node.js, Rust drivers available
+**.NET SDK**: ✅ Yes — official C# driver (`TypeDB.Driver` NuGet). P/Invoke wrapper around the Rust core driver. Targets .NET 6+. Platform-specific `TypeDB.Driver.Pinvoke.*` packages for osx-x64, osx-arm64, linux-x64, linux-arm64, win-x64
 **Written in**: Rust (core engine, since v3.x) / Java (v2.x and client libraries)
 
 #### Strengths
@@ -954,18 +957,23 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
    ```
 4. **Transition to Rust**: TypeDB 3.x core engine is Rust-based, improving performance and reducing JVM dependency
 5. **MPL 2.0 license**: File-level copyleft; more permissive than GPL/AGPL
+6. **Official .NET SDK**: C# driver available via NuGet (`TypeDB.Driver`). Built as a P/Invoke wrapper around the Rust core, with SWIG-generated bindings. Supports .NET 6+
+   ```xml
+   <PackageReference Include="TypeDB.Driver" Version="..." />
+   <PackageReference Include="TypeDB.Driver.Pinvoke.linux-x64" Version="..." />
+   ```
 
 #### Weaknesses
 
-1. **No .NET SDK**: Only Java, Python, Node.js, Rust drivers. Would need to build .NET client via gRPC
-2. **Complex learning curve**: TypeQL is a unique language; neither Cypher nor SQL
-3. **No embedded mode**: Must run as standalone server
-4. **No document model**: Entity-relationship model, not document collections
-5. **Version 3.x transition**: Major rewrite from Java to Rust; ecosystem disruption. Many v2 resources are outdated
-6. **No Cypher/Gremlin compatibility**: Cannot reuse queries from other graph databases
-7. **Inference overhead**: Rule engine adds latency and complexity; must be carefully managed
-8. **Small ecosystem**: Niche product with limited community compared to Neo4j or PostgreSQL
-9. **No auto-increment keys**: Must simulate
+1. **Complex learning curve**: TypeQL is a unique language; neither Cypher nor SQL
+2. **No embedded mode**: Must run as standalone server
+3. **No document model**: Entity-relationship model, not document collections
+4. **Version 3.x transition**: Major rewrite from Java to Rust; ecosystem disruption. Many v2 resources are outdated
+5. **No Cypher/Gremlin compatibility**: Cannot reuse queries from other graph databases
+6. **Inference overhead**: Rule engine adds latency and complexity; must be carefully managed
+7. **Small ecosystem**: Niche product with limited community compared to Neo4j or PostgreSQL
+8. **No auto-increment keys**: Must simulate
+9. **.NET SDK uses P/Invoke**: The C# driver wraps native Rust code via SWIG/P/Invoke — platform-specific packages needed (osx-x64, linux-x64, win-x64, etc.). Native memory managed via finalizers and `IDisposable`
 
 #### SharpMUSH-Specific Assessment
 
@@ -976,7 +984,7 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 | R3 Multi-edge traversals | ✅ Yes | Multi-relation patterns in TypeQL |
 | R4 Shortest path | ⚠️ Limited | No built-in shortest path; must implement via rules or application code |
 | R5 Transactions | ✅ Yes | Full ACID transactions |
-| R6 .NET SDK | ❌ No | No .NET driver; would need gRPC client |
+| R6 .NET SDK | ✅ Yes | Official `TypeDB.Driver` NuGet package (P/Invoke over Rust core) |
 | R7 Auto-increment keys | ❌ No | Must simulate |
 | R8 Schema validation | ✅ Excellent | Strongest type system of any option |
 | R9 Embedded mode | ❌ No | Standalone only |
@@ -988,7 +996,7 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 | R15 Active community | ⚠️ Small | Niche; v3 transition causing churn |
 | R16 License | ✅ MPL 2.0 | File-level copyleft; permissive enough |
 
-**Migration effort**: EXTREME — No .NET SDK, unique query language, no document model. The inference engine is interesting for attribute inheritance but the complete lack of .NET support makes this impractical.
+**Migration effort**: VERY HIGH — While the .NET SDK blocker is now resolved, TypeQL is a unique query language requiring complete query rewriting. The entity-relationship model differs significantly from ArangoDB's document+graph model. However, the inference engine is genuinely interesting for attribute inheritance — rules could potentially replace PRUNE logic at the database level. Worth evaluating if the type system and inference capabilities align with SharpMUSH's needs.
 
 #### Resource Requirements
 
@@ -1003,21 +1011,24 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 
 ## 4. Feature Comparison Matrix
 
-| Feature | ArangoDB | SurrealDB | Neo4j | Memgraph | RavenDB | PostgreSQL | ArcadeDB | LiteDB | FalkorDB | Kùzu | JanusGraph | TypeDB |
+| Feature | ArangoDB | SurrealDB | Neo4j | Memgraph | RavenDB | PostgreSQL | ArcadeDB | LiteDB | FalkorDB | Kùzu ⚠️ | JanusGraph | TypeDB |
 |---------|----------|-----------|-------|----------|---------|------------|----------|--------|----------|------|------------|--------|
-| **Graph Traversals** | ✅ Excellent | ✅ Good | ✅ Excellent | ✅ Excellent | ⚠️ Basic | ⚠️ Via CTEs | ✅ Good | ❌ None | ✅ Good | ✅ Excellent | ✅ Yes | ✅ Yes |
-| **PRUNE (conditional)** | ✅ Native | ❌ No | ✅ Via patterns | ⚠️ Partial | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No | ⚠️ Partial | ❌ No | ⚠️ Via rules |
-| **Shortest Path** | ✅ Native | ✅ v2.2+ | ✅ Native | ✅ MAGE | ✅ recursive | ⚠️ Extension | ✅ Gremlin | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | ⚠️ Limited |
-| **Multi-edge Traversal** | ✅ Native | ✅ Yes | ✅ Native | ✅ Yes | ❌ No | ⚠️ JOINs | ✅ Yes | ❌ No | ⚠️ Limited | ✅ Yes | ✅ Yes | ✅ Yes |
-| **ACID Transactions** | ✅ Yes | ⚠️ Server | ✅ Yes | ✅ Yes | ✅ Excellent | ✅ Excellent | ✅ Yes | ⚠️ Limited | ❌ No | ❌ No | ✅ Yes | ✅ Yes |
-| **.NET SDK Quality** | ✅ Good | ⚠️ Maturing | ✅ Good | ✅ Via Bolt | ✅ Excellent | ✅ Excellent | ❌ None | ✅ Excellent | ❌ Poor | ❌ None | ⚠️ Gremlin.Net | ❌ None |
-| **Embedded Mode** | ❌ No | ✅ SurrealKv | ⚠️ JVM | ❌ No | ✅ .NET | ❌ No | ⚠️ JVM | ✅ .NET | ❌ No | ✅ C++ | ❌ JVM | ❌ No |
-| **Auto-increment Keys** | ✅ Native | ❌ Simulate | ⚠️ APOC | ❌ Simulate | ✅ HiLo | ✅ SERIAL | ✅ Sequences | ✅ Auto-ID | ❌ No | ❌ No | ❌ No | ❌ No |
-| **Document CRUD** | ✅ Native | ✅ Native | ⚠️ Properties | ⚠️ Properties | ✅ Native | ✅ Marten | ✅ Native | ✅ Native | ❌ No | ❌ No | ❌ No | ❌ No |
+| **Graph Traversals** | ✅ Excellent | ✅ Good | ✅ Excellent | ✅ Excellent | ⚠️ Basic | ⚠️ Via CTEs | ✅ Good | ❌ None | ✅ Good | ~~✅ Excellent~~ | ✅ Yes | ✅ Yes |
+| **PRUNE (conditional)** | ✅ Native | ❌ No | ✅ Via patterns | ⚠️ Partial | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No | ~~⚠️ Partial~~ | ❌ No | ⚠️ Via rules |
+| **Shortest Path** | ✅ Native | ✅ v2.2+ | ✅ Native | ✅ MAGE | ✅ recursive | ⚠️ Extension | ✅ Gremlin | ❌ No | ✅ Yes | ~~✅ Yes~~ | ✅ Yes | ⚠️ Limited |
+| **Multi-edge Traversal** | ✅ Native | ✅ Yes | ✅ Native | ✅ Yes | ❌ No | ⚠️ JOINs | ✅ Yes | ❌ No | ⚠️ Limited | ~~✅ Yes~~ | ✅ Yes | ✅ Yes |
+| **ACID Transactions** | ✅ Yes | ⚠️ Server | ✅ Yes | ✅ Yes | ✅ Excellent | ✅ Excellent | ✅ Yes | ⚠️ Limited | ❌ No | ~~❌ No~~ | ✅ Yes | ✅ Yes |
+| **.NET SDK Quality** | ✅ Good | ⚠️ Maturing | ✅ Good | ✅ Via Bolt | ✅ Excellent | ✅ Excellent | ❌ None | ✅ Excellent | ❌ Poor | ❌ None | ⚠️ Gremlin.Net | ⚠️ P/Invoke |
+| **Embedded Mode** | ❌ No | ✅ SurrealKv | ⚠️ JVM | ❌ No | ✅ .NET | ❌ No | ⚠️ JVM | ✅ .NET | ❌ No | ~~✅ C++~~ | ❌ JVM | ❌ No |
+| **Auto-increment Keys** | ✅ Native | ❌ Simulate | ⚠️ APOC | ❌ Simulate | ✅ HiLo | ✅ SERIAL | ✅ Sequences | ✅ Auto-ID | ❌ No | ~~❌ No~~ | ❌ No | ❌ No |
+| **Document CRUD** | ✅ Native | ✅ Native | ⚠️ Properties | ⚠️ Properties | ✅ Native | ✅ Marten | ✅ Native | ✅ Native | ❌ No | ~~❌ No~~ | ❌ No | ❌ No |
 | **License** | Apache 2.0 | BSL 1.1 | GPL v3 | BSL 1.1 | AGPL v3 | PG+MIT | Apache 2.0 | MIT | SSPL | MIT | Apache 2.0 | MPL 2.0 |
-| **Standalone Mode** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes | ❌ No | ✅ Yes | ✅ Yes |
-| **Min RAM** | 1 GB | 50 MB–256 MB | ⚠️ 2 GB (JVM) | 256 MB | 512 MB | 256 MB | ⚠️ 1.5 GB (JVM) | 10 MB | 50 MB | 50 MB | ⚠️ 4 GB (JVM×2) | 1–2 GB |
-| **Runtime Dependency** | None (C++) | None (Rust) | ⚠️ JVM 17+ | None (C++) | .NET 8+ | None (C) | ⚠️ JVM 11+ | .NET (host) | None (C) | None (C++) | ⚠️ JVM 11+ (×2) | None (Rust v3) |
+| **Standalone Mode** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes | ~~❌ No~~ | ✅ Yes | ✅ Yes |
+| **Min RAM** | 1 GB | 50 MB–256 MB | ⚠️ 2 GB (JVM) | 256 MB | 512 MB | 256 MB | ⚠️ 1.5 GB (JVM) | 10 MB | 50 MB | ~~50 MB~~ | ⚠️ 4 GB (JVM×2) | 1–2 GB |
+| **Runtime Dependency** | None (C++) | None (Rust) | ⚠️ JVM 17+ | None (C++) | .NET 8+ | None (C) | ⚠️ JVM 11+ | .NET (host) | None (C) | ~~None (C++)~~ | ⚠️ JVM 11+ (×2) | None (Rust v3) |
+| **Project Status** | ✅ Active | ✅ Active | ✅ Active | ✅ Active | ✅ Active | ✅ Active | ✅ Active | ✅ Active | ✅ Active | ❌ Archived | ✅ Active | ✅ Active |
+
+> **Note**: Kùzu column values are struck through (~~text~~) because the project was archived in October 2025. Its technical capabilities are retained for reference but it is not viable for new projects.
 
 ---
 
@@ -1031,7 +1042,7 @@ This section compares the minimum and recommended resource profiles across all c
 |----------|---------|----------|------|-------|
 | **LiteDB** | 10 MB | C# (.NET) | No | In-process library; lightest possible |
 | **FalkorDB** | 50 MB | C | No | In-memory graph; C-native |
-| **Kùzu** | 50 MB | C++ | No | Embedded; disk-based storage |
+| **Kùzu** ❌ | 50 MB | C++ | No | ~~Embedded; disk-based storage~~ **ARCHIVED Oct 2025** |
 | **SurrealDB** (embedded) | 50 MB | Rust | No | SurrealKv embedded mode |
 | **Memgraph** | 256 MB | C++ | No | In-memory graph; very efficient |
 | **PostgreSQL** | 256 MB | C | No | Mature; efficient memory usage |
@@ -1063,7 +1074,7 @@ For a .NET project like SharpMUSH, JVM-based databases impose a **dual-runtime t
 
 | Tier | Databases | Min RAM | Runtime Tax | Best For |
 |------|-----------|---------|-------------|----------|
-| 🟢 **Ultra-Light** | LiteDB, FalkorDB, Kùzu | 10–50 MB | None | Embedded/edge deployments |
+| 🟢 **Ultra-Light** | LiteDB, FalkorDB | 10–50 MB | None | Embedded/edge deployments |
 | 🟢 **Light** | SurrealDB (embedded), Memgraph | 50–256 MB | None | Small-to-medium deployments; development |
 | 🟡 **Moderate** | PostgreSQL, SurrealDB (standalone), RavenDB, ArangoDB | 256 MB–1 GB | None/.NET | Production single-server |
 | 🔴 **Heavy** | Neo4j, ArcadeDB, TypeDB v2 | 1.5–2 GB | ⚠️ JVM | Production; JVM overhead significant |
@@ -1085,9 +1096,9 @@ For a .NET project like SharpMUSH, JVM-based databases impose a **dual-runtime t
 | **ArcadeDB** | 🔴 HIGH | Medium (model fits) | Extreme (no SDK) | Low (model fits) | High (custom) |
 | **LiteDB** | 🔴 EXTREME | Extreme (no graph) | Low (native .NET) | High (flatten) | High (custom) |
 | **FalkorDB** | 🔴 EXTREME | High (limited Cypher) | Extreme (raw Redis) | High (remodel) | High (custom) |
-| **Kùzu** | 🔴 EXTREME | Medium (full Cypher) | Extreme (no .NET) | Medium (remodel) | High (custom) |
+| **Kùzu** ❌ | ~~🔴 EXTREME~~ N/A | ~~Medium (full Cypher)~~ | ~~Extreme (no .NET)~~ | ~~Medium (remodel)~~ | ~~High (custom)~~ |
 | **JanusGraph** | 🔴 VERY HIGH | High (Gremlin verbose) | Medium (Gremlin.Net) | Medium (remodel) | High (custom) |
-| **TypeDB** | 🔴 EXTREME | High (TypeQL) | Extreme (no .NET) | High (entity model) | High (custom) |
+| **TypeDB** | 🔴 VERY HIGH | High (TypeQL) | Medium (official SDK) | High (entity model) | High (custom) |
 
 ### 6.2 Critical Migration Challenges
 
@@ -1160,6 +1171,15 @@ ArangoDB's named graphs define valid edge-vertex relationships at the schema lev
 - **Resource profile**: 🟡 Moderate — 256 MB minimum, C-native, no JVM
 - **Estimated migration**: 6-10 weeks (graph layer construction)
 
+### Tier 2b: Interesting but Niche
+
+#### TypeDB — Inference Engine for Attribute Inheritance
+- **Why**: The .NET SDK blocker is now resolved (`TypeDB.Driver` NuGet). TypeDB's inference engine is uniquely suited to attribute inheritance — rules can derive inherited attributes without explicit traversal code. The type system is the strongest of any option
+- **Key risk**: TypeQL is a unique query language (learning curve), no document model, no embedded mode, small ecosystem. Inference adds latency
+- **Best for**: If the inference engine's ability to express attribute inheritance rules is worth the TypeQL learning investment
+- **Resource profile**: 🟡 Moderate — 1 GB minimum (Rust v3 core), no JVM dependency for v3.x
+- **Estimated migration**: 6-10 weeks (TypeQL query rewrite + entity model design + inference rule authoring)
+
 ### Tier 3: Not Recommended
 
 | Alternative | Why Not | Resource Profile |
@@ -1168,16 +1188,14 @@ ArangoDB's named graphs define valid edge-vertex relationships at the schema lev
 | **LiteDB** | No graph support; too limited for SharpMUSH | 🟢 10 MB |
 | **DGraph** | No .NET SDK; RDF model is wrong paradigm; operational complexity | 🔴 2 GB (multi-process) |
 | **FalkorDB** | No .NET SDK; SSPL license; limited Cypher; no transactions | 🟢 50 MB |
-| **Kùzu** | No .NET SDK (critical blocker); excellent graph but embedded-only | 🟢 50 MB |
+| **Kùzu** | ❌ **Archived project** (Oct 2025); no .NET SDK; no future maintenance | 🟢 50 MB |
 | **JanusGraph** | Heaviest resource footprint (4 GB+); JVM×2; operational complexity | 🔴 4 GB (JVM×2) |
-| **TypeDB** | No .NET SDK; unique query language; niche ecosystem | 🟡 1–2 GB |
 
 ### Tier 3 Watch List
 
 | Alternative | Watch For | Would Move To |
 |-------------|-----------|---------------|
-| **Kùzu** | Official .NET bindings | Tier 1 (MIT license, embedded graph, full Cypher, 50 MB) |
-| **TypeDB** | .NET SDK + ecosystem growth | Tier 2 (inference engine could solve attribute inheritance) |
+| **FalkorDB** | Official .NET SDK + transaction support | Tier 2 (if Cypher coverage improves) |
 
 ### Decision Framework
 
@@ -1193,7 +1211,7 @@ If resource efficiency matters:
   → AVOID: Neo4j (2 GB JVM), JanusGraph (4 GB JVM×2), ArcadeDB (1.5 GB JVM)
 
 If license must be permissive:
-  → PostgreSQL (PostgreSQL+MIT), Kùzu (MIT), or ArcadeDB (Apache 2.0)
+  → PostgreSQL (PostgreSQL+MIT) or ArcadeDB (Apache 2.0)
 
 If .NET developer experience is critical:
   → RavenDB > PostgreSQL+Marten > SurrealDB > Memgraph (via Neo4j.Driver) > Neo4j
