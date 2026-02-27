@@ -2,9 +2,11 @@
 
 ## Executive Summary
 
-SharpMUSH currently uses ArangoDB as its sole database via the `ISharpDatabase` interface (75+ methods) implemented by `ArangoDatabase` (3,300+ lines). The database serves as a multi-model store combining document, graph, and key-value capabilities. This analysis evaluates alternatives across embedded and standalone deployment modes, assessing each against SharpMUSH's specific requirements.
+SharpMUSH currently uses ArangoDB as its sole database via the `ISharpDatabase` interface (75+ methods) implemented by `ArangoDatabase` (3,300+ lines). The database serves as a multi-model store combining document, graph, and key-value capabilities. This analysis evaluates alternatives across embedded and standalone deployment modes, assessing each against SharpMUSH's specific requirements — including both graph-native and non-graph databases.
 
 **Recommendation**: SurrealDB is the strongest overall candidate (embedded via SurrealKv, native graph support, multi-model). Memgraph is the strongest Cypher-compatible lightweight alternative. Neo4j is the most mature graph-native alternative but has heavy JVM resource overhead. RavenDB offers the best .NET developer experience but has weaker graph support. PostgreSQL + Marten is the most pragmatic but requires the most custom graph logic.
+
+**Non-graph viability**: SharpMUSH's graph usage is primarily **tree-like traversals** (parent chains, zone chains, attribute inheritance) — not arbitrary graph problems. This makes non-graph databases viable if paired with a lightweight application-level graph engine. MongoDB with `$graphLookup` and SQLite with recursive CTEs are the strongest non-graph candidates. See [Section 8](#8-non-graph-database-viability-assessment) for detailed analysis.
 
 ---
 
@@ -29,6 +31,13 @@ SharpMUSH currently uses ArangoDB as its sole database via the `ISharpDatabase` 
 5. [Resource Requirements Comparison](#5-resource-requirements-comparison)
 6. [Migration Complexity Assessment](#6-migration-complexity-assessment)
 7. [Recommendation Summary](#7-recommendation-summary)
+8. [Non-Graph Database Viability Assessment](#8-non-graph-database-viability-assessment)
+   - 8.1 [Why Non-Graph Databases Are Worth Considering](#81-why-non-graph-databases-are-worth-considering)
+   - 8.2 [Graph-in-Application Architecture Pattern](#82-graph-in-application-architecture-pattern)
+   - 8.3 [MongoDB](#83-mongodb)
+   - 8.4 [SQLite](#84-sqlite)
+   - 8.5 [Non-Graph Comparison Matrix](#85-non-graph-comparison-matrix)
+   - 8.6 [Non-Graph Recommendation](#86-non-graph-recommendation)
 
 ---
 
@@ -1205,23 +1214,420 @@ ArangoDB's named graphs define valid edge-vertex relationships at the schema lev
 ```
 If embedded mode is critical:
   → SurrealDB (SurrealKv) or RavenDB (RavenDB.Embedded)
+  → Non-graph: SQLite (lightest) or MongoDB (via Testcontainers)
 
 If graph query power is critical:
   → Memgraph (lightweight Cypher) or Neo4j (mature Cypher) or stay with ArangoDB
 
 If resource efficiency matters:
   → Memgraph (256 MB, no JVM) > SurrealDB (50 MB embedded) > PostgreSQL (256 MB)
+  → Non-graph: SQLite (< 10 MB) > MongoDB (256 MB)
   → AVOID: Neo4j (2 GB JVM), JanusGraph (4 GB JVM×2), ArcadeDB (1.5 GB JVM)
 
 If license must be permissive:
   → PostgreSQL (PostgreSQL+MIT) or ArcadeDB (Apache 2.0)
+  → Non-graph: SQLite (public domain) or MongoDB (SSPL — read the terms)
 
 If .NET developer experience is critical:
   → RavenDB > PostgreSQL+Marten > SurrealDB > Memgraph (via Neo4j.Driver) > Neo4j
+  → Non-graph: MongoDB (.NET Driver is excellent) > SQLite (EF Core/ADO.NET)
 
 If migration effort must be minimal:
   → Stay with ArangoDB, or Memgraph/Neo4j as closest graph alternatives
+
+If you're willing to build application-level graph traversal:
+  → See Section 8 — MongoDB or PostgreSQL+Marten offer the best foundation
+  → ~40% of ISharpDatabase methods are graph-dependent; the rest are simple CRUD
+  → Parent/zone chains are tree-like (bounded depth, mostly acyclic)
+  → Application-level caching can offset the loss of database-level traversal
 ```
+
+---
+
+## 8. Non-Graph Database Viability Assessment
+
+This section directly addresses the question: **"What about non-graph databases that can support our needs?"**
+
+### 8.1 Why Non-Graph Databases Are Worth Considering
+
+SharpMUSH's graph usage, while significant (~40% of `ISharpDatabase` methods), has characteristics that make it tractable without a graph database:
+
+**SharpMUSH's graph operations are mostly tree-like, not arbitrary graph problems:**
+
+| Characteristic | SharpMUSH Reality | Implication |
+|---------------|-------------------|-------------|
+| **Graph shape** | Trees/DAGs (parent chains, zone hierarchies, attribute paths) | Not complex cyclic graphs — simpler to traverse |
+| **Traversal depth** | Bounded (max 100 hops, typically 1-5) | No deep/infinite traversal needed |
+| **Traversal direction** | Mostly single-direction (child → parent, object → zone) | Simple recursive lookups suffice |
+| **Read/write ratio** | Read-heavy (inheritance queries dominate) | Caching is highly effective |
+| **Edge types** | 19 types, but most are 1:1 or 1:few relationships | Junction tables or document references work |
+| **Complex multi-hop** | Only attribute inheritance (Self → Parents → Zones) | Isolated complexity — can be special-cased |
+| **Shortest path** | Only mail routing (2 uses) | Can implement BFS in application code |
+
+**The key insight**: Only **4 methods** in `ISharpDatabase` require genuine multi-hop graph traversal:
+1. `GetAttributeWithInheritanceAsync` — walks parent → zone chains
+2. `GetLazyAttributeWithInheritanceAsync` — lazy version of above
+3. `GetParentsAsync` — returns full parent chain
+4. `IsReachableViaParentOrZoneAsync` — reachability check with cycle detection
+
+The remaining ~77 methods are **simple CRUD, single-hop edge lookups, or can be implemented with JOINs/lookups**.
+
+### 8.2 Graph-in-Application Architecture Pattern
+
+Any non-graph database can support SharpMUSH if paired with an application-level graph traversal layer:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  ISharpDatabase Implementation                      │
+│                                                     │
+│  ┌──────────────────────┐  ┌─────────────────────┐  │
+│  │  Document CRUD       │  │  Graph Engine (C#)   │  │
+│  │  (~60% of methods)   │  │  (~40% of methods)   │  │
+│  │                      │  │                      │  │
+│  │  • Object CRUD       │  │  • ParentChainWalker │  │
+│  │  • Attribute CRUD    │  │  • ZoneChainWalker   │  │
+│  │  • Flag/Power CRUD   │  │  • InheritanceEngine │  │
+│  │  • Channel CRUD      │  │  • ReachabilityCheck │  │
+│  │  • Mail CRUD         │  │  • PathFinder (BFS)  │  │
+│  │                      │  │                      │  │
+│  │  Direct DB queries   │  │  Multi-query + cache │  │
+│  └──────────┬───────────┘  └──────────┬───────────┘  │
+│             │                         │              │
+│  ┌──────────▼─────────────────────────▼───────────┐  │
+│  │  Database Backend (MongoDB / SQLite / PG / etc) │  │
+│  │  Stores: objects, attributes, edges-as-docs     │  │
+│  └─────────────────────────────────────────────────┘  │
+│                                                     │
+│  ┌─────────────────────────────────────────────────┐  │
+│  │  Optional: In-Memory Cache (parent/zone chains) │  │
+│  │  Invalidated on SetObjectParent/SetObjectZone   │  │
+│  └─────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+**Graph Engine implementation sketch** (C#):
+
+```csharp
+// Application-level parent chain walker
+public async IAsyncEnumerable<SharpObject> GetParentsAsync(
+    string objectId, [EnumeratorCancellation] CancellationToken ct)
+{
+    var visited = new HashSet<string>();
+    var currentId = objectId;
+
+    while (currentId != null && visited.Add(currentId))
+    {
+        // Single-document lookup (any DB can do this)
+        var edge = await db.FindParentEdge(currentId, ct);
+        if (edge is null) yield break;
+
+        var parent = await db.GetObjectById(edge.ParentId, ct);
+        if (parent is null) yield break;
+
+        yield return parent;
+        currentId = edge.ParentId;
+    }
+}
+```
+
+**Estimated graph engine size**: ~500-800 lines of C# code for all 4 multi-hop methods, including caching.
+
+**Trade-offs**:
+
+| Factor | Database-Level Graph | Application-Level Graph |
+|--------|---------------------|------------------------|
+| **Query count** | 1 round-trip (complex query) | N round-trips (1 per hop) |
+| **Performance** | Better for deep/wide traversals | Adequate for bounded trees (1-5 hops typical) |
+| **Caching** | Database-managed | Application-managed (more control) |
+| **Complexity** | In query language (AQL/Cypher) | In C# code (more testable) |
+| **Debugging** | Opaque query plans | Step-through debugging |
+| **Portability** | Locked to DB vendor | Works with any backend |
+
+---
+
+### 8.3 MongoDB
+
+**Type**: Document database with built-in graph traversal (`$graphLookup`)
+**License**: Server Side Public License (SSPL)
+**Embedded**: No (server process required; can use Docker/Testcontainers)
+**.NET SDK**: Official `MongoDB.Driver` v3.x (NuGet) — excellent, async, LINQ, strongly-typed
+**Written in**: C++ (WiredTiger storage engine)
+
+#### Strengths
+
+1. **`$graphLookup` aggregation stage**: Server-side recursive graph traversal — the key differentiator among non-graph databases
+   ```csharp
+   // Find all parents of an object (recursive traversal)
+   var pipeline = collection.Aggregate()
+       .Match(o => o.Id == objectId)
+       .GraphLookup<SharpObject, SharpObject, SharpObject>(
+           from: collection,
+           connectFromField: o => o.ParentId,
+           connectToField: o => o.Id,
+           startWith: o => o.ParentId,
+           @as: (input, results) => input.ParentChain,
+           options: new AggregateGraphLookupOptions<SharpObject, SharpObject, SharpObject>
+           {
+               MaxDepth = 100,
+               DepthField = o => o.Depth
+           });
+   ```
+
+2. **Best non-graph traversal support**: `$graphLookup` with `maxDepth` and `restrictSearchWithMatch` provides PRUNE-like filtering at the database level — no other non-graph DB can do this
+   ```javascript
+   // restrictSearchWithMatch acts like a partial PRUNE
+   $graphLookup: {
+     from: "objects",
+     startWith: "$parentId",
+     connectFromField: "parentId",
+     connectToField: "_id",
+     as: "ancestors",
+     maxDepth: 100,
+     restrictSearchWithMatch: { "type": { $ne: "INACTIVE" } }
+   }
+   ```
+
+3. **Excellent .NET SDK**: `MongoDB.Driver` v3.x — fully async, LINQ support, strongly-typed builders, `IAsyncCursor` streaming, change streams
+   ```csharp
+   var client = new MongoClient("mongodb://localhost:27017");
+   var db = client.GetDatabase("sharpmush");
+   var objects = db.GetCollection<SharpObject>("objects");
+
+   // LINQ query
+   var player = await objects.AsQueryable()
+       .Where(o => o.Type == "PLAYER" && o.Name == "God")
+       .FirstOrDefaultAsync();
+   ```
+
+4. **Multi-document ACID transactions**: Full transaction support since MongoDB 4.0
+   ```csharp
+   using var session = await client.StartSessionAsync();
+   session.StartTransaction();
+   try {
+       await objects.InsertOneAsync(session, newObject);
+       await edges.InsertOneAsync(session, ownerEdge);
+       await session.CommitTransactionAsync();
+   } catch {
+       await session.AbortTransactionAsync();
+       throw;
+   }
+   ```
+
+5. **Mature ecosystem**: Largest NoSQL community, excellent tooling (MongoDB Compass, Atlas), well-documented
+6. **Change streams**: Real-time notifications on data changes (useful for cache invalidation)
+7. **Schema validation**: JSON Schema validation on collections
+8. **Regex queries**: Native `$regex` operator
+9. **Auto-generated IDs**: `ObjectId` is auto-generated; can also use custom sequential IDs
+10. **Sharding ready**: Horizontal scaling if needed (unlikely for MUSH, but available)
+
+#### Weaknesses
+
+1. **No embedded mode**: Requires a MongoDB server process. Can mitigate with Docker/Testcontainers for development, but adds deployment complexity
+2. **SSPL license**: Server Side Public License — more restrictive than Apache/MIT. **Not a concern for SharpMUSH** (SSPL only restricts offering MongoDB as a service; using it as an application database is fine)
+3. **`$graphLookup` limitations**:
+   - Returns results in an array (no streaming for large result sets)
+   - No true PRUNE (conditional branch termination) — `restrictSearchWithMatch` filters nodes but doesn't stop branch exploration
+   - Single collection only (can't traverse across collections in one `$graphLookup`)
+   - Cannot be used inside transactions on sharded collections
+4. **No recursive CTE equivalent**: `$graphLookup` is the only server-side traversal mechanism; more complex patterns need application code
+5. **Resource overhead**: ~256 MB minimum for mongod process; heavier than SQLite/LiteDB
+6. **No `ltree`-like path queries**: Unlike PostgreSQL, no built-in hierarchical path matching
+
+#### SharpMUSH-Specific Assessment
+
+| Requirement | Support | Notes |
+|-------------|---------|-------|
+| R1 Graph traversals | ⚠️ Via `$graphLookup` | Server-side recursive traversal; best of non-graph options |
+| R2 PRUNE | ⚠️ Partial | `restrictSearchWithMatch` filters but doesn't terminate branches |
+| R3 Multi-edge traversals | ⚠️ Multiple pipelines | Separate `$graphLookup` per edge type, then merge |
+| R4 Shortest path | ❌ No | Must implement BFS in application code |
+| R5 Transactions | ✅ Yes | Multi-document ACID since 4.0 |
+| R6 .NET SDK | ✅ Excellent | `MongoDB.Driver` v3.x — async, LINQ, streaming |
+| R7 Auto-increment keys | ⚠️ Simulate | `findAndModify` counter pattern or custom sequence |
+| R8 Schema validation | ✅ Yes | JSON Schema validation on collections |
+| R9 Embedded mode | ❌ No | Server process required |
+| R10 Standalone mode | ✅ Yes | Docker, bare metal, Atlas |
+| R11 Migration framework | ⚠️ Third-party | `Mongo.Migration` NuGet, or custom |
+| R12 Cross-graph joins | ⚠️ Via `$lookup` | `$lookup` + `$graphLookup` can compose, but complex |
+| R13 Regex matching | ✅ Yes | Native `$regex` operator |
+| R14 Document CRUD | ✅ Excellent | Core feature |
+| R15 Active community | ✅ Excellent | Largest NoSQL ecosystem |
+| R16 License | ⚠️ SSPL | Not a concern for application use; only restricts DBaaS |
+
+**Migration effort**: HIGH — Document CRUD maps directly (~60% of methods). `$graphLookup` can handle parent chain and zone chain traversals at the database level. Attribute inheritance (the most complex query) would need a multi-step pipeline or application-level composition. Better than pure non-graph options because `$graphLookup` reduces application code needed.
+
+#### Resource Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **RAM** | 256 MB | 1 GB+ | WiredTiger cache defaults to 50% of available RAM minus 1 GB, minimum ~256 MB |
+| **CPU** | 1 core | 2+ cores | Good single-core performance; WiredTiger is concurrent |
+| **Disk** | 200 MB | Varies | Server binaries + WiredTiger data files |
+| **Runtime** | None | None | Self-contained C++ binary; no JVM or CLR needed |
+
+---
+
+### 8.4 SQLite
+
+**Type**: Embedded relational database
+**License**: Public Domain (most permissive possible)
+**Embedded**: Yes — single-file, in-process, zero configuration
+**.NET SDK**: `Microsoft.Data.Sqlite` (official ADO.NET) + `Microsoft.EntityFrameworkCore.Sqlite` (EF Core provider)
+**Written in**: C (single amalgamation file, ~250 KB compiled)
+
+#### Strengths
+
+1. **Ultimate embedded simplicity**: No server, no Docker, single file, zero configuration — the most widely deployed database engine in the world
+   ```csharp
+   using var connection = new SqliteConnection("Data Source=sharpmush.db");
+   connection.Open();
+   ```
+
+2. **Recursive CTEs**: Full `WITH RECURSIVE` support for graph traversals
+   ```sql
+   -- Walk parent chain from object #5
+   WITH RECURSIVE parent_chain(id, parent_id, depth) AS (
+     SELECT id, parent_id, 0 FROM objects WHERE id = 5
+     UNION ALL
+     SELECT o.id, o.parent_id, pc.depth + 1
+     FROM objects o JOIN parent_chain pc ON o.id = pc.parent_id
+     WHERE pc.depth < 100
+   )
+   SELECT * FROM parent_chain;
+   ```
+
+3. **PRUNE-like behavior via recursive CTEs**: The `WHERE` clause in the recursive term effectively prunes branches
+   ```sql
+   -- Walk attribute hierarchy with path matching (PRUNE equivalent)
+   WITH RECURSIVE attr_walk(obj_id, attr_name, depth) AS (
+     SELECT o.id, a.name, 0
+     FROM objects o JOIN attributes a ON a.object_id = o.id
+     WHERE o.id = @start AND a.name = @attr_name
+     UNION ALL
+     SELECT p.parent_id, a.name, aw.depth + 1
+     FROM attr_walk aw
+     JOIN objects p ON p.id = aw.obj_id
+     JOIN attributes a ON a.object_id = p.parent_id AND a.name = @attr_name
+     WHERE aw.depth < 100
+       AND aw.obj_id IS NOT NULL
+       -- This condition stops recursion on branches where attribute was found
+   )
+   SELECT * FROM attr_walk WHERE attr_name IS NOT NULL;
+   ```
+
+4. **Public Domain license**: No restrictions whatsoever — the most permissive option
+5. **EF Core integration**: Full ORM support via `Microsoft.EntityFrameworkCore.Sqlite`
+   ```csharp
+   services.AddDbContext<SharpMushContext>(o =>
+       o.UseSqlite("Data Source=sharpmush.db"));
+   ```
+
+6. **Extremely lightweight**: < 1 MB library, < 10 MB RAM for small databases
+7. **ACID transactions**: Full transaction support with WAL mode for concurrent reads
+8. **JSON support**: `json_extract`, `json_each`, `json_set` functions (since 3.38.0)
+9. **Full-text search**: FTS5 extension for text search
+10. **Auto-increment**: `AUTOINCREMENT` or `ROWID` for sequential IDs
+11. **Microsoft-maintained .NET bindings**: `Microsoft.Data.Sqlite` — official, well-maintained, part of .NET SDK
+
+#### Weaknesses
+
+1. **Single-writer limitation**: Only one writer at a time (WAL mode allows concurrent reads). Could be a bottleneck under heavy concurrent write load
+2. **No standalone/server mode**: Embedded only — if you need client-server, must add a layer (but SharpMUSH is a single-server application, so this may be fine)
+3. **No native graph model**: All graph operations via recursive CTEs or application code
+4. **Recursive CTE performance**: Slower than native graph traversal for deep/wide graphs. For SharpMUSH's bounded trees (1-5 hops typical), performance should be adequate
+5. **No change streams**: Must poll for changes (or use `sqlite3_update_hook` via P/Invoke)
+6. **No built-in schema validation**: Must use CHECK constraints or application-level validation
+7. **Limited regex**: `REGEXP` requires a custom function (not built-in by default); `LIKE`/`GLOB` are available
+8. **No streaming cursors**: Results materialized in memory (adequate for SharpMUSH's data sizes)
+
+#### SharpMUSH-Specific Assessment
+
+| Requirement | Support | Notes |
+|-------------|---------|-------|
+| R1 Graph traversals | ⚠️ Via recursive CTEs | Works for bounded trees; verbose but functional |
+| R2 PRUNE | ⚠️ Partial | CTE `WHERE` clause can stop branch recursion |
+| R3 Multi-edge traversals | ⚠️ Via JOINs | Multiple CTE branches, then UNION |
+| R4 Shortest path | ⚠️ Via CTE | BFS via recursive CTE with visited tracking |
+| R5 Transactions | ✅ Yes | Full ACID; WAL mode for concurrent reads |
+| R6 .NET SDK | ✅ Good | `Microsoft.Data.Sqlite` + EF Core provider |
+| R7 Auto-increment keys | ✅ Yes | `AUTOINCREMENT` / `ROWID` |
+| R8 Schema validation | ⚠️ Partial | CHECK constraints; no JSON Schema |
+| R9 Embedded mode | ✅ Excellent | Native embedded — lightest option |
+| R10 Standalone mode | ❌ No | Embedded only |
+| R11 Migration framework | ✅ Yes | EF Core Migrations, FluentMigrator, DbUp |
+| R12 Cross-graph joins | ⚠️ Via SQL JOINs | Possible; loses graph semantics |
+| R13 Regex matching | ⚠️ Limited | Requires custom `REGEXP` function; `LIKE`/`GLOB` available |
+| R14 Document CRUD | ⚠️ Via JSON | JSON functions for document-like operations; or use relational tables |
+| R15 Active community | ✅ Excellent | Most widely deployed DB; actively maintained |
+| R16 License | ✅ Public Domain | No restrictions whatsoever |
+
+**Migration effort**: VERY HIGH — Requires significant redesign: 16 named graphs → relational tables with foreign keys. All graph traversals → recursive CTEs or application code. Document model → relational tables (or JSON columns). But: excellent tooling, well-understood patterns, lightest deployment.
+
+#### Resource Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **RAM** | < 10 MB | 50–100 MB | Extremely lightweight; in-process with configurable page cache |
+| **CPU** | 1 core | 1 core | Single-threaded writes; reads scale with cores |
+| **Disk** | < 1 MB (library) | Varies | Single file; data-dependent. WAL file adds ~2x during writes |
+| **Runtime** | .NET (host process) | .NET 8+ | Native SQLite bundled via `e_sqlite3` in `Microsoft.Data.Sqlite` |
+
+---
+
+### 8.5 Non-Graph Comparison Matrix
+
+This matrix compares all non-graph databases evaluated (including those from Section 3):
+
+| Feature | MongoDB | SQLite | PostgreSQL+Marten | RavenDB | LiteDB |
+|---------|---------|--------|-------------------|---------|--------|
+| **Server-side traversal** | ✅ `$graphLookup` | ⚠️ Recursive CTEs | ⚠️ Recursive CTEs | ⚠️ `recursive` RQL | ❌ None |
+| **PRUNE-like filtering** | ⚠️ `restrictSearchWithMatch` | ⚠️ CTE `WHERE` clause | ⚠️ CTE `WHERE` clause | ❌ No | ❌ No |
+| **Multi-hop traversal** | ✅ In single pipeline | ⚠️ Via CTE+JOINs | ⚠️ Via CTE+JOINs | ⚠️ Basic `recursive` | ❌ App code only |
+| **ACID Transactions** | ✅ Multi-document | ✅ Full | ✅ Excellent | ✅ Excellent | ⚠️ Limited |
+| **.NET SDK Quality** | ✅ Excellent | ✅ Good (ADO.NET/EF Core) | ✅ Excellent (Marten) | ✅ Excellent | ✅ Good |
+| **Embedded Mode** | ❌ No | ✅ Best | ❌ No | ✅ Yes (.NET) | ✅ Yes (.NET) |
+| **Standalone Mode** | ✅ Yes | ❌ No | ✅ Yes | ✅ Yes | ❌ No |
+| **Document CRUD** | ✅ Native | ⚠️ Via JSON/tables | ✅ Via Marten | ✅ Native | ✅ Native |
+| **Auto-increment** | ⚠️ Simulate | ✅ `AUTOINCREMENT` | ✅ `SERIAL` | ✅ HiLo | ✅ Auto-ID |
+| **Regex** | ✅ `$regex` | ⚠️ Custom function | ✅ `~` operator | ✅ Via indexes | ❌ LIKE only |
+| **License** | ⚠️ SSPL | ✅ Public Domain | ✅ PostgreSQL+MIT | ⚠️ AGPL/Commercial | ✅ MIT |
+| **Min RAM** | 256 MB | < 10 MB | 256 MB | 512 MB | 10 MB |
+| **Community** | ✅ Excellent | ✅ Excellent | ✅ Excellent | ✅ Good | ⚠️ Declining |
+| **Graph code needed** | Low (for most ops) | Medium | Medium | High | Very High |
+
+#### Key Takeaway
+
+**MongoDB** is the best non-graph option because `$graphLookup` can handle the most common traversal patterns (parent chains, zone chains) at the database level, reducing the amount of graph logic needed in application code. **SQLite** is the best option if embedded mode and minimal resources are priorities, but requires more application-level graph code.
+
+---
+
+### 8.6 Non-Graph Recommendation
+
+#### If you must use a non-graph database:
+
+| Rank | Database | Best For | Graph Approach | Migration Effort |
+|------|----------|----------|----------------|-----------------|
+| 🥇 | **MongoDB** | Best server-side traversal support among non-graph DBs | `$graphLookup` for parent/zone chains + app code for inheritance | HIGH (4-6 weeks) |
+| 🥈 | **PostgreSQL + Marten** | Most stable foundation; best for long-term | Recursive CTEs + `ltree` for paths + Marten for documents | VERY HIGH (6-10 weeks) |
+| 🥉 | **SQLite** | Lightest embedded option; simplest deployment | Recursive CTEs + app code for complex traversals | VERY HIGH (6-10 weeks) |
+| 4th | **RavenDB** | Best .NET DX; basic graph support | `recursive` RQL for simple chains + app code | VERY HIGH (6-10 weeks) |
+| 5th | **LiteDB** | Lightest .NET embedded | All graph logic in C# | EXTREME (8-12 weeks) |
+
+#### Non-graph architecture recommendations:
+
+1. **Build a `GraphEngine` service** (~500-800 lines C#) that implements `GetParentsAsync`, `GetAttributeWithInheritanceAsync`, `GetLazyAttributeWithInheritanceAsync`, and `IsReachableViaParentOrZoneAsync` using multi-query traversal
+2. **Cache parent and zone chains** in memory — these change infrequently and are read-heavy. Invalidate on `SetObjectParent`/`SetObjectZone`
+3. **Store edges as documents/rows** with `fromId`, `toId`, `edgeType` — simple to query from any database
+4. **Use the `ISharpDatabase` interface** as-is — it already provides a clean abstraction. The non-graph implementation just has different internal strategies
+
+#### When a non-graph database makes sense for SharpMUSH:
+
+- ✅ You want **embedded mode** without SurrealDB's BSL license → **SQLite** (public domain)
+- ✅ You want the **lightest possible deployment** → **SQLite** (< 10 MB, single file)
+- ✅ You want **excellent .NET DX** with some server-side traversal → **MongoDB** or **RavenDB**
+- ✅ You want the **most stable, battle-tested foundation** → **PostgreSQL + Marten**
+- ❌ You have **deep/wide graph traversals** beyond parent/zone chains → use a graph database instead
+- ❌ You need **real-time graph algorithm performance** → use Memgraph or Neo4j
 
 ---
 
