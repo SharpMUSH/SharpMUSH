@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Server.Strategy.ArangoDB;
 using SharpMUSH.Server.Strategy.Redis;
 
@@ -18,7 +19,23 @@ public class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		var arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
+		// Determine database provider from environment variable
+		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
+		var databaseProvider = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase)
+			? DatabaseProvider.Memgraph
+			: DatabaseProvider.ArangoDB;
+
+		ArangoConfiguration? arangoConfig = null;
+		string? memgraphUri = null;
+
+		if (databaseProvider == DatabaseProvider.Memgraph)
+		{
+			memgraphUri = Environment.GetEnvironmentVariable("MEMGRAPH_URI") ?? "bolt://localhost:7687";
+		}
+		else
+		{
+			arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
+		}
 
 		// Initialize Redis strategy
 		var redisStrategy = RedisStrategyProvider.GetStrategy();
@@ -31,33 +48,36 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(arangoConfig, colorFile, redisStrategy);
+		var startup = new Startup(arangoConfig, colorFile, redisStrategy, databaseProvider, memgraphUri);
 
 		startup.ConfigureServices(builder.Services, builder.Configuration);
 
 		var app = builder.Build();
 
-		// Configure Arango database logging sink now that DI is built (avoids BuildServiceProvider anti-pattern)
-		var arangoContext = app.Services.GetRequiredService<IArangoContext>();
-		Log.Logger = new LoggerConfiguration()
-			.ReadFrom.Configuration(builder.Configuration)
-			.WriteTo.Sink(new PeriodicBatchingSink(
-				new ArangoSerilogSink(
-					arangoContext,
-					"CurrentSharpMUSHWorld",
-					DatabaseConstants.Logs,
-					ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
-					indexLevel: true,
-					indexTimestamp: true,
-					indexTemplate: true),
-				new PeriodicBatchingSinkOptions
-				{
-					BatchSizeLimit = 1000,
-					QueueLimit = 100000,
-					Period = TimeSpan.FromSeconds(2),
-					EagerlyEmitFirstEvent = true,
-				}))
-			.CreateLogger();
+		// Configure Arango database logging sink only when using ArangoDB
+		if (databaseProvider == DatabaseProvider.ArangoDB)
+		{
+			var arangoContext = app.Services.GetRequiredService<IArangoContext>();
+			Log.Logger = new LoggerConfiguration()
+				.ReadFrom.Configuration(builder.Configuration)
+				.WriteTo.Sink(new PeriodicBatchingSink(
+					new ArangoSerilogSink(
+						arangoContext,
+						"CurrentSharpMUSHWorld",
+						DatabaseConstants.Logs,
+						ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
+						indexLevel: true,
+						indexTimestamp: true,
+						indexTemplate: true),
+					new PeriodicBatchingSinkOptions
+					{
+						BatchSizeLimit = 1000,
+						QueueLimit = 100000,
+						Period = TimeSpan.FromSeconds(2),
+						EagerlyEmitFirstEvent = true,
+					}))
+				.CreateLogger();
+		}
 
 		// Get logger for startup logging
 		var logger = app.Services.GetRequiredService<ILogger<Program>>();

@@ -35,6 +35,9 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
 
+	[ClassDataSource<MemgraphTestServer>(Shared = SharedType.PerTestSession)]
+	public required MemgraphTestServer MemgraphTestServer { get; init; }
+
 	[ClassDataSource<RedPandaTestServer>(Shared = SharedType.PerTestSession)]
 	public required RedPandaTestServer RedPandaTestServer { get; init; }
 
@@ -194,11 +197,15 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var log = logConfig.CreateLogger();
 		Log.Logger = log;
 
-		var config = new ArangoConfiguration
+		// Determine database provider from environment variable
+		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
+		var useMemgraph = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase);
+
+		if (useMemgraph)
 		{
-			ConnectionString = $"Server={ArangoDbTestServer.Instance.GetTransportAddress()};User=root;Realm=;Password=password;",
-			Serializer = new ArangoJsonSerializer(new ArangoJsonDefaultPolicy())
-		};
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "memgraph");
+			Environment.SetEnvironmentVariable("MEMGRAPH_URI", MemgraphTestServer.BoltUri);
+		}
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 

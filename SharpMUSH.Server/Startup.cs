@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Neo4j.Driver;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.ResourceDetectors.Container;
@@ -14,6 +15,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Database.ArangoDB;
+using SharpMUSH.Database.Memgraph;
 using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
@@ -31,7 +33,12 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisStrategy redisStrategy)
+public class Startup(
+	ArangoConfiguration? arangoConfig,
+	string colorFile,
+	RedisStrategy redisStrategy,
+	DatabaseProvider databaseProvider = DatabaseProvider.ArangoDB,
+	string? memgraphUri = null)
 {
 	// This method gets called by the runtime. Use this method to add services to the container.
 	// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
@@ -46,17 +53,34 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 				.AllowAnyHeader());
 		});
 
-		services.AddSingleton<ISharpDatabase, ArangoDatabase>(x =>
+		if (databaseProvider == DatabaseProvider.Memgraph)
 		{
-			var logger = x.GetRequiredService<ILogger<ArangoDatabase>>();
-			var context = x.GetRequiredService<IArangoContext>();
-			var handle = x.GetRequiredService<ArangoHandle>();
-			var mediator = x.GetRequiredService<IMediator>();
-			var password = x.GetRequiredService<IPasswordService>();
-			var db = new ArangoDatabase(logger, context, handle, mediator, password);
-			db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
-			return db;
-		});
+			services.AddSingleton<IDriver>(_ =>
+				GraphDatabase.Driver(memgraphUri ?? "bolt://localhost:7687"));
+			services.AddSingleton<ISharpDatabase, MemgraphDatabase>(x =>
+			{
+				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
+				var neo4JDriver = x.GetRequiredService<IDriver>();
+				var password = x.GetRequiredService<IPasswordService>();
+				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password);
+				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+				return db;
+			});
+		}
+		else
+		{
+			services.AddSingleton<ISharpDatabase, ArangoDatabase>(x =>
+			{
+				var dbLogger = x.GetRequiredService<ILogger<ArangoDatabase>>();
+				var context = x.GetRequiredService<IArangoContext>();
+				var handle = x.GetRequiredService<ArangoHandle>();
+				var mediator = x.GetRequiredService<IMediator>();
+				var password = x.GetRequiredService<IPasswordService>();
+				var db = new ArangoDatabase(dbLogger, context, handle, mediator, password);
+				db.Migrate().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+				return db;
+			});
+		}
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
 		/*
 		 * PennMUSH Password Compatibility - IMPLEMENTED
@@ -154,12 +178,15 @@ public class Startup(ArangoConfiguration arangoConfig, string colorFile, RedisSt
 		services.AddHttpClient();
 		services.AddMediator();
 
-		services.AddArango((_, arango) =>
+		if (databaseProvider == DatabaseProvider.ArangoDB && arangoConfig is not null)
 		{
-			arango.ConnectionString = arangoConfig.ConnectionString;
-			arango.HttpClient = arangoConfig.HttpClient;
-			arango.Serializer = arangoConfig.Serializer;
-		});
+			services.AddArango((_, arango) =>
+			{
+				arango.ConnectionString = arangoConfig.ConnectionString;
+				arango.HttpClient = arangoConfig.HttpClient;
+				arango.Serializer = arangoConfig.Serializer;
+			});
+		}
 
 		services.AddLogging(logging =>
 		{
