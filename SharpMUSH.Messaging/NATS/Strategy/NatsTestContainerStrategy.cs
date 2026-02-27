@@ -28,7 +28,8 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 				.WithPortBinding(NatsPort, true)   // random host port to avoid collisions
 				.WithCommand("-js")                // enable JetStream
 				.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged(NatsReadyMessage))
-				.WithReuse(false)
+				.WithLabel("reuse-id", "SharpMUSH-NATS")
+				.WithReuse(true)                   // shared across Server and ConnectionServer processes
 				.Build();
 
 			await _container.StartAsync();
@@ -38,12 +39,12 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 		return $"nats://localhost:{port}";
 	}
 
-	public override async ValueTask DisposeAsync()
+	public override ValueTask DisposeAsync()
 	{
-		if (_container is not null)
-		{
-			await _container.DisposeAsync();
-			_container = null;
-		}
+		// Reused containers are intentionally kept alive by Testcontainers so that
+		// the sibling process (Server or ConnectionServer) can continue using them.
+		// Testcontainers will not stop a container that was started with WithReuse(true).
+		_container = null;
+		return ValueTask.CompletedTask;
 	}
 }
