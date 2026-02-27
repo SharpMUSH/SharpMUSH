@@ -129,7 +129,7 @@ Object Model (16 Graphs):
 
 #### Strengths
 
-1. **Embedded Mode (SurrealKv)**: First-class embedded mode with file-based storage
+1. **Embedded Mode (SurrealKv)**: First-class embedded mode with file-based storage (SurrealKv and RocksDB backends)
    ```csharp
    // Embedded - no server needed
    services.AddSurreal("Endpoint=surrealkv://data.db;Namespace=test;Database=test")
@@ -152,9 +152,9 @@ Object Model (16 Graphs):
 #### Weaknesses
 
 1. **No PRUNE equivalent**: SurrealQL lacks conditional traversal termination — attribute inheritance queries would need restructuring (application-level iteration or recursive subqueries)
-2. **.NET SDK maturity**: v0.9.0; no client-side transaction API (`BeginTransaction` absent from .NET SDK, present in JS SDK)
+2. **.NET SDK maturity**: As of v0.9.0 (latest verified), no client-side transaction API (`BeginTransaction` absent from .NET SDK, present in JS SDK). *Note: Verify current SDK version and capabilities before making migration decisions, as the SDK may have evolved.*
 3. **No auto-increment keys**: Would need a counter table or `ULID`/`UUID` approach. Custom auto-increment simulation required
-4. **BSL License**: Not fully open-source for 4 years (but allows usage)
+4. **BSL License**: Each SurrealDB version converts to Apache 2.0 four years after its individual release date (not a blanket conversion for all code). Newer features remain under BSL longer than older code. Usage is permitted under BSL, but redistribution restrictions apply
 5. **No migration framework**: Would need a custom migration system
 6. **Young ecosystem**: Fewer production deployments than ArangoDB
 
@@ -361,7 +361,7 @@ Object Model (16 Graphs):
      WHERE pc.depth < 100
    ) SELECT * FROM parent_chain;
    ```
-4. **Apache AGE extension**: Full graph query support (Cypher-like) within PostgreSQL
+4. **Apache AGE extension**: Graph query support (Cypher-like syntax) within PostgreSQL. *Note: .NET integration requires raw SQL with `agtype` casting — no mature .NET-native bindings exist, which adds integration friction.*
    ```sql
    SELECT * FROM cypher('sharpmush', $$
      MATCH (obj:Object)-[:HAS_PARENT*1..100]->(parent:Object)
@@ -497,7 +497,7 @@ Object Model (16 Graphs):
 4. **Single-threaded writes**: Performance degrades under concurrent write load
 5. **No streaming queries**: Results materialized in memory
 6. **No schema validation**: Schemaless only
-7. **No regex in queries**: Limited pattern matching
+7. **No regex in queries**: Limited pattern matching (BsonExpression supports basic `LIKE` but not full regex)
 8. **v5 rewrite status**: LiteDB v5 was a major rewrite; v6 development status unclear
 
 #### SharpMUSH-Specific Assessment
@@ -516,7 +516,7 @@ Object Model (16 Graphs):
 | R10 Standalone mode | ❌ No | Embedded only |
 | R11 Migration framework | ❌ No | Must build custom |
 | R12 Cross-graph joins | ❌ No | N/A |
-| R13 Regex matching | ⚠️ Limited | Basic pattern only |
+| R13 Regex matching | ❌ Limited | BsonExpression LIKE only, no full regex |
 | R14 Document CRUD | ✅ Yes | Core feature |
 | R15 Active community | ⚠️ Declining | v5/v6 transition uncertain |
 | R16 License | ✅ MIT | Most permissive |
@@ -583,7 +583,7 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 | **Document CRUD** | ✅ Native | ✅ Native | ⚠️ Properties | ✅ Native | ✅ Via Marten | ✅ Native | ✅ Native |
 | **Cross-graph Joins** | ✅ Multi-GRAPH | ✅ Subqueries | ✅ Multi-MATCH | ❌ No | ⚠️ SQL JOINs | ✅ Multi-MATCH | ❌ No |
 | **Regex in Queries** | ✅ REGEX_TEST | ✅ string::is::match | ✅ `=~` | ✅ Via indexes | ✅ `~` operator | ✅ Yes | ⚠️ Limited |
-| **License** | Apache 2.0 | BSL 1.1 | GPL v3 | AGPL v3 | PostgreSQL+MIT | Apache 2.0 | MIT |
+| **License** | Apache 2.0 | BSL 1.1→Apache 2.0 | GPL v3 | AGPL v3 | PostgreSQL+MIT | Apache 2.0 | MIT |
 | **Standalone Mode** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
 | **Streaming Cursors** | ✅ Yes | ✅ Yes | ⚠️ Reactive | ✅ Yes | ✅ Yes | ⚠️ Pagination | ❌ No |
 
@@ -638,7 +638,7 @@ ArangoDB's named graphs define valid edge-vertex relationships at the schema lev
 - **Why**: Only alternative with embedded mode + native graph + multi-model + active development
 - **Key risk**: .NET SDK maturity (no client-side transactions), PRUNE equivalent missing
 - **Best for**: If embedded mode is a high priority and you can accept application-level inheritance logic
-- **License concern**: BSL 1.1 (usage is allowed; source-available but not fully open for 4 years)
+- **License concern**: BSL 1.1 (usage is allowed; each version converts to Apache 2.0 four years after its release date)
 - **Estimated migration**: 4-6 weeks for a senior developer
 
 #### 🥈 Neo4j — Best Graph Capabilities
@@ -679,7 +679,7 @@ If graph query power is critical:
   → Neo4j (Cypher) or stay with ArangoDB (AQL)
 
 If license must be permissive:
-  → SurrealDB (BSL→Apache), PostgreSQL (PostgreSQL+MIT), or ArcadeDB (Apache 2.0)
+  → SurrealDB (BSL→Apache per-version), PostgreSQL (PostgreSQL+MIT), or ArcadeDB (Apache 2.0)
 
 If .NET developer experience is critical:
   → RavenDB > PostgreSQL+Marten > SurrealDB > Neo4j
