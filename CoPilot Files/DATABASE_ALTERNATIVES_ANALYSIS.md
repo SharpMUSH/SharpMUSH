@@ -795,7 +795,7 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 **Embedded**: Yes — native C++ library with in-process bindings
 **.NET SDK**: No official .NET SDK; Python, Node.js, Rust, Java, Go bindings available
 **Written in**: C++ (columnar storage, vectorized execution)
-**Status**: ❌ **Archived** — final release v0.11.3
+**Status**: ❌ **Archived October 2025** — final release v0.11.3
 
 #### Strengths (Historical)
 
@@ -925,7 +925,10 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 **Type**: Strongly-typed knowledge graph database with inference engine
 **License**: Mozilla Public License 2.0 (MPL 2.0)
 **Embedded**: No — standalone server only (was Java-based, now Rust core since TypeDB 3.x)
-**.NET SDK**: ✅ Yes — official C# driver (`TypeDB.Driver` NuGet). P/Invoke wrapper around the Rust core driver. Targets .NET 6+. Platform-specific `TypeDB.Driver.Pinvoke.*` packages for osx-x64, osx-arm64, linux-x64, linux-arm64, win-x64
+**.NET SDK**: ✅ Yes — official C# driver via NuGet:
+  - Package: `TypeDB.Driver` (targets .NET 6+)
+  - Architecture: P/Invoke wrapper around the Rust core driver (SWIG-generated bindings)
+  - Platform packages: `TypeDB.Driver.Pinvoke.{osx-x64, osx-arm64, linux-x64, linux-arm64, win-x64}`
 **Written in**: Rust (core engine, since v3.x) / Java (v2.x and client libraries)
 
 #### Strengths
