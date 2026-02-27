@@ -39,12 +39,15 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 		return $"nats://localhost:{port}";
 	}
 
-	public override ValueTask DisposeAsync()
+	public override async ValueTask DisposeAsync()
 	{
-		// Reused containers are intentionally kept alive by Testcontainers so that
-		// the sibling process (Server or ConnectionServer) can continue using them.
-		// Testcontainers will not stop a container that was started with WithReuse(true).
-		_container = null;
-		return ValueTask.CompletedTask;
+		if (_container is not null)
+		{
+			// With WithReuse(true), Testcontainers will NOT stop the Docker container on
+			// disposal — the Ryuk cleanup agent manages its lifetime.  We still call
+			// DisposeAsync to release the client-side .NET resources.
+			await _container.DisposeAsync();
+			_container = null;
+		}
 	}
 }

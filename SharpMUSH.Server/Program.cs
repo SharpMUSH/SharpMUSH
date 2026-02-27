@@ -17,6 +17,8 @@ public class Program
 	{
 		var arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
 
+		// Resolve the NATS URL.  Ownership of the testcontainer (when NATS_URL is not set)
+		// belongs to ConnectionServer; Server only needs the URL to connect.
 		var natsStrategy = NatsStrategyProvider.GetStrategy();
 		var natsUrl = await natsStrategy.GetUrlAsync();
 
@@ -65,7 +67,6 @@ public class Program
 		}
 		finally
 		{
-			await natsStrategy.DisposeAsync();
 			await Log.CloseAndFlushAsync();
 		}
 	}
