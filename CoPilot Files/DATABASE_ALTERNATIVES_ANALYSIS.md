@@ -647,6 +647,360 @@ Not recommended for SharpMUSH due to lack of .NET SDK, no embedded mode, operati
 
 ---
 
+### 3.8 Memgraph
+
+**Type**: Native graph database (property graph model, Cypher-compatible)
+**License**: Business Source License 1.1 (Community), Commercial (Enterprise)
+**Embedded**: No — standalone server only
+**.NET SDK**: Via Neo4j.Driver (Bolt protocol compatible) or `MGCLIENT` (community)
+**Written in**: C++ (high-performance, in-memory)
+
+#### Strengths
+
+1. **Cypher-compatible**: Drop-in Cypher support means Neo4j query patterns transfer directly
+   ```cypher
+   MATCH (obj:Object)-[:HAS_PARENT*1..100]->(parent:Object)
+   WHERE obj.key = $startKey
+   RETURN parent
+   ```
+2. **In-memory performance**: All data in RAM — extremely fast traversals and pattern matching. Purpose-built for low-latency graph queries
+3. **Low resource overhead**: C++ native, no JVM. Starts in ~1 second with minimal RAM for small datasets
+4. **Bolt protocol compatible**: Works with the official `Neo4j.Driver` .NET NuGet package — existing Neo4j client code works with Memgraph
+   ```csharp
+   var driver = GraphDatabase.Driver("bolt://localhost:7687");
+   await using var session = driver.AsyncSession();
+   var result = await session.RunAsync("MATCH (n:Player) RETURN n.name");
+   ```
+5. **MAGE graph algorithms**: Open-source algorithm library with PageRank, shortest path, community detection, BFS/DFS, etc.
+6. **Triggers and streams**: Real-time triggers on data changes; Kafka/Pulsar stream integration
+7. **ACID transactions**: Full multi-statement transaction support
+8. **Docker-friendly**: Lightweight Docker image (~200 MB), fast startup
+
+#### Weaknesses
+
+1. **No embedded mode**: Must run as a separate process (Docker or bare metal). No in-process option for .NET
+2. **In-memory limitation**: Entire dataset must fit in RAM (on-disk storage available in Enterprise only). For SharpMUSH's small datasets this is fine, but sets a ceiling
+3. **BSL license**: Similar to SurrealDB — BSL 1.1 with eventual open-source conversion
+4. **No PRUNE equivalent**: Cypher `WHERE` filters on paths but does not prune branches the way ArangoDB's PRUNE does. Same limitation as Neo4j
+5. **Not multi-model**: Pure graph database — no native document collection semantics. Properties on nodes, but no collection-level CRUD like ArangoDB
+6. **No auto-increment keys**: Must implement application-level sequences
+7. **No migration framework**: Schema evolution must be managed manually or with custom tooling
+8. **Smaller ecosystem than Neo4j**: Fewer tutorials, extensions, and community resources
+
+#### SharpMUSH-Specific Assessment
+
+| Requirement | Support | Notes |
+|-------------|---------|-------|
+| R1 Graph traversals | ✅ Excellent | Native Cypher with `*1..N` |
+| R2 PRUNE | ⚠️ Partial | `WHERE` on paths; no branch-level pruning. MAGE procedures can help |
+| R3 Multi-edge traversals | ✅ Yes | `[:TYPE1\|TYPE2*]` Cypher syntax |
+| R4 Shortest path | ✅ Excellent | `shortestPath()` + MAGE algorithms |
+| R5 Transactions | ✅ Yes | Full ACID transactions |
+| R6 .NET SDK | ✅ Yes | Via Neo4j.Driver (Bolt compatible) |
+| R7 Auto-increment keys | ❌ No | Must simulate in application |
+| R8 Schema validation | ⚠️ Partial | Constraints (unique, exists) but no JSON Schema |
+| R9 Embedded mode | ❌ No | Standalone only |
+| R10 Standalone mode | ✅ Yes | Docker, bare metal, Kubernetes |
+| R11 Migration framework | ❌ No | Must build custom |
+| R12 Cross-graph joins | ✅ Yes | Multi-MATCH Cypher patterns |
+| R13 Regex matching | ✅ Yes | `=~` Cypher regex |
+| R14 Document CRUD | ⚠️ Adapted | Properties on nodes; no collection semantics |
+| R15 Active community | ⚠️ Medium | Growing; smaller than Neo4j but active |
+| R16 License | ⚠️ BSL | BSL 1.1; eventual Apache 2.0 per version |
+
+**Migration effort**: MEDIUM — Cypher queries from a Neo4j migration would work directly. Same graph model limitations as Neo4j (no document collections), but much lower resource overhead. Good choice if Neo4j's JVM cost is unacceptable.
+
+#### Resource Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **RAM** | 256 MB | 1 GB+ | C++ native; **no JVM overhead**. In-memory store, so RAM = data size + ~100–200 MB overhead. For SharpMUSH's small graph this is very modest |
+| **CPU** | 1 core | 2+ cores | C++ query engine is efficient; single-core performance is excellent |
+| **Disk** | 100 MB | Varies | ~200 MB Docker image. Snapshots written to disk for persistence |
+| **Runtime** | None | None | Self-contained C++ binary; **no JVM, no CLR**. ~1s startup time |
+
+---
+
+### 3.9 FalkorDB
+
+**Type**: Native graph database (formerly RedisGraph, now standalone)
+**License**: Server Side Public License (SSPL) v1
+**Embedded**: No — standalone server (previously a Redis module)
+**.NET SDK**: Community `NRedisStack` or raw Redis protocol; no dedicated .NET driver
+**Written in**: C (extremely lightweight)
+
+#### Strengths
+
+1. **Cypher subset support**: Supports a subset of openCypher for graph queries
+   ```cypher
+   GRAPH.QUERY sharpmush "MATCH (p:Player)-[:HAS_PARENT*1..10]->(parent) RETURN parent"
+   ```
+2. **Extremely fast**: C-based, in-memory graph with custom sparse matrix engine (GraphBLAS). Benchmark leaders for small-to-medium graph queries
+3. **Very low resource footprint**: Lighter than any other graph database — runs comfortably in 50 MB for small graphs
+4. **Redis protocol compatible**: Can leverage existing Redis client libraries
+5. **Graph algorithms**: Built-in shortest path, BFS, DFS via Cypher extensions
+
+#### Weaknesses
+
+1. **SSPL license**: Not OSI-approved open source; may conflict with licensing requirements. More restrictive than BSL
+2. **Limited Cypher support**: Only a subset of openCypher — no quantified path patterns, limited `WHERE` on paths
+3. **No .NET SDK**: Must use Redis client with raw `GRAPH.QUERY` commands — poor developer experience
+4. **No PRUNE equivalent**: Limited path filtering compared to even Neo4j/Memgraph
+5. **In-memory only**: No on-disk storage option in community edition. Data must fit in RAM
+6. **No multi-model**: Pure graph only — no document storage
+7. **No ACID transactions**: Redis-style single-command atomicity only
+8. **Small ecosystem**: Relatively new as standalone product (forked from RedisGraph 2023)
+9. **No migration framework**: Must build custom
+
+#### SharpMUSH-Specific Assessment
+
+| Requirement | Support | Notes |
+|-------------|---------|-------|
+| R1 Graph traversals | ✅ Yes | Cypher subset with depth limits |
+| R2 PRUNE | ❌ No | Very limited path filtering |
+| R3 Multi-edge traversals | ⚠️ Limited | Basic multi-type support |
+| R4 Shortest path | ✅ Yes | Built-in `shortestPath()` |
+| R5 Transactions | ❌ No | Single-command atomicity only |
+| R6 .NET SDK | ❌ Poor | Raw Redis commands via NRedisStack |
+| R7 Auto-increment keys | ❌ No | Must simulate |
+| R8 Schema validation | ❌ No | No schema enforcement |
+| R9 Embedded mode | ❌ No | Standalone only |
+| R10 Standalone mode | ✅ Yes | Docker, bare metal |
+| R11 Migration framework | ❌ No | Must build custom |
+| R12 Cross-graph joins | ⚠️ Limited | Single graph per query |
+| R13 Regex matching | ⚠️ Limited | Basic pattern support |
+| R14 Document CRUD | ❌ No | Properties on nodes only |
+| R15 Active community | ⚠️ Small | New standalone project; growing |
+| R16 License | ❌ SSPL | Not OSI-approved; restrictive |
+
+**Migration effort**: EXTREME — Limited Cypher subset, no transactions, no document model, no .NET SDK. Not a viable candidate for SharpMUSH.
+
+#### Resource Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **RAM** | 50 MB | 256 MB+ | C-native; extremely efficient. In-memory store, so RAM = data size + minimal overhead. Lightest option in this analysis |
+| **CPU** | 1 core | 1–2 cores | Single-threaded query execution (like Redis); very efficient |
+| **Disk** | 20 MB | Varies | Tiny binary; RDB snapshots for persistence |
+| **Runtime** | None | None | Self-contained C binary; no JVM or CLR |
+
+---
+
+### 3.10 Kùzu
+
+**Type**: Embedded graph database (property graph, Cypher-compatible)
+**License**: MIT
+**Embedded**: Yes — native C++ library with in-process bindings
+**.NET SDK**: No official .NET SDK; Python, Node.js, Rust, Java, Go bindings available
+**Written in**: C++ (columnar storage, vectorized execution)
+
+#### Strengths
+
+1. **True embedded graph**: Runs in-process like SQLite but for graphs — no server needed
+2. **Full Cypher support**: Comprehensive openCypher implementation with extensions
+3. **MIT license**: Most permissive graph database license available
+4. **Columnar + vectorized**: Excellent performance for analytical graph queries; competitive with Neo4j on benchmarks
+5. **Recursive path queries**: Full variable-length path patterns with `WHERE` filtering
+6. **Very low overhead**: C++ embedded library; ~50 MB memory for small graphs
+7. **Disk-based storage**: Unlike Memgraph/FalkorDB, data doesn't need to fit in RAM
+
+#### Weaknesses
+
+1. **No .NET SDK**: This is the critical blocker. Only Python, Node.js, Rust, Java, Go bindings exist. Would need to build C# bindings via P/Invoke or wait for official support
+2. **No standalone server mode**: Embedded only — no Docker deployment, no client-server architecture
+3. **No PRUNE equivalent**: Cypher `WHERE` on paths but no branch pruning
+4. **Young project**: v0.x releases; API may change. Fewer production deployments
+5. **No transactions API**: Single-statement atomicity; no multi-statement ACID
+6. **No multi-model**: Pure graph — no document collections
+7. **No migration framework**: Must build custom
+
+#### SharpMUSH-Specific Assessment
+
+| Requirement | Support | Notes |
+|-------------|---------|-------|
+| R1 Graph traversals | ✅ Excellent | Full Cypher with `*1..N` |
+| R2 PRUNE | ⚠️ Partial | `WHERE` on paths; no branch pruning |
+| R3 Multi-edge traversals | ✅ Yes | Cypher multi-type patterns |
+| R4 Shortest path | ✅ Yes | `shortestPath()` function |
+| R5 Transactions | ❌ No | Single-statement atomicity only |
+| R6 .NET SDK | ❌ No | No .NET bindings; P/Invoke needed |
+| R7 Auto-increment keys | ❌ No | Must simulate |
+| R8 Schema validation | ⚠️ Partial | Table definitions with types |
+| R9 Embedded mode | ✅ Excellent | Native C++ in-process |
+| R10 Standalone mode | ❌ No | Embedded only |
+| R11 Migration framework | ❌ No | Must build custom |
+| R12 Cross-graph joins | ✅ Yes | Multi-MATCH Cypher |
+| R13 Regex matching | ✅ Yes | Cypher `=~` |
+| R14 Document CRUD | ❌ No | Structured tables, not documents |
+| R15 Active community | ⚠️ Growing | Active development; small but engaged |
+| R16 License | ✅ MIT | Most permissive |
+
+**Migration effort**: EXTREME — No .NET SDK is an absolute blocker. If .NET bindings were added, the Cypher compatibility would make it MEDIUM effort. Watch this project for future .NET support.
+
+#### Resource Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **RAM** | 50 MB | 256 MB+ | C++ embedded; very efficient memory usage. Disk-based storage means data doesn't need to fit in RAM |
+| **CPU** | 1 core | 2+ cores | Vectorized query engine benefits from SIMD; good single-core too |
+| **Disk** | 10 MB (library) | Varies | Small library footprint; columnar data files on disk |
+| **Runtime** | None (C++ native) | None | In-process native library; **no JVM, no CLR for DB itself**. But would need P/Invoke layer for .NET |
+
+---
+
+### 3.11 JanusGraph
+
+**Type**: Distributed graph database (built on pluggable storage backends)
+**License**: Apache License 2.0
+**Embedded**: Technically possible (JVM in-process) but not practical for .NET
+**.NET SDK**: No official SDK; Gremlin.Net (Apache TinkerPop) for query protocol
+**Written in**: Java (JVM-based, inherits JVM resource profile)
+
+#### Strengths
+
+1. **Apache TinkerPop / Gremlin**: Standard graph traversal language with .NET support via `Gremlin.Net`
+   ```csharp
+   var g = traversal().WithRemote(new DriverRemoteConnection(
+       new GremlinClient(new GremlinServer("localhost", 8182))));
+   var parents = await g.V().Has("Object", "key", startKey)
+       .Repeat(__.Out("HAS_PARENT")).Until(__.Not(__.Out("HAS_PARENT")))
+       .Limit<Vertex>(100).ToListAsync();
+   ```
+2. **Pluggable storage**: Can use Cassandra, HBase, BerkeleyDB, or Scylla as backend
+3. **Apache 2.0 license**: Fully permissive
+4. **Horizontal scalability**: Designed for massive distributed graphs
+5. **Rich graph features**: Mixed index backends (Elasticsearch, Solr, Lucene), graph partitioning
+
+#### Weaknesses
+
+1. **Very heavy JVM footprint**: JanusGraph + storage backend + index backend = massive resource requirements
+2. **Operational complexity**: Requires managing JanusGraph server + storage backend (Cassandra/HBase) + optional index backend
+3. **No embedded mode for .NET**: JVM-only embedded; Gremlin.Net is remote only
+4. **Gremlin is verbose**: Compared to Cypher or AQL, Gremlin traversals are more procedural and harder to read
+5. **No PRUNE**: Gremlin has `until()` step for recursion but no branch-level pruning
+6. **Slow startup**: JVM + storage backend initialization can take 30–60 seconds
+7. **No document model**: Pure graph with properties; no collection-level document operations
+8. **Declining momentum**: Less active development compared to Neo4j or Memgraph
+
+#### SharpMUSH-Specific Assessment
+
+| Requirement | Support | Notes |
+|-------------|---------|-------|
+| R1 Graph traversals | ✅ Yes | Gremlin `repeat().until()` with depth |
+| R2 PRUNE | ❌ No | `until()` terminates but doesn't prune branches |
+| R3 Multi-edge traversals | ✅ Yes | Gremlin can traverse multiple edge labels |
+| R4 Shortest path | ✅ Yes | `shortestPath()` step |
+| R5 Transactions | ✅ Yes | Full ACID (backend-dependent) |
+| R6 .NET SDK | ⚠️ Via Gremlin.Net | Official TinkerPop .NET driver; remote only |
+| R7 Auto-increment keys | ❌ No | Must simulate |
+| R8 Schema validation | ✅ Yes | PropertyKey and EdgeLabel schemas |
+| R9 Embedded mode | ❌ No | JVM-only; not practical for .NET |
+| R10 Standalone mode | ✅ Yes | Docker, Kubernetes |
+| R11 Migration framework | ❌ No | Must build custom |
+| R12 Cross-graph joins | ✅ Yes | Multi-step Gremlin traversals |
+| R13 Regex matching | ✅ Yes | `TextP.regex()` predicate |
+| R14 Document CRUD | ❌ No | Properties on vertices only |
+| R15 Active community | ⚠️ Declining | Less active; major contributors moved on |
+| R16 License | ✅ Apache 2.0 | Fully permissive |
+
+**Migration effort**: VERY HIGH — Gremlin is capable but verbose. No document model. Heavy operational burden. JVM resource overhead is the highest of any option.
+
+#### Resource Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **RAM** | 4 GB (total) | 8–16 GB+ | ⚠️ **Heaviest JVM option**: JanusGraph JVM ~1.5 GB + storage backend (Cassandra ~2 GB or HBase ~1 GB) + optional index backend (Elasticsearch ~1 GB). Combined minimum is realistically 4 GB |
+| **CPU** | 4 cores | 8+ cores | Multiple JVM processes (JanusGraph + Cassandra/HBase); each needs dedicated cores |
+| **Disk** | 1 GB | Varies | JanusGraph + storage backend binaries; data-dependent |
+| **Runtime** | **JVM 11+** | JVM 17+ | ⚠️ Multiple JVM instances (JanusGraph server + often Cassandra). JVM heap must be tuned per component |
+| **JVM Heap** | 1 GB (JanusGraph) + 1 GB (Cassandra) | 2–4 GB each | Each JVM process needs separate heap tuning. Cassandra is famously heap-hungry |
+
+---
+
+### 3.12 TypeDB
+
+**Type**: Strongly-typed knowledge graph database with inference engine
+**License**: Mozilla Public License 2.0 (MPL 2.0)
+**Embedded**: No — standalone server only (was Java-based, now Rust core since TypeDB 3.x)
+**.NET SDK**: No official .NET SDK; Java, Python, Node.js, Rust drivers available
+**Written in**: Rust (core engine, since v3.x) / Java (v2.x and client libraries)
+
+#### Strengths
+
+1. **Type system with inference**: Powerful schema with inheritance, roles, and rule-based reasoning
+   ```typeql
+   define
+     object sub entity, owns name, plays parent-child:child, plays parent-child:parent;
+     parent-child sub relation, relates parent, relates child;
+   ```
+2. **TypeQL query language**: Declarative, pattern-matching query language
+   ```typeql
+   match
+     $obj isa object, has name $name;
+     $parent isa object;
+     (child: $obj, parent: $parent) isa parent-child;
+   get $parent;
+   ```
+3. **Inference engine**: Can derive new relationships from rules — potentially useful for attribute inheritance
+   ```typeql
+   rule inherited-attribute:
+     when {
+       (child: $obj, parent: $parent) isa parent-child;
+       $parent has attribute $attr;
+       not { $obj has attribute $attr; };
+     } then {
+       $obj has attribute $attr;
+     };
+   ```
+4. **Transition to Rust**: TypeDB 3.x core engine is Rust-based, improving performance and reducing JVM dependency
+5. **MPL 2.0 license**: File-level copyleft; more permissive than GPL/AGPL
+
+#### Weaknesses
+
+1. **No .NET SDK**: Only Java, Python, Node.js, Rust drivers. Would need to build .NET client via gRPC
+2. **Complex learning curve**: TypeQL is a unique language; neither Cypher nor SQL
+3. **No embedded mode**: Must run as standalone server
+4. **No document model**: Entity-relationship model, not document collections
+5. **Version 3.x transition**: Major rewrite from Java to Rust; ecosystem disruption. Many v2 resources are outdated
+6. **No Cypher/Gremlin compatibility**: Cannot reuse queries from other graph databases
+7. **Inference overhead**: Rule engine adds latency and complexity; must be carefully managed
+8. **Small ecosystem**: Niche product with limited community compared to Neo4j or PostgreSQL
+9. **No auto-increment keys**: Must simulate
+
+#### SharpMUSH-Specific Assessment
+
+| Requirement | Support | Notes |
+|-------------|---------|-------|
+| R1 Graph traversals | ✅ Yes | TypeQL pattern matching with depth |
+| R2 PRUNE | ⚠️ Via inference | Rules could implement conditional logic, but not equivalent to PRUNE |
+| R3 Multi-edge traversals | ✅ Yes | Multi-relation patterns in TypeQL |
+| R4 Shortest path | ⚠️ Limited | No built-in shortest path; must implement via rules or application code |
+| R5 Transactions | ✅ Yes | Full ACID transactions |
+| R6 .NET SDK | ❌ No | No .NET driver; would need gRPC client |
+| R7 Auto-increment keys | ❌ No | Must simulate |
+| R8 Schema validation | ✅ Excellent | Strongest type system of any option |
+| R9 Embedded mode | ❌ No | Standalone only |
+| R10 Standalone mode | ✅ Yes | Docker, bare metal |
+| R11 Migration framework | ❌ No | Schema evolution via TypeQL `define`/`undefine` |
+| R12 Cross-graph joins | ✅ Yes | Multi-pattern TypeQL |
+| R13 Regex matching | ⚠️ Limited | Basic string matching |
+| R14 Document CRUD | ❌ No | Entity-relationship model |
+| R15 Active community | ⚠️ Small | Niche; v3 transition causing churn |
+| R16 License | ✅ MPL 2.0 | File-level copyleft; permissive enough |
+
+**Migration effort**: EXTREME — No .NET SDK, unique query language, no document model. The inference engine is interesting for attribute inheritance but the complete lack of .NET support makes this impractical.
+
+#### Resource Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **RAM** | 1 GB (v3 Rust) / 2 GB (v2 Java) | 4 GB+ | v3.x Rust core is more efficient than v2 Java. Inference engine adds memory overhead for rules |
+| **CPU** | 2 cores | 4+ cores | Inference engine is CPU-intensive; reasoning over rules adds computation |
+| **Disk** | 200 MB | Varies | Server binaries + data; v3 is leaner than v2 |
+| **Runtime** | None (v3 Rust) / **JVM 11+** (v2) | None (v3) | ⚠️ v2.x was fully JVM-based with ~1 GB heap minimum. v3.x Rust core eliminates JVM dependency for server, but Java client libraries still need JVM if used directly |
+
+---
+
 ## 4. Feature Comparison Matrix
 
 | Feature | ArangoDB | SurrealDB | Neo4j | Memgraph | RavenDB | PostgreSQL | ArcadeDB | LiteDB | FalkorDB | Kùzu | JanusGraph | TypeDB |
