@@ -19,6 +19,8 @@ public partial class MemgraphDatabase(
 	IPasswordService passwordService
 ) : ISharpDatabase
 {
+	private readonly IPasswordService _passwordService = passwordService;
+
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
 	{
 		try
@@ -57,7 +59,6 @@ public partial class MemgraphDatabase(
 				.ExecuteAsync(cancellationToken);
 
 			// Create Player One - God (key=1)
-			var passwordHash = passwordService.HashPassword("#1:" + now, "potrzebie");
 			await driver
 				.ExecutableQuery("""
 					MERGE (o:Object {key: 1})
@@ -66,13 +67,13 @@ public partial class MemgraphDatabase(
 						o.creationTime = $now,
 						o.modifiedTime = $now
 					MERGE (p:Player {key: 1})
-					ON CREATE SET p.passwordHash = $passwordHash,
+					ON CREATE SET p.passwordHash = '',
 						p.passwordSalt = null,
 						p.aliases = [],
 						p.quota = 999999
 					MERGE (p)-[:IS_OBJECT]->(o)
 					""")
-				.WithParameters(new { now, passwordHash })
+				.WithParameters(new { now })
 				.ExecuteAsync(cancellationToken);
 
 			// Create Room Two - Master Room (key=2)

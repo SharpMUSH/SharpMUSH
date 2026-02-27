@@ -18,7 +18,7 @@ public class MemgraphTestServer : IAsyncInitializer, IAsyncDisposable
 
 	private IContainer? _instance;
 
-	public IContainer Instance => _instance ??= new ContainerBuilder("memgraph/memgraph:latest")
+	public IContainer Instance => _instance ??= new ContainerBuilder("memgraph/memgraph:2.21")
 		.WithNetwork(DockerNetwork.Instance)
 		.WithPortBinding(BoltPort, true)
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("echo", "ready"))
