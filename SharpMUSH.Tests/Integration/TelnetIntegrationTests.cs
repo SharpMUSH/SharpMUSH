@@ -230,7 +230,57 @@ public class TelnetIntegrationTests
 		client.ReceiveTimeout = ReceiveTimeoutMs;
 
 		await using var stream = client.GetStream();
+		var received = await ReadUntilAsync(stream, s => s.Contains("Welcome to SharpMUSH"), cancellationToken);
 
+		await Assert.That(received).Contains("Welcome to SharpMUSH")
+			.Because("A new telnet connection must receive the connect.txt login screen");
+	}
+
+	/// <summary>
+	/// Verifies that a player can log in as God (empty password) via the telnet connection
+	/// and that after login the first room description ("Room Zero") is sent automatically.
+	/// This exercises the full end-to-end path:
+	///   TCP → TelnetInputMessage → NATS → Server connect command → look → NATS → TCP.
+	/// </summary>
+	[Test]
+	[Timeout(120_000)]
+	public async Task TelnetConnection_CanLogin_AndSeesFirstRoom(CancellationToken cancellationToken)
+	{
+		using var client = new TcpClient();
+		await client.ConnectAsync(IPAddress.Loopback, Fixture.TelnetPort);
+		client.ReceiveTimeout = ReceiveTimeoutMs;
+
+		await using var stream = client.GetStream();
+
+		// ── Step 1: wait for the login screen ────────────────────────────────
+		var loginScreen = await ReadUntilAsync(stream, s => s.Contains("Welcome to SharpMUSH"), cancellationToken);
+		await Assert.That(loginScreen).Contains("Welcome to SharpMUSH")
+			.Because("Login screen must appear before we can log in");
+
+		// ── Step 2: send the connect command (God has an empty password) ─────
+		await SendLineAsync(stream, "connect God", cancellationToken);
+
+		// ── Step 3: wait for the room description that auto-look produces ────
+		// ShowPostLoginMessages sends MOTD → WizMOTD → look, which outputs
+		// the room name "Room Zero" followed by a description.
+		var postLogin = await ReadUntilAsync(stream, s => s.Contains("Room Zero"), cancellationToken);
+
+		await Assert.That(postLogin).Contains("Room Zero")
+			.Because("After logging in as God, the auto-look should show Room Zero");
+	}
+
+	// ── Helpers ──────────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// Reads from <paramref name="stream"/> polling every <see cref="PollingIntervalMs"/> ms,
+	/// accumulating stripped text, until <paramref name="stopCondition"/> returns true or the
+	/// cancellation token fires.
+	/// </summary>
+	private static async Task<string> ReadUntilAsync(
+		NetworkStream stream,
+		Func<string, bool> stopCondition,
+		CancellationToken cancellationToken)
+	{
 		var buffer = new byte[4096];
 		var received = new StringBuilder();
 
@@ -241,11 +291,8 @@ public class TelnetIntegrationTests
 				var bytesRead = await stream.ReadAsync(buffer, cancellationToken);
 				if (bytesRead > 0)
 				{
-					var text = StripTelnetControlBytes(buffer, bytesRead);
-					received.Append(text);
-
-					// Stop reading once we have the expected greeting
-					if (received.ToString().Contains("Welcome to SharpMUSH"))
+					received.Append(StripTelnetControlBytes(buffer, bytesRead));
+					if (stopCondition(received.ToString()))
 						break;
 				}
 			}
@@ -256,8 +303,17 @@ public class TelnetIntegrationTests
 			}
 		}
 
-		await Assert.That(received.ToString()).Contains("Welcome to SharpMUSH")
-			.Because("A new telnet connection must receive the connect.txt login screen");
+		return received.ToString();
+	}
+
+	/// <summary>
+	/// Writes a text line (appending CRLF) to the telnet stream.
+	/// </summary>
+	private static async Task SendLineAsync(NetworkStream stream, string line, CancellationToken cancellationToken)
+	{
+		var bytes = Encoding.UTF8.GetBytes(line + "\r\n");
+		await stream.WriteAsync(bytes, cancellationToken);
+		await stream.FlushAsync(cancellationToken);
 	}
 
 	/// <summary>
