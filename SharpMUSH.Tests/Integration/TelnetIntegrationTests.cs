@@ -28,9 +28,18 @@ namespace SharpMUSH.Tests.Integration;
 /// for integration testing without mocking <see cref="INotifyService"/>.
 /// This allows the real notification path (connect.txt → NATS → TCP) to function.
 /// </summary>
+/// <param name="sqlConnectionString">MySQL connection string for the test database.</param>
+/// <param name="configFile">Path to the mushcnf.dst test configuration file.</param>
+/// <param name="natsUrl">
+/// NATS URL of the shared test NATS server.  Set via
+/// <see cref="Environment.SetEnvironmentVariable"/> inside
+/// <see cref="ConfigureWebHost"/> so it is guaranteed to be in place before
+/// <c>Program.Main()</c> calls <c>NatsStrategyProvider.GetStrategy()</c>.
+/// </param>
 internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 	string sqlConnectionString,
-	string configFile) :
+	string configFile,
+	string natsUrl) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -47,6 +56,12 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 		}
 
 		Log.Logger = logConfig.CreateLogger();
+
+		// Point the Server at the shared NATS instance.
+		// Setting the env var here (inside ConfigureWebHost) mirrors the approach used by
+		// ConnectionServerTestWebApplicationBuilderFactory and ensures the value is in place
+		// before Program.Main() calls NatsStrategyProvider.GetStrategy(), which reads it.
+		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
 		// Ensure colors.json exists in the test output directory (required by Server startup)
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
@@ -120,13 +135,16 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 	{
 		var natsPort = NatsTestServer.Instance.GetMappedPublicPort(4222);
 		var natsUrl = $"nats://localhost:{natsPort}";
-		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
 		// ── 1. Start the SharpMUSH Server (game engine) ──────────────────────
+		// natsUrl is passed to the factory so it can be set inside ConfigureWebHost —
+		// which runs immediately before Program.Main() — mirroring the approach used
+		// by ConnectionServerTestWebApplicationBuilderFactory.
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 		_serverFactory = new TelnetIntegrationServerBuilderFactory<SharpMUSH.Server.Program>(
 			MySqlTestServer.Instance.GetConnectionString(),
-			configFile);
+			configFile,
+			natsUrl);
 
 		// Accessing Services triggers the host build, which starts all hosted services
 		// (including NatsJetStreamConsumerService that listens for ConnectionEstablishedMessage).
