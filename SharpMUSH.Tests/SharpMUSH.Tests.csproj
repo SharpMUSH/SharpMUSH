@@ -55,6 +55,10 @@
 		<Content Include="Configuration\Testfile\mushcnf.dst">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
+		<Content Include="..\SharpMUSH.Server\*.txt">
+			<Link>txt\%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
 			<Link>TextFiles\help\%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
