@@ -1351,7 +1351,7 @@ public async IAsyncEnumerable<SharpObject> GetParentsAsync(
 **License**: Server Side Public License (SSPL)
 **Embedded**: No (server process required; can use Docker/Testcontainers)
 **.NET SDK**: Official `MongoDB.Driver` v3.x (NuGet) — excellent, async, LINQ, strongly-typed
-**Written in**: C++ (WiredTiger storage engine)
+**Written in**: C++ (WiredTiger storage engine) — server component; .NET SDK (`MongoDB.Driver`) is pure C#
 
 #### Strengths
 
@@ -1473,7 +1473,7 @@ public async IAsyncEnumerable<SharpObject> GetParentsAsync(
 **License**: Public Domain (most permissive possible)
 **Embedded**: Yes — single-file, in-process, zero configuration
 **.NET SDK**: `Microsoft.Data.Sqlite` (official ADO.NET) + `Microsoft.EntityFrameworkCore.Sqlite` (EF Core provider)
-**Written in**: C (single amalgamation file, ~250 KB compiled)
+**Written in**: C (single amalgamation file, ~250 KB compiled) — SQLite library; .NET bindings via `Microsoft.Data.Sqlite` (C# + bundled native `e_sqlite3`)
 
 #### Strengths
 
@@ -1531,7 +1531,7 @@ public async IAsyncEnumerable<SharpObject> GetParentsAsync(
 
 #### Weaknesses
 
-1. **Single-writer limitation**: Only one writer at a time (WAL mode allows concurrent reads). Could be a bottleneck under heavy concurrent write load
+1. **Single-writer limitation**: Only one writer at a time (WAL mode allows concurrent reads). **For SharpMUSH**: Unlikely to be a problem — MUSH servers are typically single-process with moderate write rates (player actions, attribute changes). Write contention is rare in typical MUSH workloads of 10-100 concurrent players
 2. **No standalone/server mode**: Embedded only — if you need client-server, must add a layer (but SharpMUSH is a single-server application, so this may be fine)
 3. **No native graph model**: All graph operations via recursive CTEs or application code
 4. **Recursive CTE performance**: Slower than native graph traversal for deep/wide graphs. For SharpMUSH's bounded trees (1-5 hops typical), performance should be adequate
@@ -1615,8 +1615,8 @@ This matrix compares all non-graph databases evaluated (including those from Sec
 
 #### Non-graph architecture recommendations:
 
-1. **Build a `GraphEngine` service** (~500-800 lines C#) that implements `GetParentsAsync`, `GetAttributeWithInheritanceAsync`, `GetLazyAttributeWithInheritanceAsync`, and `IsReachableViaParentOrZoneAsync` using multi-query traversal
-2. **Cache parent and zone chains** in memory — these change infrequently and are read-heavy. Invalidate on `SetObjectParent`/`SetObjectZone`
+1. **Build a `GraphEngine` service** (~500-800 lines C#, including caching logic) that implements `GetParentsAsync`, `GetAttributeWithInheritanceAsync`, `GetLazyAttributeWithInheritanceAsync`, and `IsReachableViaParentOrZoneAsync` using multi-query traversal
+2. **The caching layer is part of the GraphEngine** — parent and zone chains change infrequently and are read-heavy. Invalidate on `SetObjectParent`/`SetObjectZone`
 3. **Store edges as documents/rows** with `fromId`, `toId`, `edgeType` — simple to query from any database
 4. **Use the `ISharpDatabase` interface** as-is — it already provides a clean abstraction. The non-graph implementation just has different internal strategies
 
