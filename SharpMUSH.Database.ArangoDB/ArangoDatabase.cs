@@ -2714,9 +2714,9 @@ public partial class ArangoDatabase(
 	{
 		// Query to count all objects owned by the player
 		// Uses the HasObjectOwner edge in the GraphObjectOwners graph
+		// HasObjectOwner edges go FROM Object TO Player, so we traverse INBOUND from the Player
 		var query = $@"
-			FOR v, e IN 1..1 OUTBOUND @playerId GRAPH {DatabaseConstants.GraphObjectOwners}
-			FILTER e._id != @playerId
+			FOR v, e IN 1..1 INBOUND @playerId GRAPH {DatabaseConstants.GraphObjectOwners}
 			COLLECT WITH COUNT INTO length
 			RETURN length
 		";

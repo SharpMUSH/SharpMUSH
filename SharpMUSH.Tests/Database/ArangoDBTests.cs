@@ -48,6 +48,7 @@ public class ArangoDBTests
 
 	[Test]
 	[Repeat(10)]
+	[NotInParallel]
 	public async Task SetAndOverrideAnAttribute()
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
@@ -71,8 +72,8 @@ public class ArangoDBTests
 		var playerOneDBRef = playerOne.Object()!.DBRef;
 
 		var ansiString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], ansiString, playerOne.AsPlayer);
-		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		await Database.SetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"], ansiString, playerOne.AsPlayer);
+		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"]))!.ToListAsync();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEquatableOrEqualTo(ansiString.ToString());
 	}

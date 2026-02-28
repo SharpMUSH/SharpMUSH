@@ -51,6 +51,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.ConnectionServer"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.LanguageServer", "SharpMUSH.LanguageServer\SharpMUSH.LanguageServer.csproj", "{12066B11-9DDC-4278-85A0-A724EE99E5D9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Database.Memgraph", "SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj", "{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -277,6 +279,18 @@ Global
 		{12066B11-9DDC-4278-85A0-A724EE99E5D9}.Release|x64.Build.0 = Release|Any CPU
 		{12066B11-9DDC-4278-85A0-A724EE99E5D9}.Release|x86.ActiveCfg = Release|Any CPU
 		{12066B11-9DDC-4278-85A0-A724EE99E5D9}.Release|x86.Build.0 = Release|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Debug|x64.Build.0 = Debug|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Debug|x86.Build.0 = Debug|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Release|x64.ActiveCfg = Release|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Release|x64.Build.0 = Release|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Release|x86.ActiveCfg = Release|Any CPU
+		{4923EC25-B245-44FF-9C7D-CCE7CA9E05F6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

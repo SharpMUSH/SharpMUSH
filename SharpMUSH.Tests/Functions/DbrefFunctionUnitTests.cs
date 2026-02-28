@@ -262,6 +262,7 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async Task Lsearchr_BehavesLikeLsearch_WhenNoRegexNeeded()
 	{
 		// lsearchr() should work the same as lsearch() for simple patterns
