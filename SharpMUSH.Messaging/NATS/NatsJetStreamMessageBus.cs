@@ -46,13 +46,21 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 		await nats.ConnectAsync();
 		var js = new NatsJSContext(nats);
 
-		// Ensure the stream exists before publishing
-		await js.CreateOrUpdateStreamAsync(
-			new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
-			{
-				MaxAge = options.MaxAge,
-			},
-			ct);
+		try
+		{
+			// Ensure the stream exists before publishing
+			await js.CreateOrUpdateStreamAsync(
+				new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
+				{
+					MaxAge = options.MaxAge,
+				},
+				ct);
+		}
+		catch
+		{
+			await nats.DisposeAsync();
+			throw;
+		}
 
 		return new NatsJetStreamMessageBus(nats, js, options.SubjectPrefix, logger);
 	}

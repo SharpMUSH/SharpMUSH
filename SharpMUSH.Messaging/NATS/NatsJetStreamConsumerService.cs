@@ -74,8 +74,11 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 		}
 		catch (Exception ex)
 		{
+			// Log the error but do NOT rethrow. Rethrowing from a BackgroundService causes
+			// ASP.NET Core to shut down the entire host (StopHost behaviour in .NET 6+),
+			// which disposes all singletons (including FusionCache) and breaks other in-flight
+			// tests or requests. The consumer simply exits; the host remains healthy.
 			_logger.LogError(ex, "[NATS-CONSUMER] Consumer service failed during setup or execution.");
-			throw;
 		}
 		finally
 		{

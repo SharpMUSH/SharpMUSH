@@ -131,18 +131,27 @@ public class NatsPerformanceValidation
 		// Verify that NATS subject derivation from message type name matches the
 		// Kafka kebab-case convention so topics/subjects are interchangeable
 		// by inspection without running the bus.
+		//
+		// Use an isolated stream/subject prefix so this test does not conflict with
+		// the session-level SHARPMUSH-MS / SHARPMUSH-CS streams that cover
+		// "sharpmush.ms.>" and "sharpmush.cs.>" respectively.
 		var port = NatsTestServer.Instance.GetMappedPublicPort(4222);
-		var options = new NatsOptions { Url = $"nats://localhost:{port}" };
+		var options = new NatsOptions
+		{
+			Url = $"nats://localhost:{port}",
+			StreamName = "SHARPMUSH-PERF-TEST",
+			SubjectPrefix = "sharpmush.perf.test",
+		};
 		var logger = new LoggerFactory().CreateLogger<NatsJetStreamMessageBus>();
 		await using var bus = await NatsJetStreamMessageBus.CreateAsync(options, logger);
 
 		// Publish a typed message and verify no exception is thrown.
-		// The subject used internally is "sharpmush.telnet-output"
-		// which mirrors the Kafka topic "telnet-output".
+		// The subject used internally is "sharpmush.perf.test.telnet-output"
+		// which demonstrates the same kebab-case convention as the production subjects.
 		var msg = new TelnetOutputMessage(1, Encoding.UTF8.GetBytes("hello"));
 		await bus.Publish(msg);
 
-		Console.WriteLine("[NATS] TelnetOutputMessage published to subject sharpmush.telnet-output");
+		Console.WriteLine("[NATS] TelnetOutputMessage published to subject sharpmush.perf.test.telnet-output");
 		Console.WriteLine("[NATS] Kafka topic equivalent: telnet-output");
 	}
 }

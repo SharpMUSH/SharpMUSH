@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MySqlConnector;
 using NSubstitute;
@@ -42,6 +43,26 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 	string natsUrl) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
+	/// <summary>
+	/// Stops the hosted services cleanly via <see cref="IHostApplicationLifetime"/>
+	/// without calling the base <see cref="WebApplicationFactory{TEntryPoint}.DisposeAsync"/>.
+	/// Calling base disposal can trigger global OpenTelemetry / MemoryCache teardown that
+	/// interferes with the session-level <see cref="ServerWebAppFactory"/>, causing
+	/// <see cref="ObjectDisposedException"/> in FusionCache while other tests are still running.
+	/// </summary>
+	public new async ValueTask DisposeAsync()
+	{
+		try
+		{
+			var lifetime = Services.GetService<IHostApplicationLifetime>();
+			lifetime?.StopApplication();
+			await Task.Delay(500);
+		}
+		catch { /* best-effort */ }
+
+		GC.SuppressFinalize(this);
+	}
+
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
 		var logConfig = new LoggerConfiguration()
@@ -111,14 +132,13 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 
 /// <summary>
 /// Combined integration fixture that starts both the SharpMUSH Server and the
-/// ConnectionServer with a dedicated, class-scoped NATS instance so that the
-/// two services can communicate without interfering with the session-wide test
-/// infrastructure used by other test classes.
+/// ConnectionServer, sharing the session-wide NATS instance so that the
+/// two services can communicate without additional container overhead.
 /// </summary>
 public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 {
-	/// <summary>Dedicated NATS for this test class — not shared with session-wide tests.</summary>
-	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerClass)]
+	/// <summary>Session-wide NATS shared with all other tests.</summary>
+	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerTestSession)]
 	public required NatsTestServer NatsTestServer { get; init; }
 
 	/// <summary>Dedicated MySQL for this test class.</summary>
