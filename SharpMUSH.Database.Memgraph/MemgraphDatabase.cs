@@ -74,78 +74,14 @@ private static string ToFullMatchRegex(string pattern)
 	return pattern;
 }
 
-/// <summary>
-/// Checks if a DatabaseException is a transient transaction conflict that can be retried.
-/// Memgraph throws different error messages depending on storage mode:
-/// - IN_MEMORY: "Cannot resolve conflicting transactions"
-/// - ON_DISK: "Unable to commit due to serialization error"
-/// </summary>
-private static bool IsTransientConflict(DatabaseException ex)
-	=> ex.Message.Contains("Cannot resolve conflicting transactions")
-		|| ex.Message.Contains("serialization error");
-
-/// <summary>
-/// Retries an async operation when Memgraph reports a transient transaction conflict.
-/// </summary>
-private async ValueTask<T> WithRetryAsync<T>(Func<ValueTask<T>> operation, CancellationToken ct = default, int maxRetries = 5)
-{
-for (var attempt = 0; ; attempt++)
-{
-try
-{
-return await operation();
-}
-catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
-{
-await Task.Delay(20 * (attempt + 1), ct);
-}
-}
-}
-
-private async ValueTask WithRetryAsync(Func<ValueTask> operation, CancellationToken ct = default, int maxRetries = 5)
-{
-for (var attempt = 0; ; attempt++)
-{
-try
-{
-await operation();
-return;
-}
-catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
-{
-await Task.Delay(20 * (attempt + 1), ct);
-}
-}
-}
-
-/// <summary>
-/// Executes a Cypher query via the driver with automatic retry on Memgraph transaction conflicts.
-/// </summary>
-private async ValueTask<EagerResult<IReadOnlyList<IRecord>>> ExecuteWithRetryAsync(
-string cypher, object? parameters = null, CancellationToken ct = default, int maxRetries = 5)
-{
-for (var attempt = 0; ; attempt++)
-{
-try
-{
-var query = driver.ExecutableQuery(cypher);
-if (parameters != null) query = query.WithParameters(parameters);
-return await query.ExecuteAsync(ct);
-}
-catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
-{
-await Task.Delay(20 * (attempt + 1), ct);
-}
-}
-}
-
 private async ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
 {
-var result = await ExecuteWithRetryAsync("""
+var result = await driver.ExecutableQuery("""
 MATCH (c:Counter {name: 'object_key'})
 SET c.value = c.value + 1
 RETURN c.value AS nextKey
-""", ct: ct);
+""")
+.ExecuteAsync(ct);
 return result.Result[0]["nextKey"].As<int>();
 }
 
@@ -1277,8 +1213,6 @@ ON CREATE SET e.defaultFlags = $defaultFlags, e.lim = '', e.enumValues = []
 public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 string? salt = null, CancellationToken cancellationToken = default)
 {
-return await WithRetryAsync(async () =>
-{
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -1286,100 +1220,45 @@ var hashedPassword = salt != null
 ? password
 : _passwordService.HashPassword($"#{nextKey}:{now}", password);
 
-// Create Object node
+// Single atomic query: create Object + Player nodes with all relationships
 await driver.ExecutableQuery("""
+MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
+MATCH (hm {key: $homeKey}) WHERE hm:Room OR hm:Player OR hm:Thing
 CREATE (o:Object {key: $key, name: $name, type: 'PLAYER', creationTime: $now, modifiedTime: $now, locks: '{}', warnings: 0})
-""")
-.WithParameters(new { key = nextKey, name, now })
-.ExecuteAsync(cancellationToken);
-
-// Create Player node
-await driver.ExecutableQuery("""
 CREATE (p:Player {key: $key, passwordHash: $hash, passwordSalt: $salt, aliases: [], quota: $quota})
-""")
-.WithParameters(new { key = nextKey, hash = hashedPassword, salt = salt ?? "", quota })
-.ExecuteAsync(cancellationToken);
-
-// IS_OBJECT
-await driver.ExecutableQuery("""
-MATCH (p:Player {key: $key}), (o:Object {key: $key})
 CREATE (p)-[:IS_OBJECT]->(o)
-""")
-.WithParameters(new { key = nextKey })
-.ExecuteAsync(cancellationToken);
-
-// HAS_OWNER -> Player typed node (self-owned)
-await driver.ExecutableQuery("""
-MATCH (o:Object {key: $key}), (p:Player {key: $key})
 CREATE (o)-[:HAS_OWNER]->(p)
+CREATE (p)-[:AT_LOCATION]->(loc)
+CREATE (p)-[:HAS_HOME]->(hm)
 """)
-.WithParameters(new { key = nextKey })
-.ExecuteAsync(cancellationToken);
-
-// AT_LOCATION
-await driver.ExecutableQuery("""
-MATCH (p:Player {key: $key}), (dest {key: $locKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
-CREATE (p)-[:AT_LOCATION]->(dest)
-""")
-.WithParameters(new { key = nextKey, locKey = location.Number })
-.ExecuteAsync(cancellationToken);
-
-// HAS_HOME
-await driver.ExecutableQuery("""
-MATCH (p:Player {key: $key}), (dest {key: $homeKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
-CREATE (p)-[:HAS_HOME]->(dest)
-""")
-.WithParameters(new { key = nextKey, homeKey = home.Number })
+.WithParameters(new { key = nextKey, name, now, hash = hashedPassword, salt = salt ?? "", quota, locKey = location.Number, homeKey = home.Number })
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
-}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 var creatorKey = creator.Object.Key;
 
+// Single atomic query: create Object + Room nodes with relationships
 await driver.ExecutableQuery("""
+MATCH (owner:Player {key: $ownerKey})
 CREATE (o:Object {key: $key, name: $name, type: 'ROOM', creationTime: $now, modifiedTime: $now, locks: '{}', warnings: 0})
-""")
-.WithParameters(new { key = nextKey, name, now })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
 CREATE (r:Room {key: $key, aliases: []})
-""")
-.WithParameters(new { key = nextKey })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (r:Room {key: $key}), (o:Object {key: $key})
 CREATE (r)-[:IS_OBJECT]->(o)
-""")
-.WithParameters(new { key = nextKey })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (o:Object {key: $key}), (owner:Player {key: $ownerKey})
 CREATE (o)-[:HAS_OWNER]->(owner)
 """)
-.WithParameters(new { key = nextKey, ownerKey = creatorKey })
+.WithParameters(new { key = nextKey, name, now, ownerKey = creatorKey })
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
-}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
 AnySharpContainer home, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1387,94 +1266,46 @@ var creatorKey = creator.Object.Key;
 var locKey = ExtractKey(location.Id);
 var homeKey = ExtractKey(home.Id);
 
+// Single atomic query: create Object + Thing nodes with all relationships
 await driver.ExecutableQuery("""
+MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
+MATCH (hm {key: $homeKey}) WHERE hm:Room OR hm:Player OR hm:Thing
+MATCH (owner:Player {key: $ownerKey})
 CREATE (o:Object {key: $key, name: $name, type: 'THING', creationTime: $now, modifiedTime: $now, locks: '{}', warnings: 0})
-""")
-.WithParameters(new { key = nextKey, name, now })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("CREATE (t:Thing {key: $key, aliases: []})")
-.WithParameters(new { key = nextKey })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (t:Thing {key: $key}), (o:Object {key: $key})
+CREATE (t:Thing {key: $key, aliases: []})
 CREATE (t)-[:IS_OBJECT]->(o)
-""")
-.WithParameters(new { key = nextKey })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (t:Thing {key: $key}), (dest {key: $locKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
-CREATE (t)-[:AT_LOCATION]->(dest)
-""")
-.WithParameters(new { key = nextKey, locKey })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (t:Thing {key: $key}), (dest {key: $homeKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
-CREATE (t)-[:HAS_HOME]->(dest)
-""")
-.WithParameters(new { key = nextKey, homeKey })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (o:Object {key: $key}), (owner:Player {key: $ownerKey})
+CREATE (t)-[:AT_LOCATION]->(loc)
+CREATE (t)-[:HAS_HOME]->(hm)
 CREATE (o)-[:HAS_OWNER]->(owner)
 """)
-.WithParameters(new { key = nextKey, ownerKey = creatorKey })
+.WithParameters(new { key = nextKey, name, now, locKey, homeKey, ownerKey = creatorKey })
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
-}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 SharpPlayer creator, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 var creatorKey = creator.Object.Key;
 var locKey = ExtractKey(location.Id);
 
+// Single atomic query: create Object + Exit nodes with all relationships
 await driver.ExecutableQuery("""
+MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
+MATCH (owner:Player {key: $ownerKey})
 CREATE (o:Object {key: $key, name: $name, type: 'EXIT', creationTime: $now, modifiedTime: $now, locks: '{}', warnings: 0})
-""")
-.WithParameters(new { key = nextKey, name, now })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("CREATE (e:Exit {key: $key, aliases: $aliases})")
-.WithParameters(new { key = nextKey, aliases })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (e:Exit {key: $key}), (o:Object {key: $key})
+CREATE (e:Exit {key: $key, aliases: $aliases})
 CREATE (e)-[:IS_OBJECT]->(o)
-""")
-.WithParameters(new { key = nextKey })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (e:Exit {key: $key}), (dest {key: $locKey})
-WHERE dest:Room OR dest:Player OR dest:Thing
-CREATE (e)-[:AT_LOCATION]->(dest)
-""")
-.WithParameters(new { key = nextKey, locKey })
-.ExecuteAsync(cancellationToken);
-
-await driver.ExecutableQuery("""
-MATCH (o:Object {key: $key}), (owner:Player {key: $ownerKey})
+CREATE (e)-[:AT_LOCATION]->(loc)
 CREATE (o)-[:HAS_OWNER]->(owner)
 """)
-.WithParameters(new { key = nextKey, ownerKey = creatorKey })
+.WithParameters(new { key = nextKey, name, now, aliases, locKey, ownerKey = creatorKey })
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
-}, cancellationToken);
 }
 
 #endregion
@@ -1546,27 +1377,21 @@ return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 
 public async ValueTask SetLockAsync(SharpObject target, string lockName, SharpLockData lockData, CancellationToken cancellationToken = default)
 {
-await WithRetryAsync(async () =>
-{
 var newLocks = target.Locks
 .SetItem(lockName, lockData);
 var locksJson = SerializeLocks(newLocks);
 await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.locks = $locks")
 .WithParameters(new { key = target.Key, locks = locksJson })
 .ExecuteAsync(cancellationToken);
-}, cancellationToken);
 }
 
 public async ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken cancellationToken = default)
-{
-await WithRetryAsync(async () =>
 {
 var newLocks = target.Locks.Remove(lockName);
 var locksJson = SerializeLocks(newLocks);
 await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.locks = $locks")
 .WithParameters(new { key = target.Key, locks = locksJson })
 .ExecuteAsync(cancellationToken);
-}, cancellationToken);
 }
 
 public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default)
@@ -2572,7 +2397,7 @@ yield return await MapToLazySharpAttribute(record["child"].As<INode>(), cancella
 
 public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
 {
-return await WithRetryAsync(async () => await SetAttributeAsyncCore(dbref, attribute, value, owner, cancellationToken), cancellationToken);
+return await SetAttributeAsyncCore(dbref, attribute, value, owner, cancellationToken);
 }
 
 private async ValueTask<bool> SetAttributeAsyncCore(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
@@ -2781,8 +2606,6 @@ yield return MapNodeToAttributeFlag(record["f"].As<INode>());
 
 public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 {
-return await WithRetryAsync(async () =>
-{
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
 var targetAttr = await attrs.LastOrDefaultAsync(cancellationToken);
@@ -2814,12 +2637,9 @@ await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) DETACH DELETE a")
 }
 
 return true;
-}, cancellationToken);
 }
 
 public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
@@ -2842,7 +2662,6 @@ await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) DETACH DELETE a")
 .ExecuteAsync(cancellationToken);
 
 return true;
-}, cancellationToken);
 }
 
 #endregion
