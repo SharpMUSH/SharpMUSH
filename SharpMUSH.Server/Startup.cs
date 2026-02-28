@@ -56,7 +56,9 @@ public class Startup(
 		if (databaseProvider == DatabaseProvider.Memgraph)
 		{
 			services.AddSingleton<IDriver>(_ =>
-				GraphDatabase.Driver(memgraphUri ?? "bolt://localhost:7687"));
+				GraphDatabase.Driver(
+					memgraphUri ?? "bolt://localhost:7687",
+					o => o.WithEncryptionLevel(EncryptionLevel.None)));
 			services.AddSingleton<ISharpDatabase, MemgraphDatabase>(x =>
 			{
 				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
