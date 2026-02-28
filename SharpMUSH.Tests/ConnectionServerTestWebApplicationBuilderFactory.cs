@@ -10,8 +10,7 @@ namespace SharpMUSH.Tests;
 /// Test factory for SharpMUSH.ConnectionServer that configures the test environment.
 /// </summary>
 public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
-	string redisConnection,
-	string kafkaHost) :
+	string natsUrl) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
 	/// <summary>
@@ -40,8 +39,7 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 		Log.Logger = log;
 
 		// Set environment variables for ConnectionServer to use test infrastructure
-		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
-		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
+		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
 		builder.ConfigureTestServices(sc =>
 		{

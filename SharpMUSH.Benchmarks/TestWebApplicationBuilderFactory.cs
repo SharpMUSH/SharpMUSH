@@ -12,7 +12,6 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server;
-using SharpMUSH.Server.Strategy.Redis;
 
 namespace SharpMUSH.Benchmarks;
 
@@ -32,11 +31,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = log;
 
-		// Initialize Redis strategy for benchmarks
-		var redisStrategy = RedisStrategyProvider.GetStrategy();
-		redisStrategy.InitializeAsync().AsTask().Wait();
-
-		var startup = new Startup(acnf, colorFile, redisStrategy);
+		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+		var startup = new Startup(acnf, colorFile, natsUrl);
 
 		var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		substitute.CurrentValue.Returns(ReadPennMushConfig.Create(configFile));

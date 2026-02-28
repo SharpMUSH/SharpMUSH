@@ -11,38 +11,18 @@ services:
     command: ["arangod", "--server.endpoint", "tcp://0.0.0.0:8529", "--server.endpoint", "unix:///var/run/arangodb3/arangodb.sock"]
     networks:
       - sharpmush-net
-  
-  redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:latest
-    container_name: sharpmush-redpanda
-    command:
-      - redpanda
-      - start
-      - --smp
-      - "1"
-      - --memory
-      - 1G
-      - --reserve-memory
-      - 0M
-      - --overprovisioned
-      - --node-id
-      - "0"
-      - --kafka-addr
-      - PLAINTEXT://0.0.0.0:9092
-      - --advertise-kafka-addr
-      - PLAINTEXT://redpanda:9092
-      - --set
-      - redpanda.max_compacted_log_segment_size=6291456
+
+  nats:
+    image: nats:2-alpine
+    container_name: sharpmush-nats
+    command: ["-js", "-m", "8222"]
     ports:
-      - "9092:9092"   # Kafka API
-      - "9644:9644"   # Admin API
-      - "8082:8082"   # HTTP Proxy
-    volumes:
-      - redpanda-data:/var/lib/redpanda/data
+      - "4222:4222"   # NATS client port
+      - "8222:8222"   # NATS monitoring port
     networks:
       - sharpmush-net
     healthcheck:
-      test: ["CMD", "rpk", "cluster", "health"]
+      test: ["CMD-SHELL", "wget -q http://localhost:8222/healthz -O /dev/null"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -50,10 +30,9 @@ services:
   connectionserver:
     image: sharpmush/sharpmush-connectionserver:dev
     environment:
-      - KAFKA_HOST=redpanda
-      - KAFKA_PORT=9092
+      - NATS_URL=nats://nats:4222
     depends_on:
-      redpanda:
+      nats:
         condition: service_healthy
     ports:
       - "4201:4201" # Telnet
@@ -65,12 +44,11 @@ services:
     image: sharpmush/sharpmush-server:dev
     environment:
       - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
-      - KAFKA_HOST=redpanda
-      - KAFKA_PORT=9092
+      - NATS_URL=nats://nats:4222
     depends_on:
       arangodb:
         condition: service_started
-      redpanda:
+      nats:
         condition: service_healthy
       connectionserver:
         condition: service_started
@@ -81,7 +59,6 @@ services:
       
 volumes:
   arangodb-socket:
-  redpanda-data:
   
 networks:
   sharpmush-net:

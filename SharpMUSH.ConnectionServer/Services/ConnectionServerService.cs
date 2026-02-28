@@ -78,7 +78,7 @@ public class ConnectionServerService(
 			}
 
 			// Publish connection established message to MainProcess
-			logger.LogTrace("[KAFKA-PUBLISH] Publishing ConnectionEstablishedMessage - Handle: {Handle}, IP: {IpAddress}, Hostname: {Hostname}, Type: {ConnectionType}, Timestamp: {Timestamp}",
+			logger.LogDebug("[NATS-PUBLISH] Publishing ConnectionEstablishedMessage - Handle: {Handle}, IP: {IpAddress}, Hostname: {Hostname}, Type: {ConnectionType}, Timestamp: {Timestamp}",
 				handle, ipAddress, hostname, connectionType, DateTimeOffset.UtcNow);
 
 			await publishEndpoint.Publish(new ConnectionEstablishedMessage(
@@ -89,7 +89,7 @@ public class ConnectionServerService(
 				DateTimeOffset.UtcNow
 			));
 
-			logger.LogTrace("[KAFKA-PUBLISH] Successfully published ConnectionEstablishedMessage - Handle: {Handle}", handle);
+			logger.LogDebug("[NATS-PUBLISH] Successfully published ConnectionEstablishedMessage - Handle: {Handle}", handle);
 		}
 		catch (Exception ex)
 		{
@@ -118,7 +118,7 @@ public class ConnectionServerService(
 			}
 
 			// Publish connection closed message to MainProcess
-			logger.LogTrace("[KAFKA-PUBLISH] Publishing ConnectionClosedMessage - Handle: {Handle}, Timestamp: {Timestamp}",
+			logger.LogDebug("[NATS-PUBLISH] Publishing ConnectionClosedMessage - Handle: {Handle}, Timestamp: {Timestamp}",
 				handle, DateTimeOffset.UtcNow);
 
 			await publishEndpoint.Publish(new ConnectionClosedMessage(
@@ -126,7 +126,7 @@ public class ConnectionServerService(
 				DateTimeOffset.UtcNow
 			));
 
-			logger.LogTrace("[KAFKA-PUBLISH] Successfully published ConnectionClosedMessage - Handle: {Handle}", handle);
+			logger.LogDebug("[NATS-PUBLISH] Successfully published ConnectionClosedMessage - Handle: {Handle}", handle);
 		}
 
 		data?.DisconnectFunction();
