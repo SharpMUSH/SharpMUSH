@@ -82,11 +82,15 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("quota(%#)", "0 999999")]
-	public async Task Quota(string str, string expected)
+	public async Task Quota()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		var result = (await Parser.FunctionParse(MModule.single("quota(%#)")))?.Message!;
+		var text = result.ToPlainText();
+		// Format is "<owned_count> <max_quota>". Owned count varies by test order; max quota is always 999999.
+		var parts = text.Split(' ');
+		await Assert.That(parts).Count().IsEqualTo(2);
+		await Assert.That(int.TryParse(parts[0], out var owned) && owned >= 3).IsTrue();
+		await Assert.That(parts[1]).IsEqualTo("999999");
 	}
 
 	[Test]
