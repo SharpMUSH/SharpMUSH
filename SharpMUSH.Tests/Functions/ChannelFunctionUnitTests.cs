@@ -8,6 +8,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Tests.Functions;
 
+[NotInParallel]
 public class ChannelFunctionUnitTests
 {
 	private const string TestChannelName = "TestChannel";

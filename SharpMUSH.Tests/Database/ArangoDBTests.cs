@@ -48,6 +48,7 @@ public class ArangoDBTests
 
 	[Test]
 	[Repeat(10)]
+	[NotInParallel]
 	public async Task SetAndOverrideAnAttribute()
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;

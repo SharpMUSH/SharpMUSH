@@ -92,7 +92,7 @@ private async ValueTask<EagerResult<IReadOnlyList<IRecord>>> ExecuteWithRetryAsy
 	string cypher,
 	object? parameters = null,
 	CancellationToken ct = default,
-	int maxRetries = 5)
+	int maxRetries = 8)
 {
 	for (var attempt = 0; ; attempt++)
 	{
@@ -106,7 +106,10 @@ private async ValueTask<EagerResult<IReadOnlyList<IRecord>>> ExecuteWithRetryAsy
 		catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
 		{
 			logger.LogDebug(ex, "Memgraph transient conflict on attempt {Attempt}, retrying", attempt + 1);
-			await Task.Delay(20 * (attempt + 1), ct);
+			// Exponential backoff with jitter to reduce contention thundering herd
+			var baseDelay = Math.Min(25 * (1 << attempt), 500);
+			var jitter = Random.Shared.Next(0, baseDelay / 2);
+			await Task.Delay(baseDelay + jitter, ct);
 		}
 	}
 }
@@ -2225,121 +2228,85 @@ private async ValueTask<bool> SetAttributeAsyncCore(DBRef dbref, string[] attrib
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var objKey = dbref.Number;
 var ownerKey = ExtractKey(owner.Id!);
+var serializedValue = MarkupStringModule.serialize(value);
+var emptyValue = "";
 
-// Find typed node
-var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
-if (typedResult.Result.Count == 0) return false;
-var tkey = typedResult.Result[0]["tkey"].As<int>();
-
-// Walk the attribute path to find how far we already have
-var foundIds = new List<string>();
-var currentKey = (object)tkey;
-var isFirst = true;
-
-foreach (var attrName in attribute)
+// Build a single atomic MERGE query for the entire attribute path.
+// MERGE creates nodes/relationships if they don't exist, matches if they do.
+// This eliminates MVCC conflicts from multi-query read-then-write patterns.
+var sb = new System.Text.StringBuilder();
+var parameters = new Dictionary<string, object?>
 {
-string cypher;
-if (isFirst)
+	["objKey"] = objKey,
+	["ownerKey"] = ownerKey,
+	["value"] = serializedValue,
+	["emptyValue"] = emptyValue
+};
+
+// Start: find the typed node (Player/Room/Thing/Exit) for this object
+sb.AppendLine("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $objKey})");
+
+// Build MERGE chain for each attribute level
+for (var i = 0; i < attribute.Length; i++)
 {
-cypher = "MATCH (parent {key: toInteger($parentKey)})-[:HAS_ATTRIBUTE]->(child:Attribute {name: $attrName}) RETURN child";
-isFirst = false;
-}
-else
-{
-cypher = "MATCH (parent:Attribute {key: $parentKey})-[:HAS_ATTRIBUTE]->(child:Attribute {name: $attrName}) RETURN child";
-}
+	var parentAlias = i == 0 ? "typed" : $"a{i - 1}";
+	var childAlias = $"a{i}";
+	var nameParam = $"name{i}";
+	var keyParam = $"key{i}";
+	var longParam = $"long{i}";
+	var isLast = i == attribute.Length - 1;
 
-var stepResult = await ExecuteWithRetryAsync(cypher, new { parentKey = currentKey.ToString(), attrName }, cancellationToken);
+	var longName = string.Join('`', attribute.Take(i + 1));
+	var attrKey = $"{objKey}_{longName}";
 
-if (stepResult.Result.Count == 0) break;
+	parameters[nameParam] = attribute[i];
+	parameters[keyParam] = attrKey;
+	parameters[longParam] = longName;
 
-var childNode = stepResult.Result[0]["child"].As<INode>();
-var childKey = childNode["key"].As<string>();
-foundIds.Add(childKey);
-currentKey = childKey;
-}
-
-// Create missing path elements
-var remaining = attribute.Skip(foundIds.Count).ToArray();
-
-if (remaining.Length == 0)
-{
-// Update existing attribute value
-var lastKey = foundIds.Last();
-await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) SET a.value = $value", new { key = lastKey, value = MarkupStringModule.serialize(value) }, cancellationToken);
-
-// Update owner
-await ExecuteWithRetryAsync("""
-MATCH (a:Attribute {key: $key})-[r:HAS_ATTRIBUTE_OWNER]->()
-DELETE r
-""", new { key = lastKey }, cancellationToken);
-
-await ExecuteWithRetryAsync("""
-MATCH (a:Attribute {key: $key}), (p:Player {key: $ownerKey})
-CREATE (a)-[:HAS_ATTRIBUTE_OWNER]->(p)
-""", new { key = lastKey, ownerKey }, cancellationToken);
-
-return true;
+	sb.AppendLine($"MERGE ({parentAlias})-[:HAS_ATTRIBUTE]->({childAlias}:Attribute {{name: ${nameParam}}})");
+	if (isLast)
+	{
+		sb.AppendLine($"ON CREATE SET {childAlias}.key = ${keyParam}, {childAlias}.longName = ${longParam}, {childAlias}.value = $value");
+		sb.AppendLine($"ON MATCH SET {childAlias}.value = $value");
+	}
+	else
+	{
+		sb.AppendLine($"ON CREATE SET {childAlias}.key = ${keyParam}, {childAlias}.longName = ${longParam}, {childAlias}.value = $emptyValue");
+	}
 }
 
-// Create new attribute nodes
-var parentKeyForNew = foundIds.Count > 0 ? foundIds.Last() : null;
+var leafAlias = $"a{attribute.Length - 1}";
 
-foreach (var nextAttr in remaining.Select((name, i) => (name, i)))
+// Remove old owner and set new owner atomically
+sb.AppendLine($"WITH {leafAlias}");
+sb.AppendLine($"OPTIONAL MATCH ({leafAlias})-[oldOwner:HAS_ATTRIBUTE_OWNER]->()");
+sb.AppendLine("DELETE oldOwner");
+sb.AppendLine($"WITH {leafAlias}");
+sb.AppendLine($"MATCH (p:Player {{key: $ownerKey}})");
+sb.AppendLine($"CREATE ({leafAlias})-[:HAS_ATTRIBUTE_OWNER]->(p)");
+sb.AppendLine($"RETURN {leafAlias}.key AS leafKey");
+
+var result = await ExecuteWithRetryAsync(sb.ToString(), parameters, cancellationToken);
+if (result.Result.Count == 0) return false;
+
+// Handle attribute entry flags for newly created attributes (post-MERGE)
+// Check each level for attribute entries with default flags
+for (var i = 0; i < attribute.Length; i++)
 {
-var longName = string.Join('`', attribute.Take(foundIds.Count + nextAttr.i + 1));
-var attrKey = $"{objKey}_{longName}";
-var isLast = nextAttr.i == remaining.Length - 1;
-var attrValue = isLast ? MarkupStringModule.serialize(value) : "";
+	var longName = string.Join('`', attribute.Take(i + 1));
+	var attrKey = $"{objKey}_{longName}";
+	var attrEntry = await GetSharpAttributeEntry(longName, cancellationToken);
+	var flagNames = attrEntry?.DefaultFlags ?? [];
 
-// Check for attribute entry and get default flags
-var attrEntry = await GetSharpAttributeEntry(longName, cancellationToken);
-var flagNames = attrEntry?.DefaultFlags ?? [];
-
-await ExecuteWithRetryAsync("""
-CREATE (a:Attribute {key: $key, name: $name, longName: $longName, value: $value})
-""", new { key = attrKey, name = nextAttr.name, longName, value = attrValue }, cancellationToken);
-
-// Link to parent
-if (parentKeyForNew == null)
-{
-// Link from typed node
-await ExecuteWithRetryAsync("""
-MATCH (parent {key: toInteger($parentKey)}), (child:Attribute {key: $childKey})
-WHERE parent:Player OR parent:Room OR parent:Thing OR parent:Exit
-CREATE (parent)-[:HAS_ATTRIBUTE]->(child)
-""", new { parentKey = tkey.ToString(), childKey = attrKey }, cancellationToken);
-}
-else
-{
-await ExecuteWithRetryAsync("""
-MATCH (parent:Attribute {key: $parentKey}), (child:Attribute {key: $childKey})
-CREATE (parent)-[:HAS_ATTRIBUTE]->(child)
-""", new { parentKey = parentKeyForNew, childKey = attrKey }, cancellationToken);
-}
-
-// Link attribute owner
-await ExecuteWithRetryAsync("""
-MATCH (a:Attribute {key: $key}), (p:Player {key: $ownerKey})
-CREATE (a)-[:HAS_ATTRIBUTE_OWNER]->(p)
-""", new { key = attrKey, ownerKey }, cancellationToken);
-
-// Set default flags from attribute entry
-foreach (var flagName in flagNames)
-{
-var flagResult = await ExecuteWithRetryAsync("MATCH (f:AttributeFlag) WHERE toUpper(f.name) = toUpper($name) RETURN f", new { name = flagName }, cancellationToken);
-if (flagResult.Result.Count > 0)
-{
-var fNode = flagResult.Result[0]["f"].As<INode>();
-var fname = fNode["name"].As<string>();
-await ExecuteWithRetryAsync("""
-MATCH (a:Attribute {key: $key}), (f:AttributeFlag {name: $fname})
-CREATE (a)-[:HAS_ATTRIBUTE_FLAG]->(f)
-""", new { key = attrKey, fname }, cancellationToken);
-}
-}
-
-parentKeyForNew = attrKey;
+	foreach (var flagName in flagNames)
+	{
+		// MERGE to avoid duplicate flag relationships
+		await ExecuteWithRetryAsync("""
+		MATCH (a:Attribute {key: $key}), (f:AttributeFlag)
+		WHERE toUpper(f.name) = toUpper($fname)
+		MERGE (a)-[:HAS_ATTRIBUTE_FLAG]->(f)
+		""", new { key = attrKey, fname = flagName }, cancellationToken);
+	}
 }
 
 return true;
@@ -2932,23 +2899,15 @@ var channelName = name.ToPlainText();
 var serializedName = MarkupStringModule.serialize(name);
 var ownerObjKey = owner.Object.Key;
 
+// Single atomic query: create channel, link owner, add owner as member
 await ExecuteWithRetryAsync("""
+MATCH (o:Object {key: $ownerKey})
 CREATE (c:Channel {name: $name, markedUpName: $markedUpName, description: '', privs: $privs,
 joinLock: '', speakLock: '', seeLock: '', hideLock: '', modLock: '',
 buffer: 0, mogrifier: ''})
-""", new { name = channelName, markedUpName = serializedName, privs }, cancellationToken);
-
-// Owner relationship: Channel -> Player (typed)
-await ExecuteWithRetryAsync("""
-MATCH (c:Channel {name: $name}), (o:Object {key: $ownerKey})
 CREATE (c)-[:HAS_CHANNEL_OWNER]->(o)
-""", new { name = channelName, ownerKey = ownerObjKey }, cancellationToken);
-
-// Add owner as member
-await ExecuteWithRetryAsync("""
-MATCH (o:Object {key: $ownerKey}), (c:Channel {name: $name})
 CREATE (o)-[:ON_CHANNEL {combine: false, gagged: false, hide: false, mute: false, title: ''}]->(c)
-""", new { ownerKey = ownerObjKey, name = channelName }, cancellationToken);
+""", new { name = channelName, markedUpName = serializedName, privs, ownerKey = ownerObjKey }, cancellationToken);
 }
 
 public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name, MString? description, string[]? privs,
