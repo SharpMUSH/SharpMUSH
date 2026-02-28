@@ -25,6 +25,8 @@ IPasswordService passwordService
 ) : ISharpDatabase
 {
 private readonly IPasswordService _passwordService = passwordService;
+private static readonly SemaphoreSlim MigrateLock = new(1, 1);
+private static volatile bool _migrated;
 
 private static readonly JsonSerializerOptions JsonOptions = new()
 {
@@ -717,8 +719,11 @@ private static partial Regex WildcardToRegex();
 
 public async ValueTask Migrate(CancellationToken cancellationToken = default)
 {
+if (_migrated) return;
+await MigrateLock.WaitAsync(cancellationToken);
 try
 {
+if (_migrated) return;
 logger.LogInformation("Migrating Memgraph Database");
 
 // Create indexes (Memgraph uses CREATE INDEX ON syntax)
@@ -817,11 +822,16 @@ MERGE (o)-[:HAS_FLAG]->(f)
 """).ExecuteAsync(cancellationToken);
 
 logger.LogInformation("Memgraph Migration Completed");
+_migrated = true;
 }
 catch (Exception ex)
 {
 logger.LogError(ex, "Memgraph Migration Failed");
 throw;
+}
+finally
+{
+MigrateLock.Release();
 }
 }
 
