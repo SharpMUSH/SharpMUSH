@@ -59,15 +59,70 @@ private static int ExtractKey(string id)
 
 private static string ExtractKeyString(string id) => id.Split('/')[1];
 
+/// <summary>
+/// Retries an async operation when Memgraph reports a transient transaction conflict.
+/// Memgraph's MVCC can throw "Cannot resolve conflicting transactions" when concurrent
+/// writes touch the same data. Retrying after a short delay resolves the conflict.
+/// </summary>
+private async ValueTask<T> WithRetryAsync<T>(Func<ValueTask<T>> operation, CancellationToken ct = default, int maxRetries = 5)
+{
+for (var attempt = 0; ; attempt++)
+{
+try
+{
+return await operation();
+}
+catch (DatabaseException ex) when (attempt < maxRetries && ex.Message.Contains("Cannot resolve conflicting transactions"))
+{
+await Task.Delay(20 * (attempt + 1), ct);
+}
+}
+}
+
+private async ValueTask WithRetryAsync(Func<ValueTask> operation, CancellationToken ct = default, int maxRetries = 5)
+{
+for (var attempt = 0; ; attempt++)
+{
+try
+{
+await operation();
+return;
+}
+catch (DatabaseException ex) when (attempt < maxRetries && ex.Message.Contains("Cannot resolve conflicting transactions"))
+{
+await Task.Delay(20 * (attempt + 1), ct);
+}
+}
+}
+
+/// <summary>
+/// Executes a Cypher query via the driver with automatic retry on Memgraph transaction conflicts.
+/// </summary>
+private async ValueTask<EagerResult<IReadOnlyList<IRecord>>> ExecuteWithRetryAsync(
+string cypher, object? parameters = null, CancellationToken ct = default, int maxRetries = 5)
+{
+for (var attempt = 0; ; attempt++)
+{
+try
+{
+var query = driver.ExecutableQuery(cypher);
+if (parameters != null) query = query.WithParameters(parameters);
+return await query.ExecuteAsync(ct);
+}
+catch (DatabaseException ex) when (attempt < maxRetries && ex.Message.Contains("Cannot resolve conflicting transactions"))
+{
+await Task.Delay(20 * (attempt + 1), ct);
+}
+}
+}
+
 private async ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
 {
-var result = await driver
-.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (c:Counter {name: 'object_key'})
 SET c.value = c.value + 1
 RETURN c.value AS nextKey
-""")
-.ExecuteAsync(ct);
+""", ct: ct);
 return result.Result[0]["nextKey"].As<int>();
 }
 
@@ -725,6 +780,19 @@ try
 {
 if (_migrated) return;
 logger.LogInformation("Migrating Memgraph Database");
+
+// Switch to analytical storage mode to avoid MVCC transaction conflicts
+// when multiple concurrent operations modify the graph. This mode is appropriate
+// Set Memgraph to IN_MEMORY_ANALYTICAL to avoid MVCC transaction conflicts
+// when concurrent operations modify the graph. This mode removes transaction
+// isolation but is appropriate for SharpMUSH's single-application usage.
+try
+{
+await using var session = driver.AsyncSession();
+await session.RunAsync("STORAGE MODE IN_MEMORY_ANALYTICAL");
+logger.LogInformation("Memgraph storage mode set to IN_MEMORY_ANALYTICAL");
+}
+catch (Exception ex) { logger.LogWarning(ex, "Failed to set Memgraph storage mode to IN_MEMORY_ANALYTICAL"); }
 
 // Create indexes (Memgraph uses CREATE INDEX ON syntax)
 var indexQueries = new[]
