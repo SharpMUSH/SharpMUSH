@@ -781,18 +781,8 @@ try
 if (_migrated) return;
 logger.LogInformation("Migrating Memgraph Database");
 
-// Switch to analytical storage mode to avoid MVCC transaction conflicts
-// when multiple concurrent operations modify the graph. This mode is appropriate
-// Set Memgraph to IN_MEMORY_ANALYTICAL to avoid MVCC transaction conflicts
-// when concurrent operations modify the graph. This mode removes transaction
-// isolation but is appropriate for SharpMUSH's single-application usage.
-try
-{
-await using var session = driver.AsyncSession();
-await session.RunAsync("STORAGE MODE IN_MEMORY_ANALYTICAL");
-logger.LogInformation("Memgraph storage mode set to IN_MEMORY_ANALYTICAL");
-}
-catch (Exception ex) { logger.LogWarning(ex, "Failed to set Memgraph storage mode to IN_MEMORY_ANALYTICAL"); }
+// Storage mode IN_MEMORY_ANALYTICAL is set via container startup flags
+// (--storage-mode=IN_MEMORY_ANALYTICAL) to avoid MVCC transaction conflicts.
 
 // Create indexes (Memgraph uses CREATE INDEX ON syntax)
 var indexQueries = new[]
@@ -1264,6 +1254,8 @@ ON CREATE SET e.defaultFlags = $defaultFlags, e.lim = '', e.enumValues = []
 public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 string? salt = null, CancellationToken cancellationToken = default)
 {
+return await WithRetryAsync(async () =>
+{
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -1320,9 +1312,12 @@ CREATE (p)-[:HAS_HOME]->(dest)
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
+}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default)
+{
+return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1355,10 +1350,13 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
+}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
 AnySharpContainer home, CancellationToken cancellationToken = default)
+{
+return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1407,10 +1405,13 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
+}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 SharpPlayer creator, CancellationToken cancellationToken = default)
+{
+return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1450,6 +1451,7 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
+}, cancellationToken);
 }
 
 #endregion
@@ -1521,21 +1523,27 @@ return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 
 public async ValueTask SetLockAsync(SharpObject target, string lockName, SharpLockData lockData, CancellationToken cancellationToken = default)
 {
+await WithRetryAsync(async () =>
+{
 var newLocks = target.Locks
 .SetItem(lockName, lockData);
 var locksJson = SerializeLocks(newLocks);
 await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.locks = $locks")
 .WithParameters(new { key = target.Key, locks = locksJson })
 .ExecuteAsync(cancellationToken);
+}, cancellationToken);
 }
 
 public async ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken cancellationToken = default)
+{
+await WithRetryAsync(async () =>
 {
 var newLocks = target.Locks.Remove(lockName);
 var locksJson = SerializeLocks(newLocks);
 await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.locks = $locks")
 .WithParameters(new { key = target.Key, locks = locksJson })
 .ExecuteAsync(cancellationToken);
+}, cancellationToken);
 }
 
 public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default)
@@ -2541,6 +2549,11 @@ yield return await MapToLazySharpAttribute(record["child"].As<INode>(), cancella
 
 public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
 {
+return await WithRetryAsync(async () => await SetAttributeAsyncCore(dbref, attribute, value, owner, cancellationToken), cancellationToken);
+}
+
+private async ValueTask<bool> SetAttributeAsyncCore(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
+{
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var objKey = dbref.Number;
 var ownerKey = ExtractKey(owner.Id!);
@@ -2745,6 +2758,8 @@ yield return MapNodeToAttributeFlag(record["f"].As<INode>());
 
 public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 {
+return await WithRetryAsync(async () =>
+{
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
 var targetAttr = await attrs.LastOrDefaultAsync(cancellationToken);
@@ -2776,9 +2791,12 @@ await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) DETACH DELETE a")
 }
 
 return true;
+}, cancellationToken);
 }
 
 public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+{
+return await WithRetryAsync(async () =>
 {
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
@@ -2801,6 +2819,7 @@ await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) DETACH DELETE a")
 .ExecuteAsync(cancellationToken);
 
 return true;
+}, cancellationToken);
 }
 
 #endregion
