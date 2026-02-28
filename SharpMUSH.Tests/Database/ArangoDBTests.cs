@@ -52,14 +52,15 @@ public class ArangoDBTests
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = new DBRef(playerOne.Object.Key);
+		var suffix = Guid.NewGuid().ToString("N")[..8];
 
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer"), playerOne);
-		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		await Database.SetAttributeAsync(playerOneDBRef, ["Override_" + suffix, "Layers"], MModule.single("Layer"), playerOne);
+		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Override_" + suffix, "Layers"]))!.ToListAsync();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEqualTo("Layer");
 
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer2"), playerOne);
-		var overwrittenLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		await Database.SetAttributeAsync(playerOneDBRef, ["Override_" + suffix, "Layers"], MModule.single("Layer2"), playerOne);
+		var overwrittenLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Override_" + suffix, "Layers"]))!.ToListAsync();
 
 		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
 	}
@@ -71,8 +72,8 @@ public class ArangoDBTests
 		var playerOneDBRef = playerOne.Object()!.DBRef;
 
 		var ansiString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], ansiString, playerOne.AsPlayer);
-		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		await Database.SetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"], ansiString, playerOne.AsPlayer);
+		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"]))!.ToListAsync();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEquatableOrEqualTo(ansiString.ToString());
 	}
