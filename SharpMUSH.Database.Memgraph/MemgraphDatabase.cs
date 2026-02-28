@@ -74,7 +74,56 @@ private static string ToFullMatchRegex(string pattern)
 	return pattern;
 }
 
+/// <summary>
+/// Checks if a DatabaseException is a transient transaction conflict that should be retried.
+/// Memgraph's IN_MEMORY_TRANSACTIONAL mode throws DatabaseException (not TransientException)
+/// for MVCC write-write conflicts. Per Memgraph docs, these must be retried on the driver side:
+/// https://memgraph.com/docs/help-center/errors/transactions
+/// </summary>
+private static bool IsTransientConflict(DatabaseException ex)
+	=> ex.Message.Contains("Cannot resolve conflicting transactions")
+		|| ex.Message.Contains("serialization error");
+
+/// <summary>
+/// Retries an async operation when Memgraph reports a transient transaction conflict.
+/// Uses exponential backoff with jitter to reduce contention.
+/// </summary>
+private async ValueTask<T> WithRetryAsync<T>(Func<ValueTask<T>> operation, CancellationToken ct = default, int maxRetries = 5)
+{
+	for (var attempt = 0; ; attempt++)
+	{
+		try
+		{
+			return await operation();
+		}
+		catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
+		{
+			logger.LogDebug(ex, "Memgraph transient conflict on attempt {Attempt}, retrying", attempt + 1);
+			await Task.Delay(20 * (attempt + 1), ct);
+		}
+	}
+}
+
+private async ValueTask WithRetryAsync(Func<ValueTask> operation, CancellationToken ct = default, int maxRetries = 5)
+{
+	for (var attempt = 0; ; attempt++)
+	{
+		try
+		{
+			await operation();
+			return;
+		}
+		catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
+		{
+			logger.LogDebug(ex, "Memgraph transient conflict on attempt {Attempt}, retrying", attempt + 1);
+			await Task.Delay(20 * (attempt + 1), ct);
+		}
+	}
+}
+
 private async ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
+{
+return await WithRetryAsync(async () =>
 {
 var result = await driver.ExecutableQuery("""
 MATCH (c:Counter {name: 'object_key'})
@@ -83,6 +132,7 @@ RETURN c.value AS nextKey
 """)
 .ExecuteAsync(ct);
 return result.Result[0]["nextKey"].As<int>();
+}, ct);
 }
 
 private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
@@ -1213,6 +1263,8 @@ ON CREATE SET e.defaultFlags = $defaultFlags, e.lim = '', e.enumValues = []
 public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 string? salt = null, CancellationToken cancellationToken = default)
 {
+return await WithRetryAsync(async () =>
+{
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -1235,9 +1287,12 @@ CREATE (p)-[:HAS_HOME]->(hm)
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
+}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default)
+{
+return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1255,10 +1310,13 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
+}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
 AnySharpContainer home, CancellationToken cancellationToken = default)
+{
+return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1282,10 +1340,13 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
+}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 SharpPlayer creator, CancellationToken cancellationToken = default)
+{
+return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1306,6 +1367,7 @@ CREATE (o)-[:HAS_OWNER]->(owner)
 .ExecuteAsync(cancellationToken);
 
 return new DBRef(nextKey, now);
+}, cancellationToken);
 }
 
 #endregion
@@ -1377,21 +1439,27 @@ return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 
 public async ValueTask SetLockAsync(SharpObject target, string lockName, SharpLockData lockData, CancellationToken cancellationToken = default)
 {
+await WithRetryAsync(async () =>
+{
 var newLocks = target.Locks
 .SetItem(lockName, lockData);
 var locksJson = SerializeLocks(newLocks);
 await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.locks = $locks")
 .WithParameters(new { key = target.Key, locks = locksJson })
 .ExecuteAsync(cancellationToken);
+}, cancellationToken);
 }
 
 public async ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken cancellationToken = default)
+{
+await WithRetryAsync(async () =>
 {
 var newLocks = target.Locks.Remove(lockName);
 var locksJson = SerializeLocks(newLocks);
 await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.locks = $locks")
 .WithParameters(new { key = target.Key, locks = locksJson })
 .ExecuteAsync(cancellationToken);
+}, cancellationToken);
 }
 
 public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default)
@@ -2135,6 +2203,8 @@ yield return BuildExit(ExitId(key), exitNode, sharpObj);
 
 public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination, CancellationToken cancellationToken = default)
 {
+await WithRetryAsync(async () =>
+{
 var srcKey = ExtractKey(enactorObj.Id);
 var destKey = ExtractKey(destination.Id);
 await driver.ExecutableQuery("""
@@ -2147,6 +2217,7 @@ CREATE (src)-[:AT_LOCATION]->(dest)
 """)
 .WithParameters(new { srcKey, destKey })
 .ExecuteAsync(cancellationToken);
+}, cancellationToken);
 }
 
 public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -2397,7 +2468,7 @@ yield return await MapToLazySharpAttribute(record["child"].As<INode>(), cancella
 
 public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
 {
-return await SetAttributeAsyncCore(dbref, attribute, value, owner, cancellationToken);
+return await WithRetryAsync(async () => await SetAttributeAsyncCore(dbref, attribute, value, owner, cancellationToken), cancellationToken);
 }
 
 private async ValueTask<bool> SetAttributeAsyncCore(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
@@ -2606,6 +2677,8 @@ yield return MapNodeToAttributeFlag(record["f"].As<INode>());
 
 public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
 {
+return await WithRetryAsync(async () =>
+{
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
 var targetAttr = await attrs.LastOrDefaultAsync(cancellationToken);
@@ -2637,9 +2710,12 @@ await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) DETACH DELETE a")
 }
 
 return true;
+}, cancellationToken);
 }
 
 public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
+{
+return await WithRetryAsync(async () =>
 {
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
@@ -2662,6 +2738,7 @@ await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) DETACH DELETE a")
 .ExecuteAsync(cancellationToken);
 
 return true;
+}, cancellationToken);
 }
 
 #endregion
@@ -3217,6 +3294,8 @@ yield return MapNodeToChannel(record["c"].As<INode>());
 
 public async ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
 {
+await WithRetryAsync(async () =>
+{
 var channelName = name.ToPlainText();
 var serializedName = MarkupStringModule.serialize(name);
 var ownerObjKey = owner.Object.Key;
@@ -3244,6 +3323,7 @@ CREATE (o)-[:ON_CHANNEL {combine: false, gagged: false, hide: false, mute: false
 """)
 .WithParameters(new { ownerKey = ownerObjKey, name = channelName })
 .ExecuteAsync(cancellationToken);
+}, cancellationToken);
 }
 
 public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name, MString? description, string[]? privs,

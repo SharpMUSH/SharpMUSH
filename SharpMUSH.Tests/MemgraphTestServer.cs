@@ -18,12 +18,13 @@ public class MemgraphTestServer : IAsyncInitializer, IAsyncDisposable
 
 	private IContainer? _instance;
 
-	public IContainer Instance => _instance ??= new ContainerBuilder("memgraph/memgraph:2.21.0")
+	public IContainer Instance => _instance ??= new ContainerBuilder("memgraph/memgraph:3.8.1")
 		.WithNetwork(DockerNetwork.Instance)
 		.WithPortBinding(BoltPort, true)
 		.WithCommand(
 			"--bolt-num-workers=4",
-			"--storage-mode=IN_MEMORY_ANALYTICAL",
+			"--storage-mode=IN_MEMORY_TRANSACTIONAL",
+			"--memory-limit=1024",
 			"--log-level=WARNING")
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("You are running Memgraph"))
 		.WithReuse(false)
