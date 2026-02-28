@@ -60,6 +60,21 @@ private static int ExtractKey(string id)
 private static string ExtractKeyString(string id) => id.Split('/')[1];
 
 /// <summary>
+/// Converts a partial-match regex to a full-match regex for Memgraph.
+/// Memgraph's =~ operator does full-string matching (like re.fullmatch),
+/// while ArangoDB does partial matching (like re.search).
+/// This adds .* anchors as needed to simulate partial matching.
+/// </summary>
+private static string ToFullMatchRegex(string pattern)
+{
+	if (!pattern.StartsWith("^") && !pattern.StartsWith(".*"))
+		pattern = ".*" + pattern;
+	if (!pattern.EndsWith("$") && !pattern.EndsWith(".*"))
+		pattern += ".*";
+	return pattern;
+}
+
+/// <summary>
 /// Retries an async operation when Memgraph reports a transient transaction conflict.
 /// Memgraph's MVCC can throw "Cannot resolve conflicting transactions" when concurrent
 /// writes touch the same data. Retrying after a short delay resolves the conflict.
@@ -1659,7 +1674,7 @@ if (filter.UseRegex)
 conditions.Add("toLower(o.name) =~ $namePattern");
 else
 conditions.Add("toLower(o.name) CONTAINS toLower($namePattern)");
-parameters["namePattern"] = filter.UseRegex ? filter.NamePattern.ToLower() : filter.NamePattern;
+parameters["namePattern"] = filter.UseRegex ? ToFullMatchRegex(filter.NamePattern.ToLower()) : filter.NamePattern;
 }
 if (filter.MinDbRef.HasValue)
 {
@@ -2433,7 +2448,7 @@ MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute)
 WHERE toLower(child.longName) =~ $pattern
 RETURN child ORDER BY child.longName
 """)
-.WithParameters(new { tkey, pattern = attributePattern.ToLower() })
+.WithParameters(new { tkey, pattern = ToFullMatchRegex(attributePattern.ToLower()) })
 .ExecuteAsync(cancellationToken);
 
 foreach (var record in result.Result)
@@ -2538,7 +2553,7 @@ MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE]->(child:Attribute)
 WHERE toLower(child.longName) =~ $pattern
 RETURN child ORDER BY child.longName
 """)
-.WithParameters(new { tkey, pattern = attributePattern.ToLower() })
+.WithParameters(new { tkey, pattern = ToFullMatchRegex(attributePattern.ToLower()) })
 .ExecuteAsync(cancellationToken);
 
 foreach (var record in result.Result)
@@ -3245,18 +3260,33 @@ return await BuildTypedObjectFromObjectNode(objNode, ct);
 public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data, CancellationToken cancellationToken = default)
 {
 var objKey = ExtractKey(sharpObjectId);
-var jsonData = JsonSerializer.Serialize((object)data, JsonOptions);
 
 // Check if node exists
 var existing = await driver.ExecutableQuery("""
 MATCH (o:Object {key: $key})-[:HAS_EXPANDED_DATA]->(d:ExpandedObjectData {sharpObjectId: $objId, dataType: $dataType})
-RETURN d
+RETURN d.data AS data
 """)
 .WithParameters(new { key = objKey, objId = sharpObjectId, dataType })
 .ExecuteAsync(cancellationToken);
 
+string jsonData;
 if (existing.Result.Count > 0)
 {
+// Merge with existing data: non-null values from new data override existing
+var existingJson = existing.Result[0]["data"].As<string>();
+var existingDoc = JsonSerializer.Deserialize<JsonElement>(existingJson, JsonOptions);
+var newDoc = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize((object)data, JsonOptions), JsonOptions);
+
+var merged = new Dictionary<string, JsonElement>();
+foreach (var prop in existingDoc.EnumerateObject())
+merged[prop.Name] = prop.Value;
+foreach (var prop in newDoc.EnumerateObject())
+{
+if (prop.Value.ValueKind != JsonValueKind.Null)
+merged[prop.Name] = prop.Value;
+}
+jsonData = JsonSerializer.Serialize(merged, JsonOptions);
+
 await driver.ExecutableQuery("""
 MATCH (o:Object {key: $key})-[:HAS_EXPANDED_DATA]->(d:ExpandedObjectData {sharpObjectId: $objId, dataType: $dataType})
 SET d.data = $data
@@ -3266,6 +3296,7 @@ SET d.data = $data
 }
 else
 {
+jsonData = JsonSerializer.Serialize((object)data, JsonOptions);
 await driver.ExecutableQuery("""
 MATCH (o:Object {key: $key})
 CREATE (d:ExpandedObjectData {sharpObjectId: $objId, dataType: $dataType, data: $data})
