@@ -85,16 +85,23 @@ private static bool IsTransientConflict(DatabaseException ex)
 		|| ex.Message.Contains("serialization error");
 
 /// <summary>
-/// Retries an async operation when Memgraph reports a transient transaction conflict.
-/// Uses exponential backoff with jitter to reduce contention.
+/// Executes a Cypher query with automatic retry on transient MVCC conflicts.
+/// Wraps driver.ExecutableQuery().ExecuteAsync() with exponential backoff.
 /// </summary>
-private async ValueTask<T> WithRetryAsync<T>(Func<ValueTask<T>> operation, CancellationToken ct = default, int maxRetries = 5)
+private async ValueTask<EagerResult<IReadOnlyList<IRecord>>> ExecuteWithRetryAsync(
+	string cypher,
+	object? parameters = null,
+	CancellationToken ct = default,
+	int maxRetries = 5)
 {
 	for (var attempt = 0; ; attempt++)
 	{
 		try
 		{
-			return await operation();
+			var query = driver.ExecutableQuery(cypher);
+			if (parameters is not null)
+				query = query.WithParameters(parameters);
+			return await query.ExecuteAsync(ct);
 		}
 		catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
 		{
@@ -104,35 +111,15 @@ private async ValueTask<T> WithRetryAsync<T>(Func<ValueTask<T>> operation, Cance
 	}
 }
 
-private async ValueTask WithRetryAsync(Func<ValueTask> operation, CancellationToken ct = default, int maxRetries = 5)
-{
-	for (var attempt = 0; ; attempt++)
-	{
-		try
-		{
-			await operation();
-			return;
-		}
-		catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
-		{
-			logger.LogDebug(ex, "Memgraph transient conflict on attempt {Attempt}, retrying", attempt + 1);
-			await Task.Delay(20 * (attempt + 1), ct);
-		}
-	}
-}
 
 private async ValueTask<int> GetNextObjectKeyAsync(CancellationToken ct = default)
 {
-return await WithRetryAsync(async () =>
-{
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (c:Counter {name: 'object_key'})
 SET c.value = c.value + 1
 RETURN c.value AS nextKey
-""")
-.ExecuteAsync(ct);
+""", ct: ct);
 return result.Result[0]["nextKey"].As<int>();
-}, ct);
 }
 
 private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
@@ -221,10 +208,7 @@ var key = objNode["key"].As<int>();
 var type = objNode["type"].As<string>();
 var sharpObj = MapNodeToSharpObject(objNode);
 
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed, labels(typed) AS lbl")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed, labels(typed) AS lbl", new { key }, ct);
 
 if (typedResult.Result.Count == 0) return new None();
 
@@ -308,14 +292,11 @@ Home = new(async ct => await GetHomeAsync(id, ct))
 private async ValueTask<AnySharpContainer> GetLocationForTypedAsync(string typedId, CancellationToken ct)
 {
 var key = ExtractKey(typedId);
-var result = await driver
-.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (src {key: $key})-[:AT_LOCATION]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+""", new { key }, ct);
 
 if (result.Result.Count == 0)
 throw new InvalidOperationException($"No location found for {typedId}");
@@ -333,14 +314,11 @@ _ => throw new Exception("No location found"));
 private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
 {
 var key = ExtractKey(typedId);
-var result = await driver
-.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (src {key: $key})-[:HAS_HOME]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+""", new { key }, ct);
 
 if (result.Result.Count == 0)
 throw new InvalidOperationException($"No home found for {typedId}");
@@ -358,14 +336,11 @@ _ => throw new Exception("No home found"));
 private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)
 {
 var key = ExtractKey(roomId);
-var result = await driver
-.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (r:Room {key: $key})-[:HAS_HOME]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+""", new { key }, ct);
 
 if (result.Result.Count == 0) return new None();
 
@@ -382,14 +357,11 @@ _ => new None());
 private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)
 {
 var key = ExtractKey(objectId);
-var result = await driver
-.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_OWNER]->(ownerTyped:Player)
 MATCH (ownerTyped)-[:IS_OBJECT]->(ownerObj:Object)
 RETURN ownerObj, ownerTyped
-""")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+""", new { key }, ct);
 
 if (result.Result.Count == 0)
 throw new InvalidOperationException($"No owner found for {objectId}");
@@ -404,10 +376,7 @@ return BuildPlayer(PlayerId(ownerKey), ownerTypedNode, sharpObj);
 private async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsForIdAsync(string objectId, string type, [EnumeratorCancellation] CancellationToken ct = default)
 {
 var key = ExtractKey(objectId);
-var result = await driver
-.ExecutableQuery("MATCH (o:Object {key: $key})-[:HAS_FLAG]->(f:ObjectFlag) RETURN f")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_FLAG]->(f:ObjectFlag) RETURN f", new { key }, ct);
 
 foreach (var record in result.Result)
 {
@@ -431,10 +400,7 @@ Aliases = []
 private async IAsyncEnumerable<SharpPower> GetPowersForIdAsync(string objectId, [EnumeratorCancellation] CancellationToken ct = default)
 {
 var key = ExtractKey(objectId);
-var result = await driver
-.ExecutableQuery("MATCH (o:Object {key: $key})-[:HAS_POWER]->(p:Power) RETURN p")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_POWER]->(p:Power) RETURN p", new { key }, ct);
 
 foreach (var record in result.Result)
 {
@@ -522,10 +488,7 @@ Enum = node.Properties.ContainsKey("enumValues")
 private async IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsForAttrAsync(string attrId, [EnumeratorCancellation] CancellationToken ct = default)
 {
 var attrKey = ExtractKeyString(attrId);
-var result = await driver
-.ExecutableQuery("MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE_FLAG]->(f:AttributeFlag) RETURN f")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE_FLAG]->(f:AttributeFlag) RETURN f", new { key = attrKey }, ct);
 
 foreach (var record in result.Result)
 {
@@ -536,14 +499,11 @@ yield return MapNodeToAttributeFlag(record["f"].As<INode>());
 private async ValueTask<SharpPlayer?> GetAttributeOwnerAsync(string attrId, CancellationToken ct)
 {
 var attrKey = ExtractKeyString(attrId);
-var result = await driver
-.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE_OWNER]->(p:Player)
 MATCH (p)-[:IS_OBJECT]->(o:Object)
 RETURN o, p
-""")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(ct);
+""", new { key = attrKey }, ct);
 
 if (result.Result.Count == 0) return null;
 
@@ -557,10 +517,7 @@ return BuildPlayer(PlayerId(pKey), playerNode, sharpObj);
 private async ValueTask<SharpAttributeEntry?> GetRelatedAttributeEntryAsync(string attrId, CancellationToken ct)
 {
 var attrKey = ExtractKeyString(attrId);
-var result = await driver
-.ExecutableQuery("MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE_ENTRY]->(e:AttributeEntry) RETURN e")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE_ENTRY]->(e:AttributeEntry) RETURN e", new { key = attrKey }, ct);
 
 if (result.Result.Count == 0) return null;
 return MapNodeToAttributeEntry(result.Result[0]["e"].As<INode>());
@@ -620,19 +577,13 @@ else
 {
 // parentId is an Object ID — find the typed node first
 var objKey = ExtractKey(parentId);
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(ct);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, ct);
 if (typedResult.Result.Count == 0) yield break;
 key = typedResult.Result[0]["tkey"].As<int>().ToString();
 cypher = "MATCH (parent {key: toInteger($key)})-[:HAS_ATTRIBUTE]->(child:Attribute) RETURN child";
 }
 
-var result = await driver
-.ExecutableQuery(cypher)
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync(cypher, new { key }, ct);
 
 foreach (var record in result.Result)
 {
@@ -652,19 +603,13 @@ cypher = "MATCH (parent:Attribute {key: $key})-[:HAS_ATTRIBUTE]->(child:Attribut
 else
 {
 var objKey = ExtractKey(parentId);
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(ct);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, ct);
 if (typedResult.Result.Count == 0) yield break;
 key = typedResult.Result[0]["tkey"].As<int>().ToString();
 cypher = "MATCH (parent {key: toInteger($key)})-[:HAS_ATTRIBUTE]->(child:Attribute) RETURN child";
 }
 
-var result = await driver
-.ExecutableQuery(cypher)
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync(cypher, new { key }, ct);
 
 foreach (var record in result.Result)
 {
@@ -679,27 +624,18 @@ if (parentId.StartsWith("Attribute"))
 {
 // For attribute, find all descendants
 var attrKey = ExtractKeyString(parentId);
-var result = await driver
-.ExecutableQuery("MATCH (start:Attribute {key: $key})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (start:Attribute {key: $key})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child", new { key = attrKey }, ct);
 foreach (var record in result.Result)
 yield return await MapToSharpAttribute(record["child"].As<INode>(), ct);
 yield break;
 }
 
 startKey = ExtractKey(parentId);
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = startKey })
-.ExecuteAsync(ct);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = startKey }, ct);
 if (typedResult.Result.Count == 0) yield break;
 var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-var allResult = await driver
-.ExecutableQuery("MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child")
-.WithParameters(new { tkey })
-.ExecuteAsync(ct);
+var allResult = await ExecuteWithRetryAsync("MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child", new { tkey }, ct);
 
 foreach (var record in allResult.Result)
 {
@@ -713,27 +649,18 @@ int startKey;
 if (parentId.StartsWith("Attribute"))
 {
 var attrKey = ExtractKeyString(parentId);
-var result = await driver
-.ExecutableQuery("MATCH (start:Attribute {key: $key})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (start:Attribute {key: $key})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child", new { key = attrKey }, ct);
 foreach (var record in result.Result)
 yield return await MapToLazySharpAttribute(record["child"].As<INode>(), ct);
 yield break;
 }
 
 startKey = ExtractKey(parentId);
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = startKey })
-.ExecuteAsync(ct);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = startKey }, ct);
 if (typedResult.Result.Count == 0) yield break;
 var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-var allResult = await driver
-.ExecutableQuery("MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child")
-.WithParameters(new { tkey })
-.ExecuteAsync(ct);
+var allResult = await ExecuteWithRetryAsync("MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute) RETURN child", new { tkey }, ct);
 
 foreach (var record in allResult.Result)
 {
@@ -749,10 +676,7 @@ return GetChildrenAsyncInner(objectId, ct);
 private async IAsyncEnumerable<SharpObject> GetChildrenAsyncInner(string objectId, [EnumeratorCancellation] CancellationToken ct = default)
 {
 var key = ExtractKey(objectId);
-var result = await driver
-.ExecutableQuery("MATCH (child:Object)-[:HAS_PARENT]->(parent:Object {key: $key}) RETURN child")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (child:Object)-[:HAS_PARENT]->(parent:Object {key: $key}) RETURN child", new { key }, ct);
 
 foreach (var record in result.Result)
 {
@@ -763,10 +687,7 @@ yield return MapNodeToSharpObject(record["child"].As<INode>());
 private async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct)
 {
 var key = ExtractKey(objectId);
-var result = await driver
-.ExecutableQuery("MATCH (o:Object {key: $key})-[:HAS_ZONE]->(z:Object) RETURN z")
-.WithParameters(new { key })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_ZONE]->(z:Object) RETURN z", new { key }, ct);
 
 if (result.Result.Count == 0) return new None();
 
@@ -814,61 +735,60 @@ var indexQueries = new[]
 
 foreach (var q in indexQueries)
 {
-try { await driver.ExecutableQuery(q).ExecuteAsync(cancellationToken); }
+try { await ExecuteWithRetryAsync(q, ct: cancellationToken); }
 catch { /* Index may already exist */ }
 }
 
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 // Create Counter for auto-increment object keys
-await driver.ExecutableQuery("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 2")
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 2", ct: cancellationToken);
 
 // Create Room Zero (key=0)
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 0})
 ON CREATE SET o.name = 'Room Zero', o.type = 'ROOM', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
 MERGE (r:Room {key: 0})
 ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
-""").WithParameters(new { now }).ExecuteAsync(cancellationToken);
+""", new { now }, cancellationToken);
 
 // Create Player One - God (key=1)
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 1})
 ON CREATE SET o.name = 'God', o.type = 'PLAYER', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
 MERGE (p:Player {key: 1})
 ON CREATE SET p.passwordHash = '', p.passwordSalt = '', p.aliases = [], p.quota = 999999
 MERGE (p)-[:IS_OBJECT]->(o)
-""").WithParameters(new { now }).ExecuteAsync(cancellationToken);
+""", new { now }, cancellationToken);
 
 // Create Room Two - Master Room (key=2)
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 2})
 ON CREATE SET o.name = 'Master Room', o.type = 'ROOM', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
 MERGE (r:Room {key: 2})
 ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
-""").WithParameters(new { now }).ExecuteAsync(cancellationToken);
+""", new { now }, cancellationToken);
 
 // Player One at Room Zero
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: 1}), (r:Room {key: 0})
 MERGE (p)-[:AT_LOCATION]->(r)
-""").ExecuteAsync(cancellationToken);
+""", ct: cancellationToken);
 
 // Player One home is Room Zero
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: 1}), (r:Room {key: 0})
 MERGE (p)-[:HAS_HOME]->(r)
-""").ExecuteAsync(cancellationToken);
+""", ct: cancellationToken);
 
 // Ownership: Object nodes -> Player typed node
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (ownerPlayer:Player {key: 1})
 MATCH (o:Object) WHERE o.key IN [0, 1, 2]
 MERGE (o)-[:HAS_OWNER]->(ownerPlayer)
-""").ExecuteAsync(cancellationToken);
+""", ct: cancellationToken);
 
 // Create initial flags
 await CreateInitialFlags(cancellationToken);
@@ -883,10 +803,10 @@ await CreateInitialPowers(cancellationToken);
 await CreateInitialAttributeEntries(cancellationToken);
 
 // Give Player One the WIZARD flag
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: 1}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
-""").ExecuteAsync(cancellationToken);
+""", ct: cancellationToken);
 
 logger.LogInformation("Memgraph Migration Completed");
 _migrated = true;
@@ -967,13 +887,12 @@ var flags = new (string Name, string Symbol, string[]? Aliases, string[] SetPerm
 
 foreach (var f in flags)
 {
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (f:ObjectFlag {name: $name})
 ON CREATE SET f.symbol = $symbol, f.system = true, f.disabled = false,
 f.aliases = $aliases, f.setPermissions = $setPerms, f.unsetPermissions = $unsetPerms,
 f.typeRestrictions = $typeRestrictions
-""")
-.WithParameters(new
+""", new
 {
 name = f.Name,
 symbol = f.Symbol,
@@ -981,8 +900,7 @@ aliases = f.Aliases ?? Array.Empty<string>(),
 setPerms = f.SetPerms,
 unsetPerms = f.UnsetPerms,
 typeRestrictions = f.TypeRestrictions
-})
-.ExecuteAsync(ct);
+}, ct);
 }
 }
 
@@ -1016,12 +934,10 @@ var attrFlags = new (string Name, string Symbol, bool Inheritable)[]
 
 foreach (var af in attrFlags)
 {
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (f:AttributeFlag {name: $name})
 ON CREATE SET f.symbol = $symbol, f.system = true, f.inheritable = $inheritable
-""")
-.WithParameters(new { name = af.Name, symbol = af.Symbol, inheritable = af.Inheritable })
-.ExecuteAsync(ct);
+""", new { name = af.Name, symbol = af.Symbol, inheritable = af.Inheritable }, ct);
 }
 }
 
@@ -1069,21 +985,19 @@ var powers = new (string Name, string Alias, string[] SetPerms, string[] UnsetPe
 
 foreach (var p in powers)
 {
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (p:Power {name: $name})
 ON CREATE SET p.alias = $alias, p.system = true, p.disabled = false,
 p.setPermissions = $setPerms, p.unsetPermissions = $unsetPerms,
 p.typeRestrictions = $typeRestrictions
-""")
-.WithParameters(new
+""", new
 {
 name = p.Name,
 alias = p.Alias,
 setPerms = p.SetPerms,
 unsetPerms = p.UnsetPerms,
 typeRestrictions = new[] { "ROOM", "PLAYER", "EXIT", "THING" }
-})
-.ExecuteAsync(ct);
+}, ct);
 }
 }
 
@@ -1247,12 +1161,10 @@ var entries = new (string Name, string[] DefaultFlags)[]
 
 foreach (var e in entries)
 {
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (e:AttributeEntry {name: $name})
 ON CREATE SET e.defaultFlags = $defaultFlags, e.lim = '', e.enumValues = []
-""")
-.WithParameters(new { name = e.Name, defaultFlags = e.DefaultFlags })
-.ExecuteAsync(ct);
+""", new { name = e.Name, defaultFlags = e.DefaultFlags }, ct);
 }
 }
 
@@ -1263,8 +1175,6 @@ ON CREATE SET e.defaultFlags = $defaultFlags, e.lim = '', e.enumValues = []
 public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 string? salt = null, CancellationToken cancellationToken = default)
 {
-return await WithRetryAsync(async () =>
-{
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -1273,7 +1183,7 @@ var hashedPassword = salt != null
 : _passwordService.HashPassword($"#{nextKey}:{now}", password);
 
 // Single atomic query: create Object + Player nodes with all relationships
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
 MATCH (hm {key: $homeKey}) WHERE hm:Room OR hm:Player OR hm:Thing
 CREATE (o:Object {key: $key, name: $name, type: 'PLAYER', creationTime: $now, modifiedTime: $now, locks: '{}', warnings: 0})
@@ -1282,41 +1192,31 @@ CREATE (p)-[:IS_OBJECT]->(o)
 CREATE (o)-[:HAS_OWNER]->(p)
 CREATE (p)-[:AT_LOCATION]->(loc)
 CREATE (p)-[:HAS_HOME]->(hm)
-""")
-.WithParameters(new { key = nextKey, name, now, hash = hashedPassword, salt = salt ?? "", quota, locKey = location.Number, homeKey = home.Number })
-.ExecuteAsync(cancellationToken);
+""", new { key = nextKey, name, now, hash = hashedPassword, salt = salt ?? "", quota, locKey = location.Number, homeKey = home.Number }, cancellationToken);
 
 return new DBRef(nextKey, now);
-}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 var creatorKey = creator.Object.Key;
 
 // Single atomic query: create Object + Room nodes with relationships
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (owner:Player {key: $ownerKey})
 CREATE (o:Object {key: $key, name: $name, type: 'ROOM', creationTime: $now, modifiedTime: $now, locks: '{}', warnings: 0})
 CREATE (r:Room {key: $key, aliases: []})
 CREATE (r)-[:IS_OBJECT]->(o)
 CREATE (o)-[:HAS_OWNER]->(owner)
-""")
-.WithParameters(new { key = nextKey, name, now, ownerKey = creatorKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = nextKey, name, now, ownerKey = creatorKey }, cancellationToken);
 
 return new DBRef(nextKey, now);
-}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
 AnySharpContainer home, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1325,7 +1225,7 @@ var locKey = ExtractKey(location.Id);
 var homeKey = ExtractKey(home.Id);
 
 // Single atomic query: create Object + Thing nodes with all relationships
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
 MATCH (hm {key: $homeKey}) WHERE hm:Room OR hm:Player OR hm:Thing
 MATCH (owner:Player {key: $ownerKey})
@@ -1335,18 +1235,13 @@ CREATE (t)-[:IS_OBJECT]->(o)
 CREATE (t)-[:AT_LOCATION]->(loc)
 CREATE (t)-[:HAS_HOME]->(hm)
 CREATE (o)-[:HAS_OWNER]->(owner)
-""")
-.WithParameters(new { key = nextKey, name, now, locKey, homeKey, ownerKey = creatorKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = nextKey, name, now, locKey, homeKey, ownerKey = creatorKey }, cancellationToken);
 
 return new DBRef(nextKey, now);
-}, cancellationToken);
 }
 
 public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 SharpPlayer creator, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 var nextKey = await GetNextObjectKeyAsync(cancellationToken);
 var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -1354,7 +1249,7 @@ var creatorKey = creator.Object.Key;
 var locKey = ExtractKey(location.Id);
 
 // Single atomic query: create Object + Exit nodes with all relationships
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (loc {key: $locKey}) WHERE loc:Room OR loc:Player OR loc:Thing
 MATCH (owner:Player {key: $ownerKey})
 CREATE (o:Object {key: $key, name: $name, type: 'EXIT', creationTime: $now, modifiedTime: $now, locks: '{}', warnings: 0})
@@ -1362,12 +1257,9 @@ CREATE (e:Exit {key: $key, aliases: $aliases})
 CREATE (e)-[:IS_OBJECT]->(o)
 CREATE (e)-[:AT_LOCATION]->(loc)
 CREATE (o)-[:HAS_OWNER]->(owner)
-""")
-.WithParameters(new { key = nextKey, name, now, aliases, locKey, ownerKey = creatorKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = nextKey, name, now, aliases, locKey, ownerKey = creatorKey }, cancellationToken);
 
 return new DBRef(nextKey, now);
-}, cancellationToken);
 }
 
 #endregion
@@ -1378,26 +1270,22 @@ public async ValueTask<bool> LinkExitAsync(SharpExit exit, AnySharpContainer loc
 {
 var exitKey = ExtractKey(exit.Id!);
 var destKey = ExtractKey(location.Id);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (e:Exit {key: $exitKey}), (dest {key: $destKey})
 WHERE dest:Room OR dest:Player OR dest:Thing
 CREATE (e)-[:HAS_HOME]->(dest)
-""")
-.WithParameters(new { exitKey, destKey })
-.ExecuteAsync(cancellationToken);
+""", new { exitKey, destKey }, cancellationToken);
 return true;
 }
 
 public async ValueTask<bool> UnlinkExitAsync(SharpExit exit, CancellationToken cancellationToken = default)
 {
 var exitKey = ExtractKey(exit.Id!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (e:Exit {key: $key})-[r:HAS_HOME]->()
 DELETE r
 RETURN count(r) AS cnt
-""")
-.WithParameters(new { key = exitKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = exitKey }, cancellationToken);
 return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 }
 
@@ -1414,52 +1302,38 @@ rm => ExtractKey(rm.Id!),
 thing => ExtractKey(thing.Id!),
 _ => throw new InvalidOperationException());
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (r:Room {key: $roomKey}), (dest {key: $destKey})
 WHERE dest:Room OR dest:Player OR dest:Thing
 CREATE (r)-[:HAS_HOME]->(dest)
-""")
-.WithParameters(new { roomKey, destKey })
-.ExecuteAsync(cancellationToken);
+""", new { roomKey, destKey }, cancellationToken);
 return true;
 }
 
 public async ValueTask<bool> UnlinkRoomAsync(SharpRoom room, CancellationToken cancellationToken = default)
 {
 var roomKey = ExtractKey(room.Id!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (r:Room {key: $key})-[rel:HAS_HOME]->()
 DELETE rel
 RETURN count(rel) AS cnt
-""")
-.WithParameters(new { key = roomKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = roomKey }, cancellationToken);
 return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 }
 
 public async ValueTask SetLockAsync(SharpObject target, string lockName, SharpLockData lockData, CancellationToken cancellationToken = default)
 {
-await WithRetryAsync(async () =>
-{
 var newLocks = target.Locks
 .SetItem(lockName, lockData);
 var locksJson = SerializeLocks(newLocks);
-await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.locks = $locks")
-.WithParameters(new { key = target.Key, locks = locksJson })
-.ExecuteAsync(cancellationToken);
-}, cancellationToken);
+await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) SET o.locks = $locks", new { key = target.Key, locks = locksJson }, cancellationToken);
 }
 
 public async ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken cancellationToken = default)
 {
-await WithRetryAsync(async () =>
-{
 var newLocks = target.Locks.Remove(lockName);
 var locksJson = SerializeLocks(newLocks);
-await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.locks = $locks")
-.WithParameters(new { key = target.Key, locks = locksJson })
-.ExecuteAsync(cancellationToken);
-}, cancellationToken);
+await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) SET o.locks = $locks", new { key = target.Key, locks = locksJson }, cancellationToken);
 }
 
 public async ValueTask SetPlayerPasswordAsync(SharpPlayer player, string password, string? salt = null, CancellationToken cancellationToken = default)
@@ -1468,28 +1342,22 @@ var hashed = salt != null
 ? password
 : _passwordService.HashPassword(player.Object.DBRef.ToString(), password);
 var playerKey = ExtractKey(player.Id!);
-await driver.ExecutableQuery("MATCH (p:Player {key: $key}) SET p.passwordHash = $hash, p.passwordSalt = $salt")
-.WithParameters(new { key = playerKey, hash = hashed, salt = salt ?? "" })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (p:Player {key: $key}) SET p.passwordHash = $hash, p.passwordSalt = $salt", new { key = playerKey, hash = hashed, salt = salt ?? "" }, cancellationToken);
 }
 
 public async ValueTask SetPlayerQuotaAsync(SharpPlayer player, int quota, CancellationToken cancellationToken = default)
 {
 var playerKey = ExtractKey(player.Id!);
-await driver.ExecutableQuery("MATCH (p:Player {key: $key}) SET p.quota = $quota")
-.WithParameters(new { key = playerKey, quota })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (p:Player {key: $key}) SET p.quota = $quota", new { key = playerKey, quota }, cancellationToken);
 }
 
 public async ValueTask<int> GetOwnedObjectCountAsync(SharpPlayer player, CancellationToken cancellationToken = default)
 {
 var playerKey = ExtractKey(player.Id!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object)-[:HAS_OWNER]->(p:Player {key: $key})
 RETURN count(o) AS cnt
-""")
-.WithParameters(new { key = playerKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = playerKey }, cancellationToken);
 return result.Result.Count > 0 ? (int)result.Result[0]["cnt"].As<long>() : 0;
 }
 
@@ -1499,9 +1367,7 @@ return result.Result.Count > 0 ? (int)result.Result[0]["cnt"].As<long>() : 0;
 
 public async ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (o:Object {key: $key}) RETURN o")
-.WithParameters(new { key = dbref.Number })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) RETURN o", new { key = dbref.Number }, cancellationToken);
 
 if (result.Result.Count == 0) return new None();
 
@@ -1514,9 +1380,7 @@ return await BuildTypedObjectFromObjectNode(objNode, cancellationToken);
 
 public async ValueTask<SharpObject?> GetBaseObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (o:Object {key: $key}) RETURN o")
-.WithParameters(new { key = dbref.Number })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) RETURN o", new { key = dbref.Number }, cancellationToken);
 
 if (result.Result.Count == 0) return null;
 
@@ -1529,14 +1393,12 @@ return MapNodeToSharpObject(objNode);
 
 public async IAsyncEnumerable<SharpPlayer> GetPlayerByNameOrAliasAsync(string name, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {type: 'PLAYER'})
 MATCH (p:Player)-[:IS_OBJECT]->(o)
 WHERE o.name = $name OR $name IN p.aliases
 RETURN o, p
-""")
-.WithParameters(new { name })
-.ExecuteAsync(cancellationToken);
+""", new { name }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -1550,8 +1412,7 @@ yield return BuildPlayer(PlayerId(key), playerNode, sharpObj);
 
 public async IAsyncEnumerable<SharpObject> GetAllObjectsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (o:Object) RETURN o")
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object) RETURN o", ct: cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -1600,9 +1461,7 @@ limitClause = $"SKIP {skip}";
 }
 
 var cypher = $"MATCH (o:Object) {whereClause} RETURN o {limitClause}";
-var result = await driver.ExecutableQuery(cypher)
-.WithParameters(parameters)
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync(cypher, parameters, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -1612,11 +1471,10 @@ yield return MapNodeToSharpObject(record["o"].As<INode>());
 
 public async IAsyncEnumerable<SharpPlayer> GetAllPlayersAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (p:Player)-[:IS_OBJECT]->(o:Object {type: 'PLAYER'})
 RETURN o, p
-""")
-.ExecuteAsync(cancellationToken);
+""", ct: cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -1630,13 +1488,11 @@ yield return BuildPlayer(PlayerId(key), playerNode, sharpObj);
 
 public async IAsyncEnumerable<SharpExit> GetEntrancesAsync(DBRef destination, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (e:Exit)-[:AT_LOCATION]->(dest {key: $destKey})
 MATCH (e)-[:IS_OBJECT]->(o:Object {type: 'EXIT'})
 RETURN o, e
-""")
-.WithParameters(new { destKey = destination.Number })
-.ExecuteAsync(cancellationToken);
+""", new { destKey = destination.Number }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -1654,60 +1510,50 @@ yield return BuildExit(ExitId(key), exitNode, sharpObj);
 
 public async ValueTask SetObjectName(AnySharpObject obj, MString value, CancellationToken cancellationToken = default)
 {
-await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.name = $name")
-.WithParameters(new { key = obj.Object().Key, name = value })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) SET o.name = $name", new { key = obj.Object().Key, name = value }, cancellationToken);
 }
 
 public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken cancellationToken = default)
 {
 var objKey = ExtractKey(obj.Id);
 var homeKey = ExtractKey(home.Id);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (src {key: $objKey})-[r:HAS_HOME]->()
 DELETE r
 WITH src
 MATCH (dest {key: $homeKey})
 WHERE dest:Room OR dest:Player OR dest:Thing
 CREATE (src)-[:HAS_HOME]->(dest)
-""")
-.WithParameters(new { objKey, homeKey })
-.ExecuteAsync(cancellationToken);
+""", new { objKey, homeKey }, cancellationToken);
 }
 
 public async ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location, CancellationToken cancellationToken = default)
 {
 var objKey = ExtractKey(obj.Id);
 var locKey = ExtractKey(location.Id);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (src {key: $objKey})-[r:AT_LOCATION]->()
 DELETE r
 WITH src
 MATCH (dest {key: $locKey})
 WHERE dest:Room OR dest:Player OR dest:Thing
 CREATE (src)-[:AT_LOCATION]->(dest)
-""")
-.WithParameters(new { objKey, locKey })
-.ExecuteAsync(cancellationToken);
+""", new { objKey, locKey }, cancellationToken);
 }
 
 public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default)
 {
 var objKey = obj.Object().Key;
 // Remove existing parent edge
-await driver.ExecutableQuery("MATCH (o:Object {key: $key})-[r:HAS_PARENT]->() DELETE r")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[r:HAS_PARENT]->() DELETE r", new { key = objKey }, cancellationToken);
 
 if (parent != null)
 {
 var parentKey = parent.Object().Key;
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (p:Object {key: $parentKey})
 CREATE (o)-[:HAS_PARENT]->(p)
-""")
-.WithParameters(new { key = objKey, parentKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, parentKey }, cancellationToken);
 }
 }
 
@@ -1717,19 +1563,15 @@ public async ValueTask UnsetObjectParent(AnySharpObject obj, CancellationToken c
 public async ValueTask SetObjectZone(AnySharpObject obj, AnySharpObject? zone, CancellationToken cancellationToken = default)
 {
 var objKey = obj.Object().Key;
-await driver.ExecutableQuery("MATCH (o:Object {key: $key})-[r:HAS_ZONE]->() DELETE r")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[r:HAS_ZONE]->() DELETE r", new { key = objKey }, cancellationToken);
 
 if (zone != null)
 {
 var zoneKey = zone.Object().Key;
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (z:Object {key: $zoneKey})
 CREATE (o)-[:HAS_ZONE]->(z)
-""")
-.WithParameters(new { key = objKey, zoneKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, zoneKey }, cancellationToken);
 }
 }
 
@@ -1740,22 +1582,18 @@ public async ValueTask SetObjectOwner(AnySharpObject obj, SharpPlayer owner, Can
 {
 var objKey = obj.Object().Key;
 var ownerKey = ExtractKey(owner.Id!);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[r:HAS_OWNER]->()
 DELETE r
 WITH o
 MATCH (p:Player {key: $ownerKey})
 CREATE (o)-[:HAS_OWNER]->(p)
-""")
-.WithParameters(new { key = objKey, ownerKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, ownerKey }, cancellationToken);
 }
 
 public async ValueTask SetObjectWarnings(AnySharpObject obj, WarningType warnings, CancellationToken cancellationToken = default)
 {
-await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.warnings = $warnings")
-.WithParameters(new { key = obj.Object().Key, warnings = (int)warnings })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (o:Object {key: $key}) SET o.warnings = $warnings", new { key = obj.Object().Key, warnings = (int)warnings }, cancellationToken);
 }
 
 #endregion
@@ -1764,16 +1602,13 @@ await driver.ExecutableQuery("MATCH (o:Object {key: $key}) SET o.warnings = $war
 
 public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name, CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (f:ObjectFlag {name: $name}) RETURN f")
-.WithParameters(new { name })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (f:ObjectFlag {name: $name}) RETURN f", new { name }, cancellationToken);
 return result.Result.Count > 0 ? MapNodeToFlag(result.Result[0]["f"].As<INode>()) : null;
 }
 
 public async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (f:ObjectFlag) RETURN f")
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (f:ObjectFlag) RETURN f", ct: cancellationToken);
 foreach (var record in result.Result)
 yield return MapNodeToFlag(record["f"].As<INode>());
 }
@@ -1782,19 +1617,17 @@ public async ValueTask<SharpObjectFlag?> CreateObjectFlagAsync(string name, stri
 bool system, string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 CancellationToken cancellationToken = default)
 {
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 CREATE (f:ObjectFlag {name: $name, symbol: $symbol, system: $system, disabled: false,
 aliases: $aliases, setPermissions: $setPerms, unsetPermissions: $unsetPerms, typeRestrictions: $typeRestrictions})
-""")
-.WithParameters(new
+""", new
 {
 name, symbol, system,
 aliases = aliases ?? Array.Empty<string>(),
 setPerms = setPermissions,
 unsetPerms = unsetPermissions,
 typeRestrictions
-})
-.ExecuteAsync(cancellationToken);
+}, cancellationToken);
 
 return new SharpObjectFlag
 {
@@ -1809,9 +1642,7 @@ public async ValueTask<bool> DeleteObjectFlagAsync(string name, CancellationToke
 var flag = await GetObjectFlagAsync(name, cancellationToken);
 if (flag == null || flag.System) return false;
 
-await driver.ExecutableQuery("MATCH (f:ObjectFlag {name: $name}) DETACH DELETE f")
-.WithParameters(new { name })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (f:ObjectFlag {name: $name}) DETACH DELETE f", new { name }, cancellationToken);
 return true;
 }
 
@@ -1819,68 +1650,56 @@ public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjec
 {
 var objKey = dbref.Object().Key;
 // Check if already set
-var existing = await driver.ExecutableQuery("""
+var existing = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_FLAG]->(f:ObjectFlag {name: $fname})
 RETURN count(f) AS cnt
-""")
-.WithParameters(new { key = objKey, fname = flag.Name })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, fname = flag.Name }, cancellationToken);
 
 if (existing.Result.Count > 0 && existing.Result[0]["cnt"].As<long>() > 0) return false;
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (f:ObjectFlag {name: $fname})
 CREATE (o)-[:HAS_FLAG]->(f)
-""")
-.WithParameters(new { key = objKey, fname = flag.Name })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, fname = flag.Name }, cancellationToken);
 return true;
 }
 
 public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 {
 var objKey = dbref.Object().Key;
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[r:HAS_FLAG]->(f:ObjectFlag {name: $fname})
 DELETE r
 RETURN count(r) AS cnt
-""")
-.WithParameters(new { key = objKey, fname = flag.Name })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, fname = flag.Name }, cancellationToken);
 return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 }
 
 public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 {
 var objKey = dbref.Object().Key;
-var existing = await driver.ExecutableQuery("""
+var existing = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_POWER]->(p:Power {name: $pname})
 RETURN count(p) AS cnt
-""")
-.WithParameters(new { key = objKey, pname = power.Name })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, pname = power.Name }, cancellationToken);
 
 if (existing.Result.Count > 0 && existing.Result[0]["cnt"].As<long>() > 0) return false;
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (p:Power {name: $pname})
 CREATE (o)-[:HAS_POWER]->(p)
-""")
-.WithParameters(new { key = objKey, pname = power.Name })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, pname = power.Name }, cancellationToken);
 return true;
 }
 
 public async ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 {
 var objKey = dbref.Object().Key;
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[r:HAS_POWER]->(p:Power {name: $pname})
 DELETE r
 RETURN count(r) AS cnt
-""")
-.WithParameters(new { key = objKey, pname = power.Name })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, pname = power.Name }, cancellationToken);
 return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 }
 
@@ -1888,16 +1707,14 @@ public async ValueTask<SharpPower?> CreatePowerAsync(string name, string alias, 
 string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 CancellationToken cancellationToken = default)
 {
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 CREATE (p:Power {name: $name, alias: $alias, system: $system, disabled: false,
 setPermissions: $setPerms, unsetPermissions: $unsetPerms, typeRestrictions: $typeRestrictions})
-""")
-.WithParameters(new
+""", new
 {
 name, alias, system,
 setPerms = setPermissions, unsetPerms = unsetPermissions, typeRestrictions
-})
-.ExecuteAsync(cancellationToken);
+}, cancellationToken);
 
 return new SharpPower
 {
@@ -1911,24 +1728,19 @@ public async ValueTask<bool> DeletePowerAsync(string name, CancellationToken can
 var power = await GetPowerAsync(name, cancellationToken);
 if (power == null || power.System) return false;
 
-await driver.ExecutableQuery("MATCH (p:Power {name: $name}) DETACH DELETE p")
-.WithParameters(new { name })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (p:Power {name: $name}) DETACH DELETE p", new { name }, cancellationToken);
 return true;
 }
 
 public async ValueTask<SharpPower?> GetPowerAsync(string name, CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (p:Power {name: $name}) RETURN p")
-.WithParameters(new { name })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (p:Power {name: $name}) RETURN p", new { name }, cancellationToken);
 return result.Result.Count > 0 ? MapNodeToPower(result.Result[0]["p"].As<INode>()) : null;
 }
 
 public async IAsyncEnumerable<SharpPower> GetObjectPowersAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (p:Power) RETURN p")
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (p:Power) RETURN p", ct: cancellationToken);
 foreach (var record in result.Result)
 yield return MapNodeToPower(record["p"].As<INode>());
 }
@@ -1940,13 +1752,12 @@ CancellationToken cancellationToken = default)
 var flag = await GetObjectFlagAsync(name, cancellationToken);
 if (flag == null || flag.System) return false;
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (f:ObjectFlag {name: $name})
 SET f.aliases = $aliases, f.symbol = $symbol,
 f.setPermissions = $setPerms, f.unsetPermissions = $unsetPerms,
 f.typeRestrictions = $typeRestrictions
-""")
-.WithParameters(new
+""", new
 {
 name,
 aliases = aliases ?? Array.Empty<string>(),
@@ -1954,8 +1765,7 @@ symbol,
 setPerms = setPermissions,
 unsetPerms = unsetPermissions,
 typeRestrictions
-})
-.ExecuteAsync(cancellationToken);
+}, cancellationToken);
 return true;
 }
 
@@ -1966,14 +1776,12 @@ CancellationToken cancellationToken = default)
 var power = await GetPowerAsync(name, cancellationToken);
 if (power == null || power.System) return false;
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (p:Power {name: $name})
 SET p.alias = $alias,
 p.setPermissions = $setPerms, p.unsetPermissions = $unsetPerms,
 p.typeRestrictions = $typeRestrictions
-""")
-.WithParameters(new { name, alias, setPerms = setPermissions, unsetPerms = unsetPermissions, typeRestrictions })
-.ExecuteAsync(cancellationToken);
+""", new { name, alias, setPerms = setPermissions, unsetPerms = unsetPermissions, typeRestrictions }, cancellationToken);
 return true;
 }
 
@@ -1981,9 +1789,7 @@ public async ValueTask<bool> SetObjectFlagDisabledAsync(string name, bool disabl
 {
 var flag = await GetObjectFlagAsync(name, cancellationToken);
 if (flag == null || flag.System) return false;
-await driver.ExecutableQuery("MATCH (f:ObjectFlag {name: $name}) SET f.disabled = $disabled")
-.WithParameters(new { name, disabled })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (f:ObjectFlag {name: $name}) SET f.disabled = $disabled", new { name, disabled }, cancellationToken);
 return true;
 }
 
@@ -1991,9 +1797,7 @@ public async ValueTask<bool> SetPowerDisabledAsync(string name, bool disabled, C
 {
 var power = await GetPowerAsync(name, cancellationToken);
 if (power == null || power.System) return false;
-await driver.ExecutableQuery("MATCH (p:Power {name: $name}) SET p.disabled = $disabled")
-.WithParameters(new { name, disabled })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (p:Power {name: $name}) SET p.disabled = $disabled", new { name, disabled }, cancellationToken);
 return true;
 }
 
@@ -2007,9 +1811,7 @@ public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string t
 public async ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken cancellationToken = default)
 {
 var key = ExtractKey(id);
-var result = await driver.ExecutableQuery("MATCH (o:Object {key: $key})-[:HAS_PARENT]->(parent:Object) RETURN parent")
-.WithParameters(new { key })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT]->(parent:Object) RETURN parent", new { key }, cancellationToken);
 if (result.Result.Count == 0) return new None();
 return await BuildTypedObjectFromObjectNode(result.Result[0]["parent"].As<INode>(), cancellationToken);
 }
@@ -2017,9 +1819,7 @@ return await BuildTypedObjectFromObjectNode(result.Result[0]["parent"].As<INode>
 public async IAsyncEnumerable<SharpObject> GetParentsAsync(string id, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var key = ExtractKey(id);
-var result = await driver.ExecutableQuery("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..999]->(parent:Object) RETURN parent")
-.WithParameters(new { key })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..999]->(parent:Object) RETURN parent", new { key }, cancellationToken);
 foreach (var record in result.Result)
 yield return MapNodeToSharpObject(record["parent"].As<INode>());
 }
@@ -2029,22 +1829,18 @@ int maxDepth = 100, CancellationToken cancellationToken = default)
 {
 var startKey = startObject.Object().Key;
 var targetKey = targetObject.Object().Key;
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH path = (start:Object {key: $startKey})-[:HAS_PARENT|HAS_ZONE*1..100]->(target:Object {key: $targetKey})
 RETURN count(path) AS cnt
 LIMIT 1
-""")
-.WithParameters(new { startKey, targetKey })
-.ExecuteAsync(cancellationToken);
+""", new { startKey, targetKey }, cancellationToken);
 return result.Result.Count > 0 && result.Result[0]["cnt"].As<long>() > 0;
 }
 
 public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var zoneKey = zone.Object().Key;
-var result = await driver.ExecutableQuery("MATCH (o:Object)-[:HAS_ZONE]->(z:Object {key: $key}) RETURN o")
-.WithParameters(new { key = zoneKey })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (o:Object)-[:HAS_ZONE]->(z:Object {key: $key}) RETURN o", new { key = zoneKey }, cancellationToken);
 foreach (var record in result.Result)
 yield return MapNodeToSharpObject(record["o"].As<INode>());
 }
@@ -2065,9 +1861,7 @@ var maxHops = depth == -1 ? 999 : depth;
 var cypher = "MATCH path = (start {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
 "WITH dest, size(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
 "MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj";
-var result = await driver.ExecutableQuery(cypher)
-.WithParameters(new { key })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync(cypher, new { key }, cancellationToken);
 
 if (result.Result.Count == 0) return new None();
 
@@ -2091,9 +1885,7 @@ var maxHops = depth == -1 ? 999 : depth;
 var cypher2 = "MATCH path = (start {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
 "WITH dest, size(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
 "MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj";
-var result = await driver.ExecutableQuery(cypher2)
-.WithParameters(new { key })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync(cypher2, new { key }, cancellationToken);
 
 var destObjNode = result.Result[0]["destObj"].As<INode>();
 var located = await BuildTypedObjectFromObjectNode(destObjNode, cancellationToken);
@@ -2111,13 +1903,11 @@ var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
 if (baseObject.IsNone) yield break;
 
 var typedKey = ExtractKey(baseObject.Id()!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (content)-[:AT_LOCATION]->(container {key: $key})
 MATCH (content)-[:IS_OBJECT]->(contentObj:Object)
 RETURN contentObj
-""")
-.WithParameters(new { key = typedKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = typedKey }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -2135,13 +1925,11 @@ _ => throw new Exception("None cannot be content"));
 public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(AnySharpContainer node, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var containerKey = ExtractKey(node.Id);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (content)-[:AT_LOCATION]->(container {key: $key})
 MATCH (content)-[:IS_OBJECT]->(contentObj:Object)
 RETURN contentObj
-""")
-.WithParameters(new { key = containerKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = containerKey }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -2162,13 +1950,11 @@ var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
 if (baseObject.IsNone) yield break;
 
 var containerKey = ExtractKey(baseObject.Known.Id()!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (e:Exit)-[:AT_LOCATION]->(container {key: $key})
 MATCH (e)-[:IS_OBJECT]->(o:Object {type: 'EXIT'})
 RETURN o, e
-""")
-.WithParameters(new { key = containerKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = containerKey }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -2183,13 +1969,11 @@ yield return BuildExit(ExitId(key), exitNode, sharpObj);
 public async IAsyncEnumerable<SharpExit> GetExitsAsync(AnySharpContainer node, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var containerKey = ExtractKey(node.Id);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (e:Exit)-[:AT_LOCATION]->(container {key: $key})
 MATCH (e)-[:IS_OBJECT]->(o:Object {type: 'EXIT'})
 RETURN o, e
-""")
-.WithParameters(new { key = containerKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = containerKey }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -2203,21 +1987,16 @@ yield return BuildExit(ExitId(key), exitNode, sharpObj);
 
 public async ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination, CancellationToken cancellationToken = default)
 {
-await WithRetryAsync(async () =>
-{
 var srcKey = ExtractKey(enactorObj.Id);
 var destKey = ExtractKey(destination.Id);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (src {key: $srcKey})-[r:AT_LOCATION]->()
 DELETE r
 WITH src
 MATCH (dest {key: $destKey})
 WHERE dest:Room OR dest:Player OR dest:Thing
 CREATE (src)-[:AT_LOCATION]->(dest)
-""")
-.WithParameters(new { srcKey, destKey })
-.ExecuteAsync(cancellationToken);
-}, cancellationToken);
+""", new { srcKey, destKey }, cancellationToken);
 }
 
 public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -2257,10 +2036,7 @@ attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var objKey = dbref.Number;
 
 // Find the typed node for this object
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
 
 if (typedResult.Result.Count == 0) yield break;
 
@@ -2284,9 +2060,7 @@ else
 cypher = "MATCH (parent:Attribute {key: $parentKey})-[:HAS_ATTRIBUTE]->(child:Attribute {name: $attrName}) RETURN child";
 }
 
-var stepResult = await driver.ExecutableQuery(cypher)
-.WithParameters(new { parentKey = currentKey.ToString(), attrName })
-.ExecuteAsync(cancellationToken);
+var stepResult = await ExecuteWithRetryAsync(cypher, new { parentKey = currentKey.ToString(), attrName }, cancellationToken);
 
 if (stepResult.Result.Count == 0) yield break;
 
@@ -2306,10 +2080,7 @@ yield return await MapToSharpAttribute(node, cancellationToken);
 public async IAsyncEnumerable<SharpAttribute> GetAttributesAsync(DBRef dbref, string attributePattern, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var objKey = dbref.Number;
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
 
 if (typedResult.Result.Count == 0) yield break;
 var tkey = typedResult.Result[0]["tkey"].As<int>();
@@ -2322,13 +2093,11 @@ var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 _ => $"\\{m.Value}"
 });
 
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute)
 WHERE toLower(child.longName) =~ $pattern
 RETURN child
-""")
-.WithParameters(new { tkey, pattern = $"^{pattern.ToLower()}$" })
-.ExecuteAsync(cancellationToken);
+""", new { tkey, pattern = $"^{pattern.ToLower()}$" }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -2339,21 +2108,16 @@ yield return await MapToSharpAttribute(record["child"].As<INode>(), cancellation
 public async IAsyncEnumerable<SharpAttribute> GetAttributesByRegexAsync(DBRef dbref, string attributePattern, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var objKey = dbref.Number;
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
 
 if (typedResult.Result.Count == 0) yield break;
 var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute)
 WHERE toLower(child.longName) =~ $pattern
 RETURN child ORDER BY child.longName
-""")
-.WithParameters(new { tkey, pattern = ToFullMatchRegex(attributePattern.ToLower()) })
-.ExecuteAsync(cancellationToken);
+""", new { tkey, pattern = ToFullMatchRegex(attributePattern.ToLower()) }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -2366,10 +2130,7 @@ public async IAsyncEnumerable<LazySharpAttribute> GetLazyAttributeAsync(DBRef db
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var objKey = dbref.Number;
 
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
 
 if (typedResult.Result.Count == 0) yield break;
 var tkey = typedResult.Result[0]["tkey"].As<int>();
@@ -2391,9 +2152,7 @@ else
 cypher = "MATCH (parent:Attribute {key: $parentKey})-[:HAS_ATTRIBUTE]->(child:Attribute {name: $attrName}) RETURN child";
 }
 
-var stepResult = await driver.ExecutableQuery(cypher)
-.WithParameters(new { parentKey = currentKey.ToString(), attrName })
-.ExecuteAsync(cancellationToken);
+var stepResult = await ExecuteWithRetryAsync(cypher, new { parentKey = currentKey.ToString(), attrName }, cancellationToken);
 
 if (stepResult.Result.Count == 0) yield break;
 
@@ -2411,10 +2170,7 @@ yield return await MapToLazySharpAttribute(node, cancellationToken);
 public async IAsyncEnumerable<LazySharpAttribute> GetLazyAttributesAsync(DBRef dbref, string attributePattern, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var objKey = dbref.Number;
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
 
 if (typedResult.Result.Count == 0) yield break;
 var tkey = typedResult.Result[0]["tkey"].As<int>();
@@ -2427,13 +2183,11 @@ var pattern = WildcardToRegex().Replace(attributePattern, m => m.Value switch
 _ => $"\\{m.Value}"
 });
 
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE]->(child:Attribute)
 WHERE toLower(child.longName) =~ $pattern
 RETURN child
-""")
-.WithParameters(new { tkey, pattern = $"^{pattern.ToLower()}$" })
-.ExecuteAsync(cancellationToken);
+""", new { tkey, pattern = $"^{pattern.ToLower()}$" }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -2444,21 +2198,16 @@ yield return await MapToLazySharpAttribute(record["child"].As<INode>(), cancella
 public async IAsyncEnumerable<LazySharpAttribute> GetLazyAttributesByRegexAsync(DBRef dbref, string attributePattern, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var objKey = dbref.Number;
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
 
 if (typedResult.Result.Count == 0) yield break;
 var tkey = typedResult.Result[0]["tkey"].As<int>();
 
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE]->(child:Attribute)
 WHERE toLower(child.longName) =~ $pattern
 RETURN child ORDER BY child.longName
-""")
-.WithParameters(new { tkey, pattern = ToFullMatchRegex(attributePattern.ToLower()) })
-.ExecuteAsync(cancellationToken);
+""", new { tkey, pattern = ToFullMatchRegex(attributePattern.ToLower()) }, cancellationToken);
 
 foreach (var record in result.Result)
 {
@@ -2468,7 +2217,7 @@ yield return await MapToLazySharpAttribute(record["child"].As<INode>(), cancella
 
 public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
 {
-return await WithRetryAsync(async () => await SetAttributeAsyncCore(dbref, attribute, value, owner, cancellationToken), cancellationToken);
+return await SetAttributeAsyncCore(dbref, attribute, value, owner, cancellationToken);
 }
 
 private async ValueTask<bool> SetAttributeAsyncCore(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
@@ -2478,10 +2227,7 @@ var objKey = dbref.Number;
 var ownerKey = ExtractKey(owner.Id!);
 
 // Find typed node
-var typedResult = await driver
-.ExecutableQuery("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed.key AS tkey", new { key = objKey }, cancellationToken);
 if (typedResult.Result.Count == 0) return false;
 var tkey = typedResult.Result[0]["tkey"].As<int>();
 
@@ -2503,9 +2249,7 @@ else
 cypher = "MATCH (parent:Attribute {key: $parentKey})-[:HAS_ATTRIBUTE]->(child:Attribute {name: $attrName}) RETURN child";
 }
 
-var stepResult = await driver.ExecutableQuery(cypher)
-.WithParameters(new { parentKey = currentKey.ToString(), attrName })
-.ExecuteAsync(cancellationToken);
+var stepResult = await ExecuteWithRetryAsync(cypher, new { parentKey = currentKey.ToString(), attrName }, cancellationToken);
 
 if (stepResult.Result.Count == 0) break;
 
@@ -2522,24 +2266,18 @@ if (remaining.Length == 0)
 {
 // Update existing attribute value
 var lastKey = foundIds.Last();
-await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) SET a.value = $value")
-.WithParameters(new { key = lastKey, value = MarkupStringModule.serialize(value) })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) SET a.value = $value", new { key = lastKey, value = MarkupStringModule.serialize(value) }, cancellationToken);
 
 // Update owner
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[r:HAS_ATTRIBUTE_OWNER]->()
 DELETE r
-""")
-.WithParameters(new { key = lastKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = lastKey }, cancellationToken);
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key}), (p:Player {key: $ownerKey})
 CREATE (a)-[:HAS_ATTRIBUTE_OWNER]->(p)
-""")
-.WithParameters(new { key = lastKey, ownerKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = lastKey, ownerKey }, cancellationToken);
 
 return true;
 }
@@ -2558,58 +2296,46 @@ var attrValue = isLast ? MarkupStringModule.serialize(value) : "";
 var attrEntry = await GetSharpAttributeEntry(longName, cancellationToken);
 var flagNames = attrEntry?.DefaultFlags ?? [];
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 CREATE (a:Attribute {key: $key, name: $name, longName: $longName, value: $value})
-""")
-.WithParameters(new { key = attrKey, name = nextAttr.name, longName, value = attrValue })
-.ExecuteAsync(cancellationToken);
+""", new { key = attrKey, name = nextAttr.name, longName, value = attrValue }, cancellationToken);
 
 // Link to parent
 if (parentKeyForNew == null)
 {
 // Link from typed node
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (parent {key: toInteger($parentKey)}), (child:Attribute {key: $childKey})
 WHERE parent:Player OR parent:Room OR parent:Thing OR parent:Exit
 CREATE (parent)-[:HAS_ATTRIBUTE]->(child)
-""")
-.WithParameters(new { parentKey = tkey.ToString(), childKey = attrKey })
-.ExecuteAsync(cancellationToken);
+""", new { parentKey = tkey.ToString(), childKey = attrKey }, cancellationToken);
 }
 else
 {
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (parent:Attribute {key: $parentKey}), (child:Attribute {key: $childKey})
 CREATE (parent)-[:HAS_ATTRIBUTE]->(child)
-""")
-.WithParameters(new { parentKey = parentKeyForNew, childKey = attrKey })
-.ExecuteAsync(cancellationToken);
+""", new { parentKey = parentKeyForNew, childKey = attrKey }, cancellationToken);
 }
 
 // Link attribute owner
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key}), (p:Player {key: $ownerKey})
 CREATE (a)-[:HAS_ATTRIBUTE_OWNER]->(p)
-""")
-.WithParameters(new { key = attrKey, ownerKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = attrKey, ownerKey }, cancellationToken);
 
 // Set default flags from attribute entry
 foreach (var flagName in flagNames)
 {
-var flagResult = await driver.ExecutableQuery("MATCH (f:AttributeFlag) WHERE toUpper(f.name) = toUpper($name) RETURN f")
-.WithParameters(new { name = flagName })
-.ExecuteAsync(cancellationToken);
+var flagResult = await ExecuteWithRetryAsync("MATCH (f:AttributeFlag) WHERE toUpper(f.name) = toUpper($name) RETURN f", new { name = flagName }, cancellationToken);
 if (flagResult.Result.Count > 0)
 {
 var fNode = flagResult.Result[0]["f"].As<INode>();
 var fname = fNode["name"].As<string>();
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key}), (f:AttributeFlag {name: $fname})
 CREATE (a)-[:HAS_ATTRIBUTE_FLAG]->(f)
-""")
-.WithParameters(new { key = attrKey, fname })
-.ExecuteAsync(cancellationToken);
+""", new { key = attrKey, fname }, cancellationToken);
 }
 }
 
@@ -2631,12 +2357,10 @@ return true;
 public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
 {
 var attrKey = ExtractKeyString(attr.Id);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key}), (f:AttributeFlag {name: $fname})
 CREATE (a)-[:HAS_ATTRIBUTE_FLAG]->(f)
-""")
-.WithParameters(new { key = attrKey, fname = flag.Name })
-.ExecuteAsync(cancellationToken);
+""", new { key = attrKey, fname = flag.Name }, cancellationToken);
 }
 
 public async ValueTask<bool> UnsetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
@@ -2651,33 +2375,26 @@ return true;
 public async ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
 {
 var attrKey = ExtractKeyString(attr.Id);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[r:HAS_ATTRIBUTE_FLAG]->(f:AttributeFlag {name: $fname})
 DELETE r
-""")
-.WithParameters(new { key = attrKey, fname = flag.Name })
-.ExecuteAsync(cancellationToken);
+""", new { key = attrKey, fname = flag.Name }, cancellationToken);
 }
 
 public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName, CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (f:AttributeFlag) WHERE toUpper(f.name) = toUpper($name) RETURN f")
-.WithParameters(new { name = flagName })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (f:AttributeFlag) WHERE toUpper(f.name) = toUpper($name) RETURN f", new { name = flagName }, cancellationToken);
 return result.Result.Count > 0 ? MapNodeToAttributeFlag(result.Result[0]["f"].As<INode>()) : null;
 }
 
 public async IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (f:AttributeFlag) RETURN f")
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (f:AttributeFlag) RETURN f", ct: cancellationToken);
 foreach (var record in result.Result)
 yield return MapNodeToAttributeFlag(record["f"].As<INode>());
 }
 
 public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
@@ -2687,35 +2404,26 @@ if (targetAttr is null) return false;
 var attrKey = ExtractKeyString(targetAttr.Id);
 
 // Check for children
-var childrenResult = await driver.ExecutableQuery("""
+var childrenResult = await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE]->(child:Attribute)
 RETURN count(child) AS cnt
-""")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = attrKey }, cancellationToken);
 
 var hasChildren = childrenResult.Result.Count > 0 && childrenResult.Result[0]["cnt"].As<long>() > 0;
 
 if (hasChildren)
 {
-await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) SET a.value = $value")
-.WithParameters(new { key = attrKey, value = MarkupStringModule.serialize(MarkupStringModule.empty()) })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) SET a.value = $value", new { key = attrKey, value = MarkupStringModule.serialize(MarkupStringModule.empty()) }, cancellationToken);
 }
 else
 {
-await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) DETACH DELETE a")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) DETACH DELETE a", new { key = attrKey }, cancellationToken);
 }
 
 return true;
-}, cancellationToken);
 }
 
 public async ValueTask<bool> WipeAttributeAsync(DBRef dbref, string[] attribute, CancellationToken cancellationToken = default)
-{
-return await WithRetryAsync(async () =>
 {
 attribute = attribute.Select(x => x.ToUpper()).ToArray();
 var attrs = GetAttributeAsync(dbref, attribute, cancellationToken);
@@ -2725,20 +2433,15 @@ if (targetAttr is null) return false;
 var attrKey = ExtractKeyString(targetAttr.Id);
 
 // Delete all descendants first
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE*1..999]->(descendant:Attribute)
 DETACH DELETE descendant
-""")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = attrKey }, cancellationToken);
 
 // Delete the target itself
-await driver.ExecutableQuery("MATCH (a:Attribute {key: $key}) DETACH DELETE a")
-.WithParameters(new { key = attrKey })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) DETACH DELETE a", new { key = attrKey }, cancellationToken);
 
 return true;
-}, cancellationToken);
 }
 
 #endregion
@@ -2747,35 +2450,30 @@ return true;
 
 public async IAsyncEnumerable<SharpAttributeEntry> GetAllAttributeEntriesAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (e:AttributeEntry) RETURN e")
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (e:AttributeEntry) RETURN e", ct: cancellationToken);
 foreach (var record in result.Result)
 yield return MapNodeToAttributeEntry(record["e"].As<INode>());
 }
 
 public async ValueTask<SharpAttributeEntry?> GetSharpAttributeEntry(string name, CancellationToken ct = default)
 {
-var result = await driver.ExecutableQuery("MATCH (e:AttributeEntry {name: $name}) RETURN e")
-.WithParameters(new { name })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (e:AttributeEntry {name: $name}) RETURN e", new { name }, ct);
 return result.Result.Count > 0 ? MapNodeToAttributeEntry(result.Result[0]["e"].As<INode>()) : null;
 }
 
 public async ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags,
 string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default)
 {
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (e:AttributeEntry {name: $name})
 SET e.defaultFlags = $defaultFlags, e.lim = $lim, e.enumValues = $enumValues
-""")
-.WithParameters(new
+""", new
 {
 name,
 defaultFlags,
 lim = limit ?? "",
 enumValues = enumValues ?? Array.Empty<string>()
-})
-.ExecuteAsync(cancellationToken);
+}, cancellationToken);
 
 return await GetSharpAttributeEntry(name, cancellationToken);
 }
@@ -2785,9 +2483,7 @@ public async ValueTask<bool> DeleteAttributeEntryAsync(string name, Cancellation
 var existing = await GetSharpAttributeEntry(name, cancellationToken);
 if (existing == null) return false;
 
-await driver.ExecutableQuery("MATCH (e:AttributeEntry {name: $name}) DETACH DELETE e")
-.WithParameters(new { name })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (e:AttributeEntry {name: $name}) DETACH DELETE e", new { name }, cancellationToken);
 return true;
 }
 
@@ -2814,9 +2510,7 @@ if (!checkParent) yield break;
 
 // Try parents
 var objKey = dbref.Number;
-var parentResult = await driver.ExecutableQuery("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var parentResult = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent", new { key = objKey }, cancellationToken);
 
 foreach (var record in parentResult.Result)
 {
@@ -2834,15 +2528,13 @@ yield break;
 }
 
 // Try zones (on self and parents)
-var chainResult = await driver.ExecutableQuery("""
+var chainResult = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})
 OPTIONAL MATCH (o)-[:HAS_PARENT*0..100]->(chainObj:Object)
 WITH DISTINCT chainObj
 MATCH (chainObj)-[:HAS_ZONE]->(zone:Object)
 RETURN zone
-""")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey }, cancellationToken);
 
 foreach (var record in chainResult.Result)
 {
@@ -2877,9 +2569,7 @@ yield break;
 if (!checkParent) yield break;
 
 var objKey = dbref.Number;
-var parentResult = await driver.ExecutableQuery("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+var parentResult = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_PARENT*1..100]->(parent:Object) RETURN parent", new { key = objKey }, cancellationToken);
 
 foreach (var record in parentResult.Result)
 {
@@ -2896,15 +2586,13 @@ yield break;
 }
 }
 
-var chainResult = await driver.ExecutableQuery("""
+var chainResult = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})
 OPTIONAL MATCH (o)-[:HAS_PARENT*0..100]->(chainObj:Object)
 WITH DISTINCT chainObj
 MATCH (chainObj)-[:HAS_ZONE]->(zone:Object)
 RETURN zone
-""")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey }, cancellationToken);
 
 foreach (var record in chainResult.Result)
 {
@@ -2929,12 +2617,10 @@ yield break;
 public async IAsyncEnumerable<SharpMail> GetIncomingMailsAsync(SharpPlayer id, string folder, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var playerKey = ExtractKey(id.Id!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: $key})-[:RECEIVED_MAIL]->(m:Mail {folder: $folder})
 RETURN m
-""")
-.WithParameters(new { key = playerKey, folder })
-.ExecuteAsync(cancellationToken);
+""", new { key = playerKey, folder }, cancellationToken);
 
 foreach (var record in result.Result)
 yield return MapNodeToMail(record["m"].As<INode>());
@@ -2943,9 +2629,7 @@ yield return MapNodeToMail(record["m"].As<INode>());
 public async IAsyncEnumerable<SharpMail> GetAllIncomingMailsAsync(SharpPlayer id, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var playerKey = ExtractKey(id.Id!);
-var result = await driver.ExecutableQuery("MATCH (p:Player {key: $key})-[:RECEIVED_MAIL]->(m:Mail) RETURN m")
-.WithParameters(new { key = playerKey })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (p:Player {key: $key})-[:RECEIVED_MAIL]->(m:Mail) RETURN m", new { key = playerKey }, cancellationToken);
 
 foreach (var record in result.Result)
 yield return MapNodeToMail(record["m"].As<INode>());
@@ -2954,13 +2638,11 @@ yield return MapNodeToMail(record["m"].As<INode>());
 public async ValueTask<SharpMail?> GetIncomingMailAsync(SharpPlayer id, string folder, int mail, CancellationToken cancellationToken = default)
 {
 var playerKey = ExtractKey(id.Id!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: $key})-[:RECEIVED_MAIL]->(m:Mail {folder: $folder})
 RETURN m
 SKIP $skip LIMIT 1
-""")
-.WithParameters(new { key = playerKey, folder, skip = mail })
-.ExecuteAsync(cancellationToken);
+""", new { key = playerKey, folder, skip = mail }, cancellationToken);
 
 return result.Result.Count > 0 ? MapNodeToMail(result.Result[0]["m"].As<INode>()) : null;
 }
@@ -2969,12 +2651,10 @@ public async IAsyncEnumerable<SharpMail> GetSentMailsAsync(SharpObject sender, S
 {
 var senderKey = sender.Key;
 var recipientKey = ExtractKey(recipient.Id!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: $recipientKey})-[:RECEIVED_MAIL]->(m:Mail)-[:SENT_MAIL]->(sObj:Object {key: $senderKey})
 RETURN m
-""")
-.WithParameters(new { senderKey, recipientKey })
-.ExecuteAsync(cancellationToken);
+""", new { senderKey, recipientKey }, cancellationToken);
 
 foreach (var record in result.Result)
 yield return MapNodeToMail(record["m"].As<INode>());
@@ -2983,9 +2663,7 @@ yield return MapNodeToMail(record["m"].As<INode>());
 public async IAsyncEnumerable<SharpMail> GetAllSentMailsAsync(SharpObject sender, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var senderKey = sender.Key;
-var result = await driver.ExecutableQuery("MATCH (m:Mail)-[:SENT_MAIL]->(sObj:Object {key: $key}) RETURN m")
-.WithParameters(new { key = senderKey })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (m:Mail)-[:SENT_MAIL]->(sObj:Object {key: $key}) RETURN m", new { key = senderKey }, cancellationToken);
 
 foreach (var record in result.Result)
 yield return MapNodeToMail(record["m"].As<INode>());
@@ -2995,13 +2673,11 @@ public async ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPla
 {
 var senderKey = sender.Key;
 var recipientKey = ExtractKey(recipient.Id!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: $recipientKey})-[:RECEIVED_MAIL]->(m:Mail)-[:SENT_MAIL]->(sObj:Object {key: $senderKey})
 RETURN m
 SKIP $skip LIMIT 1
-""")
-.WithParameters(new { senderKey, recipientKey, skip = mail })
-.ExecuteAsync(cancellationToken);
+""", new { senderKey, recipientKey, skip = mail }, cancellationToken);
 
 return result.Result.Count > 0 ? MapNodeToMail(result.Result[0]["m"].As<INode>()) : null;
 }
@@ -3009,12 +2685,10 @@ return result.Result.Count > 0 ? MapNodeToMail(result.Result[0]["m"].As<INode>()
 public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id, CancellationToken cancellationToken = default)
 {
 var playerKey = ExtractKey(id.Id!);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: $key})-[:RECEIVED_MAIL]->(m:Mail)
 RETURN DISTINCT m.folder AS folder
-""")
-.WithParameters(new { key = playerKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = playerKey }, cancellationToken);
 
 return result.Result.Select(r => r["folder"].As<string>()).ToArray();
 }
@@ -3025,12 +2699,11 @@ var fromKey = from.Key;
 var toKey = ExtractKey(to.Id!);
 var mailKey = Guid.NewGuid().ToString("N");
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 CREATE (m:Mail {key: $mailKey, dateSent: $dateSent, fresh: $fresh, read: $read, tagged: $tagged,
 urgent: $urgent, forwarded: $forwarded, cleared: $cleared, folder: $folder,
 content: $content, subject: $subject})
-""")
-.WithParameters(new
+""", new
 {
 mailKey,
 dateSent = mail.DateSent.ToUnixTimeMilliseconds(),
@@ -3043,24 +2716,19 @@ cleared = mail.Cleared,
 folder = mail.Folder,
 content = MarkupStringModule.serialize(mail.Content),
 subject = MarkupStringModule.serialize(mail.Subject)
-})
-.ExecuteAsync(cancellationToken);
+}, cancellationToken);
 
 // RECEIVED_MAIL: Player -> Mail
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: $toKey}), (m:Mail {key: $mailKey})
 CREATE (p)-[:RECEIVED_MAIL]->(m)
-""")
-.WithParameters(new { toKey, mailKey })
-.ExecuteAsync(cancellationToken);
+""", new { toKey, mailKey }, cancellationToken);
 
 // SENT_MAIL: Mail -> Object (sender's Object node)
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (m:Mail {key: $mailKey}), (o:Object {key: $fromKey})
 CREATE (m)-[:SENT_MAIL]->(o)
-""")
-.WithParameters(new { mailKey, fromKey })
-.ExecuteAsync(cancellationToken);
+""", new { mailKey, fromKey }, cancellationToken);
 }
 
 public async ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail, CancellationToken cancellationToken = default)
@@ -3069,24 +2737,16 @@ var mailKey = ExtractKeyString(mailId);
 switch (commandMail)
 {
 case { IsReadEdit: true }:
-await driver.ExecutableQuery("MATCH (m:Mail {key: $key}) SET m.read = $val, m.fresh = false")
-.WithParameters(new { key = mailKey, val = commandMail.AsReadEdit })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.read = $val, m.fresh = false", new { key = mailKey, val = commandMail.AsReadEdit }, cancellationToken);
 return;
 case { IsClearEdit: true }:
-await driver.ExecutableQuery("MATCH (m:Mail {key: $key}) SET m.cleared = $val")
-.WithParameters(new { key = mailKey, val = commandMail.AsClearEdit })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.cleared = $val", new { key = mailKey, val = commandMail.AsClearEdit }, cancellationToken);
 return;
 case { IsTaggedEdit: true }:
-await driver.ExecutableQuery("MATCH (m:Mail {key: $key}) SET m.tagged = $val")
-.WithParameters(new { key = mailKey, val = commandMail.AsTaggedEdit })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.tagged = $val", new { key = mailKey, val = commandMail.AsTaggedEdit }, cancellationToken);
 return;
 case { IsUrgentEdit: true }:
-await driver.ExecutableQuery("MATCH (m:Mail {key: $key}) SET m.urgent = $val")
-.WithParameters(new { key = mailKey, val = commandMail.AsUrgentEdit })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.urgent = $val", new { key = mailKey, val = commandMail.AsUrgentEdit }, cancellationToken);
 return;
 }
 }
@@ -3094,34 +2754,27 @@ return;
 public async ValueTask DeleteMailAsync(string mailId, CancellationToken cancellationToken = default)
 {
 var mailKey = ExtractKeyString(mailId);
-await driver.ExecutableQuery("MATCH (m:Mail {key: $key}) DETACH DELETE m")
-.WithParameters(new { key = mailKey })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) DETACH DELETE m", new { key = mailKey }, cancellationToken);
 }
 
 public async ValueTask RenameMailFolderAsync(SharpPlayer player, string folder, string newFolder, CancellationToken cancellationToken = default)
 {
 var playerKey = ExtractKey(player.Id!);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: $key})-[:RECEIVED_MAIL]->(m:Mail {folder: $folder})
 SET m.folder = $newFolder
-""")
-.WithParameters(new { key = playerKey, folder, newFolder })
-.ExecuteAsync(cancellationToken);
+""", new { key = playerKey, folder, newFolder }, cancellationToken);
 }
 
 public async ValueTask MoveMailFolderAsync(string mailId, string newFolder, CancellationToken cancellationToken = default)
 {
 var mailKey = ExtractKeyString(mailId);
-await driver.ExecutableQuery("MATCH (m:Mail {key: $key}) SET m.folder = $newFolder")
-.WithParameters(new { key = mailKey, newFolder })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key}) SET m.folder = $newFolder", new { key = mailKey, newFolder }, cancellationToken);
 }
 
 public async IAsyncEnumerable<SharpMail> GetAllSystemMailAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (m:Mail) RETURN m")
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (m:Mail) RETURN m", ct: cancellationToken);
 foreach (var record in result.Result)
 yield return MapNodeToMail(record["m"].As<INode>());
 }
@@ -3148,9 +2801,7 @@ From = new AsyncLazy<AnyOptionalSharpObject>(async ct => await MailFromAsync(mai
 
 private async ValueTask<AnyOptionalSharpObject> MailFromAsync(string mailKey, CancellationToken ct)
 {
-var result = await driver.ExecutableQuery("MATCH (m:Mail {key: $key})-[:SENT_MAIL]->(o:Object) RETURN o")
-.WithParameters(new { key = mailKey })
-.ExecuteAsync(ct);
+var result = await ExecuteWithRetryAsync("MATCH (m:Mail {key: $key})-[:SENT_MAIL]->(o:Object) RETURN o", new { key = mailKey }, ct);
 
 if (result.Result.Count == 0) return new None();
 var objNode = result.Result[0]["o"].As<INode>();
@@ -3166,12 +2817,10 @@ public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataTy
 var objKey = ExtractKey(sharpObjectId);
 
 // Check if node exists
-var existing = await driver.ExecutableQuery("""
+var existing = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_EXPANDED_DATA]->(d:ExpandedObjectData {sharpObjectId: $objId, dataType: $dataType})
 RETURN d.data AS data
-""")
-.WithParameters(new { key = objKey, objId = sharpObjectId, dataType })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, objId = sharpObjectId, dataType }, cancellationToken);
 
 string jsonData;
 if (existing.Result.Count > 0)
@@ -3191,35 +2840,29 @@ merged[prop.Name] = prop.Value;
 }
 jsonData = JsonSerializer.Serialize(merged, JsonOptions);
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_EXPANDED_DATA]->(d:ExpandedObjectData {sharpObjectId: $objId, dataType: $dataType})
 SET d.data = $data
-""")
-.WithParameters(new { key = objKey, objId = sharpObjectId, dataType, data = jsonData })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, objId = sharpObjectId, dataType, data = jsonData }, cancellationToken);
 }
 else
 {
 jsonData = JsonSerializer.Serialize((object)data, JsonOptions);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})
 CREATE (d:ExpandedObjectData {sharpObjectId: $objId, dataType: $dataType, data: $data})
 CREATE (o)-[:HAS_EXPANDED_DATA]->(d)
-""")
-.WithParameters(new { key = objKey, objId = sharpObjectId, dataType, data = jsonData })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, objId = sharpObjectId, dataType, data = jsonData }, cancellationToken);
 }
 }
 
 public async ValueTask<T?> GetExpandedObjectData<T>(string sharpObjectId, string dataType, CancellationToken cancellationToken = default)
 {
 var objKey = ExtractKey(sharpObjectId);
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_EXPANDED_DATA]->(d:ExpandedObjectData {sharpObjectId: $objId, dataType: $dataType})
 RETURN d.data AS data
-""")
-.WithParameters(new { key = objKey, objId = sharpObjectId, dataType })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, objId = sharpObjectId, dataType }, cancellationToken);
 
 if (result.Result.Count == 0) return default;
 var jsonData = result.Result[0]["data"].As<string>();
@@ -3230,21 +2873,17 @@ return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
 public async ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken cancellationToken = default)
 {
 var jsonData = JsonSerializer.Serialize((object)data, JsonOptions);
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MERGE (d:ExpandedServerData {dataType: $dataType})
 SET d.data = $data
-""")
-.WithParameters(new { dataType, data = jsonData })
-.ExecuteAsync(cancellationToken);
+""", new { dataType, data = jsonData }, cancellationToken);
 }
 
 public async ValueTask<T?> GetExpandedServerData<T>(string dataType, CancellationToken cancellationToken = default)
 {
 try
 {
-var result = await driver.ExecutableQuery("MATCH (d:ExpandedServerData {dataType: $dataType}) RETURN d.data AS data")
-.WithParameters(new { dataType })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (d:ExpandedServerData {dataType: $dataType}) RETURN d.data AS data", new { dataType }, cancellationToken);
 
 if (result.Result.Count == 0) return default;
 var jsonData = result.Result[0]["data"].As<string>();
@@ -3264,29 +2903,24 @@ return default;
 
 public async IAsyncEnumerable<SharpChannel> GetAllChannelsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (c:Channel) RETURN c")
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (c:Channel) RETURN c", ct: cancellationToken);
 foreach (var record in result.Result)
 yield return MapNodeToChannel(record["c"].As<INode>());
 }
 
 public async ValueTask<SharpChannel?> GetChannelAsync(string name, CancellationToken cancellationToken = default)
 {
-var result = await driver.ExecutableQuery("MATCH (c:Channel {name: $name}) RETURN c")
-.WithParameters(new { name })
-.ExecuteAsync(cancellationToken);
+var result = await ExecuteWithRetryAsync("MATCH (c:Channel {name: $name}) RETURN c", new { name }, cancellationToken);
 return result.Result.Count > 0 ? MapNodeToChannel(result.Result[0]["c"].As<INode>()) : null;
 }
 
 public async IAsyncEnumerable<SharpChannel> GetMemberChannelsAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 {
 var objKey = obj.Object().Key;
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:ON_CHANNEL]->(c:Channel)
 RETURN c
-""")
-.WithParameters(new { key = objKey })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey }, cancellationToken);
 
 foreach (var record in result.Result)
 yield return MapNodeToChannel(record["c"].As<INode>());
@@ -3294,36 +2928,27 @@ yield return MapNodeToChannel(record["c"].As<INode>());
 
 public async ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
 {
-await WithRetryAsync(async () =>
-{
 var channelName = name.ToPlainText();
 var serializedName = MarkupStringModule.serialize(name);
 var ownerObjKey = owner.Object.Key;
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 CREATE (c:Channel {name: $name, markedUpName: $markedUpName, description: '', privs: $privs,
 joinLock: '', speakLock: '', seeLock: '', hideLock: '', modLock: '',
 buffer: 0, mogrifier: ''})
-""")
-.WithParameters(new { name = channelName, markedUpName = serializedName, privs })
-.ExecuteAsync(cancellationToken);
+""", new { name = channelName, markedUpName = serializedName, privs }, cancellationToken);
 
 // Owner relationship: Channel -> Player (typed)
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (c:Channel {name: $name}), (o:Object {key: $ownerKey})
 CREATE (c)-[:HAS_CHANNEL_OWNER]->(o)
-""")
-.WithParameters(new { name = channelName, ownerKey = ownerObjKey })
-.ExecuteAsync(cancellationToken);
+""", new { name = channelName, ownerKey = ownerObjKey }, cancellationToken);
 
 // Add owner as member
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $ownerKey}), (c:Channel {name: $name})
 CREATE (o)-[:ON_CHANNEL {combine: false, gagged: false, hide: false, mute: false, title: ''}]->(c)
-""")
-.WithParameters(new { ownerKey = ownerObjKey, name = channelName })
-.ExecuteAsync(cancellationToken);
-}, cancellationToken);
+""", new { ownerKey = ownerObjKey, name = channelName }, cancellationToken);
 }
 
 public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name, MString? description, string[]? privs,
@@ -3335,14 +2960,13 @@ var newName = name is not null ? name.ToPlainText() : channelName;
 var newMarkedUpName = name is not null ? MarkupStringModule.serialize(name) : MarkupStringModule.serialize(channel.Name);
 var newDescription = description is not null ? MarkupStringModule.serialize(description) : MarkupStringModule.serialize(channel.Description);
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (c:Channel {name: $oldName})
 SET c.name = $newName, c.markedUpName = $markedUpName, c.description = $description,
 c.privs = $privs, c.joinLock = $joinLock, c.speakLock = $speakLock,
 c.seeLock = $seeLock, c.hideLock = $hideLock, c.modLock = $modLock,
 c.buffer = $buffer, c.mogrifier = $mogrifier
-""")
-.WithParameters(new
+""", new
 {
 oldName = channelName,
 newName,
@@ -3356,8 +2980,7 @@ hideLock = hideLock ?? channel.HideLock ?? "",
 modLock = modLock ?? channel.ModLock ?? "",
 buffer = buffer ?? channel.Buffer,
 mogrifier = mogrifier ?? channel.Mogrifier ?? ""
-})
-.ExecuteAsync(cancellationToken);
+}, cancellationToken);
 }
 
 public async ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer newOwner, CancellationToken cancellationToken = default)
@@ -3365,47 +2988,39 @@ public async ValueTask UpdateChannelOwnerAsync(SharpChannel channel, SharpPlayer
 var channelName = channel.Name.ToPlainText();
 var ownerObjKey = newOwner.Object.Key;
 
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (c:Channel {name: $name})-[r:HAS_CHANNEL_OWNER]->()
 DELETE r
 WITH c
 MATCH (o:Object {key: $ownerKey})
 CREATE (c)-[:HAS_CHANNEL_OWNER]->(o)
-""")
-.WithParameters(new { name = channelName, ownerKey = ownerObjKey })
-.ExecuteAsync(cancellationToken);
+""", new { name = channelName, ownerKey = ownerObjKey }, cancellationToken);
 }
 
 public async ValueTask DeleteChannelAsync(SharpChannel channel, CancellationToken cancellationToken = default)
 {
 var channelName = channel.Name.ToPlainText();
-await driver.ExecutableQuery("MATCH (c:Channel {name: $name}) DETACH DELETE c")
-.WithParameters(new { name = channelName })
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync("MATCH (c:Channel {name: $name}) DETACH DELETE c", new { name = channelName }, cancellationToken);
 }
 
 public async ValueTask AddUserToChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default)
 {
 var channelName = channel.Name.ToPlainText();
 var objKey = obj.Object().Key;
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key}), (c:Channel {name: $name})
 CREATE (o)-[:ON_CHANNEL {combine: false, gagged: false, hide: false, mute: false, title: ''}]->(c)
-""")
-.WithParameters(new { key = objKey, name = channelName })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, name = channelName }, cancellationToken);
 }
 
 public async ValueTask RemoveUserFromChannelAsync(SharpChannel channel, AnySharpObject obj, CancellationToken cancellationToken = default)
 {
 var channelName = channel.Name.ToPlainText();
 var objKey = obj.Object().Key;
-await driver.ExecutableQuery("""
+await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[r:ON_CHANNEL]->(c:Channel {name: $name})
 DELETE r
-""")
-.WithParameters(new { key = objKey, name = channelName })
-.ExecuteAsync(cancellationToken);
+""", new { key = objKey, name = channelName }, cancellationToken);
 }
 
 public async ValueTask UpdateChannelUserStatusAsync(SharpChannel channel, AnySharpObject obj, SharpChannelStatus status, CancellationToken cancellationToken = default)
@@ -3451,9 +3066,7 @@ if (setClauses.Count == 0) return;
 var cypher = "MATCH (o:Object {key: $key})-[r:ON_CHANNEL]->(c:Channel {name: $name}) SET " +
 string.Join(", ", setClauses);
 
-await driver.ExecutableQuery(cypher)
-.WithParameters(parameters)
-.ExecuteAsync(cancellationToken);
+await ExecuteWithRetryAsync(cypher, parameters, cancellationToken);
 }
 
 private SharpChannel MapNodeToChannel(INode node)
@@ -3487,12 +3100,10 @@ GetChannelMembersAsync(channelName, CancellationToken.None))
 
 private async ValueTask<SharpPlayer> GetChannelOwnerAsync(string channelName, CancellationToken ct)
 {
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (c:Channel {name: $name})-[:HAS_CHANNEL_OWNER]->(o:Object)
 RETURN o
-""")
-.WithParameters(new { name = channelName })
-.ExecuteAsync(ct);
+""", new { name = channelName }, ct);
 
 var objNode = result.Result[0]["o"].As<INode>();
 var ownerObj = await BuildTypedObjectFromObjectNode(objNode, ct);
@@ -3501,12 +3112,10 @@ return ownerObj.AsPlayer;
 
 private async IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersAsync(string channelName, [EnumeratorCancellation] CancellationToken ct = default)
 {
-var result = await driver.ExecutableQuery("""
+var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object)-[r:ON_CHANNEL]->(c:Channel {name: $name})
 RETURN o, r
-""")
-.WithParameters(new { name = channelName })
-.ExecuteAsync(ct);
+""", new { name = channelName }, ct);
 
 foreach (var record in result.Result)
 {
