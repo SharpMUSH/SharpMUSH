@@ -2162,7 +2162,7 @@ var key = ExtractKey(typedId);
 
 var maxHops = depth == -1 ? 999 : depth;
 var cypher = "MATCH path = (start {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
-"WITH dest, length(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
+"WITH dest, size(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
 "MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj";
 var result = await driver.ExecutableQuery(cypher)
 .WithParameters(new { key })
@@ -2188,7 +2188,7 @@ public async ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth 
 var key = ExtractKey(id);
 var maxHops = depth == -1 ? 999 : depth;
 var cypher2 = "MATCH path = (start {key: $key})-[:AT_LOCATION*0.." + maxHops + "]->(dest) " +
-"WITH dest, length(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
+"WITH dest, size(path) AS pathLen ORDER BY pathLen DESC LIMIT 1 " +
 "MATCH (dest)-[:IS_OBJECT]->(destObj:Object) RETURN destObj";
 var result = await driver.ExecutableQuery(cypher2)
 .WithParameters(new { key })
