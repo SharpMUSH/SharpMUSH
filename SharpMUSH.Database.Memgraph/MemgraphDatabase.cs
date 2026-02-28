@@ -1570,10 +1570,10 @@ parameters["types"] = filter.Types;
 if (!string.IsNullOrEmpty(filter.NamePattern))
 {
 if (filter.UseRegex)
-conditions.Add("o.name =~ $namePattern");
+conditions.Add("toLower(o.name) =~ $namePattern");
 else
 conditions.Add("toLower(o.name) CONTAINS toLower($namePattern)");
-parameters["namePattern"] = filter.UseRegex ? $"(?i){filter.NamePattern}" : filter.NamePattern;
+parameters["namePattern"] = filter.UseRegex ? filter.NamePattern.ToLower() : filter.NamePattern;
 }
 if (filter.MinDbRef.HasValue)
 {
@@ -2319,10 +2319,10 @@ _ => $"\\{m.Value}"
 
 var result = await driver.ExecutableQuery("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute)
-WHERE child.longName =~ $pattern
+WHERE toLower(child.longName) =~ $pattern
 RETURN child
 """)
-.WithParameters(new { tkey, pattern = $"(?i)^{pattern}$" })
+.WithParameters(new { tkey, pattern = $"^{pattern.ToLower()}$" })
 .ExecuteAsync(cancellationToken);
 
 foreach (var record in result.Result)
@@ -2344,10 +2344,10 @@ var tkey = typedResult.Result[0]["tkey"].As<int>();
 
 var result = await driver.ExecutableQuery("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE*1..999]->(child:Attribute)
-WHERE child.longName =~ $pattern
+WHERE toLower(child.longName) =~ $pattern
 RETURN child ORDER BY child.longName
 """)
-.WithParameters(new { tkey, pattern = $"(?i){attributePattern}" })
+.WithParameters(new { tkey, pattern = attributePattern.ToLower() })
 .ExecuteAsync(cancellationToken);
 
 foreach (var record in result.Result)
@@ -2424,10 +2424,10 @@ _ => $"\\{m.Value}"
 
 var result = await driver.ExecutableQuery("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE]->(child:Attribute)
-WHERE child.longName =~ $pattern
+WHERE toLower(child.longName) =~ $pattern
 RETURN child
 """)
-.WithParameters(new { tkey, pattern = $"(?i)^{pattern}$" })
+.WithParameters(new { tkey, pattern = $"^{pattern.ToLower()}$" })
 .ExecuteAsync(cancellationToken);
 
 foreach (var record in result.Result)
@@ -2449,10 +2449,10 @@ var tkey = typedResult.Result[0]["tkey"].As<int>();
 
 var result = await driver.ExecutableQuery("""
 MATCH (start {key: $tkey})-[:HAS_ATTRIBUTE]->(child:Attribute)
-WHERE child.longName =~ $pattern
+WHERE toLower(child.longName) =~ $pattern
 RETURN child ORDER BY child.longName
 """)
-.WithParameters(new { tkey, pattern = $"(?i){attributePattern}" })
+.WithParameters(new { tkey, pattern = attributePattern.ToLower() })
 .ExecuteAsync(cancellationToken);
 
 foreach (var record in result.Result)
@@ -2587,16 +2587,18 @@ CREATE (a)-[:HAS_ATTRIBUTE_OWNER]->(p)
 // Set default flags from attribute entry
 foreach (var flagName in flagNames)
 {
-var flagResult = await driver.ExecutableQuery("MATCH (f:AttributeFlag {name: $name}) RETURN f")
+var flagResult = await driver.ExecutableQuery("MATCH (f:AttributeFlag) WHERE toUpper(f.name) = toUpper($name) RETURN f")
 .WithParameters(new { name = flagName })
 .ExecuteAsync(cancellationToken);
 if (flagResult.Result.Count > 0)
 {
+var fNode = flagResult.Result[0]["f"].As<INode>();
+var fname = fNode["name"].As<string>();
 await driver.ExecutableQuery("""
 MATCH (a:Attribute {key: $key}), (f:AttributeFlag {name: $fname})
 CREATE (a)-[:HAS_ATTRIBUTE_FLAG]->(f)
 """)
-.WithParameters(new { key = attrKey, fname = flagName })
+.WithParameters(new { key = attrKey, fname })
 .ExecuteAsync(cancellationToken);
 }
 }
