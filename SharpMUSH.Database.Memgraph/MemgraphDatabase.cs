@@ -75,9 +75,17 @@ private static string ToFullMatchRegex(string pattern)
 }
 
 /// <summary>
+/// Checks if a DatabaseException is a transient transaction conflict that can be retried.
+/// Memgraph throws different error messages depending on storage mode:
+/// - IN_MEMORY: "Cannot resolve conflicting transactions"
+/// - ON_DISK: "Unable to commit due to serialization error"
+/// </summary>
+private static bool IsTransientConflict(DatabaseException ex)
+	=> ex.Message.Contains("Cannot resolve conflicting transactions")
+		|| ex.Message.Contains("serialization error");
+
+/// <summary>
 /// Retries an async operation when Memgraph reports a transient transaction conflict.
-/// Memgraph's MVCC can throw "Cannot resolve conflicting transactions" when concurrent
-/// writes touch the same data. Retrying after a short delay resolves the conflict.
 /// </summary>
 private async ValueTask<T> WithRetryAsync<T>(Func<ValueTask<T>> operation, CancellationToken ct = default, int maxRetries = 5)
 {
@@ -87,7 +95,7 @@ try
 {
 return await operation();
 }
-catch (DatabaseException ex) when (attempt < maxRetries && ex.Message.Contains("Cannot resolve conflicting transactions"))
+catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
 {
 await Task.Delay(20 * (attempt + 1), ct);
 }
@@ -103,7 +111,7 @@ try
 await operation();
 return;
 }
-catch (DatabaseException ex) when (attempt < maxRetries && ex.Message.Contains("Cannot resolve conflicting transactions"))
+catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
 {
 await Task.Delay(20 * (attempt + 1), ct);
 }
@@ -124,7 +132,7 @@ var query = driver.ExecutableQuery(cypher);
 if (parameters != null) query = query.WithParameters(parameters);
 return await query.ExecuteAsync(ct);
 }
-catch (DatabaseException ex) when (attempt < maxRetries && ex.Message.Contains("Cannot resolve conflicting transactions"))
+catch (DatabaseException ex) when (attempt < maxRetries && IsTransientConflict(ex))
 {
 await Task.Delay(20 * (attempt + 1), ct);
 }
