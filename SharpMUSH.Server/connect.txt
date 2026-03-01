@@ -1,8 +1,18 @@
-
-Welcome to SharpMUSH!
-
-To connect to your existing character, type:
-  connect <name> <password>
-
-To create a new character, ask a wizard for assistance.
-
+          ==         ==          
+         ====       ====         
+       =======     =======                  Welcome to SharpMUSH!
+      =========   =========      
+     =========== ===========         
+    =================== =====          
+  ======-  ===========   ======      The following commands are available:
+ ======     =========     ======       
+======   =   =======   =   ======    - Connect to a Character
+======   ==   =====   ==   ======        connect <name> <password>
+ =====   ===   ===   ===   =====     - Create a new Character  
+ =====   ====   =   ====   =====         create <name> <password>
+  ====   =====     =====   ====      - See who is online
+   ===    ====     ====    ===           WHO
+   ===     ===     ===-    ===   
+    ==     ===     ===     ==        
+     =      ==     ==      =     
+             =     =             
