@@ -26,7 +26,7 @@ public class RenderFormatTests
 	}
 
 	[Test]
-	public async Task Render_HtmlFormat_AnsiColorMarkup_ReturnsSpanWithStyle()
+	public async Task Render_HtmlFormat_AnsiColorMarkup_ReturnsSpanWithClass()
 	{
 		// Arrange
 		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
@@ -35,17 +35,16 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert
-		await Assert.That(result).Contains("<span style=\"");
-		await Assert.That(result).Contains("color: #ff0000");
+		// Assert - class-based, not inline style
+		await Assert.That(result).Contains("<span class=\"fg-ff0000\">");
 		await Assert.That(result).Contains("Red Text");
 		await Assert.That(result).Contains("</span>");
-		// Should NOT contain ANSI escape codes
+		await Assert.That(result).DoesNotContain("style=");
 		await Assert.That(result).DoesNotContain("\u001b[");
 	}
 
 	[Test]
-	public async Task Render_HtmlFormat_BoldMarkup_ReturnsSpanWithFontWeight()
+	public async Task Render_HtmlFormat_BoldMarkup_ReturnsSpanWithBoldClass()
 	{
 		// Arrange
 		var ansiMarkup = M.Create(bold: true);
@@ -55,13 +54,14 @@ public class RenderFormatTests
 		var result = markupString.Render("html");
 
 		// Assert
-		await Assert.That(result).Contains("font-weight: bold");
+		await Assert.That(result).Contains("ms-bold");
 		await Assert.That(result).Contains("Bold Text");
+		await Assert.That(result).DoesNotContain("style=");
 		await Assert.That(result).DoesNotContain("\u001b[");
 	}
 
 	[Test]
-	public async Task Render_HtmlFormat_ItalicMarkup_ReturnsSpanWithFontStyle()
+	public async Task Render_HtmlFormat_ItalicMarkup_ReturnsSpanWithItalicClass()
 	{
 		// Arrange
 		var ansiMarkup = M.Create(italic: true);
@@ -71,12 +71,12 @@ public class RenderFormatTests
 		var result = markupString.Render("html");
 
 		// Assert
-		await Assert.That(result).Contains("font-style: italic");
+		await Assert.That(result).Contains("ms-italic");
 		await Assert.That(result).Contains("Italic Text");
 	}
 
 	[Test]
-	public async Task Render_HtmlFormat_UnderlinedMarkup_ReturnsSpanWithTextDecoration()
+	public async Task Render_HtmlFormat_UnderlinedMarkup_ReturnsSpanWithUnderlineClass()
 	{
 		// Arrange
 		var ansiMarkup = M.Create(underlined: true);
@@ -86,12 +86,12 @@ public class RenderFormatTests
 		var result = markupString.Render("html");
 
 		// Assert
-		await Assert.That(result).Contains("text-decoration: underline");
+		await Assert.That(result).Contains("ms-underline");
 		await Assert.That(result).Contains("Underlined Text");
 	}
 
 	[Test]
-	public async Task Render_HtmlFormat_BackgroundColor_ReturnsSpanWithBackgroundStyle()
+	public async Task Render_HtmlFormat_BackgroundColor_ReturnsSpanWithBgClass()
 	{
 		// Arrange
 		var ansiMarkup = M.Create(background: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 128, 0)));
@@ -101,8 +101,9 @@ public class RenderFormatTests
 		var result = markupString.Render("html");
 
 		// Assert
-		await Assert.That(result).Contains("background-color: #008000");
+		await Assert.That(result).Contains("bg-008000");
 		await Assert.That(result).Contains("Green BG");
+		await Assert.That(result).DoesNotContain("style=");
 	}
 
 	[Test]
@@ -145,11 +146,12 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert - all styles should be in a single span
-		await Assert.That(result).Contains("color: #ff0000");
-		await Assert.That(result).Contains("font-weight: bold");
-		await Assert.That(result).Contains("font-style: italic");
+		// Assert - all classes in a single span
+		await Assert.That(result).Contains("fg-ff0000");
+		await Assert.That(result).Contains("ms-bold");
+		await Assert.That(result).Contains("ms-italic");
 		await Assert.That(result).Contains("Styled Text");
+		await Assert.That(result).DoesNotContain("style=");
 	}
 
 	[Test]
@@ -168,7 +170,7 @@ public class RenderFormatTests
 	}
 
 	[Test]
-	public async Task Render_HtmlFormat_StrikeThrough_ReturnsSpanWithLineThrough()
+	public async Task Render_HtmlFormat_StrikeThrough_ReturnsSpanWithStrikeClass()
 	{
 		// Arrange
 		var ansiMarkup = M.Create(strikeThrough: true);
@@ -178,7 +180,7 @@ public class RenderFormatTests
 		var result = markupString.Render("html");
 
 		// Assert
-		await Assert.That(result).Contains("text-decoration: line-through");
+		await Assert.That(result).Contains("ms-strike");
 	}
 
 	[Test]
@@ -196,10 +198,11 @@ public class RenderFormatTests
 		var result = combined.Render("html");
 
 		// Assert
-		await Assert.That(result).Contains("color: #ff0000");
-		await Assert.That(result).Contains("color: #0000ff");
+		await Assert.That(result).Contains("fg-ff0000");
+		await Assert.That(result).Contains("fg-0000ff");
 		await Assert.That(result).Contains("Red");
 		await Assert.That(result).Contains("Blue");
+		await Assert.That(result).DoesNotContain("style=");
 		await Assert.That(result).DoesNotContain("\u001b[");
 	}
 
@@ -214,7 +217,7 @@ public class RenderFormatTests
 		var result = A.render("html", markupString);
 
 		// Assert
-		await Assert.That(result).Contains("color: #ffa500");
+		await Assert.That(result).Contains("fg-ffa500");
 		await Assert.That(result).Contains("Orange");
 	}
 
@@ -231,8 +234,168 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert - original fg (red) becomes background; original bg (blue) becomes foreground
-		await Assert.That(result).Contains("background-color: #ff0000");
-		await Assert.That(result).Contains("color: #0000ff");
+		// Assert - original fg (red) becomes background class; original bg (blue) becomes foreground class
+		await Assert.That(result).Contains("bg-ff0000");
+		await Assert.That(result).Contains("fg-0000ff");
+	}
+
+	// --- Entity escaping tests ---
+
+	[Test]
+	public async Task Render_HtmlFormat_TextWithLessThan_IsEscaped()
+	{
+		// Arrange
+		var markupString = A.single("a < b");
+
+		// Act
+		var result = markupString.Render("html");
+
+		// Assert
+		await Assert.That(result).IsEqualTo("a &lt; b");
+		await Assert.That(result).DoesNotContain("<b");
+	}
+
+	[Test]
+	public async Task Render_HtmlFormat_TextWithGreaterThan_IsEscaped()
+	{
+		// Arrange
+		var markupString = A.single("a > b");
+
+		// Act
+		var result = markupString.Render("html");
+
+		// Assert
+		await Assert.That(result).IsEqualTo("a &gt; b");
+	}
+
+	[Test]
+	public async Task Render_HtmlFormat_TextWithAmpersand_IsEscaped()
+	{
+		// Arrange
+		var markupString = A.single("rock & roll");
+
+		// Act
+		var result = markupString.Render("html");
+
+		// Assert
+		await Assert.That(result).IsEqualTo("rock &amp; roll");
+	}
+
+	[Test]
+	public async Task Render_HtmlFormat_TextWithQuote_IsEscaped()
+	{
+		// Arrange
+		var markupString = A.single("say \"hello\"");
+
+		// Act
+		var result = markupString.Render("html");
+
+		// Assert
+		await Assert.That(result).IsEqualTo("say &quot;hello&quot;");
+	}
+
+	[Test]
+	public async Task Render_HtmlFormat_EscapingInsideMarkup_TextIsEscaped()
+	{
+		// Arrange - entity chars inside a colored span
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "<b>not a tag</b>");
+
+		// Act
+		var result = markupString.Render("html");
+
+		// Assert - text is escaped; the outer span uses a class attribute
+		await Assert.That(result).Contains("&lt;b&gt;not a tag&lt;/b&gt;");
+		await Assert.That(result).Contains("fg-ff0000");
+	}
+
+	[Test]
+	public async Task Render_AnsiFormat_TextIsNotEscaped()
+	{
+		// Arrange - entity chars should NOT be escaped in ANSI output
+		var markupString = A.single("a < b & c");
+
+		// Act
+		var result = markupString.Render("ansi");
+
+		// Assert - ANSI format is unchanged
+		await Assert.That(result).IsEqualTo("a < b & c");
+	}
+
+	// --- CSS sheet tests ---
+
+	[Test]
+	public async Task FixedCss_ContainsAllFormattingClasses()
+	{
+		var css = A.fixedCss;
+
+		await Assert.That(css).Contains(".ms-bold");
+		await Assert.That(css).Contains(".ms-faint");
+		await Assert.That(css).Contains(".ms-italic");
+		await Assert.That(css).Contains(".ms-underline");
+		await Assert.That(css).Contains(".ms-strike");
+		await Assert.That(css).Contains(".ms-overline");
+		await Assert.That(css).Contains(".ms-blink");
+	}
+
+	[Test]
+	public async Task CssSheet_ContainsForegroundColorClass()
+	{
+		// Arrange
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "Red");
+
+		// Act
+		var css = A.cssSheet(markupString);
+
+		// Assert
+		await Assert.That(css).Contains(".fg-ff0000 { color: #ff0000; }");
+		await Assert.That(css).Contains(".ms-bold"); // fixed classes always included
+	}
+
+	[Test]
+	public async Task CssSheet_ContainsBackgroundColorClass()
+	{
+		// Arrange
+		var ansiMarkup = M.Create(background: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 128, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "Green BG");
+
+		// Act
+		var css = A.cssSheet(markupString);
+
+		// Assert
+		await Assert.That(css).Contains(".bg-008000 { background-color: #008000; }");
+	}
+
+	[Test]
+	public async Task CssSheet_PlainText_ContainsOnlyFixedCss()
+	{
+		// Arrange
+		var markupString = A.single("No colors here");
+
+		// Act
+		var css = A.cssSheet(markupString);
+
+		// Assert - no color rules, just the fixed rules
+		await Assert.That(css).DoesNotContain(".fg-");
+		await Assert.That(css).DoesNotContain(".bg-");
+		await Assert.That(css).Contains(".ms-bold");
+	}
+
+	[Test]
+	public async Task CssSheet_MultipleColors_ContainsAllColorClasses()
+	{
+		// Arrange
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 0, 255)));
+		var combined = A.concat(A.markupSingle(red, "Red"), A.markupSingle(blue, "Blue"));
+
+		// Act
+		var css = A.cssSheet(combined);
+
+		// Assert
+		await Assert.That(css).Contains(".fg-ff0000");
+		await Assert.That(css).Contains(".fg-0000ff");
 	}
 }
+
