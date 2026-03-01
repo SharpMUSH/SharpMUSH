@@ -18,7 +18,7 @@ public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 	public IContainer Instance => field ??= new ContainerBuilder("nats:2-alpine")
 		.WithNetwork(DockerNetwork.Instance)
 		.WithPortBinding(NatsPort, true) // Random host port
-		.WithCommand("-js")              // Enable JetStream
+		.WithCommand("-js", "-max_payload=6291456") // Enable JetStream, set 6 MB max payload
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Server is ready"))
 		.WithReuse(false)
 		.Build();

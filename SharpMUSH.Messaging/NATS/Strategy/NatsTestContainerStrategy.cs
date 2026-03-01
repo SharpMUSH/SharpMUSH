@@ -26,7 +26,7 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 		{
 			_container = new ContainerBuilder("nats:2-alpine")
 				.WithPortBinding(NatsPort, true)   // random host port to avoid collisions
-				.WithCommand("-js")                // enable JetStream
+				.WithCommand("-js", "-max_payload=6291456")                // enable JetStream, set 6 MB max payload
 				.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged(NatsReadyMessage))
 				.WithLabel("reuse-id", "SharpMUSH-NATS")
 				.WithReuse(true)                   // shared across Server and ConnectionServer processes
