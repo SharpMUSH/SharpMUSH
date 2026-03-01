@@ -1,3 +1,4 @@
+using System.Text;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using TUnit.Core.Interfaces;
@@ -11,6 +12,8 @@ namespace SharpMUSH.Tests;
 public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 {
 	private const int NatsPort = 4222;
+	private const string NatsConfigPath = "/etc/nats/nats.conf";
+	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes("max_payload: 6291456\njetstream: true\n");
 
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
@@ -18,7 +21,8 @@ public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 	public IContainer Instance => field ??= new ContainerBuilder("nats:2-alpine")
 		.WithNetwork(DockerNetwork.Instance)
 		.WithPortBinding(NatsPort, true) // Random host port
-		.WithCommand("-js", "-max_payload=6291456") // Enable JetStream, set 6 MB max payload
+		.WithResourceMapping(NatsConfig, NatsConfigPath) // Embed config with max_payload and JetStream
+		.WithCommand("-c", NatsConfigPath)               // Load config file
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Server is ready"))
 		.WithReuse(false)
 		.Build();
