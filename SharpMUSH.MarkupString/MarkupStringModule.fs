@@ -466,45 +466,13 @@ module MarkupStringModule =
         ".ms-blink { animation: blink 1s step-start infinite; }\n"
 
     /// <summary>
-    /// Generates a complete CSS stylesheet for the given MarkupString.
-    /// The stylesheet includes both the fixed formatting rules and dynamic color rules
-    /// for every foreground/background color that appears in the markup tree.
+    /// Generates a CSS stylesheet for the given MarkupString.
+    /// Colors are emitted as inline style attributes in the HTML output, so only the fixed
+    /// formatting rules (ms-bold, ms-italic, etc.) are included in the stylesheet.
     /// </summary>
-    /// <param name="markupStr">The MarkupString to generate CSS for.</param>
-    let cssSheet (markupStr: MarkupString) : string =
-        let rec collectClasses (ms: MarkupString) (acc: Set<string>) : Set<string> =
-            let accWithDetails =
-                match ms.MarkupDetails with
-                | MarkedupText markup ->
-                    match markup with
-                    | :? AnsiMarkup as am ->
-                        AnsiMarkup.HtmlClassNames am.Details |> Set.ofList |> Set.union acc
-                    | _ -> acc
-                | Empty -> acc
-            List.fold
-                (fun a c ->
-                    match c with
-                    | Text _ -> a
-                    | MarkupText ms2 -> collectClasses ms2 a)
-                accWithDetails
-                ms.Content
-
-        let classes = collectClasses markupStr Set.empty
-
-        let colorCss =
-            classes
-            |> Set.toSeq
-            |> Seq.choose (fun cls ->
-                if cls.StartsWith("fg-") then
-                    let hex = cls[3..]
-                    Some (sprintf ".fg-%s { color: #%s; }" hex hex)
-                elif cls.StartsWith("bg-") then
-                    let hex = cls[3..]
-                    Some (sprintf ".bg-%s { background-color: #%s; }" hex hex)
-                else None)
-            |> String.concat "\n"
-
-        fixedCss + colorCss
+    /// <param name="markupStr">The MarkupString (unused; accepted for API compatibility).</param>
+    let cssSheet (_markupStr: MarkupString) : string =
+        fixedCss
 
     /// <summary>
     /// Optimizes a MarkupString by merging adjacent content with the same markup details

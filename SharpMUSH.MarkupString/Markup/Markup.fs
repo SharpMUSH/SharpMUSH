@@ -89,25 +89,10 @@ module MarkupImplementation =
       }
       |> AnsiMarkup
 
-    /// Returns the CSS class names that represent this AnsiStructure in HTML rendering.
-    /// Color classes are prefixed with "fg-" or "bg-" followed by a 6-digit hex color.
-    /// Fixed formatting classes are prefixed with "ms-".
+    /// Returns the CSS class names for the non-color formatting attributes.
+    /// Only ms-* classes are returned; colors are rendered as inline style attributes.
     static member HtmlClassNames (details: AnsiStructure) : string list =
-      let fg, bg =
-        if details.Inverted then details.Background, details.Foreground
-        else details.Foreground, details.Background
-
-      let colorClass (prefix: string) (color: AnsiColor) =
-        match color with
-        | NoAnsi -> None
-        | RGB c -> Some (sprintf "%s-%02x%02x%02x" prefix c.R c.G c.B)
-        | ANSI bytes ->
-          let rgb = AnsiToRgb bytes
-          Some (sprintf "%s-%02x%02x%02x" prefix rgb.R rgb.G rgb.B)
-
       [
-        match colorClass "fg" fg with Some cls -> yield cls | None -> ()
-        match colorClass "bg" bg with Some cls -> yield cls | None -> ()
         if details.Bold then yield "ms-bold"
         if details.Faint then yield "ms-faint"
         if details.Italic then yield "ms-italic"
@@ -117,10 +102,28 @@ module MarkupImplementation =
         if details.Blink then yield "ms-blink"
       ]
 
-    /// Renders an AnsiStructure as an HTML span using CSS classes.
+    /// Renders an AnsiStructure as an HTML span.
+    /// Colors are emitted as an inline style attribute; formatting flags are emitted as CSS classes.
     /// The <paramref name="text"/> parameter is expected to already be HTML-entity-encoded
     /// by the caller (getTextAs applies HtmlEncode to all Text leaf nodes before wrapping).
     static member private wrapAsHtmlClass (details: AnsiStructure) (text: string) : string =
+      let fg, bg =
+        if details.Inverted then details.Background, details.Foreground
+        else details.Foreground, details.Background
+
+      let colorStyle (property: string) (color: AnsiColor) =
+        match color with
+        | NoAnsi -> None
+        | RGB c -> Some (sprintf "%s: #%02x%02x%02x" property c.R c.G c.B)
+        | ANSI bytes ->
+          let rgb = AnsiToRgb bytes
+          Some (sprintf "%s: #%02x%02x%02x" property rgb.R rgb.G rgb.B)
+
+      let styles = [
+        match colorStyle "color" fg with Some s -> yield s | None -> ()
+        match colorStyle "background-color" bg with Some s -> yield s | None -> ()
+      ]
+
       let classes = AnsiMarkup.HtmlClassNames details
 
       let inner =
@@ -129,8 +132,15 @@ module MarkupImplementation =
           sprintf "<a href=\"%s\">%s</a>" (System.Net.WebUtility.HtmlEncode url) text
         | _ -> text
 
-      if classes.IsEmpty then inner
-      else sprintf "<span class=\"%s\">%s</span>" (String.concat " " classes) inner
+      let styleAttr =
+        if styles.IsEmpty then ""
+        else sprintf " style=\"%s\"" (String.concat "; " styles)
+      let classAttr =
+        if classes.IsEmpty then ""
+        else sprintf " class=\"%s\"" (String.concat " " classes)
+
+      if styleAttr.Length = 0 && classAttr.Length = 0 then inner
+      else sprintf "<span%s%s>%s</span>" styleAttr classAttr inner
 
     static member applyDetails (details: AnsiStructure) (text: string) =
         StringExtensions.toANSI text

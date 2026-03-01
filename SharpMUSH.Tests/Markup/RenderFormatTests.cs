@@ -26,7 +26,7 @@ public class RenderFormatTests
 	}
 
 	[Test]
-	public async Task Render_HtmlFormat_AnsiColorMarkup_ReturnsSpanWithClass()
+	public async Task Render_HtmlFormat_ForegroundColor_ReturnsSpanWithInlineStyle()
 	{
 		// Arrange
 		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
@@ -35,11 +35,11 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert - class-based, not inline style
-		await Assert.That(result).Contains("<span class=\"fg-ff0000\">");
+		// Assert - color via inline style, no class for color
+		await Assert.That(result).Contains("<span style=\"color: #ff0000\">");
 		await Assert.That(result).Contains("Red Text");
 		await Assert.That(result).Contains("</span>");
-		await Assert.That(result).DoesNotContain("style=");
+		await Assert.That(result).DoesNotContain("fg-ff0000");
 		await Assert.That(result).DoesNotContain("\u001b[");
 	}
 
@@ -53,7 +53,7 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert
+		// Assert - formatting flag uses class, and there is no inline style when no color
 		await Assert.That(result).Contains("ms-bold");
 		await Assert.That(result).Contains("Bold Text");
 		await Assert.That(result).DoesNotContain("style=");
@@ -91,7 +91,7 @@ public class RenderFormatTests
 	}
 
 	[Test]
-	public async Task Render_HtmlFormat_BackgroundColor_ReturnsSpanWithBgClass()
+	public async Task Render_HtmlFormat_BackgroundColor_ReturnsSpanWithInlineStyle()
 	{
 		// Arrange
 		var ansiMarkup = M.Create(background: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 128, 0)));
@@ -100,10 +100,10 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert
-		await Assert.That(result).Contains("bg-008000");
+		// Assert - background color via inline style
+		await Assert.That(result).Contains("background-color: #008000");
 		await Assert.That(result).Contains("Green BG");
-		await Assert.That(result).DoesNotContain("style=");
+		await Assert.That(result).DoesNotContain("bg-008000");
 	}
 
 	[Test]
@@ -146,12 +146,13 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert - all classes in a single span
-		await Assert.That(result).Contains("fg-ff0000");
+		// Assert - color via inline style, formatting via class, both in one span
+		await Assert.That(result).Contains("color: #ff0000");
 		await Assert.That(result).Contains("ms-bold");
 		await Assert.That(result).Contains("ms-italic");
 		await Assert.That(result).Contains("Styled Text");
-		await Assert.That(result).DoesNotContain("style=");
+		await Assert.That(result).Contains("style=");
+		await Assert.That(result).Contains("class=");
 	}
 
 	[Test]
@@ -197,12 +198,11 @@ public class RenderFormatTests
 		// Act
 		var result = combined.Render("html");
 
-		// Assert
-		await Assert.That(result).Contains("fg-ff0000");
-		await Assert.That(result).Contains("fg-0000ff");
+		// Assert - each segment uses inline style for its color
+		await Assert.That(result).Contains("color: #ff0000");
+		await Assert.That(result).Contains("color: #0000ff");
 		await Assert.That(result).Contains("Red");
 		await Assert.That(result).Contains("Blue");
-		await Assert.That(result).DoesNotContain("style=");
 		await Assert.That(result).DoesNotContain("\u001b[");
 	}
 
@@ -216,8 +216,8 @@ public class RenderFormatTests
 		// Act - use module-level render function
 		var result = A.render("html", markupString);
 
-		// Assert
-		await Assert.That(result).Contains("fg-ffa500");
+		// Assert - color via inline style
+		await Assert.That(result).Contains("color: #ffa500");
 		await Assert.That(result).Contains("Orange");
 	}
 
@@ -234,9 +234,9 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert - original fg (red) becomes background class; original bg (blue) becomes foreground class
-		await Assert.That(result).Contains("bg-ff0000");
-		await Assert.That(result).Contains("fg-0000ff");
+		// Assert - original fg (red) becomes background; original bg (blue) becomes foreground
+		await Assert.That(result).Contains("background-color: #ff0000");
+		await Assert.That(result).Contains("color: #0000ff");
 	}
 
 	// --- Entity escaping tests ---
@@ -304,9 +304,9 @@ public class RenderFormatTests
 		// Act
 		var result = markupString.Render("html");
 
-		// Assert - text is escaped; the outer span uses a class attribute
+		// Assert - text is escaped; color is applied via inline style
 		await Assert.That(result).Contains("&lt;b&gt;not a tag&lt;/b&gt;");
-		await Assert.That(result).Contains("fg-ff0000");
+		await Assert.That(result).Contains("color: #ff0000");
 	}
 
 	[Test]
@@ -339,63 +339,32 @@ public class RenderFormatTests
 	}
 
 	[Test]
-	public async Task CssSheet_ContainsForegroundColorClass()
+	public async Task CssSheet_NeverContainsColorClasses()
 	{
-		// Arrange
+		// Colors are rendered as inline styles, so the stylesheet never has fg-*/bg-* rules.
 		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
 		var markupString = A.markupSingle(ansiMarkup, "Red");
 
-		// Act
 		var css = A.cssSheet(markupString);
 
-		// Assert
-		await Assert.That(css).Contains(".fg-ff0000 { color: #ff0000; }");
+		// Assert - no color classes ever appear in the stylesheet
+		await Assert.That(css).DoesNotContain(".fg-");
+		await Assert.That(css).DoesNotContain(".bg-");
 		await Assert.That(css).Contains(".ms-bold"); // fixed classes always included
 	}
 
 	[Test]
-	public async Task CssSheet_ContainsBackgroundColorClass()
+	public async Task CssSheet_AlwaysEqualsFixedCss()
 	{
-		// Arrange
-		var ansiMarkup = M.Create(background: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 128, 0)));
-		var markupString = A.markupSingle(ansiMarkup, "Green BG");
-
-		// Act
-		var css = A.cssSheet(markupString);
-
-		// Assert
-		await Assert.That(css).Contains(".bg-008000 { background-color: #008000; }");
-	}
-
-	[Test]
-	public async Task CssSheet_PlainText_ContainsOnlyFixedCss()
-	{
-		// Arrange
-		var markupString = A.single("No colors here");
-
-		// Act
-		var css = A.cssSheet(markupString);
-
-		// Assert - no color rules, just the fixed rules
-		await Assert.That(css).DoesNotContain(".fg-");
-		await Assert.That(css).DoesNotContain(".bg-");
-		await Assert.That(css).Contains(".ms-bold");
-	}
-
-	[Test]
-	public async Task CssSheet_MultipleColors_ContainsAllColorClasses()
-	{
-		// Arrange
+		// cssSheet always returns only the fixed formatting rules regardless of content
 		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 0, 255)));
-		var combined = A.concat(A.markupSingle(red, "Red"), A.markupSingle(blue, "Blue"));
+		var combined = A.concat(
+			A.markupSingle(red, "Red"),
+			A.single("plain"));
 
-		// Act
 		var css = A.cssSheet(combined);
 
-		// Assert
-		await Assert.That(css).Contains(".fg-ff0000");
-		await Assert.That(css).Contains(".fg-0000ff");
+		await Assert.That(css).IsEqualTo(A.fixedCss);
 	}
 }
 
