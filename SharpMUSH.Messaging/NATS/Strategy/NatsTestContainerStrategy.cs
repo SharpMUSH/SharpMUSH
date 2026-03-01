@@ -1,3 +1,4 @@
+using System.Text;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 
@@ -11,6 +12,9 @@ namespace SharpMUSH.Messaging.NATS.Strategy;
 public sealed class NatsTestContainerStrategy : NatsStrategy
 {
 	private const int NatsPort = 4222;
+	private const string NatsConfigPath = "/etc/nats/nats.conf";
+	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
+	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes($"max_payload: {MaxPayloadBytes}\njetstream: true\n");
 
 	/// <summary>
 	/// The log message emitted by NATS when it is ready to accept connections.
@@ -26,7 +30,8 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 		{
 			_container = new ContainerBuilder("nats:2-alpine")
 				.WithPortBinding(NatsPort, true)   // random host port to avoid collisions
-				.WithCommand("-js")                // enable JetStream
+				.WithResourceMapping(NatsConfig, NatsConfigPath) // Embed config with max_payload and JetStream
+				.WithCommand("-c", NatsConfigPath)               // Load config file
 				.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged(NatsReadyMessage))
 				.WithLabel("reuse-id", "SharpMUSH-NATS")
 				.WithReuse(true)                   // shared across Server and ConnectionServer processes

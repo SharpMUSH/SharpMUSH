@@ -42,6 +42,12 @@ public class NatsOptions
 	/// </summary>
 	public string? ConsumeSubjectPrefix { get; set; }
 
+	/// <summary>
+	/// Maximum size in bytes for a single message accepted by the JetStream stream.
+	/// Defaults to 6 MB. Set to -1 for unlimited.
+	/// </summary>
+	public int MaxMsgSize { get; set; } = 6 * 1024 * 1024;
+
 	internal string GetConsumeStreamName() => ConsumeStreamName ?? StreamName;
 	internal string GetConsumeSubjectPrefix() => ConsumeSubjectPrefix ?? SubjectPrefix;
 }
