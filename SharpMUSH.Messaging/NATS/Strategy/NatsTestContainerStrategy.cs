@@ -13,7 +13,8 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 {
 	private const int NatsPort = 4222;
 	private const string NatsConfigPath = "/etc/nats/nats.conf";
-	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes("max_payload: 6291456\njetstream: true\n");
+	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
+	private static readonly byte[] NatsConfig = Encoding.UTF8.GetBytes($"max_payload: {MaxPayloadBytes}\njetstream: true\n");
 
 	/// <summary>
 	/// The log message emitted by NATS when it is ready to accept connections.
