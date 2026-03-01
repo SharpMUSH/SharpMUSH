@@ -53,6 +53,7 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 				new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
 				{
 					MaxAge = options.MaxAge,
+					MaxMsgSize = options.MaxMsgSize,
 				},
 				ct);
 		}
