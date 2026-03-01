@@ -239,6 +239,44 @@ public class RenderFormatTests
 		await Assert.That(result).Contains("color: #0000ff");
 	}
 
+	[Test]
+	public async Task Render_InvertedMarkup_OnlyFg_FgBecomesBackground()
+	{
+		// Arrange - fg=red, no bg, inverted=true → bg=red, fg=inherited (no css color)
+		// This mirrors ANSI reverse-video: the foreground color moves to the background
+		// and the foreground reverts to the inherited/default color.
+		var ansiMarkup = M.Create(
+			foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)),
+			inverted: true);
+		var markupString = A.markupSingle(ansiMarkup, "OnlyFgInverted");
+
+		// Act
+		var result = markupString.Render("html");
+
+		// Assert - red moved to background; no explicit foreground color emitted
+		await Assert.That(result).Contains("background-color: #ff0000");
+		// The style attribute must not start with "color:" (foreground) - only background-color is present
+		await Assert.That(result).DoesNotContain("style=\"color:");
+	}
+
+	[Test]
+	public async Task Render_InvertedMarkup_OnlyBg_BgBecomesForeground()
+	{
+		// Arrange - no fg, bg=blue, inverted=true → fg=blue, bg=inherited (no css background-color)
+		// This mirrors ANSI reverse-video: the background color moves to the foreground.
+		var ansiMarkup = M.Create(
+			background: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 0, 255)),
+			inverted: true);
+		var markupString = A.markupSingle(ansiMarkup, "OnlyBgInverted");
+
+		// Act
+		var result = markupString.Render("html");
+
+		// Assert - blue moved to foreground; no explicit background-color emitted
+		await Assert.That(result).Contains("color: #0000ff");
+		await Assert.That(result).DoesNotContain("background-color:");
+	}
+
 	// --- Entity escaping tests ---
 
 	[Test]
