@@ -109,6 +109,35 @@ module MarkupStringModule =
             finally
                 StringBuilderPool.returnStringBuilder sb
 
+        let rec getTextAs (format: string) (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
+            let rec accumulate (sb: System.Text.StringBuilder) (items: Content list) =
+                match items with
+                | [] -> ()
+                | Text str :: tail ->
+                    sb.Append(str) |> ignore
+                    accumulate sb tail
+                | MarkupText mStr :: tail ->
+                    let inner =
+                        match markupStr.MarkupDetails with
+                        | Empty -> getTextAs format (mStr, outerMarkupType)
+                        | MarkedupText _ -> getTextAs format (mStr, markupStr.MarkupDetails)
+                    sb.Append(inner) |> ignore
+                    accumulate sb tail
+
+            let sb = StringBuilderPool.getStringBuilder()
+            try
+                accumulate sb markupStr.Content
+                let innerText = sb.ToString()
+
+                match markupStr.MarkupDetails with
+                | Empty -> innerText
+                | MarkedupText str ->
+                    match outerMarkupType with
+                    | Empty -> str.WrapAs(format, innerText)
+                    | MarkedupText outerMarkup -> str.WrapAndRestoreAs(format, innerText, outerMarkup)
+            finally
+                StringBuilderPool.returnStringBuilder sb
+
         [<TailCall>]
         let rec length () : int =
             let rec getLengthInternal (internalContent: Content list) : int =
@@ -221,6 +250,11 @@ module MarkupStringModule =
                      + getText (ms, Empty)
                      + postfix firstMarkedupTextType)
 
+        let renderAs (format: string) : string =
+            match format.ToLower() with
+            | "ansi" -> toString()
+            | _ -> getTextAs format (ms, Empty)
+
         let strVal: Lazy<string> = Lazy<string>(toString)
 
         [<TailCall>]
@@ -254,6 +288,8 @@ module MarkupStringModule =
 
         member this.EvaluateWith(evaluator: System.Func<MarkupTypes, string, string>) : string =
             evaluateWith (fun markup text -> evaluator.Invoke(markup, text))
+
+        member this.Render(format: string) : string = renderAs format
             
         override this.ToString() : string = strVal.Value
         
@@ -402,6 +438,14 @@ module MarkupStringModule =
     /// <param name="markupStr">The MarkupString to evaluate</param>
     let evaluateWith (evaluator: System.Func<MarkupTypes, string, string>) (markupStr: MarkupString) : string =
         markupStr.EvaluateWith(evaluator)
+
+    /// <summary>
+    /// Renders a MarkupString to the specified output format.
+    /// </summary>
+    /// <param name="format">The output format: "ansi" for ANSI escape codes (default), "html" for HTML spans.</param>
+    /// <param name="markupStr">The MarkupString to render.</param>
+    let render (format: string) (markupStr: MarkupString) : string =
+        markupStr.Render(format)
 
     /// <summary>
     /// Optimizes a MarkupString by merging adjacent content with the same markup details

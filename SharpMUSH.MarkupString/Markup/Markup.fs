@@ -39,6 +39,8 @@ module MarkupImplementation =
   type Markup =
       abstract member Wrap: string -> string
       abstract member WrapAndRestore: string * Markup -> string
+      abstract member WrapAs: string * string -> string
+      abstract member WrapAndRestoreAs: string * string * Markup -> string
       abstract member Prefix: string
       abstract member Postfix: string
       abstract member Optimize: string -> string
@@ -49,6 +51,8 @@ module MarkupImplementation =
       member this.Prefix: string = System.String.Empty
       member this.Wrap(text: string): string = text
       member this.WrapAndRestore(text: string, _: Markup): string = text
+      member this.WrapAs(_format: string, text: string): string = text
+      member this.WrapAndRestoreAs(_format: string, text: string, _: Markup): string = text
       member this.Optimize(text: string): string = text
 
   and AnsiMarkup(details: AnsiStructure) =
@@ -84,6 +88,43 @@ module MarkupImplementation =
         StrikeThrough = defaultArg strikeThrough false
       }
       |> AnsiMarkup
+
+    /// Renders an AnsiStructure as an HTML span with inline CSS styles.
+    static member private wrapAsHtml (details: AnsiStructure) (text: string) : string =
+      let fg, bg =
+        if details.Inverted then details.Background, details.Foreground
+        else details.Foreground, details.Background
+
+      let colorCss (color: AnsiColor) =
+        match color with
+        | NoAnsi -> None
+        | RGB c -> Some (sprintf "#%02x%02x%02x" c.R c.G c.B)
+        | ANSI bytes ->
+          let rgb = AnsiToRgb bytes
+          Some (sprintf "#%02x%02x%02x" rgb.R rgb.G rgb.B)
+
+      let styles = [
+        match colorCss fg with Some css -> yield sprintf "color: %s" css | None -> ()
+        match colorCss bg with Some css -> yield sprintf "background-color: %s" css | None -> ()
+        if details.Bold then yield "font-weight: bold"
+        if details.Faint then yield "opacity: 0.5"
+        if details.Italic then yield "font-style: italic"
+        if details.Underlined then yield "text-decoration: underline"
+        if details.StrikeThrough then yield "text-decoration: line-through"
+        if details.Overlined then yield "text-decoration: overline"
+        if details.Blink then yield "animation: blink 1s step-start infinite" // consumer must provide @keyframes blink
+      ]
+
+      let inner =
+        match details.LinkUrl with
+        | Some url when url.Length > 0 -> sprintf "<a href=\"%s\">%s</a>" url text
+        | _ -> text
+
+      let styleAttr = String.concat "; " styles
+      if styleAttr.Length > 0 then
+        sprintf "<span style=\"%s\">%s</span>" styleAttr inner
+      else
+        inner
 
     static member applyDetails (details: AnsiStructure) (text: string) =
         StringExtensions.toANSI text
@@ -135,6 +176,16 @@ module MarkupImplementation =
       override this.Wrap (text: string) : string =
         StringExtensions.endWithTrueClear((AnsiMarkup.applyDetails details text).ToString()).ToString()
 
+      override this.WrapAs(format: string, text: string) : string =
+        match format.ToLower() with
+        | "html" -> AnsiMarkup.wrapAsHtml details text
+        | _ -> (this :> Markup).Wrap(text)
+
+      override this.WrapAndRestoreAs(format: string, text: string, outerDetails: Markup) : string =
+        match format.ToLower() with
+        | "html" -> AnsiMarkup.wrapAsHtml details text
+        | _ -> (this :> Markup).WrapAndRestore(text, outerDetails)
+
   and HtmlMarkup(details: HtmlStructure) =
     member val Details = details with get
     
@@ -159,6 +210,12 @@ module MarkupImplementation =
 
       override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
         // For HTML, we just wrap without restoring outer markup since HTML tags are independent
+        (this :> Markup).Wrap(text)
+
+      override this.WrapAs(_format: string, text: string) : string =
+        (this :> Markup).Wrap(text)
+
+      override this.WrapAndRestoreAs(_format: string, text: string, _: Markup) : string =
         (this :> Markup).Wrap(text)
 
       override this.Optimize (text: string) : string = text
