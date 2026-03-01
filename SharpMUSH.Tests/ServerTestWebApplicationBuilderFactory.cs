@@ -29,7 +29,23 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureStartupConfiguration(IConfigurationBuilder configurationBuilder)
 	{
-		// No Prometheus configuration needed anymore
+		// Support PARSER_STRICT_MODE environment variable for grammar debugging
+		var parserStrictMode = Environment.GetEnvironmentVariable("PARSER_STRICT_MODE");
+		var isStrictMode = !string.IsNullOrEmpty(parserStrictMode) &&
+											 (parserStrictMode.Equals("true", StringComparison.OrdinalIgnoreCase) || parserStrictMode == "1");
+		
+		Console.WriteLine($"[STARTUP] PARSER_STRICT_MODE={parserStrictMode ?? "(not set)"}, isStrictMode={isStrictMode}");
+		
+		if (isStrictMode)
+		{
+			// Configuration key must match the property path in SharpMUSHOptions
+			// The key format for nested options is: "PropertyName:SubPropertyName"
+			configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				["Debug:ParserStrictMode"] = "true"
+			});
+			Console.WriteLine("[STARTUP] Added Debug:ParserStrictMode=true to configuration");
+		}
 	}
 
 	/// <summary>
@@ -79,6 +95,26 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			{
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 				var config = ReadPennMushConfig.Create(configFile);
+
+// Apply PARSER_STRICT_MODE environment variable if set
+var parserStrictMode = Environment.GetEnvironmentVariable("PARSER_STRICT_MODE");
+var isStrictMode = !string.IsNullOrEmpty(parserStrictMode) &&
+(parserStrictMode.Equals("true", StringComparison.OrdinalIgnoreCase) || parserStrictMode == "1");
+
+Console.WriteLine($"[CONFIG] PARSER_STRICT_MODE={parserStrictMode ?? "(not set)"}, isStrictMode={isStrictMode}");
+
+if (isStrictMode)
+{
+// Override Debug options to enable strict mode
+config = config with
+{
+Debug = config.Debug with
+{
+ParserStrictMode = true
+}
+};
+Console.WriteLine($"[CONFIG] Set ParserStrictMode=true in configuration");
+}
 
 				// Create IOptionsMonitor for SqlService with test connection string
 				var sqlOptionsMonitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
