@@ -325,7 +325,7 @@ public class WizardCommandTests
 				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")));
 	}
 
-	[Test]
+	[Test, NotInParallel]
 	public async ValueTask Hide_AlreadyHidden_ShowsAppropriateMessage()
 	{
 		// Test that @hide/on when already hidden shows appropriate message

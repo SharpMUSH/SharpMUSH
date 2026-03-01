@@ -39,6 +39,8 @@ module MarkupImplementation =
   type Markup =
       abstract member Wrap: string -> string
       abstract member WrapAndRestore: string * Markup -> string
+      abstract member WrapAs: string * string -> string
+      abstract member WrapAndRestoreAs: string * string * Markup -> string
       abstract member Prefix: string
       abstract member Postfix: string
       abstract member Optimize: string -> string
@@ -49,6 +51,8 @@ module MarkupImplementation =
       member this.Prefix: string = System.String.Empty
       member this.Wrap(text: string): string = text
       member this.WrapAndRestore(text: string, _: Markup): string = text
+      member this.WrapAs(_format: string, text: string): string = text
+      member this.WrapAndRestoreAs(_format: string, text: string, _: Markup): string = text
       member this.Optimize(text: string): string = text
 
   and AnsiMarkup(details: AnsiStructure) =
@@ -84,6 +88,59 @@ module MarkupImplementation =
         StrikeThrough = defaultArg strikeThrough false
       }
       |> AnsiMarkup
+
+    /// Returns the CSS class names for the non-color formatting attributes.
+    /// Only ms-* classes are returned; colors are rendered as inline style attributes.
+    static member HtmlClassNames (details: AnsiStructure) : string list =
+      [
+        if details.Bold then yield "ms-bold"
+        if details.Faint then yield "ms-faint"
+        if details.Italic then yield "ms-italic"
+        if details.Underlined then yield "ms-underline"
+        if details.StrikeThrough then yield "ms-strike"
+        if details.Overlined then yield "ms-overline"
+        if details.Blink then yield "ms-blink"
+      ]
+
+    /// Renders an AnsiStructure as an HTML span.
+    /// Colors are emitted as an inline style attribute; formatting flags are emitted as CSS classes.
+    /// The <paramref name="text"/> parameter is expected to already be HTML-entity-encoded
+    /// by the caller (getTextAs applies HtmlEncode to all Text leaf nodes before wrapping).
+    static member private wrapAsHtmlClass (details: AnsiStructure) (text: string) : string =
+      let fg, bg =
+        if details.Inverted then details.Background, details.Foreground
+        else details.Foreground, details.Background
+
+      let colorStyle (property: string) (color: AnsiColor) =
+        match color with
+        | NoAnsi -> None
+        | RGB c -> Some (sprintf "%s: #%02x%02x%02x" property c.R c.G c.B)
+        | ANSI bytes ->
+          let rgb = AnsiToRgb bytes
+          Some (sprintf "%s: #%02x%02x%02x" property rgb.R rgb.G rgb.B)
+
+      let styles = [
+        match colorStyle "color" fg with Some s -> yield s | None -> ()
+        match colorStyle "background-color" bg with Some s -> yield s | None -> ()
+      ]
+
+      let classes = AnsiMarkup.HtmlClassNames details
+
+      let inner =
+        match details.LinkUrl with
+        | Some url when url.Length > 0 ->
+          sprintf "<a href=\"%s\">%s</a>" (System.Net.WebUtility.HtmlEncode url) text
+        | _ -> text
+
+      let styleAttr =
+        if styles.IsEmpty then ""
+        else sprintf " style=\"%s\"" (String.concat "; " styles)
+      let classAttr =
+        if classes.IsEmpty then ""
+        else sprintf " class=\"%s\"" (String.concat " " classes)
+
+      if styleAttr.Length = 0 && classAttr.Length = 0 then inner
+      else sprintf "<span%s%s>%s</span>" styleAttr classAttr inner
 
     static member applyDetails (details: AnsiStructure) (text: string) =
         StringExtensions.toANSI text
@@ -135,6 +192,16 @@ module MarkupImplementation =
       override this.Wrap (text: string) : string =
         StringExtensions.endWithTrueClear((AnsiMarkup.applyDetails details text).ToString()).ToString()
 
+      override this.WrapAs(format: string, text: string) : string =
+        match format.ToLower() with
+        | "html" -> AnsiMarkup.wrapAsHtmlClass details text
+        | _ -> (this :> Markup).Wrap(text)
+
+      override this.WrapAndRestoreAs(format: string, text: string, outerDetails: Markup) : string =
+        match format.ToLower() with
+        | "html" -> AnsiMarkup.wrapAsHtmlClass details text
+        | _ -> (this :> Markup).WrapAndRestore(text, outerDetails)
+
   and HtmlMarkup(details: HtmlStructure) =
     member val Details = details with get
     
@@ -159,6 +226,12 @@ module MarkupImplementation =
 
       override this.WrapAndRestore (text: string, outerDetails: Markup) : string =
         // For HTML, we just wrap without restoring outer markup since HTML tags are independent
+        (this :> Markup).Wrap(text)
+
+      override this.WrapAs(_format: string, text: string) : string =
+        (this :> Markup).Wrap(text)
+
+      override this.WrapAndRestoreAs(_format: string, text: string, _: Markup) : string =
         (this :> Markup).Wrap(text)
 
       override this.Optimize (text: string) : string = text
