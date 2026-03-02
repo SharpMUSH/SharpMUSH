@@ -367,6 +367,17 @@ public class RecursiveMarkdownRenderer
 	private MString BuildSharpLineContent(string line)
 	{
 		var trimmed = line.TrimStart();
+
+		// Strip "> " prompt prefix commonly used in helpfile code examples so
+		// the parse-type detection and tokeniser see the actual MUSH code.
+		var promptPrefix = string.Empty;
+		if (trimmed.StartsWith("> "))
+		{
+			promptPrefix = line[..^(trimmed.Length - 2)]; // leading whitespace + "> "
+			line = line[promptPrefix.Length..];
+			trimmed = trimmed[2..];
+		}
+
 		var parseType = trimmed.Length > 0 && (trimmed[0] == '&' || trimmed[0] == '@' || trimmed[0] == '$')
 			? ParseType.CommandList
 			: ParseType.Function;
@@ -377,9 +388,13 @@ public class RecursiveMarkdownRenderer
 			.ToList();
 
 		if (sortedTokens.Count == 0)
-			return MModule.single(line);
+			return promptPrefix.Length > 0
+				? MModule.concat(MModule.single(promptPrefix), MModule.single(line))
+				: MModule.single(line);
 
 		var parts = new List<MString>();
+		if (promptPrefix.Length > 0)
+			parts.Add(MModule.single(promptPrefix));
 		foreach (var token in sortedTokens)
 		{
 			var style = SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
