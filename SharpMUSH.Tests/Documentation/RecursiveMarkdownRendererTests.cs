@@ -123,7 +123,7 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderList_WithBullets_ShouldHaveFaintFormatting()
+	public async Task RenderList_WithBullets_ShouldRenderAsCommaSeparated()
 	{
 		// Arrange
 		var markdown = "- Item 1\n- Item 2";
@@ -131,10 +131,8 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert
-		await Assert.That(result.ToPlainText()).IsEqualTo("- Item 1\n- Item 2");
-		// Bullets should have faint ANSI formatting
-		await Assert.That(result.ToString().Contains(Faint)).IsTrue();
+		// Assert – unordered lists are displayed as comma-separated values
+		await Assert.That(result.ToPlainText()).IsEqualTo("Item 1, Item 2");
 		await Assert.That(result.ToString().Contains("Item 1")).IsTrue();
 		await Assert.That(result.ToString().Contains("Item 2")).IsTrue();
 	}

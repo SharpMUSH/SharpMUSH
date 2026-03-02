@@ -9,7 +9,7 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "HELP", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
+	[SharpCommand(Name = "HELP", Switches = ["SEARCH"], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
 	public static async ValueTask<Option<CallState>> Help(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -28,7 +28,7 @@ public partial class Commands
 			var mainHelp = await TextFileService.GetEntryAsync("help", "help");
 			if (mainHelp != null)
 			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainHelp);
+				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainHelp, mushParser: parser);
 				await NotifyService!.Notify(executor, rendered);
 			}
 			else
@@ -72,7 +72,7 @@ public partial class Commands
 				var wildcardContent = await TextFileService.GetEntryAsync("help", matches[0]);
 				if (wildcardContent != null)
 				{
-					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
+					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent, mushParser: parser);
 					await NotifyService!.Notify(executor, rendered);
 				}
 			}
@@ -97,7 +97,7 @@ public partial class Commands
 			var prefixContent = await TextFileService.GetEntryAsync("help", firstMatch);
 			if (prefixContent != null)
 			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(prefixContent);
+				var rendered = RecursiveMarkdownHelper.RenderMarkdown(prefixContent, mushParser: parser);
 				await NotifyService!.Notify(executor, rendered);
 			}
 			return CallState.Empty;
@@ -118,7 +118,7 @@ public partial class Commands
 			var fuzzyContent = await TextFileService.GetEntryAsync("help", fuzzyMatches[0]);
 			if (fuzzyContent != null)
 			{
-				var rendered = RecursiveMarkdownHelper.RenderMarkdown(fuzzyContent);
+				var rendered = RecursiveMarkdownHelper.RenderMarkdown(fuzzyContent, mushParser: parser);
 				await NotifyService!.Notify(executor, rendered);
 			}
 		}
