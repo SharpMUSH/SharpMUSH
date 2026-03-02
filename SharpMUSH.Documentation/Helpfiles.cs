@@ -193,7 +193,17 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 
 		using var openText = file.OpenText();
 		var textBody = openText.ReadToEnd().Replace("\r\n", "\n");
-		var textBytes = Encoding.UTF8.GetBytes(textBody);
+
+		// Pre-compute cumulative byte offsets so we can convert any char index
+		// to a byte position in O(1) instead of re-encoding prefixes.
+		var byteOffsets = new int[textBody.Length + 1];
+		var running = 0;
+		for (var i = 0; i < textBody.Length; i++)
+		{
+			byteOffsets[i] = running;
+			running += Encoding.UTF8.GetByteCount(textBody.AsSpan(i, 1));
+		}
+		byteOffsets[textBody.Length] = running;
 
 		var matches = MarkdownHeaders().Matches(textBody);
 
@@ -208,7 +218,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 			var nextMatch = match.NextMatch();
 			var endIndex = nextMatch.Success ? nextMatch.Index : textBody.Length;
 
-			var content = textBody.Substring(startIndex, endIndex - startIndex).Trim();
+			var content = textBody.AsSpan(startIndex, endIndex - startIndex).Trim();
 
 			pendingTopics.Add(topicName);
 			if (firstPendingCharIndex < 0)
@@ -216,10 +226,10 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 				firstPendingCharIndex = match.Index;
 			}
 
-			if (!string.IsNullOrEmpty(content))
+			if (!content.IsEmpty)
 			{
-				var startByte = (long)Encoding.UTF8.GetByteCount(textBody.AsSpan(0, firstPendingCharIndex));
-				var endByte = (long)Encoding.UTF8.GetByteCount(textBody.AsSpan(0, endIndex));
+				var startByte = (long)byteOffsets[firstPendingCharIndex];
+				var endByte = (long)byteOffsets[endIndex];
 
 				foreach (var topic in pendingTopics)
 				{
@@ -235,8 +245,8 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		foreach (var topic in pendingTopics)
 		{
 			var charStart = firstPendingCharIndex >= 0 ? firstPendingCharIndex : 0;
-			var startByte = (long)Encoding.UTF8.GetByteCount(textBody.AsSpan(0, charStart));
-			var endByte = (long)textBytes.Length;
+			var startByte = (long)byteOffsets[charStart];
+			var endByte = (long)byteOffsets[textBody.Length];
 			dict[topic] = (startByte, endByte);
 		}
 
