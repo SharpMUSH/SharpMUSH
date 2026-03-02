@@ -1615,7 +1615,7 @@ public class SharpMUSHParserVisitor(
 
 		// TODO: Implement lsargs (list-style arguments) support.
 		// No immediate commands require this feature yet, so implementation is deferred.
-		if (argCallState is null)
+		if (argCallState is null or { Arguments: null })
 		{
 			return arguments;
 		}
@@ -1623,8 +1623,8 @@ public class SharpMUSHParserVisitor(
 		if (eqSplit)
 		{
 			arguments.Add(noParse
-				? new CallState(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
-				: (await prs.FunctionParse(argCallState.Arguments!.FirstOrDefault() ?? MModule.empty()))!);
+				? new CallState(argCallState.Arguments.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
+				: (await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);
 
 			if (nArgs < 2) return arguments;
 
@@ -1643,7 +1643,7 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				foreach (var argument in argCallState.Arguments!.Skip(1))
+				foreach (var argument in argCallState.Arguments.Skip(1))
 				{
 					// This is done to avoid allocation with ValueTask.
 					arguments.Add((await prs.FunctionParse(argument))!);
@@ -1654,7 +1654,7 @@ public class SharpMUSHParserVisitor(
 		{
 			if (noParse)
 			{
-				arguments.AddRange(argCallState.Arguments!
+				arguments.AddRange(argCallState.Arguments
 					.Select(x => new CallState(x, argCallState.Depth)));
 			}
 			else
