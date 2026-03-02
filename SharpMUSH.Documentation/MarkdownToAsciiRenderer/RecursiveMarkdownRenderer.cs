@@ -67,6 +67,11 @@ public class RecursiveMarkdownRenderer
 		foreground: StringExtensions.rgb(Color.FromArgb(0xD4, 0xD4, 0xD4)),
 		background: StringExtensions.rgb(Color.FromArgb(0x2D, 0x2D, 0x2D)));
 
+	// Light-blue colour applied to inline code spans (`...`).
+	// #9CDCFE matches VS Code Dark+'s variable/property colour and reads well on dark terminals.
+	private static readonly Ansi InlineCodeStyle = Ansi.Create(
+		foreground: StringExtensions.rgb(Color.FromArgb(0x9C, 0xDC, 0xFE)));
+
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
 	/// </summary>
@@ -178,6 +183,18 @@ public class RecursiveMarkdownRenderer
 			if (colored is not null) return MModule.markupSingle2(CodeBackgroundStyle, colored);
 		}
 
+		// Apply background styling to unlabeled fenced code blocks so they are visually
+		// distinct from regular prose, consistent with labelled code blocks.
+		if (code is FencedCodeBlock fencedPlain && string.IsNullOrWhiteSpace(fencedPlain.Info))
+		{
+			var bgLines = fencedPlain.Lines.Lines?
+				.Where(line => line.Slice.Text != null)
+				.Select(line => MModule.single(line.Slice.ToString()))
+				.ToList() ?? new List<MString>();
+			if (bgLines.Count == 0) return MModule.empty();
+			return MModule.markupSingle2(CodeBackgroundStyle, AlignAllCodeLines(bgLines));
+		}
+
 		var lines = code.Lines.Lines?
 			.Where(line => line.Slice.Text != null)
 			.Select(line => MModule.single("  " + line.Slice.ToString()))
@@ -187,27 +204,31 @@ public class RecursiveMarkdownRenderer
 	}
 
 	/// <summary>
-	/// Lays out a single code line using <c>align()</c>:
+	/// Lays out all code lines at once using <c>align()</c>:
 	/// a 1-wide left-gutter column plus a 1-char column separator gives the standard
 	/// 2-char indent, while the content column is padded with spaces to fill the
 	/// remaining render width so that the background colour spans the full terminal line.
+	/// All rows are handled in a single call — <c>align()</c> splits on <c>\n</c> internally,
+	/// so there is no need to iterate line-by-line in the caller.
 	/// </summary>
-	private MString AlignCodeLine(MString lineContent)
+	private MString AlignAllCodeLines(IEnumerable<MString> lineContents)
 	{
 		var contentWidth = Math.Max(1, _maxWidth - 2); // 1 (gutter col) + 1 (separator)
+		var allContent = MModule.multipleWithDelimiter(MModule.single("\n"), lineContents);
 		return SharpMUSH.MarkupString.TextAlignerModule.align(
 			$"1 <{contentWidth}",
-			[MModule.empty(), lineContent],
+			[MModule.empty(), allContent],
 			MModule.single(" "),    // filler = space
 			MModule.single(" "),    // column separator = 1 space → total 2-char indent
-			MModule.single("\n")    // row separator = newline (standard align behaviour; used when a long line wraps)
+			MModule.single("\n")    // row separator used when a long line wraps
 		);
 	}
 
 	/// <summary>
 	/// Attempts to render a fenced code block using ColorCode.Core for ANSI syntax colouring.
 	/// Returns <c>null</c> if the language is not recognised.
-	/// Each source line is colourised independently then laid out via <see cref="AlignCodeLine"/>.
+	/// Each source line is colourised independently; all colourised lines are then laid out
+	/// via a single <see cref="AlignAllCodeLines"/> call.
 	/// </summary>
 	private MString? TryRenderColorCodeBlock(FencedCodeBlock code)
 	{
@@ -221,15 +242,15 @@ public class RecursiveMarkdownRenderer
 
 		if (sourceLines.Count == 0) return MModule.empty();
 
-		var renderedLines = sourceLines.Select(line =>
+		var coloredLines = sourceLines.Select(line =>
 		{
 			var parts = new List<MString>();
 			ColorCodeParser.Value.Parse(line, language, (text, scopes) =>
 				WriteColorCodeScopes(text, scopes, parts));
-			return AlignCodeLine(MModule.multiple(parts));
-		}).ToList();
+			return MModule.multiple(parts);
+		});
 
-		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedLines);
+		return AlignAllCodeLines(coloredLines);
 	}
 
 	/// <summary>
@@ -316,8 +337,8 @@ public class RecursiveMarkdownRenderer
 
 	/// <summary>
 	/// Renders a <c>sharp</c>-tagged fenced code block with MUSH semantic token colours.
-	/// Each source line is tokenised independently so that multi-line code blocks
-	/// are handled safely regardless of parser line-tracking behaviour.
+	/// Each source line is colourised independently; all colourised lines are then laid out
+	/// via a single <see cref="AlignAllCodeLines"/> call.
 	/// </summary>
 	private MString RenderSharpCodeBlock(FencedCodeBlock code)
 	{
@@ -329,13 +350,13 @@ public class RecursiveMarkdownRenderer
 		if (sourceLines.Count == 0)
 			return MModule.empty();
 
-		var renderedLines = sourceLines.Select(RenderSharpLine).ToList();
-		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedLines);
+		return AlignAllCodeLines(sourceLines.Select(BuildSharpLineContent));
 	}
 
 	/// <summary>
-	/// Applies MUSH semantic token colours to a single source line, then lays it out
-	/// via <see cref="AlignCodeLine"/> so the background fills the full render width.
+	/// Applies MUSH semantic token colours to a single source line and returns the colourised
+	/// <see cref="MString"/> without any layout/alignment applied.
+	/// Layout for the whole block is handled by a single <see cref="AlignAllCodeLines"/> call.
 	/// </summary>
 	/// <remarks>
 	/// Parse type is auto-detected: lines whose first non-whitespace character is
@@ -343,7 +364,7 @@ public class RecursiveMarkdownRenderer
 	/// command-list lines and are passed to the parser as <see cref="ParseType.CommandList"/>;
 	/// everything else is treated as a function expression (<see cref="ParseType.Function"/>).
 	/// </remarks>
-	private MString RenderSharpLine(string line)
+	private MString BuildSharpLineContent(string line)
 	{
 		var trimmed = line.TrimStart();
 		var parseType = trimmed.Length > 0 && (trimmed[0] == '&' || trimmed[0] == '@' || trimmed[0] == '$')
@@ -356,7 +377,7 @@ public class RecursiveMarkdownRenderer
 			.ToList();
 
 		if (sortedTokens.Count == 0)
-			return AlignCodeLine(MModule.single(line));
+			return MModule.single(line);
 
 		var parts = new List<MString>();
 		foreach (var token in sortedTokens)
@@ -366,7 +387,7 @@ public class RecursiveMarkdownRenderer
 				? MModule.single(token.Text)
 				: MModule.markupSingle(style, token.Text));
 		}
-		return AlignCodeLine(MModule.multiple(parts));
+		return MModule.multiple(parts);
 	}
 
 	private MString RenderList(ListBlock list)
@@ -460,6 +481,60 @@ public class RecursiveMarkdownRenderer
 		{
 			columnWidths[col] = allRows.Max(r => col < r.Cells.Count ? r.Cells[col].ToPlainText().Length : 0);
 			columnWidths[col] = Math.Max(columnWidths[col], 3);
+		}
+
+		// When all header cells are empty the table is decorative (e.g. the COMMANDS list).
+		// Render it without borders or separator lines: just nicely-spaced columns.
+		var headerRows = allRows.Where(r => r.IsHeader).ToList();
+		var hasEmptyHeaders = headerRows.Count > 0 &&
+			headerRows.All(r => r.Cells.All(c => string.IsNullOrWhiteSpace(c.ToPlainText())));
+
+		if (hasEmptyHeaders)
+		{
+			// For borderless tables use the full available width split evenly across columns.
+			// Column separator is 2 spaces; no pipe characters.
+			const int BORDERLESS_SEP_WIDTH = 2;
+			var borderlessAvailable = _maxWidth - (columnCount - 1) * BORDERLESS_SEP_WIDTH;
+			var totalBorderlessWidth = columnWidths.Sum();
+
+			if (totalBorderlessWidth > borderlessAvailable && borderlessAvailable > columnCount * 3)
+			{
+				for (int col = 0; col < columnCount; col++)
+				{
+					var proportion = (double)columnWidths[col] / totalBorderlessWidth;
+					columnWidths[col] = Math.Max(3, (int)(borderlessAvailable * proportion));
+				}
+			}
+			else if (totalBorderlessWidth < borderlessAvailable)
+			{
+				var extraSpace = borderlessAvailable - totalBorderlessWidth;
+				for (int col = 0; col < columnCount; col++)
+				{
+					var proportion = (double)columnWidths[col] / totalBorderlessWidth;
+					columnWidths[col] += (int)(extraSpace * proportion);
+				}
+			}
+
+			var borderlessSpecs = new StringBuilder();
+			for (int col = 0; col < columnCount; col++)
+			{
+				if (col > 0) borderlessSpecs.Append(' ');
+				borderlessSpecs.Append('<');
+				borderlessSpecs.Append(columnWidths[col]);
+			}
+
+			var borderlessRows = allRows
+				.Where(r => !r.IsHeader)
+				.Select(r => SharpMUSH.MarkupString.TextAlignerModule.align(
+					borderlessSpecs.ToString(),
+					r.Cells,
+					MModule.single(" "),
+					MModule.single("  "),
+					MModule.single("")
+				))
+				.ToList();
+
+			return MModule.multipleWithDelimiter(MModule.single("\n"), borderlessRows);
 		}
 
 		// Fit table to available width by distributing space across columns
@@ -577,6 +652,30 @@ public class RecursiveMarkdownRenderer
 		var parts = new List<MString>();
 		while (inline != null)
 		{
+			// Markdig splits an unresolved shortcut reference link like [topic] into two adjacent
+			// LiteralInlines: one containing "[" and one containing "topic]...rest of text".
+			// Detect this pattern and emit an ANSI OSC 8 hyperlink with URL "help <topic>".
+			if (inline is LiteralInline bracketLit && bracketLit.Content.ToString() == "[")
+			{
+				var next = inline.NextSibling;
+				if (next is LiteralInline nextLit)
+				{
+					var nextText = nextLit.Content.ToString();
+					var closingBracket = nextText.IndexOf(']');
+					if (closingBracket > 0)  // non-empty topic between [ and ]
+					{
+						var topic = nextText.AsSpan(0, closingBracket).ToString();
+						var remainder = nextText.AsSpan(closingBracket + 1).ToString();
+						var linkMarkup = Ansi.Create(linkUrl: FSharpOption<string>.Some("help " + topic));
+						parts.Add(MModule.markupSingle(linkMarkup, topic));
+						if (!string.IsNullOrEmpty(remainder))
+							parts.Add(MModule.single(remainder));
+						inline = next.NextSibling;
+						continue;
+					}
+				}
+			}
+
 			var rendered = Render(inline);
 			if (rendered.Length > 0)
 			{
@@ -657,7 +756,7 @@ public class RecursiveMarkdownRenderer
 	/// </summary>
 	protected virtual MString RenderInlineCode(CodeInline code)
 	{
-		return MModule.single(code.Content);
+		return MModule.markupSingle(InlineCodeStyle, code.Content);
 	}
 
 	private MString RenderLineBreak()
