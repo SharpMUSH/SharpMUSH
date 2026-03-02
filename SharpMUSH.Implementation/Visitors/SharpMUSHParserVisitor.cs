@@ -1659,7 +1659,7 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				foreach (var argument in argCallState.Arguments!)
+				foreach (var argument in argCallState.Arguments ?? [])
 				{
 					// This is done to avoid allocation with ValueTask.
 					arguments.Add((await prs.FunctionParse(argument))!);

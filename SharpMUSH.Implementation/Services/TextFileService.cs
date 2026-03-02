@@ -282,44 +282,31 @@ public class TextFileService : ITextFileService
 		_logger.LogDebug("Indexed category {Category}: {Count} entries", category, categoryIndex.Count);
 	}
 
-	private async Task IndexMarkdownFileAsync(string filePath, Dictionary<string, IndexEntry> index)
+	private Task IndexMarkdownFileAsync(string filePath, Dictionary<string, IndexEntry> index)
 	{
 		var fileInfo = new FileInfo(filePath);
-		var result = Helpfiles.IndexMarkdown(fileInfo);
+		var result = Helpfiles.IndexMarkdownPositions(fileInfo);
 
 		if (result.IsT1)
 		{
 			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsT1.Value);
-			return;
+			return Task.CompletedTask;
 		}
 
 		var entries = result.AsT0;
-		var content = await File.ReadAllTextAsync(filePath);
 
-		foreach (var (entryName, entryContent) in entries)
+		foreach (var (entryName, positions) in entries)
 		{
-			// For markdown files, find the position of the header
-			var headerPattern = $"# {Regex.Escape(entryName)}";
-			var match = Regex.Match(content, headerPattern, RegexOptions.Multiline | RegexOptions.IgnoreCase);
-
-			if (match.Success)
-			{
-				var startPos = match.Index;
-				// Find next header or end of file
-				var nextHeaderMatch = Regex.Match(content.Substring(startPos + match.Length), @"^# ", RegexOptions.Multiline);
-				var endPos = nextHeaderMatch.Success
-					? startPos + match.Length + nextHeaderMatch.Index
-					: content.Length;
-
-				var entry = new IndexEntry(
-					filePath,
-					startPos,
-					endPos,
-					entryName
-				);
-				index[entryName] = entry;
-			}
+			var entry = new IndexEntry(
+				filePath,
+				positions.Start,
+				positions.End,
+				entryName
+			);
+			index[entryName] = entry;
 		}
+
+		return Task.CompletedTask;
 	}
 
 	private async Task<string> ReadEntryFromFileAsync(IndexEntry entry)

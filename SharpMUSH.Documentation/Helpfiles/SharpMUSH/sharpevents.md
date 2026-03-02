@@ -1,5 +1,4 @@
 # EVENTS
-
 # EVENT
 SharpMUSH Events are hardcoded events that may or may not be caused by players. The Event system lets administrators designate an object as an event handler (using the "event_handler" config option). The event_handler object will then have attributes triggered, with arguments, on specified events.
 
