@@ -298,6 +298,8 @@ public class TextFileService : ITextFileService
 
 		foreach (var (entryName, entryContent) in entries)
 		{
+			// StartPosition/EndPosition are unused when CachedContent is set;
+			// ReadEntryFromFileAsync returns CachedContent directly.
 			var entry = new IndexEntry(
 				filePath,
 				StartPosition: 0,
