@@ -249,17 +249,15 @@ The look command lets you examine your surroundings.
 	}
 
 	[Test]
-	public async Task AliasesWithBlankLinesBetweenHeadersHaveContent()
+	public async Task ConsecutiveAliasHeadersHaveContent()
 	{
 		var currentDirectory = Directory.GetCurrentDirectory();
-		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelpBlankLineAliases.md");
+		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelpConsecutiveAliases.md");
 
-		// Simulates the pattern from real help files where aliases have blank lines between headers.
+		// Consecutive alias headers (no blank lines between them) share the same content block.
 		// This mirrors the "Getting Started"/"GS"/"Walkthrough" pattern in sharptop.md.
 		var testContent = @"# Getting Started
-
 # GS
-
 # Walkthrough
   This helpfile is a quick walkthrough of some of SharpMUSH's standard systems.
 
@@ -432,6 +430,103 @@ Existing games which have softcoded 'who' commands.
 		var who = helpfiles.FindEntry("WHO");
 		await Assert.That(who).IsNotNull();
 		await Assert.That(who!).Contains("WHO command");
+	}
+
+	[Test]
+	public async Task PositionBasedIndexingReturnsCorrectContentForAliases()
+	{
+		var currentDirectory = Directory.GetCurrentDirectory();
+		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelpPositions.md");
+
+		// Consecutive alias headers share the same byte range.
+		var testContent = "# WHO\n# DOING\n`WHO [<pattern>]`\n\nFor mortals, the WHO command displays players.\n\n# WHO2\nSoftcoded who commands.\n";
+		await File.WriteAllTextAsync(testFilePath, testContent);
+
+		try
+		{
+			var fileInfo = new FileInfo(testFilePath);
+			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
+
+			await Assert.That(maybePositions.IsT0).IsTrue();
+
+			var positions = maybePositions.AsT0;
+
+			await Assert.That(positions).ContainsKey("WHO");
+			await Assert.That(positions).ContainsKey("DOING");
+			await Assert.That(positions).ContainsKey("WHO2");
+
+			// WHO and DOING should share the same byte range (aliases).
+			await Assert.That(positions["WHO"].Start).IsEqualTo(positions["DOING"].Start);
+			await Assert.That(positions["WHO"].End).IsEqualTo(positions["DOING"].End);
+
+			// WHO2 should have a different range.
+			await Assert.That(positions["WHO2"].Start).IsNotEqualTo(positions["WHO"].Start);
+
+			// Verify the byte ranges produce correct content when read from file.
+			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
+
+			var whoStart = (int)positions["WHO"].Start;
+			var whoEnd = (int)positions["WHO"].End;
+			var whoContent = System.Text.Encoding.UTF8.GetString(fileBytes, whoStart, whoEnd - whoStart);
+			await Assert.That(whoContent).Contains("# WHO");
+			await Assert.That(whoContent).Contains("displays players");
+
+			var who2Start = (int)positions["WHO2"].Start;
+			var who2End = (int)positions["WHO2"].End;
+			var who2Content = System.Text.Encoding.UTF8.GetString(fileBytes, who2Start, who2End - who2Start);
+			await Assert.That(who2Content).Contains("# WHO2");
+			await Assert.That(who2Content).Contains("Softcoded");
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+			{
+				File.Delete(testFilePath);
+			}
+		}
+	}
+
+	[Test]
+	public async Task PositionBasedIndexingHandlesMultipleAliasGroups()
+	{
+		var currentDirectory = Directory.GetCurrentDirectory();
+		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelpMultiAlias.md");
+
+		var testContent = "# FUNCTIONS2\n  There are two types.\n\n# FUNCTION LIST\n# FUNCTION TYPES\n  Several variants available.\n\n# Attribute functions\n  These access attributes.\n";
+		await File.WriteAllTextAsync(testFilePath, testContent);
+
+		try
+		{
+			var fileInfo = new FileInfo(testFilePath);
+			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
+
+			await Assert.That(maybePositions.IsT0).IsTrue();
+
+			var positions = maybePositions.AsT0;
+
+			// FUNCTION LIST and FUNCTION TYPES share the same range.
+			await Assert.That(positions["FUNCTION LIST"].Start).IsEqualTo(positions["FUNCTION TYPES"].Start);
+			await Assert.That(positions["FUNCTION LIST"].End).IsEqualTo(positions["FUNCTION TYPES"].End);
+
+			// FUNCTIONS2 has its own range.
+			await Assert.That(positions["FUNCTIONS2"].Start).IsNotEqualTo(positions["FUNCTION LIST"].Start);
+
+			// Verify content from byte positions.
+			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
+
+			var flStart = (int)positions["FUNCTION LIST"].Start;
+			var flEnd = (int)positions["FUNCTION LIST"].End;
+			var flContent = System.Text.Encoding.UTF8.GetString(fileBytes, flStart, flEnd - flStart);
+			await Assert.That(flContent).Contains("# FUNCTION LIST");
+			await Assert.That(flContent).Contains("Several variants");
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+			{
+				File.Delete(testFilePath);
+			}
+		}
 	}
 
 	private static string? FindHelpfilesDirectory()

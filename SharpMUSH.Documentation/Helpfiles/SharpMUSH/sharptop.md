@@ -20,9 +20,7 @@ This is the index to the MUSH online help files.
   If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
 
 # help search
-
 # help/search
-
 # helpfile
   `help <textname>`
   `help <namepattern>`
@@ -60,7 +58,6 @@ This is the index to the MUSH online help files.
 - [textsearch()]
 
 # helpfile2
-
 # help query
   Displays help entries that match `<pattern>` using an advanced full text search. If the /brief switch is given, only shows the names of matching entries. Without it, also shows a fragment of the entry with matches underlined.
 
@@ -108,9 +105,7 @@ This is the index to the MUSH online help files.
 - [Getting Started]
 
 # Getting Started
-
 # GS
-
 # Walkthrough
   This helpfile is a quick walkthrough of some of SharpMUSH's standard systems. It uses the same syntax as the other helpfiles; if you're not familiar with the syntax of the SharpMUSH helpfiles, please read [newbie] first, as it's explained there.
 
@@ -199,7 +194,6 @@ This is the index to the MUSH online help files.
 - [@emit]
 
 # GS CHAT
-
 # GS CHANNELS
   SharpMUSH has a built-in channel system, which allows you to talk with players who are on the same channels as you, even if you're in different rooms.
 
@@ -352,11 +346,8 @@ For a list of all topics, see [entries].
 - [ORPHAN]
 
 # ANONYMOUS ATTRIBUTES
-
 # LAMBDA
-
 # #LAMBDA
-
 # #APPLY
   In many cases where a function expects a object/attribute pair that refers to an attribute to evaluate, you can use the form
 
@@ -375,9 +366,7 @@ For a list of all topics, see [entries].
   See [ANONYMOUS2]
 
 # ANONYMOUS2
-
 # LAMBDA2
-
 # #LAMBDA2
   A typical usage of anonymous attributes would be to convert a list of dbrefs to names, as so:
 
@@ -403,9 +392,7 @@ For a list of all topics, see [entries].
   See [ANONYMOUS3]
 
 # ANONYMOUS3
-
 # LAMBDA3
-
 # #LAMBDA3
   You can also use `lit()` to avoid having the code evaluated twice, if needed. For example, this code, which returns all unlinked exits in a room:
 
@@ -422,11 +409,8 @@ For a list of all topics, see [entries].
   See [ANONYMOUS4]
 
 # ANONYMOUS4
-
 # LAMBDA4
-
 # #LAMBDA4
-
 # LAMBDA FUNCTIONS
   The following functions support anonymous attributes:
 
@@ -451,9 +435,7 @@ For a list of all topics, see [entries].
 - [ATTRIBUTES]
 
 # ATTRIBUTES
-
 # ATTRIBUTES LIST
-
 # ATTRIBUTE LIST
   Attributes with (*) after them are special, cannot be set by players, and may only be visible to wizards or admin. For those attributes, there is no @-command, so you can just type 'help `<attribute name>`' for help. For all other attributes, type 'help @`<attribute name>`' for help.
 
@@ -644,11 +626,8 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [license]
 
 # DATABASE
-
 # DBREFS
-
 # DBREF NUMBER
-
 # DBREF #
   You will find the term "dbref" or "dbref number" used frequently in these help files and in MUSHcode. It is an abbreviation of "database reference number".
 
@@ -681,7 +660,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [OBJIDS]
 
 # OBJIDS
-
 # OBJECT IDS
 
   When an object is destroyed, its dbref number will eventually be recycled and given to a newly created object. This can cause problems in code, particularly in database code which stores members of a group, as code which was meant to refer to the old object ends up referring to the new one by mistake.
@@ -697,7 +675,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [DBREFS]
 
 # DROP-TOS
-
 # DROPTOS
 
   When you use the `@link` command on a room, it sets another room or object as the DROP-TO location. By default, any non-STICKY object that someone drops in the room will automatically be transported to the drop-to location, rather than staying in the room. Any STICKY object dropped in the room will go to its home.
@@ -716,15 +693,10 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [@lock]
 
 # %#
-
 # %n
-
 # %k
-
 # %~
-
 # %:
-
 # ENACTOR
   The enactor is the object which causes something to happen. This is an important concept in MUSH, because the way many commands work will depend on who enters the command (ie, who the enactor is). Note that while the enactor is the object which -caused- code/a command to run, it is not necessarily the object which is running the code (that's the executor). Any type of object can be an enactor.
 
@@ -746,7 +718,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [DBREF]
 
 # %!
-
 # EXECUTOR
   The executor of a command is the object actually carrying out the command or running the code. This differs from the enactor, because the enactor is the object that sets off the command. In some cases, the enactor and the executor will be the same. The substitution %! evaluates to the dbref of the executor of the code.
 
@@ -770,7 +741,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [SUBSTITUTIONS]
 
 # %@
-
 # CALLER
   The caller is the object which causes an attribute to be evaluated (for instance, by using `ufun()` or a similar function). The substitution %@ evaluates to the caller's dbref. It's particularly useful for functions with side-effects, to check that the object evaluating the function has permission.
 
@@ -874,7 +844,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   ** `@haven` or `@away` will also be shown on failure to "page", if set
 
 # GENDER
-
 # SEX
   Gender on a MUSH is entirely up to you. You can set yourself (or any of your objects) to be male, female, neuter, or plural. If whatever is in the SEX attribute is not recognizable, the MUSH will assume the object is neuter. Setting a gender attribute will enable pronoun substitution by the MUSH. The SEX attribute is visual to anyone who wants to see it.
 
@@ -886,7 +855,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [SUBSTITUTION]
 
 # GLOBALS
-
 # GLOBAL COMMANDS
   A command is "global" if it can be used anywhere in the world of the MUSH. The standard/built-in MUSH commands are all global, so this term is usually used to refer to user-defined commands on objects in the Master Room of the MUSH. Global commands very greatly from MUSH to MUSH, but you can usually find MUSH-specific help on them by typing "`+help`".
 
@@ -908,7 +876,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [MATCHING]
 
 # HOMES
-
 # HOME
   Every thing or player has a home, which is usually the room where it was created. You can reset your home or the home of any object you own with the `@link` command: `@link` [me | `<object>`]=`<location>`. You must also control `<location>`, unless that location (room or thing) is set ABODE or LINK_OK.
 
@@ -975,9 +942,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 # LAST
 # LASTLOGOUT
-
 # LAST
-
 # LASTLOGOUT
   LAST and LASTLOGOUT
 
@@ -988,7 +953,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [LASTSITE]
 
 # LASTSITE
-
 # LASTIP
   LASTSITE and LASTIP
 
@@ -1027,9 +991,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   See [listening2]
 
 # ^
-
 # ^-LISTENS
-
 # LISTENING2
   If you need an object to "listen" for more than one pattern, you can also use ^-patterns. These work similar to user-defined commands, using ^ instead of $. An object must be set MONITOR to have ^-patterns activated.
 
@@ -1187,7 +1149,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [MONIKER]
 
 # MUSHCODE
-
 # SOFTCODE
 
   MUSHcode is the programming language available within the MUSH itself with which you can create user-defined commands and macros. It is sometimes called "softcode" to distinguish it from "hardcode", which is the language that the source code for the MUSH server is written in. (Incidentally, hardcode is written in the C programming language.)
@@ -1235,9 +1196,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [ATTRIBUTE FLAGS]
 
 # PARENT
-
 # PARENTS
-
 # OBJECT PARENTS
 
   Objects may have "parent" objects, from which they can inherit attributes. Once an object is given a parent, it may use the attributes on the parent just as if the attributes were on the object itself, including checking for `$-commands`. Use the `@parent` command to change the parent of an object.
@@ -1398,7 +1357,6 @@ See [queue2]
 - [No_Quota Power]
 
 # REGEXP
-
 # REGEXPS
   (This help text is largely from TinyMUSH 2.2.4, with permission)
 
@@ -1712,7 +1670,6 @@ See [queue2]
   This allows you to use one object to control many different things -- for example, fights in a turn-based combat sytem.
 
 # SETTING-ATTRIBUTES
-
 # SETTING ATTRIBUTES
   Standard attributes are set using @`<attrib>` `<obj>`=`<value>`
   Nonstandard attributes are set using &`<attrib>` `<obj>`=`<value>`
@@ -1774,13 +1731,9 @@ See [queue2]
 - [string functions]
 
 # %
-
 # %b
-
 # %t
-
 # %%
-
 # SUBSTITUTIONS
   The % symbol is used in MUSH commands to indicate a substitution -- some other character(s) or words are substituted for whatever follows the % symbol. Some common substitutions are:
 
@@ -1800,13 +1753,9 @@ See [queue2]
   See [substitutions2]
 
 # SUBSTITUTIONS2
-
 # %2
-
 # %v
-
 # %w
-
 # %x
   If the ENACTOR's gender is set, you can use these substitutions to get the
   right pronoun for him/her:
@@ -1825,19 +1774,12 @@ See [queue2]
   See [substitutions3]
 
 # SUBSTITUTIONS3
-
 # %3
-
 # %L
-
 # %c
-
 # %u
-
 # %?
-
 # %=
-
 # %+
   Other substitutions:
     %0-%9   = the contents of the REGISTERS 0-9, respectively
@@ -1865,7 +1807,6 @@ See [queue2]
 - [v()]
 
 # SUBSTITUTIONS4
-
 # %4
 
   Example:
@@ -1919,9 +1860,7 @@ See [queue2]
   (If you are looking for information on `@switch`, see [`@switch`].)
 
 # TYPES OF OBJECTS
-
 # TYPES
-
 # OBJECTS
   Everything on a MUSH is an object in the MUSH database. There are four main types of objects: players, things (once called 'objects'), rooms and exits. You can see the type of an object when you 'examine' it, or with the `type()` function.
 
@@ -2003,9 +1942,7 @@ See [queue2]
 - [@stats]
 
 # $-COMMANDS
-
 # MACROS
-
 # USER-DEFINED COMMANDS
   User-defined commands can be created by setting `$-commands` on players, things, and rooms. Exits are not checked for `$-commands`. To set a `$-command`:
 
@@ -2025,9 +1962,7 @@ See [queue2]
   See [user-defined2]
 
 # $-COMMANDS2
-
 # MACROS2
-
 # USER-DEFINED2
   Any number of wildcards, * and ?, may be in present in `<command pattern>`. A * matches any number of characters (including none), and ? matches exactly one character. When the action list is executed, the values on the stack in %0-%9 and v(10)-v(29) are the portions of what the user types that match the first 30 *'s or ?'s. You can also match a regular expression rather than wildcards by setting the REGEXP attribute flag on `<attribute>`; see [regexps] for details. When using named regexp captures, the named arguments can be accessed via r(`<name>`, args).
 
@@ -2062,9 +1997,7 @@ See [queue2]
   See [verbs2]
 
 # VERBS2
-
 # NONAME
-
 # NOSPACE
   Normally, the enactor's name and a space are prepended to the 'overb' and 'oxverb' attributes automatically. The NOSPACE attribute flag prevents a space being placed between the name and attribute value, and the NONAME attribute flag stops the name being added at all.
 
@@ -2127,11 +2060,8 @@ See [queue2]
   You can exclude warnings from a larger list by using !`<warning>` after the larger list. For example: `@warnings` me=all !exit-oneway
 
 # WILDCARDS
-
 # *
-
 # ?
-
 # **
   SharpMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
 
@@ -2170,7 +2100,6 @@ See [queue2]
 - [REGISTERS]
 
 # ZONE MASTER ROOMS
-
 # ZMRs
 
   Zone Master Rooms are a subset of zones. If a room is used as a zone, it is called a Zone Master Room (ZMR). ZMRs are like local "master" rooms; exits in the ZMR are global to that zone, and `$-commands` on objects in the ZMR are global to that zone (`$-commands` on the ZMR itself, like `$-commands` on the master room, are ignored). If a ZMR is a player's personal zone, objects in the ZMR are checked for commands that the player can use anywhere (but exits are not checked unless the player is in a zoned room).
@@ -2184,9 +2113,7 @@ See [queue2]
 - [EVALUATION]
 
 # ZONE MASTERS
-
 # ZMPs
-
 # SHARED PLAYERS
   SHARED PLAYERS
 
@@ -2212,15 +2139,10 @@ See [queue2]
 - [ZMO]
 
 # ZONES
-
 # ZONE OBJECTS
-
 # ZONE MASTER OBJECTS
-
 # ZONE MASTER THINGS
-
 # ZMOs
-
 # ZMTs
   Zones are areas of the MUSH that can have the same user-defined commands without having to `@parent` every object in the zone or make the commands MUSH-wide globals.
 
@@ -2332,7 +2254,6 @@ This is the AHELP index.
 - [@lock]
 
 # DESCRIPTOR
-
 # PORT
   A descriptor (also called a port or socket descriptor) is a unique (though reusable) number assigned to each connection to the MUSH. The descriptor for each connection is shown on the Wizard WHO in the 'Des' column.
 

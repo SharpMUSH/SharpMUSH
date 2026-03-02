@@ -1,11 +1,7 @@
 # HTTP
-
 # http_handler
-
 # http_per_second
-
 # @config http_per_second
-
 # @config http_handler
 If http_handler `@config` is a dbref of a valid player, SharpMUSH will support HTTP requests reaching its mush port. It is very low level, and a little tricky to understand.
 
@@ -69,9 +65,7 @@ HTTP Responses are limited to BUFFER_LEN in response size. Anything sent to the 
 - [urldecode()]
 
 # @RESPOND
-
 # @RESPOND/TYPE
-
 # @RESPOND/HEADER
 
 `@respond <code> <text>`

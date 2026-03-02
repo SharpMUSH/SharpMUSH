@@ -17,8 +17,7 @@ public record IndexEntry(
 	string FilePath,
 	long StartPosition,
 	long EndPosition,
-	string EntryName,
-	string? CachedContent = null
+	string EntryName
 );
 
 public class TextFileService : ITextFileService
@@ -286,7 +285,7 @@ public class TextFileService : ITextFileService
 	private Task IndexMarkdownFileAsync(string filePath, Dictionary<string, IndexEntry> index)
 	{
 		var fileInfo = new FileInfo(filePath);
-		var result = Helpfiles.IndexMarkdown(fileInfo);
+		var result = Helpfiles.IndexMarkdownPositions(fileInfo);
 
 		if (result.IsT1)
 		{
@@ -296,16 +295,13 @@ public class TextFileService : ITextFileService
 
 		var entries = result.AsT0;
 
-		foreach (var (entryName, entryContent) in entries)
+		foreach (var (entryName, positions) in entries)
 		{
-			// StartPosition/EndPosition are unused when CachedContent is set;
-			// ReadEntryFromFileAsync returns CachedContent directly.
 			var entry = new IndexEntry(
 				filePath,
-				StartPosition: 0,
-				EndPosition: 0,
-				entryName,
-				CachedContent: entryContent
+				positions.Start,
+				positions.End,
+				entryName
 			);
 			index[entryName] = entry;
 		}
@@ -315,11 +311,6 @@ public class TextFileService : ITextFileService
 
 	private async Task<string> ReadEntryFromFileAsync(IndexEntry entry)
 	{
-		if (entry.CachedContent != null)
-		{
-			return entry.CachedContent;
-		}
-
 		var length = (int)(entry.EndPosition - entry.StartPosition);
 		var buffer = ArrayPool<byte>.Shared.Rent(length);
 
