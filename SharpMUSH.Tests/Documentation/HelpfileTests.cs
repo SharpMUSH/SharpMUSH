@@ -74,7 +74,7 @@ public class HelpfileTests
 		pipeline.Setup(renderer);
 
 		var markdown = "# Header1 *Bolded*\nNewline?";
-		var headerStyle = MarkupImplementation.AnsiMarkup.Create(underlined: true, bold: true);
+		var headerStyle = MarkupImplementation.AnsiMarkup.Create(foreground: StringExtensions.rgb(Color.White), underlined: true, bold: true);
 		var boldStyle = MarkupImplementation.AnsiMarkup.Create(bold: true, foreground: StringExtensions.rgb(Color.White));
 
 		var header = MModule.markupMultiple(headerStyle,
