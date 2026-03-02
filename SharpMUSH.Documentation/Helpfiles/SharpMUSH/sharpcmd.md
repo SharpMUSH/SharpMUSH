@@ -96,22 +96,22 @@ These '@' commands are only usable by wizards or privileged players:
 # ]
 "]" is a special prefix which can be used before any command. It instructs the MUSH that it shouldn't evaluate the arguments to the command (similar to the "/noeval" switch available on some commands). For example:
 
-```
+```sharp
 > say [add(1,1)]
 You say, "2"
 ```
 
-```
+```sharp
 > say \[add(1,1)\]
 You say, "[add(1,1)]"
 ```
 
-```
+```sharp
 > ]say [add(1,1)]
 You say, "[add(1,1)]"
 ```
 
-```
+```sharp
 > ]"[add(1,1)]
 You say, "[add(1,1)]"
 ```
@@ -130,24 +130,24 @@ See []2] for more examples.
 # ]2
 Using ']' with $-commands:
 
-```
+```sharp
 > &test Tester=$test *: @pemit %#=I got: %0
 ```
 
 Normal evaluation:
-```
+```sharp
 > test My name is %n.
 I got: My name is Wiggles.
 ```
 
 Preventing the user input from being evaluated:
-```
+```sharp
 > ]test My name is %n.
 I got: My name is %n.
 ```
 
 Preventing evaluation of code inside the $-command:
-```
+```sharp
 > &test Tester=$test *: ]@pemit %#=I got: %0
 > test My name is %n.
 I got: %0
@@ -168,8 +168,8 @@ In order for debug to be shown for triggered $-commands, you must either control
 
 The "@@" command does nothing; it does not evaluate its input or show any messages to the executor. It can be used for commenting code.
 
-Example:
-```
+### Example
+```sharp
 > @va me=$testing: @emit Test ; @@ Just a test ; @vb me=Testing
 ```
 
@@ -199,8 +199,8 @@ Note that long and spammy @aconnect messages, whether in your room or on a chann
 One argument is passed to @aconnect:
 %1 = number of player connections (1 if this is an initial connect)
 
-Example:
-```
+### Example
+```sharp
 > @aconnect me=+who ; +bbscan
 ```
 
@@ -224,8 +224,8 @@ Sets the actions to be taken by `<object>` whenever it receives @mail. Admin-onl
 
 These attributes contain the message shown to others in the enactor's location when he looks at `<object>`, and the actions to be taken by `<object>` when someone looks at it. (See [@describe] for the attribute shown to the enactor when he looks at `<object>`.) When the enactor is inside `<object>`, the @oidescribe and @aidescribe attributes will be used instead, if set. Please note that using these attributes to show long messages is often found annoying.
 
-Examples:
-```
+### Examples
+```sharp
 > @odescribe Walker=glances at Walker and sniggers.
 > @adescribe me=think %n just looked at you.
 ```
@@ -260,8 +260,8 @@ Several arguments are passed to @adisconnect:
 %4 = commands issued by the disconnecting descriptor
 %5 = 1 if the descriptor was hidden on disconnect, 0 otherwise
 
-Example:
-```
+### Example
+```sharp
 > @adisconnect me = home
 ```
 
@@ -284,13 +284,13 @@ When `<object>` is a player or thing, the @drop attribute is shown to whoever dr
 
 When `<object>` is an exit, @drop is shown to objects going through `<object>`, and @odrop is shown to objects in the exit's destination. @adrop is triggered when someone passes through the exit.
 
-Example:
-```
+### Example
+```sharp
 > @drop Box=You put the box down gently.
 > @odrop Box=puts the box down gently.
 ```
 
-```
+```sharp
 > @odrop South=arrives from the North.
 ```
 
@@ -475,8 +475,8 @@ These attributes contain the message shown to `<object>` immediately after it mo
 
 The `<object>`'s new location is in %0 and the old location it moved from in %1.
 
-Example:
-```
+### Example
+```sharp
 > @move me=You moved! You are now in the room: [name(here)].
 > @omove me=stalks into the room wearing a malevolent expression.
 > @oxmove me=stalks away, glaring.
@@ -501,8 +501,8 @@ These attributes contain the messages shown to someone who enters `<object>`, th
 
 The old location of the entering object is passed in %0, if `<object>` had permission to see it there.
 
-Example:
-```
+### Example
+```sharp
 > @enter Sofa=You sit on the comfy sofa.
 > @oenter Sofa=sits with you on the sofa.
 > @oxenter Sofa=sits down on the sofa. It looks comfy.
@@ -525,8 +525,8 @@ Example:
 
 These attributes contain the messages shown to someone who pays `<object>` pennies with the "give" command, the message shown to others when someone pays `<object>`, and the actions to be taken by `<object>` when it's paid. Each attribute is passed the number of pennies paid as %0.
 
-Example:
-```
+### Example
+```sharp
 > @payment Collecting Tin=Thank you for your donation!
 > @opayment Collecting Tin=makes a donation to charity.
 > @apayment Collecting Tin=&%# me=%0 at [time()]
@@ -553,8 +553,8 @@ These attributes contain the message shown to `<object>` when it is teleported, 
 
 In all of these attributes, %0 is the object which teleported `<object>`, and %1 is `<object>`'s old location.
 
-Example:
-```
+### Example
+```sharp
 > @tport me=name(%0) has teleported you from [name(%1)] to [name(here)].
 > @otport me=appears in a puff of smoke.
 > @oxtport me=disappears in a puff of smoke.
@@ -608,13 +608,13 @@ For exits, they contain the message shown to an object passing through the exit 
 
 In all cases, %0 is the dbref of the moving object's original location.
 
-Example:
-```
+### Example
+```sharp
 > @success Door=You open the door and step inside.
 > @osuccess Door=opens the door and steps inside.
 ```
 
-```
+```sharp
 > @success Box=You pick up the box.
 > @osuccess Box=picks up the box.
 ```
@@ -665,8 +665,8 @@ See [@attribute3].
 
 `@attribute/enum` lets you restrict all _new_ values for an attribute to match an item in a list. It will also perform partial matching on the list, much like a grab. Delimiter is optional, and defaults to a space.
 
-Examples:
-```
+### Examples
+```sharp
 @attribute/enum sex=male female   <-- requires 'male' or 'female' as @sex
 @attribute/enum | race=Wookie|Indy 500 <- Your race can be 'wookie' or 'Indy 500'
 @attribute/limit score=^\\d+$    <-- @score can only contain digits. (Remember, Penn's parser eats a \)
@@ -691,8 +691,8 @@ These attributes contain the message shown to someone who successfully uses `<ob
 
 Note that, if `<object>` has a CHARGES attribute set and it does not contain a number greater than 0, the RUNOUT attribute is triggered instead of the AUSE attribute. See [@charges] for more information.
 
-Example:
-```
+### Example
+```sharp
 > @use Jack-In-The-Box=You wind the handle.
 > @ouse Jack-In-The-Box=winds the handle.
 > @ause Jack-In-The-Box=@wait 3=POSE pops up with a bang!
@@ -711,8 +711,8 @@ Example:
 
 If `<message>` evaluates to something non-null, it will be shown to anyone who pages `<player>` when she is not connected.
 
-Example:
-```
+### Example
+```sharp
 > @away me=I'm not here, please send me @mail instead.
 ```
 
@@ -760,8 +760,8 @@ See [@break2] for examples.
 - [@if]
 # @break2
 # @assert2
-Examples:
-```
+### Examples
+```sharp
 > @va obj=$testme *: @pemit %#=You try a test ; @break lt(%0,10)=@pemit %#=But you're too low! ; @pemit %#=And you succeed!
 > testme 0
 You try a test
@@ -774,7 +774,7 @@ You try a test
 And you succeed!
 ```
 
-```
+```sharp
 > @force me={@switch 1=1, think Third; think First; @break 1; think Second}
 First
 Third
@@ -798,8 +798,8 @@ See [charges2] for an example.
 - [ACTION LISTS]
 # charges2
 # runout2
-Example:
-```
+### Example
+```sharp
 > @create Revolver
 > @use Revolver=You pull the trigger.
 > @ouse Revolver=pulls the trigger.
@@ -808,7 +808,7 @@ Example:
 > @runout Revolver=POSE clicks, but is out of bullets.
 ```
 
-```
+```sharp
 > use revolver
 You pull the trigger.
 Revolver fires into the air.
@@ -818,7 +818,7 @@ CHARGES [#6$]: 5
 
 The next 5 "use revolver"s work the same way, decrementing CHARGES each time.
 
-```
+```sharp
 > ex revolver/charges
 CHARGES [#6$]: 0
 > use revolver
@@ -837,8 +837,8 @@ Normally, @chown'ing an object clears privileged flags and powers, and sets the 
 
 If `/<attribute>` is specified, it acts as an alias for @atrchown; see [@atrchown] for details.
 
-Examples:
-```
+### Examples
+```sharp
 > @chown here=me (for a room)
 > @chown box=Soundwave (for a thing)
 ```
@@ -911,7 +911,7 @@ Normally, the Wizard and Royalty flags, @powers and @warnings are stripped from 
 The clone will normally be created with the first available dbref, but Wizards and objects with the pick_dbref power may specify the `<dbref>` of a garbage object to use that instead.
 
 To clone a room and all its exits, use code like:
-```
+```sharp
 > @teleport setq(0,%L)[clone(here)]
 > @dolist lexits(%q0)=@clone ##
 ```
@@ -970,8 +970,8 @@ See [@command3] for examples.
 - [RESTRICT]
 - [EVALUATION ORDER]
 # @command3
-Examples:
-```
+### Examples
+```sharp
 > @create Dining Machine
 > &eat dining=$eat *:@remit %L=%n takes a bite of %0.
 > @command/add/noparse eat
@@ -982,7 +982,7 @@ Walker takes a bite of meat loaf.
 Walker takes a bite of randword(apple tomato pear)
 ```
 
-```
+```sharp
 > &drink dining=$^drink(/noeval)? (.*)$:@remit %L=%n drinks %2.
 > @set dining/drink=regexp
 > @command/add drink
@@ -1021,14 +1021,14 @@ The dbrefs of the objects which would appear in the normal contents list are pas
 
 Q-registers (set via setq() and similar functions) are inherited from the @descformat, and passed on to the @exitformat.
 
-Examples:
+### Examples
 Show the normal contents list, but in upper-case:
-```
+```sharp
 > @conformat here=edit(ucstr(%1), |, %r)
 ```
 
 Show just the object names (with no ansi) in a table:
-```
+```sharp
 > @conformat here=table(iter(%0, name(%i0), %b, |), 20, width(%#), |)
 ```
 
@@ -1045,15 +1045,15 @@ Show just the object names (with no ansi) in a table:
 
 @include inserts the contents of the attribute provided into the action list in-place, without adding a new queue entry. It is useful to avoid having to copy the same code into multiple commands. The attribute to be included must be visible to the enactor.
 
-Example:
-```
+### Example
+```sharp
 &CHECKS me=@assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
 &CMD1 me=$cmd *: @include me/CHECKS; @pemit %#=You passed.
 &CMD2 me=$othercmd *: @include me/CHECKS; @@ Do something else...
 ```
 
 When including attribute contents, @include ignores any ^...: or $...: at the start, so the CHECKS attribute above could also be written like this, to allow for "unit testing":
-```
+```sharp
 &CHECKS me=$testchk *: @assert [orflags(%#,Wr)]; @break [gt(words(lwho()),%0)]
 ```
 
@@ -1076,8 +1076,8 @@ See [@include2].
 
 When set, this attribute is evaluated and displayed instead of the usual "You are carrying:" list of objects when `<object>` uses the "inventory" command. The list of objects that would normally appear in the inventory is passed as %0, and a list of the names as they would appear in the default display, |-delimited, is passed as %1.
 
-Example:
-```
+### Example
+```sharp
 > @invformat me=You're holding: [itemize(iter(%0, name(%i0), %b, |), |)]
 > inventory
 You're holding: Red Ball, Pickle, and Piano
@@ -1100,8 +1100,8 @@ This is primarily useful for room parents, to enforce a consistent look for all 
 
 Q-registers (set via setq() and similar functions) are inherited from the @nameformat, and passed on to the @conformat.
 
-Example:
-```
+### Example
+```sharp
 > @descformat Room Parent=repeat(=, width(%#))%r%0[repeat(=, width(%#))]
 ```
 
@@ -1124,8 +1124,8 @@ This is useful for things like object parents that enforce a consistent "look" f
 
 Q-registers (set via setq() and similar functions) are inherited from the @nameformat, and passed on to the @conformat.
 
-Example:
-```
+### Example
+```sharp
 > @idescribe Vehicle Parent=repeat(*, width(%#))%r%0
 ```
 
@@ -1162,9 +1162,9 @@ When set, this attribute is evaluated and displayed in place of `<object>`'s nam
 
 Q-registers (set via setq() and similar functions) are passed on from the nameformat to the other @*format attributes used for formatting "look" output. Use localize() if you don't want this behaviour.
 
-Example:
+### Example
 Show the room's zone after its name.
-```
+```sharp
 > @nameformat here = %1 [if(zone(%0),<[name(zone(%0))]>)]
 ```
 
@@ -1185,20 +1185,20 @@ The COST attribute contains the number of pennies that must be given to `<object
 
 This attribute is evaluated, with the amount being given passed as %0. If the attribute returns a number less than 0, the money will be refused. Non-players must have this attribute set in order to receive pennies. Players who don't have a COST always accept the amount of pennies given.
 
-Example:
-```
+### Example
+```sharp
 > @cost Exit Machine=10
 > @apay Exit Machine=@open %n-exit
 > @pay Exit Machine=Your exit has been created.
 ```
 
-```
+```sharp
 > give Exit Machine=10
 Your exit has been created.
 (The exit will also have been opened by the machine.)
 ```
 
-```
+```sharp
 > @cost charity=%0
 > @pay charity=Thanks for your donation of %0 [money(%0)].
 ```
@@ -1221,12 +1221,12 @@ Your exit has been created.
 
 Attribute flags are copied as well, unless the `/noflagcopy` switch is given. This is recommended when copying from a non-standard attribute to a standard one.
 
-Example:
-```
+### Example
+```sharp
 > @cpattr box/test=box/test1, cube/random, tribble/describe
 ```
 would check the object "box" for an attribute named TEST and then copy it to the attributes TEST1 on "box", RANDOM on the object named "cube", and DESCRIBE on the object named "tribble".
-```
+```sharp
 > @cpattr box/test=cube
 ```
 would copy the TEST attribute from "box" to TEST on "cube".
@@ -1276,7 +1276,7 @@ This is a wizard only command. It forces the database to perform a series of int
 All output lines are prefixed with `<prefix>`, if one is given. This is useful for creating client-side scripts for editing code.
 
 You can either @decompile an entire object, or just certain parts of it. To @decompile just a few attributes, for example, you could type:
-```
+```sharp
 @decompile <object>/<attribute pattern> [ ... <attribute patternN>]
 ```
 including each attribute. Attribute patterns can be wildcards.
@@ -1315,7 +1315,7 @@ In TinyFugue:
 ```
 
 In SimpleMU:
-```
+```sharp
 Set your Options -> Grab Password
 @set me=tfprefix:<grabpassword>FugueEdit >%b
 ```
@@ -1407,16 +1407,16 @@ Wizards and objects with the pick_dbref power can also specify the dbrefs of gar
 
 See [@dig2] for examples.
 # @dig2
-Examples:
-```
+### Examples
+```sharp
 > @dig Kitchen
 ```
 This command will create a new room named 'Kitchen'. You will be informed what the dbref of this room is.
-```
+```sharp
 > @dig Kitchen=Kitchen \<N\>;n;north;kitchen;k
 ```
 This will create the room as above, and also open an exit leading to it named `Kitchen \<N\>` with the aliases n, north, kitchen and k. It will NOT create an exit coming back from the Kitchen room.
-```
+```sharp
 > @dig Kitchen=Kitchen \<N\>;n;north;kitchen;k, Out \<S\>;s;south;out;o
 ```
 This will do just the same as the above, except it will also create an exit named `Out \<S\>` with the aliases s, south, out and o coming back from the kitchen to whatever room you are currently in.
@@ -1475,15 +1475,15 @@ See [@dolist3] for examples.
 - [SEMAPHORES]
 - [ACTION LISTS]
 # @dolist3
-Examples:
-```
+### Examples
+```sharp
 > @dolist a b c=say %i0 is number [inum(0)]
 You say, "a is number 1"
 You say, "b is number 2"
 You say, "c is number 3"
 ```
 
-```
+```sharp
 > &test me=$test: say Starting ; @wait me={say Done} ;
                   @dolist/notify a b c=say %i0 is [inum(0)]
 > test
@@ -1495,7 +1495,7 @@ Notified.
 You say, "Done"
 ```
 
-```
+```sharp
 > @dolist a b c=@dolist 1 2 3=say %iL/%i0
 You say, "a/1"
 You say, "a/2"
@@ -1550,8 +1550,8 @@ These attributes contain lists of "enter aliases" and "leave aliases" for `<obje
 
 These attributes only have meaning for players and things (as rooms/exits cannot be "enter"ed) - the aliases for exits are stored in @alias.
 
-Example:
-```
+### Example
+```sharp
 > @ealias Chair=Sit down;sit
 > @lalias Chair=Stand up;stand
 ```
@@ -1592,14 +1592,14 @@ The `/check` and `/quiet` switches work the same as for non-regexp @edits.
 
 Note that, unlike normal @edits, the `<replace>` for an `@edit/regexp` WILL be evaluated, once for each replacement made, with the $0 token being replaced with the overall matching text, $1 with the first subexpression, and so on. Named subexpressions are also possible via `$<name>`.
 
-Example:
-```
+### Example
+```sharp
 > &foo me=Block of text/Wed Feb 22 22:54:02 2012/#10010
 > @edit/regexp me/foo=^(.+)/([^/]+)/(#[0-9]+(?::[0-9]+)?)$, ucstr($1) -- [convtime($2)] -- [name($3)]
 FOO - Set: BLOCK OF TEXT -- 1329951242 -- Minion
 ```
 Replace a literal '^' with 'v'
-```
+```sharp
 > @edit/regexp me/bar=\^, v
 ```
 
@@ -1729,8 +1729,8 @@ When set, the exitformat attribute is evaluated and shown in place of the "Obvio
 
 Q-registers (set via setq() and similar functions) are inherited from the @conformat.
 
-Example:
-```
+### Example
+```sharp
 > @exitformat here=Exits: [itemize(iter(%0, name(%i0)))]
 ```
 
@@ -1765,8 +1765,8 @@ Note: The response body has the same 8k limit as other MUSH strings. Anything lo
 
 Normally, exits appear in a room's Obvious exits list in the order they were created, most recent first. You can use this command to rearrange them. @firstexit moves each exit, in the order given, to the top of the Obvious exits list for its source room. You must control the room.
 
-Example:
-```
+### Example
+```sharp
 > @dig/teleport Test Room
 > @open Two ; @open Three ; @open One
 > look
@@ -1810,16 +1810,16 @@ See [@filter2] for an example.
 - [@prefix]
 - [WILDCARDS]
 # @filter2
-Example:
+### Example
 An audible exit leads from the room where Wizard is standing to another room where the puppet "Wiztoy" is standing.
-```
+```sharp
 > @prefix exit=From inside,
 > :tests.
 Wizard tests.
 Wiztoy> From inside, Wizard tests.
 ```
 
-```
+```sharp
 > @filter exit=* jumps.,* tests.
 > :jumps.
 Wizard jumps.
@@ -1827,7 +1827,7 @@ Wizard jumps.
 Wizard tests.
 ```
 
-```
+```sharp
 > :tests again.
 Wizard tests again.
 Wiztoy> From inside, Wizard tests again.
@@ -1892,8 +1892,8 @@ See [@force2].
 # @force2
 Normally, the action list is evaluated twice - once when @force is run, and again when `<object>` runs the action list. If the `/noeval` switch is given, `<action list>` is not evaluated until it is run by `<object>`.
 
-Examples:
-```
+### Examples
+```sharp
 > @create Lackey
 Created: Object #103
 > @force Lackey=go east
@@ -1909,8 +1909,8 @@ See [@force3].
 # @force3
 Normally, @force creates a new queue entry. `@force/inline` does not.
 
-Examples:
-```
+### Examples
+```sharp
 > @create Lackey
 Created: Object #103
 > &order me=$order *:say Lackey, %0 ; @force Lackey=%0 ; say Done?
@@ -1920,7 +1920,7 @@ You say, "Done?"
 Lackey salutes!
 ```
 
-```
+```sharp
 > &order me=$order *:say Lackey, %0 ; @force/inline Lackey=%0 ; say Done?
 > order pose salutes!
 You say, "Lackey, pose salutes!"
@@ -2028,14 +2028,14 @@ An optional fifth argument will set restriction flags.
 
 The `/preserve` switch, for MUX compability, does the same thing as the 'localize' restriction - treats the attribute that's evaluated as if it were called with ulocal() instead of u().
 
-Example:
-```
+### Example
+```sharp
 > &WORD_CONCAT #10=%0 %1
 > say u(#10/word_concat, foo, bar)
 You say, "foo bar"
 ```
 
-```
+```sharp
 > @function word_concat=#10, word_concat
 > say word_concat(foo,bar)
 You say, "foo bar"
@@ -2046,7 +2046,7 @@ See [@function3].
 Global user-defined functions are not automatically loaded when the game is restarted. In order to avoid objects which attempt to use functions that have not been loaded, a @startup containing @function commands should be set on a wizard object with as low a dbref number as possible; God (#1) is suggested for this use. You can also create functions from the alias.cnf file.
 
 For example, if you have one object that stores all your global functions, you could set the following command (the object is #100 in the example):
-```
+```sharp
 @startup #1=@dolist lattr(#100)=@function ##=#100,##
 ```
 
@@ -2058,8 +2058,8 @@ Normally, built in functions cannot be overriden by @functions. However, if a bu
 
 Using @function on an already-added @function will delete the old one and install a new function with none of the settings of the old one kept.
 
-Example:
-```
+### Example
+```sharp
 > @function/delete ansi
 > &ansi_fun #1234=%1
 > @function ansi=#1234, ansi_fun, 2, -2, noguest
@@ -2124,8 +2124,8 @@ Only wizards and objects with the halt @power can @halt other player's objects. 
 
 When someone attempts to page `<player>` and is unable to, either because `<player>` is set HAVEN or because of his page lock, they will be shown `<message>`, if it evaluates to something non-null.
 
-Example:
-```
+### Example
+```sharp
 > @set me=HAVEN
 > @haven me=I'm AFK and can't answer pages. Please @mail instead.
 ```
@@ -2205,7 +2205,7 @@ See [@hook3] for more information about `@hook/override/inline`, [@hook4] for in
 `@hook/override/inline` and `@hook/extend/inline` allow you to write softcoded commands which act exactly like built-in commands - because they're run immediately, instead of being queued, output from the command appears in the right order relative to other commands in the action list. By default, commands hooked with `/inline` have access to the q-registers of the calling action list, and @breaks in the hooked command propagate to the calling action list, allowing you to write your own control structures.
 
 For example, this adds a new command, @qbreak, which works like @break but stops command execution when %q0 contains a true value:
-```
+```sharp
 > &qbreak #123=$@qbreak: @break %q0=@pemit/silent %#=Stopping.
 > @command/add @qbreak
 > @hook/override/inline @qbreak=#123, qbreak
@@ -2221,7 +2221,7 @@ This behaviour can be altered by adding the following switches to `@hook/inline`
 See [@hook6] for some examples of using `@hook/override/inline`.
 # @hook4
 `@hook/extend` can be used to add new features to a built-in command, via additional switches, without forcing you to also rewrite the existing functionality like `@hook/override` would. For example:
-```
+```sharp
 > &who`active #123=$who/active*: @nspemit %#=ufun(fun_who, lwho(%#), switch(%0, ?*, stringsecs(%0)))
 > &who`staff #123=$who/staff: @nspemit %#=ufun(fun_who, setunion(lwho(%#), lsearch(all, elock, type^player&(flag^wizard|flag^royalty)))
 > @hook/extend WHO=#123
@@ -2232,7 +2232,7 @@ This leaves the built-in WHO command working as normal, but adds two new switche
 `@hook/igswitch` is an alias for `@hook/extend`, for Rhost compatability.
 # @hook5
 An example of @hook:
-```
+```sharp
 > &top_line #3=pemit(%#, What follows is the results of a look)
 > &bottom_line #3=pemit(%#, You're done looking.)
 > @hook/before look=#3, top_line
@@ -2244,7 +2244,7 @@ You are in Room Zero. It's very dark here.
 You're done looking.
 ```
 
-```
+```sharp
 > &cmd.say #3=$say *: @remit %L=if(hasflag(%#,OOC),<OOC>%b)%n says, "%0"
 > @hook/override say=#3, cmd.say
 > @set me=OOC
@@ -2254,7 +2254,7 @@ You're done looking.
 
 See [@hook6] for /inplace examples.
 # @hook6
-```
+```sharp
 > &dance me=$dance:pose sticks his right foot in ; say Do the hokey pokey ; pose sticks his right foot out
 > dance
 Walker sticks his right foot in
@@ -2262,7 +2262,7 @@ You say, "Do the hokey pokey"
 Walker sticks his right foot out
 ```
 
-```
+```sharp
 > &cmd.say #3=$say *:@remit %l=%n declares, "%0"
 > @hook/override say=#3,cmd.say
 > dance
@@ -2271,7 +2271,7 @@ Walker sticks his right foot out
 Walker declares, "Do the hokey pokey"
 ```
 
-```
+```sharp
 > @hook/override/inplace say=#3,cmd.say
 > dance
 Walker sticks his right foot in
@@ -2298,21 +2298,21 @@ The following named registers may be available (via `r(<name>,args)`) in your @h
 # HUH_COMMAND
 This internal command is run whenever someone attempts to run a command which doesn't match any built-in or softcoded commands. The huh_command command cannot be run directly, but it can be @hook'd to perform custom actions when an invalid command is entered.
 
-Examples:
-```
+### Examples
+```sharp
 > &cmd.huh #0=$huh_command: @pemit/sil %#=Whu?
 > @hook/override huh_command=#0, cmd.huh
 > dsfsdf
 Whu?
 ```
 
-```
+```sharp
 > &cmd.huh #0=$huh_command *: @pemit/sil %#=Whu? What is '%0'?
 > sdfsdf ert
 Whu? What is 'sdfsdf ert'?
 ```
 
-```
+```sharp
 > &cmd.huh #0=$huh_command *: &typos %#=add(default(%#/typos,0),1) ; @pemit/sil %#=Huh? %b(Type "help" for help.) ; @break mod(get(%#/typos),10) ; @wall %n wins %p [ordinal(div(get(%#/typos),10))] typo trophy!
 > asfdsf (10 times)
 Huh? (Type "help" for help.) (10 times)
@@ -2330,8 +2330,8 @@ Announcement: Room Zero shouts, "Dunce wins his first typo trophy!"
 
 This message is sent in return to every page which successfully reaches you if it evaluates non-null. It is useful if you are idle for long periods of time and wish to inform people where you are, or if you are in a meeting and cannot quickly return pages.
 
-Example:
-```
+### Example
+```sharp
 > @idle me=switch(idle(me),>120,I'm idle. Use @mail)
 ```
 
@@ -2361,18 +2361,18 @@ See [@if2] for examples.
 - [if()]
 - [BOOLEAN VALUES]
 # @if2
-Examples:
-```
+### Examples
+```sharp
 > @if 1=say Yes, say No
 You say, "Yes"
 ```
 
-```
+```sharp
 > @if 0=say Yes, say No
 You say, "No"
 ```
 
-```
+```sharp
 > &foo me=$foo *: say Checking... ; @if %0=say Yes, {say No ; say Sorry!}
 ```
 
@@ -2409,8 +2409,8 @@ For an explanation of infilter patterns, see the help for "@filter".
 
 When an object has an @listen, any string it hears which is propagated to its contents will be prefixed with `<message>`. Useful for vehicles, etc, which have an @listen of "*".
 
-Example:
-```
+### Example
+```sharp
 > @create Vehicle
 Created: Object #103.
 > @create Test
@@ -2518,8 +2518,8 @@ If no DESTINATION attribute is set on a variable exit, the MUSH will also check 
 
 Note that, unlike most attributes, @destination cannot be abbreviated and must be typed in full.
 
-Example:
-```
+### Example
+```sharp
 > @open Random Exit;re
 > @link re=variable
 > @power re=link_anywhere
@@ -2541,11 +2541,11 @@ Sets the object's listen pattern to `<pattern>`, which can have wildcards. Whene
 Rather than using @listen, it's recommended you use ^-listening patterns, which can be set in any attribute similar to $-commands. This allows for descriptive attribute names, and also allows multiple patterns per object. See [^] for more information.
 
 For example:
-```
+```sharp
 > @listen Chair=*
 ```
 Since the wildcard (*) matches anything, anyone inside the object will hear anything said outside it.
-```
+```sharp
 > @listen Butler=* has arrived.
 > @ahear Butler=:walks over to the new arrival and takes %p coat.
 ```
@@ -2560,14 +2560,14 @@ See [@listen2].
 An object "hears" anything that another player standing in the same room would hear. For example, if you type in a command, the object does NOT hear it. If the command has a result that people in the room hear, the object will hear it.
 
 For example:
-```
+```sharp
 > @listen Recorder=@emit *
 > @ahear Recorder=:records %0
 > @emit Whee!
 Whee!
 ```
 In this example, the Recorder's listen-pattern is NOT matched, because it doesn't hear the '@emit Whee!', it only hears the 'Whee!' part, which doesn't match.
-```
+```sharp
 > @listen Recorder=Cyclonus says, "*"
 > say Whee!
 Cyclonus says, "Whee!"
@@ -2690,8 +2690,8 @@ See [@message2] for examples.
 - [@remit]
 - [speak()]
 # @message2
-Example:
-```
+### Example
+```sharp
 > &sayformat *Mike=%n sez, '%0'
 > &sayformat *Walker=From %n: %0
 > &cmd.fsay me=$fsay *: @message/spoof *Mike *Walker *Javelin=%n says\, "%0", SAYFORMAT, %0
@@ -2712,7 +2712,7 @@ Player says, "This is a test"
 ```
 
 A rough implementation of @chatformat:
-```
+```sharp
 > &cmd.chat Globals=$^@chat (.+?)=([\:;]?)(.+?)$: @message/spoof cwho(%1)=setr(0,<%1> [speak(&[squish(ctitle(%1, %#) %n)], %2%3)]), CHATFORMAT, firstof(%2, "), %1, %3, %n, ctitle(%1, %#), %q0
 > @set Globals/cmd.chat=regexp
 ```
@@ -2720,7 +2720,7 @@ A rough implementation of @chatformat:
 See [@message3] for more examples.
 # @message3
 A (very) basic language system:
-```
+```sharp
 > &skill`spanish Juan=2
 > &skill`spanish Bob=1
 > &cmd.spanish Globals=$+spanish *: @nspemit %#=You say (Spanish), "%0"; @message/oemit/spoof %#=setr(0,%n says (Spanish)\, "%0"), %!/TRANSLATE, ##, SPANISH, %q0
@@ -2748,14 +2748,14 @@ This command sets or clears the "moniker" for `<object>`. A moniker is an ansi t
 
 `<moniker>` can contain any text - it will be ignored, and only the ansi colors will be taken into account. If `<object>`'s name is longer than `<moniker>`, the last color will be used for the remaining letters.
 
-Examples:
+### Examples
 Display your name in highligted red
-```
+```sharp
 > @moniker me=ansi(hr,-)
 ```
 
 Show the first letter in orange, and the rest with no color
-```
+```sharp
 > @moniker me=ansi(+orange,-)[ansi(n,-)]
 ```
 
@@ -2801,8 +2801,8 @@ You can change the alias for a player or exit while renaming it, by giving the a
 
 When `<object>`'s name is changed, its ONAME and ANAME verb attributes will be triggered. See [@oname] for details.
 
-Examples:
-```
+### Examples
+```sharp
 > @name here=My Room
 Name set.
 > @name me=Mike;Michael;m
@@ -2827,8 +2827,8 @@ Config options: player_name_spaces, player_name_len, only_ascii_in_names
 
 Whenever `<object>`'s name is changed (via @name), others in the same location will see the contents of `<object>`'s ONAME attribute, prepended with `<object>`'s new name. At the same time, `<object>`'s ANAME attribute will be triggered. Both attributes receive the old name as %0, and the new name as %1.
 
-Example:
-```
+### Example
+```sharp
 > @oname me=has regenerated from %0!
 > @aname me=think >> Renamed from %0 to %1 at [time()] by %n(%#).
 ```
@@ -2873,8 +2873,8 @@ See [@notify2].
 
 `/setq` supercedes all other switches: You cannot `@notify/all/setq` or `@notify/any/setq` - it deals with just one queue entry.
 
-Example:
-```
+### Example
+```sharp
 > @wait me=think Hello, %q0!
 > @notify/setq me=0,Walker
 Hello, Walker!
@@ -2941,19 +2941,19 @@ See [@oemit2] for examples.
 - [NOSPOOF]
 - [SPOOFING]
 # @oemit2
-Examples:
+### Examples
 Show a message in the locations of players Bob and Fred, to everyone except those two players:
-```
+```sharp
 > @oemit *Bob *Fred=Bob throws a paper aeroplane at Fred.
 ```
 
 Show a message in #50 to everyone except the object 'Spy'.
-```
+```sharp
 > @oemit #50/Spy=Sssh!
 ```
 
 Show a message to everyone in your current location, except the 2nd object called 'foo'.
-```
+```sharp
 > @oemit %L/"2nd foo"=bar
 ```
 # @open
@@ -2969,8 +2969,8 @@ Wizards and objects with the pick_dbref power can specify garbage dbrefs to use 
 
 To open an exit in a room, you must control the room, have the Open_Anywhere @power, or the room must be set OPEN_OK and you must pass its @lock/open.
 
-Example:
-```
+### Example
+```sharp
 > @open Up \<U\>;up;u;climb=#255, Down \<D\>;down;d;fall
 ```
 
@@ -3027,18 +3027,18 @@ See [@pageformat2] for examples.
 # @pageformat2
 # @outpageformat2
 For simple page timestamps:
-```
+```sharp
 > @pageformat me=\[[time()]\] %4
 > @outpageformat me=\[[time()]\] %4
 ```
 
 To obtain 'page_aliases' behavior:
-```
+```sharp
 > @pageformat me=[setq(0,%n[if(%2,%b(%2))],1,switch(%3,%!,,itemize(iter(%3, name(##),%b,|),|)))][switch(%1,",%q0 pages[if(%q1,%b%q1)]: %0,:,From afar[if(%q1,%b(to %q1))]\, %q0 %0,From afar[if(%q1,%b(to %q1))]\, %q0%0)]
 ```
 
 To obtain no 'page_aliases' behavior:
-```
+```sharp
 > @pageformat me=[setq(1,switch(%3,%!,,itemize(iter(%3,name(##),%b,|),|)))][switch(%1,",%n pages[if(%q1,%b%q1)]: %0,:,From afar[if(%q1,%b(to %q1))]\, %n %0,From afar[if(%q1,%b(to %q1))]\, %n%0)]
 ```
 # @receive
@@ -3337,8 +3337,9 @@ See [@retry2] for examples.
 - [@break]
 - [@include]
 # @retry2
-Example: 'while'
-```
+
+### Example: 'while'
+```sharp
 > &sing me=$sing *:say %0 bottles of beer! ; @retry gt(%0,0)=dec(%0) ; say Go get some more!
 > sing 3
 You say, "3 bottles of beer!"
@@ -3350,7 +3351,7 @@ You say, "Go get some more!"
 
 Implementing a folding algorithm:
 (Yes, I know lmath is better, but this is just an example! :D)
-```
+```sharp
 > &add me=$add *:@retry words(%0)=rest(%0),add(first(%0),0%1) ; think %1
 > add 4 3 2 1
 10
@@ -3436,8 +3437,8 @@ See [@search5] for some examples.
 - [lsearch()]
 - [@find]
 # @search5
-Examples:
-```
+### Examples
+```sharp
 @search all type=player,flags=W <-- list all Wizard players
 @search type=room <-- list all rooms owned by me.
 @search zone=#50 <-- list all objects belong to zone #50.
@@ -3491,8 +3492,8 @@ ATTRIB_SET is the internal command which powers &attr and @_attr setting; it can
 
 You can use this command to set yourself or any of your objects to be male, female, neuter, or plural. The SEX attribute is used for pronoun substitution by the MUSH, and anything not recognizable will be treated as neuter.
 
-Examples:
-```
+### Examples
+```sharp
 > @sex me=Male
 > @sex me=Female
 > @sex me=Woman
@@ -3572,7 +3573,7 @@ See [@sitelock3].
 If you specify a character name after the options, the options are only checked if the host pattern matches, AND the character being checked for connect support matches the one you gave. Use it only with connect and !connect options, since they're the only ones where an existing character is used.
 
 For example, to disallow anyone from connecting to 'Twink' from one domain, but to allow connections to the character from others, use something like:
-```
+```sharp
 > @sitelock *.somesite.com=!connect,Twink
 ```
 
@@ -3650,8 +3651,8 @@ When set, this attribute modifies everything `<object>` says, poses, semiposes a
 
 If the attribute evaluates to an empty string, the original text will be used. Otherwise, the result of the attribute is used.
 
-Example:
-```
+### Example
+```sharp
 > @speechmod me=ucstr(%0)!
 > say hello
 You say, "HELLO!"
@@ -3659,7 +3660,7 @@ You say, "HELLO!"
 Bob WAVES!
 ```
 
-```
+```sharp
 > @speechmod me=switch(%1,",ucstr(%0),:,lcstr(%0))
 > say Test
 You say, "TEST"
@@ -3691,19 +3692,19 @@ By default, the object using @mapsql will be the enactor (%#) for the triggered 
 
 The `/prepare` switch enables prepared statement mode. When used, additional comma-separated parameters after the query are treated as values that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe. When using `/prepare` with queries containing commas, store the query in an attribute and use v() to retrieve it, or escape commas with backslash.
 
-Examples:
-```
+### Examples
+```sharp
 > &desctable me=think align(30 20 4 10 10,%0,%1,%2,%3,%4)
 > @mapsql me/desctable=DESCRIBE table_name
 ```
 
-```
+```sharp
 > &showresult me=@pemit %#=%0. [r(name, arg)] ([r(age, arg)])
 > @mapsql me/showresult=SELECT `name`, `age` FROM `people`
 ```
 
 Prepared statement example:
-```
+```sharp
 > &showresult me=@pemit %#=%0. %1 (%2)
 > &QUERY me=SELECT `name`, `age` FROM `people` WHERE status = ?
 > @mapsql/prepare me/showresult=v(QUERY),active
@@ -3724,18 +3725,18 @@ Generally, the sql() function is more useful for coding, as it delimits its retu
 
 The `/prepare` switch enables prepared statement mode. When used, additional comma-separated parameters after the query are treated as values that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe. When using `/prepare` with queries containing commas, store the query in an attribute and use v() to retrieve it, or escape commas with backslash.
 
-Example:
-```
+### Example
+```sharp
 > @sql SHOW TABLES
 ```
 
 Prepared statement examples:
-```
+```sharp
 > &QUERY me=INSERT INTO users (name, email) VALUES (?, ?)
 > @sql/prepare v(QUERY),John Doe,john@example.com
 ```
 
-```
+```sharp
 > &QUERY me=UPDATE users SET status = ? WHERE id = ?
 > @sql/prepare v(QUERY),active,123
 ```
@@ -3824,8 +3825,8 @@ See [@switch3] for examples.
 - [stext()]
 - [slev()]
 # @switch3
-Examples:
-```
+### Examples
+```sharp
 > &SWITCH_EX thing=$foo *: @switch %0=*a*, :acks, *b*, :bars, :glurps
 > foo abc
 thing acks
@@ -3834,19 +3835,19 @@ thing bars
 thing glurps
 ```
 
-```
+```sharp
 > &SWITCH_EX thing=$foo *: @switch/first %0=*a*, :acks,*b*, :bars, :glurps
 > foo abc
 thing acks
 ```
 
-```
+```sharp
 > &SWITCH_EX thing=$test: @switch hasflag(%#,PUPPET)=1, say Puppet!, say Not Puppet!
 > test
 thing says, "Not Puppet!"
 ```
 
-```
+```sharp
 > &SWITCH_EX thing=$foo *: @switch %0=*a*,say Before: '$0'. After: '$1'
 > foo foobarbaz
 thing says, "Before: 'foob'. After: 'rbaz'
@@ -3854,8 +3855,8 @@ thing says, "Before: 'foob'. After: 'rbaz'
 
 See [@switch4].
 # @switch4
-Examples:
-```
+### Examples
+```sharp
 > &SWITCH_EX me=$foo *:think before ; @switch %0=1,think one ; think after
 > foo 1
 thing before
@@ -3863,7 +3864,7 @@ thing after
 thing one
 ```
 
-```
+```sharp
 > &SWITCH_EX me=$foo *:think before ; @switch/inline %0=1,think one ; think after
 > foo 1
 thing before
@@ -3929,7 +3930,7 @@ By default, the object using @trigger will be the enactor (%#) for the triggered
 Q-registers set at the time @trigger is run will be copied and made available in the triggered attribute, unless the `/clearregs` switch is given.
 
 @trigger can execute obj/attrs that are $-commands or ^-listens. e.g:
-```
+```sharp
 > &SLAP object=$slap *=*:@emit %n slaps %0 around with a %1
 > slap himself=trout
 Walker slaps himself around with a trout
@@ -3938,7 +3939,7 @@ Walker slaps himself around with a trout
 ```
 
 Note that you have to pass %0 and %1 yourself. For some $-commands or listens, the pattern can get complex (especially with regexps!), so `/match` allows you to pass a command to match the pattern.
-```
+```sharp
 > @trigger/match object/slap=slap himself=trout
 Walker slaps himself around with a trout
 ```
@@ -3950,28 +3951,28 @@ See [@trigger3] for examples.
 - [ufun()]
 - [VERBS]
 # @trigger3
-Examples:
-```
+### Examples
+```sharp
 > &GREET me=POSE waves hi.
 > @trigger me/GREET
 Cyclonus waves hi.
 ```
 
-```
+```sharp
 > &GREET me=POSE waves to %0! ; say Hi there, %1.
 > @trigger me/GREET=Gears, Arcee
 Cyclonus waves to Gears.
 You say, "Hi there, Arcee."
 ```
 
-```
+```sharp
 > &foo Globals=$foo *: @assert setr(0,locate(%#,%0,*))=@nspemit %#=Who? ; @nspemit %#=You foo [name(%q0)]. ; @trigger %q0/AFOO
 > &AFOO Bar=:is foo'd by %n!
 > FOO BAR
 Bar is foo'd by Globals!
 ```
 
-```
+```sharp
 > &foo Globals=$foo *: @assert setr(0,locate(%#,%0,*))=@nspemit %#=Who? ; @nspemit %#=You foo [name(%q0)]. ; @trigger/spoof %q0/AFOO
 > FOO BAR
 Bar is foo'd by Cyclonus!
@@ -4069,15 +4070,15 @@ See [@verb3] for examples.
 - [VERBS]
 - [@trigger]
 # @verb3
-Examples:
-```
+### Examples
+```sharp
 > &VERB_EXAMPLE Test Object=$test:@verb me=%#,TEST,You just tested.,OTEST,just tested the example.,ATEST,%n
 > test
 You just tested.
 [others see] Cyclonus just tested the example.
 ```
 
-```
+```sharp
 > &TEST Test Object=You have just tested this object!
 > &ATEST Test Object=@emit %0 has failed!
 > &OTEST Test Object=tests test object.
@@ -4090,11 +4091,11 @@ Cyclonus has failed!
 See [@verb4] for another example.
 # @verb4
 In order to make this into a global command that anyone can use, we need to put it on a WIZARD object in the Master Room.
-```
+```sharp
 > &DO_TEST Global=$test *: @assert setr(0,locate(%#,%0,n))=@pemit %#=I don't see that here. ; @verb %q0=%#, TEST, You test [capstr(%0)]., OTEST,tests [capstr(%0)]. ,ATEST
 ```
 
-```
+```sharp
 > &TEST Example=You test this fun example.
 > &ATEST Example=POSE has been tested!
 > test example
@@ -4207,8 +4208,8 @@ If `<player>` is not set UNFINDABLE, this command will tell you where the player
 
 To avoid being found this way, just do: `@set me=UNFINDABLE`
 
-Example:
-```
+### Example
+```sharp
 > @whereis Moonchilde
 ```
 
@@ -4295,7 +4296,7 @@ Some routers will only consider a connection alive if text is received, as well 
 `teach/list <action list>`
 
 The teach command shows its argument (unparsed) to others in your location, and then executes it as a command. If the `/list` switch is given, it will run an `<action list>` of commands in much the same way as @triggering an attribute. Otherwise, it executes a single `<command>`, exactly as if you'd entered `<command>` from your client. Useful for helping newbies and demonstrating commands.
-```
+```sharp
 > say To do a pose, use :<action>
 You say "To do a pose, use :<action>"
 > teach :waves hello.
@@ -4303,13 +4304,13 @@ Javelin types --> :waves hello.
 Javelin waves hello.
 ```
 
-```
+```sharp
 > teach "[sort(c b a)]
 Javelin types --> "[sort(c b a)]
 Javelin says, "a b c"
 ```
 
-```
+```sharp
 > teach/list @switch 1=1, say Third; say First; @break 1; say Second
 Javelin types --> @switch 1=1, say Third; say First; @break 1; say Second
 You say, "First"
@@ -4444,8 +4445,8 @@ To get an object from someone else's inventory, the possessive_get @config optio
 
 These attributes contain the message shown to a player who successfully buys something from `<object>` using the "buy" command, the message shown to others in the room when something is bought from `<object>` (prefixed with the buyer's name), and the actions to be taken by `<object>` when something is bought from it, respectively. Each attribute is passed the item being purchased as %0 and the amount paid for it as %1.
 
-Example:
-```
+### Example
+```sharp
 > @buy Vendor=udefault(me/buy`%0,You buy %0 for %1 [money(%1)]., %0, %1)
 > @obuy Vendor=hands some money to [name(me)] for [art(%0)] %0.
 > @abuy Vendor=:goes into the storeroom. ; @wait 2=:returns with %n's %0.
@@ -4471,8 +4472,8 @@ A price is either a number (20), a range of numbers (10-30), or a minimum number
 
 A player must pass `<object>`'s @lock/pay in order to purchase from it.
 
-Example::
-```
+### Example
+```sharp
 > @PRICELIST vendor=mansion:1000+ large_house:100-200 house:20,30,50
 ```
 
@@ -4491,8 +4492,8 @@ When you try buying an item, PRICELIST attributes on nearby objects (or `<vendor
 
 If the pricelist match contains a list of prices, ITEM:30,20,10, the first one you can afford will be the resulting price.
 
-Example:
-```
+### Example
+```sharp
 > @PRICELIST vendor=coke:20 pepsi:20
 > &drink`coke vendor=You enjoy a delicious coke.
 > &drink`pepsi vendor=It tastes like a funny coke.
@@ -4633,8 +4634,8 @@ This command sends a message to a player or list of players. If the player's nam
 
 will send the message to the last person paged. You cannot page a player if they are set HAVEN or if you do not pass their @lock/page. In the latter case, the player's PAGE_LOCK`FAILURE, PAGE_LOCK`OFAILURE, and PAGE_LOCK`AFAILURE attributes will be activated if set.
 
-Examples:
-```
+### Examples
+```sharp
 > page airwolf=hi there!
 You paged Airwolf with 'hi there!'.
 > page see, I don't have to retype the name.
@@ -4689,13 +4690,13 @@ See [pose2] for examples.
 - [@emit]
 - [@speechmod]
 # pose2
-Examples:
-```
+### Examples
+```sharp
 > pose waves.
 Bob waves.
 ```
 
-```
+```sharp
 > :laughs out loud.
 Bob laughs out loud.
 > ;'s laughing on the inside.
@@ -4776,18 +4777,18 @@ If you pass the lock, you will see `<object>`'s USE attribute, and others in you
 - [@ufail]
 # WARN_ON_MISSING
 This internal command is run when someone attempts to run a command which starts with a function, for example:
-```
+```sharp
 &test me=$test: [emit(test)]
 ```
 By default it sends the owner of the offending object a message, so they can fix the code to use a command instead of a function. The command must be enabled (either in restrict.cnf or with @command/enable) in order to be used. It can be @hooked to set custom behaviour.
 
-Example:
-```
+### Example
+```sharp
 > @hook/override warn_on_missing=#0, wom
 > &wom #0=$warn_on_missing: @pemit/list %# [owner(%!)]=[name(%!)] has broken code in %=!
 ```
 
-```
+```sharp
 > &wom #0=$warn_on_missing *: @pemit [owner(%!)]=[name(%!)] has broken code in %= - attempted to run %0!
 ```
 
@@ -4842,7 +4843,7 @@ If a `<pattern>` is given for either command, only connected players whose names
 See [who2].
 # WHO2
 Existing games which have softcoded 'who' commands can maintain separation from 'WHO' by using an @hook/ignore on the WHO command, such as:
-```
+```sharp
 > &HOOK`WHO <object>=not(comp(left(%c,3),WHO))
 > @hook/ignore WHO=<object>,HOOK`WHO
 ```
@@ -4919,8 +4920,8 @@ When given no switches or `/list`, shows all available suggestion categories. If
 
 `/add` and `/delete` are Wizard-only switches that do the respective operation for a word in a given category.
 
-Example:
-```
+### Example
+```sharp
 > @suggest/add pets=dog
 > @suggest/add pets=cat
 > @suggest/add pets=bird

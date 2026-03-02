@@ -126,7 +126,7 @@ Setting the AUDIBLE flag on a ROOM activates audible exits in that room. EXITs w
 
 By setting the TRACK_MONEY flag, a player can determine which objects may be using their money. TRACK_MONEY reports all charges to a player and their objects except the queue deposit.
 
-```
+```sharp
 > @set me=TRACK_MONEY
 > give Javelin=50
 You give 50 pennies to Javelin.
@@ -262,7 +262,7 @@ See [debug2] for an example.
 
 # DEBUG2
 
-```
+```sharp
 > @create Test
 > @set Test=DEBUG
 > &cmd test=$wc *: say String %0 has [strlen(%0)] letters and [words(%0)] words.
