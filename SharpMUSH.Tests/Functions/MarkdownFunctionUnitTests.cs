@@ -35,6 +35,16 @@ public class MarkdownFunctionUnitTests
 		}
 	}
 
+	/// <summary>
+	/// Returns the plain-text representation of <paramref name="result"/> with
+	/// trailing whitespace trimmed from every line.  Code-block lines are
+	/// rendered with terminal-fill padding (spaces to fill the terminal width
+	/// for background-colour spanning), so line-level <see cref="string.TrimEnd()"/>
+	/// is needed when asserting indentation rather than exact character count.
+	/// </summary>
+	private static string TrimmedPlainText(MString result) =>
+		string.Join("\n", result.ToPlainText().Split('\n').Select(l => l.TrimEnd()));
+
 	[Test]
 	public async Task RenderMarkdown_PlainText_ExactMatch()
 	{
@@ -103,23 +113,24 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_CodeBlock_ExactMatch()
 	{
 		// Test code block (using %r for newlines in MUSH)
-		// Code blocks should be indented by 2 spaces
+		// Code blocks should be indented by 2 spaces.
+		// Lines are rendered with background-fill padding; use TrimmedPlainText when checking indentation.
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(```%rcode line 1%rcode line 2%r```)")))?.Message;
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.ToPlainText()).IsEqualTo("  code line 1\n  code line 2");
+		await Assert.That(TrimmedPlainText(result!)).IsEqualTo("  code line 1\n  code line 2");
 	}
 
 	[Test]
 	public async Task RenderMarkdown_CodeBlock_Indentation_ExactMatch()
 	{
-		// Test that code blocks are properly indented by 2 spaces
-		// This verifies the markup adjustment for ```code``` blocks
+		// Test that code blocks are properly indented by 2 spaces.
+		// Lines are rendered with background-fill padding; use TrimmedPlainText when checking indentation.
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(```%rLine one%r  Line two indented%rLine three%r```)")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		// All lines in code blocks should have 2 spaces of indentation added (total)
 		var expected = "  Line one\n    Line two indented\n  Line three";
-		await Assert.That(result!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(TrimmedPlainText(result!)).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -339,12 +350,13 @@ public class MarkdownFunctionUnitTests
 	{
 		// Test code blocks - backticks can be tricky in MUSH functions
 		// This test uses a simple code block without special characters
-		// Code blocks should be indented by 2 spaces
+		// Code blocks should be indented by 2 spaces.
+		// Lines are rendered with background-fill padding; use TrimmedPlainText when checking indentation.
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(```%rvar x = 42;%rvar y = 100;%r```)")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		// Verify the plain text output with 2-space indentation
-		await Assert.That(result!.ToPlainText()).IsEqualTo("  var x = 42;\n  var y = 100;");
+		await Assert.That(TrimmedPlainText(result!)).IsEqualTo("  var x = 42;\n  var y = 100;");
 	}
 
 	[Test]
