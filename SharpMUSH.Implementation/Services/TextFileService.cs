@@ -346,18 +346,18 @@ public class TextFileService : ITextFileService
 	public static string StripConsecutiveHeaders(string content)
 	{
 		var lines = content.Split('\n');
-		var firstHeaderEnd = -1;
-		var lastConsecutiveHeaderEnd = -1;
+		var firstHeaderIndex = -1;
+		var lastConsecutiveHeaderIndex = -1;
 
 		for (var i = 0; i < lines.Length; i++)
 		{
 			if (lines[i].StartsWith("# "))
 			{
-				if (firstHeaderEnd < 0)
+				if (firstHeaderIndex < 0)
 				{
-					firstHeaderEnd = i;
+					firstHeaderIndex = i;
 				}
-				lastConsecutiveHeaderEnd = i;
+				lastConsecutiveHeaderIndex = i;
 			}
 			else
 			{
@@ -366,18 +366,10 @@ public class TextFileService : ITextFileService
 		}
 
 		// If there are multiple consecutive headers, keep only the first
-		if (firstHeaderEnd >= 0 && lastConsecutiveHeaderEnd > firstHeaderEnd)
+		if (firstHeaderIndex >= 0 && lastConsecutiveHeaderIndex > firstHeaderIndex)
 		{
-			var result = new StringBuilder();
-			result.AppendLine(lines[firstHeaderEnd]);
-			for (var i = lastConsecutiveHeaderEnd + 1; i < lines.Length; i++)
-			{
-				if (i < lines.Length - 1)
-					result.AppendLine(lines[i]);
-				else
-					result.Append(lines[i]);
-			}
-			return result.ToString();
+			var remaining = string.Join('\n', lines.Skip(lastConsecutiveHeaderIndex + 1));
+			return lines[firstHeaderIndex] + "\n" + remaining;
 		}
 
 		return content;

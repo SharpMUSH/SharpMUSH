@@ -69,6 +69,9 @@ public partial class OutputTransformService : IOutputTransformService
 		ProtocolCapabilities capabilities,
 		PlayerOutputPreferences? preferences)
 	{
+		// Always strip OSC 8 hyperlinks - telnet clients don't support them
+		text = StripOsc8Hyperlinks(text);
+
 		// If player preferences exist and either ANSI or COLOR is disabled, strip all ANSI
 		if (preferences is { AnsiEnabled: false } or { ColorEnabled: false })
 		{
@@ -80,9 +83,6 @@ public partial class OutputTransformService : IOutputTransformService
 		{
 			return StripAnsiCodes(text);
 		}
-
-		// Always strip OSC 8 hyperlinks - telnet clients don't support them
-		text = StripOsc8Hyperlinks(text);
 
 		// If XTERM256 is disabled (either by preference or capability), downgrade to 16-color
 		if ((preferences != null && !preferences.Xterm256Enabled) || !capabilities.SupportsXterm256)
@@ -103,8 +103,6 @@ public partial class OutputTransformService : IOutputTransformService
 
 	private string StripAnsiCodes(string text)
 	{
-		// Remove OSC 8 hyperlinks first (preserve display text)
-		text = StripOsc8Hyperlinks(text);
 		// Remove all CSI ANSI escape sequences
 		return AnsiEscapeSequenceRegex().Replace(text, string.Empty);
 	}
