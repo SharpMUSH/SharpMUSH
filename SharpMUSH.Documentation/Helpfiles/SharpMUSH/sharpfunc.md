@@ -5,7 +5,7 @@
   The brackets are used to delimit and force evaluation of the function (or nested functions). The brackets can also be used to group functions for the purposes of string concatenation. In general, more than one pair of brackets is not required, but you can nest an arbitrary number of brackets.
 
   Examples:
-```
+```sharp
 say first(rest(This is a nice day))
 You say, "is"
 ```
@@ -325,12 +325,12 @@ You say, "is"
   Returns the absolute value of a number.
 
   Examples:
-```
+```sharp
 say abs(-4)
 You say, "4"
 ```
 
-```
+```sharp
 > say abs(2)
 You say, "2"
 ```
@@ -444,11 +444,11 @@ You say, "2"
   Returns the portion of `<string1>` that occurs after `<string2>`. If `<string2>` isn't in `<string1>`, the function returns nothing. This is case-sensitive.
 
   Examples:
-```
+```sharp
 > say after(foo bar baz,bar)
 You say, " baz"
 ```
-```
+```sharp
 > say after(foo bar baz,ba)
 You say, "r baz"
 ```
@@ -497,7 +497,7 @@ You say, "r baz"
 - [table()]
 # ALIGN3
   Examples:
-```
+```sharp
 
     > &line me=align(<3 10 20$,([ljust(get(%0/sex),1,,1)]), name(%0),name(loc(%0)))
     > th iter(lwho(),u(line,##),%b,%r)
@@ -507,7 +507,7 @@ You say, "r baz"
       (F) Jane Doe   Nowhere
 ```
 
-```
+```sharp
     > &line me=align(<3 10X 20X$,([ljust(get(%0/sex),1,,1)]), name(%0),name(loc(%0)))
     > th iter(lwho(),u(line,##),%b,%r)
       (M) Walker     Tree
@@ -517,7 +517,7 @@ You say, "r baz"
 
         See '[align4]' for more examples.
 # ALIGN4
-```
+```sharp
     > &haiku me = Alignment function,%rIt justifies your writing,%rBut the words still suck.%rLuke
 
     > th [align(5 -40 5,,[repeat(-,40)]%r[u(haiku)]%r[repeat(-,40)],,%b,+)]
@@ -532,7 +532,7 @@ You say, "r baz"
 
   See '[align5]' for more examples.
 # ALIGN5
-```
+```sharp
   > &dropcap me=%b_______%r|__%b%b%b__|%r%b%b%b|%b|%r%b%b%b|_|
   > &story me=%r'was the night before Christmas, when all through the house%rNot a creature was stirring, not even a mouse.%rThe stockings were hung by the chimney with care,%rIn hopes that St Nicholas soon would be there.
   > th align(9'(ch) 68, u(dropcap), u(story))
@@ -547,12 +547,12 @@ You say, "r baz"
   column.
 ```
 
-```
+```sharp
   > th align(>15 60,Walker,Staff & Developer,x,x)
   xxxxxxxxxWalkerxStaff & Developerxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-```
+```sharp
   > th align(>15 60$,Walker,Staff & Developer,x,x)
   xxxxxxxxxWalkerxStaff & Developer
 ```
@@ -562,23 +562,23 @@ You say, "r baz"
   Evaluates every `<expr>` argument (including side-effects) and returns the results of those which are true, in a list separated by `<osep>`. The output separator argument is required, and can be a string of any length (including an empty string; use %b for a space).
 
   The meaning of true or false depends on configuration options as explained in the 'BOOLEAN VALUES' help topics.
-```
+```sharp
     > &s me=Bats are similar to Rats which are afraid of Cats
     > say allof(grab(v(s),rats),grab(v(s),mats),grab(v(s),bats),)
     You say, "Rats Bats"
 ```
 
-```
+```sharp
     > say allof(#-1,#101,#2970,,#-3,0,#319,null(This Doesn't Count),|)
     You say, "#101|#2970|#319"
 ```
 
-```
+```sharp
     > say allof(foo, 0, #-1, bar, baz,)
     You say, "foobarbaz"
 ```
 
-```
+```sharp
     > say allof(foo, 0, #-1, bar, baz,%b)
     You say, "foo bar baz"
 ```
@@ -673,7 +673,7 @@ You say, "r baz"
   For example, "ansi(+orange/#0000ff,Test)" would color "Test" in orange, on a blue background. In the event that your client does not support those colors, SharpMUSH will downgrade the color to the closest fit that your client can understand.
 
   Codes are parsed from left to right so, with later codes overriding earlier ones. So, for example:
-```
+```sharp
 ansi(y /+green B <#ffffff>, test)
 would show white text on an ANSI-blue background.
 ```
@@ -832,7 +832,7 @@ would show white text on an ANSI-blue background.
   Returns the portion of `<string1>` that occurs before `<string2>`. If `<string2>` isn't in `<string1>`, `<string1>` is returned. This is case-sensitive.
 
   Examples:
-```
+```sharp
 say before(foo bar baz,bar)
 You say, "foo"
 say before(foo bar baz,r)
@@ -851,7 +851,7 @@ You say, "foo b"
   Evaluates `<expression>` `<number>` times, and returns the average, minimum, and maximum time it took to evaluate `<expression>` in microseconds. If a `<sendto>` argument is given, benchmark() instead pemits the times to the object `<sendto>`, and returns the result of the last evaluation of `<expression>`.
 
   Example:
-```
+```sharp
 think benchmark(iter(lnum(1,100), ##), 200)
 Average: 520.47   Min: 340   Max: 1382
 think benchmark(iter(lnum(1,100), %i0), 200)
@@ -863,7 +863,7 @@ Average: 110.27   Min: 106   Max: 281
   Returns a count of the number of left and right square brackets, parentheses, and curly braces in the string, in that order, as a space-separated list of numbers. This is useful for finding missing or extra brackets in MUSH code. `<string>` is evaluated.
 
   Example:
-```
+```sharp
 @desc me=This is [ansi(h,a test)] of the { brackets() function.
 think brackets(v(desc))
 1 1 2 2 1 0
@@ -921,7 +921,7 @@ think brackets(v(desc))
   Returns `<string>` with the first character capitalized.
 
   Example:
-```
+```sharp
 think capstr(foo bar baz)
 Foo bar baz
 ```
@@ -938,7 +938,7 @@ Foo bar baz
   These functions concatenate multiple strings together. cat() adds a space between each string; strcat() does not.
 
   Example:
-```
+```sharp
 say cat(foo bar, baz blech)
 You say, "foo bar baz blech"
 say strcat(foo bar, baz blech)
@@ -952,7 +952,7 @@ You say, "foo barbaz blech"
   If `<string>` divides `<width>` into uneven portions, the left side will be one character shorter than the right side.
 
   Examples:
-```
+```sharp
 say center(X,5,-)
 You say, "--X--"
 ```
@@ -990,7 +990,7 @@ You say, "--X--"
   ord() returns the numerical value of the given character. chr() returns the character with the given numerical value.
 
   Examples:
-```
+```sharp
 say ord(A)
 You say, "65"
 say chr(65)
@@ -1074,36 +1074,36 @@ You say, "A"
 # colors2
 
   Examples:
-```
+```sharp
 think colors(*yellow*)
 greenyellow yellowgreen lightgoldenrodyellow lightyellow yellow lightyellow1 lightyellow2 lightyellow3 lightyellow4 yellow1 yellow2 yellow3 yellow4
 ```
 
-```
+```sharp
     > think colors(+yellow, hex)
     #ffff00
 ```
-```
+```sharp
     > think colors(+yellow, xterm256)
     226
 ```
-```
+```sharp
     > think colors(+yellow, 16color)
     yh
 ```
-```
+```sharp
     > think colors(/+yellow, 16color)
     Y
 ```
-```
+```sharp
     > think colors(#ffff00, name)
     yellow yellow1
 ```
-```
+```sharp
     > think colors(iuB+red, hex styles)
     ui#ff0000/#0000ee
 ```
-```
+```sharp
     > think colors(+blue huyG/+black, auto)
     hy/+black
 ```
@@ -1154,7 +1154,7 @@ greenyellow yellowgreen lightgoldenrodyellow lightyellow yellow lightyellow1 lig
   ncond() and ncondall() are identical to cond(), except it returns `<expr>`s for which `<cond>`s evaluate to false.
 
   Examples:
-```
+```sharp
 say cond(0,This is false,#-1,This is also false,#123,This is true)
 You say, "This is true"
 ```
@@ -1175,7 +1175,7 @@ You say, "This is true"
   With no arguments, config() returns a list of config option names. If `<option>` is given, config() returns the value of the given option Boolean configuration options will return values of "Yes" or "No".
 
   Example:
-```
+```sharp
 think config(money_singular)
 Penny
 ```
@@ -1213,15 +1213,15 @@ Penny
   convutcsecs(`<seconds>`) is an alias for convsecs(`<seconds>`, utc).
 
   Examples:
-```
+```sharp
 say secs()
 You say, "709395750"
 ```
-```
+```sharp
     > say convsecs(709395750)
     You say, "Wed Jun 24 10:22:54 1992"
 ```
-```
+```sharp
     > say convutcsecs(709395750)
     You say, "Wed Jun 24 14:22:30 1992"
 ```
@@ -1244,7 +1244,7 @@ You say, "709395750"
   If the extended convtime() is supported (See @config compile), more formats for the date are enabled, including ones missing the day of week and year, and a 'Month Day Year' format. In this case, convtime() can also handle dates prior to 1970 (in which case a negative number will be returned).
 
   Example:
-```
+```sharp
 say time()
 You say, "Wed Jun 24 10:22:54 1992"
 ```
@@ -1263,11 +1263,11 @@ You say, "Wed Jun 24 10:22:54 1992"
   Returns the cosine of `<angle>`. Angle must be in the given angle type, or radians by default.
 
   Examples:
-```
+```sharp
 say cos(90, d)
 You say, "0"
 ```
-```
+```sharp
     > say cos(1.570796)
     You say, "0"
 ```
@@ -1343,7 +1343,7 @@ You say, "0"
   Converts between the different ways to measure angles. `<from>` controls what the angle is treated as, and `<to>` what form it is turned into. See HELP ANGLES for more information.
 
   Example:
-```
+```sharp
 say 90 degrees is [ctu(90, d, r)] radians
 You say, "90 degrees is 1.570796 radians"
 ```
@@ -1362,19 +1362,19 @@ You say, "90 degrees is 1.570796 radians"
 
   dec() returns the given `<integer>` minus 1. If given a string that ends in an integer, it decrements only the final integer portion. That is:
 
-```
+```sharp
     > think dec(3)
     2
 ```
-```
+```sharp
     > think dec(hi3)
     hi2
 ```
-```
+```sharp
     > think dec(1.3.3)
     1.3.2
 ```
-```
+```sharp
     > think dec(1.3)
     1.2
 ```
@@ -1393,7 +1393,7 @@ You say, "90 degrees is 1.570796 radians"
   decompose() works like escape() with the additional caveat that it inserts parse-able characters to recreate `<string>` exactly after one parsing. It takes care of multiple spaces, '%r's, and '%t's.
 
   Example:
-```
+```sharp
 think decompose(This is \[a [ansi(y,test)]\][space(3)])
 This is \[a%b[ansi(y,test)]\] %b%b
 ```
@@ -1412,12 +1412,12 @@ This is \[a%b[ansi(y,test)]\] %b%b
   This is useful for code that needs to return the value of an attribute, or an error message or default case, if that attribute does not exist.
 
   Examples:
-```
+```sharp
 &TEST me=apple orange banana
 say default(me/Test, No fruits!)
 You say "apple orange banana"
 ```
-```
+```sharp
     > &TEST ME
     > say default(me/Test, No fruits!)
     You say "No fruits!"
@@ -1438,11 +1438,11 @@ You say "apple orange banana"
   Return a modified `<string>`, with `<len>` characters starting after the character at position `<first>` deleted. In other words, it copies `<first>` characters, skips `<len>` characters, and then copies the remainder of the string. If `<len>` is negative, deletes characters leftwards from `<first>`. Characters are numbered starting at 0.
 
   Examples:
-```
+```sharp
 say strdelete(abcdefgh, 3, 2)
 You say, "abcfgh"
 ```
-```
+```sharp
     > say strdelete(abcdefgh, 3, -2)
     You say, "abefgh"
 ```
@@ -1460,7 +1460,7 @@ You say, "abcfgh"
   This function simulates rolling dice. It "rolls" a die with a given number of sides, a certain number of times, and adds the results. For example, DIE(2, 6) would roll "2d6" - two six-sided dice, generating a result in the range 2-12. The maximum number of dice this function will roll in a single call is 700. If `<show>` is true, the result will be a space-seperated list of the individual rolls rather than their sum.
 
   Examples:
-```
+```sharp
 think die(3, 6)
 6
 think die(3, 6, 1)
@@ -1500,7 +1500,7 @@ think die(3, 6, 1)
   Depending on the host's OpenSSL version and how it was configured, there might be more (or less) available. digest(list) returns the methods a particular server understands if the OpenSSL library version being used is recent enough (1.0.0 and higher), or '#-1 LISTING NOT SUPPORTED' on older versions. For portable code, stick with MD5, SHA1 and the SHA2 family.
 
   Example:
-```
+```sharp
 think iter(digest(list), %i0(foo) => [digest(%i0, foo)], %b, %r)
 ...
 MD4(foo) => 0ac6700c491d70fb8650940b1ca1e4b2
@@ -1592,7 +1592,7 @@ SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
   This function returns the evaluated value of `<obj>`/`<attr>`, as if retrieved via the get_eval() function, if the attribute exists and is readable by you. Otherwise, it evaluates `<default case>`, and returns that. `<default case>` is only evaluated if the attribute does not exist or cannot be read.
 
   Example:
-```
+```sharp
 &TEST me=You have lost [rand(10)] marbles.
 say edefault(me/Test,You have no marbles.)
 You say "You have lost 6 marbles."
@@ -1621,7 +1621,7 @@ You say "You have lost 6 marbles."
   If `<replace>` is an empty string, `<search>` is deleted from the string.
 
   Example:
-```
+```sharp
 say edit(this is a test,^,I think%b,$,.,a test,an exam)
 You say "I think this is an exam."
 ```
@@ -1640,7 +1640,7 @@ You say "I think this is an exam."
   If any of the `<list of numbers>` is negative, it counts backwards from the end of the list of words, with -1 being the last word, -2 the word before last, and so on.
 
   Examples:
-```
+```sharp
 say elements(Foo Ack Beep Moo Zot,2 4)
 You say "Ack Moo"
 ```
@@ -1664,7 +1664,7 @@ You say "Ack Moo"
   You must be able to examine the lock, which means either that you must control `<object>`, it must be @set VISUAL, or the `<locktype>` lock must be @lset VISUAL.
 
   Examples:
-```
+```sharp
 @lock/drop Dancing Slippers=#0
 think elock(Dancing Slippers/drop, Princess)
 0
@@ -1773,7 +1773,7 @@ think elock(Dancing Slippers/drop, Princess)
   eval() and get_eval() are similar to ufun(), in that they evaluate the given `<attribute>` on `<object>`. However, they change the enactor (%#) to the object executing the eval (%!). It does not modify the stack (%0-%9), so the attribute being evaled sees the same values for them that the calling code does. Unless you need this behavior, it is better to use u() instead, which hides the caller's stack.
 
   Example:
-```
+```sharp
 &TEST Foo=%b%b%b-[name(me)] (%n)
 &CMD Foo=$test: @emit ufun(me/test) ; @emit eval(me, test)
 test
@@ -1808,7 +1808,7 @@ test
   If `<length>` is negative, extract() will return up to and including the `<length>`th element from the right, so -1 will extract up to the last element, -2 up to the element before last, and so on.
 
   Examples:
-```
+```sharp
 think extract(This is a test string,3,2)
 a test
 ```
@@ -1836,7 +1836,7 @@ a test
   filter(`<obj>`/`<attr>`, `<list>`) is roughly equivalent to squish(iter(`<list>`, switch(ufun(`<obj>`/`<attr>`, %i0),1,%i0,))) though the filter() version is much more efficient.
 
   Example:
-```
+```sharp
 &IS_ODD test=mod(%0,2)
 say filter(test/is_odd, 1 2 3 4 5 6)
 You say, "1 3 5"
@@ -1882,7 +1882,7 @@ You say, "1 3 5"
   This function evaluates arguments one at a time, stopping as soon as one is true.
 
   Examples:
-```
+```sharp
 say firstof(0,2)
 You say, "2"
 ```
@@ -1913,7 +1913,7 @@ You say, "2"
   With an `<object>`/`<attribute>`, the flag letters for each flag set on the given `<attribute>` are returned.
 
   Examples:
-```
+```sharp
 @create Test
 @set Test=no_command puppet
 think flags(Test)
@@ -1936,7 +1936,7 @@ Tnp
   Given no arguments, this function returns a space-separated list of all flag names known to the server, as per @list/flags.
 
   Examples:
-```
+```sharp
 @create Test
 @set Test=no_command puppet
 think flags(Test)
@@ -1957,7 +1957,7 @@ NO_COMMAND PUPPET
   flip() reverses a string. reverse() is an alias for flip().
 
   Example:
-```
+```sharp
 say flip(foo bar baz)
 You say, "zab rab oof"
 ```
@@ -1971,7 +1971,7 @@ You say, "zab rab oof"
   Similar to remainder() but may take floating point arguments. The return value is `<number>` - n * `<divisor>`, where n is the quotient of `<number>` / `<divisor>`, rounded towards zero. The result has the same sign as `<number>` and a magnitude less than the magnitude of `<divisor>`.
 
   Example:
-```
+```sharp
 think fmod(6.1,2.5)
 1.1
 ```
@@ -1998,7 +1998,7 @@ think fmod(6.1,2.5)
 # FOLD2
 
   Examples:
-```
+```sharp
 &REP_NUM test=%0[repeat(%1,%1)]
 say fold(test/rep_num,1 2 3 4 5)
 You say, "122333444455555"
@@ -2011,7 +2011,7 @@ You say, "List:122333444455555"
     You say, "15"
 
   If your list uses a delimiter, you need to give a `<base case>`. This can be a problem for dynamically generated lists. One solution is to use a register and pop the first element off the list. For example:
-```
+```sharp
 &GEN_LIST test=lnum(1,rand(5,10),|)
 &ADD_NUMS test=add(%0,%1)
 say letq(fl, u(gen_list), fold(test/add_nums, rest(%q<fl>,|), first(%q<fl>,|), |))
@@ -2054,7 +2054,7 @@ You say, "36"
 # FOREACH2
 
   Examples:
-```
+```sharp
 &add_one me=add(%0,1)
 say foreach(add_one, 54321)
 You say, "65432"
@@ -2082,7 +2082,7 @@ You say, "This is 1 number"
   If `<whole>` is true, and `<number>` is greater than 1.0 (or less than -1.0), the return value will be a whole number followed by the fraction representation of the decimal.
 
   Examples:
-```
+```sharp
 think fraction(.75)
 3/4
 ```
@@ -2104,7 +2104,7 @@ think fraction(.75)
   fullname() returns the full name of object `<object>`. It is identical to name() except that for exits, fullname() returns the complete exit name, including all aliases.
 
   Example:
-```
+```sharp
 say fullname(south)
 You say, "South;sout;sou;so;s"
 ```
@@ -2133,7 +2133,7 @@ You say, "South;sout;sou;so;s"
   These functions return the string stored in an `<object>`'s `<attribute>` attribute, without evaluating it. You must be able to examine the attribute. get() and xget() are identical, apart from the argument separator.
 
     Example:
-```
+```sharp
 &test me=This is [a test].
 think get(me/test)
 This is [a test].
@@ -2188,7 +2188,7 @@ This is [a test].
   These functions work identically to the grab() and regrab()/regrabi() functions, except they return all matches, not just the first: They return all words in the `<list>` which match `<pattern>`. If none match, an empty string is returned. `<delim>` defaults to a space, and `<osep>` defaults to `<delim>`.
 
   Examples:
-```
+```sharp
 say graball(This is a test of a test,test)
 You say "test test"
 say graball(This|is|testing|a|test,tes*,|)
@@ -2291,7 +2291,7 @@ You say "This is"
   hasflag() will accept a full flag name ("Wizard") or a flag letter ("W"). You can check the flags of any object, whether you control them or not.
 
   Example:
-```
+```sharp
 think hasflag(me, wizard)
 1
 ```
@@ -2326,7 +2326,7 @@ think hasflag(me, wizard)
   Returns 1 if `<object>` belongs to one of the types given in `<type list>`, and 0 otherwise. Valid types are PLAYER, THING, ROOM, EXIT and GARBAGE.
 
   Example:
-```
+```sharp
 @create Test Object
 think hastype(test object, PLAYER EXIT)
 0
@@ -2417,7 +2417,7 @@ think hastype(test object, PLAYER THING)
   inc() returns the integer plus 1. If given a string that ends in an integer, it increments only the final integer portion. That is:
 
   Examples:
-```
+```sharp
 think inc(3)
 4
 ```
@@ -2443,7 +2443,7 @@ think inc(3)
   This function is similar to extract(), except that it requires four arguments, while extract() uses defaults for its arguments if they aren't given. The function returns `<length>` items starting from the `<first>` position. Trailing spaces are trimmed.
 
   Examples:
-```
+```sharp
 say index(Cup of Tea | Mug of Beer | Glass of Wine, |, 2, 1)
 You say, "Mug of Beer"
 ```
@@ -2469,7 +2469,7 @@ You say, "Mug of Beer"
   If a `<delim>` is not given, a space is assumed. Null items are counted when determining position, as in 'items()'.
 
   Examples:
-```
+```sharp
 say linsert(This is a string,4,test)
 You say, "This is a test string"
 say linsert(one|three|four,2,two,|)
@@ -2504,7 +2504,7 @@ You say, "meep GOOP bleep gleep"
   isdbref() functions the same, but will also return 1 if `<string>` is the dbref of an existing (or garbage) object.
 
   Examples:
-```
+```sharp
 @stats
 100 objects = 20 rooms, 20 exits, 20 things, 20 players, 20 garbage.
 The next object to be created will be #33.
@@ -2592,7 +2592,7 @@ The next object to be created will be #33.
   elist() uses `<osep>` after `<punc>`/`<conj>` instead of a space.
   The default `<conjunction>` is "and", default punctuation is ",".
   Examples:
-```
+```sharp
 say itemize(eggs) * [itemize(eggs bacon)]
 You say, "eggs * eggs and bacon"
 say itemize(eggs bacon spam)
@@ -2625,7 +2625,7 @@ You say, "eggs; bacon; & spam"
 - [@dolist]
 # ITER2
   Examples:
-```
+```sharp
 say iter(This is a test string., strlen(%i0))
 You say, "4 2 1 4 7"
 ```
@@ -2659,7 +2659,7 @@ You say, "4 2 1 4 7"
   The ibreak() function stops an iter() from running at the end of the current loop. When used in nested iter()s, you can give a `<level>` to specify how many iter()s to break from. iter() will stop evaluating at the end of the current loop, and NOT immediately after ibreak() is called.
 
   Examples:
-```
+```sharp
 say iter(1 2 3 4 5,switch(%i0,3,ibreak())Test %i0!)
 You say, "Test 1! Test 2! Test 3!"
 ```
@@ -2699,7 +2699,7 @@ You say, "Test 1! Test 2! Test 3!"
 # ITEXT2
 
   Examples:
-```
+```sharp
 say iter(red blue green, iter(fish shoe, #@:##))
 You say, "1:red 1:red 2:blue 2:blue 3:green 3:green"
 ```
@@ -2832,7 +2832,7 @@ You say, "1:red 1:red 2:blue 2:blue 3:green 3:green"
   If the MUSH is compiled with ICU Unicode support, lcstr2() does the same thing except the returned string might be a different length, and ansi colors and other markup are stripped.
 
   Example:
-```
+```sharp
 say lcstr(Foo BAR bAz)
 You say, "foo bar baz"
 ```
@@ -2851,7 +2851,7 @@ You say, "foo bar baz"
   All position calculations are performed on the original list. That is, ldelete(a b c, -1 -1) will return "a b", not "a", and ldelete(a b c, -1 -2) returns "a", not "b".
 
   Examples:
-```
+```sharp
 say ldelete(This is a long test string,4)
 You say, "This is a test string"
 say ldelete(lemon|orange|pear|apple,2 3,|)
@@ -2896,7 +2896,7 @@ You say, "foo ~ bar ~ boing"
   It returns the result of `<expr>`.
 
   Examples:
-```
+```sharp
 think setr(A, 1):[letq(A, 2, %qA)]:%qA
 1:2:1
 think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
@@ -2933,7 +2933,7 @@ think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
   If `<string>` is longer than `<length>`, it will be returned unaltered, unless `<truncate?>` is true, in which case only the first `<length>` characters of `<string>` are returned.
 
   Examples:
-```
+```sharp
 say ljust(foo,6)
 You say, "foo   "
 ```
@@ -3020,7 +3020,7 @@ You say, "foo   "
   add and band bor bxor dist2d dist3d div eq fdiv gt gte lt lte max mean median min modulo mul nand neq nor or remainder stddev sub xor
 
   Examples:
-```
+```sharp
 think lmath(add, 1|2|3, |)
 6
 ```
@@ -3078,7 +3078,7 @@ think lmath(add, 1|2|3, |)
   localize() saves the q-registers, evaluates its argument, and restores the registers afterwards. It has the same effect as ulocal(), but doesn't require setting the code into an attribute.
 
   Examples:
-```
+```sharp
 say setr(0, Outside)-[setr(0, Inside)]-%q0
 You say, "Outside-Inside-Inside"
 ```
@@ -3151,7 +3151,7 @@ You say, "Outside-Inside-Inside"
 # LOCATE3
 
   Examples:
-```
+```sharp
 Find the dbref of the player whose name matches %0, or %#'s dbref if %0 is "me".
 think locate(%#, %0, PFym)
 'PF' matches objects of type 'player' and nothing else, 'm' checks for the string "me", and 'y' matches the names of players.
@@ -3188,7 +3188,7 @@ think locate(%#, %0, PFym)
   If no object is given, llocks() returns all the predefined lock types available.
 
   Example:
-```
+```sharp
 @lock me==me
 @lock/use me==me
 @lock/user:itsme me==me
@@ -3215,7 +3215,7 @@ Basic USER:ITSME Use
   `<delim>` defaults to a space, and is the delimiter of `<dbrefs>` and the list returned by lockfilter().
 
   Examples:
-```
+```sharp
 Get all male players with a name starting with 'W'.
 think iter(lockfilter(NAME^W*&SEX:M*,lwho()),name(%i0))
 Walker WalkerBot Wilco
@@ -3341,7 +3341,7 @@ Walker WalkerBot Wilco
   If `<character>` is a null argument, space is used. If `<character>` is not found anywhere in `<string>`, an empty list is returned.
 
   Example:
-```
+```sharp
 say lpos(a-bc-def-g, -)
 You say, "1 4 8"
 ```
@@ -3422,7 +3422,7 @@ You say, "1 4 8"
   Takes two or more numbers, and returns 1 if and only if each number is less than the number after it, and 0 otherwise.
 
   Examples:
-```
+```sharp
 th lt(1,2)
 1
 th lt(1,2,3)
@@ -3522,7 +3522,7 @@ th lt(1,3,2)
 `iter(<list>, ulambda(<object>/<attribute>, %i0, inum(0)), <delim>, <osep>)`
 
   Examples:
-```
+```sharp
 &times_two me=mul(%0,2)
 ```
 
@@ -3561,7 +3561,7 @@ th lt(1,3,2)
 - [WILDCARDS]
 # MATCH2
   Examples:
-```
+```sharp
 say match(I am testing a test, test*)
 You say, "3"
 ```
@@ -3598,7 +3598,7 @@ You say, "3"
 - [REGEXP SYNTAX]
 # REGLMATCH2
   Examples:
-```
+```sharp
 
   > say reglmatch(I am testing a test, test)
   You say, "3"
@@ -3662,7 +3662,7 @@ You say, "3"
   This function merges `<string1>` and `<string2>`, depending on `<characters>`. If a character in `<string1>` is the same as one in `<characters>`, it is replaced by the character in the corresponding position in `<string2>`. The two strings must be of the same length.
 
   Example:
-```
+```sharp
 say merge(AB--EF,abcdef,-)
 You say, "ABcdEF"
 ```
@@ -3670,7 +3670,7 @@ You say, "ABcdEF"
   Spaces need to be treated specially. An empty argument is considered to equal a space, for `<characters>`.
 
   Example:
-```
+```sharp
 say merge(AB[space(2)]EF,abcdef,)
 You say, "ABcdEF"
 ```
@@ -3687,7 +3687,7 @@ You say, "ABcdEF"
   `<switches>` is a space-separated list of one or more of "nospoof", "spoof", "oemit" and "remit", and makes message() behaviour as per @message/`<switches>`. For backwards-compatability reasons, all ten `<arg>` arguments must be given (even if empty) to use `<switches>`.
 
   Examples:
-```
+```sharp
 &formatter #123
 think message(me, Default> foo bar baz, #123/formatter, foo bar baz)
 Foo Bar Baz
@@ -3711,7 +3711,7 @@ Formatted> Foo Bar Baz
   mid() returns `<length>` characters from `<string>`, starting from the `<first>` character. If `<length>` is positive, it counts forwards from the `<first>` character; for negative `<length>`s, it counts backwards. Note that the first character in `<string>` is numbered 0, not 1.
 
   Examples:
-```
+```sharp
 say mid(testing, 2, 2)
 You say, "st"
 say mid(testing, 2, -2)
@@ -3795,7 +3795,7 @@ You say, "es"
   Otherwise, it returns the amount of money `<object>` has. If `<object>` has the no_pay power, the value of the 'max_pennies' @config option is returned. `<object>` must have the power itself, rather than inheriting it from its owner, in this case.
 
   Examples:
-```
+```sharp
 say money(Javelin)
 You say, "150"
 ```
@@ -3839,7 +3839,7 @@ You say, "150"
   These functions return the name of the MUSH and the MUSH's website address, as set in the 'mud_name' and 'mud_url' @config options.
 
   Example:
-```
+```sharp
 say mudname()
 You say, "TestMUSH"
 say mudurl()
@@ -3910,7 +3910,7 @@ You say, "http://www.testmush.com"
   With two arguments, alias() attempts to change the alias for `<object>` to `<new alias>`, as per @alias.
 
   Examples:
-```
+```sharp
 ex *Noltar/ALIAS
 ALIAS [#7$v]: $;No;Nol;Noli;Nolt
 say alias(*Noltar)
@@ -3958,7 +3958,7 @@ You say, "$;No;Nol;Noli;Nolt"
   If an `<object>`/`<attribute>` is given, the specified attribute will be called once for each invalid name, with the name as %0 and the dbref returned (#-1 for an unmatched name, #-2 for an ambiguous one) as %1.
 
   Example:
-```
+```sharp
 &test me=pemit(%#,Bad name "%0")
 say namelist(#1 Javelin "ringo spar" bogus, test)
 Bad name "bogus"
@@ -4560,7 +4560,7 @@ You say, "#1 #7 #56 #-1"
   randextract() may return less than `<count>` elements for `<type>`s L and R, depending on the random element chosen and the length of `<list>`. Elements of the returned list are separated by `<osep>`, which defaults to `<delim>`. `<delim>` defaults to a single space, `<count>` defaults to 1, and `<type>` defaults to R.
 
   Examples:
-```
+```sharp
 say randextract(this is a test,3)
 You say "this test a"
 say randextract(this@is@a@test,3,@)
@@ -4589,7 +4589,7 @@ You say, "this test is this is is"
   regedit() only replaces the first match, while regeditall() replaces all matches. The versions ending in i are case insensitive. The `<replace>` argument is evaluated once for each match, allowing for more complex transformations than is possible with straight replacement.
 
   Examples:
-```
+```sharp
 say regedit(this test is the best string, (?P<char>.)est, $<char>rash)
 You say "this trash is the best string"
 say regeditall(this test is the best string, (.)est, capstr($1)rash)
@@ -4671,7 +4671,7 @@ You say "this Trash is the Brash string"
                   will be stripped, as per stripansi()
 
   Examples:
-```
+```sharp
 say render(<Test 1> & [tagwrap(u,Test 2)], html)
 You say, "&lt;Test 1&gt; &amp; \<u\>Test 2</u>"
 ```
@@ -4690,7 +4690,7 @@ You say, "&lt;Test 1&gt; &amp; \<u\>Test 2</u>"
   This function simply repeats `<string>`, `<number>` times. No spaces are inserted between each repetition.
 
   Example:
-```
+```sharp
 say repeat(Test, 5)
 You say, "TestTestTestTestTest"
 ```
@@ -4707,7 +4707,7 @@ You say, "TestTestTestTestTest"
   If `<position>` is negative, it counts backwards from the end of the list. A `<position>` of -1 will replace the last element, -2 the element before last, and so on.
 
   Examples:
-```
+```sharp
 say lreplace(Turn north at the junction,2,south)
 You say, "Turn south at the junction"
 ```
@@ -4746,7 +4746,7 @@ You say, "Turn south at the junction"
   This function reverses the order of words in a list. List elements are separated by `<delimiter>`, which defaults to a space. Elements in the reversed list are separated by `<ouput separator>`, which defaults to the delimiter.
 
   Example:
-```
+```sharp
 say revwords(foo bar baz eep)
 You say, "eep baz bar foo"
 ```
@@ -4771,7 +4771,7 @@ You say, "eep baz bar foo"
   If `<string>` is longer than `<length>`, it will be returned unaltered, unless `<truncate?>` is true, in which case only the last `<length>` characters of `<string>` are returned.
 
   Examples:
-```
+```sharp
 say -[rjust(foo,6)]-
 You say, "-   foo-"
 ```
@@ -4839,7 +4839,7 @@ You say, "-   foo-"
   Returns the n-th root of `<number>`. The 2nd root is the square root, the 3rd the cube root, and so on.
 
   Examples:
-```
+```sharp
 think root(27, 3)
 3
 think power(3, 3)
@@ -4862,7 +4862,7 @@ think power(3, 3)
   floor() rounds `<number>` down, and ceil() rounds `<number>` up, to 0 decimal places.
 
   Examples:
-```
+```sharp
 think round(3.14159, 2)
 3.14
 think round(3.5, 3, 1)
@@ -4883,7 +4883,7 @@ think floor(3.14159)
   fn() executes the built-in/hardcoded function `<function name>`, even if the function has been deleted or overridden with @function. It is primarily useful within @functions that override built-ins in order to be able to call the built-in.
 
   Example:
-```
+```sharp
 &BRIGHT_PEMIT #10=fn(pemit,%0,-->[ansi(h,%1)])
 @function/delete PEMIT
 @function PEMIT=#10,BRIGHT_PEMIT
@@ -4902,7 +4902,7 @@ think pemit(me,test)
   When an `<obj>` is given, debug information is automatically suppressed when evaluating the built-in function.
 
   Example:
-```
+```sharp
 &BRIGHT_PEMIT #10=fn(%@/pemit, %0, -->[ansi(h,%1)]))
 @function/delete PEMIT
 @function PEMIT=#10, BRIGHT_PEMIT
@@ -4927,7 +4927,7 @@ think pemit(me,test)
   This function performs a second round of evaluation on `<string>`, and returns the result. It should be considered extremely dangerous to use on user input, or any other string which you don't have complete control over. There are very few genuine uses for this function; things can normally be achieved another, safer way.
 
   Example:
-```
+```sharp
 &test me=$eval *: say When we eval %0, we get [s(%0)]
 eval \[ucstr(test)]
 You say, "When we eval [ucstr(test)], we get TEST"
@@ -4970,7 +4970,7 @@ You say, "When we eval [ucstr(test)], we get TEST"
   This function scrambles a string, returning a random permutation of its characters. Note that this function does not pay any attention to spaces or other special characters; it will scramble these characters just like normal characters.
 
   Example:
-```
+```sharp
 say scramble(abcdef)
 You say, "cfaedb"
 ```
@@ -5017,7 +5017,7 @@ You say, "cfaedb"
   This function returns the difference of two sets -- i.e., the elements in `<list1>` that aren't in `<list2>`. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [sorting]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
   Example:
-```
+```sharp
 say setdiff(foo baz gleep bar, bar moof gleep)
 You say, "baz foo"
 ```
@@ -5033,7 +5033,7 @@ You say, "baz foo"
   This function returns the symmetric difference of two sets -- i.e., the elements that only appear in one or the other of the lists, but not in both. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [sorting]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
   Example:
-```
+```sharp
 say setsymdiff(foo baz gleep bar, bar moof gleep)
 You say, "baz foo moof"
 ```
@@ -5049,7 +5049,7 @@ You say, "baz foo moof"
   This function returns the intersection of two sets -- i.e., the elements that are in both `<list1>` and `<list2>`. The list that is returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [sorting]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
   Example:
-```
+```sharp
 say setinter(foo baz gleep bar, bar moof gleep)
 You say, "bar gleep"
 ```
@@ -5108,7 +5108,7 @@ You say, "bar gleep"
   The registers set by setq() can be used in later commands in the same thread. That is, the registers are set to null on all $-commands, ^-commands, A-attribute triggers, etc., but are then retained from that point forward through the execution of all your code. Code branches like @wait and @switch retain the register values from the time of the branch.
 
   Example:
-```
+```sharp
 say setr(what,foo); @wait 0=say %q<what>; say setr(what,bar)
 Object says "foo"
 Object says "bar"
@@ -5128,7 +5128,7 @@ Object says "foo"
   unsetq(`<arg>`) will clear all registers returned by listq(`<arg>`).
 
   Example:
-```
+```sharp
 think setq(name,Walker,num,#6061,loc,Bahamas)[listq()]
 LOC NAME NUM
 think setq(name,Walker,num,#6061,loc,Bahamas)[listq(n*)]
@@ -5178,7 +5178,7 @@ LOC
   This function returns the union of two sets -- i.e., all the elements of both `<list1>` and `<list2>`, minus any duplicate elements. The list returned is sorted. Normally, alphabetic sorting is done. You can change this with the fourth argument, which is a sort type as defined in [sorting]. If used with exactly four arguments where the fourth is not a sort type, it's treated instead as the output separator.
 
   Examples:
-```
+```sharp
 say setunion(foo baz gleep bar, bar moof gleep)
 You say, "bar baz foo gleep moof"
 ```
@@ -5226,7 +5226,7 @@ You say, "bar baz foo gleep moof"
   `<delimiter>` defaults to a space, and `<osep>` defaults to `<delimiter>`.
 
   Example:
-```
+```sharp
 say shuffle(foo bar baz gleep)
 You say, "baz foo gleep bar"
 ```
@@ -5241,7 +5241,7 @@ You say, "baz foo gleep bar"
   Essentially returns the sign of a number -- 0 if the number is 0, 1 if the number is positive, and -1 if the number is negative. This is equivalent to bound(`<number>`, -1, 1).
 
   Example:
-```
+```sharp
 say sign(-4)
 You say, "-1"
 ```
@@ -5402,7 +5402,7 @@ You say, "-1"
   The soundslike function returns 1 if the two words have the same hash code (see [soundex()] for information), which means, in general, if they sound alike. The hash type can be 'soundex' (Default) or 'phone' for a different algorithm that might give better results with some words.
 
   Examples:
-```
+```sharp
 think soundslike(robin,robbyn)
 1
 think soundslike(robin,roebuck, phone)
@@ -5418,7 +5418,7 @@ think soundslike(robin,roebuck, phone)
   Prints `<number>` spaces. Useful for times when you want to be able to use lots of spaces to separate things. Same as [repeat(%b, `<number>`)].
 
   Example:
-```
+```sharp
 say a[space(5)]b
 Amberyl says, "a     b"
 ```
@@ -5450,7 +5450,7 @@ Amberyl says, "a     b"
 # SPEAK2
 
   Examples:
-```
+```sharp
 say [name(me)]
 You say, "Wizard"
 ```
@@ -5492,7 +5492,7 @@ You say, "Wizard"
 # SPEAK4
 
   Examples:
-```
+```sharp
 @va me="Fragment %2 is: %0"
 ```
 
@@ -5565,7 +5565,7 @@ You say, "Wizard"
   Given a number, return its written-out representation in words.
 
   Example:
-```
+```sharp
 think spellnum(12345)
 twelve thousand three hundred forty-five
 ```
@@ -5579,7 +5579,7 @@ twelve thousand three hundred forty-five
   Given an integer, return its written-out ordinal representation in words.
 
   Example:
-```
+```sharp
 think ordinal(1)
 first
 ```
@@ -5596,7 +5596,7 @@ first
   number of words.
 
   Example:
-```
+```sharp
 say splice(foo bar baz,eek moof gleep,bar)
 You say, "foo moof baz"
 ```
@@ -5618,7 +5618,7 @@ You say, "foo moof baz"
   **Prepared Statements (Parameterized Queries):** If more than 4 arguments are provided, mapsql() automatically uses prepared statements. The 5th argument onwards are treated as parameters that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe.
 
   Example using prepared statements:
-  ```
+```sharp
   > &DisplayRow me=User %1 has email %2
   > think mapsql(me/DisplayRow,lit(SELECT name\, email FROM users WHERE status = ?),%r,0,active)
   ```
@@ -5648,7 +5648,7 @@ You say, "foo moof baz"
   **Prepared Statements (Parameterized Queries):** If more than 4 arguments are provided, sql() automatically uses prepared statements. The 5th argument onwards are treated as parameters that replace `?` placeholders in the query. This is the recommended way to prevent SQL injection attacks, as parameters are properly escaped and type-safe.
 
   Example using prepared statements:
-  ```
+```sharp
   > think sql(lit(SELECT name FROM users WHERE id = ?),%r,%b,,123)
   ```
 
@@ -5698,7 +5698,7 @@ You say, "foo moof baz"
   This function performs SQL-server-implemented escaping of `<string>`. It's important to escape arbitrary data before passing it to the sql() and mapsql() functions, or @sql command, to prevent SQL injection attacks.
 
   Example:
-```
+```sharp
 think sqlescape(You don't say)
 You don\'t say
 ```
@@ -5732,7 +5732,7 @@ You don\'t say
   This function removes the leading and trailing `<character>`s from `<string>`, and condenses all inter-word `<character>`s to a single`<character>`. If no character is given, a space is used.
 
   Examples:
-```
+```sharp
 
     > say squish(%b%bfoo bar%b%bbaz blech%b%b%beek%b)
     You say, "foo bar baz blech eek"
@@ -5751,7 +5751,7 @@ You don\'t say
   starttime() returns the time the MUSH was last started, and restarttime() returns the time it was last restarted, including @shutdown/reboots. The times are in the same format as time().
 
   Example:
-```
+```sharp
 say starttime()%r[restarttime()]
 You say "Sat Dec  7 00:09:13 1991
 You say "Sat Dec  7 00:09:13 1991
@@ -5788,7 +5788,7 @@ Tue Sep 22 13:54:04 2015
   This function is similar to map(), except you can pass up to 30 elements of the list at a time, in %0-%9 and v(10)-v(29). `<step>` must be between 1 and 30, with a step of 1 equivalent to map(). If the elements of the list can't be split up evenly, the last evaluation will run with some of the registers unset; the %+ substitution or the registers() function can be used to see which/how many are set.
 
   Example:
-```
+```sharp
 &foo me=%0 - %1 - %2
 think step(foo, a b c d e, 3,, %r)
 a - b - c
@@ -5828,7 +5828,7 @@ d - e -
   strallof() returns all `<expr>`s which evaluate to non-empty strings, with each expression separated by `<osep>`.
 
   Examples:
-```
+```sharp
 say strfirstof(,  ,@@(Nothing),foo,default)
 You say, "foo"
 ```
@@ -5855,7 +5855,7 @@ You say, "foo"
   If `<position>` is less than 0, an error is returned. If `<position>` is greater than the length of `<string>`, `<insert>` is appended to it.
 
   Examples:
-```
+```sharp
 think strinsert(barbaz, 0, foo)
 foobarbaz
 think strinsert(Myname, 2, %b)
@@ -5898,7 +5898,7 @@ My name
   Returns the length of the string (the number of characters in it).
 
   Example:
-```
+```sharp
 say strlen(foobar)
 You say, "6"
 ```
@@ -5915,7 +5915,7 @@ You say, "6"
   If `<register list>` is given, there is a side-effect: Wildcards and patterns are stored in q-registers, in the order they are given. `<register list>` is a space-separated list of register names.
 
   Examples:
-```
+```sharp
 say strmatch(Foo bar baz, *Baz)
 You say, "1"
 ```
@@ -5949,7 +5949,7 @@ You say, "1"
   strreplace() attempts to preserve ansi: if `<text>` contains ansi, it will be kept the same. If `<text>` contains no ansi, but `<string>` does, `<text>` will be inserted with the same ansi as the text it replaces. To force `<text>` to be inserted with no ansi, even if `<string>` has ansi, wrap it in ansi(n,....).
 
   Examples:
-```
+```sharp
 say strreplace(abcXYZgh, 3, 3, def)
 You say, "abcdefgh"
 ```
@@ -6035,7 +6035,7 @@ You say, "abcdefgh"
 - [firstof()]
 # SWITCH2
   Examples:
-```
+```sharp
 say switch(test, *a*, foo, *b*, bar, *t*, neat, baz)
 You say, "neat"
 ```
@@ -6085,7 +6085,7 @@ You say, "neat"
   stext(L) returns the `<string>` for the outermost switch, and is equivilent to stext(slev()). %$`\<n\>` is equivilent to stext(`\<n\>`), for `\<n\>`s of 0-9 or L.
 
   Examples:
-```
+```sharp
 &cmd.whois me=$whois *: @pemit %#=switch(pmatch(%0),#-*, I don't know '%0', '%0' is %$0)
 @switch foo=f*, say switch(bar, b*,%$1 %$0!)
 You say, "foo bar!"
@@ -6117,7 +6117,7 @@ You say, "foo bar!"
   `<line length>` is how wide a table row can be, and defaults to 78. `<delimiter>` is the delimiter used in `<list>`, and defaults to a space. `<osep>` is a single character to be used between entries in the table, and also defaults to a space.
 
   Examples:
-```
+```sharp
 think table(a b areallylongone d)
 a          b          areallylon d
 ```
@@ -6215,7 +6215,7 @@ a          b          areallylon d
   This function returns 1 if its argument is valid JSON, 0 if not.
 
   Examples:
-```
+```sharp
 think isjson(1)
 1
 think isjson(true)
@@ -6290,7 +6290,7 @@ think isjson("quoted")
 - [json_query()]
 # JSON_MAP2
   A very basic example:
-```
+```sharp
 &json me=We got [art(%0)] %0: %1
 ```
 
@@ -6347,7 +6347,7 @@ think isjson("quoted")
 - [json_map()]
 # JSON_QUERY2
   Examples:
-```
+```sharp
 
     > say json_query(true)
     You say, "boolean"
@@ -6371,7 +6371,7 @@ think isjson("quoted")
  See [json_query3] for more examples.
 # JSON_QUERY3
  Examples:
-```
+```sharp
 
     > @set me=json:[json(object, foo, "bar", baz, 12345, fnord, json(array, 1, 2, 3))]
     > say v(json)
@@ -6413,7 +6413,7 @@ think isjson("quoted")
   See 'HELP JSON_MOD2' for examples.
 # JSON_MOD2
  Examples:
-```
+```sharp
 
     > say json_mod(json(object, a,1,b,2), patch, json(object, a,42))
     You say, "{"a":43,"b":2}"
@@ -6440,7 +6440,7 @@ think isjson("quoted")
   testlock() evaluates the lock from the caller's perspective.
 
   Example:
-```
+```sharp
 think testlock(TYPE^PLAYER&FLAG^WIZARD, *Gandalf)
 1
 think testlock(TYPE^PLAYER&FLAG^WIZARD, *Bilbo)
@@ -6473,7 +6473,7 @@ think testlock(\\+FOO:BAR,*Walker)
   textsearch() returns the names of all topics whose contents matches the given `<pattern>`, the same as "help/search `<pattern>`", with topic names separated by `<osep>`.
 
   Example:
-```
+```sharp
 say textentries(help, ?who())
 You say, "CWHO() LWHO() MWHO() NWHO() XWHO() ZWHO()"
 ```
@@ -6568,7 +6568,7 @@ Continued in HELP TIMECALC2
   For details about what these formats and modifers mean, see https://www.sqlite.org/lang_datefunc.html
 
  Examples:
-```
+```sharp
 think timecalc(now, +100 years, localtime)
 Mon May 09 03:57:31 2118
 think timecalc(secs(), unixepoch)
@@ -6923,7 +6923,7 @@ Continued in HELP TIMEZONES13
   The elapsed time is split into years, weeks, days, hours, minutes and seconds fields. As many non-zero fields as can fit into `<width>` characters are used, in that order. If all fields are 0, seconds are displayed.
 
   Examples:
-```
+```sharp
 think etime(59)
 59s
 think etime(60)
@@ -6949,7 +6949,7 @@ think etime(61, 5)
   A list of all codes is in [etimefmt2].
 
   Examples:
-```
+```sharp
 say etimefmt(I have been connected for $2H:$2M., conn(%#))
 You say, "I have been connected for 01:32."
 think etimefmt($2mm $2ss, 500) - [timestring(500)]
@@ -6976,7 +6976,7 @@ think etimefmt($2mm $2ss, 500) - [timestring(500)]
   See [etimefmt3] for more examples.
 # ETIMEFMT3
   Examples:
-```
+```sharp
 think etimefmt($2h:$2M, 3700)
 1:01
 think etimefmt(You have $m minutes and $s seconds to go, 78)
@@ -6994,7 +6994,7 @@ think etimefmt($txs is $xm$xs, 75)
   A list of all codes for `<format>` is in [timefmt2].
 
   Example:
-```
+```sharp
 think timefmt($A\, the $dth day of $B.)
 Monday, the 17th day of July.
 ```
@@ -7024,7 +7024,7 @@ Monday, the 17th day of July.
   The timestring function takes a number of seconds as input and returns the amount of time formatted into days, hours, minutes, and seconds. If `<pad flag>` is 1, all time periods will be used even if the number of seconds is less than a day, hour, or minute. If `<pad flag>` is 2, all numbers will be 2 digits long.
 
   Examples:
-```
+```sharp
 say timestring(301)
 You say, " 5m  1s"
 say timestring(301,1)
@@ -7045,7 +7045,7 @@ You say, "00d 00h 05m 01s"
   The stringsecs() function takes a string of the form produced by timestring() or etime() and converts it back into seconds.
 
   Examples:
-```
+```sharp
 say stringsecs(5m 1s)
 You say, "301"
 ```
@@ -7065,7 +7065,7 @@ You say, "301"
   This function translates every character in `<string>` that exists in `<find>` to the character at an identical position in `<replace>`. Ranges of characters separated by -'s are accepted. `<find>` and `<replace>` must be the same length after expansion of ranges. If a character exists more than once in `<find>`, only the last instance will be counted. The example below is the common ROT-13 algorithm for lower case strings, demonstrated with every letter explicitly listed, and with the equivalent but briefer character ranges. Literal -'s can be in `<find>` and `<replace>` if they are the first or last characters in the arguments.
 
    Examples:
-```
+```sharp
 say tr(hello,abcdefghijklmnopqrstuvwxyz,nopqrstuvwxyzabcdefghijklm)
 You say, "uryyb"
 say tr(uryyb, a-z, n-za-m)
@@ -7092,7 +7092,7 @@ You say, "hello"
   Normally, the arguments for trim() are in the same order as trimpenn(). However, if the tiny_trim_fun @config option is on, the `<characters to trim>` and `<trim style>` arguments are reversed. Use trimpenn() or trimtiny() if you want to specify a particular argument sequence no matter how the option is set.
 
   Examples:
-```
+```sharp
 say trim(%b%bfoo bar baz%b%b%beek%b%b)
 You say, "foo bar baz   eek"
 say trim(***BLAM***,*)
@@ -7114,7 +7114,7 @@ You say "Trim Test"
   This function truncates floating point numbers to integers. It can also be used to return the leading numeric prefix of a string. If `<string>` does not start with a number, 0 is returned.
 
   Examples:
-```
+```sharp
 say trunc(3.141593)
 You say, "3"
 say trunc(101Dalmations)
@@ -7136,7 +7136,7 @@ You say, "101"
   This function returns the type of an object - one of PLAYER, THING, EXIT, ROOM or GARBAGE - or #-1 if the object can't be found.
 
   Examples:
-```
+```sharp
 @create Test
 think type(Test)
 THING
@@ -7160,7 +7160,7 @@ ROOM
   It differs from ufun() when the caller does have the attribute set - pfun() will ignore the attribute on the child, and evaluate the attribute as it would be inherited from the parent.
 
   Example:
-```
+```sharp
 @create ParentObject
 @parent me=ParentObject
 &foo me=ChildFoo
@@ -7231,7 +7231,7 @@ ParentFoo
 # U3
 # UFUN3
   Example:
-```
+```sharp
 &testcmd Object=$test *: say ufun(testfun, %0); @emit %0
 &testfun object=[strlen(%0)] [ucstr(%0)]
 test string
@@ -7261,7 +7261,7 @@ string
   If the MUSH is compiled with ICU Unicode support, ucstr2() does the same thing except the returned string might be a different length, and ansi colors and other markup are stripped.
 
   Example:
-```
+```sharp
 say ucstr(Foo BAR baz)
 You say, "FOO BAR BAZ"
 say ucstr2(grüßen)
@@ -7284,7 +7284,7 @@ You say, "GRÜSSEN
   uldefault() saves the global q-registers (%q0-%q9, %qa-%qz, etc) before evaluation, and restores them afterwards, as per ulocal().
 
   Examples:
-```
+```sharp
 &TEST me=center(%0,5,*)
 say udefault(Test,-- BOOM --,ACK)
 You say "*ACK*"
@@ -7310,7 +7310,7 @@ You say "-- BOOM --"
   See [ulocal2] for examples.
 # ULOCAL2
   Examples:
-```
+```sharp
 &FRUIT me=apples bananas oranges pears
 &SUB-FUNCTION me=setq(0,v(FRUIT))[extract(%q0,match(%q0,%0),1)]
 &TOP-FUNCTION me=setq(0,are delicious!)[ulocal(SUB-FUNCTION,%0)] %q0
@@ -7338,7 +7338,7 @@ You say "bananas are delicious!"
   unique() returns a copy of `<list>` with consecutive duplicate items removed. It does not sort the list. The optional `<sort type>` describes what type of data is in the list; see [sorting] for details. If no type is given, the elements are compared as strings. Elements of `<list>` are separated by `<delim>`, which defaults to a space. Each element of the output is separated by `<osep>`, which defaults to `<delim>`.
 
   Examples:
-```
+```sharp
 think unique(a b b c b)
 a b c b
 think unique(1 2 2.0 3, f)
@@ -7501,7 +7501,7 @@ think unique(1|2|3|3, n, |, _)
   version() returns a string which contains various version information for the MUSH you're on. numversion() returns an integer representation of the version/patchlevel which can be used for softcode comparison.
 
   Example:
-```
+```sharp
 say version()
 You say "SharpMUSH version 1.8.1 patchlevel 4 [12/06/2005]"
 say numversion()
@@ -7621,7 +7621,7 @@ You say "1008001004"
   Returns the number of the word within `<list>` where the `<number>`th character falls. Characters and words are numbered starting with 1, and `<delimiter>`s between words are treated as belonging to the word that follows them. If the list is less than `<number>` characters long, #-1 is returned. `<delimiter>` defaults to a space.
 
   Example:
-```
+```sharp
 say wordpos(foo bar baz, 5)
 You say, "2"
 ```
@@ -7638,7 +7638,7 @@ You say, "2"
   When the `<delimiter>` is a space, empty elements are not counted.
 
   Examples:
-```
+```sharp
 think words(1 2%b%b3, %b)
 3
 ```
@@ -7656,7 +7656,7 @@ think words(1 2%b%b3, %b)
   This function takes `<string>` and splits it into lines containing no more than `<width>` characters each. If `<first line width>` is given, the first line may have a different width. If `<line separator>` is given, it is inserted between each line; by default the separator is a newline (%r).
 
   Examples:
-```
+```sharp
 @desc here=wrap(Wrapped paragraph, 72)
 @desc here=wrap([space(4)]Indented paragraph, 72)
 @desc here=iter(wrap(Hanging indent, 72, 76, %r), switch(#@, >1, space(4))%i0, %r, %r)
@@ -7887,7 +7887,7 @@ think words(1 2%b%b3, %b)
  If the dict_file @config option is set, loads that file into the 'words' category.
 
  Example:
-```
+```sharp
 think suggest(words, ardvark)
 AARDVARK AARDVARKS AARDVARK'S etc...
 ```
@@ -7929,7 +7929,7 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 - [connrecord()]
 # CONNLOG3
   Examples:
-```
+```sharp
 think connlog(logged in, after, secscalc(now, -15 minutes))
 shows all connections that were present during the last 15 minutes
 ```
@@ -7993,7 +7993,7 @@ shows all connections that were present during the last 15 minutes
   Computes the HMAC (message authentication code) hash for `<text>` using the passphrase `<key>` and the given hash function `<digest>`, which can be any supported by digest(). `<encoding>` can be base16 (The default) or base64.
 
   Example:
-```
+```sharp
 think hmac(sha256, secret, this is some text)
 9598fd959633f2a64a7d7e985966774aa6f334bc802e5b3301772ec8ed6eed5a
 think hmac(sha256, secret, this is some text, base64)

@@ -20,7 +20,7 @@ SharpMUSH makes the following enhancements visible to Pueblo users when Pueblo s
 
 While Pueblo brings a number of new features and markups to MUSHes, in many ways it's not well suited. Because it's based on HTML, multiple spaces are compressed, and Pueblo typically defaults to a variable width font. Because of this, supporting Pueblo is not just a matter of enabling the option. The output of any commands which rely on fixed spacing, such as a +who, must be wrapped in `<pre>` tags to ensure they appear correctly for players using Pueblo. For instance:
 
-```
+```sharp
 > &cmd`who Globals=$+who: @nspemit %#=tagwrap(pre, u(fun`who))
 ```
 
@@ -74,8 +74,8 @@ Available functions:
 - tagwrap()
 - wshtml()
 
-Examples:
-```
+### Examples
+```sharp
 > say html(a href="https://sharpmush.com")SharpMUSH[html(/a)]
 > say tag(a,href="https://sharpmush.com")SharpMUSH[endtag(a)]
 > say tagwrap(a,href="https://sharpmush.com",SharpMUSH)
@@ -95,8 +95,8 @@ Mortals are restricted in the tags they may use. Most standard HTML tags are ok;
 
 This wizard-only function will output *<string>* as an HTML Tag.
 
-Example:
-```
+### Example
+```sharp
 > think html(b)Foo[html(/b)]
 ```
 
@@ -121,8 +121,8 @@ Non-wizards should see the tag(), endtag(), and tagwrap() functions, which are s
 
 This function outputs the named HTML/Pueblo tag with the given paramaters.
 
-Example:
-```
+### Example
+```sharp
 tag(img,src="https://sharpmush.com/image.jpg",align="left",width="300")
 ```
 
@@ -143,8 +143,8 @@ Will output (in HTML):
 
 Outputs a closing HTML/Pueblo tag for the named tag.
 
-Example:
-```
+### Example
+```sharp
 endtag(b)
 ```
 
@@ -165,8 +165,8 @@ Will output (in HTML):
 
 This function outputs *<string>*, wrapped in the *<name>* HTML/Pueblo tag with the specified *<parameters>*.
 
-Example:
-```
+### Example
+```sharp
 tagwrap(a,href="https://sharpmush.com",SharpMUSH Downloads)]
 ```
 
@@ -234,7 +234,7 @@ In both cases, the *<default string>* is shown as plain text if the recipient is
 
 For example, if one uses:
 
-```
+```sharp
 @emit [wshtml(<a href="https://sharpmush.com">SharpMUSH</a>,Go to https://sharpmush.com)]
 ```
 

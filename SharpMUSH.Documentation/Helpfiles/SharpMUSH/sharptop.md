@@ -30,19 +30,19 @@ This is the index to the MUSH online help files.
   These commands and switches also work with other things using our helpfile setup: news, ahelp, and any others added.
 
   help `<textname>` is how to see a help file.
-```
+```sharp
   > help helpfile
   > help @search
 ```
 
   help `<namepattern>` is a good way to read long helpfilenames or find a pattern you're looking for. If `<namepattern>` matches multiple entries, it will show you their names.
-```
+```sharp
   > help @tri*2
   > help sort*()
 ```
 
   If you want to find helpfiles that _contain_ a pattern, use "help/search". For example:
-```
+```sharp
   > help/search @trigger
   > help/search @switch
 ```
@@ -303,7 +303,7 @@ For a list of all topics, see [entries].
 
 # ACTION2
   Example 1:
-```
+```sharp
     > @asuccess Gift=@pemit %#={The box pops open; surprise!} ; @name me=New Toy ; @desc me=A shiny new toy, just for %n!
     > take gift
     The box pops open; surprise!
@@ -313,7 +313,7 @@ For a list of all topics, see [entries].
 ```
 
   Example 2:
-```
+```sharp
     > &TEST me=$test:@emit {Testing; testing; one, two.} ; @dolist 1 2 3={think Test %i0, success.}
     > test
     Testing; testing; one, two.
@@ -370,20 +370,20 @@ For a list of all topics, see [entries].
 # #LAMBDA2
   A typical usage of anonymous attributes would be to convert a list of dbrefs to names, as so:
 
-```
+```sharp
   > say map(#lambda/name(\%0), #3 #12 #23)
   You say, "Joe Robert Sally"
 ```
 
   The following version uses `#apply` instead:
 
-```
+```sharp
   > say map(#apply/name, #3 #12 #23)
 ```
 
   Because the code is parsed twice, you can actually build parts of it in place, which is very convenient. Consider this implementation of a lattrval function, which is like `lattr()` but it only returns non-empty attributes:
 
-```
+```sharp
   > &lattrval me=filter(#lambda/hasattrval([decompose(before(%0, /))], \%0), lattr(%0))
 ```
 
@@ -402,7 +402,7 @@ For a list of all topics, see [entries].
 
   Finally, a multiple argument example of #apply, which requires less escaping than #lambda for cases where you're just calling another function:
 
-```
+```sharp
   > think mix(#apply2/ansi, r g b, foo bar baz)
 ```
 
@@ -643,7 +643,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 
   Example:
-```
+```sharp
     > look me
     Cyclonus(#3PWenAMc)
     A very short desc.
@@ -722,7 +722,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The executor of a command is the object actually carrying out the command or running the code. This differs from the enactor, because the enactor is the object that sets off the command. In some cases, the enactor and the executor will be the same. The substitution %! evaluates to the dbref of the executor of the code.
 
   For example:
-```
+```sharp
     > @emit %n (%#) is the enactor and %! is the executor!
     Cyclonus (#6) is the enactor and #6 is the executor!
     > @create Box
@@ -746,13 +746,13 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 
   Example:
-```
+```sharp
     > &cmd_test Foo=$test: @emit ufun(Bar/fun_test)
     > &fun_test Bar=%n(%#) typed 'test', and [name(%@)](%@) ufun()'d this!
     > test
     Mike(#5) typed 'test', and Foo(#6) ufun()'d this!
 ```
-```
+```sharp
     > &wizfun Foo=if(hasflag(%@, Wizard), ufun(wizfun2), #-1 Sorry)
 ```
 
@@ -867,7 +867,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # HERE
   The word 'here' refers to the room you are in. For example, to rename the room you're in (if you control it), you could use:
 
-```
+```sharp
     > @name here=<new name>
 ```
 
@@ -882,7 +882,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   When a player types 'home', she is sent back to the home room. When a thing with the STICKY flag set on it is dropped, it also goes to its home location. Note that if the FIXED flag is set on a player, she cannot use the 'home' command.
 
   You can create an exit that sends players home by doing:
-```
+```sharp
     > @link <exit name>=home
   You can set the drop-to in a room to home by doing:
     > @link <room dbref or "here">=home
@@ -979,7 +979,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The other way is to "listen" for something said/emitted in your hearing. There are two ways to listen for something in a room. The easiest way is to use a combination of `@listen` and `@ahear`/`@aahear`/`@amhear`.
 
   For example:
-```
+```sharp
     > @listen Welcome Mat=* has arrived.
     > @ahear Welcome Mat="Welcome, %n!
     Breaker has arrived.
@@ -998,7 +998,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Syntax:  &`<attribute>` `<object>` = ^`<pattern>`:`<action list>`
 
   For example:
-```
+```sharp
     > @set Welcome Mat = MONITOR
     > &greet Welcome Mat=^* has arrived.:"Welcome, %n!
     > &goodbye Welcome Mat=^* has left.:POSE says as %n leaves, "Bye!"
@@ -1220,7 +1220,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   If a child and its parent both have the same attribute set, the attribute on the child will always be used first. However, a child can use the `pfun()` function to get the value of an attribute from its parent, even when it has an attribute with the same name.
 
   For example:
-```
+```sharp
     > &TEST Bar=$test:@emit I'm the parent ([name(me)])
     > &TEST Foo=$check:@emit I'm the child ([name(me)])
     > @parent Foo=Bar
@@ -1236,7 +1236,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   If a parent has the same `$-command` name in a different attribute, however, BOTH the parent and child commands will execute:
 
   (continued from previous example)
-```
+```sharp
     > &CHECK Bar=$check:@emit No, I'm the parent! ([name(me)])
 ```
 ```
@@ -1280,7 +1280,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # PUPPETS2
   An example of a puppet:
 
-```
+```sharp
   > @create Punch
   Created: Object #18.
   > drop Punch
@@ -1371,7 +1371,7 @@ See [queue2]
 # REGEXPS2
   Regular expressions are extremely useful when you want to enforce a data type. For example, if you have a command where you want a player to enter a string and a number ('`+setnum` `<player>`=`<number>`', for example), you might do it like this:
 
-```
+```sharp
     > &DO_NUM Command Object=$^\+setnum (.+)=([0-9]+)$: @va me=Data: %1 = %2
     > @set Command Object/DO_NUM=regexp
 ```
@@ -1504,7 +1504,7 @@ See [queue2]
 
 
   Examples:
-```
+```sharp
     > say regmatch(foo_bar, lit(^[[:word:]]+$))
     You say "1"
     > say regmatch(foo bar, lit(^[[:word:]]+$))
@@ -1529,7 +1529,7 @@ See [queue2]
 
   The basic registers are filled with information that matches the wildcard pattern of the command trigger. (Before you say "Huh?", here's an example.)
 
-```
+```sharp
     > &COMMAND me=$command *=*:@emit %0 is in register 0 and %1 is in register 1.
     > command whee=blert foo
     whee is in register 0 and blert foo is in register 1.
@@ -1542,7 +1542,7 @@ See [queue2]
 
   They can also be filled with information that is passed by an `@trigger` command:
 
-```
+```sharp
     > &SOMECODE me=@emit %0 is in register 0 and %1 is in register 1.
     > @trigger me/somecode=whee,foo bar
   whee is in register 0 and foo bar is in register 1.
@@ -1605,12 +1605,12 @@ See [queue2]
 
 
   Examples:
-```
+```sharp
     > @wait semaphore=:tests.
     > @notify semaphore
     Wizard tests.
 ```
-```
+```sharp
     > @wait timer/30=:waits 30 seconds.
     [ 30 seconds passes. ]
     Wizard waits 30 seconds.
@@ -1620,7 +1620,7 @@ See [queue2]
 # SEMAPHORES4
   Semaphores can be used to enforce mutual exclusion - to prevent the same object from being used simultaneously by two players. The basic strategy is to ensure that the object always has a SEMAPHORE of -1, to enclose commands in an `@wait`, and to conclude the set of commands with an `@notify` me:
 
-```
+```sharp
     > &doit obj=$doit: @wait me={&doer me = %n; @trigger me/report}
     > &report obj=say [v(doer)] did it!; @notify me
     > @startup obj=@drain me; @notify me
@@ -1653,7 +1653,7 @@ See [queue2]
 # SEMAPHORES6
   An example:
 
-```
+```sharp
   > @wait me/semtest=think blah
   > ex me/semtest
   SEMTEST [#1ic+]: 1
@@ -1810,7 +1810,7 @@ See [queue2]
 # %4
 
   Example:
-```
+```sharp
   > @sex me=male
   > @drop box=%n just dropped %p box.
   > drop box
@@ -1819,7 +1819,7 @@ See [queue2]
 ```
   Let's say that Cyclonus's dbref number is #10 and the box's dbref number is #11. The dbref of the room Cyclonus is standing in is #13. When Cyclonus dropped the box above, these were the values of the following %-subs:
 ```
-```
+```sharp
   %n = Cyclonus
   %# = #10
   %@ = #10
@@ -1967,7 +1967,7 @@ See [queue2]
   Any number of wildcards, * and ?, may be in present in `<command pattern>`. A * matches any number of characters (including none), and ? matches exactly one character. When the action list is executed, the values on the stack in %0-%9 and v(10)-v(29) are the portions of what the user types that match the first 30 *'s or ?'s. You can also match a regular expression rather than wildcards by setting the REGEXP attribute flag on `<attribute>`; see [regexps] for details. When using named regexp captures, the named arguments can be accessed via r(`<name>`, args).
 
   For example, to make a 'wave' command, you could do the following:
-```
+```sharp
     > &DO_WAVE me=$wave *: pose waves to %0.
   You could then type:
     > wave Guest
@@ -2003,18 +2003,18 @@ See [queue2]
 
 
   Example:
-```
+```sharp
     > @ouse Foo=has used Foo!
     > use Foo
     Sketch has used Foo!
 ```
-```
+```sharp
     > @ouse Foo='s used Foo!
     > @set Foo/ouse=nospace
     > use Foo
     Sketch's used Foo!
 ```
-```
+```sharp
     > @ouse Foo=Foo has been used by %n!
     > @set Foo/ouse=noname
     > use Foo
@@ -2065,13 +2065,13 @@ See [queue2]
 # **
   SharpMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
 
-```
+```sharp
     > &cmd.wave me=$wave *: pose waves.
 ```
 
   The "*" wildcard will match anything, allowing you to type "wave foo", "wave bar", etc. You can use the %0-%9 substitutions to get the values which matched the first ten wildcards in the command:
 
-```
+```sharp
     > &cmd.wave me=$wave *: pose waves to %0.
     > wave to Muse
     Mike waves to Muse.
@@ -2079,7 +2079,7 @@ See [queue2]
 
   A backslash (\) can be used to escape * and ? if you want to match a literal asterisk or question mark. (Note that you will often have to use \\ so that the softcode parser doesn't evaluate it away!)
 
-```
+```sharp
   > think strmatch(foobar, ?*?)
   1
   > think strmatch(foobar, \\?*\\?)
@@ -2237,11 +2237,11 @@ This is the AHELP index.
 
 
   Examples:
-```
+```sharp
   Only allow admin to use ansi():
     > @function/restrict ansi=admin
 ```
-```
+```sharp
   Don't let anyone set SUSPECT or GAGGED use @emit, and log the name of anyone who uses it.
     > @command/restrict @emit=logname
     > @command/restrict @emit=!flag^suspect&!flag^gagged

@@ -22,7 +22,7 @@ You can negate lock keys, and combine multiple keys, as explained in [lockkeys2]
 
 A lock key can be negated by prefixing the key with an "!". For example:
 
-```
+```sharp
 > @lock North=flag^wizard
 > @lock South=!flag^wizard
 ```
@@ -31,13 +31,13 @@ only lets those with the Wizard flag pass through the North exit, while only all
 
 You can combine keys, either allowing someone to pass a lock if they pass any of the keys given, or requiring that they pass all of the keys, using the "|" (or) and "&" (and) symbols. For example:
 
-```
+```sharp
 > @lock OOC Room= status:OOC | power^guest
 ```
 
 locks the exit "OOC Room" so that only those with their STATUS attribute set to "OOC", or those with the Guest @power, can pass, while
 
-```
+```sharp
 > @lock Men's Room= Sex:Male & +Bathroom Key
 ```
 
@@ -45,7 +45,7 @@ only allows those with their @sex set to Male who are carrying a "Bathroom Key" 
 
 You can group together different sets of keys by enclosing each group in parenthesis "()". For instance,
 
-```
+```sharp
 > @lock Entrance=!type^player | (type^player & !flag^unregistered)
 ```
 
@@ -65,12 +65,12 @@ allows non-players to pass, or players who do not have the "unregistered" flag s
 
 You can lock an object in several different ways. The simplest lock is one that always succeeds (#true) or always fails (#false), or that matches a specific object by prefixing it with an "=":
 
-```
+```sharp
 > @lock My Toy = #false
 ```
 This lock will always fail.
 
-```
+```sharp
 > @lock My Toy = =me
 ```
 This locks the object "My Toy" to you and you alone. It is recommended that you `@lock me = =me` in order to prevent anyone else from picking you up. The two = signs are NOT a typo! The first is part of the @lock syntax (as shown at the top of [@lock]) the second is a lock key that means "only this exact object".
@@ -83,20 +83,20 @@ For backwards compatibility, `OBJID^<object>` is an alias for `=<object>`.
 **## OWNER LOCK**
 
 An "owner" lock allows you to lock something to anything owned by the same player:
-```
+```sharp
 @lock Box = $My Toy
 ```
 This locks "Box" to anything owned by the owner of "My Toy" (since players own themselves, that includes the owner as well).
 
 **## CARRY LOCK**
 You can lock an object to something that has to be carried:
-```
+```sharp
 @lock Door = +Secret Door Key
 ```
 This locks the exit "Door" to someone carrying the object "Secret Door Key". Anyone carrying that object will be able to go through the exit.
 
 You can lock an object to -either- an object or to someone carrying the object with:
-```
+```sharp
 @lock Disneyworld Entrance = Child
 ```
 This locks the exit "Disneyworld Entrance" to either the object "Child" -or- to someone carrying the object "Child". (OK, so it's a weird example.)
@@ -113,11 +113,11 @@ You can lock an object to an attribute on the person trying to pass the lock (as
 *<value>* can contain wildcards (*), greater than (>) or less than (<) symbols.
 
 For example:
-```
+```sharp
 @lock Men's Room = sex:m*
 ```
 This would lock the exit "Men's Room" to anyone with a SEX attribute starting with the letter "m".
-```
+```sharp
 @lock A-F = icname:<g
 ```
 This would lock the exit "A-F" to anyone with a ICNAME attribute starting with a letter "less than" the letter "g". This assumes that ICNAME is visual or the object with the lock can see it.
@@ -140,8 +140,8 @@ The person trying to pass the lock is %# and *<object>* is %! when the evaluatio
 # @LOCK-EVAL2
 # @LOCK-EVALUATION2
 
-Example:
-```
+### Example
+```sharp
 @lock Thursday Cafe = whichday/Thu
 &whichday Thursday Cafe = first(time())
 ```
@@ -165,7 +165,7 @@ You can test for objects matching a given name by using the below format:
 It is similar to performing strmatch(%n,*<pattern>*), though will also match for a player/exit with *<pattern>* as one of its @aliases.
 
 For example, to lock "Bob's Tools" to only people with a name beginning with Bob:
-```
+```sharp
 @lock/use Bob's Tools=name^bob*
 ```
 
@@ -185,7 +185,7 @@ You can test for set flags, powers, or object types in a lock directly, without 
 These locks act like the object the lock is on does a hasflag(%#, *<flag>*), or haspower(%#, *<power>*), hastype(%#, *<type>*) succeeding only if the flag/power is set, or the object is of the specified type.
 
 For example:
-```
+```sharp
 @lock/use Admin Commands=flag^wizard|flag^royalty
 ```
 
@@ -202,7 +202,7 @@ You can test to see if the enactor is a member of a space-separated list of dbre
 `@lock <object>=dbreflist^<attributename>`
 
 For example:
-```
+```sharp
 &allow Commands = #1 #7 #23 #200:841701384
 &deny commands = #200 #1020
 @lock/use commands = !dbreflist^deny & dbreflist^allow 
@@ -212,11 +212,11 @@ For example:
 
 **## INDIRECT LOCKS**
 An "indirect" lock allows you to lock something to the same thing as another object (very useful in setting channel locks; see [@clock]):
-```
+```sharp
 @lock Second Puppet=@First Puppet
 ```
 This locks the object "Second Puppet" to whatever the object "First Puppet" is locked to. Normally, the lock type that is checked is the same as the lock on the first. You can specify a different lock type with @object/LOCKNAME. For example:
-```
+```sharp
 @lock Second Puppet = @First Puppet/Use
 ```
 Second Puppet's basic lock now checks First Puppet's use lock.
@@ -233,7 +233,7 @@ You can check to make sure an object is owned by a player connected from a speci
 *<ipaddress>* and *<hostname>* can contain wildcards. *<object>* must be able to see the LASTIP attribute (for ip locks) or LASTSITE attribute (for hostname locks) on the enactor's owner.
 
 For example:
-```
+```sharp
 @lock <object>=ip^127.0.0.1
 ```
 This locks *<object>* to players (and the objects of players) currently connected from the computer the MUSH is running on.
@@ -603,7 +603,7 @@ Controls who can @open an exit from this OPEN_OK room.
 **## User-defined Locks**
 User-defined locks have no hardcoded meaning. They allow you to set locks for any purpose, which you can test using the elock() function. *<name>* can be anything which is a valid attribute name. For example, in a combat system you might use a "wield" @lock on weapons, similar to:
 
-```
+```sharp
 > @lock/user:wield War Hammer=strength:>20
 ```
 

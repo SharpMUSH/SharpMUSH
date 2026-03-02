@@ -327,12 +327,52 @@ public class TextFileService : ITextFileService
 			fileStream.Seek(entry.StartPosition, SeekOrigin.Begin);
 			var bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, length));
 
-			return Encoding.UTF8.GetString(buffer.AsSpan(0, bytesRead));
+			var content = Encoding.UTF8.GetString(buffer.AsSpan(0, bytesRead));
+
+			// Strip consecutive alias headers - keep only the first # header.
+			// Aliased topics share the same byte range which includes all alias headers.
+			return StripConsecutiveHeaders(content);
 		}
 		finally
 		{
 			ArrayPool<byte>.Shared.Return(buffer);
 		}
+	}
+
+	/// <summary>
+	/// When multiple consecutive markdown headers appear at the start of content
+	/// (from aliased help topics), keep only the first header line.
+	/// </summary>
+	public static string StripConsecutiveHeaders(string content)
+	{
+		var lines = content.Split('\n');
+		var firstHeaderIndex = -1;
+		var lastConsecutiveHeaderIndex = -1;
+
+		for (var i = 0; i < lines.Length; i++)
+		{
+			if (lines[i].StartsWith("# "))
+			{
+				if (firstHeaderIndex < 0)
+				{
+					firstHeaderIndex = i;
+				}
+				lastConsecutiveHeaderIndex = i;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		// If there are multiple consecutive headers, keep only the first
+		if (firstHeaderIndex >= 0 && lastConsecutiveHeaderIndex > firstHeaderIndex)
+		{
+			var remaining = string.Join('\n', lines.Skip(lastConsecutiveHeaderIndex + 1));
+			return lines[firstHeaderIndex] + "\n" + remaining;
+		}
+
+		return content;
 	}
 
 	private (string? Category, string? FileName) ParseFileReference(string fileReference)
