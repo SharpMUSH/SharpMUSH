@@ -2949,7 +2949,13 @@ public partial class Commands
 	{
 		// Inline does nothing.
 		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
 		var nargs = args.Count;
+
+		// Note: INLINE is default behavior (immediate execution)
+		// QUEUED switch queues the command for later execution via task scheduler
+		var useQueue = switches.Contains("QUEUED");
+
 		switch (nargs)
 		{
 			case 0:
@@ -2962,15 +2968,30 @@ public partial class Commands
 				}
 
 				return args["0"];
-			case 2:
-				if (args["0"].Message.Truthy())
+			case 2 when args["0"].Message.Truthy():
+				var command = await args["1"].ParsedMessage();
+
+				if (useQueue)
 				{
-					var command = await args["1"].ParsedMessage();
+					// Queue the command for later execution
+					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
+					await Mediator!.Send(new QueueCommandListRequest(
+						command!,
+						parser.CurrentState,
+						new DbRefAttribute(executor, ["BREAK"]),
+						-1));
+				}
+				else
+				{
+					// Execute inline (default)
 					var commandList = parser.CommandListParseVisitor(command!);
 					await commandList();
-					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
 
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+
+				return args["0"];
+			case 2:
 				return args["0"];
 		}
 
