@@ -20,23 +20,23 @@ namespace SharpMUSH.Database.Memgraph;
 
 public partial class MemgraphDatabase
 {
-#region Migration
+	#region Migration
 
-public async ValueTask Migrate(CancellationToken cancellationToken = default)
-{
-if (_migrated) return;
-await MigrateLock.WaitAsync(cancellationToken);
-try
-{
-if (_migrated) return;
-logger.LogInformation("Migrating Memgraph Database");
+	public async ValueTask Migrate(CancellationToken cancellationToken = default)
+	{
+		if (_migrated) return;
+		await MigrateLock.WaitAsync(cancellationToken);
+		try
+		{
+			if (_migrated) return;
+			logger.LogInformation("Migrating Memgraph Database");
 
-// Storage mode IN_MEMORY_ANALYTICAL is set via container startup flags
-// (--storage-mode=IN_MEMORY_ANALYTICAL) to avoid MVCC transaction conflicts.
+			// Storage mode IN_MEMORY_ANALYTICAL is set via container startup flags
+			// (--storage-mode=IN_MEMORY_ANALYTICAL) to avoid MVCC transaction conflicts.
 
-// Create indexes (Memgraph uses CREATE INDEX ON syntax)
-var indexQueries = new[]
-{
+			// Create indexes (Memgraph uses CREATE INDEX ON syntax)
+			var indexQueries = new[]
+			{
 "CREATE INDEX ON :Object(key)",
 "CREATE INDEX ON :Object(type)",
 "CREATE INDEX ON :Object(name)",
@@ -53,19 +53,19 @@ var indexQueries = new[]
 "CREATE INDEX ON :Counter(name)"
 };
 
-foreach (var q in indexQueries)
-{
-try { await ExecuteWithRetryAsync(q, ct: cancellationToken); }
-catch { /* Index may already exist */ }
-}
+			foreach (var q in indexQueries)
+			{
+				try { await ExecuteWithRetryAsync(q, ct: cancellationToken); }
+				catch { /* Index may already exist */ }
+			}
 
-var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-// Create Counter for auto-increment object keys
-await ExecuteWithRetryAsync("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 2", ct: cancellationToken);
+			// Create Counter for auto-increment object keys
+			await ExecuteWithRetryAsync("MERGE (c:Counter {name: 'object_key'}) ON CREATE SET c.value = 2", ct: cancellationToken);
 
-// Create Room Zero (key=0)
-await ExecuteWithRetryAsync("""
+			// Create Room Zero (key=0)
+			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 0})
 ON CREATE SET o.name = 'Room Zero', o.type = 'ROOM', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
 MERGE (r:Room {key: 0})
@@ -73,8 +73,8 @@ ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-// Create Player One - God (key=1)
-await ExecuteWithRetryAsync("""
+			// Create Player One - God (key=1)
+			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 1})
 ON CREATE SET o.name = 'God', o.type = 'PLAYER', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
 MERGE (p:Player {key: 1})
@@ -82,8 +82,8 @@ ON CREATE SET p.passwordHash = '', p.passwordSalt = '', p.aliases = [], p.quota 
 MERGE (p)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-// Create Room Two - Master Room (key=2)
-await ExecuteWithRetryAsync("""
+			// Create Room Two - Master Room (key=2)
+			await ExecuteWithRetryAsync("""
 MERGE (o:Object {key: 2})
 ON CREATE SET o.name = 'Master Room', o.type = 'ROOM', o.creationTime = $now, o.modifiedTime = $now, o.locks = '{}', o.warnings = 0
 MERGE (r:Room {key: 2})
@@ -91,61 +91,61 @@ ON CREATE SET r.aliases = []
 MERGE (r)-[:IS_OBJECT]->(o)
 """, new { now }, cancellationToken);
 
-// Player One at Room Zero
-await ExecuteWithRetryAsync("""
+			// Player One at Room Zero
+			await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: 1}), (r:Room {key: 0})
 MERGE (p)-[:AT_LOCATION]->(r)
 """, ct: cancellationToken);
 
-// Player One home is Room Zero
-await ExecuteWithRetryAsync("""
+			// Player One home is Room Zero
+			await ExecuteWithRetryAsync("""
 MATCH (p:Player {key: 1}), (r:Room {key: 0})
 MERGE (p)-[:HAS_HOME]->(r)
 """, ct: cancellationToken);
 
-// Ownership: Object nodes -> Player typed node
-await ExecuteWithRetryAsync("""
+			// Ownership: Object nodes -> Player typed node
+			await ExecuteWithRetryAsync("""
 MATCH (ownerPlayer:Player {key: 1})
 MATCH (o:Object) WHERE o.key IN [0, 1, 2]
 MERGE (o)-[:HAS_OWNER]->(ownerPlayer)
 """, ct: cancellationToken);
 
-// Create initial flags
-await CreateInitialFlags(cancellationToken);
+			// Create initial flags
+			await CreateInitialFlags(cancellationToken);
 
-// Create initial attribute flags
-await CreateInitialAttributeFlags(cancellationToken);
+			// Create initial attribute flags
+			await CreateInitialAttributeFlags(cancellationToken);
 
-// Create initial powers
-await CreateInitialPowers(cancellationToken);
+			// Create initial powers
+			await CreateInitialPowers(cancellationToken);
 
-// Create initial attribute entries
-await CreateInitialAttributeEntries(cancellationToken);
+			// Create initial attribute entries
+			await CreateInitialAttributeEntries(cancellationToken);
 
-// Give Player One the WIZARD flag
-await ExecuteWithRetryAsync("""
+			// Give Player One the WIZARD flag
+			await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: 1}), (f:ObjectFlag {name: 'WIZARD'})
 MERGE (o)-[:HAS_FLAG]->(f)
 """, ct: cancellationToken);
 
-logger.LogInformation("Memgraph Migration Completed");
-_migrated = true;
-}
-catch (Exception ex)
-{
-logger.LogError(ex, "Memgraph Migration Failed");
-throw;
-}
-finally
-{
-MigrateLock.Release();
-}
-}
+			logger.LogInformation("Memgraph Migration Completed");
+			_migrated = true;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Memgraph Migration Failed");
+			throw;
+		}
+		finally
+		{
+			MigrateLock.Release();
+		}
+	}
 
-private async Task CreateInitialFlags(CancellationToken ct)
-{
-var flags = new (string Name, string Symbol, string[]? Aliases, string[] SetPerms, string[] UnsetPerms, string[] TypeRestrictions)[]
-{
+	private async Task CreateInitialFlags(CancellationToken ct)
+	{
+		var flags = new (string Name, string Symbol, string[]? Aliases, string[] SetPerms, string[] UnsetPerms, string[] TypeRestrictions)[]
+		{
 ("WIZARD", "W", null, ["trusted","wizard","log"], ["trusted","wizard"], ["ROOM","PLAYER","EXIT","THING"]),
 ("ABODE", "A", null, [], [], ["ROOM"]),
 ("ANSI", "A", null, [], [], ["PLAYER"]),
@@ -203,31 +203,31 @@ var flags = new (string Name, string Symbol, string[]? Aliases, string[] SetPerm
 ("XTERM256", "", ["XTERM","COLOR256"], [], [], ["PLAYER"]),
 ("MONIKER", "", null, ["royalty"], ["royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 ("OPEN_OK", "", null, [], [], ["ROOM"]),
-};
+		};
 
-foreach (var f in flags)
-{
-await ExecuteWithRetryAsync("""
+		foreach (var f in flags)
+		{
+			await ExecuteWithRetryAsync("""
 MERGE (f:ObjectFlag {name: $name})
 ON CREATE SET f.symbol = $symbol, f.system = true, f.disabled = false,
 f.aliases = $aliases, f.setPermissions = $setPerms, f.unsetPermissions = $unsetPerms,
 f.typeRestrictions = $typeRestrictions
 """, new
-{
-name = f.Name,
-symbol = f.Symbol,
-aliases = f.Aliases ?? Array.Empty<string>(),
-setPerms = f.SetPerms,
-unsetPerms = f.UnsetPerms,
-typeRestrictions = f.TypeRestrictions
-}, ct);
-}
-}
+			{
+				name = f.Name,
+				symbol = f.Symbol,
+				aliases = f.Aliases ?? Array.Empty<string>(),
+				setPerms = f.SetPerms,
+				unsetPerms = f.UnsetPerms,
+				typeRestrictions = f.TypeRestrictions
+			}, ct);
+		}
+	}
 
-private async Task CreateInitialAttributeFlags(CancellationToken ct)
-{
-var attrFlags = new (string Name, string Symbol, bool Inheritable)[]
-{
+	private async Task CreateInitialAttributeFlags(CancellationToken ct)
+	{
+		var attrFlags = new (string Name, string Symbol, bool Inheritable)[]
+		{
 ("no_command", "$", true),
 ("no_inherit", "i", true),
 ("no_clone", "c", true),
@@ -250,21 +250,21 @@ var attrFlags = new (string Name, string Symbol, bool Inheritable)[]
 ("quiet", "Q", false),
 ("branch", "`", false),
 ("prefixmatch", "", false),
-};
+		};
 
-foreach (var af in attrFlags)
-{
-await ExecuteWithRetryAsync("""
+		foreach (var af in attrFlags)
+		{
+			await ExecuteWithRetryAsync("""
 MERGE (f:AttributeFlag {name: $name})
 ON CREATE SET f.symbol = $symbol, f.system = true, f.inheritable = $inheritable
 """, new { name = af.Name, symbol = af.Symbol, inheritable = af.Inheritable }, ct);
-}
-}
+		}
+	}
 
-private async Task CreateInitialPowers(CancellationToken ct)
-{
-var powers = new (string Name, string Alias, string[] SetPerms, string[] UnsetPerms)[]
-{
+	private async Task CreateInitialPowers(CancellationToken ct)
+	{
+		var powers = new (string Name, string Alias, string[] SetPerms, string[] UnsetPerms)[]
+		{
 ("Announce", "", ["wizard","log"], ["wizard"]),
 ("Boot", "", ["wizard","log"], ["wizard"]),
 ("Builder", "", ["wizard","log"], ["wizard"]),
@@ -301,30 +301,30 @@ var powers = new (string Name, string Alias, string[] SetPerms, string[] UnsetPe
 ("Tport_Anything", "", ["wizard","log"], ["wizard"]),
 ("Tport_Anywhere", "", ["wizard","log"], ["wizard"]),
 ("Unkillable", "", ["wizard","log"], ["wizard"]),
-};
+		};
 
-foreach (var p in powers)
-{
-await ExecuteWithRetryAsync("""
+		foreach (var p in powers)
+		{
+			await ExecuteWithRetryAsync("""
 MERGE (p:Power {name: $name})
 ON CREATE SET p.alias = $alias, p.system = true, p.disabled = false,
 p.setPermissions = $setPerms, p.unsetPermissions = $unsetPerms,
 p.typeRestrictions = $typeRestrictions
 """, new
-{
-name = p.Name,
-alias = p.Alias,
-setPerms = p.SetPerms,
-unsetPerms = p.UnsetPerms,
-typeRestrictions = new[] { "ROOM", "PLAYER", "EXIT", "THING" }
-}, ct);
-}
-}
+			{
+				name = p.Name,
+				alias = p.Alias,
+				setPerms = p.SetPerms,
+				unsetPerms = p.UnsetPerms,
+				typeRestrictions = new[] { "ROOM", "PLAYER", "EXIT", "THING" }
+			}, ct);
+		}
+	}
 
-private async Task CreateInitialAttributeEntries(CancellationToken ct)
-{
-var entries = new (string Name, string[] DefaultFlags)[]
-{
+	private async Task CreateInitialAttributeEntries(CancellationToken ct)
+	{
+		var entries = new (string Name, string[] DefaultFlags)[]
+		{
 ("AAHEAR", ["no_command","prefixmatch"]),
 ("ABUY", ["no_command","prefixmatch"]),
 ("ACLONE", ["no_command","prefixmatch"]),
@@ -477,16 +477,16 @@ var entries = new (string Name, string[] DefaultFlags)[]
 ("XS", []), ("XT", []), ("XU", []), ("XV", []), ("XW", []), ("XX", []),
 ("XY", []), ("XZ", []),
 ("ZENTER", ["no_command","prefixmatch"]),
-};
+		};
 
-foreach (var e in entries)
-{
-await ExecuteWithRetryAsync("""
+		foreach (var e in entries)
+		{
+			await ExecuteWithRetryAsync("""
 MERGE (e:AttributeEntry {name: $name})
 ON CREATE SET e.defaultFlags = $defaultFlags, e.lim = '', e.enumValues = []
 """, new { name = e.Name, defaultFlags = e.DefaultFlags }, ct);
-}
-}
+		}
+	}
 
-#endregion
+	#endregion
 }

@@ -14,5 +14,5 @@ IMediator mediator,
 IPasswordService passwordService
 ) : ISharpDatabase, ISharpDatabaseWithLogging
 {
-private const string StartVertex = "startVertex";
+	private const string StartVertex = "startVertex";
 }

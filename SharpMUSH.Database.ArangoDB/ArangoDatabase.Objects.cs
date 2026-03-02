@@ -293,7 +293,7 @@ public partial class ArangoDatabase
 			return;
 		}
 
-		if (parentEdge is null && parent != null)
+		if (parentEdge is null)
 		{
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphParents, DatabaseConstants.HasParent,
 				new { _from = fromId, _to = toId }, cancellationToken: ct);
@@ -327,11 +327,11 @@ public partial class ArangoDatabase
 			return;
 		}
 
-		if (zoneEdge is null && zone != null)
+		if (zoneEdge is null)
 		{
 			// No existing zone, create new edge
 			await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphZones, DatabaseConstants.HasZone,
-				new { _from = obj.Object().Id, _to = zone.Object().Id }, cancellationToken: ct);
+				new { _from = obj.Object().Id, _to = zone!.Object().Id }, cancellationToken: ct);
 		}
 		else if (zone is null)
 		{
@@ -553,14 +553,17 @@ public partial class ArangoDatabase
 		var obj = await arangoDb.Document.GetAsync<SharpObjectQueryResult>(handle, DatabaseConstants.Objects,
 			dbref.Number.ToString(), cancellationToken: cancellationToken);
 
+		if (obj is null)
+		{
+			return null;
+		}
+
 		if (dbref.CreationMilliseconds.HasValue && obj.CreationTime != dbref.CreationMilliseconds)
 		{
 			return null;
 		}
 
-		return obj is null
-			? null
-			: SharpObjectQueryToSharpObject(obj);
+		return SharpObjectQueryToSharpObject(obj);
 	}
 
 	private SharpObject SharpObjectQueryToSharpObject(SharpObjectQueryResult obj) =>
