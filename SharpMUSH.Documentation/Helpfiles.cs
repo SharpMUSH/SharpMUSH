@@ -191,13 +191,18 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 
 		var dict = new Dictionary<string, (long Start, long End)>(StringComparer.OrdinalIgnoreCase);
 
-		using var openText = file.OpenText();
-		var textBody = openText.ReadToEnd().Replace("\r\n", "\n");
+		// Read raw bytes to ensure byte offsets correspond exactly to file positions.
+		// Using StreamReader would silently strip BOM bytes, and replacing \r\n with \n
+		// would shift all positions when files have CRLF line endings.
+		var rawBytes = File.ReadAllBytes(file.FullName);
+		var preamble = Encoding.UTF8.Preamble;
+		var bomLength = rawBytes.AsSpan().StartsWith(preamble) ? preamble.Length : 0;
+		var textBody = Encoding.UTF8.GetString(rawBytes, bomLength, rawBytes.Length - bomLength);
 
 		// Pre-compute cumulative byte offsets so we can convert any char index
 		// to a byte position in O(1) instead of re-encoding prefixes.
 		var byteOffsets = new int[textBody.Length + 1];
-		var running = 0;
+		var running = bomLength;
 		for (var i = 0; i < textBody.Length; i++)
 		{
 			byteOffsets[i] = running;
