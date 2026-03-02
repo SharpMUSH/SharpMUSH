@@ -652,30 +652,6 @@ public class RecursiveMarkdownRenderer
 		var parts = new List<MString>();
 		while (inline != null)
 		{
-			// Markdig splits an unresolved shortcut reference link like [topic] into two adjacent
-			// LiteralInlines: one containing "[" and one containing "topic]...rest of text".
-			// Detect this pattern and emit an ANSI OSC 8 hyperlink with URL "help <topic>".
-			if (inline is LiteralInline bracketLit && bracketLit.Content.ToString() == "[")
-			{
-				var next = inline.NextSibling;
-				if (next is LiteralInline nextLit)
-				{
-					var nextText = nextLit.Content.ToString();
-					var closingBracket = nextText.IndexOf(']');
-					if (closingBracket > 0)  // non-empty topic between [ and ]
-					{
-						var topic = nextText.AsSpan(0, closingBracket).ToString();
-						var remainder = nextText.AsSpan(closingBracket + 1).ToString();
-						var linkMarkup = Ansi.Create(linkUrl: FSharpOption<string>.Some("help " + topic));
-						parts.Add(MModule.markupSingle(linkMarkup, topic));
-						if (!string.IsNullOrEmpty(remainder))
-							parts.Add(MModule.single(remainder));
-						inline = next.NextSibling;
-						continue;
-					}
-				}
-			}
-
 			var rendered = Render(inline);
 			if (rendered.Length > 0)
 			{

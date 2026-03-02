@@ -485,7 +485,8 @@ public class RecursiveMarkdownRendererTests
 	[Test]
 	public async Task RenderHelpTopicLink_ShouldCreateHelpUrl()
 	{
-		// Arrange - shortcut reference link with no definition is a help topic link
+		// Arrange - bare [topic] with no URL definition is parsed by HelpTopicInlineParser
+		// into a proper LinkInline with URL "help newbie2" (not the old literal-inline hack).
 		var markdown = "See [newbie2] for more.";
 
 		// Act
@@ -496,6 +497,21 @@ public class RecursiveMarkdownRendererTests
 		// OSC 8 hyperlink is present containing "help newbie2"
 		var fullString = result.ToString();
 		await Assert.That(fullString).Contains("\u001b]8;;help newbie2");
+	}
+
+	[Test]
+	public async Task RenderHelpTopicLink_NormalLinkUnchanged()
+	{
+		// Arrange - [text](url) must NOT be treated as a help topic link
+		var markdown = "See [topic](https://example.com) for more.";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - URL from (url) is used, not "help topic"
+		await Assert.That(result.ToPlainText()).IsEqualTo("See topic for more.");
+		await Assert.That(result.ToString()).Contains("https://example.com");
+		await Assert.That(result.ToString()).DoesNotContain("help topic");
 	}
 
 	[Test]
