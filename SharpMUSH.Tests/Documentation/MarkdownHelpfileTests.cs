@@ -529,6 +529,52 @@ Existing games which have softcoded 'who' commands.
 		}
 	}
 
+	[Test]
+	public async Task RandomSampledTopicsFromRealHelpFilesHaveContent()
+	{
+		var helpDir = FindHelpfilesDirectory();
+		if (helpDir == null)
+		{
+			// Skip if help files directory not found (e.g. running outside repo).
+			return;
+		}
+
+		var mdFiles = Directory.GetFiles(helpDir, "*.md", SearchOption.AllDirectories);
+		await Assert.That(mdFiles.Length).IsGreaterThan(0);
+
+		var rng = new Random(42); // Fixed seed for reproducibility.
+		var failures = new List<string>();
+
+		foreach (var filePath in mdFiles)
+		{
+			var fileInfo = new FileInfo(filePath);
+			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
+
+			await Assert.That(maybeIndexes.IsT0).IsTrue();
+
+			var indexes = maybeIndexes.AsT0;
+			if (indexes.Count == 0)
+			{
+				continue;
+			}
+
+			// Pick up to 5 random topics from this file.
+			var topics = indexes.Keys.ToList();
+			var sampled = topics.OrderBy(_ => rng.Next()).Take(5).ToList();
+
+			foreach (var topic in sampled)
+			{
+				var content = indexes[topic];
+				if (string.IsNullOrWhiteSpace(content) || content.Trim() == $"# {topic}")
+				{
+					failures.Add($"{Path.GetFileName(filePath)}: topic '{topic}' has no content beyond the header");
+				}
+			}
+		}
+
+		await Assert.That(failures).IsEmpty();
+	}
+
 	private static string? FindHelpfilesDirectory()
 	{
 		// Walk up from the current directory to find the repository root,
