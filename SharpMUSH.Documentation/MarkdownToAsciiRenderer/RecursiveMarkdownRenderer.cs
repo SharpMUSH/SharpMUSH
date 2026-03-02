@@ -24,8 +24,8 @@ public class RecursiveMarkdownRenderer
 {
 	private readonly Ansi _dimStyle = Ansi.Create(faint: true);
 	private readonly Ansi _boldStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true);
-	private readonly Ansi _headingStyle = Ansi.Create(underlined: true, bold: true);
-	private readonly Ansi _heading3Style = Ansi.Create(underlined: true);
+	private readonly Ansi _headingStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true, bold: true);
+	private readonly Ansi _heading3Style = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true);
 	private readonly int _maxWidth;
 	private readonly IMUSHCodeParser? _mushParser;
 
