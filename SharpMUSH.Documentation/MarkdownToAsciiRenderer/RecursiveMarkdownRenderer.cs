@@ -373,7 +373,8 @@ public class RecursiveMarkdownRenderer
 		var promptPrefix = string.Empty;
 		if (trimmed.StartsWith("> "))
 		{
-			promptPrefix = line[..^(trimmed.Length - 2)]; // leading whitespace + "> "
+			var leadingSpaces = line.Length - trimmed.Length;
+			promptPrefix = line[..(leadingSpaces + 2)]; // leading whitespace + "> "
 			line = line[promptPrefix.Length..];
 			trimmed = trimmed[2..];
 		}
