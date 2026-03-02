@@ -167,11 +167,13 @@ public class RecursiveMarkdownRenderer
 	protected virtual MString RenderCodeBlock(CodeBlock code)
 	{
 		// Apply syntax highlighting to 'sharp' fenced code blocks when a parser is available.
+		// Background colour is applied per-line inside RenderSharpCodeBlock so that each
+		// MUSH line carries its own ANSI start/reset (MUSH clients reset ANSI on \r\n).
 		if (code is FencedCodeBlock fenced &&
 			string.Equals(fenced.Info, "sharp", StringComparison.OrdinalIgnoreCase) &&
 			_mushParser != null)
 		{
-			return MModule.markupSingle2(CodeBackgroundStyle, RenderSharpCodeBlock(fenced));
+			return RenderSharpCodeBlock(fenced);
 		}
 
 		// Apply ColorCode syntax highlighting for fenced blocks with a recognised language tag.
@@ -337,8 +339,9 @@ public class RecursiveMarkdownRenderer
 
 	/// <summary>
 	/// Renders a <c>sharp</c>-tagged fenced code block with MUSH semantic token colours.
-	/// Each source line is colourised independently; all colourised lines are then laid out
-	/// via a single <see cref="AlignAllCodeLines"/> call.
+	/// Each source line is colourised independently and wrapped in its own
+	/// <see cref="CodeBackgroundStyle"/> ANSI span, so that MUSH clients which reset ANSI
+	/// attributes on <c>\r\n</c> line endings still display the background on every line.
 	/// </summary>
 	private MString RenderSharpCodeBlock(FencedCodeBlock code)
 	{
@@ -350,13 +353,27 @@ public class RecursiveMarkdownRenderer
 		if (sourceLines.Count == 0)
 			return MModule.empty();
 
-		return AlignAllCodeLines(sourceLines.Select(BuildSharpLineContent));
+		var contentWidth = Math.Max(1, _maxWidth - 2);
+		var styledLines = sourceLines.Select(line =>
+		{
+			var content = BuildSharpLineContent(line);
+			var aligned = SharpMUSH.MarkupString.TextAlignerModule.align(
+				$"1 <{contentWidth}",
+				[MModule.empty(), content],
+				MModule.single(" "),
+				MModule.single(" "),
+				MModule.single("\n")
+			);
+			return MModule.markupSingle2(CodeBackgroundStyle, aligned);
+		});
+
+		return MModule.multipleWithDelimiter(MModule.single("\n"), styledLines);
 	}
 
 	/// <summary>
 	/// Applies MUSH semantic token colours to a single source line and returns the colourised
 	/// <see cref="MString"/> without any layout/alignment applied.
-	/// Layout for the whole block is handled by a single <see cref="AlignAllCodeLines"/> call.
+	/// Alignment and background styling are applied per-line by <see cref="RenderSharpCodeBlock"/>.
 	/// </summary>
 	/// <remarks>
 	/// Parse type is auto-detected: lines whose first non-whitespace character is
@@ -470,7 +487,7 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderThematicBreak()
 	{
-		return MModule.markupSingle(_dimStyle, "---");
+		return MModule.markupSingle(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
 	}
 
 	private MString RenderHtmlBlock(HtmlBlock html)
