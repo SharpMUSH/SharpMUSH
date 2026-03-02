@@ -216,9 +216,26 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - code blocks should be indented by 2 spaces
-		await Assert.That(result.ToPlainText()).IsEqualTo("  code line 1\n  code line 2");
-		await Assert.That(result.ToString()).IsEqualTo("  code line 1\n  code line 2");
+		// Assert - content is preserved in plain text and ANSI background styling is applied
+		await Assert.That(result.ToPlainText()).Contains("code line 1");
+		await Assert.That(result.ToPlainText()).Contains("code line 2");
+		// Unlabeled fenced code blocks now receive background styling
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCodeBlock_UnlabeledFenced_ShouldApplyBackground()
+	{
+		// Arrange - unlabeled fenced code block
+		var markdown = "```\nhello world\n```";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - content preserved and background ANSI colour applied
+		await Assert.That(result.ToPlainText()).Contains("hello world");
+		// Background colour (#2D2D2D) must be present
+		await Assert.That(result.ToString()).Contains("\u001b[48;2;45;45;45m");
 	}
 
 	[Test]
@@ -230,9 +247,24 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert
+		// Assert - plain text content preserved; ANSI colour applied on ToString()
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is inline code here");
-		await Assert.That(result.ToString()).IsEqualTo("This is inline code here");
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderInlineCode_ShouldApplyLightBlueColor()
+	{
+		// Arrange
+		var markdown = "Use `name()` to get the name";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text preserved
+		await Assert.That(result.ToPlainText()).IsEqualTo("Use name() to get the name");
+		// Light-blue foreground (#9CDCFE = rgb(156,220,254)) applied to inline code
+		await Assert.That(result.ToString()).Contains(Foreground(0x9C, 0xDC, 0xFE));
 	}
 
 	[Test]
@@ -448,6 +480,82 @@ public class RecursiveMarkdownRendererTests
 		// Assert - plain text preserved and no ANSI colouring
 		await Assert.That(result.ToPlainText().Trim()).Contains("plain indented code");
 		await Assert.That(result.ToString().Contains(ESC)).IsFalse();
+	}
+
+	[Test]
+	public async Task RenderHelpTopicLink_ShouldCreateHelpUrl()
+	{
+		// Arrange - bare [topic] with no URL definition is parsed by HelpTopicInlineParser
+		// into a proper LinkInline with URL "help newbie2" (not the old literal-inline hack).
+		var markdown = "See [newbie2] for more.";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text contains the topic name without brackets
+		await Assert.That(result.ToPlainText()).IsEqualTo("See newbie2 for more.");
+		// OSC 8 hyperlink is present containing "help newbie2"
+		var fullString = result.ToString();
+		await Assert.That(fullString).Contains("\u001b]8;;help newbie2");
+	}
+
+	[Test]
+	public async Task RenderHelpTopicLink_NormalLinkUnchanged()
+	{
+		// Arrange - [text](url) must NOT be treated as a help topic link
+		var markdown = "See [topic](https://example.com) for more.";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - URL from (url) is used, not "help topic"
+		await Assert.That(result.ToPlainText()).IsEqualTo("See topic for more.");
+		await Assert.That(result.ToString()).Contains("https://example.com");
+		await Assert.That(result.ToString()).DoesNotContain("help topic");
+	}
+
+	[Test]
+	public async Task RenderTable_WithEmptyHeaders_ShouldBeWithoutBorders()
+	{
+		// Arrange - table whose header row has all empty cells (like the COMMANDS list)
+		var markdown =
+			"|              |              |\n" +
+			"|--------------|--------------|  \n" +
+			"| CmdA         | CmdB         |\n" +
+			"| CmdC         | CmdD         |";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		var plainText = result.ToPlainText();
+
+		// Assert - no pipe characters in output
+		await Assert.That(plainText).DoesNotContain("|");
+		// All cell content is present
+		await Assert.That(plainText).Contains("CmdA");
+		await Assert.That(plainText).Contains("CmdB");
+		await Assert.That(plainText).Contains("CmdC");
+		await Assert.That(plainText).Contains("CmdD");
+	}
+
+	[Test]
+	public async Task RenderTable_WithNonEmptyHeaders_ShouldHaveBorders()
+	{
+		// Arrange - table whose header row has cell content (should keep bordered format)
+		var markdown =
+			"| Col1 | Col2 |\n" +
+			"|------|------|\n" +
+			"| A    | B    |";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+		var plainText = result.ToPlainText();
+
+		// Assert - pipe characters present (bordered format)
+		await Assert.That(plainText).Contains("|");
+		await Assert.That(plainText).Contains("Col1");
+		await Assert.That(plainText).Contains("Col2");
+		await Assert.That(plainText).Contains("A");
+		await Assert.That(plainText).Contains("B");
 	}
 }
 

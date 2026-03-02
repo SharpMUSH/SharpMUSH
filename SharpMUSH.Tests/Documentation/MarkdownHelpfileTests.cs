@@ -487,6 +487,106 @@ Existing games which have softcoded 'who' commands.
 	}
 
 	[Test]
+	public async Task PositionBasedIndexingHandlesCrlfLineEndings()
+	{
+		var currentDirectory = Directory.GetCurrentDirectory();
+		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelpCrlf.md");
+
+		// Write a file with explicit CRLF (\r\n) line endings to simulate Windows checkouts.
+		var testContent = "# help\r\nThis is the main help.\r\n\r\n# newbie\r\nNewbie help content here.\r\n\r\n# newbie2\r\nMore newbie content.\r\n";
+		await File.WriteAllBytesAsync(testFilePath, System.Text.Encoding.UTF8.GetBytes(testContent));
+
+		try
+		{
+			var fileInfo = new FileInfo(testFilePath);
+			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
+
+			await Assert.That(maybePositions.IsT0).IsTrue();
+
+			var positions = maybePositions.AsT0;
+
+			await Assert.That(positions).ContainsKey("help");
+			await Assert.That(positions).ContainsKey("newbie");
+			await Assert.That(positions).ContainsKey("newbie2");
+
+			// Verify the byte ranges produce correct content when read from file.
+			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
+
+			var newbieStart = (int)positions["newbie"].Start;
+			var newbieEnd = (int)positions["newbie"].End;
+			var newbieContent = System.Text.Encoding.UTF8.GetString(fileBytes, newbieStart, newbieEnd - newbieStart);
+			await Assert.That(newbieContent).StartsWith("# newbie\r\n");
+			await Assert.That(newbieContent).Contains("Newbie help content");
+			await Assert.That(newbieContent).DoesNotContain("main help");
+
+			var newbie2Start = (int)positions["newbie2"].Start;
+			var newbie2End = (int)positions["newbie2"].End;
+			var newbie2Content = System.Text.Encoding.UTF8.GetString(fileBytes, newbie2Start, newbie2End - newbie2Start);
+			await Assert.That(newbie2Content).StartsWith("# newbie2\r\n");
+			await Assert.That(newbie2Content).Contains("More newbie content");
+			await Assert.That(newbie2Content).DoesNotContain("Newbie help content");
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+			{
+				File.Delete(testFilePath);
+			}
+		}
+	}
+
+	[Test]
+	public async Task PositionBasedIndexingHandlesBom()
+	{
+		var currentDirectory = Directory.GetCurrentDirectory();
+		var testFilePath = Path.Combine(currentDirectory, "TestMarkdownHelpBom.md");
+
+		// Write a file with a UTF-8 BOM prefix.
+		var content = "# help\nMain help content.\n\n# topic2\nSecond topic.\n";
+		var bom = new byte[] { 0xEF, 0xBB, 0xBF };
+		var contentBytes = System.Text.Encoding.UTF8.GetBytes(content);
+		var withBom = new byte[bom.Length + contentBytes.Length];
+		bom.CopyTo(withBom, 0);
+		contentBytes.CopyTo(withBom, bom.Length);
+		await File.WriteAllBytesAsync(testFilePath, withBom);
+
+		try
+		{
+			var fileInfo = new FileInfo(testFilePath);
+			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
+
+			await Assert.That(maybePositions.IsT0).IsTrue();
+
+			var positions = maybePositions.AsT0;
+
+			await Assert.That(positions).ContainsKey("help");
+			await Assert.That(positions).ContainsKey("topic2");
+
+			// Verify the byte ranges produce correct content when read from the BOM file.
+			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
+
+			var helpStart = (int)positions["help"].Start;
+			var helpEnd = (int)positions["help"].End;
+			var helpContent = System.Text.Encoding.UTF8.GetString(fileBytes, helpStart, helpEnd - helpStart);
+			await Assert.That(helpContent).StartsWith("# help\n");
+			await Assert.That(helpContent).Contains("Main help content");
+
+			var topic2Start = (int)positions["topic2"].Start;
+			var topic2End = (int)positions["topic2"].End;
+			var topic2Content = System.Text.Encoding.UTF8.GetString(fileBytes, topic2Start, topic2End - topic2Start);
+			await Assert.That(topic2Content).StartsWith("# topic2\n");
+			await Assert.That(topic2Content).Contains("Second topic");
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+			{
+				File.Delete(testFilePath);
+			}
+		}
+	}
+
+	[Test]
 	public async Task PositionBasedIndexingHandlesMultipleAliasGroups()
 	{
 		var currentDirectory = Directory.GetCurrentDirectory();
