@@ -182,7 +182,7 @@ public class MarkdownFunctionUnitTests
 		// Test unordered list
 		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(- Item 1%r- Item 2%r- Item 3)")))?.Message;
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.ToPlainText()).IsEqualTo("- Item 1\n- Item 2\n- Item 3");
+		await Assert.That(result!.ToPlainText()).IsEqualTo("Item 1, Item 2, Item 3");
 	}
 
 	[Test]

@@ -408,14 +408,22 @@ public class RecursiveMarkdownRenderer
 
 	private MString RenderList(ListBlock list)
 	{
+		if (!list.IsOrdered)
+		{
+			// Unordered lists render as a comma-separated list
+			var unorderedItems = list
+				.OfType<ListItemBlock>()
+				.Select(listItem => RenderListItem(listItem))
+				.ToList();
+			return MModule.multipleWithDelimiter(MModule.single(", "), unorderedItems);
+		}
+
 		var itemIndex = 1;
 		var items = list
 			.OfType<ListItemBlock>()
 			.Select(listItem =>
 			{
-				var prefix = list.IsOrdered
-					? MModule.markupSingle(_dimStyle, $"{itemIndex}. ")
-					: MModule.markupSingle(_dimStyle, "- ");
+				var prefix = MModule.markupSingle(_dimStyle, $"{itemIndex}. ");
 
 				var content = RenderListItem(listItem, itemIndex - 1, list.IsOrdered);
 				itemIndex++;
