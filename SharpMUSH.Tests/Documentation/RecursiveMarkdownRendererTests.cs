@@ -419,14 +419,16 @@ public class RecursiveMarkdownRendererTests
 	[Test]
 	public async Task RenderHtmlBlock_ShouldPreserveContent()
 	{
-		// Arrange - <div> is a block-level tag, parsed as HtmlBlock by Markdig
+		// Arrange - <div> is a block-level tag, parsed as HtmlBlock by Markdig.
+		// HtmlBlock is a LeafBlock — Markdig doesn't recurse into it, so the
+		// raw HTML is passed through as-is.
 		var markdown = "<div>block content</div>";
 
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - text content must be preserved
-		await Assert.That(result.ToPlainText()).IsEqualTo("block content");
+		// Assert - raw HTML is passed through unchanged
+		await Assert.That(result.ToPlainText()).IsEqualTo("<div>block content</div>");
 	}
 
 	[Test]

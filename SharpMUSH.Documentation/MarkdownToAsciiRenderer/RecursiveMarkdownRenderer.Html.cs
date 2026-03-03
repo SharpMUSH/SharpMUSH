@@ -91,25 +91,6 @@ public partial class RecursiveMarkdownRenderer
 		return null;
 	}
 
-	/// <summary>
-	/// Extracts the text content between the opening and closing HTML tags.
-	/// For example, <c>&lt;div&gt;hello&lt;/div&gt;</c> returns <c>"hello"</c>.
-	/// Returns all text when no tags are found.
-	/// </summary>
-	/// <param name="html">The raw HTML string including the opening and closing tags.</param>
-	/// <param name="tagName">The lower-case tag name (e.g. <c>"div"</c>).</param>
-	private static string ExtractHtmlBlockContent(string html, string tagName)
-	{
-		var openEnd = html.IndexOf('>');
-		if (openEnd < 0)
-			return html;
-
-		var closeStart = html.LastIndexOf($"</{tagName}>", StringComparison.OrdinalIgnoreCase);
-		return closeStart > openEnd
-			? html[(openEnd + 1)..closeStart]
-			: html[(openEnd + 1)..];
-	}
-
 	private Color? ParseColorValue(string colorStr)
 	{
 		colorStr = colorStr.Trim();

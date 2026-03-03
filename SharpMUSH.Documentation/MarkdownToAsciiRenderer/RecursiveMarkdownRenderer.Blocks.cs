@@ -93,18 +93,13 @@ public partial class RecursiveMarkdownRenderer
 
 	private MString RenderHtmlBlock(HtmlBlock html)
 	{
-		var htmlContent = string.Join("\n", html.Lines.Lines.Select(line => line.Slice.ToString()));
-		if (string.IsNullOrWhiteSpace(htmlContent))
-			return MModule.empty();
-
-		var tagName = ExtractTagName(htmlContent);
-		var textContent = ExtractHtmlBlockContent(htmlContent, tagName);
-		if (string.IsNullOrWhiteSpace(textContent))
-			return MModule.empty();
-
-		var ansi = ConvertHtmlTagToAnsi(htmlContent, tagName);
-		return ansi is not null
-			? MModule.markupSingle(ansi, textContent)
-			: MModule.single(textContent);
+		// HtmlBlock is a LeafBlock — Markdig does not recurse into it or parse
+		// child inlines. The raw HTML lines are all we have, so pass them through.
+		var htmlContent = string.Join("\n", html.Lines.Lines
+			.Take(html.Lines.Count)
+			.Select(line => line.Slice.ToString()));
+		return string.IsNullOrWhiteSpace(htmlContent)
+			? MModule.empty()
+			: MModule.single(htmlContent);
 	}
 }
