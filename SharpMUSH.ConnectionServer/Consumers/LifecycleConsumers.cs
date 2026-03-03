@@ -1,4 +1,5 @@
 using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
@@ -11,6 +12,7 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 /// </summary>
 public class MainProcessReadyConsumer(
 	IConnectionServerService connectionService,
+	IConnectionStateStore stateStore,
 	IMessageBus messageBus,
 	ILogger<MainProcessReadyConsumer> logger)
 	: IMessageConsumer<MainProcessReadyMessage>
@@ -27,14 +29,17 @@ public class MainProcessReadyConsumer(
 		{
 			try
 			{
-				var metadata = new Dictionary<string, string>();
-				// We don't have the original IP/hostname stored on ConnectionData,
-				// but we can send a reconnection signal with the handle.
+				// Retrieve original connection metadata from the state store
+				var stateData = await stateStore.GetConnectionAsync(connection.Handle, cancellationToken);
+				var ipAddress = stateData?.IpAddress ?? "unknown";
+				var hostname = stateData?.Hostname ?? "unknown";
+				var connectionType = stateData?.ConnectionType ?? "unknown";
+
 				await messageBus.Publish(new ConnectionEstablishedMessage(
 					connection.Handle,
-					"reconnected",
-					"reconnected",
-					"reconnected",
+					ipAddress,
+					hostname,
+					connectionType,
 					DateTimeOffset.UtcNow
 				), cancellationToken);
 

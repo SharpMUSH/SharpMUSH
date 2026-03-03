@@ -17,7 +17,7 @@ public class WebSocketClientService : IWebSocketClientService
 	private CancellationTokenSource? _cancellationTokenSource;
 	private Task? _receiveTask;
 	private string? _serverUri;
-	private bool _intentionalDisconnect;
+	private volatile bool _intentionalDisconnect;
 
 	/// <summary>Maximum number of messages to buffer while disconnected.</summary>
 	private const int MaxBufferedMessages = 500;
@@ -202,7 +202,17 @@ public class WebSocketClientService : IWebSocketClientService
 		// Attempt automatic reconnection if the disconnect was not intentional
 		if (!_intentionalDisconnect && _serverUri is not null)
 		{
-			_ = ReconnectAsync();
+			_ = Task.Run(async () =>
+			{
+				try
+				{
+					await ReconnectAsync();
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Unhandled exception during WebSocket reconnection");
+				}
+			});
 		}
 	}
 
@@ -258,8 +268,15 @@ public class WebSocketClientService : IWebSocketClientService
 			}
 			catch (Exception ex)
 			{
-				_logger.LogWarning(ex, "Failed to flush buffered message, re-queuing");
-				_sendBuffer.Enqueue(message);
+				_logger.LogWarning(ex, "Failed to flush buffered message");
+				if (_sendBuffer.Count < MaxBufferedMessages)
+				{
+					_sendBuffer.Enqueue(message);
+				}
+				else
+				{
+					_logger.LogWarning("Send buffer full, dropping message during flush");
+				}
 				break;
 			}
 		}
