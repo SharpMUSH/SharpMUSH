@@ -58,6 +58,9 @@ jobs:
         with:
           name: build-artifacts
 
+      - name: Restore execute permissions
+        run: find . -path '*/bin/*' -type f ! -name '*.dll' ! -name '*.pdb' ! -name '*.json' ! -name '*.xml' -exec chmod +x {} +
+
       - name: Test (${{ matrix.database }})
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
