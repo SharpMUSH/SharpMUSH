@@ -47,6 +47,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore dependencies
+        run: dotnet restore
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4.1.3
