@@ -22,151 +22,151 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 /// </summary>
 public partial class RecursiveMarkdownRenderer
 {
-private readonly Ansi _dimStyle = Ansi.Create(faint: true);
-private readonly Ansi _boldStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true);
-private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
-private readonly Ansi _headingStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true, bold: true);
-private readonly Ansi _heading3Style = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true);
-private readonly int _maxWidth;
-private readonly IMUSHCodeParser? _mushParser;
+	private readonly Ansi _dimStyle = Ansi.Create(faint: true);
+	private readonly Ansi _boldStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true);
+	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
+	private readonly Ansi _headingStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true, bold: true);
+	private readonly Ansi _heading3Style = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true);
+	private readonly int _maxWidth;
+	private readonly IMUSHCodeParser? _mushParser;
 
-// Table border and separator character counts
-private const int START_BORDER_WIDTH = 2; // "| "
-private const int END_BORDER_WIDTH = 2; // " |"
-private const int COLUMN_SEPARATOR_WIDTH = 3; // " | "
+	// Table border and separator character counts
+	private const int START_BORDER_WIDTH = 2; // "| "
+	private const int END_BORDER_WIDTH = 2; // " |"
+	private const int COLUMN_SEPARATOR_WIDTH = 3; // " | "
 
-// Cached compiled regex patterns for performance
-private static readonly Regex ColorAttributeRegex = new(@"color\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-private static readonly Regex StyleAttributeRegex = new(@"style\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-private static readonly Regex StyleColorRegex = new(@"color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-private static readonly Regex StyleBackgroundColorRegex = new(@"background-color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-private static readonly Regex ColorTagRegex = new(@"<color\s+([^>]+)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	// Cached compiled regex patterns for performance
+	private static readonly Regex ColorAttributeRegex = new(@"color\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	private static readonly Regex StyleAttributeRegex = new(@"style\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	private static readonly Regex StyleColorRegex = new(@"color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	private static readonly Regex StyleBackgroundColorRegex = new(@"background-color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	private static readonly Regex ColorTagRegex = new(@"<color\s+([^>]+)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-// ColorCode.Core language parser and style dictionary for standard-language code blocks.
-// Shared across all renderer instances; lazy-initialised on first use.
-// The lock is held as a named static field (process lifetime) so the compiler's
-// CA2000 disposable-not-disposed analysis is satisfied. As a process-lifetime
-// singleton, it is cleaned up when the process exits.
-private static readonly ReaderWriterLockSlim _colorCodeLock = new();
-private static readonly Lazy<LanguageParser> ColorCodeParser = new(() =>
-{
-var compiler = new LanguageCompiler([], _colorCodeLock);
-var repo = new LanguageRepository(Languages.All.ToDictionary(l => l.Id, l => l));
-return new LanguageParser(compiler, repo);
-});
-private static readonly StyleDictionary ColorCodeStyles = StyleDictionary.DefaultDark;
+	// ColorCode.Core language parser and style dictionary for standard-language code blocks.
+	// Shared across all renderer instances; lazy-initialised on first use.
+	// The lock is held as a named static field (process lifetime) so the compiler's
+	// CA2000 disposable-not-disposed analysis is satisfied. As a process-lifetime
+	// singleton, it is cleaned up when the process exits.
+	private static readonly ReaderWriterLockSlim _colorCodeLock = new();
+	private static readonly Lazy<LanguageParser> ColorCodeParser = new(() =>
+	{
+		var compiler = new LanguageCompiler([], _colorCodeLock);
+		var repo = new LanguageRepository(Languages.All.ToDictionary(l => l.Id, l => l));
+		return new LanguageParser(compiler, repo);
+	});
+	private static readonly StyleDictionary ColorCodeStyles = StyleDictionary.DefaultDark;
 
-// Dark-grey background applied to every line of every highlighted code block,
-// giving a subtle "gutter" effect that visually separates code from prose.
-// #2D2D2D is slightly lighter than a typical #1E1E1E terminal background.
-// Including a default foreground (#D4D4D4 light-grey, matching VS Code DefaultDark) is
-// essential: MString's WrapAndRestore restores the OUTER markup after each inner coloured
-// span, so if the outer style only has background the foreground from the inner span
-// bleeds into the following plain-text segment.  With both fg+bg in the outer style,
-// WrapAndRestore re-applies both after every inner span, keeping colours correct.
-private static readonly Ansi CodeBackgroundStyle = Ansi.Create(
-foreground: StringExtensions.rgb(Color.FromArgb(0xD4, 0xD4, 0xD4)),
-background: StringExtensions.rgb(Color.FromArgb(0x2D, 0x2D, 0x2D)));
+	// Dark-grey background applied to every line of every highlighted code block,
+	// giving a subtle "gutter" effect that visually separates code from prose.
+	// #2D2D2D is slightly lighter than a typical #1E1E1E terminal background.
+	// Including a default foreground (#D4D4D4 light-grey, matching VS Code DefaultDark) is
+	// essential: MString's WrapAndRestore restores the OUTER markup after each inner coloured
+	// span, so if the outer style only has background the foreground from the inner span
+	// bleeds into the following plain-text segment.  With both fg+bg in the outer style,
+	// WrapAndRestore re-applies both after every inner span, keeping colours correct.
+	private static readonly Ansi CodeBackgroundStyle = Ansi.Create(
+		foreground: StringExtensions.rgb(Color.FromArgb(0xD4, 0xD4, 0xD4)),
+		background: StringExtensions.rgb(Color.FromArgb(0x2D, 0x2D, 0x2D)));
 
-// Light-blue colour applied to inline code spans (`...`).
-// #9CDCFE matches VS Code Dark+'s variable/property colour and reads well on dark terminals.
-private static readonly Ansi InlineCodeStyle = Ansi.Create(
-foreground: StringExtensions.rgb(Color.FromArgb(0x9C, 0xDC, 0xFE)));
+	// Light-blue colour applied to inline code spans (`...`).
+	// #9CDCFE matches VS Code Dark+'s variable/property colour and reads well on dark terminals.
+	private static readonly Ansi InlineCodeStyle = Ansi.Create(
+		foreground: StringExtensions.rgb(Color.FromArgb(0x9C, 0xDC, 0xFE)));
 
-/// <summary>
-/// Initializes a new instance of the RecursiveMarkdownRenderer
-/// </summary>
-/// <param name="maxWidth">Maximum width for rendered output. Tables will fit to this width with nice column spacing. Default is 78.</param>
-/// <param name="mushParser">
-/// Optional MUSH code parser used to apply syntax highlighting to
-/// <c>sharp</c> fenced code blocks. When <c>null</c>, those blocks are
-/// rendered as plain indented text.
-/// </param>
-public RecursiveMarkdownRenderer(int maxWidth = 78, IMUSHCodeParser? mushParser = null)
-{
-_maxWidth = maxWidth > 0 ? maxWidth : 78;
-_mushParser = mushParser;
-}
+	/// <summary>
+	/// Initializes a new instance of the RecursiveMarkdownRenderer
+	/// </summary>
+	/// <param name="maxWidth">Maximum width for rendered output. Tables will fit to this width with nice column spacing. Default is 78.</param>
+	/// <param name="mushParser">
+	/// Optional MUSH code parser used to apply syntax highlighting to
+	/// <c>sharp</c> fenced code blocks. When <c>null</c>, those blocks are
+	/// rendered as plain indented text.
+	/// </param>
+	public RecursiveMarkdownRenderer(int maxWidth = 78, IMUSHCodeParser? mushParser = null)
+	{
+		_maxWidth = maxWidth > 0 ? maxWidth : 78;
+		_mushParser = mushParser;
+	}
 
-/// <summary>
-/// Main entry point - renders any MarkdownObject to MString
-/// </summary>
-public MString Render(MarkdownObject obj)
-{
-return obj switch
-{
-// Block elements
-MarkdownDocument doc => RenderDocument(doc),
-HeadingBlock heading => RenderHeading(heading),
-ParagraphBlock para => RenderParagraph(para),
-CodeBlock code => RenderCodeBlock(code),
-ListBlock list => RenderList(list),
-ListItemBlock listItem => RenderListItem(listItem),
-QuoteBlock quote => RenderQuote(quote),
-ThematicBreakBlock _ => RenderThematicBreak(),
-HtmlBlock html => RenderHtmlBlock(html),
-Table table => RenderTable(table),
-TableRow row => RenderTableRow(row),
-TableCell cell => RenderTableCell(cell),
+	/// <summary>
+	/// Main entry point - renders any MarkdownObject to MString
+	/// </summary>
+	public MString Render(MarkdownObject obj)
+	{
+		return obj switch
+		{
+			// Block elements
+			MarkdownDocument doc => RenderDocument(doc),
+			HeadingBlock heading => RenderHeading(heading),
+			ParagraphBlock para => RenderParagraph(para),
+			CodeBlock code => RenderCodeBlock(code),
+			ListBlock list => RenderList(list),
+			ListItemBlock listItem => RenderListItem(listItem),
+			QuoteBlock quote => RenderQuote(quote),
+			ThematicBreakBlock _ => RenderThematicBreak(),
+			HtmlBlock html => RenderHtmlBlock(html),
+			Table table => RenderTable(table),
+			TableRow row => RenderTableRow(row),
+			TableCell cell => RenderTableCell(cell),
 
-// Inline elements - specific types first, then base ContainerInline
-LiteralInline literal => RenderLiteral(literal),
-CodeInline code => RenderCodeInline(code),
-EmphasisInline emphasis => RenderEmphasis(emphasis),
-LineBreakInline lb => RenderLineBreak(lb),
-LinkInline link => RenderLink(link, RenderInlines(link.FirstChild)),
-AutolinkInline autolink => RenderAutolink(autolink),
-HtmlInline html => RenderHtmlInline(html),
-HtmlEntityInline entity => RenderHtmlEntity(entity),
-DelimiterInline delimiter => RenderDelimiter(delimiter),
-ContainerInline container => RenderContainerInline(container),
+			// Inline elements - specific types first, then base ContainerInline
+			LiteralInline literal => RenderLiteral(literal),
+			CodeInline code => RenderCodeInline(code),
+			EmphasisInline emphasis => RenderEmphasis(emphasis),
+			LineBreakInline lb => RenderLineBreak(lb),
+			LinkInline link => RenderLink(link, RenderInlines(link.FirstChild)),
+			AutolinkInline autolink => RenderAutolink(autolink),
+			HtmlInline html => RenderHtmlInline(html),
+			HtmlEntityInline entity => RenderHtmlEntity(entity),
+			DelimiterInline delimiter => RenderDelimiter(delimiter),
+			ContainerInline container => RenderContainerInline(container),
 
-// Default case - try to render children if it's a container block
-ContainerBlock container => RenderContainerBlock(container),
+			// Default case - try to render children if it's a container block
+			ContainerBlock container => RenderContainerBlock(container),
 
-_ => MModule.empty()
-};
-}
+			_ => MModule.empty()
+		};
+	}
 
-private MString RenderContainerBlock(ContainerBlock container)
-{
-var parts = container
-.Select(child => Render(child))
-.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
-.ToList();
-return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
-}
+	private MString RenderContainerBlock(ContainerBlock container)
+	{
+		var parts = container
+			.Select(child => Render(child))
+			.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
+			.ToList();
+		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+	}
 
-private MString RenderDocument(MarkdownDocument doc)
-{
-var parts = doc
-.Select(child => Render(child))
-.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
-.ToList();
-var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
-return parts.Count > 1
-? MModule.concat(content, MModule.single("\n"))
-: content;
-}
+	private MString RenderDocument(MarkdownDocument doc)
+	{
+		var parts = doc
+			.Select(child => Render(child))
+			.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
+			.ToList();
+		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+		return parts.Count > 1
+			? MModule.concat(content, MModule.single("\n"))
+			: content;
+	}
 
-private MString RenderInlines(Inline? inline)
-{
-var parts = new List<MString>();
-while (inline != null)
-{
-var rendered = Render(inline);
-if (rendered.Length > 0)
-{
-parts.Add(rendered);
-}
-inline = inline.NextSibling;
-}
-return MModule.multiple(parts);
-}
+	private MString RenderInlines(Inline? inline)
+	{
+		var parts = new List<MString>();
+		while (inline != null)
+		{
+			var rendered = Render(inline);
+			if (rendered.Length > 0)
+			{
+				parts.Add(rendered);
+			}
+			inline = inline.NextSibling;
+		}
+		return MModule.multiple(parts);
+	}
 
-private MString RenderContainerInline(ContainerInline container)
-=> RenderInlines(container.FirstChild);
+	private MString RenderContainerInline(ContainerInline container)
+	=> RenderInlines(container.FirstChild);
 
-private MString RenderLineBreak(LineBreakInline lineBreak)
-=> lineBreak.IsHard ? MModule.single("\n") : MModule.single(" ");
+	private MString RenderLineBreak(LineBreakInline lineBreak)
+	=> lineBreak.IsHard ? MModule.single("\n") : MModule.single(" ");
 }
