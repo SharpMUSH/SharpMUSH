@@ -114,7 +114,7 @@ public class RecursiveMarkdownRenderer
 			LiteralInline literal => RenderLiteral(literal),
 			CodeInline code => RenderCodeInline(code),
 			EmphasisInline emphasis => RenderEmphasis(emphasis),
-			LineBreakInline _ => RenderLineBreak(),
+			LineBreakInline lb => RenderLineBreak(lb),
 			LinkInline link => RenderLink(link, RenderInlines(link.FirstChild)),
 			AutolinkInline autolink => RenderAutolink(autolink),
 			HtmlInline html => RenderHtmlInline(html),
@@ -133,7 +133,7 @@ public class RecursiveMarkdownRenderer
 	{
 		var parts = container
 			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0)
+			.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
 			.ToList();
 		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
 	}
@@ -142,9 +142,12 @@ public class RecursiveMarkdownRenderer
 	{
 		var parts = doc
 			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0)
+			.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
 			.ToList();
-		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+		return parts.Count > 1
+			? MModule.concat(content, MModule.single("\n"))
+			: content;
 	}
 
 	protected virtual MString RenderHeading(HeadingBlock heading)
@@ -750,8 +753,8 @@ public class RecursiveMarkdownRenderer
 	protected virtual MString RenderInlineCode(CodeInline code)
 		=> MModule.markupSingle(InlineCodeStyle, code.Content);
 
-	private MString RenderLineBreak()
-		=> MModule.single("\n");
+	private MString RenderLineBreak(LineBreakInline lineBreak)
+		=> lineBreak.IsHard ? MModule.single("\n") : MModule.single(" ");
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
