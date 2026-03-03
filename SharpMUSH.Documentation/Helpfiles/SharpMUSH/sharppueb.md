@@ -198,14 +198,14 @@ The different kinds of markup that can be sent to clients are:
 
 Without using any HTML markup functions, output is rendered as normal plain text (including ANSI and xterm256 color).
 
-See [HTML Functions] for functions used to embed HTML markup tags one at a time.
+See [HTML Functions] for functions used to embed HTML markup tags one at a time.<br>
 See [wshtml()] for help embedding large segments of raw HTML markup to be sent to WebSocket clients.
 
 Support for Pueblo links depends on the WebSocket client, however the example client above supports xch_cmd for command links and xch_hint for tooltip text popups. For clickable command links, embed a link tag with the command to be executed in the "xch_cmd" attribute, e.g. `<a xch_cmd="+who">Who is online?</a>`.
 
 You can also send data encapsulated in a JSON object.
 
-See [json()] for information about formatting data into JSON object strings.
+See [json()] for information about formatting data into JSON object strings.<br>
 See [wsjson()] for help sending formatted JSON object strings to WebSocket clients as a JavaScript object.
 
 See [@prompt] for information about sending telnet GOAHEAD prompts. Support for prompts depends on the WebSocket client. The example client above shows prompts on their own line, separating the input and output windows, but requires PROMPT_NEWLINES to be turned off.
@@ -221,7 +221,7 @@ See [@prompt] for information about sending telnet GOAHEAD prompts. Support for 
 # WSHTML()
 # WSJSON()
 
-`wshtml(<html string>[, <default string>])`
+`wshtml(<html string>[, <default string>])`<br>
 `wsjson(<json string>[, <default string>])`
 
 These functions are used to embed HTML and JSON markup into the output for WebSocket-enabled clients. You must have the Pueblo_Send power to use them.

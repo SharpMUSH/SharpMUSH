@@ -7,7 +7,9 @@ public class RecursiveMarkdownRendererTests
 	private const string CSI = "\u001b[";
 	private const string Bold = "\u001b[1m";
 	private const string Faint = "\u001b[2m";
+	private const string Italic = "\u001b[3m";
 	private const string Underlined = "\u001b[4m";
+	private const string StrikeThrough = "\u001b[9m";
 	private const string Clear = "\u001b[0m";
 	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
 
@@ -345,7 +347,7 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderHtml_BoldTag_ShouldStripTags()
+	public async Task RenderHtml_BoldTag_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = "This is <b>bold</b> text";
@@ -353,12 +355,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped, leaving just the content
+		// Assert - HTML tags stripped and ANSI bold markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is bold text");
+		await Assert.That(result.ToString().Contains(Bold)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_ItalicTag_ShouldStripTags()
+	public async Task RenderHtml_ItalicTag_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = "This is <i>italic</i> text";
@@ -366,12 +369,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
+		// Assert - HTML tags stripped and ANSI italic markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is italic text");
+		await Assert.That(result.ToString().Contains(Italic)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_UnderlineTag_ShouldStripTags()
+	public async Task RenderHtml_UnderlineTag_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = "This is <u>underlined</u> text";
@@ -379,12 +383,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
+		// Assert - HTML tags stripped and ANSI underline markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is underlined text");
+		await Assert.That(result.ToString().Contains(Underlined)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_FontColorTag_ShouldStripTags()
+	public async Task RenderHtml_FontColorTag_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = @"This is <font color=""red"">red</font> text";
@@ -392,12 +397,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
+		// Assert - HTML tags stripped and ANSI colour markup applied (red = 255,0,0)
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
+		await Assert.That(result.ToString().Contains(Foreground(255, 0, 0))).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_SpanWithStyle_ShouldStripTags()
+	public async Task RenderHtml_SpanWithStyle_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = @"This is <span style=""color: #FF0000"">red</span> text";
@@ -405,8 +411,37 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
+		// Assert - HTML tags stripped and ANSI colour markup applied (red = 255,0,0)
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
+		await Assert.That(result.ToString().Contains(Foreground(255, 0, 0))).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderHtml_BrTag_ShouldRenderAsNewline()
+	{
+		// Arrange - <br> is a self-closing void element within a paragraph
+		var markdown = "Line one<br>Line two";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - <br> produces a newline
+		await Assert.That(result.ToPlainText()).IsEqualTo("Line one\nLine two");
+	}
+
+	[Test]
+	public async Task RenderHtmlBlock_ShouldPreserveContent()
+	{
+		// Arrange - <div> is a block-level tag, parsed as HtmlBlock by Markdig.
+		// HtmlBlock is a LeafBlock — Markdig doesn't recurse into it, so the
+		// raw HTML is passed through as-is.
+		var markdown = "<div>block content</div>";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - raw HTML is passed through unchanged
+		await Assert.That(result.ToPlainText()).IsEqualTo("<div>block content</div>");
 	}
 
 	[Test]

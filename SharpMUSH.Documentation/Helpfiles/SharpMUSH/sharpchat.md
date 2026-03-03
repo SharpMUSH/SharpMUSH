@@ -377,11 +377,11 @@ Only channel admins can set locks. Players must pass:
 # CEMIT()
 # NSCEMIT()
 
-`channels([<player>][,<type>])`
-`cowner(<channel>)`
-`cflags(<channel>[,<player>])`
-`cstatus([<player>][,<channel>])`
-`cemit(<channel>,<message>[,<noisy>])`
+`channels([<player>][,<type>])`<br>
+`cowner(<channel>)`<br>
+`cflags(<channel>[,<player>])`<br>
+`cstatus([<player>][,<channel>])`<br>
+`cemit(<channel>,<message>[,<noisy>])`<br>
 `nscemit(<channel>,<message>[,<noisy>])`
 
 These functions provide information about channels:

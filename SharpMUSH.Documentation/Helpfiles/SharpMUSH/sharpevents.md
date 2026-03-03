@@ -60,7 +60,7 @@ The Event Handler object, since it's handling so many events, may become clutter
 # EVENT LIST
 Event names are of the format *<type>\`<event>*. The 'type' is used simply to group similar events together for help.
 
-Event syntax in the help is of the form:
+Event syntax in the help is of the form:<br>
 *<eventgroup>\`<eventname>* (What is passed as %0, %1, ... %9)
 
 The following event types and events have been added to SharpMUSH. To see the help for them, type [event <type>].
