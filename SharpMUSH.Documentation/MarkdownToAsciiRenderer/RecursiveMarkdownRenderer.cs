@@ -142,11 +142,25 @@ public partial class RecursiveMarkdownRenderer
 
 	private MString RenderDocument(MarkdownDocument doc)
 	{
-		var parts = doc
-			.Select(child => Render(child))
-			.Where(IsNonWhitespace)
+		// Pair each child block with its rendered MString so we can vary the
+		// delimiter: headings get a single "\n" after them (no blank line),
+		// while other blocks are separated by "\n\n" (paragraph break).
+		var items = doc
+			.Select(child => (block: child, rendered: Render(child)))
+			.Where(x => IsNonWhitespace(x.rendered))
 			.ToList();
-		return MModule.multipleWithDelimiter(MModule.single("\n\n"), parts);
+
+		if (items.Count == 0) return MModule.empty();
+
+		var result = new List<MString> { items[0].rendered };
+		for (var i = 1; i < items.Count; i++)
+		{
+			var prevIsHeading = items[i - 1].block is HeadingBlock;
+			result.Add(MModule.single(prevIsHeading ? "\n" : "\n\n"));
+			result.Add(items[i].rendered);
+		}
+
+		return MModule.multiple(result);
 	}
 
 	private MString RenderInlines(Inline? inline)
