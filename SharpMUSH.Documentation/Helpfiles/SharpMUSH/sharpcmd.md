@@ -12,12 +12,14 @@ Help is available for the following MUSH commands:
 | [teach]      | [think]      | [unfollow]   | [use]        | [whisper]    |
 | [WHO]        | [with]       |              |              |              |
 
+
 In addition to these, there are several types of '@' commands. @-commands are usually commands which have permanent effects on the MUSH (such as creating a new object). Here are the help topics on @-commands:
 
 - [@-ATTRIBUTES]
 - [@-BUILDING]
 - [@-GENERAL]
 - [@-WIZARD]
+
 
 Commands that can only be used by connected players are listed in HELP SOCKET COMMANDS.
 
@@ -30,6 +32,7 @@ These '@' commands set standard message/action sets on objects. Each comes in 3 
 | [@follow]    | [@give]      | [@idescribe] | [@leave]     | [@lfail]     |
 | [@move]      | [@payment]   | [@receive]   | [@success]   | [@tport]     |
 | [@ufail]     | [@unfollow]  | [@use]       | [@zenter]    | [@zleave]    |
+
 
 These '@' command set other standard attributes on objects that don't follow the pattern above:
 
@@ -205,7 +208,6 @@ One argument is passed to @aconnect:<br>
 > @aconnect me=+who ; +bbscan
 ```
 
-
 **See Also:**
 - [@adisconnect]
 - [ACTION LISTS]
@@ -266,7 +268,6 @@ Several arguments are passed to @adisconnect:<br>
 > @adisconnect me = home
 ```
 
-
 **See Also:**
 - [@aconnect]
 - [ACTION LISTS]
@@ -294,7 +295,6 @@ When `<object>` is an exit, @drop is shown to objects going through `<object>`, 
 ```sharp
 > @odrop South=arrives from the North.
 ```
-
 
 **See Also:**
 - [drop]
@@ -331,7 +331,6 @@ Note that these attributes are @ufail, NOT @ufailure, for TinyMUSH compatibility
 
 Although the Use @lock also restricts who can trigger $-commands or ^-listens on an object, these attributes will not be triggered for those failures. Instead, the COMMAND_LOCK`* and LISTEN_LOCK`* attributes are triggered. See [failure] for more information.
 
-
 **See Also:**
 - [use]
 - [@use]
@@ -366,7 +365,6 @@ For players and things, this means failure to get/take. For exits, it means fail
 
 Sets the message shown to someone who begins following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone begins following it, respectively. The name of the person following `<object>` is automatically prepended to the @ofollow message.
 
-
 **See Also:**
 - [follow]
 - [unfollow]
@@ -382,7 +380,6 @@ Sets the message shown to someone who begins following `<object>`, the message s
 `@aunfollow <object>[=<action list>]`
 
 Sets the message shown to someone who stops following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone stops following it, respectively. The name of the person stopping following `<object>` is automatically prepended to the @ounfollow message.
-
 
 **See Also:**
 - [follow]

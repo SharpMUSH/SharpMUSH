@@ -25,7 +25,7 @@ This is the index to the MUSH online help files.
   `help <textname>`<br>
   `help <namepattern>`<br>
   `help/search <pattern>`<br>
-  `help/query[/brief] <sqlite3query>`
+  `help/query[/brief] <sqlite3query>`<br>
 
   These commands and switches also work with other things using our helpfile setup: news, ahelp, and any others added.
 
