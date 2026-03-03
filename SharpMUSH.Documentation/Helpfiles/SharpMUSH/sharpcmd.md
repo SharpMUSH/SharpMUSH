@@ -197,7 +197,7 @@ Sets the actions to be taken by `<object>` when a player connects to the game. @
 
 Note that long and spammy @aconnect messages, whether in your room or on a channel, are frequently found annoying by other players.
 
-One argument is passed to @aconnect:
+One argument is passed to @aconnect:<br>
 %1 = number of player connections (1 if this is an initial connect)
 
 ### Example
@@ -220,7 +220,7 @@ Sets the actions to be taken by `<object>` whenever it receives @mail. Admin-onl
 - [@mail]
 # @adescribe
 # @odescribe
-`@odescribe <object>[=<message>]`
+`@odescribe <object>[=<message>]`<br>
 `@adescribe <object>[=<action list>]`
 
 These attributes contain the message shown to others in the enactor's location when he looks at `<object>`, and the actions to be taken by `<object>` when someone looks at it. (See [@describe] for the attribute shown to the enactor when he looks at `<object>`.) When the enactor is inside `<object>`, the @oidescribe and @aidescribe attributes will be used instead, if set. Please note that using these attributes to show long messages is often found annoying.
@@ -254,11 +254,11 @@ Please note that there are no destroy or odestroy attributes.
 
 Sets the actions to be taken by `<object>` when a player disconnects from the game. @adisconnects are triggered on disconnecting players, their locations (if the room_connects @config option is true), their zone object/objects in their zone master room, and objects in the Master Room.
 
-Several arguments are passed to @adisconnect:
-%1 = number of remaining connections (0 if a full disconnect)
-%2 = bytes received by the disconnecting descriptor
-%3 = bytes sent by the disconnecting descriptor
-%4 = commands issued by the disconnecting descriptor
+Several arguments are passed to @adisconnect:<br>
+%1 = number of remaining connections (0 if a full disconnect)<br>
+%2 = bytes received by the disconnecting descriptor<br>
+%3 = bytes sent by the disconnecting descriptor<br>
+%4 = commands issued by the disconnecting descriptor<br>
 %5 = 1 if the descriptor was hidden on disconnect, 0 otherwise
 
 ### Example
@@ -277,8 +277,8 @@ Several arguments are passed to @adisconnect:
 # @adrop
 # @odrop
 # @drop
-`@drop <object>[=<message>]`
-`@odrop <object>[=<message>]`
+`@drop <object>[=<message>]`<br>
+`@odrop <object>[=<message>]`<br>
 `@adrop <object>[=<action list>]`
 
 When `<object>` is a player or thing, the @drop attribute is shown to whoever drops `<object>`, and @odrop to others in the location `<object>` is dropped in. The @adrop attribute is triggered when `<object>` is dropped.
@@ -305,8 +305,8 @@ When `<object>` is an exit, @drop is shown to objects going through `<object>`, 
 # @aefail
 # @oefail
 # @efail
-`@efail <object>[=<message>]`
-`@oefail <object>[=<message>]`
+`@efail <object>[=<message>]`<br>
+`@oefail <object>[=<message>]`<br>
 `@aefail <object>[=<action list>]`
 
 These attributes contain the message shown to someone who fails to enter `<object>`, the message shown to others when someone fails to enter `<object>`, and the actions to be taken when someone fails to enter it, respectively.
@@ -321,8 +321,8 @@ These attributes contain the message shown to someone who fails to enter `<objec
 # @aufail
 # @oufail
 # @ufail
-`@ufail <object>=[<message>]`
-`@oufail <object>=[<message>]`
+`@ufail <object>=[<message>]`<br>
+`@oufail <object>=[<message>]`<br>
 `@aufail <object>=[<action list>]`
 
 Sets the message shown to a player who fails to use an object via the 'use' command (because they don't pass the @lock/use), the message shown to others in the room when a player fails to use `<object>`, and the actions to be taken by `<object>` when someone fails to use it, respectively.
@@ -341,8 +341,8 @@ Although the Use @lock also restricts who can trigger $-commands or ^-listens on
 # @afailure
 # @ofailure
 # @failure
-`@failure <object>[=<message>]`
-`@ofailure <object>[=<message>]`
+`@failure <object>[=<message>]`<br>
+`@ofailure <object>[=<message>]`<br>
 `@afailure <object>[=<action list>]`
 
 @failure contains the message shown to someone who fails to pass `<object>`'s Basic @lock. @ofailure contains the message shown to others, and @afailure contains the actions to be taken by `<object>`.
@@ -360,8 +360,8 @@ For players and things, this means failure to get/take. For exits, it means fail
 # @follow
 # @ofollow
 # @afollow
-`@follow <object>[=<message>]`
-`@ofollow <object>[=<message>]`
+`@follow <object>[=<message>]`<br>
+`@ofollow <object>[=<message>]`<br>
 `@afollow <object>[=<action list>]`
 
 Sets the message shown to someone who begins following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone begins following it, respectively. The name of the person following `<object>` is automatically prepended to the @ofollow message.
@@ -377,8 +377,8 @@ Sets the message shown to someone who begins following `<object>`, the message s
 # @unfollow
 # @ounfollow
 # @aunfollow
-`@unfollow <object>[=<message>]`
-`@ounfollow <object>[=<message>]`
+`@unfollow <object>[=<message>]`<br>
+`@ounfollow <object>[=<message>]`<br>
 `@aunfollow <object>[=<action list>]`
 
 Sets the message shown to someone who stops following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone stops following it, respectively. The name of the person stopping following `<object>` is automatically prepended to the @ounfollow message.
@@ -394,8 +394,8 @@ Sets the message shown to someone who stops following `<object>`, the message sh
 # @ahear
 # @amhear
 # @aahear
-`@ahear <object>[=<action list>]`
-`@amhear <object>[=<action list>]`
+`@ahear <object>[=<action list>]`<br>
+`@amhear <object>[=<action list>]`<br>
 `@aahear <object>[=<action list>]`
 
 Sets the actions to be taken after the object's @listen is matched. @ahear will only be triggered by sound made by other objects, and @amhear is only triggered by sound made by `<object>` itself. @aahear will be triggered by all matching sound, regardless of the source.
@@ -409,9 +409,9 @@ Sets the actions to be taken after the object's @listen is matched. @ahear will 
 # @oleave
 # @oxleave
 # @aleave
-`@leave <object>[=<message>]`
-`@oleave <object>[=<message>]`
-`@oxleave <object>[=<message>]`
+`@leave <object>[=<message>]`<br>
+`@oleave <object>[=<message>]`<br>
+`@oxleave <object>[=<message>]`<br>
 `@aleave <object>[=<action list>]`
 
 These attributes contain the message shown to anyone leaving `<object>`, the message shown to others inside `<object>` when someone leaves it, the message shown to others in `<object>`'s location when someone leaves it, and the actions to be taken by `<object>` when someone leaves it, respectively.
@@ -428,8 +428,8 @@ The leaver's new location is passed in %0, if `<object>` has permission to see i
 # @lfail
 # @olfail
 # @alfail
-`@lfail <object>[=<message>]`
-`@olfail <object>[=<message>]`
+`@lfail <object>[=<message>]`<br>
+`@olfail <object>[=<message>]`<br>
 `@alfail <object>[=<action list>]`
 
 These attributes contain the message shown to objects who try to leave `<object>` and fail, the message shown to others inside `<object>` when someone fails to leave, and the actions to be taken by `<object>` when someone attempts to leave it and fails.
@@ -445,7 +445,7 @@ Such a failure usually occurs because `<object>` is set NO_LEAVE, or because the
 - [ACTION LISTS]
 - [VERBS]
 # @alias
-`@alias <player>[=<name1>[;<name2>[;...;<nameN>]]]`
+`@alias <player>[=<name1>[;<name2>[;...;<nameN>]]]`<br>
 `@alias <object>[=<string>]`
 
 For players and exits, the ALIAS attribute has special meaning: it contains a list of aliases (separated by semicolons) which can be used instead of its name to refer to the player or exit.
@@ -467,9 +467,9 @@ For other types of object, @alias has no special meaning.
 # @omove
 # @oxmove
 # @amove
-`@move <object>[=<message>]`
-`@omove <object>[=<message>]`
-`@oxmove <object>[=<message>]`
+`@move <object>[=<message>]`<br>
+`@omove <object>[=<message>]`<br>
+`@oxmove <object>[=<message>]`<br>
 `@amove <object>[=<action list>]`
 
 These attributes contain the message shown to `<object>` immediately after it moves, the message shown to others in the room `<object>` moves into, the message shown to objects in the location `<object>` leaves, and the actions to be taken when `<object>` moves, respectively. Please note that long @omoves are frequently found annoying.
@@ -493,9 +493,9 @@ The `<object>`'s new location is in %0 and the old location it moved from in %1.
 # @enter
 # @oenter
 # @oxenter
-`@enter <object>[=<message>]`
-`@oenter <object>[=<message>]`
-`@oxenter <object>[=<message>]`
+`@enter <object>[=<message>]`<br>
+`@oenter <object>[=<message>]`<br>
+`@oxenter <object>[=<message>]`<br>
 `@aenter <object>[=<action list>]`
 
 These attributes contain the messages shown to someone who enters `<object>`, the message shown to others inside `<object>` when someone enters it, the message shown to those in `<object>`'s location when someone enters it, and the actions to be taken by `<object>` when someone enters it, respectively.
@@ -520,8 +520,8 @@ The old location of the entering object is passed in %0, if `<object>` had permi
 # @apayment
 # @payment
 # @opayment
-`@payment <object>[=<message>]`
-`@opayment <object>[=<message>]`
+`@payment <object>[=<message>]`<br>
+`@opayment <object>[=<message>]`<br>
 `@apayment <object>[=<action list>]`
 
 These attributes contain the messages shown to someone who pays `<object>` pennies with the "give" command, the message shown to others when someone pays `<object>`, and the actions to be taken by `<object>` when it's paid. Each attribute is passed the number of pennies paid as %0.
@@ -545,9 +545,9 @@ These attributes contain the messages shown to someone who pays `<object>` penni
 # @tport
 # @otport
 # @oxtport
-`@tport <object>[=<message>]`
-`@otport <object>[=<message>]`
-`@oxtport <object> [=<message>]`
+`@tport <object>[=<message>]`<br>
+`@otport <object>[=<message>]`<br>
+`@oxtport <object> [=<message>]`<br>
 `@atport <object>[=<action list>]`
 
 These attributes contain the message shown to `<object>` when it is teleported, the message shown to others in the room `<object>` is teleported to, the message shown to others in the room `<object>` is teleported from, and the actions to be taken by `<object>` when it disappears, respectively.
@@ -581,7 +581,7 @@ This command changes the ownership of the attribute `<attribute>` on `<object>` 
 - [NON-STANDARD ATTRIBUTES]
 # @atrlock
 # @attrlock
-`@atrlock <object>/<attribute>`
+`@atrlock <object>/<attribute>`<br>
 `@atrlock <object>/<attribute=[on|off]`
 
 The first form of this command tells you whether or not the given attribute is locked (whether it has the "locked" attribute flag set).
@@ -599,8 +599,8 @@ If you wish to lock an attribute without gaining ownership, you can set it "lock
 # @asuccess
 # @success
 # @osuccess
-`@success <object>[=<message>]`
-`@osuccess <object>[=<message>]`
+`@success <object>[=<message>]`<br>
+`@osuccess <object>[=<message>]`<br>
 `@asuccess <object>[=<action list>]`
 
 For players and things, these attributes contain the message shown to someone who picks up `<object>` with the "get" command, the message shown to others when someone gets `<object>`, and the actions to be taken by `<object>` when someone gets it, respectively.
@@ -641,16 +641,16 @@ The first form of the command displays the full name of the attribute `<attrib>`
 
 See [@attribute2].
 # @attribute2
-`@attribute/access[/retroactive] <attrib>=<flag list>`
-`@attribute/delete <attrib>`
-`@attribute/rename <attrib>=<new name>`
+`@attribute/access[/retroactive] <attrib>=<flag list>`<br>
+`@attribute/delete <attrib>`<br>
+`@attribute/rename <attrib>=<new name>`<br>
 `@attribute/decompile[/retroactive] [<pattern>]`
 
 `@attribute/access` adds `<attrib>` as a new standard attribute, with the default attribute flags `<flag list>`. If `<attrib>` is already a standard attribute, this command modifies its default attribute flags. Use "none" for `<flag list>` if you don't want any default attribute flags.
 
 If the `/retroactive` switch is given with `/access`, all existing copies of the attribute will be @atrchown'd to the player running the command, and will have its flags changed to `<flag list>`.
 
-`@attribute/delete` removes a standard attribute from the table.
+`@attribute/delete` removes a standard attribute from the table.<br>
 `@attribute/rename` renames a standard attribute.
 
 Only Wizards can modify the attribute table.
@@ -659,7 +659,7 @@ Only Wizards can modify the attribute table.
 
 See [@attribute3].
 # @attribute3
-`@attribute/limit <attrib>=<regexp pattern>`
+`@attribute/limit <attrib>=<regexp pattern>`<br>
 `@attribute/enum [<delim>] <attrib>=<list of choices>`
 
 `@attribute/limit` lets you restrict all _new_ values for an attribute to those that match a regexp pattern. Case insensitive. (Use (?-i) to make your regexp case-sensitive.)
@@ -684,8 +684,8 @@ See [@attribute3].
 # @ause
 # @use
 # @ouse
-`@use <object>[=<message>]`
-`@ouse <object>[=<message>]`
+`@use <object>[=<message>]`<br>
+`@ouse <object>[=<message>]`<br>
 `@ause <object>[=<action list>]`
 
 These attributes contain the message shown to someone who successfully uses `<object>`, the message shown to others when someone uses `<object>`, and the actions to be taken by `<object>` when it is used, respectively.
@@ -722,8 +722,8 @@ If `<message>` evaluates to something non-null, it will be shown to anyone who p
 - [@idle]
 - [@haven]
 # @boot
-`@boot[/silent] <player>`
-`@boot/port[/silent] <descriptor number>`
+`@boot[/silent] <player>`<br>
+`@boot/port[/silent] <descriptor number>`<br>
 `@boot/me`
 
 The first form of this command disconnects all of `<player>`'s connections from the game.
@@ -742,7 +742,7 @@ Only admin and those with the "boot" power can @boot other players.
 - [LOGOUT]
 # @break
 # @assert
-`@break[/queued] <boolean>[=<action list>]`
+`@break[/queued] <boolean>[=<action list>]`<br>
 `@assert[/queued] <boolean>[=<action list>]`
 
 `@break` stops the execution of further commands in the current action list if `<boolean>` is a true value. It doesn't affect new queue entries made by previous commands in the action list. It can be useful for doing error checking without having to nest @switches.
@@ -783,7 +783,7 @@ Third
 ```
 # @charges
 # @runout
-`@charges <object>[=<integer>]`
+`@charges <object>[=<integer>]`<br>
 `@runout <object>[=<action list>]`
 
 These attributes can limit how many times an object can be successfully "use"d. When you "use" an object with a CHARGES attribute set, the object's AUSE attribute is only triggered if CHARGES is a positive integer. When CHARGES is less than 1 (or not a number), the object's RUNOUT attribute is triggered instead.
@@ -829,7 +829,7 @@ Revolver clicks, but is out of bullets.
 CHARGES [#6$]: 0
 ```
 # @chown
-`@chown[/preserve] <object>=<player>`
+`@chown[/preserve] <object>=<player>`<br>
 `@chown <object>/<attribute>=<player>`
 
 Changes the ownership of `<object>` to `<player>`. You can chown things, rooms or exits. Players can't be @chown'd - they always own themselves. To chown a thing, you have to be carrying it. If you do not own an object, you can only chown it if it has the CHOWN_OK flag and you pass its @lock/chown. If you're not a Wizard, you can only @chown objects to yourself or a Zone Master whose zone-lock you pass.
@@ -864,7 +864,7 @@ This command can only be used by Wizards.
 **See Also:**
 - [@chown]
 # @chzone
-`@chzone[/preserve] <object>=<zone>`
+`@chzone[/preserve] <object>=<zone>`<br>
 `@chzone <object>=none`
 
 The first form of this command changes the zone of `<object>` to `<zone>`. This puts the object on that zone and may (if the zone_control_zmp_only @config option is off) allow anyone who passes the Zone @lock of `<zone>` to control `<object>`. Any kind of object can be @chzoned, and any kind of object can be used as a zone.
@@ -898,7 +898,7 @@ Changes the zone of all objects owned by `<player>` to `<zone object>`. If `<zon
 - [@chzone]
 - [ZONES]
 # @clone
-`@clone <object>[=<new name>[, <dbref>]]`
+`@clone <object>[=<new name>[, <dbref>]]`<br>
 `@clone/preserve <object>[=<new name>[, <dbref>]]`
 
 This command creates a copy of `<object>`. The clone will have the same name as the original unless a `<new name>` is given for it. You can only clone things, rooms and exits, not players. You must control `<object>`. The new object will be owned by the player who performs the @clone, not the owner of the original `<object>`.
@@ -926,10 +926,10 @@ Note: If @create is restricted or disabled, it will also restrict or disable thi
 - [create()]
 - [@cpattr]
 # @command
-`@command <command>`
-`@command/<switch> <command>`
-`@command/alias <command>=<alias>`
-`@command/clone <command>=<clone>`
+`@command <command>`<br>
+`@command/<switch> <command>`<br>
+`@command/alias <command>=<alias>`<br>
+`@command/clone <command>=<clone>`<br>
 `@command/restrict <command>=<restriction> [" <error message>]`
 
 @command can be used for adding new built-in commands, altering the way a built-in command works, and displaying information about how commands currently work.
@@ -1003,9 +1003,9 @@ This is a wizard-only command which sets a COMMENT attribute on `<object>`. The 
 - [@@]
 - [@@()]
 # @config
-`@config`
-`@config [<category>|<option>]`
-`@config/set <option>=<value>`
+`@config`<br>
+`@config [<category>|<option>]`<br>
+`@config/set <option>=<value>`<br>
 `@config/save <option>=<value>`
 
 With no arguments, @config lists the categories of configuration options for the MUSH. With an argument, @config lists the options in the given `<category>`, or shows the current value of the given `<option>`.
@@ -1213,7 +1213,7 @@ Your exit has been created.
 - [buy]
 # @cpattr
 # @mvattr
-`@cpattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`
+`@cpattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`<br>
 `@mvattr[/noflagcopy] <obj>/<attr>=<obj1>[/<attr1>][, ..., <objN>[/<attrN>]]`
 
 @cpattr copies the `<attr>` attribute from `<obj>` to `<obj1>` (and any other objects given). By default, the new attributes will have the same name as the original, but you can specify a different name to be used on each object if you wish.
@@ -1269,7 +1269,7 @@ This is a wizard only command. It forces the database to perform a series of int
 
 @dbck no longer performs an @purge. The results of @dbck are written to the game's error log, and not reported to the Wizard.
 # @decompile
-`@decompile[/<switches>] <object>[=<prefix>]`
+`@decompile[/<switches>] <object>[=<prefix>]`<br>
 `@decompile[/<switches>] <object>/<attribute patterns>[=<prefix>]`
 
 @decompile outputs a list of the commands that you would have to enter in order to recreate `<object>`. Useful for either copying objects from one MUSH to another, or for making logs of important objects to protect against an accidental @nuke or a crash.
@@ -1286,24 +1286,24 @@ See [@decompile2].
 # @decompile2
 @decompile takes the following switches, which can be combined:
 
-`@decompile/name`
-This switch causes @decompile to use the object's name, instead of its dbref. This is the default.
-`@decompile/db`
-This switch makes @decompile use the object's dbref instead of its name, which is useful for editing code off-MUSH.
-`@decompile/flags`
-Only the code to @create the object and set flags/powers/locks is printed. When an `<attribute pattern>` is given, this switch is ignored, and @decompile only prints the matching attributes.
-`@decompile/attribs`
-Only the code to set the object's attributes is printed. Same as `@decompile <object>/**`
-`@decompile/skipdefaults`
-Don't output commands to set attribute flags if those flags are the defaults for that attribute on that MUSH.
-`@decompile/tf`
+`@decompile/name`<br>
+This switch causes @decompile to use the object's name, instead of its dbref. This is the default.<br>
+`@decompile/db`<br>
+This switch makes @decompile use the object's dbref instead of its name, which is useful for editing code off-MUSH.<br>
+`@decompile/flags`<br>
+Only the code to @create the object and set flags/powers/locks is printed. When an `<attribute pattern>` is given, this switch is ignored, and @decompile only prints the matching attributes.<br>
+`@decompile/attribs`<br>
+Only the code to set the object's attributes is printed. Same as `@decompile <object>/**`<br>
+`@decompile/skipdefaults`<br>
+Don't output commands to set attribute flags if those flags are the defaults for that attribute on that MUSH.<br>
+`@decompile/tf`<br>
 Explained in [@decompile3].
 
 See [@decompile3].
 # @decompile3
 `@decompile/tf <object>[/<attribute>]`
 
-The /tf works the same as if you'd typed:
+The /tf works the same as if you'd typed:<br>
 `@decompile/db <obj>[/<attrs>]=[default(me/TFPREFIX, FugueEdit >%b)]`
 
 with the exception that `@decompile/tf` does not include commands for setting attribute flags. If you have a TFPREFIX attribute set, the (unevaluated) contents of that attribute is used as the prefix. Otherwise, the string "FugueEdit > " is used. It's useful for automatically copying @decompile output into your client to alter. It is highly recommended that you set a TFPREFIX attribute, to prevent others from maliciously placing code in your client's command line.
@@ -1348,7 +1348,7 @@ When inside a thing or player, you will see its @idescribe instead, if one is se
 # @destroy
 # @recycle
 # @nuke
-`@destroy[/override] <object>` or `@recyle[/override] <object>`
+`@destroy[/override] <object>` or `@recyle[/override] <object>`<br>
 `@nuke <object>`
 
 The @destroy command marks `<object>` for destruction, or destroys `<object>` instantly if it was already marked for destruction. You must either control `<object>`, control its source or destination room (for exits), or it must be set DESTROY_OK and you must pass its @lock/destroy.
@@ -1526,7 +1526,7 @@ You may not specify both the `/any` switch and a specific attribute. Similarly, 
 - [@notify]
 - [@halt]
 # @dump
-`@dump`
+`@dump`<br>
 `@dump[/paranoid|/debug|/nofork] [<check interval>]`
 
 This is a wizard-only command which saves a copy of the database from memory into the outdb file on disk. The MUSH saves the game automatically at a regular interval, controlled by the "dump_interval" @config option.
@@ -1544,7 +1544,7 @@ These switches should ONLY be used if a normal @dump is not being done correctly
 - [@shutdown]
 # @ealias
 # @lalias
-`@ealias <object>[=<enter alias1>[; ... ; <enter aliasN>]]`
+`@ealias <object>[=<enter alias1>[; ... ; <enter aliasN>]]`<br>
 `@lalias <object>[=<leave alias1>[; ... ; <leave aliasN>]]`
 
 These attributes contain lists of "enter aliases" and "leave aliases" for `<object>` - any of the aliases can be used in place of "enter `<object>`" and "leave `<object>`" to enter/leave the object.
@@ -1565,8 +1565,8 @@ These attributes only have meaning for players and things (as rooms/exits cannot
 - [ENTER_OK]
 # @edit
 # @gedit
-`@edit[/first][/check][/quiet] <object>/<attributes>=<search>, <replace>`
-`@edit[/check][/quiet] <object>/<attributes>=$, <string to append>`
+`@edit[/first][/check][/quiet] <object>/<attributes>=<search>, <replace>`<br>
+`@edit[/check][/quiet] <object>/<attributes>=$, <string to append>`<br>
 `@edit[/check][/quiet] <object>/<attributes>=^, <string to prepend>`
 
 This command allows you to edit the contents of attributes, without having to retype the entire attribute.
@@ -1612,14 +1612,14 @@ Replace a literal '^' with 'v'
 - [WILDCARDS]
 # @elock
 # @eunlock
-`@elock <object>[=<key>]`
+`@elock <object>[=<key>]`<br>
 `@eunlock <object>`
 
 @elock sets the Enter @lock for `<object>` to `<key>`, or clears the the lock if no `<key>`. is given. @eunlock removes the Enter @lock for `<object>`.
 
-@elock and @eunlock are deprecated and uses of them should be replaced by
-`@lock/enter <object>[=<key>]`
-and
+@elock and @eunlock are deprecated and uses of them should be replaced by<br>
+`@lock/enter <object>[=<key>]`<br>
+and<br>
 `@lock/enter <object>`
 
 
@@ -1630,7 +1630,7 @@ and
 - [ENTER_OK]
 # @emit
 # \
-`@emit[/<switch>] <message>`
+`@emit[/<switch>] <message>`<br>
 `\<message>`
 
 This sends `<message>` to everyone in your location. Nothing is added to the message, not even your name. If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` as %0, and | as %1, and the result will be shown instead of `<message>` as long as it evaluates to a non-empty string.
@@ -1654,12 +1654,12 @@ The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof`
 - [SPOOFING].]
 # @enable
 # @disable
-`@enable <option>`
+`@enable <option>`<br>
 `@disable <option>`
 
 These wizard-only commands allow for any boolean @config options to be changed (see [@config paramaters] for a list).
 
-`@enable <option>` is the same thing as `@config/set <option>=yes`
+`@enable <option>` is the same thing as `@config/set <option>=yes`<br>
 `@disable <option>` is the same thing as `@config/set <option>=no`
 
 
@@ -1668,8 +1668,8 @@ These wizard-only commands allow for any boolean @config options to be changed (
 # @zenter
 # @ozenter
 # @azenter
-`@zenter <object>[=<message>]`
-`@ozenter <object>[=<message>]`
+`@zenter <object>[=<message>]`<br>
+`@ozenter <object>[=<message>]`<br>
 `@azenter <object>[=<action list>]`
 
 These attributes set the message shown to a player when he enters the zone `<object>`, the message shown to others in the room the player enters when he enters the zone, and the action to be taken by the zone `<object>` when the player moves into an area zoned to it.
@@ -1688,8 +1688,8 @@ Zone entry is assumed to occur before room entry, so these are triggered before 
 # @zleave
 # @ozleave
 # @azleave
-`@zleave <object>[=<message>]`
-`@ozleave <object>[=<message>]`
+`@zleave <object>[=<message>]`<br>
+`@ozleave <object>[=<message>]`<br>
 `@azleave <object>[=<action list>]`
 
 These attributes set the message shown to a player when he leaves the zone `<object>`, the message shown to others in the room he left when leaving the zone, and the actions to be taken by `<object>` with a player leaves an area zoned to it.
@@ -1742,9 +1742,9 @@ Q-registers (set via setq() and similar functions) are inherited from the @confo
 - [@nameformat]
 - [@descformat]
 # @HTTP
-`@http <obj>/<attr>=<URL>`
-`@http/delete <obj>/<att>=<URL>[,<data>]`
-`@http/post <obj>/<att>=<URL>[,<data>]`
+`@http <obj>/<attr>=<URL>`<br>
+`@http/delete <obj>/<att>=<URL>[,<data>]`<br>
+`@http/post <obj>/<att>=<URL>[,<data>]`<br>
 `@http/put <obj>/<att>=<URL>[,<data>]`
 
 Attempts to retrieve URL with a HTTP GET request, and upon doing so, queues the action list in `<obj>/<attr>`. The body of the reply from the remote web server is passed as %0, with the HTTP status in %q`<status>` and the Content-Type header in %q`<content-type>`. Any commas in the URL need to be escaped.
@@ -1886,7 +1886,7 @@ If `/inline` is given, `<object>` will run `<action list>` _now_, instead of bei
 
 `@force/inplace` is an alias for `@force/inline/nobreak/localize`.
 
-@force can be abbreviated as
+@force can be abbreviated as<br>
 `<dbref> <action list>`
 
 See [@force2].
@@ -1935,16 +1935,16 @@ You say, "Done?"
 - [DBREF]
 - [objeval()]
 # @flag
-`@flag <flag name>`
-`@flag/list [<flag name pattern>]`
-`@flag/add <flag name>=[<letter>], [<type(s)>], [<setperms>], [<unsetperms>]`
-`@flag/delete <flag name>`
-`@flag/alias <flag name>=<alias>`
-`@flag/letter <flag name>[=<letter>]`
-`@flag/restrict <flag name>=[<setperms>], [<unsetperms>]`
-`@flag/type <flag name>=<type(s)>`
-`@flag/enable <flag name>`
-`@flag/disable <flagname>`
+`@flag <flag name>`<br>
+`@flag/list [<flag name pattern>]`<br>
+`@flag/add <flag name>=[<letter>], [<type(s)>], [<setperms>], [<unsetperms>]`<br>
+`@flag/delete <flag name>`<br>
+`@flag/alias <flag name>=<alias>`<br>
+`@flag/letter <flag name>[=<letter>]`<br>
+`@flag/restrict <flag name>=[<setperms>], [<unsetperms>]`<br>
+`@flag/type <flag name>=<type(s)>`<br>
+`@flag/enable <flag name>`<br>
+`@flag/disable <flagname>`<br>
 `@flag/decompile [<pattern>]`
 
 This command manipulates the list of flags in the database. With no switches, the command displays information about the given flag, including aliases and permissions. `@flag/list` lists names of enabled flags, and may be given a wildcarded pattern to restrict which names it will show.
@@ -1970,9 +1970,9 @@ See [@flag2] for information on `@flag/add`.
 # @flag2
 `@flag/add` is used to add a new flag with the given name. Arguments other than the flag name are optional:
 
-`<letter>` gives the flag's one-letter abbreviation, which must not conflict with the one-letter abbreviation of another flag that could be applied to the same object type(s). It defaults to none, which means it won't appear in a list of flag characters but can still be tested for with hasflag(), andlflags(), and orlflags().
-`<type>` specifies the space-separated list of types to which the flag applies, and may be 'any' (the default) or one or more of 'room', 'thing', 'player', or 'exit'.
-`<setperms>` specifies the space-separated list of permissions for who can set and/or see the flag. See [flag permissions] for details. It defaults to 'any'
+`<letter>` gives the flag's one-letter abbreviation, which must not conflict with the one-letter abbreviation of another flag that could be applied to the same object type(s). It defaults to none, which means it won't appear in a list of flag characters but can still be tested for with hasflag(), andlflags(), and orlflags().<br>
+`<type>` specifies the space-separated list of types to which the flag applies, and may be 'any' (the default) or one or more of 'room', 'thing', 'player', or 'exit'.<br>
+`<setperms>` specifies the space-separated list of permissions for who can set and/or see the flag. See [flag permissions] for details. It defaults to 'any'<br>
 `<unsetperms>` specifies the space-separated list of permissions for who can clear the flag on an object they control. It defaults to whatever `<setperms>` is given, or 'any'.
 
 Flags added with `@flag/add` are saved with the database when it is dumped, and do not need to be re-added at startup. They are treated exactly as any other flag in the server.
@@ -1992,15 +1992,15 @@ The following permissions can be used to specify whether `<looker>` can see the 
 
 The following permissions control other behavior related to the flag:
 
-log Log when the flag is set or cleared. Only meaningful in `<setperms>`.
+log Log when the flag is set or cleared. Only meaningful in `<setperms>`.<br>
 event Trigger the OBJECT`FLAG event when this flag is set or cleared. Only meaningful in `<setperms>`. See [events] for more information.
 # @function
-`@function [<function name>]`
-`@function[/preserve] <name>=<obj>, <attrib>[, <min args>, <max args>[, <restrictions>]]`
-`@function <function name>=<object>/<attribute>`
-`@function/<switch> <function name>`
-`@function/restrict[/builtin] <function name>=<restrictions>`
-`@function/alias <function name>=<alias>`
+`@function [<function name>]`<br>
+`@function[/preserve] <name>=<obj>, <attrib>[, <min args>, <max args>[, <restrictions>]]`<br>
+`@function <function name>=<object>/<attribute>`<br>
+`@function/<switch> <function name>`<br>
+`@function/restrict[/builtin] <function name>=<restrictions>`<br>
+`@function/alias <function name>=<alias>`<br>
 `@function/clone <function name>=<clone>`
 
 When used without any arguments, this command lists all global user-defined functions. For wizards and others with the Functions power, it also lists the dbref number and attribute corresponding to the listed functions.
@@ -2098,9 +2098,9 @@ For backwards compatability, the `/list` switch provides the default behaviour o
 - [WILDCARDS]
 # @halt
 # @allhalt
-`@halt[/noeval] <object>[=<action list>]`
-`@halt/pid <pid>`
-`@halt/all`
+`@halt[/noeval] <object>[=<action list>]`<br>
+`@halt/pid <pid>`<br>
+`@halt/all`<br>
 `@allhalt`
 
 The @halt command removes all queued actions for `<object>`. If given, `<action list>` is placed in the queue for the object instead. If no action list is specified, the object is set HALT.
@@ -2139,7 +2139,7 @@ When someone attempts to page `<player>` and is unable to, either because `<play
 - [@away]
 - [@idle]
 # @hide
-`@hide[/<switch>] <descriptor>`
+`@hide[/<switch>] <descriptor>`<br>
 `@hide[/<switch>] [<player>]`
 
 This command allows players to hide their online status. Hidden connections don't show up on WHO, in lwho(), etc, when used by players without see_all.
@@ -2158,8 +2158,8 @@ The `/on` and `/yes` switches hide connections, while `/off` and `/no` unhide co
 # @idescribe
 # @oidescribe
 # @aidescribe
-`@idescribe <object>[=<description>]`
-`@oidescribe <object>[=<message>]`
+`@idescribe <object>[=<description>]`<br>
+`@oidescribe <object>[=<message>]`<br>
 `@aidescribe <object>[=<action list>]`
 
 @idescribe command sets the internal description for an object, which is shown to anyone who enters or looks while inside the object. It's only used for players and things; rooms and exits always use @describe.
@@ -2178,7 +2178,7 @@ If there is no IDESCRIBE set for an object, those who enter or look inside it wi
 - [@idescformat]
 - [VERBS]
 # @hook
-`@hook/<switch> <command>[=<object>[, <attribute>]]`
+`@hook/<switch> <command>[=<object>[, <attribute>]]`<br>
 `@hook/list [<command>]`
 
 @hook makes the command parser evaluate given attributes at certain points in command evaluation. The possible points, indicated by the proper switch:
@@ -2345,7 +2345,7 @@ Players paging me will only see the "I'm idle" message if I've been idle for ove
 # @if
 # @ifelse
 # @skip
-`@if <boolean>=<true>[, <false>]`
+`@if <boolean>=<true>[, <false>]`<br>
 `@skip <boolean>=<false>`
 
 If `<boolean>` is true, the action list `<true>` is run, otherwise the action list `<false>` is run. The action list is not queued, it is run immediately, in the same action list as @if.
@@ -2442,8 +2442,8 @@ This wizard-only command forces the immediate execution of `<number>` items from
 
 Emits a message to the outermost container object. For example, if you are carrying a bird, and are inside a vehicle which is in room #10, and you force the bird to @lemit "Cheep", everyone in room #10 will hear "Cheep". This command is the same as "@emit/room".
 
-With the `/silent` switch, no confirmation message is shown. With `/noisy`, it is. If neither is given, the silent_pemit option determines if it is shown.
-The `/noeval` switch prevents `<message>` from being evaluated.
+With the `/silent` switch, no confirmation message is shown. With `/noisy`, it is. If neither is given, the silent_pemit option determines if it is shown.<br>
+The `/noeval` switch prevents `<message>` from being evaluated.<br>
 The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
 
 
@@ -2451,7 +2451,7 @@ The `/spoof` switch causes nospoof notifications to show the enactor's dbref ins
 - [@remit]
 - [@nslemit]
 # @list
-`@list/<switch>`
+`@list/<switch>`<br>
 `@list[/lowercase] <switch>`
 
 The @list command lists useful MUSH information.
@@ -2508,7 +2508,7 @@ LINK_OK objects can also be used as semaphores, and any object can be @parented 
 # @destination
 # @exitto
 # Variable Exits
-`@destination <exit>[=<destination>]`
+`@destination <exit>[=<destination>]`<br>
 `@exitto <exit>[=<destination>]`
 
 The DESTINATION attribute is used by variable exits. To make a variable exit, you create it in the usual way (with @open), then @link it to "variable" instead of a dbref. When someone attempts to pass through the exit, the DESTINATION attribute will be evaluated, and should return a dbref; the dbref will be used as the location for the person to go to. The exit name or alias the moving player used is passed to the attribute as %0.
@@ -2616,7 +2616,7 @@ A listing of lock types, such as pagelocks, look at [locktypes]. For the availab
 # @lset
 `@lset <object>/<lock type>=[!]<flag>`
 
-This commands sets or clears flags on locks.
+This commands sets or clears flags on locks.<br>
 Valid flags include:
 
 - visual (v) This lock can be seen even if the object it's on isn't visual.
@@ -2632,7 +2632,7 @@ Valid flags include:
 - [llockflags()]
 - [lset()]
 # @log
-`@log[/<switch>] <message>`
+`@log[/<switch>] <message>`<br>
 `@log/recall/<switch> [<number>]`
 
 This wizard-only command puts `<message>` in a log file, tagged with the time and object executing the command. The available switches are /check, /cmd, /conn, /err, /trace, and /wiz, specifying which file to log to. /cmd is default.
@@ -2647,7 +2647,7 @@ Adding the `/recall` switch will display the last `<number>` lines written to th
 
 This God-only command erases one of the MUSH logs.
 
-`<log>` specifies which log file to erase, and must be one of:
+`<log>` specifies which log file to erase, and must be one of:<br>
 /check, /cmd, /conn, /err (Default), /trace, and /wiz.
 
 The default policy of erasing a log can be changed by giving one of the following switches:
@@ -2772,8 +2772,8 @@ Show the first letter in orange, and the rest with no color
 # @listmotd
 # @wizmotd
 # @rejectmotd
-`@motd[/<type>] <message>`
-`@motd/clear[/<type>]`
+`@motd[/<type>] <message>`<br>
+`@motd/clear[/<type>]`<br>
 `@motd/list`
 
 This command is used for manipulating the various Messages of the Day, or MotD. The first form of this command sets the `<type>` MotD to `<message>`, the second form clears the `<type>` MotD, and the third form lists the current value of each MotD. If no switch is given, `<type>` defaults to /connect.
@@ -2791,7 +2791,7 @@ You must have the Announce @power to change the Connect MotD; only wizards and r
 
 For historical reasons, @listmotd, @wizmotd and @rejectmotd are aliases for `@motd/list`, `@motd/wizard` and `@motd/full`, respectively.
 # @name
-`@name <object>=<new name>`
+`@name <object>=<new name>`<br>
 `@name <player|exit>=<new name>[;<alias1>[;<aliasN>]]`
 
 Changes the name of `<object>` to `<new name>`.
@@ -2823,7 +2823,7 @@ Name set.
 Config options: player_name_spaces, player_name_len, only_ascii_in_names
 # @ONAME
 # @ANAME
-`@oname <object>[=<message>]`
+`@oname <object>[=<message>]`<br>
 `@aname <object>[=<action list>]`
 
 Whenever `<object>`'s name is changed (via @name), others in the same location will see the contents of `<object>`'s ONAME attribute, prepended with `<object>`'s new name. At the same time, `<object>`'s ANAME attribute will be triggered. Both attributes receive the old name as %0, and the new name as %1.
@@ -2840,14 +2840,14 @@ Whenever `<object>`'s name is changed (via @name), others in the same location w
 - [name()]
 - [VERBS]
 # @newpassword
-`@newpassword <player>=<password>`
+`@newpassword <player>=<password>`<br>
 `@newpassword/generate <player>`
 
 This wizard-only command changes `<player>`'s password. If `<player>` is connected, she will be informed that the password was changed and who by, but not what it was changed to.
 
 The `<player>` argument is evaluated, but the `<password>` argument is not when the command is entered directly from a client.
 
-If the `/generate` switch is given, a new, random password is generated automatically, and shown to the enactor (but not to `<player>`).
+If the `/generate` switch is given, a new, random password is generated automatically, and shown to the enactor (but not to `<player>`).<br>
 The `<password>` must not contain whitespace, unprintable characters, or '='.
 
 
@@ -2855,7 +2855,7 @@ The `<password>` must not contain whitespace, unprintable characters, or '='.
 - [@password]
 - [checkpass()]
 # @notify
-`@notify[/any][/all] <object>[/<attribute>][=<number>]`
+`@notify[/any][/all] <object>[/<attribute>][=<number>]`<br>
 `@notify/setq <object>[/<attribute>]=<qreg1>,<qval1>[,...]`
 
 This command notifies a semaphore, allowing commands queued for that semaphore to be executed.
@@ -2894,12 +2894,12 @@ Hello, Walker!
 # @nszemit
 # @nsoemit
 # @nsprompt
-`@nsemit[/<switch>] [<message>]`
-`@nslemit[/<switch>] <message>`
-`@nspemit[/switches] <object>=<message>`
-`@nsprompt[/switches] <object>=<message>`
-`@nsremit[/switches] <object>=<message>`
-`@nsoemit[/<switch>] [<room>/]<object> [<object>...]=<message>`
+`@nsemit[/<switch>] [<message>]`<br>
+`@nslemit[/<switch>] <message>`<br>
+`@nspemit[/switches] <object>=<message>`<br>
+`@nsprompt[/switches] <object>=<message>`<br>
+`@nsremit[/switches] <object>=<message>`<br>
+`@nsoemit[/<switch>] [<room>/]<object> [<object>...]=<message>`<br>
 `@nszemit <zone>=<message>`
 
 These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @zemit, respectively, but will not include nospoof information if used by Wizards or someone with the Can_spoof @power. They are meant to be used by commands in the master room where the nospoof information is just useless noise. They take the same switches as their respective commands, with a few exceptions (`/spoof`, and for @nspemit, `/contents` and the admin-only `/port`).
@@ -2928,7 +2928,7 @@ This command shows `<message>` to everyone in the location of `<object>` EXCEPT 
 
 If `<room>` is specified (usually as a dbref), this command shows `<message>` to everyone in `<room>` except for the given `<object>`s. In this case, each `<object>` is matched relative to `<room>`. If no matching `<object>`s are found in `<room>`, this is the equivilent of `@remit <room>=<message>`.
 
-The `/noeval` switch prevents the MUSH from evaluating `<message>`.
+The `/noeval` switch prevents the MUSH from evaluating `<message>`.<br>
 The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
 
 See [@oemit2] for examples.
@@ -2995,7 +2995,7 @@ This command sets the parent of `<object>` to `<parent>`. If no `<parent>` is gi
 # @password
 `@password <old password>=<new password>`
 
-This changes your password. Please note that passwords ARE case-sensitive. The arguments are not evaluated.
+This changes your password. Please note that passwords ARE case-sensitive. The arguments are not evaluated.<br>
 The `<new password>` must not contain whitespace, unprintable characters, or '='.
 
 
@@ -3004,16 +3004,16 @@ The `<new password>` must not contain whitespace, unprintable characters, or '='
 - [checkpass()]
 # @pageformat
 # @outpageformat
-`@outpageformat <object>[=<message>]`
+`@outpageformat <object>[=<message>]`<br>
 `@pageformat <object>[=<message>]`
 
-`@pageformat` changes the message seen by `<object>` when it receives a page.
+`@pageformat` changes the message seen by `<object>` when it receives a page.<br>
 `@outpageformat` sets the message seen by `<object>` when it sends a page.
 
-%0 will be set to the page message (not including :, ; or ").
-%1 will be set to ':' ';' or '"' for pose, semipose and normal page, respectively.
-%2 will be set to the alias of the pager, if any.
-%3 will be a space-separated list of recipient dbrefs.
+%0 will be set to the page message (not including :, ; or ").<br>
+%1 will be set to ':' ';' or '"' for pose, semipose and normal page, respectively.<br>
+%2 will be set to the alias of the pager, if any.<br>
+%3 will be a space-separated list of recipient dbrefs.<br>
 %4 will be set to the default message.
 
 See [@pageformat2] for examples.
@@ -3045,8 +3045,8 @@ To obtain no 'page_aliases' behavior:
 # @receive
 # @oreceive
 # @areceive
-`@receive <recipient>[=<message>]`
-`@oreceive <recipient>[=<message>]`
+`@receive <recipient>[=<message>]`<br>
+`@oreceive <recipient>[=<message>]`<br>
 `@areceive <recipient>[=<action list>]`
 
 These attributes contain the message shown `<recipient>` when he receives an object (via 'get' or 'give'), the message shown to others in `<recipient>`'s location when he receives an object, and the actions to be taken by `<recipient>` when he receives an object, respectively.
@@ -3064,8 +3064,8 @@ In all cases, %0 is the dbref of the object received. If the object was 'give'n,
 # @give
 # @ogive
 # @agive
-`@give <giver>[=<message>]`
-`@ogive <giver>[=<message>]`
+`@give <giver>[=<message>]`<br>
+`@ogive <giver>[=<message>]`<br>
 `@agive <giver>[=<action list>]`
 
 These attributes contain the message shown to `<giver>` when he gives an object, the message shown to others in `<giver>`'s location when he gives an object, and the actions to be taken by `<giver>` when he gives an object, respectively.
@@ -3116,8 +3116,8 @@ Some clients, like TinyFugue, are smart enough to interpret GOAHEAD and treat pr
 - [terminfo()]
 - [@sockset]
 # @pemit
-`@pemit[/<switches>] <object>=<message>`
-`@pemit/list[/<switches>] <object list>=<message>`
+`@pemit[/<switches>] <object>=<message>`<br>
+`@pemit/list[/<switches>] <object list>=<message>`<br>
 `@pemit/port[/list][/silent] <descriptor(s)>=<message>`
 
 The basic form of this command sends `<message>` to `<object>` directly. It is very similar in its effects to @emit except only one object will see the message.
@@ -3147,8 +3147,8 @@ You cannot @pemit to objects set HAVEN, or objects whose @lock/page you do not p
 - [SPOOFING]
 - [page]
 # @poll
-`@poll`
-`@poll <message>`
+`@poll`<br>
+`@poll <message>`<br>
 `@poll/clear`
 
 This command manipulate the message at the top of WHO/DOING. By itself, it displays the current poll. Wizards and those with the poll @power can set or clear the message.
@@ -3168,11 +3168,11 @@ This command sets the pennies of every player on the MUSH to `<value>`. It can o
 - [MONEY]
 - [give]
 # @power
-`@power/list [<power name pattern>]`
-`@power <power>`
+`@power/list [<power name pattern>]`<br>
+`@power <power>`<br>
 `@power <object>=[!]<power>`
 
-`@power/list` lists the defined powers (see [powers]). A list of standard powers with explanations is given in [powers list]. When given a power name as an argument, @power displays information
+`@power/list` lists the defined powers (see [powers]). A list of standard powers with explanations is given in [powers list]. When given a power name as an argument, @power displays information<br>
 about a power.
 
 The third form manipulates powers on objects, and is limited to Wizards. `@power <object>=[!]<power>` sets (or clears) the given power on an object.
@@ -3184,13 +3184,13 @@ God can add, delete, and otherwise manipulate power definitions. See help @power
 - [powers()]
 - [@flag]
 # @power2
-`@power/add <power>=[<letter>], [<type(s)>], [<setperms>], [<unsetperms>]`
-`@power/delete <power>`
-`@power/alias <power>=<alias>`
-`@power/letter <power>[=<letter>]`
-`@power/restrict <power>=[<setperms>], [<unsetperms>]`
-`@power/type <power>=<type(s)>`
-`@power/enable <power>`
+`@power/add <power>=[<letter>], [<type(s)>], [<setperms>], [<unsetperms>]`<br>
+`@power/delete <power>`<br>
+`@power/alias <power>=<alias>`<br>
+`@power/letter <power>[=<letter>]`<br>
+`@power/restrict <power>=[<setperms>], [<unsetperms>]`<br>
+`@power/type <power>=<type(s)>`<br>
+`@power/enable <power>`<br>
 `@power/disable <power>`
 
 These commands manipulate power definitions. Only God may use them.
@@ -3206,9 +3206,9 @@ See help @power3 for information on `@power/add`
 # @power3
 `@power/add` is used to add a new power with the given name. Arguments other than the power name are optional:
 
-`<letter>` gives the power's one-letter abbreviation, which must not conflict with the one-letter abbreviation of another power that could be applied to the same object type(s). It defaults to none, which means it won't appear in a list of power characters but can still be tested for with haspower(), andlpowers(), and orlpowers().
-`<type>` specifies the space-separated list of types to which the power applies, and may be 'any' or one or more of 'room', 'thing', 'player', or 'exit'. It defaults to 'any'.
-`<setperms>` specifies the space-separated list of permissions for who can set and/or see the power. See [flag permissions] for details. It defaults to 'any'
+`<letter>` gives the power's one-letter abbreviation, which must not conflict with the one-letter abbreviation of another power that could be applied to the same object type(s). It defaults to none, which means it won't appear in a list of power characters but can still be tested for with haspower(), andlpowers(), and orlpowers().<br>
+`<type>` specifies the space-separated list of types to which the power applies, and may be 'any' or one or more of 'room', 'thing', 'player', or 'exit'. It defaults to 'any'.<br>
+`<setperms>` specifies the space-separated list of permissions for who can set and/or see the power. See [flag permissions] for details. It defaults to 'any'<br>
 `<unsetperms>` specifies the space-separated list of permissions for who can clear the power on an object they control. It defaults to whatever `<setperms>` is given, or 'any'.
 
 Powers added with `@power/add` are saved with the database when it is dumped, and do not need to be re-added at startup. They are treated exactly as any other power in the server.
@@ -3225,10 +3225,10 @@ For example, if you have an audible exit "Outside" leading from a room Garden to
 - [AUDIBLE]
 - [@listen]
 # @ps
-`@ps[/<switch>] [<player>]`
+`@ps[/<switch>] [<player>]`<br>
 `@ps[/debug] <pid>`
 
-@ps lists all commands currently on your 'to be executed' queue, thus allowing you to identify infinite (or unnecessary) loops with-out putting in says or poses. It gives a count of the total commands in each of the queues (Command, Wait, and Semaphore), displayed in the format:
+@ps lists all commands currently on your 'to be executed' queue, thus allowing you to identify infinite (or unnecessary) loops with-out putting in says or poses. It gives a count of the total commands in each of the queues (Command, Wait, and Semaphore), displayed in the format:<br>
 `<Number of your queued commands> / <Total number of queued commands>`.
 
 Some of the queues also include a [Ndel] after the total. That number is the number of entries made by objects that have been halted but haven't been removed from the queue yet.
@@ -3269,7 +3269,7 @@ See [@quota2].
 # @quota2
 # @squota
 # @allquota
-`@squota <player>=[+|-]<amount>`
+`@squota <player>=[+|-]<amount>`<br>
 `@allquota[/quiet] [<limit>]`
 
 @squota is a Wizard-only command which adjusts the quota of `<player>`. If `<amount>` is prefixed by + or -, their current quota will be incremented or decremented by `<amount>`, respectively. Otherwise, their total quota is set to `<amount>`.
@@ -3304,11 +3304,11 @@ A site admin can achieve the same effect by sending the MUSH process a kill -1 o
 
 Sends the message to all contents of `<object>`, which can be a room, thing, or player. The message is also sent to the `<object>` itself. (The TinyMUSH equivalent is `@pemit/contents`).
 
-The `/silent` switch stops the remitter from getting feedback if they're in a different location than the target.
-The `/noisy` switch always gives feedback to the remitter if they are not in the target location.
-(Without `/silent` or `/noisy`, the silent_pemit config option is used to determine noisiness.)
-The `/list` switch will send the message to the contents of multiple objects at the same time. The `<object>` argument is treated as a space-separated list of targets.
-The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
+The `/silent` switch stops the remitter from getting feedback if they're in a different location than the target.<br>
+The `/noisy` switch always gives feedback to the remitter if they are not in the target location.<br>
+(Without `/silent` or `/noisy`, the silent_pemit config option is used to determine noisiness.)<br>
+The `/list` switch will send the message to the contents of multiple objects at the same time. The `<object>` argument is treated as a space-separated list of targets.<br>
+The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.<br>
 The `/noeval` switch causes `<message>` to not be evaluated.
 
 
@@ -3320,7 +3320,7 @@ The `/noeval` switch causes `<message>` to not be evaluated.
 - [NOSPOOF]
 - [CONTROL].]
 # @retry
-`@retry <boolean>`
+`@retry <boolean>`<br>
 `@retry <boolean>=<arg0>[,...[,<argN>]]`
 
 The @retry command restarts the current queue entry, enabling people to loop their command without requiring a wait for the next queue entry. It can be a little tricky to understand at first. It basically tells the parser: "If `<boolean>` is true, then go back to the beginning." It can also replace %0-%9 with the arguments passed to it. (`<arg0>`,...).
@@ -3350,7 +3350,7 @@ You say, "0 bottles of beer!"
 You say, "Go get some more!"
 ```
 
-Implementing a folding algorithm:
+Implementing a folding algorithm:<br>
 (Yes, I know lmath is better, but this is just an example! :D)
 ```sharp
 > &add me=$add *:@retry words(%0)=rest(%0),add(first(%0),0%1) ; think %1
@@ -3358,7 +3358,7 @@ Implementing a folding algorithm:
 10
 ```
 # @restart
-`@restart <object>`
+`@restart <object>`<br>
 `@restart/all`
 
 This command halts `<object>` (as described in @halt), and then triggers the STARTUP attribute on the object, if set. If `<object>` is a player, it affects the player and all of their objects. Players can use `@restart me` to restart their own objects. The `/all` switch halts all objects (see @allhalt) and restarts them, and can only be used by a wizard.
@@ -3398,8 +3398,8 @@ If `<class>`=TYPE, possible `<restriction>`s include THING (or OBJECT), ROOM, EX
 
 If `<class>`=NAME, only objects whose name begin with the string `<restriction>` will be listed. If `<class>`=EXITS, OBJECTS, ROOMS or PLAYERS, only objects of that type whose name begins with `<restriction>` are listed.
 
-If `<class>`=ZONE, only objects in the zone `<restriction>` will be listed.
-If `<class>`=PARENT, only children of parent `<restriction>` will be listed.
+If `<class>`=ZONE, only objects in the zone `<restriction>` will be listed.<br>
+If `<class>`=PARENT, only children of parent `<restriction>` will be listed.<br>
 For ZONE and PARENT, `<restriction>` must be specified as a dbref number.
 
 See [@search2].
@@ -3449,22 +3449,22 @@ See [@search5] for some examples.
 @search wizard_bc command=+who <-- Forgot what object has your +who?
 ```
 # @set
-`@set <object>=[!]<flag> [[!]<flag> ...]`
-`@<pre-defined attribute> <object>=<value>`
-`@set <object>=<attribute>:<value>`
+`@set <object>=[!]<flag> [[!]<flag> ...]`<br>
+`@<pre-defined attribute> <object>=<value>`<br>
+`@set <object>=<attribute>:<value>`<br>
 `@set <object>/<attribute>=[!]<attrflag>`
 
-The first form sets (or unsets) flag(s) on `<object>`. See [flags].
-Ex: `@set me=VISUAL`
-Flags may be specified by full name (recommended) or by flag character.
+The first form sets (or unsets) flag(s) on `<object>`. See [flags].<br>
+Ex: `@set me=VISUAL`<br>
+Flags may be specified by full name (recommended) or by flag character.<br>
 Flags are set or reset in the order supplied.
 
-The second form sets a pre-defined attribute on `<object>`
+The second form sets a pre-defined attribute on `<object>`<br>
 Ex: `@fail Heavy Box=You can't pick that up.`
 
-The third form sets an arbitrary attribute with `<value>` on `<object>`. You can also do this with `&<attribute> <object>=<value>`
-Ex: `@set Test Object=random:This is a random attribute.`
-`&random Test Object=This is a random attribute.`
+The third form sets an arbitrary attribute with `<value>` on `<object>`. You can also do this with `&<attribute> <object>=<value>`<br>
+Ex: `@set Test Object=random:This is a random attribute.`<br>
+`&random Test Object=This is a random attribute.`<br>
 An important difference between these two forms is that @set will always evaluate the `<value>` before setting it on `<object>`, while the `&<attribute>` form will not evaluate when entered directly by a player in his client (and is usually what you want).
 
 The fourth form sets (or unsets) an attribute flag on the specified attribute. See [attribute flags].
@@ -3476,8 +3476,8 @@ The fourth form sets (or unsets) an attribute flag on the specified attribute. S
 - [set()]
 # ATTRIB_SET
 # @_
-`&<attr> <object>[=<value>]`
-`@_<attr> <object>[=<value>]`
+`&<attr> <object>[=<value>]`<br>
+`@_<attr> <object>[=<value>]`<br>
 `ATTRIB_SET/<attr> <object>=<value>`
 
 The `&<attr>` and `@_<attr>` commands can be used to set or clear an attribute from an object. When entered directly from a client, they do not evaluate the `<value>`.
@@ -3521,11 +3521,11 @@ You can use this command to set yourself or any of your objects to be male, fema
 
 If the `/paranoid` switch is added, the shutdown dump will be a paranoid dump (see @dump).
 # @sitelock
-`@sitelock`
-`@sitelock/name <name>`
-`@sitelock[/player] <host-pattern>=<options>[, <name>]`
-`@sitelock[/<ban|register>][/player] <host-pattern>`
-`@sitelock/check <host>`
+`@sitelock`<br>
+`@sitelock/name <name>`<br>
+`@sitelock[/player] <host-pattern>=<options>[, <name>]`<br>
+`@sitelock[/<ban|register>][/player] <host-pattern>`<br>
+`@sitelock/check <host>`<br>
 `@sitelock/remove[/player] <string>`
 
 The @sitelock command adds rules to the access.cnf file, controlling a host's level of access to the MUSH, or adds banned player names to the names.cnf file. Only Wizards may use @sitelock.
@@ -3588,11 +3588,11 @@ If you want to disallow connections to a character from anywhere, use @newpasswo
 
 Two different daemons are used:
 
-info: Resolves IP addresses into host names whenever a new connection is established.
+info: Resolves IP addresses into host names whenever a new connection is established.<br>
 ssl : Handles encrypted SSL connections across @shutdown/reboots.
 # @SOCKSET
 # SOCKSET
-`SOCKSET [<option>=<value>]`
+`SOCKSET [<option>=<value>]`<br>
 `@sockset [<descriptor>][=<option>, <value>[, ..., <optionN>, <valueN>]]`
 
 SOCKSET is a socket command which sets or queries socket-specific options. These options are usually set automatically, or negotiated by the MUSH and your client, but this command lets you override those settings.
@@ -3624,7 +3624,7 @@ Note that changing 'telnet' or 'pueblo' may stop your client from parsing or dis
 - [colorstyle]
 - [@prompt]
 # COLORSTYLE
-`SOCKSET colorstyle=<value>`
+`SOCKSET colorstyle=<value>`<br>
 `@SOCKSET [me|<descriptor>]=colorstyle,<value>`
 
 You can override the color format you receive from SharpMUSH. Normally, SharpMUSH tries to guess what your client is capable of through telnet negotiation and your player flags. @sockset lets you inform SharpMUSH that your client can support more colors than expected.
@@ -3766,17 +3766,17 @@ Note that @startups are NEVER inherited from parent objects.
 - [@command]
 - [@hook]
 # @stats
-`@stats [<player>]`
-`@stats/tables`
-`@stats/flags`
-`@stats/chunks`
-`@stats/regions`
-`@stats/paging`
+`@stats [<player>]`<br>
+`@stats/tables`<br>
+`@stats/flags`<br>
+`@stats/chunks`<br>
+`@stats/regions`<br>
+`@stats/paging`<br>
 `@stats/freespace`
 
 In its first form, display the number of objects in the game broken down by object types. Wizards can supply a player name to count only objects owned by that player.
 
-`@stats/tables` displays statistics on internal tables.
+`@stats/tables` displays statistics on internal tables.<br>
 `@stats/flags` displays statistics about the flag and power system.
 
 In the remaining forms, display statistics or histograms about the chunk (attribute) memory system.
@@ -3792,7 +3792,7 @@ The four command options can also be used as switches (i.e., you can use "`@swee
 - [@scan]
 # @switch
 # @select
-`@switch[/<switch>] <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`
+`@switch[/<switch>] <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`<br>
 `@select <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`
 
 For those of you familiar with programming, these command acts like if/then/else or switch/case. It compares `<string>` against whatever each `<expr>` evaluates to. If `<string>` and `<expr>` match, the action list associated with that `<expr>` is carried out. If no match is found, the `<default>` action list is carried out. @switch runs `<action>`s for all matching `<expr>`s by default, while @select only runs the `<action>` for the first matching `<expr>`.
@@ -3801,10 +3801,10 @@ If `<expr>` is a regexp or a wildcard glob, then $0-$9 will be set with capture 
 
 The string "#$" in `<action>`'s will be replaced with the evaluated result of `<string>` before it is acted on. Note that this replacement happens BEFORE the `<action>` is queued and executed, and does not work well in nested switches. It is recommended that you use the %$N substitution, or the stext() function, instead.
 
-`@switch/all` runs `<action>`s for all matching `<expr>`s. Default for @switch.
-`@switch/first` runs `<action>` for the first matching `<expr>` only. Same as @select, and often the desired behaviour.
-`@switch/notify` queues "@notify me" after the last `<action>`.
-`@switch/inline` runs all actions in place, instead of creating a new queue entry for them.
+`@switch/all` runs `<action>`s for all matching `<expr>`s. Default for @switch.<br>
+`@switch/first` runs `<action>` for the first matching `<expr>` only. Same as @select, and often the desired behaviour.<br>
+`@switch/notify` queues "@notify me" after the last `<action>`.<br>
+`@switch/inline` runs all actions in place, instead of creating a new queue entry for them.<br>
 `@switch/regexp` makes `<expr>`s case-insensitive regular expressions, not wildcard/glob patterns.
 
 See [@switch2].
@@ -3873,7 +3873,7 @@ thing one
 thing after
 ```
 # @teleport
-`@teleport[/<switches>] [<object>=]<destination>`
+`@teleport[/<switches>] [<object>=]<destination>`<br>
 `@teleport/list[/<switches>] <object-list>=<destination>`
 
 Teleports `<object>` to `<destination>`. `<object>` can be a player, thing or exit, and defaults to yourself. (Exits must be specified by dbref, things or players can be specified by name.) The destination must be either JUMP_OK or controlled by you, and you must either control `<object>` or `<object>`'s current location. Also, the destination, if a room, cannot be teleport-locked against `<object>`. Mortals cannot teleport HEAVY objects. If the destination is a room with a drop-to, `<object>` may go to the drop-to room instead.
@@ -3902,7 +3902,7 @@ As a special case, using "home" as the `<room>` has the same effect as the home 
 - [@tport]
 - [@lock]
 # @trigger
-`@trigger[/<switches>] <object>/<attribute>[=<arg0>, ..., <arg29>]`
+`@trigger[/<switches>] <object>/<attribute>[=<arg0>, ..., <arg29>]`<br>
 `@trigger/match[/<switches>] <object>/<attribute>=<string>`
 
 @trigger queues an action list stored in an attribute. It can also pass values to that attribute on the stack, as %0 to %9 and `r(0,args)` to `r(29,args)`.
@@ -3980,13 +3980,13 @@ Bar is foo'd by Cyclonus!
 ```
 # @ulock
 # @uunlock
-`@ulock <object>[=<key>]`
+`@ulock <object>[=<key>]`<br>
 `@uunlock <object>`
 
 These commands set the Use lock for `<object>` to `<key>`, or clear the Use lock. They are deprecated, and should be replaced with
 
-`@lock/use <object>[=<key>]`
-and
+`@lock/use <object>[=<key>]`<br>
+and<br>
 `@lock/use <object>`
 
 The Use lock determines who is allowed to "use" the object or trigger any $-commands or ^-listens on the object.
@@ -4016,7 +4016,7 @@ Under Linux, memory usage is split into a number of different categories includi
 - [@stats]
 - [@list]
 # @unlink
-`@unlink <exit>`
+`@unlink <exit>`<br>
 `@unlink <room>`
 
 The first form of this command unlinks an exit from its destination room. Unlinked exits may be picked up and dropped elsewhere or relinked by anyone else. (Note that relinking an unlinked exit will @chown it to you if you do not already own it.)
@@ -4050,8 +4050,8 @@ Tells the player the name of the MUSH, which version of the code is currently ru
 
 This command provides a way to do user-defined verbs with associated @attr/@oattr/@aattr groups. Invoking it does the following:
 
-`<actor>` sees the contents of `<victim>`'s `<what>` attribute, or `<whatd>` if `<victim>` doesn't have a `<what>`.
-Everyone in the same room as `<actor>` sees the contents of `<victim>`'s `<owhat>` attribute, with `<actor>`'s name prepended, or `<owhatd>`, also with `<actor>`'s name prepended, if `<victim>` doesn't have an `<owhat>`.
+`<actor>` sees the contents of `<victim>`'s `<what>` attribute, or `<whatd>` if `<victim>` doesn't have a `<what>`.<br>
+Everyone in the same room as `<actor>` sees the contents of `<victim>`'s `<owhat>` attribute, with `<actor>`'s name prepended, or `<owhatd>`, also with `<actor>`'s name prepended, if `<victim>` doesn't have an `<owhat>`.<br>
 `<victim>` executes the contents of his `<awhat>` attribute.
 
 By supplying up to 29 `<args>`, you may pass those values on the stack (i.e. %0, %1, %2, etc. up through %9, and `r(0,args)` to `r(29,args)`).
@@ -4105,8 +4105,8 @@ You test this fun example.
 Example has been tested!
 ```
 # @wait
-`@wait[/until] <time>=<command_list>`
-`@wait <object>=<command_list>`
+`@wait[/until] <time>=<command_list>`<br>
+`@wait <object>=<command_list>`<br>
 `@wait[/until] <object>/<time>=<command_list>`
 
 The basic form of this command puts the command list (a semicolon-separated list of commands) into the wait queue to execute in `<time>` seconds. If the `/until` switch is given, the time is taken to be an absolute value in seconds, not an offset.
@@ -4127,15 +4127,15 @@ Normally, a semaphore wait depends on the SEMAPHORE attribute of the object in q
 
 The syntax for these are:
 
-`@wait <object>/<attribute>=<command list>`
+`@wait <object>/<attribute>=<command list>`<br>
 `@wait[/until] <object>/<attribute>/<time>=<command list>`
 
 You cannot do a non-timed semaphore on an attribute with a numeric name, as that is taken as a timeout instead.
 
 See [@wait3].
 # @wait3
-`@wait/pid <pid>=<seconds>`
-`@wait/pid <pid>=[+-]<adjustment>`
+`@wait/pid <pid>=<seconds>`<br>
+`@wait/pid <pid>=[+-]<adjustment>`<br>
 `@wait/pid/until <pid>=<time>`
 
 The `/pid` switch can be used to alter the timeout of entries in the wait and semaphore queues. You can set a new wait time, increase or decrease the current time, or set a new absolute time in seconds.
@@ -4144,8 +4144,8 @@ You must control the object doing the wait, or have the halt @power.
 # @wall
 # @rwall
 # @wizwall
-`@wall[/emit][/noeval] <message>`
-`@rwall[/emit][/noeval] <message>`
+`@wall[/emit][/noeval] <message>`<br>
+`@rwall[/emit][/noeval] <message>`<br>
 `@wizwall[/emit][/noeval] <message>`
 
 @wall sends `<message>` to all connected players. @rwall only sends the message to connected wizards and royalty, and @wizwall is seen only be wizards.
@@ -4165,7 +4165,7 @@ This command will set the types of warnings which should be reported on an objec
 
 When an object is checked for warnings (via @wcheck by the owner, or automatically), only warnings which are set to be reported on the object will be reported. If no warnings are set on the object, the owner's warning settings will be used. When admin use @wcheck to check non-owned objects, their personal warnings are always used.
 
-For a list of warnings, see [warnings list].
+For a list of warnings, see [warnings list].<br>
 For examples, see [@warnings2].
 
 
@@ -4173,22 +4173,22 @@ For examples, see [@warnings2].
 - [@wcheck]
 - [NO_WARN]
 # @warnings2
-Example 1: Normal building situations
+Example 1: Normal building situations<br>
 Most people will simply want to leave their @warnings set to "normal" and their objects' @warnings set to "none". They will then receive normal warnings for all their objects.
 
-Example 2: Warning-lover
+Example 2: Warning-lover<br>
 People who find warnings very helpful (like heavy builders) may want to set their personal @warnings to "extra" or "all", and keep their objects' warnings at "none". If a specific object should be treated less strictly, set that object's @warnings differently. If an object shouldn't be warned on at all, set the NO_WARN flag on the object.
 
 See [@warnings3].
 # @warnings3
-Example 3: Warning-hater
+Example 3: Warning-hater<br>
 People who prefer not to be warned except for specific object may set their personal @warnings to "none" and set the @warnings on those objects to appropriate levels.
 
-Example 4: I need some peace!
+Example 4: I need some peace!<br>
 Players who @set themselves NO_WARN will receive no warnings ever until they unset the flag.
 # @wcheck
-`@wcheck <object>`
-`@wcheck/all`
+`@wcheck <object>`<br>
+`@wcheck/all`<br>
 `@wcheck/me`
 
 The first form of the command performs warning checks on a specific object. The player must own the object or be see_all. When the owner runs the command, the @warnings of the object are used to determine which warnings to give. If the object has no @warning's set, the @warnings of the owner are used. When a non-owner runs the command, the @warnings of the non-owner are used.
@@ -4242,7 +4242,7 @@ The `/silent` switch suppresses the confirmation message, and `/noisy` causes it
 - [ZONES]
 # ahelp
 # anews
-`ahelp [<topic>]`
+`ahelp [<topic>]`<br>
 `anews [<topic>]`
 
 These commands, if enabled, show the admin-only help or news files for the MUSH. Only Wizards and Royalty may use them.
@@ -4259,8 +4259,8 @@ This command works like an abbreviated version of "examine", showing information
 # cd
 # ch
 # cv
-`cd <name> <password>`
-`ch <name> <password>`
+`cd <name> <password>`<br>
+`ch <name> <password>`<br>
 `cv <name> <password>`
 
 Not really MUSH commands, but commands available at the connect screen. Wizards can use 'cd' instead of 'connect'; the new connection will be hidden (as per @hide), and the player will be set DARK. Mortals set HEAR_CONNECT will not hear dark wizards connect.
@@ -4277,7 +4277,7 @@ None of those commands affect the hidden status of other connections, if you're 
 - [@hide]
 # OUTPUTPREFIX
 # OUTPUTSUFFIX
-`OUTPUTPREFIX <string>`
+`OUTPUTPREFIX <string>`<br>
 `OUTPUTSUFFIX <string>`
 
 Sets your output prefix or suffix. These strings will be shown before and after the output of any command that you initiate, respectively. They are primarily useful for bots and the like.
@@ -4293,7 +4293,7 @@ Some routers will only consider a connection alive if text is received, as well 
 - [KEEPALIVE]
 - [@idle]
 # teach
-`teach <command>`
+`teach <command>`<br>
 `teach/list <action list>`
 
 The teach command shows its argument (unparsed) to others in your location, and then executes it as a command. If the `/list` switch is given, it will run an `<action list>` of commands in much the same way as @triggering an attribute. Otherwise, it executes a single `<command>`, exactly as if you'd entered `<command>` from your client. Useful for helping newbies and demonstrating commands.
@@ -4346,17 +4346,17 @@ See: [@enter], [@efail], [@ealias], [leave], [@lock], [@idescribe], [INTERIORS]
 # examine
 `examine[/<switches>] <object>[/<attribute>]`
 
-Displays all available information about `<object>`. `<object>` may be an object, 'me' or 'here'. You must control the object to examine it. If you do not own the object, or it is not visible, you will just see the name of the object's owner. May be abbreviated 'ex `<object>`'. If the attribute parameter is given, you will only see that attribute (good for looking at code). You can also wildcard match on attributes.
-The * wildcard matches any number of characters except a backtick (`).
-The ? wildcard matches a single character except a backtick (`).
-The ** wildcard matches any number of characters, including backticks.
+Displays all available information about `<object>`. `<object>` may be an object, 'me' or 'here'. You must control the object to examine it. If you do not own the object, or it is not visible, you will just see the name of the object's owner. May be abbreviated 'ex `<object>`'. If the attribute parameter is given, you will only see that attribute (good for looking at code). You can also wildcard match on attributes.<br>
+The * wildcard matches any number of characters except a backtick (`).<br>
+The ? wildcard matches a single character except a backtick (`).<br>
+The ** wildcard matches any number of characters, including backticks.<br>
 For example, to see all the attributes that began with a 'v' you could do ex `<object>`/v**
 
-The `/brief` switch is equivalent to the 'brief' command.
-The `/debug` switch is wizard-only and shows raw values for certain fields in an object.
-The `/mortal` switch shows an object as if you were a mortal other than the object's owner and is primarily useful to admins. This switch ignores the object's VISUAL flag (but not its attribute flags)
-The `/parent` switch show attributes that would be inherited from the object's parents, if you have permission to examine the attributes on the parent.
-The `/all` switch shows the values of VEILED attributes.
+The `/brief` switch is equivalent to the 'brief' command.<br>
+The `/debug` switch is wizard-only and shows raw values for certain fields in an object.<br>
+The `/mortal` switch shows an object as if you were a mortal other than the object's owner and is primarily useful to admins. This switch ignores the object's VISUAL flag (but not its attribute flags)<br>
+The `/parent` switch show attributes that would be inherited from the object's parents, if you have permission to examine the attributes on the parent.<br>
+The `/all` switch shows the values of VEILED attributes.<br>
 The `/opaque` switch omits contents listings.
 
 
@@ -4381,7 +4381,7 @@ If you pass the object's follow lock, you begin following it. As the object move
 - [@ofollow]
 - [@afollow]
 # dismiss
-`dismiss <object>`
+`dismiss <object>`<br>
 `dismiss`
 
 The dismiss command stops `<object>` from following you. If no object is given, it stops everyone from following you.
@@ -4393,7 +4393,7 @@ The dismiss command stops `<object>` from following you. If no object is given, 
 - [desert]
 - [followers()]
 # desert
-`desert <object>`
+`desert <object>`<br>
 `desert`
 
 The desert command stops `<object>` from following you and stops you from following `<object>`. That is, it's shorthand for 'unfollow `<object>`' and 'dismiss `<object>`'. If no object is given, it stops everyone from following or leading you.
@@ -4418,7 +4418,7 @@ The empty command assumes that all `<object>`'s items pass through the hands of 
 - [drop]
 # get
 # take
-`get <object>`
+`get <object>`<br>
 `get <box>'s <object>`
 
 The first form of this command lets you pick up `<object>` from your current location. The second form allows you to take `<object>` from inside `<box>`'s inventory.
@@ -4440,8 +4440,8 @@ To get an object from someone else's inventory, the possessive_get @config optio
 # @buy
 # @abuy
 # @obuy
-`@buy <object>[=<message>]`
-`@obuy <object>[=<message>]`
+`@buy <object>[=<message>]`<br>
+`@obuy <object>[=<message>]`<br>
 `@abuy <object>[=<message>]`
 
 These attributes contain the message shown to a player who successfully buys something from `<object>` using the "buy" command, the message shown to others in the room when something is bought from `<object>` (prefixed with the buyer's name), and the actions to be taken by `<object>` when something is bought from it, respectively. Each attribute is passed the item being purchased as %0 and the amount paid for it as %1.
@@ -4510,9 +4510,9 @@ You enjoy a delicious coke.
 - [give]
 - [@COST]
 # give
-`give[/silent] <recipient>=<number>`
-`give[/silent] <number> to <recipient>`
-`give <recipient>=<object>`
+`give[/silent] <recipient>=<number>`<br>
+`give[/silent] <number> to <recipient>`<br>
+`give <recipient>=<object>`<br>
 `give <object> to <recipient>`
 
 The first two forms of this command give `<number>` pennies to `<recipient>`. If `<recipient>` is a non-player, it must have an @COST, and any pennies given to it will go to its owner. The amount given must match `<recipient>`'s @cost (if set). If `/silent` is given, the message informing the recipient how many pennies were given is suppressed. Wizards may "give" a negative number of pennies to take from players. When you give `<recipient>` pennies, his PAYMENT/OPAYMENT/APAYMENT attributes are triggered. You must pass `<recipient>`'s @lock/pay, unless you are a Wizard and are either giving a negative number of pennies, or giving to a player with no @cost.
@@ -4532,9 +4532,9 @@ The last two forms of this command give an `<object>` from your inventory to `<r
 # go
 # goto
 # move
-`go[to] <direction>`
-`go[to] home`
-`move <direction>`
+`go[to] <direction>`<br>
+`go[to] home`<br>
+`move <direction>`<br>
 `move home`
 
 Goes in the specified direction. `<Direction>` can be the name or alias of an exit in your area, the enter alias of an object in your area, or the leave alias of the object you are in. You do not need to use the word 'go' or 'move', in fact -- simply typing the direction will have the same effect.
@@ -4592,9 +4592,9 @@ The NO_LEAVE flag may be enabled on some MUSHes. Objects set with this flag cann
 LOGOUT is similar to QUIT, but instead of disconnecting you from the game completely, it merely disconnects you from your current character and returns you to the opening welcome screen. This is useful if you want to disconnect and then reconnect to another character. Unlike most commands, it is case-sensitive and must be typed in all caps.
 # look
 # read
-`look [<object>]`
-`look <container>'s <object>`
-`look <exit>'s <object>`
+`look [<object>]`<br>
+`look <container>'s <object>`<br>
+`look <exit>'s <object>`<br>
 `look/outside [<object>]`
 
 Displays the description of `<object>`, or the room you're in if you don't name a specific object. You can also look at objects inside others, as long as the `<container>` is not set OPAQUE, or at objects on the other side of an exit, if the exit is set TRANSPARENT or CLOUDY.
@@ -4654,8 +4654,8 @@ When a player is paged, their PAGEFORMAT attribute is checked, and if exists, th
 
 Page takes three switches: `/noeval`, `/override`, and `/port`.
 
-The `/noeval` switch prevents the MUSH from evaluating the message.
-The `/override` switch is admin-only, and overrides pagelocks and HAVEN.
+The `/noeval` switch prevents the MUSH from evaluating the message.<br>
+The `/override` switch is admin-only, and overrides pagelocks and HAVEN.<br>
 The `/port` switch is admin-only, and will page a single port descriptor directly, including connections that have not yet logged into a player.
 
 
@@ -4673,11 +4673,11 @@ The `/port` switch is admin-only, and will page a single port descriptor directl
 # ;
 # pose
 # semipose
-`pose[/noeval] <action>`
+`pose[/noeval] <action>`<br>
 `:<action>`
 
-`pose/nospace[/noeval] <action>`
-`semipose[/noeval] <action>`
+`pose/nospace[/noeval] <action>`<br>
+`semipose[/noeval] <action>`<br>
 `;<action>`
 
 The pose and semipose commands allow you to perform actions. Pose shows your name, a space, and then `<action>`; semipose omits the space. They can be abbreviated to ':' and ';' respectively. The `/noeval` switch stops `<action>` from being evaluated.
@@ -4705,7 +4705,7 @@ Bob's laughing on the inside.
 ```
 # "
 # say
-`say[/noeval] <message>`
+`say[/noeval] <message>`<br>
 `"<message>`
 
 Says `<message>` out loud. The message will be enclosed in double-quotes. A single double-quote is the abbreviation for this common command. If the `/noeval` switch is given, `<message>` will not be evaluated.
@@ -4749,7 +4749,7 @@ One possible use: `@adesc me=think %n just looked at you.`
 
 Log out and leave the game. Must be in all capitals.
 # unfollow
-`unfollow`
+`unfollow`<br>
 `unfollow <object>`
 
 This command stops you from following an object that you were formerly following. If no object is given, you stop following everyone you were following.
@@ -4809,10 +4809,10 @@ By default, the command just shows the message "This command has not been implem
 - [@command]
 - [@hook]
 # whisper
-`whisper <player>=<message>`
-`whisper/silent <player>=<message>`
-`whisper/noisy <player>=<message>`
-`whisper/noeval <player>=<message>`
+`whisper <player>=<message>`<br>
+`whisper/silent <player>=<message>`<br>
+`whisper/noisy <player>=<message>`<br>
+`whisper/noeval <player>=<message>`<br>
 `whisper/list <players>=<message>`
 
 Whispers the message to the named person, if they are nearby. If `<message>` is prefixed with a ':' or ';' it will be posed or semiposed, respectively.
@@ -4830,7 +4830,7 @@ The `/list` switch lets you whisper to multiple people at once. In this case, `<
 - [@pemit]
 # WHO
 # DOING
-`WHO [<pattern>]`
+`WHO [<pattern>]`<br>
 `DOING [<pattern>]`
 
 For mortals, the WHO command displays a list of players currently connected to the MUSH, the amount of time they've been connected, their idle time, and their @doing. Hidden players are not shown.
@@ -4911,8 +4911,8 @@ This socket command shows some basic information about the MUSH, along with any 
 **See Also:**
 - [INFO]
 # @SUGGEST
-`@suggest[/list]`
-`@suggest/add <category>=<word>`
+`@suggest[/list]`<br>
+`@suggest/add <category>=<word>`<br>
 `@suggest/delete <category>=<word>`
 
 Given a list of known good words in a category, the mush can suggest ones based on misspelled or otherwise invalid words. This is used for suggesting function names, help entries, etc. @suggest provides a way to add custom categories and vocabulary words.

@@ -68,8 +68,8 @@ HTTP Responses are limited to BUFFER_LEN in response size. Anything sent to the 
 # @RESPOND/TYPE
 # @RESPOND/HEADER
 
-`@respond <code> <text>`
-`@respond/type <content-type>`
+`@respond <code> <text>`<br>
+`@respond/type <content-type>`<br>
 `@respond/header <name>=<value>`
 
 Within the context of an HTTP Player connection, `@respond` is used to modify the headers sent back to the HTTP client.
@@ -227,7 +227,7 @@ Look at something, whose name is passed by ?name=... value:
 Check: http://yourmush:port/look?name=here
 
 # HTTP POST
-Suppose you want a web hook for notifications from an external system.
+Suppose you want a web hook for notifications from an external system.<br>
 HTTP via POST is ideal for that:
 
 ```sharp
