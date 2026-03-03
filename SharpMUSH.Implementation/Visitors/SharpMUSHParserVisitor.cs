@@ -1245,10 +1245,8 @@ public class SharpMUSHParserVisitor(
 		}
 		namedRegisters["LSAC"] = MModule.single(arguments.Count.ToString());
 
-		// Construct full command string for $-command matching (command + switches + args)
-		var commandWithSwitches = switchArray.Length > 0
-			? MModule.single($"{rootCommand}/{string.Join("/", switchArray)} {src.ToPlainText()}")
-			: MModule.single($"{rootCommand} {src.ToPlainText()}");
+		// The src already contains the full command string (command name + switches + args)
+		var commandWithSwitches = src;
 
 		// Execute hooks with the new parser state that includes named registers
 		return await prs.With(state =>

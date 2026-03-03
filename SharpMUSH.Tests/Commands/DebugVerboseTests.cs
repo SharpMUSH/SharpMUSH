@@ -132,6 +132,76 @@ public class DebugVerboseTests
 	}
 
 	[Test]
+	public async Task VerboseFlag_DoesNotDuplicateCommandName()
+	{
+		// Arrange - Create test object and set VERBOSE flag on it
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseNoDupObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseNoDupObj=VERBOSE"));
+
+		// Act - Execute a think command as the test object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force VerboseNoDupObj=think UniqueNoDup777"));
+
+		// Assert - Verbose output should show "think UniqueNoDup777" NOT "think think UniqueNoDup777"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("] think UniqueNoDup777"),
+						str => str.Contains("] think UniqueNoDup777"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("] think think"),
+						str => str.Contains("] think think"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseNoDupObj"));
+	}
+
+	[Test]
+	public async Task VerboseFlag_DoesNotDuplicateCommandNameWithSwitches()
+	{
+		// Arrange - Create test object and set VERBOSE flag on it
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseNoDupSwitchObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseNoDupSwitchObj=VERBOSE"));
+
+		// Act - Execute a command with a switch as the test object
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force VerboseNoDupSwitchObj=@emit/noeval UniqueNoDupSwitch555"));
+
+		// Assert - Verbose output should show "@emit/noeval UniqueNoDupSwitch555" NOT "@emit/noeval @emit/noeval UniqueNoDupSwitch555"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("] @emit/noeval UniqueNoDupSwitch555"),
+						str => str.Contains("] @emit/noeval UniqueNoDupSwitch555"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("@emit/noeval @emit/noeval"),
+						str => str.Contains("@emit/noeval @emit/noeval"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseNoDupSwitchObj"));
+	}
+
+	[Test]
 	[Skip("@trigger command syntax needs investigation - implementation is complete")]
 	public async Task AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug()
 	{
