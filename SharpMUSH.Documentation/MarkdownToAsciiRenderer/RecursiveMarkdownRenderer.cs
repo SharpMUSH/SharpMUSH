@@ -18,936 +18,155 @@ using System.Threading;
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 /// <summary>
-/// Recursive renderer that returns MString for each markdown element,
-/// enabling easy composition and use of TextAlignerModule for tables.
+/// Recursive renderer core: dispatch, document, and inline traversal.
 /// </summary>
-public class RecursiveMarkdownRenderer
+public partial class RecursiveMarkdownRenderer
 {
-	private readonly Ansi _dimStyle = Ansi.Create(faint: true);
-	private readonly Ansi _boldStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true);
-	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
-	private readonly Ansi _headingStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true, bold: true);
-	private readonly Ansi _heading3Style = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true);
-	private readonly int _maxWidth;
-	private readonly IMUSHCodeParser? _mushParser;
-
-	// Table border and separator character counts
-	private const int START_BORDER_WIDTH = 2; // "| "
-	private const int END_BORDER_WIDTH = 2; // " |"
-	private const int COLUMN_SEPARATOR_WIDTH = 3; // " | "
-
-	// Cached compiled regex patterns for performance
-	private static readonly Regex ColorAttributeRegex = new(@"color\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-	private static readonly Regex StyleAttributeRegex = new(@"style\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-	private static readonly Regex StyleColorRegex = new(@"color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-	private static readonly Regex StyleBackgroundColorRegex = new(@"background-color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-	private static readonly Regex ColorTagRegex = new(@"<color\s+([^>]+)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-	// ColorCode.Core language parser and style dictionary for standard-language code blocks.
-	// Shared across all renderer instances; lazy-initialised on first use.
-	// The lock is held as a named static field (process lifetime) so the compiler's
-	// CA2000 disposable-not-disposed analysis is satisfied. As a process-lifetime
-	// singleton, it is cleaned up when the process exits.
-	private static readonly ReaderWriterLockSlim _colorCodeLock = new();
-	private static readonly Lazy<LanguageParser> ColorCodeParser = new(() =>
-	{
-		var compiler = new LanguageCompiler([], _colorCodeLock);
-		var repo = new LanguageRepository(Languages.All.ToDictionary(l => l.Id, l => l));
-		return new LanguageParser(compiler, repo);
-	});
-	private static readonly StyleDictionary ColorCodeStyles = StyleDictionary.DefaultDark;
-
-	// Dark-grey background applied to every line of every highlighted code block,
-	// giving a subtle "gutter" effect that visually separates code from prose.
-	// #2D2D2D is slightly lighter than a typical #1E1E1E terminal background.
-	// Including a default foreground (#D4D4D4 light-grey, matching VS Code DefaultDark) is
-	// essential: MString's WrapAndRestore restores the OUTER markup after each inner coloured
-	// span, so if the outer style only has background the foreground from the inner span
-	// bleeds into the following plain-text segment.  With both fg+bg in the outer style,
-	// WrapAndRestore re-applies both after every inner span, keeping colours correct.
-	private static readonly Ansi CodeBackgroundStyle = Ansi.Create(
-		foreground: StringExtensions.rgb(Color.FromArgb(0xD4, 0xD4, 0xD4)),
-		background: StringExtensions.rgb(Color.FromArgb(0x2D, 0x2D, 0x2D)));
-
-	// Light-blue colour applied to inline code spans (`...`).
-	// #9CDCFE matches VS Code Dark+'s variable/property colour and reads well on dark terminals.
-	private static readonly Ansi InlineCodeStyle = Ansi.Create(
-		foreground: StringExtensions.rgb(Color.FromArgb(0x9C, 0xDC, 0xFE)));
-
-	/// <summary>
-	/// Initializes a new instance of the RecursiveMarkdownRenderer
-	/// </summary>
-	/// <param name="maxWidth">Maximum width for rendered output. Tables will fit to this width with nice column spacing. Default is 78.</param>
-	/// <param name="mushParser">
-	/// Optional MUSH code parser used to apply syntax highlighting to
-	/// <c>sharp</c> fenced code blocks. When <c>null</c>, those blocks are
-	/// rendered as plain indented text.
-	/// </param>
-	public RecursiveMarkdownRenderer(int maxWidth = 78, IMUSHCodeParser? mushParser = null)
-	{
-		_maxWidth = maxWidth > 0 ? maxWidth : 78;
-		_mushParser = mushParser;
-	}
-
-	/// <summary>
-	/// Main entry point - renders any MarkdownObject to MString
-	/// </summary>
-	public MString Render(MarkdownObject obj)
-	{
-		return obj switch
-		{
-			// Block elements
-			MarkdownDocument doc => RenderDocument(doc),
-			HeadingBlock heading => RenderHeading(heading),
-			ParagraphBlock para => RenderParagraph(para),
-			CodeBlock code => RenderCodeBlock(code),
-			ListBlock list => RenderList(list),
-			ListItemBlock listItem => RenderListItem(listItem),
-			QuoteBlock quote => RenderQuote(quote),
-			ThematicBreakBlock _ => RenderThematicBreak(),
-			HtmlBlock html => RenderHtmlBlock(html),
-			Table table => RenderTable(table),
-			TableRow row => RenderTableRow(row),
-			TableCell cell => RenderTableCell(cell),
-
-			// Inline elements - specific types first, then base ContainerInline
-			LiteralInline literal => RenderLiteral(literal),
-			CodeInline code => RenderCodeInline(code),
-			EmphasisInline emphasis => RenderEmphasis(emphasis),
-			LineBreakInline lb => RenderLineBreak(lb),
-			LinkInline link => RenderLink(link, RenderInlines(link.FirstChild)),
-			AutolinkInline autolink => RenderAutolink(autolink),
-			HtmlInline html => RenderHtmlInline(html),
-			HtmlEntityInline entity => RenderHtmlEntity(entity),
-			DelimiterInline delimiter => RenderDelimiter(delimiter),
-			ContainerInline container => RenderContainerInline(container),
-
-			// Default case - try to render children if it's a container block
-			ContainerBlock container => RenderContainerBlock(container),
-
-			_ => MModule.empty()
-		};
-	}
-
-	private MString RenderContainerBlock(ContainerBlock container)
-	{
-		var parts = container
-			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
-			.ToList();
-		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
-	}
-
-	private MString RenderDocument(MarkdownDocument doc)
-	{
-		var parts = doc
-			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
-			.ToList();
-		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
-		return parts.Count > 1
-			? MModule.concat(content, MModule.single("\n"))
-			: content;
-	}
-
-	protected virtual MString RenderHeading(HeadingBlock heading)
-	{
-		var style = heading.Level switch
-		{
-			1 or 2 => _headingStyle,
-			3 => _heading3Style,
-			_ => Ansi.Create()
-		};
-
-		var content = RenderInlines(heading.Inline);
-		return MModule.concat(MModule.markupSingle(style, ""), content);
-	}
-
-	private MString RenderParagraph(ParagraphBlock para)
-	{
-		// Paragraph blocks contain inline elements in the Inline property
-		return RenderInlines(para.Inline);
-	}
-
-	protected virtual MString RenderCodeBlock(CodeBlock code)
-	{
-		// Apply syntax highlighting to 'sharp' fenced code blocks when a parser is available.
-		// Background colour is applied per-line inside RenderSharpCodeBlock so that each
-		// MUSH line carries its own ANSI start/reset (MUSH clients reset ANSI on \r\n).
-		if (code is FencedCodeBlock fenced &&
-			string.Equals(fenced.Info, "sharp", StringComparison.OrdinalIgnoreCase) &&
-			_mushParser != null)
-		{
-			return RenderSharpCodeBlock(fenced);
-		}
-
-		// Apply ColorCode syntax highlighting for fenced blocks with a recognised language tag.
-		if (code is FencedCodeBlock fencedStd &&
-			!string.IsNullOrWhiteSpace(fencedStd.Info) &&
-			!string.Equals(fencedStd.Info, "sharp", StringComparison.OrdinalIgnoreCase))
-		{
-			var colored = TryRenderColorCodeBlock(fencedStd);
-			if (colored is not null) return MModule.markupSingle2(CodeBackgroundStyle, colored);
-		}
-
-		// Apply background styling to unlabeled fenced code blocks so they are visually
-		// distinct from regular prose, consistent with labelled code blocks.
-		if (code is FencedCodeBlock fencedPlain && string.IsNullOrWhiteSpace(fencedPlain.Info))
-		{
-			var bgLines = fencedPlain.Lines.Lines?
-				.Where(line => line.Slice.Text != null)
-				.Select(line => MModule.single(line.Slice.ToString()))
-				.ToList() ?? new List<MString>();
-			if (bgLines.Count == 0) return MModule.empty();
-			return MModule.markupSingle2(CodeBackgroundStyle, AlignAllCodeLines(bgLines));
-		}
-
-		var lines = code.Lines.Lines?
-			.Where(line => line.Slice.Text != null)
-			.Select(line => MModule.single("  " + line.Slice.ToString()))
-			.ToList() ?? new List<MString>();
-
-		return MModule.multipleWithDelimiter(MModule.single("\n"), lines);
-	}
-
-	/// <summary>
-	/// Lays out all code lines at once using <c>align()</c>:
-	/// a 1-wide left-gutter column plus a 1-char column separator gives the standard
-	/// 2-char indent, while the content column is padded with spaces to fill the
-	/// remaining render width so that the background colour spans the full terminal line.
-	/// All rows are handled in a single call — <c>align()</c> splits on <c>\n</c> internally,
-	/// so there is no need to iterate line-by-line in the caller.
-	/// </summary>
-	private MString AlignAllCodeLines(IEnumerable<MString> lineContents)
-	{
-		var contentWidth = Math.Max(1, _maxWidth - 2); // 1 (gutter col) + 1 (separator)
-		var allContent = MModule.multipleWithDelimiter(MModule.single("\n"), lineContents);
-		return TextAlignerModule.align(
-			$"1 <{contentWidth}",
-			[MModule.empty(), allContent],
-			MModule.single(" "),    // filler = space
-			MModule.single(" "),    // column separator = 1 space → total 2-char indent
-			MModule.single("\n")    // row separator used when a long line wraps
-		);
-	}
-
-	/// <summary>
-	/// Attempts to render a fenced code block using ColorCode.Core for ANSI syntax colouring.
-	/// Returns <c>null</c> if the language is not recognised.
-	/// Each source line is colourised independently; all colourised lines are then laid out
-	/// via a single <see cref="AlignAllCodeLines"/> call.
-	/// </summary>
-	private MString? TryRenderColorCodeBlock(FencedCodeBlock code)
-	{
-		var language = Languages.FindById(code.Info!);
-		if (language is null) return null;
-
-		var sourceLines = code.Lines.Lines?
-			.Where(l => l.Slice.Text != null)
-			.Select(l => l.Slice.ToString())
-			.ToList() ?? [];
-
-		if (sourceLines.Count == 0) return MModule.empty();
-
-		var coloredLines = sourceLines.Select(line =>
-		{
-			var parts = new List<MString>();
-			ColorCodeParser.Value.Parse(line, language, (text, scopes) =>
-				WriteColorCodeScopes(text, scopes, parts));
-			return MModule.multiple(parts);
-		});
-
-		return AlignAllCodeLines(coloredLines);
-	}
-
-	/// <summary>
-	/// Mirrors the algorithm used by <c>HtmlFormatter.Write</c> in ColorCode.Core:
-	/// uses <c>Scope.Index</c> and <c>Scope.Length</c> to slice <paramref name="text"/>
-	/// into plain and coloured segments, recursing into <c>Scope.Children</c> for nested grammars.
-	/// The callback <paramref name="text"/> is the FULL regex group-0 match, which can include
-	/// structural delimiters (e.g. <c>{</c> before a JSON key). Only the sub-range identified
-	/// by each scope carries a colour; everything else is emitted as plain text.
-	/// </summary>
-	private static void WriteColorCodeScopes(string text, IList<Scope> scopes, List<MString> parts)
-	{
-		var ordered = scopes.OrderBy(s => s.Index).ToList();
-		var offset = 0;
-
-		foreach (var scope in ordered)
-		{
-			// Plain text before this scope's range
-			if (scope.Index > offset)
-				parts.Add(MModule.single(text[offset..scope.Index]));
-
-			var scopeText = text[scope.Index..(scope.Index + scope.Length)];
-
-			if (scope.Children.Count > 0)
-			{
-				// Nested grammar: recurse so child scopes get their own colours.
-				WriteColorCodeScopes(scopeText, scope.Children, parts);
-			}
-			else
-			{
-				var style = ColorCodeStyles.Contains(scope.Name) ? ColorCodeStyles[scope.Name] : null;
-				// ColorCode foreground is #AARRGGBB (8-digit) or #RRGGBB (6-digit).
-				var color = style?.Foreground is not null ? ParseArgbHex(style.Foreground) : null;
-				if (color is not null && scope.Name != ScopeName.PlainText)
-				{
-					var ansiStyle = Ansi.Create(foreground: StringExtensions.rgb(color.Value), bold: style!.Bold);
-					parts.Add(MModule.markupSingle(ansiStyle, scopeText));
-				}
-				else
-				{
-					parts.Add(MModule.single(scopeText));
-				}
-			}
-
-			offset = scope.Index + scope.Length;
-		}
-
-		// Trailing plain text after all scopes
-		if (offset < text.Length)
-			parts.Add(MModule.single(text[offset..]));
-	}
-
-	/// <summary>
-	/// Parses a CSS hex colour string produced by ColorCode (e.g. <c>#FFRRGGBB</c> or <c>#RRGGBB</c>)
-	/// into a <see cref="Color"/>. Returns <c>null</c> on failure.
-	/// </summary>
-	private static Color? ParseArgbHex(string hex)
-	{
-		if (string.IsNullOrEmpty(hex) || hex[0] != '#') return null;
-		try
-		{
-			return hex.Length switch
-			{
-				// #AARRGGBB — ColorCode DefaultDark emits this 8-digit ARGB format.
-				// The alpha byte (positions 1–2) is discarded: ANSI terminal colours
-				// do not support transparency, so only the RGB components are used.
-				9 => Color.FromArgb(
-					Convert.ToByte(hex.Substring(3, 2), 16),
-					Convert.ToByte(hex.Substring(5, 2), 16),
-					Convert.ToByte(hex.Substring(7, 2), 16)),
-				// #RRGGBB
-				7 => Color.FromArgb(
-					Convert.ToByte(hex.Substring(1, 2), 16),
-					Convert.ToByte(hex.Substring(3, 2), 16),
-					Convert.ToByte(hex.Substring(5, 2), 16)),
-				_ => null
-			};
-		}
-		catch
-		{
-			return null;
-		}
-	}
-
-	/// <summary>
-	/// Renders a <c>sharp</c>-tagged fenced code block with MUSH semantic token colours.
-	/// Each source line is colourised independently and wrapped in its own
-	/// <see cref="CodeBackgroundStyle"/> ANSI span, so that MUSH clients which reset ANSI
-	/// attributes on <c>\r\n</c> line endings still display the background on every line.
-	/// </summary>
-	private MString RenderSharpCodeBlock(FencedCodeBlock code)
-	{
-		var sourceLines = code.Lines.Lines?
-			.Where(l => l.Slice.Text != null)
-			.Select(l => l.Slice.ToString())
-			.ToList() ?? [];
-
-		if (sourceLines.Count == 0)
-			return MModule.empty();
-
-		var contentWidth = Math.Max(1, _maxWidth - 2);
-		var styledLines = sourceLines.Select(line =>
-		{
-			var content = BuildSharpLineContent(line);
-			var aligned = TextAlignerModule.align(
-				$"1 <{contentWidth}",
-				[MModule.empty(), content],
-				MModule.single(" "),
-				MModule.single(" "),
-				MModule.single("\n")
-			);
-			return MModule.markupSingle2(CodeBackgroundStyle, aligned);
-		});
-
-		return MModule.multipleWithDelimiter(MModule.single("\n"), styledLines);
-	}
-
-	/// <summary>
-	/// Applies MUSH semantic token colours to a single source line and returns the colourised
-	/// <see cref="MString"/> without any layout/alignment applied.
-	/// Alignment and background styling are applied per-line by <see cref="RenderSharpCodeBlock"/>.
-	/// </summary>
-	/// <remarks>
-	/// Parse type is auto-detected: lines whose first non-whitespace character is
-	/// <c>&amp;</c> (attribute), <c>@</c> (command), or <c>$</c> (trigger pattern) are
-	/// command-list lines and are passed to the parser as <see cref="ParseType.CommandList"/>;
-	/// everything else is treated as a function expression (<see cref="ParseType.Function"/>).
-	/// </remarks>
-	private MString BuildSharpLineContent(string line)
-	{
-		var trimmed = line.TrimStart();
-
-		// Strip "> " prompt prefix commonly used in helpfile code examples so
-		// the parse-type detection and tokeniser see the actual MUSH code.
-		var promptPrefix = string.Empty;
-		if (trimmed.StartsWith("> "))
-		{
-			var leadingSpaces = line.Length - trimmed.Length;
-			promptPrefix = line[..(leadingSpaces + 2)]; // leading whitespace + "> "
-			line = line[promptPrefix.Length..];
-			trimmed = trimmed[2..];
-		}
-
-		var parseType = trimmed.Length > 0 && (trimmed[0] == '&' || trimmed[0] == '@' || trimmed[0] == '$')
-			? ParseType.CommandList
-			: ParseType.Function;
-		var tokens = _mushParser!.GetSemanticTokens(MModule.single(line), parseType);
-		var sortedTokens = tokens
-			.OrderBy(t => t.Range.Start.Line)
-			.ThenBy(t => t.Range.Start.Character)
-			.ToList();
-
-		if (sortedTokens.Count == 0)
-			return promptPrefix.Length > 0
-				? MModule.concat(MModule.single(promptPrefix), MModule.single(line))
-				: MModule.single(line);
-
-		var parts = new List<MString>();
-		if (promptPrefix.Length > 0)
-			parts.Add(MModule.single(promptPrefix));
-		foreach (var token in sortedTokens)
-		{
-			var style = SemanticTokenAnsiPalette.GetStyle(token.TokenType, token.Modifiers);
-			parts.Add(style is null
-				? MModule.single(token.Text)
-				: MModule.markupSingle(style, token.Text));
-		}
-		return MModule.multiple(parts);
-	}
-
-	private MString RenderList(ListBlock list)
-	{
-		if (!list.IsOrdered)
-		{
-			// Unordered lists render as a comma-separated list
-			var unorderedItems = list
-				.OfType<ListItemBlock>()
-				.Select(listItem => RenderListItem(listItem))
-				.ToList();
-			return MModule.multipleWithDelimiter(MModule.single(", "), unorderedItems);
-		}
-
-		var itemIndex = 1;
-		var items = list
-			.OfType<ListItemBlock>()
-			.Select(listItem =>
-			{
-				var prefix = MModule.markupSingle(_dimStyle, $"{itemIndex}. ");
-
-				var content = RenderListItem(listItem, itemIndex - 1, list.IsOrdered);
-				itemIndex++;
-				return MModule.concat(prefix, content);
-			})
-			.ToList();
-
-		return MModule.multipleWithDelimiter(MModule.single("\n"), items);
-	}
-
-	protected virtual MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
-	{
-		var parts = listItem
-			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0)
-			.ToList();
-
-		var combined = MModule.multiple(parts);
-
-		var trimmed = MModule.trim(combined, MModule.single(" "), trimType: MModule.TrimType.TrimBoth);
-		return trimmed;
-	}
-
-	protected virtual MString RenderQuote(QuoteBlock quote)
-	{
-		var parts = quote
-			.Select(Render)
-			.Where(rendered => rendered.Length > 0)
-			.ToList();
-
-		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
-
-		// Add 2-space indentation to each line
-		var plainText = content.ToPlainText();
-		if (string.IsNullOrEmpty(plainText)) return MModule.empty();
-
-		var indentedLines = TextAlignerModule.align(
-			$"1 <{_maxWidth}",
-			parts,
-			MModule.single(" "),
-			MModule.single(" "),
-			MModule.single("\n")
-		);
-		return indentedLines;
-	}
-
-	private MString RenderThematicBreak()
-		=> MModule.markupSingle(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
-
-	private MString RenderHtmlBlock(HtmlBlock html)
-	{
-		var htmlContent = string.Join("\n", html.Lines.Lines.Select(line => line.Slice.ToString()));
-		return ParseHtmlToAnsi(htmlContent);
-	}
-
-	protected virtual MString RenderTable(Table table)
-	{
-		var borderStyle = _dimStyle;
-
-		var allRows = table
-			.OfType<TableRow>()
-			.Select(row => (
-				IsHeader: row.IsHeader,
-				Cells: row.OfType<TableCell>()
-					.Select(cell => RenderTableCell(cell))
-					.ToList()
-			))
-			.ToList();
-
-		if (allRows.Count == 0) return MModule.empty();
-
-		// Calculate column widths
-		var columnCount = allRows.Max(r => r.Cells.Count);
-		var columnWidths = new int[columnCount];
-
-		for (var col = 0; col < columnCount; col++)
-		{
-			columnWidths[col] = allRows.Max(r => col < r.Cells.Count ? r.Cells[col].ToPlainText().Length : 0);
-			columnWidths[col] = Math.Max(columnWidths[col], 3);
-		}
-
-		// When all header cells are empty the table is decorative (e.g. the COMMANDS list).
-		// Render it without borders or separator lines: just nicely-spaced columns.
-		var headerRows = allRows.Where(r => r.IsHeader).ToList();
-		var hasEmptyHeaders = headerRows.Count > 0 &&
-			headerRows.All(r => r.Cells.All(c => string.IsNullOrWhiteSpace(c.ToPlainText())));
-
-		if (hasEmptyHeaders)
-		{
-			// For borderless tables use the full available width split evenly across columns.
-			// Column separator is 2 spaces; no pipe characters.
-			const int BORDERLESS_SEP_WIDTH = 2;
-			var borderlessAvailable = _maxWidth - (columnCount - 1) * BORDERLESS_SEP_WIDTH;
-			var totalBorderlessWidth = columnWidths.Sum();
-
-			if (totalBorderlessWidth > borderlessAvailable && borderlessAvailable > columnCount * 3)
-			{
-				for (var col = 0; col < columnCount; col++)
-				{
-					var proportion = (double)columnWidths[col] / totalBorderlessWidth;
-					columnWidths[col] = Math.Max(3, (int)(borderlessAvailable * proportion));
-				}
-			}
-			else if (totalBorderlessWidth < borderlessAvailable)
-			{
-				var extraSpace = borderlessAvailable - totalBorderlessWidth;
-				for (var col = 0; col < columnCount; col++)
-				{
-					var proportion = (double)columnWidths[col] / totalBorderlessWidth;
-					columnWidths[col] += (int)(extraSpace * proportion);
-				}
-			}
-
-			var borderlessSpecs = new StringBuilder();
-			for (var col = 0; col < columnCount; col++)
-			{
-				if (col > 0) borderlessSpecs.Append(' ');
-				borderlessSpecs.Append('<');
-				borderlessSpecs.Append(columnWidths[col]);
-			}
-
-			var borderlessRows = allRows
-				.Where(r => !r.IsHeader)
-				.Select(r => TextAlignerModule.align(
-					borderlessSpecs.ToString(),
-					r.Cells,
-					MModule.single(" "),
-					MModule.single("  "),
-					MModule.single("")
-				))
-				.ToList();
-
-			return MModule.multipleWithDelimiter(MModule.single("\n"), borderlessRows);
-		}
-
-		// Fit table to available width by distributing space across columns
-		// Format: "| cell1 | cell2 | cell3 |"
-		// Total width = START_BORDER + content widths + separators + END_BORDER
-		var borderAndSeparatorWidth = START_BORDER_WIDTH + END_BORDER_WIDTH +
-																	 (columnCount - 1) * COLUMN_SEPARATOR_WIDTH;
-		var availableWidth = _maxWidth - borderAndSeparatorWidth;
-		var totalWidth = columnWidths.Sum();
-
-		if (totalWidth > availableWidth && availableWidth > columnCount * 3)
-		{
-			// Scale down column widths proportionally when table is too wide
-			for (var col = 0; col < columnCount; col++)
-			{
-				var proportion = (double)columnWidths[col] / totalWidth;
-				columnWidths[col] = Math.Max(3, (int)(availableWidth * proportion));
-			}
-		}
-		else if (totalWidth < availableWidth)
-		{
-			// Expand columns proportionally to fit the available width for nice spacing
-			var extraSpace = availableWidth - totalWidth;
-			for (var col = 0; col < columnCount; col++)
-			{
-				var proportion = (double)columnWidths[col] / totalWidth;
-				columnWidths[col] += (int)(extraSpace * proportion);
-			}
-		}
-
-		// Build column specifications with alignment
-		var columnSpecs = new StringBuilder();
-		for (var col = 0; col < columnCount; col++)
-		{
-			if (col > 0) columnSpecs.Append(' ');
-
-			var alignment = "<"; // Default to left
-			if (table.ColumnDefinitions.Count > col && table.ColumnDefinitions[col].Alignment.HasValue)
-			{
-				alignment = table.ColumnDefinitions[col].Alignment!.Value switch
-				{
-					TableColumnAlign.Left => "<",
-					TableColumnAlign.Center => "-",
-					TableColumnAlign.Right => ">",
-					_ => "<"
-				};
-			}
-
-			columnSpecs.Append(alignment);
-			columnSpecs.Append(columnWidths[col]);
-		}
-
-		// Render each row
-		var renderedRows = new List<MString>();
-		for (var rowIndex = 0; rowIndex < allRows.Count; rowIndex++)
-		{
-			var (isHeader, cells) = allRows[rowIndex];
-
-			// Use TextAlignerModule to align the cells
-			var alignedRow = TextAlignerModule.align(
-				columnSpecs.ToString(),
-				cells,
-				MModule.single(" "),
-				MModule.markupSingle(borderStyle, " | "),
-				MModule.single("")
-			);
-
-			// Wrap in borders
-			var rowWithBorders = MModule.multiple([
-				MModule.markupSingle(borderStyle, "| "),
-				alignedRow,
-				MModule.markupSingle(borderStyle, " |")
-			]);
-
-			renderedRows.Add(rowWithBorders);
-
-			// Add separator after header
-			if (isHeader)
-			{
-				var separator = new StringBuilder();
-				separator.Append("|");
-				for (var col = 0; col < columnCount; col++)
-				{
-					separator.Append('-', columnWidths[col] + 2);
-					separator.Append('|');
-				}
-				renderedRows.Add(MModule.markupSingle(borderStyle, separator.ToString()));
-			}
-		}
-
-		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedRows);
-	}
-
-	// Rows are handled by RenderTable for proper alignment
-	private MString RenderTableRow(TableRow _)
-		=> MModule.empty();
-
-	private MString RenderTableCell(TableCell cell)
-		=> MModule.multiple(cell
-			.Select(Render)
-			.Where(rendered => rendered.Length > 0));
-
-	private MString RenderInlines(Inline? inline)
-	{
-		var parts = new List<MString>();
-		while (inline != null)
-		{
-			var rendered = Render(inline);
-			if (rendered.Length > 0)
-			{
-				parts.Add(rendered);
-			}
-			inline = inline.NextSibling;
-		}
-		return MModule.multiple(parts);
-	}
-
-	private MString RenderContainerInline(ContainerInline container)
-		=> RenderInlines(container.FirstChild);
-
-	private MString RenderLiteral(LiteralInline literal)
-	{
-		var text = literal.Content.ToString();
-		return string.IsNullOrEmpty(text)
-			? MModule.empty()
-			: MModule.single(text);
-	}
-
-	private MString RenderCodeInline(CodeInline code)
-		=> string.IsNullOrEmpty(code.Content)
-			? MModule.empty()
-			: RenderInlineCode(code);
-
-	private MString RenderEmphasis(EmphasisInline emphasis)
-	{
-		var content = RenderInlines(emphasis.FirstChild);
-
-		// DelimiterCount determines bold (2) vs italic (1)
-		if (emphasis.DelimiterCount == 2 || emphasis.DelimiterChar == '*')
-		{
-			// Bold
-			return RenderBold(content);
-		}
-		else
-		{
-			// Italic
-			return RenderItalic(content);
-		}
-	}
-
-	/// <summary>
-	/// Render bold text. Can be overridden for custom rendering.
-	/// </summary>
-	protected virtual MString RenderBold(MString content)
-		=> MModule.markupSingle(_boldStyle, content.ToPlainText());
-
-	/// <summary>
-	/// Render italic text. Can be overridden for custom rendering.
-	/// </summary>
-	protected virtual MString RenderItalic(MString content)
-		=> MModule.markupSingle(_boldStyle, content.ToPlainText());
-
-	/// <summary>
-	/// Render underlined text. Can be overridden for custom rendering.
-	/// </summary>
-	protected virtual MString RenderUnderline(MString content)
-		=> MModule.markupSingle(_underlineStyle, content.ToPlainText());
-
-	/// <summary>
-	/// Render inline code. Can be overridden for custom rendering.
-	/// </summary>
-	protected virtual MString RenderInlineCode(CodeInline code)
-		=> MModule.markupSingle(InlineCodeStyle, code.Content);
-
-	private MString RenderLineBreak(LineBreakInline lineBreak)
-		=> lineBreak.IsHard ? MModule.single("\n") : MModule.single(" ");
-
-	protected virtual MString RenderLink(LinkInline link, MString content)
-	{
-		// Create hyperlink using ANSI OSC 8 escape sequence
-		var url = link.Url ?? string.Empty;
-		var contentText = content.ToPlainText().Trim();
-
-		if (string.IsNullOrWhiteSpace(url))
-		{
-			// No URL, just return the content
-			return content;
-		}
-
-		if (string.IsNullOrWhiteSpace(contentText))
-		{
-			// No text, use URL as display text
-			contentText = url;
-		}
-
-		// Create hyperlink markup with linkUrl parameter
-		var linkMarkup = Ansi.Create(linkUrl: FSharpOption<string>.Some(url));
-		return MModule.markupSingle(linkMarkup, contentText);
-	}
-
-	protected virtual MString RenderAutolink(AutolinkInline autolink)
-	{
-		if (string.IsNullOrEmpty(autolink.Url))
-		{
-			return MModule.empty();
-		}
-
-		// Create hyperlink with URL as both the text and the link
-		var linkMarkup = Ansi.Create(linkUrl: FSharpOption<string>.Some(autolink.Url));
-		return MModule.markupSingle(linkMarkup, autolink.Url);
-	}
-
-	private MString RenderHtmlInline(HtmlInline html)
-	{
-		// HTML inline tags are not fully supported in the recursive renderer.
-		// They would require matching opening/closing tags to properly wrap content with markup.
-		// For now, just skip the tags themselves. The content between tags is rendered separately
-		// by Markdig as literal inlines, so it will still appear in the output.
-		return MModule.empty();
-	}
-
-	private MString RenderHtmlEntity(HtmlEntityInline entity)
-	{
-		var text = entity.Transcoded.ToString();
-		return string.IsNullOrEmpty(text)
-			? MModule.empty()
-			: MModule.single(text);
-	}
-
-	private MString RenderDelimiter(DelimiterInline delimiter)
-		=> RenderInlines(delimiter.FirstChild);
-
-	/// <summary>
-	/// Parses HTML tags and converts them to ANSI markup.
-	/// Supports basic color tags, bold, italic, underline, etc.
-	/// </summary>
-	private MString ParseHtmlToAnsi(string tag)
-	{
-		if (string.IsNullOrWhiteSpace(tag))
-			return MModule.empty();
-
-		var tagName = ExtractTagName(tag);
-		var ansiCode = ConvertHtmlTagToAnsiCode(tag, tagName);
-
-		return string.IsNullOrEmpty(ansiCode)
-			? MModule.empty()
-			: MModule.single(ansiCode);
-	}
-
-	private string ExtractTagName(string tag)
-	{
-		var start = tag.StartsWith("</") ? 2 : 1;
-		var end = tag.IndexOfAny([' ', '>', '/'], start);
-		if (end == -1)
-		{
-			end = tag.Length;
-		}
-		return tag[start..end].ToLowerInvariant();
-	}
-
-	private string ConvertHtmlTagToAnsiCode(string tag, string tagName)
-	{
-		// TODO: This should work on MStrings, as such, this is a bad method.
-		// This should use recursion instead, and be aware of its contents.
-		return tagName switch
-		{
-			"b" or "strong" => ANSI.Bold + ANSI.Foreground(ANSI.AnsiColor.NewRGB(Color.White)),
-			"i" or "em" => ANSI.Italic,
-			"u" => ANSI.Underlined,
-			"s" or "strike" or "del" => ANSI.StrikeThrough,
-			"font" => ParseFontTagToAnsiCode(tag),
-			"span" => ParseSpanTagToAnsiCode(tag),
-			"color" => ParseColorTagToAnsiCode(tag),
-			_ => ""
-		};
-	}
-
-	private string ParseFontTagToAnsiCode(string tag)
-	{
-		// Extract color attribute: <font color="red"> or <font color="#FF0000">
-		var colorMatch = ColorAttributeRegex.Match(tag);
-		if (colorMatch.Success)
-		{
-			var color = ParseColorValue(colorMatch.Groups[1].Value);
-			if (color.HasValue)
-			{
-				return ANSI.Foreground(ANSI.AnsiColor.NewRGB(color.Value));
-			}
-		}
-		return "";
-	}
-
-	private string ParseSpanTagToAnsiCode(string tag)
-	{
-		// Extract style attribute: <span style="color: red"> or <span style="background-color: blue">
-		var styleMatch = StyleAttributeRegex.Match(tag);
-		if (styleMatch.Success)
-		{
-			var style = styleMatch.Groups[1].Value;
-
-			// Parse color
-			var colorMatch = StyleColorRegex.Match(style);
-			var bgColorMatch = StyleBackgroundColorRegex.Match(style);
-
-			var result = new StringBuilder();
-
-			if (colorMatch.Success)
-			{
-				var fg = ParseColorValue(colorMatch.Groups[1].Value.Trim());
-				if (fg.HasValue)
-					result.Append(ANSI.Foreground(ANSI.AnsiColor.NewRGB(fg.Value)));
-			}
-
-			if (bgColorMatch.Success)
-			{
-				var bg = ParseColorValue(bgColorMatch.Groups[1].Value.Trim());
-				if (bg.HasValue)
-					result.Append(ANSI.Background(ANSI.AnsiColor.NewRGB(bg.Value)));
-			}
-
-			return result.ToString();
-		}
-		return "";
-	}
-
-	private string ParseColorTagToAnsiCode(string tag)
-	{
-		// Extract color value: <color red> or <color #FF0000>
-		var match = ColorTagRegex.Match(tag);
-		if (match.Success)
-		{
-			var color = ParseColorValue(match.Groups[1].Value.Trim());
-			if (color.HasValue)
-				return ANSI.Foreground(ANSI.AnsiColor.NewRGB(color.Value));
-		}
-		return "";
-	}
-
-	private Color? ParseColorValue(string colorStr)
-	{
-		colorStr = colorStr.Trim();
-
-		// Hex color: #RRGGBB or #RGB
-		if (colorStr.StartsWith("#"))
-		{
-			if (colorStr.Length == 7) // #RRGGBB
-			{
-				if (byte.TryParse(colorStr.AsSpan(1, 2), System.Globalization.NumberStyles.HexNumber, null, out var r) &&
-						byte.TryParse(colorStr.AsSpan(3, 2), System.Globalization.NumberStyles.HexNumber, null, out var g) &&
-						byte.TryParse(colorStr.AsSpan(5, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
-				{
-					return Color.FromArgb(r, g, b);
-				}
-			}
-			else if (colorStr.Length == 4) // #RGB - expand each digit
-			{
-				if (byte.TryParse(colorStr.AsSpan(1, 1), System.Globalization.NumberStyles.HexNumber, null, out var r) &&
-						byte.TryParse(colorStr.AsSpan(2, 1), System.Globalization.NumberStyles.HexNumber, null, out var g) &&
-						byte.TryParse(colorStr.AsSpan(3, 1), System.Globalization.NumberStyles.HexNumber, null, out var b))
-				{
-					return Color.FromArgb((byte)(r * 17), (byte)(g * 17), (byte)(b * 17));
-				}
-			}
-
-			return null;
-		}
-
-		// Named colors - Color.FromName doesn't throw, but returns invalid color if name doesn't exist
-		var namedColor = Color.FromName(colorStr);
-		return namedColor.IsKnownColor ? namedColor : null;
-	}
+private readonly Ansi _dimStyle = Ansi.Create(faint: true);
+private readonly Ansi _boldStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true);
+private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
+private readonly Ansi _headingStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true, bold: true);
+private readonly Ansi _heading3Style = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true);
+private readonly int _maxWidth;
+private readonly IMUSHCodeParser? _mushParser;
+
+// Table border and separator character counts
+private const int START_BORDER_WIDTH = 2; // "| "
+private const int END_BORDER_WIDTH = 2; // " |"
+private const int COLUMN_SEPARATOR_WIDTH = 3; // " | "
+
+// Cached compiled regex patterns for performance
+private static readonly Regex ColorAttributeRegex = new(@"color\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+private static readonly Regex StyleAttributeRegex = new(@"style\s*=\s*[""']([^""']+)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+private static readonly Regex StyleColorRegex = new(@"color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+private static readonly Regex StyleBackgroundColorRegex = new(@"background-color\s*:\s*([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+private static readonly Regex ColorTagRegex = new(@"<color\s+([^>]+)>", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+// ColorCode.Core language parser and style dictionary for standard-language code blocks.
+// Shared across all renderer instances; lazy-initialised on first use.
+// The lock is held as a named static field (process lifetime) so the compiler's
+// CA2000 disposable-not-disposed analysis is satisfied. As a process-lifetime
+// singleton, it is cleaned up when the process exits.
+private static readonly ReaderWriterLockSlim _colorCodeLock = new();
+private static readonly Lazy<LanguageParser> ColorCodeParser = new(() =>
+{
+var compiler = new LanguageCompiler([], _colorCodeLock);
+var repo = new LanguageRepository(Languages.All.ToDictionary(l => l.Id, l => l));
+return new LanguageParser(compiler, repo);
+});
+private static readonly StyleDictionary ColorCodeStyles = StyleDictionary.DefaultDark;
+
+// Dark-grey background applied to every line of every highlighted code block,
+// giving a subtle "gutter" effect that visually separates code from prose.
+// #2D2D2D is slightly lighter than a typical #1E1E1E terminal background.
+// Including a default foreground (#D4D4D4 light-grey, matching VS Code DefaultDark) is
+// essential: MString's WrapAndRestore restores the OUTER markup after each inner coloured
+// span, so if the outer style only has background the foreground from the inner span
+// bleeds into the following plain-text segment.  With both fg+bg in the outer style,
+// WrapAndRestore re-applies both after every inner span, keeping colours correct.
+private static readonly Ansi CodeBackgroundStyle = Ansi.Create(
+foreground: StringExtensions.rgb(Color.FromArgb(0xD4, 0xD4, 0xD4)),
+background: StringExtensions.rgb(Color.FromArgb(0x2D, 0x2D, 0x2D)));
+
+// Light-blue colour applied to inline code spans (`...`).
+// #9CDCFE matches VS Code Dark+'s variable/property colour and reads well on dark terminals.
+private static readonly Ansi InlineCodeStyle = Ansi.Create(
+foreground: StringExtensions.rgb(Color.FromArgb(0x9C, 0xDC, 0xFE)));
+
+/// <summary>
+/// Initializes a new instance of the RecursiveMarkdownRenderer
+/// </summary>
+/// <param name="maxWidth">Maximum width for rendered output. Tables will fit to this width with nice column spacing. Default is 78.</param>
+/// <param name="mushParser">
+/// Optional MUSH code parser used to apply syntax highlighting to
+/// <c>sharp</c> fenced code blocks. When <c>null</c>, those blocks are
+/// rendered as plain indented text.
+/// </param>
+public RecursiveMarkdownRenderer(int maxWidth = 78, IMUSHCodeParser? mushParser = null)
+{
+_maxWidth = maxWidth > 0 ? maxWidth : 78;
+_mushParser = mushParser;
+}
+
+/// <summary>
+/// Main entry point - renders any MarkdownObject to MString
+/// </summary>
+public MString Render(MarkdownObject obj)
+{
+return obj switch
+{
+// Block elements
+MarkdownDocument doc => RenderDocument(doc),
+HeadingBlock heading => RenderHeading(heading),
+ParagraphBlock para => RenderParagraph(para),
+CodeBlock code => RenderCodeBlock(code),
+ListBlock list => RenderList(list),
+ListItemBlock listItem => RenderListItem(listItem),
+QuoteBlock quote => RenderQuote(quote),
+ThematicBreakBlock _ => RenderThematicBreak(),
+HtmlBlock html => RenderHtmlBlock(html),
+Table table => RenderTable(table),
+TableRow row => RenderTableRow(row),
+TableCell cell => RenderTableCell(cell),
+
+// Inline elements - specific types first, then base ContainerInline
+LiteralInline literal => RenderLiteral(literal),
+CodeInline code => RenderCodeInline(code),
+EmphasisInline emphasis => RenderEmphasis(emphasis),
+LineBreakInline lb => RenderLineBreak(lb),
+LinkInline link => RenderLink(link, RenderInlines(link.FirstChild)),
+AutolinkInline autolink => RenderAutolink(autolink),
+HtmlInline html => RenderHtmlInline(html),
+HtmlEntityInline entity => RenderHtmlEntity(entity),
+DelimiterInline delimiter => RenderDelimiter(delimiter),
+ContainerInline container => RenderContainerInline(container),
+
+// Default case - try to render children if it's a container block
+ContainerBlock container => RenderContainerBlock(container),
+
+_ => MModule.empty()
+};
+}
+
+private MString RenderContainerBlock(ContainerBlock container)
+{
+var parts = container
+.Select(child => Render(child))
+.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
+.ToList();
+return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+}
+
+private MString RenderDocument(MarkdownDocument doc)
+{
+var parts = doc
+.Select(child => Render(child))
+.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
+.ToList();
+var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+return parts.Count > 1
+? MModule.concat(content, MModule.single("\n"))
+: content;
+}
+
+private MString RenderInlines(Inline? inline)
+{
+var parts = new List<MString>();
+while (inline != null)
+{
+var rendered = Render(inline);
+if (rendered.Length > 0)
+{
+parts.Add(rendered);
+}
+inline = inline.NextSibling;
+}
+return MModule.multiple(parts);
+}
+
+private MString RenderContainerInline(ContainerInline container)
+=> RenderInlines(container.FirstChild);
+
+private MString RenderLineBreak(LineBreakInline lineBreak)
+=> lineBreak.IsHard ? MModule.single("\n") : MModule.single(" ");
 }
