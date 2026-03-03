@@ -23,7 +23,7 @@ public class AsciiTableRenderer : AsciiObjectRenderer<Table>
 			renderer.Write(MModule.markupSingle(borderStyle, "| "));
 
 			// Render each cell
-			for (int i = 0; i < row.Count; i++)
+			for (var i = 0; i < row.Count; i++)
 			{
 				var cellObj = row[i];
 				var cell = (TableCell)cellObj;
@@ -41,8 +41,8 @@ public class AsciiTableRenderer : AsciiObjectRenderer<Table>
 			if (row.IsHeader || isFirstRow)
 			{
 				var separatorBuilder = new StringBuilder();
-				separatorBuilder.Append("|");
-				for (int i = 0; i < row.Count; i++)
+				separatorBuilder.Append('|');
+				for (var i = 0; i < row.Count; i++)
 				{
 					separatorBuilder.Append("---|");
 				}
