@@ -101,6 +101,11 @@ public partial class RecursiveMarkdownRenderer
 			return MModule.empty();
 
 		var tagName = ExtractTagName(tag);
+
+		// <br>, <br/>, <br /> are self-closing void elements — render as newline.
+		if (tagName == "br")
+			return MModule.single("\n");
+
 		var ansi = ConvertHtmlTagToAnsi(tag, tagName);
 		if (ansi is null)
 			return MModule.empty();

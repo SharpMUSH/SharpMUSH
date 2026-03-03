@@ -417,6 +417,19 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
+	public async Task RenderHtml_BrTag_ShouldRenderAsNewline()
+	{
+		// Arrange - <br> is a self-closing void element within a paragraph
+		var markdown = "Line one<br>Line two";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - <br> produces a newline
+		await Assert.That(result.ToPlainText()).IsEqualTo("Line one\nLine two");
+	}
+
+	[Test]
 	public async Task RenderHtmlBlock_ShouldPreserveContent()
 	{
 		// Arrange - <div> is a block-level tag, parsed as HtmlBlock by Markdig.
