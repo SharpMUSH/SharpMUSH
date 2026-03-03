@@ -103,8 +103,15 @@ public partial class RecursiveMarkdownRenderer
 		var tagName = ExtractTagName(tag);
 
 		// <br>, <br/>, <br /> are self-closing void elements — render as newline.
+		// The source newline after <br> causes Markdig to append a soft
+		// LineBreakInline as the next sibling — skip it so it doesn't add a
+		// redundant space.
 		if (tagName == "br")
+		{
+			if (html.NextSibling is LineBreakInline { IsHard: false } softBreak)
+				softBreak.Remove();
 			return MModule.single("\n");
+		}
 
 		var ansi = ConvertHtmlTagToAnsi(tag, tagName);
 		if (ansi is null)

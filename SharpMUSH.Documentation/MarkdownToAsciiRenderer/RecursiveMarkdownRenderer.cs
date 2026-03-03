@@ -142,9 +142,10 @@ public partial class RecursiveMarkdownRenderer
 
 	private MString RenderDocument(MarkdownDocument doc)
 	{
-		// Pair each child block with its rendered MString so we can vary the
-		// delimiter: headings get a single "\n" after them (no blank line),
-		// while other blocks are separated by "\n\n" (paragraph break).
+		// EnableTrackTrivia records blank lines from the source as LinesBefore /
+		// LinesAfter trivia on each block. Use that to reproduce the original
+		// vertical spacing: a single "\n" always separates adjacent blocks, plus
+		// one extra "\n" for every blank line the author placed between them.
 		var items = doc
 			.Select(child => (block: child, rendered: Render(child)))
 			.Where(x => IsNonWhitespace(x.rendered))
@@ -155,8 +156,10 @@ public partial class RecursiveMarkdownRenderer
 		var result = new List<MString> { items[0].rendered };
 		for (var i = 1; i < items.Count; i++)
 		{
-			var prevIsHeading = items[i - 1].block is HeadingBlock;
-			result.Add(MModule.single(prevIsHeading ? "\n" : "\n\n"));
+			var blankLines = (items[i - 1].block.LinesAfter?.Count ?? 0)
+			               + (items[i].block.LinesBefore?.Count ?? 0);
+			var delimiter = "\n" + new string('\n', blankLines);
+			result.Add(MModule.single(delimiter));
 			result.Add(items[i].rendered);
 		}
 
