@@ -114,10 +114,7 @@ public class RecursiveMarkdownRenderer
 			LiteralInline literal => RenderLiteral(literal),
 			CodeInline code => RenderCodeInline(code),
 			EmphasisInline emphasis => RenderEmphasis(emphasis),
-			// Soft line breaks (markdown word-wrap) are rendered as a space to avoid
-			// double-newlines inside list items and other containers. Hard line breaks
-			// (two trailing spaces or backslash in source) emit an actual newline.
-			LineBreakInline lb => lb.IsHard ? RenderLineBreak() : MModule.single(" "),
+			LineBreakInline _ => RenderLineBreak(),
 			LinkInline link => RenderLink(link, RenderInlines(link.FirstChild)),
 			AutolinkInline autolink => RenderAutolink(autolink),
 			HtmlInline html => RenderHtmlInline(html),
@@ -465,7 +462,7 @@ public class RecursiveMarkdownRenderer
 
 		var combined = MModule.multiple(parts);
 
-		var trimmed = MModule.trim(combined, MModule.single(" "), trimType: MModule.TrimType.TrimBoth);
+		var trimmed = MModule.trim(combined, MModule.single(" \n"), trimType: MModule.TrimType.TrimBoth);
 		return trimmed;
 	}
 
