@@ -114,7 +114,10 @@ public class RecursiveMarkdownRenderer
 			LiteralInline literal => RenderLiteral(literal),
 			CodeInline code => RenderCodeInline(code),
 			EmphasisInline emphasis => RenderEmphasis(emphasis),
-			LineBreakInline _ => RenderLineBreak(),
+			// Soft line breaks (markdown word-wrap) are rendered as a space to avoid
+			// double-newlines inside list items and other containers. Hard line breaks
+			// (two trailing spaces or backslash in source) emit an actual newline.
+			LineBreakInline lb => lb.IsHard ? RenderLineBreak() : MModule.single(" "),
 			LinkInline link => RenderLink(link, RenderInlines(link.FirstChild)),
 			AutolinkInline autolink => RenderAutolink(autolink),
 			HtmlInline html => RenderHtmlInline(html),
@@ -479,14 +482,9 @@ public class RecursiveMarkdownRenderer
 		var plainText = content.ToPlainText();
 		if (string.IsNullOrEmpty(plainText)) return MModule.empty();
 
-		var indentedLines = TextAlignerModule.align(
-			$"1 <{_maxWidth}",
-			parts,
-			MModule.single(" "),
-			MModule.single(" "),
-			MModule.single("\n")
-		);
-		return indentedLines;
+		var lines = plainText.Split('\n');
+		var indentedLines = lines.Select(line => MModule.single("  " + line));
+		return MModule.multipleWithDelimiter(MModule.single("\n"), indentedLines);
 	}
 
 	private MString RenderThematicBreak()
