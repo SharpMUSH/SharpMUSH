@@ -21,7 +21,7 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 
 Fenced code blocks support ANSI syntax highlighting when a language tag is specified.
 
-Use `` ```sharp `` for SharpMUSH/MUSH softcode — the full semantic token pipeline
+Use `` ```sharp `` for SharpMUSH/MUSH softcode — the full semantic token pipeline<br>
 (functions, substitutions, object references, registers, etc.) is used:
 
 ```sharp
@@ -30,7 +30,7 @@ get(#1/ATTR)          -- object reference
 %q<myvar>             -- register read
 ```
 
-Standard programming languages are also supported via ColorCode and render with
+Standard programming languages are also supported via ColorCode and render with<br>
 `StyleDictionary.DefaultDark` colours:
 
 ```json
@@ -42,13 +42,13 @@ def greet(name):
     return "Hello, " + name
 ```
 
-Other supported language tags: `csharp`, `javascript`, `typescript`, `sql`, `xml`,
+Other supported language tags: `csharp`, `javascript`, `typescript`, `sql`, `xml`,<br>
 `html`, `css`, `java`, `powershell`, `fsharp`, `python`, `json`, `cpp`.
 
-Blocks without a language tag, or with an unrecognised tag, fall back to plain
+Blocks without a language tag, or with an unrecognised tag, fall back to plain<br>
 2-space-indented text with no colour.
 
-**MUSH Special Character Escaping:**
+**MUSH Special Character Escaping:**<br>
 When using markdown features with square brackets `[` `]` or parentheses `(` `)`, you must escape them using `%`:
 - `%[` for `[`
 - `%]` for `]`

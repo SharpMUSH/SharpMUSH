@@ -1,18 +1,18 @@
 # help
 This is the index to the MUSH online help files.
 
-  For an explanation of the help system, type:    help [newbie]
-  For a walkthrough of SharpMUSH systems, type:   help [getting started]
+  For an explanation of the help system, type:    help [newbie]<br>
+  For a walkthrough of SharpMUSH systems, type:   help [getting started]<br>
   For help finding the helpfile you want:         help [helpfile]
 
-  For the list of MUSH commands, type:            help [commands]
-  For the list of MUSH topics, type:              help [topics]
-  For an alphabetical list of all help entries:   help [entries]
+  For the list of MUSH commands, type:            help [commands]<br>
+  For the list of MUSH topics, type:              help [topics]<br>
+  For an alphabetical list of all help entries:   help [entries]<br>
   For information about SharpMUSH:                help [code]
 
-  For a list of flags:                            help [flag list]
-  For a list of functions:                        help [function list]
-  For a list of attributes:                       help [attribute list]
+  For a list of flags:                            help [flag list]<br>
+  For a list of functions:                        help [function list]<br>
+  For a list of attributes:                       help [attribute list]<br>
   To see the configuration of this MUSH:          `@config`
 
   On many MUSHes, list local commands with:       `+help`
@@ -22,10 +22,10 @@ This is the index to the MUSH online help files.
 # help search
 # help/search
 # helpfile
-  `help <textname>`
-  `help <namepattern>`
-  `help/search <pattern>`
-  `help/query[/brief] <sqlite3query>`
+  `help <textname>`<br>
+  `help <namepattern>`<br>
+  `help/search <pattern>`<br>
+  `help/query[/brief] <sqlite3query>`<br>
 
   These commands and switches also work with other things using our helpfile setup: news, ahelp, and any others added.
 
@@ -120,12 +120,12 @@ This is the index to the MUSH online help files.
 # GS MOVING
   To see the room you're in, type 'look'. You'll probably see something similar to this (though some MUSHes customize the appearance of rooms):
 
-    Example Room
-    This is an example room. It has a rather boring description.
-    Contents:
-    Bob
-    Sports car
-    Obvious exits:
+    Example Room<br>
+    This is an example room. It has a rather boring description.<br>
+    Contents:<br>
+    Bob<br>
+    Sports car<br>
+    Obvious exits:<br>
     Next Room and Out
 
   The first line is the name of the room you're in, followed by the room's description, a list of other people (and objects) in the room, and finally a list of exits to other rooms.
@@ -156,9 +156,9 @@ This is the index to the MUSH online help files.
   ```sharp
     say Hello!
   ```
-  you'll see:
-    You say, "Hello!"
-  and everyone else in the room will see:
+  you'll see:<br>
+    You say, "Hello!"<br>
+  and everyone else in the room will see:<br>
     Lisa says, "Hello!"
 
   You can abbreviate the command to just:
@@ -170,20 +170,20 @@ This is the index to the MUSH online help files.
   See [gs talking2]
 
 # GS TALKING2
-  You can also perform actions, using the 'pose' command, or ':' for short.
-  For example:
-    pose waves!   or
-    :waves!
-  will both show:
-    Lisa waves!
-  to everyone in the room (including yourself). If you don't want a space after your name, use 'semipose' (or ';') instead:
-    ;'s waving!
-  will show:
+  You can also perform actions, using the 'pose' command, or ':' for short.<br>
+  For example:<br>
+    pose waves!   or<br>
+    :waves!<br>
+  will both show:<br>
+    Lisa waves!<br>
+  to everyone in the room (including yourself). If you don't want a space after your name, use 'semipose' (or ';') instead:<br>
+    ;'s waving!<br>
+  will show:<br>
     Lisa's waving!
 
-  If you don't want your name to be added at all, you can use the '`@emit`' command, or '\' for short:
-    `@emit` Smiling, Lisa waves, "Hello!"
-  will show everyone in the room:
+  If you don't want your name to be added at all, you can use the '`@emit`' command, or '\' for short:<br>
+    `@emit` Smiling, Lisa waves, "Hello!"<br>
+  will show everyone in the room:<br>
     Smiling, Lisa waves, "Hello!"
 
   However, make sure you include your name somewhere, so people know who's talking.
@@ -211,15 +211,15 @@ This is the index to the MUSH online help files.
 # GS CHAT2
   When you've joined a channel, you can chat on it in two ways:
 
-    +`<channel>` `<message>`
+    +`<channel>` `<message>`<br>
     `@chat` `<channel>`=`<message>`
 
   You don't need to type the entire channel name, just enough letters to make it distinct from other channels. For instance, '`+pub` Hello'.
 
-  When you talk on a channel, everyone who is on the channel will see the channel name in '<>' angle brackets, then your name and the message.
-  For example, '`+pub` Hello' will show everyone
-    `<Public>` Skye says, "Hello"
-  If the `<message>` starts with a ':' or ';' it will be posed or semiposed, respectively. For example, '`+pub` :waves' shows
+  When you talk on a channel, everyone who is on the channel will see the channel name in '<>' angle brackets, then your name and the message.<br>
+  For example, '`+pub` Hello' will show everyone<br>
+    `<Public>` Skye says, "Hello"<br>
+  If the `<message>` starts with a ':' or ';' it will be posed or semiposed, respectively. For example, '`+pub` :waves' shows<br>
     `<Public>` Skye waves.
 
   Some games customize the appearance of channels a little (for instance, adding color or using '[]' square brackets instead of angle brackets), so it may look a little different.
@@ -246,7 +246,7 @@ This is the index to the MUSH online help files.
   See [gs mail2]
 
 # GS MAIL2
-  To send mail to someone, type:
+  To send mail to someone, type:<br>
     `@mail` `<recipients>`=[`<subject>`/]`<message>`
 
   You can send a message to more than one person at a time, just include the names of all the people you want to send to in `<recipients>`. The `<subject>` is optional. For example:
@@ -264,32 +264,32 @@ This is the index to the MUSH online help files.
 # topics
 Help is available on the following topics:
 
-  ACTION LISTS             ANCESTORS                ANONYMOUS ATTRIBUTES
-  ATTRIB-OWNERSHIP         ATTRIBUTES               BOOLEAN VALUES
-  CHAT                     CLIENTS                  CONTROL
-  COPYRIGHT                COSTS                    CREDITS
-  DBREFS                   DROP-TO                  ENACTOR
-  EVALUATION               EXECUTOR                 EXITS
-  FAILURE                  FLAGS                    FUNCTIONS
-  GENDER                   GLOBALS                  HERE
-  HOMES                    INTERIORS                LINKING
-  LISTENING                LISTS                    LOOPING
+  ACTION LISTS             ANCESTORS                ANONYMOUS ATTRIBUTES<br>
+  ATTRIB-OWNERSHIP         ATTRIBUTES               BOOLEAN VALUES<br>
+  CHAT                     CLIENTS                  CONTROL<br>
+  COPYRIGHT                COSTS                    CREDITS<br>
+  DBREFS                   DROP-TO                  ENACTOR<br>
+  EVALUATION               EXECUTOR                 EXITS<br>
+  FAILURE                  FLAGS                    FUNCTIONS<br>
+  GENDER                   GLOBALS                  HERE<br>
+  HOMES                    INTERIORS                LINKING<br>
+  LISTENING                LISTS                    LOOPING<br>
   MASTER ROOM              MATCHING                 ME
 
   See [topics2]
 
 # topics2
-  MONEY                    MUSHCODE                 NON-STANDARD ATTRIBUTES
-  PARENTS                  POWERS                   PUPPETS
-  QUEUE                    REGEXPS                  REGISTERS
-  SEMAPHORES               SETTING-ATTRIBUTES       SPOOFING
-  STACK                    STRINGS                  SUBSTITUTIONS
-  SUCCESS                  SWITCHES                 TYPES OF OBJECTS
-  USER-DEFINED COMMANDS    VERBS                    WARNINGS
-  WILDCARDS                ZONE MASTER ROOMS        ZONE MASTERS
+  MONEY                    MUSHCODE                 NON-STANDARD ATTRIBUTES<br>
+  PARENTS                  POWERS                   PUPPETS<br>
+  QUEUE                    REGEXPS                  REGISTERS<br>
+  SEMAPHORES               SETTING-ATTRIBUTES       SPOOFING<br>
+  STACK                    STRINGS                  SUBSTITUTIONS<br>
+  SUCCESS                  SWITCHES                 TYPES OF OBJECTS<br>
+  USER-DEFINED COMMANDS    VERBS                    WARNINGS<br>
+  WILDCARDS                ZONE MASTER ROOMS        ZONE MASTERS<br>
   ZONES
 
-Type 'help `<topic name>`' for help.
+Type 'help `<topic name>`' for help.<br>
 For a list of all topics, see [entries].
 
 # ACTION LISTS
@@ -453,18 +453,18 @@ For a list of all topics, see [entries].
 # ATTRIBUTE LIST
   Attributes with (*) after them are special, cannot be set by players, and may only be visible to wizards or admin. For those attributes, there is no @-command, so you can just type 'help `<attribute name>`' for help. For all other attributes, type 'help @`<attribute name>`' for help.
 
-Standard Attributes: (see `@list/attribs` for the complete list)
-  AAHEAR        ACLONE        ACONNECT      ADESCRIBE     ADISCONNECT
-  ADROP         AEFAIL        AENTER        AFAILURE      AHEAR
-  ALEAVE        ALFAIL        AMHEAR        AMOVE         APAYMENT
-  ASUCCESS      AWAY          CHARGES       COST          DESCRIBE
-  DROP          EALIAS        EFAIL         ENTER         FAILURE
-  FORWARDLIST   HAVEN         IDESCRIBE     IDLE          LALIAS
-  LAST (*)      LASTIP (*)    LASTLOGOUT(*) LASTSITE (*)  LEAVE
-  LFAIL         LISTEN        MOVE          ODESCRIBE     ODROP
-  OEFAIL        OENTER        OFAILURE      OLEAVE        OLFAIL
-  OMOVE         OPAYMENT      OSUCCESS      OXENTER       OXLEAVE
-  OXMOVE        PAYMENT       QUEUE (*)     RQUOTA (*)    RUNOUT
+Standard Attributes: (see `@list/attribs` for the complete list)<br>
+  AAHEAR        ACLONE        ACONNECT      ADESCRIBE     ADISCONNECT<br>
+  ADROP         AEFAIL        AENTER        AFAILURE      AHEAR<br>
+  ALEAVE        ALFAIL        AMHEAR        AMOVE         APAYMENT<br>
+  ASUCCESS      AWAY          CHARGES       COST          DESCRIBE<br>
+  DROP          EALIAS        EFAIL         ENTER         FAILURE<br>
+  FORWARDLIST   HAVEN         IDESCRIBE     IDLE          LALIAS<br>
+  LAST (*)      LASTIP (*)    LASTLOGOUT(*) LASTSITE (*)  LEAVE<br>
+  LFAIL         LISTEN        MOVE          ODESCRIBE     ODROP<br>
+  OEFAIL        OENTER        OFAILURE      OLEAVE        OLFAIL<br>
+  OMOVE         OPAYMENT      OSUCCESS      OXENTER       OXLEAVE<br>
+  OXMOVE        PAYMENT       QUEUE (*)     RQUOTA (*)    RUNOUT<br>
   SEX           STARTUP       SUCCESS       TFPREFIX
 
   See [attributes2]
@@ -472,9 +472,9 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # ATTRIBUTES2
   An attribute is part of the code on an object that makes it unique. An attribute can contain any sort of text -- from a single word, to a long paragraph, to a piece of MUSHcode. Some attributes are standard in SharpMUSH. That means that their effects are pre-set.
 
-  Standard attributes can be set using one of the following commands:
-    @`<attribute name>` `<object>`=`<content>`
-    `@set` `<object>`=`<attribute name>`:`<content>`
+  Standard attributes can be set using one of the following commands:<br>
+    @`<attribute name>` `<object>`=`<content>`<br>
+    `@set` `<object>`=`<attribute name>`:`<content>`<br>
     &`<attribute name>` `<object>`=`<content>`
 
   It is also possible to have non-standard attributes, which can be named anything you like. Please see [NON-STANDARD ATTRIBUTES] for more information on those.
@@ -524,34 +524,34 @@ Standard Attributes: (see `@list/attribs` for the complete list)
   See [boolean2]
 
 # BOOLEAN2
-  If tiny_booleans is...
-  no                       FALSE: null string, 0, any negative db
-                           TRUE:  everything else
-  yes                      TRUE:  numbers other than 0, strings beginning with numbers other than 0
+  If tiny_booleans is...<br>
+  no                       FALSE: null string, 0, any negative db<br>
+                           TRUE:  everything else<br>
+  yes                      TRUE:  numbers other than 0, strings beginning with numbers other than 0<br>
                            FALSE: everything else
 
-  Or, put another way:
-  Value                 tiny_booleans=no        tiny_booleans=yes  Gotcha
-  0                     FALSE                   FALSE
+  Or, put another way:<br>
+  Value                 tiny_booleans=no        tiny_booleans=yes  Gotcha<br>
+  0                     FALSE                   FALSE<br>
   non-zero number       TRUE                    TRUE
   #<non-negative>       TRUE                    FALSE               *
   #<negative>           FALSE                   FALSE
 
-  null string           FALSE                   FALSE
-  0<non-numbers..>      TRUE                    FALSE               *
+  null string           FALSE                   FALSE<br>
+  0<non-numbers..>      TRUE                    FALSE               *<br>
   <non-numbers...>      TRUE                    FALSE               *
 
   See [boolean3]
 
 # BOOLEAN3
-  Examples (assuming tiny_booleans is "no"):
-    not(foo) = 0
-    not(`<null string>`) = 1
-    not(-66) = 0
-    not(0) = 1
-    not(#-1) = 1
-    not(#12) = 0
-  And so on...
+  Examples (assuming tiny_booleans is "no"):<br>
+    not(foo) = 0<br>
+    not(`<null string>`) = 1<br>
+    not(-66) = 0<br>
+    not(0) = 1<br>
+    not(#-1) = 1<br>
+    not(#12) = 0<br>
+  And so on...<br>
   (note: These rules only apply when a function expects a Boolean value, not for strings that expect other values.)
 
 
@@ -590,8 +590,8 @@ Standard Attributes: (see `@list/attribs` for the complete list)
    6. If V is Royalty and O is not, O does not control V
    7. If O is MISTRUST, O does not control V
    8. If O and V are owned by the same player, and either:
-       a. V is not set TRUST, or
-       b. O is set TRUST
+       a. V is not set TRUST, or<br>
+       b. O is set TRUST<br>
       then O controls V
    9. If V is a player, or set TRUST, O does not control V
   10. If the zone_control_zmp_only `@config` option is set to 'No', V is on a Zone, and O passes the Zone's `@lock`/zone, O controls V
@@ -610,10 +610,10 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # COSTS
   Some things on the MUSH cost pennies. The default costs are shown below:
 
-    `@dig`: 10 pennies
-    `@create`: 10 pennies (or more)
-    `@search`: 100 pennies *
-    `@link`: 1 penny (if you didn't already own it, +1 to the previous owner)
+    `@dig`: 10 pennies<br>
+    `@create`: 10 pennies (or more)<br>
+    `@search`: 100 pennies *<br>
+    `@link`: 1 penny (if you didn't already own it, +1 to the previous owner)<br>
     `@open`: 1 penny (2 pennies if linked at the same time)
 
   Type '`@config`/list costs' to get the costs for the MUSH you are on.
@@ -703,12 +703,12 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # ENACTOR
   The enactor is the object which causes something to happen. This is an important concept in MUSH, because the way many commands work will depend on who enters the command (ie, who the enactor is). Note that while the enactor is the object which -caused- code/a command to run, it is not necessarily the object which is running the code (that's the executor). Any type of object can be an enactor.
 
-  There are eight %-substitutions that involve the enactor:
-    %# = the enactor's dbref
-    %n = the enactor's name
-    %~ = the enactor's accented name
-    %k = the enactor's name, colored by their `@moniker` (if any)
-    %: = the enactor's unique identifier, like `objid(%#)`
+  There are eight %-substitutions that involve the enactor:<br>
+    %# = the enactor's dbref<br>
+    %n = the enactor's name<br>
+    %~ = the enactor's accented name<br>
+    %k = the enactor's name, colored by their `@moniker` (if any)<br>
+    %: = the enactor's unique identifier, like `objid(%#)`<br>
     %a, %o, %p, %s = pronoun substitutions, by default based on the enactor's `@sex`. See [gender] for more information.
 
   If, for example, you have an `@osuccess` on an object that includes the %n subtitution, whenever someone picks up the object, that %n will evaluate to the name of the enactor (the person who typed 'get `<object>`' in this case).
@@ -764,21 +764,21 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # EVALUATION ORDER
   Whenever some text is entered by an object, the MUSH attempts to match it against a valid game command in the following order of possible commands:
 
-    Socket commands (*): QUIT, SCREENWIDTH, etc
-    Single-token commands: ", :, ;, +, \, #
-    MUX-style channel aliases, if enabled (see [muxcomm])
-    Exits in the room
-    &attribute setting
-    Regular game commands: get, inventory, `@emit`, etc
-    `@attribute` setting
-    Enter aliases
-    Leave aliases
-    User-defined commands on nearby objects. All such `$-commands` are matched and executed.
-    If there are no user-defined commands nearby:
-      If the zone of the player's location is a zone master room,
-        Zone master room exits
-        Zone master room user-defined commands
-      Else
+    Socket commands (*): QUIT, SCREENWIDTH, etc<br>
+    Single-token commands: ", :, ;, +, \, #<br>
+    MUX-style channel aliases, if enabled (see [muxcomm])<br>
+    Exits in the room<br>
+    &attribute setting<br>
+    Regular game commands: get, inventory, `@emit`, etc<br>
+    `@attribute` setting<br>
+    Enter aliases<br>
+    Leave aliases<br>
+    User-defined commands on nearby objects. All such `$-commands` are matched and executed.<br>
+    If there are no user-defined commands nearby:<br>
+      If the zone of the player's location is a zone master room,<br>
+        Zone master room exits<br>
+        Zone master room user-defined commands<br>
+      Else<br>
         User-defined commands on the zone of the player's location
 
   (*) Socket commands are only matched when the command is entered by a player directly from their client.
@@ -786,11 +786,11 @@ Standard Attributes: (see `@list/attribs` for the complete list)
   See [evaluation2]
 
 # EVALUATION2
-    If still nothing is matched:
-      User-defined commands on the player's personal zone
-    If nothing, including zone commands, has been matched:
-      Global exits
-      Global user-defined commands: all `$-commands` in the Master Room are matched. Local commands are always checked first and ALWAYS negate global commands.
+    If still nothing is matched:<br>
+      User-defined commands on the player's personal zone<br>
+    If nothing, including zone commands, has been matched:<br>
+      Global exits<br>
+      Global user-defined commands: all `$-commands` in the Master Room are matched. Local commands are always checked first and ALWAYS negate global commands.<br>
     If still nothing has matched, run huh_command to show a Huh? message
 
   Because local `$-commands` overrule global `$-commands`, you can easily prevent a global `$-command` from working in a specific room by setting a copy of the global `$-command` in that room. Alternatively, if a global `$-command` is oddly not working in a room, you should check for copies of the command word in the room (using `@scan`). Wizards who want to ensure a global `$-command` always takes precedence over a local one should use `@command`/add and `@hook`/override, to make the command run as a regular game command instead of a softcoded global.
@@ -821,25 +821,25 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # failure2
   The following failures are defined in SharpMUSH:
 
-  Failure to...                                | Lock    | Attribute
-  -------------------------------------------- | ------- | --------------------
-  "get" a player/thing, pass through an exit, or "look" in a room | Basic   | `@failure`
-  run an `$-command` on an object              | Command* | COMMAND_LOCK`FAILURE
-  use `zwho()`                                 | Zone     | ZONE_LOCK`FAILURE
-  leave your current location                  | Leave    | `@lfail`
-  "take" from an object                        | Take     | TAKE_LOCK`FAILURE
-  "drop" a thing, or drop something in a room  | Drop     | DROP_LOCK`FAILURE
-   enter an object                             | Enter    | `@efail`
-  "follow" an object                           | Follow   | FOLLOW_LOCK`FAILURE
-  "give" an object away                        | Give     | GIVE_LOCK`FAILURE
-  "give" money to or "buy" from an object      | Pay      | PAY_LOCK`FAILURE
-  "`@chzone`" something to a zone              | Chzone   | CHZONE_LOCK`FAILURE
-  "use" an object                              | Use      | `@ufail`
-  speak via say/pose/@*emit/teach in a room    | Speech   | SPEECH_LOCK`FAILURE
-  "page" or "`@pemit`" to an object            | Page     | PAGE_LOCK`FAILURE**
+  Failure to...                                | Lock    | Attribute<br>
+  -------------------------------------------- | ------- | --------------------<br>
+  "get" a player/thing, pass through an exit, or "look" in a room | Basic   | `@failure`<br>
+  run an `$-command` on an object              | Command* | COMMAND_LOCK`FAILURE<br>
+  use `zwho()`                                 | Zone     | ZONE_LOCK`FAILURE<br>
+  leave your current location                  | Leave    | `@lfail`<br>
+  "take" from an object                        | Take     | TAKE_LOCK`FAILURE<br>
+  "drop" a thing, or drop something in a room  | Drop     | DROP_LOCK`FAILURE<br>
+   enter an object                             | Enter    | `@efail`<br>
+  "follow" an object                           | Follow   | FOLLOW_LOCK`FAILURE<br>
+  "give" an object away                        | Give     | GIVE_LOCK`FAILURE<br>
+  "give" money to or "buy" from an object      | Pay      | PAY_LOCK`FAILURE<br>
+  "`@chzone`" something to a zone              | Chzone   | CHZONE_LOCK`FAILURE<br>
+  "use" an object                              | Use      | `@ufail`<br>
+  speak via say/pose/@*emit/teach in a room    | Speech   | SPEECH_LOCK`FAILURE<br>
+  "page" or "`@pemit`" to an object            | Page     | PAGE_LOCK`FAILURE**<br>
   "`@mail`" a player                           | Mail     | MAIL_LOCK`FAILURE
 
-  `*` The Use lock can also prevent you from running an `$-command`, but it will still trigger COMMAND_LOCK`FAILURE.
+  `*` The Use lock can also prevent you from running an `$-command`, but it will still trigger COMMAND_LOCK`FAILURE.<br>
   `**` `@haven` or `@away` will also be shown on failure to "page", if set
 
 # GENDER
@@ -901,15 +901,15 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # INTERIORS
   Here's a quick description of how to make things that can be entered:
 
-  `@create` Car
-  `@desc` Car=A shiny red car.
-  `@idesc` car=You are sitting inside a luxurious sportscar.
-  `@set` Car=enter_ok
-  `@oxleave` car=climbs out of the car.   { The 'ox' messages are shown to
-  `@oxenter` car=climbs into the car.     { those OUTSIDE the object.
-  `@oenter` car=joins you inside the car. { The 'o' messages are shown to
-  `@oleave` car=gets out of the car.      { those INSIDE the object
-  `@enter` car=You get into the car.      { The plain messages are shown to
+  `@create` Car<br>
+  `@desc` Car=A shiny red car.<br>
+  `@idesc` car=You are sitting inside a luxurious sportscar.<br>
+  `@set` Car=enter_ok<br>
+  `@oxleave` car=climbs out of the car.   { The 'ox' messages are shown to<br>
+  `@oxenter` car=climbs into the car.     { those OUTSIDE the object.<br>
+  `@oenter` car=joins you inside the car. { The 'o' messages are shown to<br>
+  `@oleave` car=gets out of the car.      { those INSIDE the object<br>
+  `@enter` car=You get into the car.      { The plain messages are shown to<br>
   `@leave` car=You get out of the car.    { the one entering or leaving
 
   See [interiors2]
@@ -917,11 +917,11 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # INTERIORS2
   Now, if you want people inside to be able to hear and communicate with the outside, you also need to do the following.
 
-  `@set` car=audible  (lets people outside hear what's being said in the car.
-  `@listen` car=*     (lets people inside hear what's being said outside.
-  `@prefix` car=From inside the car,
-  `@inprefix` car=From outside,
-  `@filter` car=* has arrived.,* has left.,joins you inside the car., gets out of the car.
+  `@set` car=audible  (lets people outside hear what's being said in the car.<br>
+  `@listen` car=*     (lets people inside hear what's being said outside.<br>
+  `@prefix` car=From inside the car,<br>
+  `@inprefix` car=From outside,<br>
+  `@filter` car=* has arrived.,* has left.,joins you inside the car., gets out of the car.<br>
   `@infilter` car=* has arrived.,* has left.,* climbs out of the car., * climbs into the car.
 
   (The filters will keep people on the outside from seeing the 'o' messages and people on the inside from seeing the 'ox' messages which is a good thing.)
@@ -1027,12 +1027,12 @@ Standard Attributes: (see `@list/attribs` for the complete list)
   The word "list" is used in the help files to refer to a string that is a series of smaller strings separated by one or more spaces. A list can also have its elements separated by some other kind of character -- the separating character is called the "delimiter". For example, the following are all lists:
 
     #6 #10 #14 #12
-    Rumble|Krystal|Bobatron|Rodimus Prime   ('|' is the delimiter here)
-    foo bar whee blarg
+    Rumble|Krystal|Bobatron|Rodimus Prime   ('|' is the delimiter here)<br>
+    foo bar whee blarg<br>
     -eek- .boing. yawp #5 7
 
-  Lots of MUSHCode depends on lists and manipulating them. Normally, a
-  list is made up of similar items (so the fourth list in the example
+  Lots of MUSHCode depends on lists and manipulating them. Normally, a<br>
+  list is made up of similar items (so the fourth list in the example<br>
   is NOT a typical one).
 
 **See Also:**
@@ -1068,10 +1068,10 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 - [GLOBAL COMMANDS]
 
 # ME
-  The word 'me' refers to yourself. Some things to do when starting out:
-  1) give yourself a description:       `@desc` me=`<description>`
-  2) check your desc.:                  look me
-  3) lock yourself:                     `@lock` me==me
+  The word 'me' refers to yourself. Some things to do when starting out:<br>
+  1) give yourself a description:       `@desc` me=`<description>`<br>
+  2) check your desc.:                  look me<br>
+  3) lock yourself:                     `@lock` me==me<br>
   4) set your gender:                   `@sex` me=`<male|female|neuter|plural>`
 
 **See Also:**
@@ -1110,14 +1110,14 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # MONIKERS2
   The "monikers" `@config` option should be a list of one or more of these:
 
-  chat - In `@chat` messages
-            say - Non-channel speech (say, pose, page, `@wall`, etc)
-       movement - Movement messages (Joe has arrived., exit `@osucc`/`@odrop`, etc)
-           look - "look" - contents/exit lists, when looking at an object, etc
-        unparse - In "examine", and other places which show Name(#123flags)
-            who - In WHO, DOING and SESSION
-         system - All other messages generated by the MUSH with player names.
-  announcements - Connection messages and "GAME: *" announcements.
+  chat - In `@chat` messages<br>
+            say - Non-channel speech (say, pose, page, `@wall`, etc)<br>
+       movement - Movement messages (Joe has arrived., exit `@osucc`/`@odrop`, etc)<br>
+           look - "look" - contents/exit lists, when looking at an object, etc<br>
+        unparse - In "examine", and other places which show Name(#123flags)<br>
+            who - In WHO, DOING and SESSION<br>
+         system - All other messages generated by the MUSH with player names.<br>
+  announcements - Connection messages and "GAME: *" announcements.<br>
      everywhere - All of the above.
 
   You can also limit the types of objects which monikers are used for with 'players', 'things', 'rooms', and/or 'exits'. Use 'alltypes' for all.
@@ -1145,7 +1145,7 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 
   If you would like to learn more about MUSHcoding and how to create `$-commands` for yourself, the following help files may be useful. You may also find it useful to download a copy of Amberyl's MUSH manual and follow the examples described there. However, the manual is quite old now, and some parts may no longer be relevant or entirely accurate. 
   
-  Related Help Topics (in no particular order)
+  Related Help Topics (in no particular order)<br>
   -------------------
   - [ATTRIBUTES]
   - [SUBSTITUTION]
@@ -1164,9 +1164,9 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 # NON-STANDARD ATTRIBUTES
   While there are many standard attributes in MUSH, objects can also have an enormous number of attributes, with any name you wish to use. In the past, you were limited to attributes named VA-VZ, WA-WZ, XA-XZ; these are still available as standard attributes. However, it is strongly recommended that you use non-standard attributes and meaningful names in order to make maintaining your MUSHCode easier.
 
-  To set a non-standard attribute, you can use these formats:
-      &`<attribute name>` `<obj>`=`<value>`  OR
-      `@_`<attribute_name> `<obj>`=`<value>` OR
+  To set a non-standard attribute, you can use these formats:<br>
+      &`<attribute name>` `<obj>`=`<value>`  OR<br>
+      `@_`<attribute_name> `<obj>`=`<value>` OR<br>
       `@set` `<obj>`=`<attribute_name>`:`<value>`
 
   You can get the value of attributes using the functions `v()`, `get()`, and `xget()`. You can evaluate attributes using `u()`, `eval()`, and `get_eval()`. All attributes can be used in attribute locks and can be 'owned' independent of object ownership.
@@ -1195,7 +1195,7 @@ Standard Attributes: (see `@list/attribs` for the complete list)
 
   Note that the only properties inherited are attributes and locks. In particular, flags and exits are NOT inherited from the parent object. Also, commands which walk the attribute list (such as "examine", the `LATTR()` function, the `HASATTR()` function, `@set`, and `@edit`) only affect attributes that are on the object itself, although there are variants which also check parents (examine/parent, `lattrp()`, `hasattrp()`, etc).
 
-  There are some limitations to the use of `@parent`. The most important is that ^-pattern checking is not done on the parent of an object, unless the object is set LISTEN_PARENT. For the purposes of automated game checks, the following attributes are not inherited:
+  There are some limitations to the use of `@parent`. The most important is that ^-pattern checking is not done on the parent of an object, unless the object is set LISTEN_PARENT. For the purposes of automated game checks, the following attributes are not inherited:<br>
     CHARGES, EALIAS, LALIAS, LAST, LASTSITE, LISTEN, QUEUE, RQUOTA, SEMAPHORE, and STARTUP.
 
   See [parents3]
@@ -1382,14 +1382,14 @@ See [queue2]
 
   There are two different sets of meta-characters: those that are recognized anywhere in the pattern except within square brackets, and those that are recognized in square brackets.  Outside square brackets, the meta-characters are as follows:
 
-       \      general escape character with several uses
-       ^      assert start of subject
-       $      assert end of subject
-       .      match any character except newline
+       \      general escape character with several uses<br>
+       ^      assert start of subject<br>
+       $      assert end of subject<br>
+       .      match any character except newline<br>
        [      start character class definition
        |      start of alternative branch ("or")
-       (      start subpattern
-       )      end subpattern
+       (      start subpattern<br>
+       )      end subpattern<br>
        ?      0 or 1 quantifier (after a unit to quantify) or, minimal match (after a quantifier) or, extends the meaning of ( after a (
        *      0 or more quantifier
        +      1 or more quantifier
@@ -1399,19 +1399,19 @@ See [queue2]
 # regexp syntax3
   Part of a pattern that is in square brackets is called a "character class". It matches any character listed in the class. In a character class, the only metacharacters are:
 
-       \      general escape character
+       \      general escape character<br>
        ^      negate the class, if the first character in the class
        -      indicates character range (e.g. A-Z, 0-4)
-   [:NAME:]   A symbol for a group of characters that can vary according to the language the mush is using. See [regexp classes] for more information.
+   [:NAME:]   A symbol for a group of characters that can vary according to the language the mush is using. See [regexp classes] for more information.<br>
        ]      terminates the character class
 
   A backslash will escape most metacharacters, and can turn some normal characters into generic character types:
 
-       \d     any decimal digit
-       \D     any character that is not a decimal digit
-       \s     any whitespace character
-       \S     any character that is not a whitespace character
-       \w     any "word" character (letter, digit, or underscore)
+       \d     any decimal digit<br>
+       \D     any character that is not a decimal digit<br>
+       \s     any whitespace character<br>
+       \S     any character that is not a whitespace character<br>
+       \w     any "word" character (letter, digit, or underscore)<br>
        \W     any "non-word" character
 
   Continued in '"help regexp syntax4'.
@@ -1419,10 +1419,10 @@ See [queue2]
 # regexp syntax4
   A backlash can also be used for two useful assertions -- conditions that must be met at a particular point in a match:
 
-       \b     word boundary
+       \b     word boundary<br>
        \B     not a word boundary
 
-  A word boundary is a position in the subject string where the current character and the previous character do not both match \w or \W (i.e. one matches \w and  the  other  matches \W), or the start
+  A word boundary is a position in the subject string where the current character and the previous character do not both match \w or \W (i.e. one matches \w and  the  other  matches \W), or the start<br>
   or end of the string if the first or last character matches \w, respectively.
 
   Continued in '"help regexp syntax5'.
@@ -1430,8 +1430,8 @@ See [queue2]
 # regexp syntax5
   Quantifiers specify repetition of characters. Four are available:
        *    match 0 or more of whatever came before
-       +    match 1 or more of whatever came before
-       ?    match 0 or 1 of whatever came before
+       +    match 1 or more of whatever came before<br>
+       ?    match 0 or 1 of whatever came before<br>
 	 {m,n}  match between 'm' and 'n' of whatever came before. if 'm' is omitted, it matches between 0 and 'n'. if 'n' is omitted, matches at least 'm'. Note the MUSH parser often requires escaping the braces and the comma.
 
   Quantifiers are usually greedy -- they match as much as possible. Adding a ? after a quantifier causes it to match as little as possible instead.
@@ -1472,13 +1472,13 @@ See [queue2]
 
   These keywords can be mixed with other things in the character class, like [ab[:digit:]], which will match 'a, 'b', or a digit. [:^NAME:] reverses the meaning of NAME - it expands to everything but characters that would match [:NAME:].
 
-  Some recognized NAMEs:
-   digit, for numbers. [[:digit:]] is the same as \d. [[:^digit:]] is the same as \D.
-   alpha, for letters.
-   alnum, for numbers and letters.
-   lower, for lower-case letters.
-   upper, for upper-case letters.
-   word, for word characters. [[:word:]] is the same as \w. [[:^word:]] is the same as \W.
+  Some recognized NAMEs:<br>
+   digit, for numbers. [[:digit:]] is the same as \d. [[:^digit:]] is the same as \D.<br>
+   alpha, for letters.<br>
+   alnum, for numbers and letters.<br>
+   lower, for lower-case letters.<br>
+   upper, for upper-case letters.<br>
+   word, for word characters. [[:word:]] is the same as \w. [[:^word:]] is the same as \W.<br>
    space, for whitespace characters. [[:space:]] is the same as \s. [[:^space:]] is the same as \S.
 
   See [regexp classes2]
@@ -1503,7 +1503,7 @@ See [queue2]
 
   The regexp pattern '.*' is equivalent to the wildcard '*'; it matches zero or more arbitrary characters. To match one or more arbitrary characters, the regexp pattern is '.+'.
 
-  To match a string of numbers, use:       [0-9]+    or \d+
+  To match a string of numbers, use:       [0-9]+    or \d+<br>
   To match a string of letters only, use:  [A-Za-z]+ or \w+
 
   See [regexp syntax]
@@ -1566,7 +1566,7 @@ See [queue2]
 
   and the action takes place after that number of seconds has passed. With a semaphore, you instead type:
 
-    `@wait` `<object>`=`<action>`
+    `@wait` `<object>`=`<action>`<br>
     `@wait` `<object>`/`<number of seconds before timeout>`=`<action>`
 
   and the action takes place after the object has been "notified" that its time for it to happen. You can also set a timeout -- if the object hasn't been notified by the time that number of seconds has passed, the action will take place. Any object (player, thing, exit, room) that you control or that is set LINK_OK can be used to wait actions on.
@@ -1655,14 +1655,14 @@ See [queue2]
 
 # SETTING-ATTRIBUTES
 # SETTING ATTRIBUTES
-  Standard attributes are set using @`<attrib>` `<obj>`=`<value>`
-  Nonstandard attributes are set using &`<attrib>` `<obj>`=`<value>`
+  Standard attributes are set using @`<attrib>` `<obj>`=`<value>`<br>
+  Nonstandard attributes are set using &`<attrib>` `<obj>`=`<value>`<br>
   Attributes may also be set using `@set` `<obj>`=`<attrib>`:`<value>` or the `attrib_set()` or `set()` functions.
 
   Attributes are cleared using @`<attrib>` `<obj>` or &`<attrib>` `<obj>`, `attrib_set()`, or with `@wipe` or `wipe()`.
 
-  Note that if the empty_attrs configuration option is set (`@config` empty_attrs to check), there is a difference between clearing an attribute and setting an attribute to a null value:
-    `@va` me       <--- wipes out my VA attribute
+  Note that if the empty_attrs configuration option is set (`@config` empty_attrs to check), there is a difference between clearing an attribute and setting an attribute to a null value:<br>
+    `@va` me       <--- wipes out my VA attribute<br>
     `@va` me=      <--- sets my VA attribute to be empty
 
   Empty attributes retain their flags and atrlock status. Wiped attributes are gone forever.
@@ -1721,15 +1721,15 @@ See [queue2]
 # SUBSTITUTIONS
   The % symbol is used in MUSH commands to indicate a substitution -- some other character(s) or words are substituted for whatever follows the % symbol. Some common substitutions are:
 
-     %b = a single space (just like [space(1)])
-     %r = a blank line
-     %t = A tab. Note that this may not look right on some screens.
-     %# = dbref of the ENACTOR (object that set off the command)
-     %n = the ENACTOR's name
-     %N = the ENACTOR's name, first letter capitalized
-     %~ = the ENACTOR's accented name, like accname(%#)
-     %: = the ENACTOR's unique identifier, like objid(%#)
-     %k = the ENACTOR's name, colored by `@moniker`, like moniker(%#)
+     %b = a single space (just like [space(1)])<br>
+     %r = a blank line<br>
+     %t = A tab. Note that this may not look right on some screens.<br>
+     %# = dbref of the ENACTOR (object that set off the command)<br>
+     %n = the ENACTOR's name<br>
+     %N = the ENACTOR's name, first letter capitalized<br>
+     %~ = the ENACTOR's accented name, like accname(%#)<br>
+     %: = the ENACTOR's unique identifier, like objid(%#)<br>
+     %k = the ENACTOR's name, colored by `@moniker`, like moniker(%#)<br>
      %% = a literal %
 
   Case makes a difference in all substitutions; capitalizing the first letter after the % will capitalize the first letter of the resulting substitution.
@@ -1741,18 +1741,18 @@ See [queue2]
 # %v
 # %w
 # %x
-  If the ENACTOR's gender is set, you can use these substitutions to get the
-  right pronoun for him/her:
-     %s = subjective pronoun: he, she, it, they. Same as subj(%#)
-     %o = objective pronoun: him, her, it, them. Same as obj(%#)
-     %p = possessive pronoun: his, her, its, their. Same as poss(%#).
+  If the ENACTOR's gender is set, you can use these substitutions to get the<br>
+  right pronoun for him/her:<br>
+     %s = subjective pronoun: he, she, it, they. Same as subj(%#)<br>
+     %o = objective pronoun: him, her, it, them. Same as obj(%#)<br>
+     %p = possessive pronoun: his, her, its, their. Same as poss(%#).<br>
      %a = absolute possessive: his, hers, its, theirs. Same as aposs(%#).
 
     Case makes a difference: %S will return He, She, It, They.
 
-  Some attributes can be retrieved via substitutions:
-     %va-%vz = the contents of the object's VA-VZ attributes, respectively
-     %wa-%wz, %xa-%xz = as above, for WA-WZ and XA-XZ
+  Some attributes can be retrieved via substitutions:<br>
+     %va-%vz = the contents of the object's VA-VZ attributes, respectively<br>
+     %wa-%wz, %xa-%xz = as above, for WA-WZ and XA-XZ<br>
   These are the equivilent of get(me/`<attribute>`).
 
   See [substitutions3]
@@ -1765,19 +1765,19 @@ See [queue2]
 # %?
 # %=
 # %+
-  Other substitutions:
-    %0-%9   = the contents of the REGISTERS 0-9, respectively
-    %@ = the caller's dbref number. Initially same as %#, changes when something like `ufun()` is called.
-    %! = the dbref number of the object the command is on (the EXECUTOR)
-    %L = the dbref of the ENACTOR's location
-    %c = text of the last command, _before_ evaluation
-    %u = text of the last command, after evaluation, available to locks/hooks
-    %? = The current function invocation and depth counts
-    %= = The dbref/attribute currently being evaluated
-    %+ = The number of arguments passed to the current ufun.
-    %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function
-    %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function
-    %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.
+  Other substitutions:<br>
+    %0-%9   = the contents of the REGISTERS 0-9, respectively<br>
+    %@ = the caller's dbref number. Initially same as %#, changes when something like `ufun()` is called.<br>
+    %! = the dbref number of the object the command is on (the EXECUTOR)<br>
+    %L = the dbref of the ENACTOR's location<br>
+    %c = text of the last command, _before_ evaluation<br>
+    %u = text of the last command, after evaluation, available to locks/hooks<br>
+    %? = The current function invocation and depth counts<br>
+    %= = The dbref/attribute currently being evaluated<br>
+    %+ = The number of arguments passed to the current ufun.<br>
+    %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function<br>
+    %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function<br>
+    %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`.<br>
     %`$N` = equivalent of stext(N), the `<string>` in `switch()`/`@switch`.
 
   See [substitutions4]
@@ -1840,7 +1840,7 @@ See [queue2]
 
     `@pemit`/noeval/silent me=Hi!
 
-  Help on the switches available for a command is available in the help file for that command.
+  Help on the switches available for a command is available in the help file for that command.<br>
   (If you are looking for information on `@switch`, see [`@switch`].)
 
 # TYPES OF OBJECTS
@@ -2013,21 +2013,21 @@ See [queue2]
 
   If the MUSH is configured to do so, players may receive regular warnings about potential building problems on objects that they own. The interval is set in the 'warn_interval' `@config` option; if set to 0, automatic warnings are disabled. You can also check warnings, either for a specific object or all objects you own, with `@wcheck`.
 
-  For more information, see the following help topics:
+  For more information, see the following help topics:<br>
     `@warnings`        `@wcheck`         NO_WARN         WARNINGS LIST
 
 # WARNINGS LIST
   The building warning system supports the following types of warnings:
 
-  exit-unlinked         Warn on unlinked exits
-  exit-oneway           Warn on exits with no return exit
-  exit-multiple         Warn on multiple exits from A to B
-  exit-msgs             Warn on missing succ/osucc/odrop/fail
-  exit-desc             Warn on missing description
-  room-desc             Warn on missing description
-  thing-msgs            Warn on missing succ/osucc/odrop/fail
-  thing-desc            Warn on missing description
-  my-desc               Warn on missing player description
+  exit-unlinked         Warn on unlinked exits<br>
+  exit-oneway           Warn on exits with no return exit<br>
+  exit-multiple         Warn on multiple exits from A to B<br>
+  exit-msgs             Warn on missing succ/osucc/odrop/fail<br>
+  exit-desc             Warn on missing description<br>
+  room-desc             Warn on missing description<br>
+  thing-msgs            Warn on missing succ/osucc/odrop/fail<br>
+  thing-desc            Warn on missing description<br>
+  my-desc               Warn on missing player description<br>
   lock-checks           Warn on `@lock` problems
 
   See [warnings list2]
@@ -2035,12 +2035,12 @@ See [queue2]
 # WARNINGS LIST2
   These warnings combine the functionality of multiple warnings above:
 
-  serious      exit-unlinked, thing-desc, room-desc, my-desc, lock-checks
-  normal       serious, exit-oneway, exit-multiple, exit-msgs
-  extra        normal, thing-msgs
+  serious      exit-unlinked, thing-desc, room-desc, my-desc, lock-checks<br>
+  normal       serious, exit-oneway, exit-multiple, exit-msgs<br>
+  extra        normal, thing-msgs<br>
   all          all of the above
 
-  The warning "none" indicates no warnings.
+  The warning "none" indicates no warnings.<br>
   You can exclude warnings from a larger list by using !`<warning>` after the larger list. For example: `@warnings` me=all !exit-oneway
 
 # WILDCARDS
@@ -2163,7 +2163,7 @@ See [queue2]
     * toward `<exit>` - an exit in your location
     * 1st, 2nd, etc. `<obj>` - one of a set of objects with the same names. Objects are ordered in the order in which they're listed in your inventory, room contents, and exit list (in that order). If there aren't enough objects, this will fail.	You can use an adjective with an ordinal (my 1st `<obj>`, this 2nd `<obj>`, etc)
 
-  In commands that take a list of space-separated names (like page), you'll need to enclose names with spaces in "double quotes". The same is true on the login screen. For example:
+  In commands that take a list of space-separated names (like page), you'll need to enclose names with spaces in "double quotes". The same is true on the login screen. For example:<br>
     page "Leeroy Jenkins"=Stop doing that.
 
 # &HELP
@@ -2173,14 +2173,14 @@ This is the AHELP index.
 
   Commands, functions and attributes can have their permission levels controlled in the mush config files, or by wizards from the game via `@command`, `@function` and `@attribute`.
 
-  In the config file, the syntax is:
-    restrict_command `<command-name>` `<restriction>` [" `<error message>`]
-    restrict_function `<function-name>` `<restriction>`
+  In the config file, the syntax is:<br>
+    restrict_command `<command-name>` `<restriction>` [" `<error message>`]<br>
+    restrict_function `<function-name>` `<restriction>`<br>
     restrict_attribute `<attribute-name>` `<restriction>`
 
-  From the game:
-    `@command`/restrict `<command-name>`=`<restriction>` [" `<error message>`]
-    `@function`/restrict `<function-name>`=`<restriction>`
+  From the game:<br>
+    `@command`/restrict `<command-name>`=`<restriction>` [" `<error message>`]<br>
+    `@function`/restrict `<function-name>`=`<restriction>`<br>
     `@attribute`/access `<attribute-name>`=`<restriction>`
 
   For commands, if `<error message>` is given, that message is sent to the player who runs it instead of a generic, unhelpful error message.
@@ -2191,25 +2191,25 @@ This is the AHELP index.
 
   For commands, `<restriction>` should be an `@lock`-style boolexp (though, for backwards compatability, the restrictions below can be used, and will be converted into an `@lock` automatically). For functions, `<restriction>` should be any combination of the phrases below. For attributes, `<restriction>` is a list of attribute flags, or "none" to create a standard attribute with no restrictions (see [attribute flags]).
 
-    god        Command or function is usable only by God.
-    wizard     Usable only by wizards.
-    admin      Usable only by Wiz/Roy.
-    nogagged   Usable only by non-GAGGED objects.
-    nofixed    Usable only by non-FIXED objects.
-    noguest    Usable only by non-guest `@powered` objects.
-    nobody     Nothing can use it. Same as the /disable switch to `@command` or `@function`.
-    logname    When used, log cmd/fun name, and who is using it
+    god        Command or function is usable only by God.<br>
+    wizard     Usable only by wizards.<br>
+    admin      Usable only by Wiz/Roy.<br>
+    nogagged   Usable only by non-GAGGED objects.<br>
+    nofixed    Usable only by non-FIXED objects.<br>
+    noguest    Usable only by non-guest `@powered` objects.<br>
+    nobody     Nothing can use it. Same as the /disable switch to `@command` or `@function`.<br>
+    logname    When used, log cmd/fun name, and who is using it<br>
     logargs    When used, log cmd/fun name and args, and who is using it
 
-  Functions only:
-    noparse    Function arguments are not evaluated. Only applies to `@functions`.
-    localize   %q-registers are saved/restored when evaluating, as if the `@function` were wrapped in `localize()`.
-    userfn     Function can only be called from within an `@function`.
-    nosidefx   Don't allow side-effects for this function. See also the function_side_effects `@config` option.
+  Functions only:<br>
+    noparse    Function arguments are not evaluated. Only applies to `@functions`.<br>
+    localize   %q-registers are saved/restored when evaluating, as if the `@function` were wrapped in `localize()`.<br>
+    userfn     Function can only be called from within an `@function`.<br>
+    nosidefx   Don't allow side-effects for this function. See also the function_side_effects `@config` option.<br>
     deprecated This function should no longer be used. Warns the executor's owner whenever someone uses the function.
 
-  Commands only:
-     noplayer   Cannot be used by players.
+  Commands only:<br>
+     noplayer   Cannot be used by players.<br>
   Commands can also give any flag, power or type, to restrict to objects with one of those flags or powers, or of one of those types.
 
   See [restrict3]
