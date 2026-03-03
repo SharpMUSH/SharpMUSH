@@ -120,11 +120,10 @@ public static class LoggingConfiguration
 	{
 		return new Dictionary<string, LogEventLevel>
 		{
-			// Reduce noise from caching library
 			["ZiggyCreatures.Caching.Fusion"] = LogEventLevel.Error,
-			// Reduce noise from ASP.NET Core
 			["Microsoft.AspNetCore"] = LogEventLevel.Warning,
-			["Microsoft.Hosting.Lifetime"] = LogEventLevel.Information
+			["Microsoft.Hosting.Lifetime"] = LogEventLevel.Information,
+			["TelnetNegotiationCore"] = LogEventLevel.Information
 		};
 	}
 }
