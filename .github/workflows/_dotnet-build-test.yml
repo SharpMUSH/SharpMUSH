@@ -29,6 +29,9 @@ jobs:
   test:
     needs: [build]
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [arangodb, memgraph]
 
     steps:
       - uses: actions/checkout@v4
@@ -46,10 +49,11 @@ jobs:
       - name: Build
         run: dotnet build --no-restore
 
-      - name: Test
+      - name: Test (${{ matrix.database }})
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
+          SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
         run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
 
       - name: Publish Telemetry to Summary
@@ -67,6 +71,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-telemetry
+          name: test-telemetry-${{ matrix.database }}
           path: test-telemetry.md
           if-no-files-found: ignore
