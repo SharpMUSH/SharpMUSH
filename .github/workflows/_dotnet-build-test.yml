@@ -7,34 +7,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.x
-          cache: true
-          cache-dependency-path: '**/*.csproj'
-
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: '**/bin/'
-          retention-days: 1
-
   test:
-    needs: [build]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -53,13 +26,8 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4.1.3
-        with:
-          name: build-artifacts
-
-      - name: Restore execute permissions
-        run: find . -path '*/bin/*' -type f ! -name '*.dll' ! -name '*.pdb' ! -name '*.json' ! -name '*.xml' -exec chmod +x {} +
+      - name: Build
+        run: dotnet build --no-restore
 
       - name: Test (${{ matrix.database }})
         env:
