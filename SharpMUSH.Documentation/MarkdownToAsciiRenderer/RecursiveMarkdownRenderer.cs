@@ -146,10 +146,7 @@ public partial class RecursiveMarkdownRenderer
 			.Select(child => Render(child))
 			.Where(IsNonWhitespace)
 			.ToList();
-		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
-		return parts.Count > 1
-			? MModule.concat(content, MModule.single("\n"))
-			: content;
+		return MModule.multipleWithDelimiter(MModule.single("\n\n"), parts);
 	}
 
 	private MString RenderInlines(Inline? inline)

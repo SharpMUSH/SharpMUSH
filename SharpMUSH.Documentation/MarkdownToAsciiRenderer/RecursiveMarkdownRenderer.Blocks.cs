@@ -20,8 +20,11 @@ public partial class RecursiveMarkdownRenderer
 
 	private MString RenderParagraph(ParagraphBlock para)
 	{
-		// Paragraph blocks contain inline elements in the Inline property
-		return RenderInlines(para.Inline);
+		// Paragraph blocks contain inline elements in the Inline property.
+		// Trim trailing whitespace because EnableTrackTrivia appends a soft
+		// LineBreakInline (rendered as " ") at the end of many paragraphs.
+		var content = RenderInlines(para.Inline);
+		return MModule.trim(content, MModule.single(" "), trimType: MModule.TrimType.TrimEnd);
 	}
 
 	private MString RenderList(ListBlock list)
@@ -74,18 +77,17 @@ public partial class RecursiveMarkdownRenderer
 
 		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
 
-		// Add 2-space indentation to each line
+		// Add 2-space indentation to each line via plain-text split.
+		// TextAlignerModule.align cannot be used here because it expects exactly
+		// N items for an N-column spec; parts has a variable count.
 		var plainText = content.ToPlainText();
 		if (string.IsNullOrEmpty(plainText)) return MModule.empty();
 
-		var indentedLines = TextAlignerModule.align(
-			$"1 <{_maxWidth}",
-			parts,
-			MModule.single(" "),
-			MModule.single(" "),
-			MModule.single("\n")
-		);
-		return indentedLines;
+		var lines = plainText.Split('\n');
+		var indentedParts = lines
+			.Select(line => MModule.single("  " + line))
+			.ToList();
+		return MModule.multipleWithDelimiter(MModule.single("\n"), indentedParts);
 	}
 
 	private MString RenderThematicBreak()
