@@ -48,6 +48,10 @@ public class StartupHandler(
 		{
 			await messageBus.Publish(new MainProcessShutdownMessage(DateTimeOffset.UtcNow, "Server shutting down"), cancellationToken);
 		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			logger.LogDebug("Shutdown message publishing cancelled.");
+		}
 		catch (Exception ex)
 		{
 			logger.LogWarning(ex, "Failed to publish MainProcessShutdownMessage during shutdown");

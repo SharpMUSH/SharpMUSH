@@ -25,9 +25,6 @@ public class WebSocketClientService : IWebSocketClientService
 	/// <summary>Messages queued for sending while disconnected.</summary>
 	private readonly ConcurrentQueue<string> _sendBuffer = new();
 
-	/// <summary>Maximum reconnection attempts before giving up (0 = unlimited).</summary>
-	private const int MaxReconnectAttempts = 0;
-
 	/// <summary>Initial delay between reconnection attempts.</summary>
 	private static readonly TimeSpan InitialReconnectDelay = TimeSpan.FromSeconds(1);
 
@@ -115,7 +112,11 @@ public class WebSocketClientService : IWebSocketClientService
 					_cancellationTokenSource?.Token ?? CancellationToken.None);
 				return;
 			}
-			catch (Exception ex)
+			catch (OperationCanceledException)
+			{
+				throw;
+			}
+			catch (WebSocketException ex)
 			{
 				_logger.LogWarning(ex, "Failed to send message, buffering for retry");
 			}
@@ -208,6 +209,10 @@ public class WebSocketClientService : IWebSocketClientService
 				{
 					await ReconnectAsync();
 				}
+				catch (OperationCanceledException)
+				{
+					// Expected during intentional disconnect
+				}
 				catch (Exception ex)
 				{
 					_logger.LogError(ex, "Unhandled exception during WebSocket reconnection");
@@ -221,7 +226,7 @@ public class WebSocketClientService : IWebSocketClientService
 		var delay = InitialReconnectDelay;
 		var attempt = 0;
 
-		while (!_intentionalDisconnect && (MaxReconnectAttempts == 0 || attempt < MaxReconnectAttempts))
+		while (!_intentionalDisconnect)
 		{
 			attempt++;
 			_logger.LogInformation("Attempting reconnection (attempt {Attempt}, delay {Delay}s)...",
@@ -239,7 +244,11 @@ public class WebSocketClientService : IWebSocketClientService
 					return;
 				}
 			}
-			catch (Exception ex)
+			catch (OperationCanceledException)
+			{
+				_logger.LogDebug("Reconnection attempt {Attempt} cancelled", attempt);
+			}
+			catch (WebSocketException ex)
 			{
 				_logger.LogWarning(ex, "Reconnection attempt {Attempt} failed", attempt);
 			}
@@ -248,7 +257,7 @@ public class WebSocketClientService : IWebSocketClientService
 			delay = TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, MaxReconnectDelay.Ticks));
 		}
 
-		_logger.LogError("Failed to reconnect after {Attempts} attempts.", attempt);
+		_logger.LogInformation("Reconnection stopped after {Attempts} attempt(s) due to intentional disconnect.", attempt);
 	}
 
 	private async Task FlushSendBufferAsync()
@@ -266,7 +275,19 @@ public class WebSocketClientService : IWebSocketClientService
 					true,
 					_cancellationTokenSource?.Token ?? CancellationToken.None);
 			}
-			catch (Exception ex)
+			catch (OperationCanceledException)
+			{
+				if (_sendBuffer.Count < MaxBufferedMessages)
+				{
+					_sendBuffer.Enqueue(message);
+				}
+				else
+				{
+					_logger.LogWarning("Send buffer full, dropping message during flush");
+				}
+				break;
+			}
+			catch (WebSocketException ex)
 			{
 				_logger.LogWarning(ex, "Failed to flush buffered message");
 				if (_sendBuffer.Count < MaxBufferedMessages)

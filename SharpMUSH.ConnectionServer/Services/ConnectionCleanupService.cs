@@ -36,6 +36,10 @@ public class ConnectionCleanupService(
 					await stateStore.RemoveConnectionAsync(handle, cancellationToken);
 					logger.LogDebug("Removed stale connection state for handle {Handle}.", handle);
 				}
+				catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+				{
+					throw;
+				}
 				catch (Exception ex)
 				{
 					logger.LogWarning(ex, "Failed to remove stale connection state for handle {Handle}.", handle);
@@ -43,6 +47,10 @@ public class ConnectionCleanupService(
 			}
 
 			logger.LogInformation("Stale connection state purge completed. Removed {Count} entries.", handleList.Count);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			throw;
 		}
 		catch (Exception ex)
 		{
