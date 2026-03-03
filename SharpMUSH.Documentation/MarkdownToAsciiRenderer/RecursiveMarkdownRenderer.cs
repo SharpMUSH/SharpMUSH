@@ -128,11 +128,14 @@ public partial class RecursiveMarkdownRenderer
 		};
 	}
 
+	private static bool IsNonWhitespace(MString rendered)
+		=> rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText());
+
 	private MString RenderContainerBlock(ContainerBlock container)
 	{
 		var parts = container
 			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
+			.Where(IsNonWhitespace)
 			.ToList();
 		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
 	}
@@ -141,7 +144,7 @@ public partial class RecursiveMarkdownRenderer
 	{
 		var parts = doc
 			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0 && !string.IsNullOrWhiteSpace(rendered.ToPlainText()))
+			.Where(IsNonWhitespace)
 			.ToList();
 		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
 		return parts.Count > 1
@@ -167,6 +170,11 @@ public partial class RecursiveMarkdownRenderer
 	private MString RenderContainerInline(ContainerInline container)
 	=> RenderInlines(container.FirstChild);
 
+	// Soft line breaks (IsHard=false) are word-wrap points in Markdown and should
+	// render as spaces in terminal output, not newlines. EnableTrackTrivia appends
+	// them to every paragraph; rendering them as "\n" would produce double-newlines
+	// between document blocks. Only hard breaks (two trailing spaces or backslash)
+	// produce actual newlines.
 	private MString RenderLineBreak(LineBreakInline lineBreak)
 	=> lineBreak.IsHard ? MModule.single("\n") : MModule.single(" ");
 }
