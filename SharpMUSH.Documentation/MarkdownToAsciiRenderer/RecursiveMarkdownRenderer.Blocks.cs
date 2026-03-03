@@ -98,9 +98,13 @@ public partial class RecursiveMarkdownRenderer
 			return MModule.empty();
 
 		var tagName = ExtractTagName(htmlContent);
+		var textContent = ExtractHtmlBlockContent(htmlContent, tagName);
+		if (string.IsNullOrWhiteSpace(textContent))
+			return MModule.empty();
+
 		var ansi = ConvertHtmlTagToAnsi(htmlContent, tagName);
 		return ansi is not null
-			? MModule.markupSingle(ansi, "")
-			: MModule.empty();
+			? MModule.markupSingle(ansi, textContent)
+			: MModule.single(textContent);
 	}
 }

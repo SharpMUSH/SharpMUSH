@@ -417,6 +417,19 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
+	public async Task RenderHtmlBlock_ShouldPreserveContent()
+	{
+		// Arrange - <div> is a block-level tag, parsed as HtmlBlock by Markdig
+		var markdown = "<div>block content</div>";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - text content must be preserved
+		await Assert.That(result.ToPlainText()).IsEqualTo("block content");
+	}
+
+	[Test]
 	public async Task RenderCodeBlock_WithJsonLanguage_ShouldApplyAnsiColours()
 	{
 		// Arrange - JSON fenced block with a key and a number
