@@ -590,6 +590,89 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(plainText).Contains("A");
 		await Assert.That(plainText).Contains("B");
 	}
+
+	[Test]
+	public async Task RenderHeading_H1_ShouldApplyBoldUnderlineWhite()
+	{
+		// Arrange
+		var markdown = "# test";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text is preserved
+		await Assert.That(result.ToPlainText()).IsEqualTo("test");
+
+		// Verify ANSI formatting is present: Bold + Underline + White foreground
+		var ansi = result.ToString();
+		await Assert.That(ansi.Contains(Bold)).IsTrue();
+		await Assert.That(ansi.Contains(Underlined)).IsTrue();
+		await Assert.That(ansi.Contains(Foreground(255, 255, 255))).IsTrue();
+		// "test" must appear after all the ANSI formatting codes
+		var textIdx = ansi.IndexOf("test");
+		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Bold));
+		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
+		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Foreground(255, 255, 255)));
+	}
+
+	[Test]
+	public async Task RenderHeading_H2_ShouldApplyBoldUnderlineWhite()
+	{
+		// Arrange
+		var markdown = "## heading two";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text is preserved
+		await Assert.That(result.ToPlainText()).IsEqualTo("heading two");
+
+		// H2 uses same _headingStyle as H1: Bold + Underline + White
+		var ansi = result.ToString();
+		await Assert.That(ansi.Contains(Bold)).IsTrue();
+		await Assert.That(ansi.Contains(Underlined)).IsTrue();
+		await Assert.That(ansi.Contains(Foreground(255, 255, 255))).IsTrue();
+		// "heading two" must appear after all the ANSI formatting codes
+		var textIdx = ansi.IndexOf("heading two");
+		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Bold));
+		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
+		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Foreground(255, 255, 255)));
+	}
+
+	[Test]
+	public async Task RenderHeading_H3_ShouldApplyUnderlineWhiteWithoutBold()
+	{
+		// Arrange
+		var markdown = "### heading three";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text is preserved
+		await Assert.That(result.ToPlainText()).IsEqualTo("heading three");
+
+		// H3 uses _heading3Style: Underline + White (no bold)
+		var ansi = result.ToString();
+		await Assert.That(ansi.Contains(Underlined)).IsTrue();
+		await Assert.That(ansi.Contains(Foreground(255, 255, 255))).IsTrue();
+		// "heading three" must appear after the ANSI formatting codes
+		var textIdx = ansi.IndexOf("heading three");
+		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Underlined));
+		await Assert.That(textIdx).IsGreaterThan(ansi.IndexOf(Foreground(255, 255, 255)));
+	}
+
+	[Test]
+	public async Task RenderHeading_H4_ShouldRenderPlainText()
+	{
+		// Arrange
+		var markdown = "#### heading four";
+
+		// Act
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		// Assert - plain text is preserved, no bold/underline for H4+
+		await Assert.That(result.ToPlainText()).IsEqualTo("heading four");
+	}
 }
 
 /// <summary>
