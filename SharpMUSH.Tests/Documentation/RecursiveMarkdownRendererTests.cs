@@ -7,7 +7,9 @@ public class RecursiveMarkdownRendererTests
 	private const string CSI = "\u001b[";
 	private const string Bold = "\u001b[1m";
 	private const string Faint = "\u001b[2m";
+	private const string Italic = "\u001b[3m";
 	private const string Underlined = "\u001b[4m";
+	private const string StrikeThrough = "\u001b[9m";
 	private const string Clear = "\u001b[0m";
 	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
 
@@ -369,7 +371,7 @@ public class RecursiveMarkdownRendererTests
 
 		// Assert - HTML tags stripped and ANSI italic markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is italic text");
-		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+		await Assert.That(result.ToString().Contains(Italic)).IsTrue();
 	}
 
 	[Test]
@@ -395,9 +397,9 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags stripped and ANSI colour markup applied
+		// Assert - HTML tags stripped and ANSI colour markup applied (red = 255,0,0)
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
-		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+		await Assert.That(result.ToString().Contains(Foreground(255, 0, 0))).IsTrue();
 	}
 
 	[Test]
@@ -409,9 +411,9 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags stripped and ANSI colour markup applied
+		// Assert - HTML tags stripped and ANSI colour markup applied (red = 255,0,0)
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
-		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
+		await Assert.That(result.ToString().Contains(Foreground(255, 0, 0))).IsTrue();
 	}
 
 	[Test]

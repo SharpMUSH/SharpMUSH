@@ -137,8 +137,7 @@ public partial class RecursiveMarkdownRenderer
 			toRemove = next;
 		}
 
-		var content = MModule.multiple(contentParts);
-		return MModule.markupMultiple(ansi, [content]);
+		return MModule.markupMultiple(ansi, contentParts);
 	}
 
 	private MString RenderHtmlEntity(HtmlEntityInline entity)
