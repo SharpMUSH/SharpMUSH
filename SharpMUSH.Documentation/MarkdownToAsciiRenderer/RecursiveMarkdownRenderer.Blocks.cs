@@ -94,6 +94,13 @@ public partial class RecursiveMarkdownRenderer
 	private MString RenderHtmlBlock(HtmlBlock html)
 	{
 		var htmlContent = string.Join("\n", html.Lines.Lines.Select(line => line.Slice.ToString()));
-		return ParseHtmlToAnsi(htmlContent);
+		if (string.IsNullOrWhiteSpace(htmlContent))
+			return MModule.empty();
+
+		var tagName = ExtractTagName(htmlContent);
+		var ansi = ConvertHtmlTagToAnsi(htmlContent, tagName);
+		return ansi is not null
+			? MModule.markupSingle(ansi, "")
+			: MModule.empty();
 	}
 }

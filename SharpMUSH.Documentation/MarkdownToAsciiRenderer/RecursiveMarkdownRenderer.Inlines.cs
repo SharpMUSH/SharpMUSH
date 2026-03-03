@@ -96,11 +96,49 @@ public partial class RecursiveMarkdownRenderer
 
 	private MString RenderHtmlInline(HtmlInline html)
 	{
-		// HTML inline tags are not fully supported in the recursive renderer.
-		// They would require matching opening/closing tags to properly wrap content with markup.
-		// For now, just skip the tags themselves. The content between tags is rendered separately
-		// by Markdig as literal inlines, so it will still appear in the output.
-		return MModule.empty();
+		var tag = html.Tag;
+		if (string.IsNullOrWhiteSpace(tag) || tag.StartsWith("</"))
+			return MModule.empty();
+
+		var tagName = ExtractTagName(tag);
+		var ansi = ConvertHtmlTagToAnsi(tag, tagName);
+		if (ansi is null)
+			return MModule.empty();
+
+		// Collect sibling content until the matching closing tag, then wrap with markup.
+		var closingTag = $"</{tagName}>";
+		var contentParts = new List<MString>();
+		var sibling = html.NextSibling;
+		Inline? closingNode = null;
+		while (sibling != null)
+		{
+			if (sibling is HtmlInline closeHtml &&
+				closeHtml.Tag.Equals(closingTag, StringComparison.OrdinalIgnoreCase))
+			{
+				closingNode = sibling;
+				break;
+			}
+			contentParts.Add(Render(sibling));
+			sibling = sibling.NextSibling;
+		}
+
+		if (closingNode is null)
+			return MModule.empty();
+
+		// Remove rendered siblings from the inline chain so they are not rendered again.
+		// Walk from html.NextSibling up to and including closingNode, unlinking each.
+		var toRemove = html.NextSibling;
+		while (toRemove != null)
+		{
+			var next = toRemove.NextSibling;
+			var wasClosing = ReferenceEquals(toRemove, closingNode);
+			toRemove.Remove();
+			if (wasClosing) break;
+			toRemove = next;
+		}
+
+		var content = MModule.multiple(contentParts);
+		return MModule.markupMultiple(ansi, [content]);
 	}
 
 	private MString RenderHtmlEntity(HtmlEntityInline entity)

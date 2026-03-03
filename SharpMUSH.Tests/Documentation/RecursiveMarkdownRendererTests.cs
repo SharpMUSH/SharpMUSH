@@ -345,7 +345,7 @@ public class RecursiveMarkdownRendererTests
 	}
 
 	[Test]
-	public async Task RenderHtml_BoldTag_ShouldStripTags()
+	public async Task RenderHtml_BoldTag_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = "This is <b>bold</b> text";
@@ -353,12 +353,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped, leaving just the content
+		// Assert - HTML tags stripped and ANSI bold markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is bold text");
+		await Assert.That(result.ToString().Contains(Bold)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_ItalicTag_ShouldStripTags()
+	public async Task RenderHtml_ItalicTag_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = "This is <i>italic</i> text";
@@ -366,12 +367,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
+		// Assert - HTML tags stripped and ANSI italic markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is italic text");
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_UnderlineTag_ShouldStripTags()
+	public async Task RenderHtml_UnderlineTag_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = "This is <u>underlined</u> text";
@@ -379,12 +381,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
+		// Assert - HTML tags stripped and ANSI underline markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is underlined text");
+		await Assert.That(result.ToString().Contains(Underlined)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_FontColorTag_ShouldStripTags()
+	public async Task RenderHtml_FontColorTag_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = @"This is <font color=""red"">red</font> text";
@@ -392,12 +395,13 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
+		// Assert - HTML tags stripped and ANSI colour markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
 	}
 
 	[Test]
-	public async Task RenderHtml_SpanWithStyle_ShouldStripTags()
+	public async Task RenderHtml_SpanWithStyle_ShouldApplyMarkup()
 	{
 		// Arrange
 		var markdown = @"This is <span style=""color: #FF0000"">red</span> text";
@@ -405,8 +409,9 @@ public class RecursiveMarkdownRendererTests
 		// Act
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		// Assert - HTML tags should be stripped
+		// Assert - HTML tags stripped and ANSI colour markup applied
 		await Assert.That(result.ToPlainText()).IsEqualTo("This is red text");
+		await Assert.That(result.ToString().Contains(ESC)).IsTrue();
 	}
 
 	[Test]

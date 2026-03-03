@@ -1,6 +1,5 @@
 using ANSILibrary;
 using System.Drawing;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -8,20 +7,22 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 public partial class RecursiveMarkdownRenderer
 {
 	/// <summary>
-	/// Parses HTML tags and converts them to ANSI markup.
-	/// Supports basic color tags, bold, italic, underline, etc.
+	/// Converts an HTML tag name and attributes to an <see cref="Ansi"/> markup object.
+	/// Returns <c>null</c> when the tag is not recognised.
 	/// </summary>
-	private MString ParseHtmlToAnsi(string tag)
+	private Ansi? ConvertHtmlTagToAnsi(string tag, string tagName)
 	{
-		if (string.IsNullOrWhiteSpace(tag))
-			return MModule.empty();
-
-		var tagName = ExtractTagName(tag);
-		var ansiCode = ConvertHtmlTagToAnsiCode(tag, tagName);
-
-		return string.IsNullOrEmpty(ansiCode)
-			? MModule.empty()
-			: MModule.single(ansiCode);
+		return tagName switch
+		{
+			"b" or "strong" => Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true),
+			"i" or "em" => Ansi.Create(italic: true),
+			"u" => Ansi.Create(underlined: true),
+			"s" or "strike" or "del" => Ansi.Create(strikeThrough: true),
+			"font" => ParseFontTagToAnsi(tag),
+			"span" => ParseSpanTagToAnsi(tag),
+			"color" => ParseColorTagToAnsi(tag),
+			_ => null
+		};
 	}
 
 	private string ExtractTagName(string tag)
@@ -35,24 +36,7 @@ public partial class RecursiveMarkdownRenderer
 		return tag[start..end].ToLowerInvariant();
 	}
 
-	private string ConvertHtmlTagToAnsiCode(string tag, string tagName)
-	{
-		// TODO: This should work on MStrings, as such, this is a bad method.
-		// This should use recursion instead, and be aware of its contents.
-		return tagName switch
-		{
-			"b" or "strong" => ANSI.Bold + ANSI.Foreground(ANSI.AnsiColor.NewRGB(Color.White)),
-			"i" or "em" => ANSI.Italic,
-			"u" => ANSI.Underlined,
-			"s" or "strike" or "del" => ANSI.StrikeThrough,
-			"font" => ParseFontTagToAnsiCode(tag),
-			"span" => ParseSpanTagToAnsiCode(tag),
-			"color" => ParseColorTagToAnsiCode(tag),
-			_ => ""
-		};
-	}
-
-	private string ParseFontTagToAnsiCode(string tag)
+	private Ansi? ParseFontTagToAnsi(string tag)
 	{
 		// Extract color attribute: <font color="red"> or <font color="#FF0000">
 		var colorMatch = ColorAttributeRegex.Match(tag);
@@ -61,46 +45,40 @@ public partial class RecursiveMarkdownRenderer
 			var color = ParseColorValue(colorMatch.Groups[1].Value);
 			if (color.HasValue)
 			{
-				return ANSI.Foreground(ANSI.AnsiColor.NewRGB(color.Value));
+				return Ansi.Create(foreground: StringExtensions.rgb(color.Value));
 			}
 		}
-		return "";
+		return null;
 	}
 
-	private string ParseSpanTagToAnsiCode(string tag)
+	private Ansi? ParseSpanTagToAnsi(string tag)
 	{
 		// Extract style attribute: <span style="color: red"> or <span style="background-color: blue">
 		var styleMatch = StyleAttributeRegex.Match(tag);
-		if (styleMatch.Success)
-		{
-			var style = styleMatch.Groups[1].Value;
+		if (!styleMatch.Success)
+			return null;
 
-			// Parse color
-			var colorMatch = StyleColorRegex.Match(style);
-			var bgColorMatch = StyleBackgroundColorRegex.Match(style);
+		var style = styleMatch.Groups[1].Value;
 
-			var result = new StringBuilder();
+		var colorMatch = StyleColorRegex.Match(style);
+		var bgColorMatch = StyleBackgroundColorRegex.Match(style);
 
-			if (colorMatch.Success)
-			{
-				var fg = ParseColorValue(colorMatch.Groups[1].Value.Trim());
-				if (fg.HasValue)
-					result.Append(ANSI.Foreground(ANSI.AnsiColor.NewRGB(fg.Value)));
-			}
+		var fg = colorMatch.Success ? ParseColorValue(colorMatch.Groups[1].Value.Trim()) : null;
+		var bg = bgColorMatch.Success ? ParseColorValue(bgColorMatch.Groups[1].Value.Trim()) : null;
 
-			if (bgColorMatch.Success)
-			{
-				var bg = ParseColorValue(bgColorMatch.Groups[1].Value.Trim());
-				if (bg.HasValue)
-					result.Append(ANSI.Background(ANSI.AnsiColor.NewRGB(bg.Value)));
-			}
+		if (fg is null && bg is null)
+			return null;
 
-			return result.ToString();
-		}
-		return "";
+		if (fg.HasValue && bg.HasValue)
+			return Ansi.Create(
+				foreground: StringExtensions.rgb(fg.Value),
+				background: StringExtensions.rgb(bg.Value));
+		if (fg.HasValue)
+			return Ansi.Create(foreground: StringExtensions.rgb(fg.Value));
+		return Ansi.Create(background: StringExtensions.rgb(bg!.Value));
 	}
 
-	private string ParseColorTagToAnsiCode(string tag)
+	private Ansi? ParseColorTagToAnsi(string tag)
 	{
 		// Extract color value: <color red> or <color #FF0000>
 		var match = ColorTagRegex.Match(tag);
@@ -108,9 +86,9 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var color = ParseColorValue(match.Groups[1].Value.Trim());
 			if (color.HasValue)
-				return ANSI.Foreground(ANSI.AnsiColor.NewRGB(color.Value));
+				return Ansi.Create(foreground: StringExtensions.rgb(color.Value));
 		}
-		return "";
+		return null;
 	}
 
 	private Color? ParseColorValue(string colorStr)
