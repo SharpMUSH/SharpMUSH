@@ -359,6 +359,7 @@ public partial class Commands
 	[SharpCommand(Name = "QUIT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		var handle = parser.CurrentState.Handle!.Value;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
 
@@ -369,7 +370,15 @@ public partial class Commands
 			await NotifyService!.Notify(executor, quitText);
 		}
 
-		await ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
+		// Clean up Server-side connection state
+		await ConnectionService!.Disconnect(handle);
+
+		// Tell ConnectionServer to close the actual socket connection
+		if (MessageBus != null)
+		{
+			await MessageBus.Publish(new DisconnectConnectionMessage(handle, "QUIT"));
+		}
+
 		return new None();
 	}
 

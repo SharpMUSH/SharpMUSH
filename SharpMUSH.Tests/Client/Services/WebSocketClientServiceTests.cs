@@ -35,19 +35,17 @@ public class WebSocketClientServiceTests
 	}
 
 	[Test]
-	public async Task SendAsync_WhenNotConnected_ThrowsInvalidOperationException()
+	public async Task SendAsync_WhenNotConnected_BuffersMessage()
 	{
 		// Arrange
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
 		var service = new WebSocketClientService(logger);
 
-		// Act & Assert
-		var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-		{
-			await service.SendAsync("test message");
-		});
+		// Act - Should buffer the message instead of throwing
+		await service.SendAsync("test message");
 
-		await Assert.That(exception).IsNotNull();
+		// Assert - Service should still be disconnected (message is buffered for later)
+		await Assert.That(service.IsConnected).IsFalse();
 	}
 
 	[Test]
@@ -129,16 +127,16 @@ public class WebSocketClientServiceTests
 	}
 
 	[Test]
-	public async Task SendAsync_WithEmptyMessage_DoesNotThrowWhenDisconnected()
+	public async Task SendAsync_WithEmptyMessage_BuffersWhenDisconnected()
 	{
 		// Arrange
 		var logger = Substitute.For<ILogger<WebSocketClientService>>();
 		var service = new WebSocketClientService(logger);
 
-		// Act & Assert - Should throw because not connected
-		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-		{
-			await service.SendAsync("");
-		});
+		// Act - Should buffer the empty message instead of throwing
+		await service.SendAsync("");
+
+		// Assert - Service should still be disconnected (message is buffered for later)
+		await Assert.That(service.IsConnected).IsFalse();
 	}
 }

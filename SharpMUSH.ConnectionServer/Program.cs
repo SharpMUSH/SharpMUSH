@@ -26,8 +26,12 @@ public class Program
 
 		try
 		{
-			// Enable WebSocket support
-			app.UseWebSockets();
+			// Enable WebSocket support with keep-alive to detect dropped connections
+			var webSocketOptions = new WebSocketOptions
+			{
+				KeepAliveInterval = TimeSpan.FromSeconds(30)
+			};
+			app.UseWebSockets(webSocketOptions);
 			var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
 			app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
 
@@ -111,6 +115,9 @@ public class Program
 		// Add health monitoring service
 		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
 
+		// Add startup cleanup service to purge stale connection state
+		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.ConnectionCleanupService>();
+
 		// Configure NATS messaging (URL resolved lazily for the same reason as above)
 		builder.Services.AddNatsConnectionServerMessaging(
 			options =>
@@ -127,6 +134,8 @@ public class Program
 				x.AddConsumer<UpdatePlayerPreferencesConsumer>();
 				x.AddConsumer<WebSocketOutputConsumer>();
 				x.AddConsumer<WebSocketPromptConsumer>();
+				x.AddConsumer<MainProcessReadyConsumer>();
+				x.AddConsumer<MainProcessShutdownConsumer>();
 			});
 
 		// Configure Kestrel to listen for Telnet and WebSocket connections
