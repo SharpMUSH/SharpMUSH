@@ -462,7 +462,7 @@ public class RecursiveMarkdownRenderer
 
 		var combined = MModule.multiple(parts);
 
-		var trimmed = MModule.trim(combined, MModule.single(" "), trimType: MModule.TrimType.TrimBoth);
+		var trimmed = MModule.trim(combined, MModule.single(" \n"), trimType: MModule.TrimType.TrimBoth);
 		return trimmed;
 	}
 
@@ -479,14 +479,9 @@ public class RecursiveMarkdownRenderer
 		var plainText = content.ToPlainText();
 		if (string.IsNullOrEmpty(plainText)) return MModule.empty();
 
-		var indentedLines = TextAlignerModule.align(
-			$"1 <{_maxWidth}",
-			parts,
-			MModule.single(" "),
-			MModule.single(" "),
-			MModule.single("\n")
-		);
-		return indentedLines;
+		var lines = plainText.Split('\n');
+		var indentedLines = lines.Select(line => MModule.single("  " + line));
+		return MModule.multipleWithDelimiter(MModule.single("\n"), indentedLines);
 	}
 
 	private MString RenderThematicBreak()
