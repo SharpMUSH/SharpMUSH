@@ -1,18 +1,18 @@
 # help
 This is the index to the MUSH online help files.
 
-  For an explanation of the help system, type:    help newbie
-  For a walkthrough of SharpMUSH systems, type:   help getting started
-  For help finding the helpfile you want:         help helpfile
+  For an explanation of the help system, type:    help [newbie]
+  For a walkthrough of SharpMUSH systems, type:   help [getting started]
+  For help finding the helpfile you want:         help [helpfile]
 
-  For the list of MUSH commands, type:            help commands
-  For the list of MUSH topics, type:              help topics
-  For an alphabetical list of all help entries:   help entries
-  For information about SharpMUSH:                help code
+  For the list of MUSH commands, type:            help [commands]
+  For the list of MUSH topics, type:              help [topics]
+  For an alphabetical list of all help entries:   help [entries]
+  For information about SharpMUSH:                help [code]
 
-  For a list of flags:                            help flag list
-  For a list of functions:                        help function list
-  For a list of attributes:                       help attribute list
+  For a list of flags:                            help [flag list]
+  For a list of functions:                        help [function list]
+  For a list of attributes:                       help [attribute list]
   To see the configuration of this MUSH:          `@config`
 
   On many MUSHes, list local commands with:       `+help`
@@ -141,7 +141,6 @@ This is the index to the MUSH online help files.
 
   It's also sometimes possible to teleport from one room to another, using the '`@teleport`' command. However, most new players on a game probably won't be able to do that - it's mentioned here only for completeness.
 
-
 **See Also:**
 - [goto]
 - [home]
@@ -154,14 +153,18 @@ This is the index to the MUSH online help files.
   You can talk to others in the room with you (those listed in the 'Contents' of the room) in a number of ways. The easiest is to use the 'say' command.
 
   For example, when you type:
+  ```sharp
     say Hello!
+  ```
   you'll see:
     You say, "Hello!"
   and everyone else in the room will see:
     Lisa says, "Hello!"
 
   You can abbreviate the command to just:
+  ```sharp
     "Hello!
+  ```
   if you wish; it works exactly the same.
 
   See [gs talking2]
@@ -248,7 +251,9 @@ This is the index to the MUSH online help files.
 
   You can send a message to more than one person at a time, just include the names of all the people you want to send to in `<recipients>`. The `<subject>` is optional. For example:
 
-    `@mail` qa'toq anne=Test/Hi! This is a test message!
+    ```sharp
+    @mail qa'toq anne=Test/Hi! This is a test message!
+    ```
 
   You can do other, slightly more complex things with the mail system, too, like filing your messages into different folders. See [`@mail`] for more information.
 
@@ -414,9 +419,19 @@ For a list of all topics, see [entries].
 # LAMBDA FUNCTIONS
   The following functions support anonymous attributes:
 
-  filter()    filterbool()   fold()      foreach()   map()      mapsql()
-  mix()       munge()        namelist()  sortby()    sortkey()  speak()
-  `step()`
+  - [filter()]
+  - [filterbool()]
+  - [fold()]
+  - [foreach()]
+  - [map()]
+  - [mapsql()]
+  - [mix()]
+  - [munge()]
+  - [namelist()]
+  - [sortby()]
+  - [sortkey()]
+  - [speak()]
+  - [step()]
 
 # ATTRIB-OWNERSHIP
   ATTRIBUTE OWNERSHIP
@@ -426,7 +441,6 @@ For a list of all topics, see [entries].
   Attribute ownership is NOT changed when the object itself is `@chown`'ed. To change attribute ownership, you must use the `@atrchown` command.
 
   You must control an object in order to set attributes on it.
-
 
 **See Also:**
 - [@atrlock]
@@ -439,7 +453,7 @@ For a list of all topics, see [entries].
 # ATTRIBUTE LIST
   Attributes with (*) after them are special, cannot be set by players, and may only be visible to wizards or admin. For those attributes, there is no @-command, so you can just type 'help `<attribute name>`' for help. For all other attributes, type 'help @`<attribute name>`' for help.
 
-Standard Attributes: (see `@list`/attribs for the complete list)
+Standard Attributes: (see `@list/attribs` for the complete list)
   AAHEAR        ACLONE        ACONNECT      ADESCRIBE     ADISCONNECT
   ADROP         AEFAIL        AENTER        AFAILURE      AHEAR
   ALEAVE        ALFAIL        AMHEAR        AMOVE         APAYMENT
@@ -471,9 +485,13 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Any attribute name can be shortened, but a shorter forms run the risk of conflicting with other attribute names. This could result in you setting an unwanted attribute.
 
   For example:
-    `@adesc` me=think %n looks at you.
+  ```sharp
+    @adesc me=think %n looks at you.
+  ```
   will set your ADESCRIBE attribute just as
-    `@adescribe` me=think %n looks at you.
+  ```sharp
+    @adescribe`me=think %n looks at you.
+  ```
   would.
 
   To see the attributes that are set on you or on any of the objects you own, you should use the "examine" command. See [examine].
@@ -484,7 +502,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   Attributes can be owned by someone other than the object they are set on. This allows the person to change the content of just that attribute while not the rest of the object. Attributes can also be locked, which prevents them from being changed by anyone.
 
   In addition to the standard attributes with pre-set effects, there are some special attributes that date from the days before you could set non-standard attributes with any name you wanted. These are the attributes VA-VZ, WA-WZ, XA-XZ. These attributes have no pre-set effects, and were just to allow players to store any text or MUSHcode that they wished in those attributes. Now that non-standard attributes are available, it is highly recommended that you instead use them, since you can use longer and descriptive names for attributes, which makes it much easier to examine and work on objects.
-
 
 **See Also:**
 - [ATTRIB-OWNERSHIP]
@@ -500,7 +517,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [ATTRIBUTE TREES]
 
 # BOOLEAN VALUES
-
   A boolean variable, for those of you not familiar with programming, is a variable that is either true or false. Normally, a value of 1 is considered "true" and a value of 0 is considered "false". Many MUSH functions return either 1 if they are true or 0 if false. For example, the `hasflag()` function tests to see if an object has a certain flag set on it. If hasflag(`<object>`,`<flag name>`) is true (the object has the flag), it will return 1. If it is false, it will return 0.
 
   Other functions expect to operate on boolean values. What they consider "true" or "false", however, depends on the setting of the "tiny_booleans" config option (`@config` tiny will show this).
@@ -528,7 +544,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   See [boolean3]
 
 # BOOLEAN3
-
   Examples (assuming tiny_booleans is "no"):
     not(foo) = 0
     not(`<null string>`) = 1
@@ -550,19 +565,18 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   Here is a list of common clients and the web sites where they can be found.  Please note that the below sites are subject to change. The below are listed solely for your information and possible benefit. The developers of SharpMUSH have nothing to do with the clients. Except for Potato, which is made by Mike. Not that this is a shameless plug. Noooo. Carry on.
 
-  OPERATING
-  SYSTEM          CLIENT      WEB SITE
-  -----------------------------------------------------------------------
-  UNIX            Tinyfugue   http://tinyfugue.sourceforge.net
-                  Potato      http://www.potatomushclient.com
-  WINDOWS         MUSHClient  http://www.mushclient.com
-                  SimpleMU    http://simplemu.onlineroleplay.com
-                  MuckClient  http://www.xcalibur.co.uk/MuckClient/
-                  Potato      http://www.potatomushclient.com
-  MAC OS X        Savitar     http://www.heynow.com/Savitar/
-                  Atlantis    http://www.riverdark.net/atlantis/
-                  Potato      http://www.potatomushclient.com
-                  Unix clients will also run on OS X.
+  | OPERATING SYSTEM | CLIENT      | WEB SITE                              |
+  |------------------|-------------|---------------------------------------|
+  | UNIX             | Tinyfugue   | http://tinyfugue.sourceforge.net      |
+  |                  | Potato      | http://www.potatomushclient.com       |
+  | WINDOWS          | MUSHClient  | http://www.mushclient.com             |
+  |                  | MuckClient  | http://www.xcalibur.co.uk/MuckClient/ |
+  |                  | Potato      | http://www.potatomushclient.com       |
+  |                  | BeipMU      | http://www.beipmu.com (Recommended)   |
+  | MAC OS X         | Savitar     | http://www.heynow.com/Savitar/        |
+  |                  | Atlantis    | http://www.riverdark.net/atlantis/    |
+  |                  | Potato      | http://www.potatomushclient.com       |
+  |                  | Unix clients will also run on OS X. |               |
 
 # CONTROL
   Controlling an object basically means that you have the power to change the object's characteristics such as flags and attributes. It may also mean that you have the ability to destroy it.
@@ -596,11 +610,11 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # COSTS
   Some things on the MUSH cost pennies. The default costs are shown below:
 
-          `@dig`: 10 pennies
-          `@create`: 10 pennies (or more)
-          `@search`: 100 pennies *
-          `@link`: 1 penny (if you didn't already own it, +1 to the previous owner)
-          `@open`: 1 penny (2 pennies if linked at the same time)
+    `@dig`: 10 pennies
+    `@create`: 10 pennies (or more)
+    `@search`: 100 pennies *
+    `@link`: 1 penny (if you didn't already own it, +1 to the previous owner)
+    `@open`: 1 penny (2 pennies if linked at the same time)
 
   Type '`@config`/list costs' to get the costs for the MUSH you are on.
 
@@ -611,15 +625,9 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [score]
 
 # CREDITS
-  Maintainer: Raevnos [SW]
-  Developers: Greg Millam [GM], Mike Griffiths [MG], Intrevis, Tim Krajcar/Rince [TK]
-  Past Porters: Nick Gammon [NJG] (win32), Dan Williams [DW] (MacOS), Sylvia (OS/2)
-  Former developers: Rhyanna [RLM], Trivian [TN], Halatir [LdW], Talek [TAP], Javelin, Ervin Hearn III [EEH]
+  Developers: Mercutio (Harry Cordewener)
 
-  The original TinyMUSH 1.0 code was written by Lawrence Foard, and was based upon James Aspnes' TinyMUD server. Since then, the code has been modified by the programmers of MicroMUSE (then MicroMUSH), and Joseph Traub (Moonchilde of PernMUSH). From January 1992 to January 1995, Lydia Leong (Amberyl of PernMUSH / Polgara of Belgariad) maintained the code currently known as SharpMUSH 1.50. From January 1995 until July 2006, Alan Schwartz (Paul of DuneMUSH / Javelin elsewhere) maintained this code, along with a development team. From July 2006 on, Raevnos has been the maintainer.
-
-  Big thanks to the developers of TinyMUSH 2.0, 2.2 [2.2], 3.0 [3], MUX2, and Rhost [Rhost] servers, as well as to the players of Belgariad MUSH, DuneMUSH, and M*U*S*H, and everyone else using this server!
-
+  Big thanks to the developers of PennMUSH and all of the history it is derived from, as well as most of these helpfiles.
 
 **See Also:**
 - [code]
@@ -638,7 +646,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   See [dbref2]
 
 # DBREF2
-
   If you own or control an object, you will see its dbref number listed right after its name when you look at it (unless you are set MYOPIC).
 
 
@@ -648,9 +655,8 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     Cyclonus(#3PWenAMc)
     A very short desc.
 ```
-```
+  
   The dbref number is indicated by the number/pound sign (#). Cyclonus's dbref is #3. The letters following the dbref are the abbreviations of the flags set on the object. NOTE: the abbreviation of the OPAQUE flag is 'O' (o), which looks like '0' (zero) on some clients. Make sure you have the right number before using it in your code!
-```
 
 **See Also:**
 - [MYOPIC]
@@ -661,7 +667,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 # OBJIDS
 # OBJECT IDS
-
   When an object is destroyed, its dbref number will eventually be recycled and given to a newly created object. This can cause problems in code, particularly in database code which stores members of a group, as code which was meant to refer to the old object ends up referring to the new one by mistake.
 
   To avoid this problem, you can use the "object id", or objid, instead of the dbref. An object id consists of the object's dbref, a colon, and then the object's creation time. Objids can be used anywhere dbrefs can and, because the creation time is different each time the dbref is recycled, the objid is totally unique to each object.
@@ -676,15 +681,13 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 # DROP-TOS
 # DROPTOS
-
   When you use the `@link` command on a room, it sets another room or object as the DROP-TO location. By default, any non-STICKY object that someone drops in the room will automatically be transported to the drop-to location, rather than staying in the room. Any STICKY object dropped in the room will go to its home.
 
   If the room is set STICKY, objects will stay in the room until the last player leaves or disconnects, at which point they will be transported as described above.
 
   Drop-tos work on things and players alike.
 
-  If the room has a `@lock`/dropto set on it, only objects that pass the lock will be transported (either immediately or when the last player leaves if the room is STICKY). This can be used to prevent the dropto from acting on, say, objects containing connected players.
-
+  If the room has a `@lock/dropto` set on it, only objects that pass the lock will be transported (either immediately or when the last player leaves if the room is STICKY). This can be used to prevent the dropto from acting on, say, objects containing connected players.
 
 **See Also:**
 - [@link]
@@ -705,11 +708,10 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     %n = the enactor's name
     %~ = the enactor's accented name
     %k = the enactor's name, colored by their `@moniker` (if any)
-    %: = the enactor's unique identifier, like objid(%#)
-    %a, %o, %p, %s = pronoun substitutions, based on the enactor's `@sex`. See [gender] for more information.
+    %: = the enactor's unique identifier, like `objid(%#)`
+    %a, %o, %p, %s = pronoun substitutions, by default based on the enactor's `@sex`. See [gender] for more information.
 
   If, for example, you have an `@osuccess` on an object that includes the %n subtitution, whenever someone picks up the object, that %n will evaluate to the name of the enactor (the person who typed 'get `<object>`' in this case).
-
 
 **See Also:**
 - [EXECUTOR]
@@ -734,7 +736,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   In the first case, Cyclonus directly entered the command and was therefore both the enactor and the executor. In the second, Cyclonus set off the command on the box, so Cyclonus was still the enactor, but the box was the object that was actually doing the `@emit`, and was thus the executor.
 
-
 **See Also:**
 - [ENACTOR]
 - [CALLER]
@@ -744,7 +745,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # CALLER
   The caller is the object which causes an attribute to be evaluated (for instance, by using `ufun()` or a similar function). The substitution %@ evaluates to the caller's dbref. It's particularly useful for functions with side-effects, to check that the object evaluating the function has permission.
 
-
   Example:
 ```sharp
     > &cmd_test Foo=$test: @emit ufun(Bar/fun_test)
@@ -752,6 +752,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
     > test
     Mike(#5) typed 'test', and Foo(#6) ufun()'d this!
 ```
+
 ```sharp
     > &wizfun Foo=if(hasflag(%@, Wizard), ufun(wizfun2), #-1 Sorry)
 ```
@@ -794,7 +795,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   Because local `$-commands` overrule global `$-commands`, you can easily prevent a global `$-command` from working in a specific room by setting a copy of the global `$-command` in that room. Alternatively, if a global `$-command` is oddly not working in a room, you should check for copies of the command word in the room (using `@scan`). Wizards who want to ensure a global `$-command` always takes precedence over a local one should use `@command`/add and `@hook`/override, to make the command run as a regular game command instead of a softcoded global.
 
-
 **See Also:**
 - [@command]
 - [@hook]
@@ -821,34 +821,32 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # failure2
   The following failures are defined in SharpMUSH:
 
-  Failure to...                                 Lock     Attribute
-  --------------------------------------------- -------- --------------------
-  "get" a player/thing, pass through an exit,   Basic    `@failure`
-    or "look" in a room
-  run an `$-command` on an object                 Command* COMMAND_LOCK`FAILURE
-  use `zwho()`                                    Zone     ZONE_LOCK`FAILURE
-  leave your current location                   Leave    `@lfail`
-  "take" from an object                         Take     TAKE_LOCK`FAILURE
-  "drop" a thing, or drop something in a room   Drop     DROP_LOCK`FAILURE
-   enter an object                              Enter    `@efail`
-  "follow" an object                            Follow   FOLLOW_LOCK`FAILURE
-  "give" an object away                         Give     GIVE_LOCK`FAILURE
-  "give" money to or "buy" from an object       Pay      PAY_LOCK`FAILURE
-  "`@chzone`" something to a zone                 Chzone   CHZONE_LOCK`FAILURE
-  "use" an object                               Use      `@ufail`
-  speak via say/pose/@*emit/teach in a room     Speech   SPEECH_LOCK`FAILURE
-  "page" or "`@pemit`" to an object               Page     PAGE_LOCK`FAILURE**
-  "`@mail`" a player                              Mail     MAIL_LOCK`FAILURE
+  Failure to...                                | Lock    | Attribute
+  -------------------------------------------- | ------- | --------------------
+  "get" a player/thing, pass through an exit, or "look" in a room | Basic   | `@failure`
+  run an `$-command` on an object              | Command* | COMMAND_LOCK`FAILURE
+  use `zwho()`                                 | Zone     | ZONE_LOCK`FAILURE
+  leave your current location                  | Leave    | `@lfail`
+  "take" from an object                        | Take     | TAKE_LOCK`FAILURE
+  "drop" a thing, or drop something in a room  | Drop     | DROP_LOCK`FAILURE
+   enter an object                             | Enter    | `@efail`
+  "follow" an object                           | Follow   | FOLLOW_LOCK`FAILURE
+  "give" an object away                        | Give     | GIVE_LOCK`FAILURE
+  "give" money to or "buy" from an object      | Pay      | PAY_LOCK`FAILURE
+  "`@chzone`" something to a zone              | Chzone   | CHZONE_LOCK`FAILURE
+  "use" an object                              | Use      | `@ufail`
+  speak via say/pose/@*emit/teach in a room    | Speech   | SPEECH_LOCK`FAILURE
+  "page" or "`@pemit`" to an object            | Page     | PAGE_LOCK`FAILURE**
+  "`@mail`" a player                           | Mail     | MAIL_LOCK`FAILURE
 
-  * The Use lock can also prevent you from running an `$-command`, but it will still trigger COMMAND_LOCK`FAILURE.
-  ** `@haven` or `@away` will also be shown on failure to "page", if set
+  `*` The Use lock can also prevent you from running an `$-command`, but it will still trigger COMMAND_LOCK`FAILURE.
+  `**` `@haven` or `@away` will also be shown on failure to "page", if set
 
 # GENDER
 # SEX
   Gender on a MUSH is entirely up to you. You can set yourself (or any of your objects) to be male, female, neuter, or plural. If whatever is in the SEX attribute is not recognizable, the MUSH will assume the object is neuter. Setting a gender attribute will enable pronoun substitution by the MUSH. The SEX attribute is visual to anyone who wants to see it.
 
   The `obj()`, `subj()`, `poss()` and `aposs()` functions return different pronouns for an object based on its `@sex`, and the %o, %s, %p and %a substitutions return the same pronouns for the enactor.
-
 
 **See Also:**
 - [@sex]
@@ -857,7 +855,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # GLOBALS
 # GLOBAL COMMANDS
   A command is "global" if it can be used anywhere in the world of the MUSH. The standard/built-in MUSH commands are all global, so this term is usually used to refer to user-defined commands on objects in the Master Room of the MUSH. Global commands very greatly from MUSH to MUSH, but you can usually find MUSH-specific help on them by typing "`+help`".
-
 
 **See Also:**
 - [MASTER ROOM]
@@ -870,7 +867,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 ```sharp
     > @name here=<new name>
 ```
-
 
 **See Also:**
 - [MATCHING]
@@ -891,7 +887,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   The home of an exit is its source (the room it's located in). You can change the home/source of an exit by `@teleporting` it to another room.
 
   The home of a room is its drop-to.
-
 
 **See Also:**
 - [DROP-TOS]
@@ -948,7 +943,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   These attributes show the last times you connected and disconnected from the MUSH.
 
-
 **See Also:**
 - [LASTSITE]
 
@@ -958,14 +952,12 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   The LASTSITE attribute gives the name of the site you last connected from. The LASTIP attribute gives the IP address you last connected from. Mortals cannot set them.
 
-
 **See Also:**
 - [LAST]
 
 # LINKING
 
   You can link to a room if you control it, or if it is set LINK_OK or ABODE. Being able to link means you can set the homes of objects or yourself to that room if it is set ABODE, and can set the destination of exits to that room if it is LINK_OK.
-
 
 **See Also:**
 - [LINK_OK]
@@ -1021,7 +1013,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   Listen patterns are checked after the object's normal `@listen` attribute.
 
-
 **See Also:**
 - [@listen]
 - [@ahear]
@@ -1044,7 +1035,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   list is made up of similar items (so the fourth list in the example
   is NOT a typical one).
 
-
 **See Also:**
 - [STRINGS]
 - [List Functions]
@@ -1053,13 +1043,13 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 # LOOPING
   Looping in an object can have its good parts and its bad parts. The good part is when you activate part of a program multiple times to exhaustively perform an operation. This can be done like this:
 
-    &PART1 object=`<action list>` ; `@trigger` me/PART2
-    &PART2 object= `@select` `<test for being done>`=`<false>`,`@trigger` me/PART1
-
+  ```sharp
+    &PART1 object=<action list> ; @trigger me/PART2
+    &PART2 object=@select <test for being done>=<false>,@trigger me/PART1
+  ```
   Looping can be a problem when it goes on without stopping. The `@ps` command can be used to see if you are looping. Beware! A looping machine that isn't `@halt`'d will drain your pennies while you are away from the mush!
 
   The `@retry` and `@include` commands, and %= substitution, can also be useful for building code which needs to loop.
-
 
 **See Also:**
 - [@ps]
@@ -1073,7 +1063,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   The Master Room enables global commands and exits. Exits in the Master Room may be used from any location on the MUSH. All objects left in the Master Room are checked for user-defined `$-commands`. Those `$-commands` are considered global, meaning that they can be used anywhere on the MUSH. Normally, only wizards will have access to the Master Room; if you have a global command that you would like to see enabled for the MUSH, speak to a wizard.
 
-
 **See Also:**
 - [EVALUATION]
 - [GLOBAL COMMANDS]
@@ -1084,7 +1073,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   2) check your desc.:                  look me
   3) lock yourself:                     `@lock` me==me
   4) set your gender:                   `@sex` me=`<male|female|neuter|plural>`
-
 
 **See Also:**
 - [NEWBIE]
@@ -1113,7 +1101,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 - [money()]
 
 # MONIKERS
-
   Monikers are ansi templates which allow objects to have colored names. They can be set via the `@moniker` command, and can always be viewed via the `moniker()` function and %k substitution. Monikers may also be used automatically by MUSH commands, depending on how the "monikers" `@config` option is set.
 
   By default, anyone can use the `@moniker` command to set a moniker for themselves or their objects. However, where monikers are displayed - and for what types of objects - is controlled via the "monikers" `@config` option.
@@ -1121,7 +1108,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
   See [monikers2]
 
 # MONIKERS2
-
   The "monikers" `@config` option should be a list of one or more of these:
 
   chat - In `@chat` messages
@@ -1142,7 +1128,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
   You can use !`<value>` to remove something, so 'everywhere !who' shows monikers everywhere except in WHO, '!everywhere !alltypes' will disable them entirely, etc.
 
-
 **See Also:**
 - [@moniker]
 - [moniker()]
@@ -1150,7 +1135,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 
 # MUSHCODE
 # SOFTCODE
-
   MUSHcode is the programming language available within the MUSH itself with which you can create user-defined commands and macros. It is sometimes called "softcode" to distinguish it from "hardcode", which is the language that the source code for the MUSH server is written in. (Incidentally, hardcode is written in the C programming language.)
 
   At its most basic, writing MUSHcode is just stringing together a series of commands that you would otherwise just type in one at a time. You can store MUSHcode in attributes on any type of object you own or control (including yourself!). The series of commands can be triggered by using a user-defined command or by using `@trigger`.
@@ -1239,6 +1223,7 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 ```sharp
     > &CHECK Bar=$check:@emit No, I'm the parent! ([name(me)])
 ```
+
 ```
     > check
     I'm the child (Foo)
@@ -1301,7 +1286,6 @@ Standard Attributes: (see `@list`/attribs for the complete list)
 ```
 
   To have an object relay things it hears to players other than its owner, use `@forwardlist`.
-
 
 **See Also:**
 - [PUPPET]

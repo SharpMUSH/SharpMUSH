@@ -9,6 +9,7 @@ using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Microsoft.FSharp.Core;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.MarkupString;
 using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -24,6 +25,7 @@ public class RecursiveMarkdownRenderer
 {
 	private readonly Ansi _dimStyle = Ansi.Create(faint: true);
 	private readonly Ansi _boldStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), bold: true);
+	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
 	private readonly Ansi _headingStyle = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true, bold: true);
 	private readonly Ansi _heading3Style = Ansi.Create(foreground: StringExtensions.rgb(Color.White), underlined: true);
 	private readonly int _maxWidth;
@@ -49,7 +51,7 @@ public class RecursiveMarkdownRenderer
 	private static readonly ReaderWriterLockSlim _colorCodeLock = new();
 	private static readonly Lazy<LanguageParser> ColorCodeParser = new(() =>
 	{
-		var compiler = new LanguageCompiler(new Dictionary<string, CompiledLanguage>(), _colorCodeLock);
+		var compiler = new LanguageCompiler([], _colorCodeLock);
 		var repo = new LanguageRepository(Languages.All.ToDictionary(l => l.Id, l => l));
 		return new LanguageParser(compiler, repo);
 	});
@@ -217,7 +219,7 @@ public class RecursiveMarkdownRenderer
 	{
 		var contentWidth = Math.Max(1, _maxWidth - 2); // 1 (gutter col) + 1 (separator)
 		var allContent = MModule.multipleWithDelimiter(MModule.single("\n"), lineContents);
-		return SharpMUSH.MarkupString.TextAlignerModule.align(
+		return TextAlignerModule.align(
 			$"1 <{contentWidth}",
 			[MModule.empty(), allContent],
 			MModule.single(" "),    // filler = space
@@ -266,7 +268,7 @@ public class RecursiveMarkdownRenderer
 	private static void WriteColorCodeScopes(string text, IList<Scope> scopes, List<MString> parts)
 	{
 		var ordered = scopes.OrderBy(s => s.Index).ToList();
-		int offset = 0;
+		var offset = 0;
 
 		foreach (var scope in ordered)
 		{
@@ -357,7 +359,7 @@ public class RecursiveMarkdownRenderer
 		var styledLines = sourceLines.Select(line =>
 		{
 			var content = BuildSharpLineContent(line);
-			var aligned = SharpMUSH.MarkupString.TextAlignerModule.align(
+			var aligned = TextAlignerModule.align(
 				$"1 <{contentWidth}",
 				[MModule.empty(), content],
 				MModule.single(" "),
@@ -458,19 +460,16 @@ public class RecursiveMarkdownRenderer
 			.Where(rendered => rendered.Length > 0)
 			.ToList();
 
-		// Join list item blocks without newlines between them
 		var combined = MModule.multiple(parts);
 
-		// Trim leading/trailing whitespace from the plain text and recreate MString
-		// This removes extra spaces that Markdig might preserve from markdown formatting
-		var trimmed = combined.ToPlainText().Trim();
-		return MModule.single(trimmed);
+		var trimmed = MModule.trim(combined, MModule.single(" "), trimType: MModule.TrimType.TrimBoth);
+		return trimmed;
 	}
 
 	protected virtual MString RenderQuote(QuoteBlock quote)
 	{
 		var parts = quote
-			.Select(child => Render(child))
+			.Select(Render)
 			.Where(rendered => rendered.Length > 0)
 			.ToList();
 
@@ -480,19 +479,21 @@ public class RecursiveMarkdownRenderer
 		var plainText = content.ToPlainText();
 		if (string.IsNullOrEmpty(plainText)) return MModule.empty();
 
-		var lines = plainText.Split('\n');
-		var indentedLines = lines.Select(line => MModule.single("  " + line));
-		return MModule.multipleWithDelimiter(MModule.single("\n"), indentedLines);
+		var indentedLines = TextAlignerModule.align(
+			$"1 <{_maxWidth}",
+			parts,
+			MModule.single(" "),
+			MModule.single(" "),
+			MModule.single("\n")
+		);
+		return indentedLines;
 	}
 
 	private MString RenderThematicBreak()
-	{
-		return MModule.markupSingle(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
-	}
+		=> MModule.markupSingle(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
 
 	private MString RenderHtmlBlock(HtmlBlock html)
 	{
-		// Parse HTML block and convert to ANSI markup
 		var htmlContent = string.Join("\n", html.Lines.Lines.Select(line => line.Slice.ToString()));
 		return ParseHtmlToAnsi(htmlContent);
 	}
@@ -501,7 +502,6 @@ public class RecursiveMarkdownRenderer
 	{
 		var borderStyle = _dimStyle;
 
-		// Collect all rows with their cell contents using LINQ
 		var allRows = table
 			.OfType<TableRow>()
 			.Select(row => (
@@ -518,7 +518,7 @@ public class RecursiveMarkdownRenderer
 		var columnCount = allRows.Max(r => r.Cells.Count);
 		var columnWidths = new int[columnCount];
 
-		for (int col = 0; col < columnCount; col++)
+		for (var col = 0; col < columnCount; col++)
 		{
 			columnWidths[col] = allRows.Max(r => col < r.Cells.Count ? r.Cells[col].ToPlainText().Length : 0);
 			columnWidths[col] = Math.Max(columnWidths[col], 3);
@@ -540,7 +540,7 @@ public class RecursiveMarkdownRenderer
 
 			if (totalBorderlessWidth > borderlessAvailable && borderlessAvailable > columnCount * 3)
 			{
-				for (int col = 0; col < columnCount; col++)
+				for (var col = 0; col < columnCount; col++)
 				{
 					var proportion = (double)columnWidths[col] / totalBorderlessWidth;
 					columnWidths[col] = Math.Max(3, (int)(borderlessAvailable * proportion));
@@ -549,7 +549,7 @@ public class RecursiveMarkdownRenderer
 			else if (totalBorderlessWidth < borderlessAvailable)
 			{
 				var extraSpace = borderlessAvailable - totalBorderlessWidth;
-				for (int col = 0; col < columnCount; col++)
+				for (var col = 0; col < columnCount; col++)
 				{
 					var proportion = (double)columnWidths[col] / totalBorderlessWidth;
 					columnWidths[col] += (int)(extraSpace * proportion);
@@ -557,7 +557,7 @@ public class RecursiveMarkdownRenderer
 			}
 
 			var borderlessSpecs = new StringBuilder();
-			for (int col = 0; col < columnCount; col++)
+			for (var col = 0; col < columnCount; col++)
 			{
 				if (col > 0) borderlessSpecs.Append(' ');
 				borderlessSpecs.Append('<');
@@ -566,7 +566,7 @@ public class RecursiveMarkdownRenderer
 
 			var borderlessRows = allRows
 				.Where(r => !r.IsHeader)
-				.Select(r => SharpMUSH.MarkupString.TextAlignerModule.align(
+				.Select(r => TextAlignerModule.align(
 					borderlessSpecs.ToString(),
 					r.Cells,
 					MModule.single(" "),
@@ -589,7 +589,7 @@ public class RecursiveMarkdownRenderer
 		if (totalWidth > availableWidth && availableWidth > columnCount * 3)
 		{
 			// Scale down column widths proportionally when table is too wide
-			for (int col = 0; col < columnCount; col++)
+			for (var col = 0; col < columnCount; col++)
 			{
 				var proportion = (double)columnWidths[col] / totalWidth;
 				columnWidths[col] = Math.Max(3, (int)(availableWidth * proportion));
@@ -599,7 +599,7 @@ public class RecursiveMarkdownRenderer
 		{
 			// Expand columns proportionally to fit the available width for nice spacing
 			var extraSpace = availableWidth - totalWidth;
-			for (int col = 0; col < columnCount; col++)
+			for (var col = 0; col < columnCount; col++)
 			{
 				var proportion = (double)columnWidths[col] / totalWidth;
 				columnWidths[col] += (int)(extraSpace * proportion);
@@ -608,7 +608,7 @@ public class RecursiveMarkdownRenderer
 
 		// Build column specifications with alignment
 		var columnSpecs = new StringBuilder();
-		for (int col = 0; col < columnCount; col++)
+		for (var col = 0; col < columnCount; col++)
 		{
 			if (col > 0) columnSpecs.Append(' ');
 
@@ -630,12 +630,12 @@ public class RecursiveMarkdownRenderer
 
 		// Render each row
 		var renderedRows = new List<MString>();
-		for (int rowIndex = 0; rowIndex < allRows.Count; rowIndex++)
+		for (var rowIndex = 0; rowIndex < allRows.Count; rowIndex++)
 		{
 			var (isHeader, cells) = allRows[rowIndex];
 
 			// Use TextAlignerModule to align the cells
-			var alignedRow = SharpMUSH.MarkupString.TextAlignerModule.align(
+			var alignedRow = TextAlignerModule.align(
 				columnSpecs.ToString(),
 				cells,
 				MModule.single(" "),
@@ -657,7 +657,7 @@ public class RecursiveMarkdownRenderer
 			{
 				var separator = new StringBuilder();
 				separator.Append("|");
-				for (int col = 0; col < columnCount; col++)
+				for (var col = 0; col < columnCount; col++)
 				{
 					separator.Append('-', columnWidths[col] + 2);
 					separator.Append('|');
@@ -669,24 +669,14 @@ public class RecursiveMarkdownRenderer
 		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedRows);
 	}
 
-	private MString RenderTableRow(TableRow row)
-	{
-		// Rows are handled by RenderTable for proper alignment
-		return MModule.empty();
-	}
+	// Rows are handled by RenderTable for proper alignment
+	private MString RenderTableRow(TableRow _)
+		=> MModule.empty();
 
 	private MString RenderTableCell(TableCell cell)
-	{
-		var parts = cell
-			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0)
-			.ToList();
-
-		// Join cell blocks without newlines between them
-		return MModule.multiple(parts);
-	}
-
-	// Inline renderers
+		=> MModule.multiple(cell
+			.Select(Render)
+			.Where(rendered => rendered.Length > 0));
 
 	private MString RenderInlines(Inline? inline)
 	{
@@ -703,25 +693,21 @@ public class RecursiveMarkdownRenderer
 		return MModule.multiple(parts);
 	}
 
-
 	private MString RenderContainerInline(ContainerInline container)
-	{
-		// ContainerInline has FirstChild - render all children
-		return RenderInlines(container.FirstChild);
-	}
+		=> RenderInlines(container.FirstChild);
 
 	private MString RenderLiteral(LiteralInline literal)
 	{
-		// StringSlice.ToString() handles the conversion properly
 		var text = literal.Content.ToString();
-		return string.IsNullOrEmpty(text) ? MModule.empty() : MModule.single(text);
+		return string.IsNullOrEmpty(text)
+			? MModule.empty()
+			: MModule.single(text);
 	}
 
 	private MString RenderCodeInline(CodeInline code)
-	{
-		// Code content is a string, not StringSlice
-		return string.IsNullOrEmpty(code.Content) ? MModule.empty() : RenderInlineCode(code);
-	}
+		=> string.IsNullOrEmpty(code.Content)
+			? MModule.empty()
+			: RenderInlineCode(code);
 
 	private MString RenderEmphasis(EmphasisInline emphasis)
 	{
@@ -744,42 +730,28 @@ public class RecursiveMarkdownRenderer
 	/// Render bold text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderBold(MString content)
-	{
-		// Apply bold style to the content's plain text
-		return MModule.markupSingle(_boldStyle, content.ToPlainText());
-	}
+		=> MModule.markupSingle(_boldStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render italic text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderItalic(MString content)
-	{
-		// Default uses same style as bold (ANSI italic support varies)
-		// Apply italic (displayed as bold) to the content's plain text
-		return MModule.markupSingle(_boldStyle, content.ToPlainText());
-	}
+		=> MModule.markupSingle(_boldStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render underlined text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderUnderline(MString content)
-	{
-		var underlineStyle = Ansi.Create(underlined: true);
-		return MModule.markupSingle(underlineStyle, content.ToPlainText());
-	}
+		=> MModule.markupSingle(_underlineStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render inline code. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderInlineCode(CodeInline code)
-	{
-		return MModule.markupSingle(InlineCodeStyle, code.Content);
-	}
+		=> MModule.markupSingle(InlineCodeStyle, code.Content);
 
 	private MString RenderLineBreak()
-	{
-		return MModule.single("\n");
-	}
+		=> MModule.single("\n");
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
@@ -828,13 +800,13 @@ public class RecursiveMarkdownRenderer
 	private MString RenderHtmlEntity(HtmlEntityInline entity)
 	{
 		var text = entity.Transcoded.ToString();
-		return string.IsNullOrEmpty(text) ? MModule.empty() : MModule.single(text);
+		return string.IsNullOrEmpty(text)
+			? MModule.empty()
+			: MModule.single(text);
 	}
 
 	private MString RenderDelimiter(DelimiterInline delimiter)
-	{
-		return RenderInlines(delimiter.FirstChild);
-	}
+		=> RenderInlines(delimiter.FirstChild);
 
 	/// <summary>
 	/// Parses HTML tags and converts them to ANSI markup.
@@ -846,37 +818,34 @@ public class RecursiveMarkdownRenderer
 			return MModule.empty();
 
 		var tagName = ExtractTagName(tag);
-		var isClosing = tag.StartsWith("</");
+		var ansiCode = ConvertHtmlTagToAnsiCode(tag, tagName);
 
-		if (isClosing)
-		{
-			// Closing tag - return clear formatting as actual ANSI string
-			return MModule.single(ANSILibrary.ANSI.Clear);
-		}
-		else
-		{
-			// Opening tag - convert to ANSI code string
-			var ansiCode = ConvertHtmlTagToAnsiCode(tag, tagName);
-			return string.IsNullOrEmpty(ansiCode) ? MModule.empty() : MModule.single(ansiCode);
-		}
+		return string.IsNullOrEmpty(ansiCode)
+			? MModule.empty()
+			: MModule.single(ansiCode);
 	}
 
 	private string ExtractTagName(string tag)
 	{
 		var start = tag.StartsWith("</") ? 2 : 1;
 		var end = tag.IndexOfAny([' ', '>', '/'], start);
-		if (end == -1) end = tag.Length;
-		return tag.Substring(start, end - start).ToLowerInvariant();
+		if (end == -1)
+		{
+			end = tag.Length;
+		}
+		return tag[start..end].ToLowerInvariant();
 	}
 
 	private string ConvertHtmlTagToAnsiCode(string tag, string tagName)
 	{
+		// TODO: This should work on MStrings, as such, this is a bad method.
+		// This should use recursion instead, and be aware of its contents.
 		return tagName switch
 		{
-			"b" or "strong" => ANSILibrary.ANSI.Bold + ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(Color.White)),
-			"i" or "em" => ANSILibrary.ANSI.Italic,
-			"u" => ANSILibrary.ANSI.Underlined,
-			"s" or "strike" or "del" => ANSILibrary.ANSI.StrikeThrough,
+			"b" or "strong" => ANSI.Bold + ANSI.Foreground(ANSI.AnsiColor.NewRGB(Color.White)),
+			"i" or "em" => ANSI.Italic,
+			"u" => ANSI.Underlined,
+			"s" or "strike" or "del" => ANSI.StrikeThrough,
 			"font" => ParseFontTagToAnsiCode(tag),
 			"span" => ParseSpanTagToAnsiCode(tag),
 			"color" => ParseColorTagToAnsiCode(tag),
@@ -892,7 +861,9 @@ public class RecursiveMarkdownRenderer
 		{
 			var color = ParseColorValue(colorMatch.Groups[1].Value);
 			if (color.HasValue)
-				return ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(color.Value));
+			{
+				return ANSI.Foreground(ANSI.AnsiColor.NewRGB(color.Value));
+			}
 		}
 		return "";
 	}
@@ -915,14 +886,14 @@ public class RecursiveMarkdownRenderer
 			{
 				var fg = ParseColorValue(colorMatch.Groups[1].Value.Trim());
 				if (fg.HasValue)
-					result.Append(ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(fg.Value)));
+					result.Append(ANSI.Foreground(ANSI.AnsiColor.NewRGB(fg.Value)));
 			}
 
 			if (bgColorMatch.Success)
 			{
 				var bg = ParseColorValue(bgColorMatch.Groups[1].Value.Trim());
 				if (bg.HasValue)
-					result.Append(ANSILibrary.ANSI.Background(ANSILibrary.ANSI.AnsiColor.NewRGB(bg.Value)));
+					result.Append(ANSI.Background(ANSI.AnsiColor.NewRGB(bg.Value)));
 			}
 
 			return result.ToString();
@@ -938,7 +909,7 @@ public class RecursiveMarkdownRenderer
 		{
 			var color = ParseColorValue(match.Groups[1].Value.Trim());
 			if (color.HasValue)
-				return ANSILibrary.ANSI.Foreground(ANSILibrary.ANSI.AnsiColor.NewRGB(color.Value));
+				return ANSI.Foreground(ANSI.AnsiColor.NewRGB(color.Value));
 		}
 		return "";
 	}
