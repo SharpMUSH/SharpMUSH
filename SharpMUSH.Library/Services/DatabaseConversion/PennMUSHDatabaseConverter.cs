@@ -4,7 +4,6 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
@@ -21,12 +20,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 	// Mapping from PennMUSH DBRef to SharpMUSH DBRef
 	private readonly Dictionary<int, DBRef> _dbrefMapping = [];
-
-	// Compiled regex patterns for efficient escape sequence stripping
-	// Raw ANSI escape sequences as stored in PennMUSH database files
-	private static readonly Regex AnsiEscapePattern = new(@"\x1b\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
-	private static readonly Regex AnsiOscPattern = new(@"\x1b\][^\x1b]*(\x1b\\|\x07)", RegexOptions.Compiled);
-	private static readonly Regex SimpleAnsiPattern = new(@"\x1b[A-Za-z]", RegexOptions.Compiled);
 
 	public PennMUSHDatabaseConverter(
 		ISharpDatabase database,
@@ -860,34 +853,4 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return (salt, password);
 	}
 
-	[Obsolete("Use AnsiEscapeParser.ConvertAnsiToMarkupString instead")]
-	private static string StripEscapeSequences(string? text)
-	{
-		if (string.IsNullOrEmpty(text))
-		{
-			return string.Empty;
-		}
-
-		// Strip CSI (Control Sequence Introducer) sequences: ESC[ ... letter
-		// This handles most ANSI codes including:
-		// - Colors: ESC[31m (red), ESC[32m (green), etc.
-		// - 256-color: ESC[38;5;nm (foreground), ESC[48;5;nm (background)
-		// - RGB color: ESC[38;2;r;g;bm (foreground), ESC[48;2;r;g;bm (background)
-		// - Styles: ESC[1m (bold), ESC[4m (underline), ESC[7m (inverse)
-		// - Reset: ESC[0m (reset all attributes)
-		text = AnsiEscapePattern.Replace(text, string.Empty);
-
-		// Strip OSC (Operating System Command) sequences: ESC] ... ESC\ or ESC] ... BEL
-		// These are used by Pueblo for special markup and hyperlinks
-		text = AnsiOscPattern.Replace(text, string.Empty);
-
-		// Strip other ANSI escape sequences (ESC followed by a single character)
-		// This handles simpler escape codes
-		text = SimpleAnsiPattern.Replace(text, string.Empty);
-
-		// Strip any remaining ESC characters that weren't part of sequences
-		text = text.Replace("\x1b", string.Empty);
-
-		return text;
-	}
 }
