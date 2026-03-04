@@ -593,9 +593,10 @@ public partial class Functions
 			return "an";
 		}
 
-		// Todo: Turn into compiled regexs.
-		if (new[] { "^e[uw]", "^onc?e\b", "^uni([^nmd]|mo)", "^u[bcfhjkqrst][aeiou]" }
-				.Any(regex => Regex.IsMatch(wordLower, regex)))
+		if (ArticleEuwRegex().IsMatch(wordLower)
+				|| ArticleOnceRegex().IsMatch(wordLower)
+				|| ArticleUniRegex().IsMatch(wordLower)
+				|| ArticleUConsonantRegex().IsMatch(wordLower))
 		{
 			return "a";
 		}
@@ -2138,4 +2139,16 @@ public partial class Functions
 
 	[GeneratedRegex("\\s+")]
 	private static partial Regex SpacesRegex();
+
+	[GeneratedRegex("^e[uw]")]
+	private static partial Regex ArticleEuwRegex();
+
+	[GeneratedRegex(@"^onc?e\b")]
+	private static partial Regex ArticleOnceRegex();
+
+	[GeneratedRegex("^uni([^nmd]|mo)")]
+	private static partial Regex ArticleUniRegex();
+
+	[GeneratedRegex("^u[bcfhjkqrst][aeiou]")]
+	private static partial Regex ArticleUConsonantRegex();
 }
