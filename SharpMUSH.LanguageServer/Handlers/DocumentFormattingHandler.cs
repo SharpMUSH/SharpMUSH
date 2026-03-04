@@ -2,6 +2,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using SharpMUSH.LanguageServer.Services;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.LanguageServer.Handlers;
 
@@ -9,7 +10,7 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// Handles document formatting requests for MUSH code.
 /// Provides basic auto-formatting with consistent style.
 /// </summary>
-public class DocumentFormattingHandler : DocumentFormattingHandlerBase
+public partial class DocumentFormattingHandler : DocumentFormattingHandlerBase
 {
 	private readonly DocumentManager _documentManager;
 
@@ -84,10 +85,10 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 	private static string NormalizeSpacing(string line)
 	{
 		// Add space after commas in function calls
-		var result = System.Text.RegularExpressions.Regex.Replace(line, @",(?!\s)", ", ");
+		var result = CommaWithoutSpaceRegex().Replace(line, ", ");
 
 		// Ensure space after commands
-		result = System.Text.RegularExpressions.Regex.Replace(result, @"^(@[a-zA-Z]+)([^\s/])", "$1 $2");
+		result = CommandWithoutSpaceRegex().Replace(result, "$1 $2");
 
 		return result;
 	}
@@ -126,4 +127,10 @@ public class DocumentFormattingHandler : DocumentFormattingHandlerBase
 			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu")
 		};
 	}
+
+	[GeneratedRegex(@",(?!\s)")]
+	private static partial Regex CommaWithoutSpaceRegex();
+
+	[GeneratedRegex(@"^(@[a-zA-Z]+)([^\s/])")]
+	private static partial Regex CommandWithoutSpaceRegex();
 }

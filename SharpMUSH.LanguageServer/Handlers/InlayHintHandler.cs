@@ -12,7 +12,7 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// Handles inlay hint requests for MUSH code.
 /// Shows parameter names inline in function calls to improve code readability.
 /// </summary>
-public class InlayHintHandler : InlayHintsHandlerBase
+public partial class InlayHintHandler : InlayHintsHandlerBase
 {
 	private readonly DocumentManager _documentManager;
 	private readonly IMUSHCodeParser _parser;
@@ -61,8 +61,7 @@ public class InlayHintHandler : InlayHintsHandlerBase
 	{
 		// Match function calls: functionName(arg1, arg2, ...)
 		// Pattern to find function calls with parameters
-		var functionPattern = @"(\w+)\s*\(([^)]*)\)";
-		var matches = Regex.Matches(line, functionPattern);
+		var matches = FunctionCallWithArgsRegex().Matches(line);
 
 		foreach (Match match in matches)
 		{
@@ -230,4 +229,7 @@ public class InlayHintHandler : InlayHintsHandlerBase
 	{
 		return Task.FromResult(request);
 	}
+
+	[GeneratedRegex(@"(\w+)\s*\(([^)]*)\)")]
+	private static partial Regex FunctionCallWithArgsRegex();
 }

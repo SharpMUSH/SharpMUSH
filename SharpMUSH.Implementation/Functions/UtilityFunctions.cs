@@ -725,7 +725,7 @@ public partial class Functions
 	{
 		var arg = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
 		// Object ID format is #dbref:timestamp (e.g., #123:456789)
-		var match = Regex.Match(arg, @"^#\d+:\d+$");
+		var match = ObjIdRegex().Match(arg);
 		return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
 	}
 
@@ -765,7 +765,7 @@ public partial class Functions
 	public static ValueTask<CallState> IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
-		return ValueTask.FromResult(new CallState(Regex.IsMatch(str, @"^[a-zA-Z]$")));
+		return ValueTask.FromResult(new CallState(IsWordRegex().IsMatch(str)));
 	}
 
 	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1873,4 +1873,10 @@ public partial class Functions
 				return $"Wiped {attributesToClear.Count}";
 			});
 	}
+
+	[GeneratedRegex(@"^#\d+:\d+$")]
+	private static partial Regex ObjIdRegex();
+
+	[GeneratedRegex(@"^[a-zA-Z]$")]
+	private static partial Regex IsWordRegex();
 }

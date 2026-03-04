@@ -4619,7 +4619,7 @@ public partial class Commands
 			.Replace("^", "\\^")
 			.Replace("$", "\\$");
 
-		result = Regex.Replace(result, @"\s{2,}", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+		result = MultipleWhitespaceRegex().Replace(result, m => string.Join("", Enumerable.Repeat("%b", m.Length)));
 
 		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
 
@@ -6519,4 +6519,7 @@ public partial class Commands
 		return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern,
 		System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
+
+	[GeneratedRegex(@"\s{2,}")]
+	private static partial Regex MultipleWhitespaceRegex();
 }

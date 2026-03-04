@@ -4,6 +4,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using SharpMUSH.LanguageServer.Services;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.LanguageServer.Handlers;
 
@@ -11,7 +12,7 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// Handles code action requests for MUSH code.
 /// Provides quick fixes for common errors.
 /// </summary>
-public class CodeActionHandler : CodeActionHandlerBase
+public partial class CodeActionHandler : CodeActionHandlerBase
 {
 	private readonly DocumentManager _documentManager;
 	private readonly LSPMUSHCodeParser _parser;
@@ -95,8 +96,8 @@ public class CodeActionHandler : CodeActionHandlerBase
 			var functionNames = _underlyingParser.FunctionLibrary.Keys.ToList();
 			foreach (var line in lines.Select((text, index) => new { text, index }))
 			{
-				var words = System.Text.RegularExpressions.Regex.Matches(line.text, @"\b[a-zA-Z_][a-zA-Z0-9_]*\b");
-				foreach (System.Text.RegularExpressions.Match match in words)
+				var words = IdentifierRegex().Matches(line.text);
+				foreach (Match match in words)
 				{
 					var word = match.Value;
 					// Check if word looks like a function call (followed by parenthesis)
@@ -216,4 +217,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 				CodeActionKind.Refactor)
 		};
 	}
+
+	[GeneratedRegex(@"\b[a-zA-Z_][a-zA-Z0-9_]*\b")]
+	private static partial Regex IdentifierRegex();
 }

@@ -7,6 +7,7 @@ using SharpMUSH.Library.Queries.Database;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -141,7 +142,7 @@ public class IterationWrapper<T>
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
 /// <param name="LimitExceeded">Shared flag indicating a limit has been exceeded. Mutable and shared across all states in an evaluation.</param>
-public record ParserState(
+public partial record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
 	ConcurrentStack<Dictionary<string, MString>> RegexRegisters,
@@ -298,7 +299,7 @@ public record ParserState(
 	{
 		// Validate register pattern: alphanumeric characters, underscores, and hyphens
 		// Register names should be uppercase and match pattern: [A-Z0-9_-]+
-		if (string.IsNullOrEmpty(register) || !System.Text.RegularExpressions.Regex.IsMatch(register, @"^[A-Z0-9_\-]+$"))
+		if (string.IsNullOrEmpty(register) || !RegisterNameRegex().IsMatch(register))
 		{
 			return false;
 		}
@@ -316,4 +317,7 @@ public record ParserState(
 
 		return true;
 	}
+
+	[GeneratedRegex(@"^[A-Z0-9_\-]+$")]
+	private static partial Regex RegisterNameRegex();
 }
