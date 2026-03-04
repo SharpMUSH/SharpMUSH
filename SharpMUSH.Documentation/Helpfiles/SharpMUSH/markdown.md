@@ -79,17 +79,21 @@ Blocks without a language tag, or with an unrecognised tag, fall back to plain<b
 
 **Extending language support:**
 
-Additional languages can be made available by adding NuGet packages to the project:
+`ColorCode.Core` (already in use) supports 25 languages. Common languages **not** covered<br>
+include Bash, Go, Rust, Ruby, Swift, Kotlin, Scala, Dart, Perl, Lua, and R.
 
 - **`TextMateSharp` + `TextMateSharp.Grammars`** — a C# port of the VS Code TextMate<br>
-  grammar engine. Covers the full set of languages that VS Code highlights (hundreds),<br>
-  including Bash, Go, Rust, Swift, Kotlin, Dart, Scala, R, and many more. Requires<br>
-  more complex setup (grammar registry, theme files) and is not currently integrated.
+  grammar engine covering 200+ languages. It has **no Markdig integration of its own**;<br>
+  a custom `IMarkdownExtension` would be needed to hook it into the rendering pipeline.<br>
+  `TextMateSharp.Grammars` is a large package (~20 MB of embedded grammar JSON files),<br>
+  which may be a concern for startup time and package size. Color output uses VS Code<br>
+  theme files (e.g. Dark+), and an ANSI adapter would be needed for the terminal renderer<br>
+  in addition to the HTML path. **Not currently integrated.**
 
-- **`Markdown.ColorCode`** — a Markdig pipeline extension built on top of<br>
-  ColorCode.Core that adds inline-styled HTML syntax highlighting to the Blazor wiki<br>
-  client. It covers the same languages as ColorCode.Core and is already referenced in<br>
-  `SharpMUSH.Client`; it does not add new languages to the terminal renderer.
+- **`Markdown.ColorCode`** — a Markdig pipeline extension built on top of ColorCode.Core.<br>
+  It is already referenced in `SharpMUSH.Client` for the Blazor wiki HTML path. It does<br>
+  **not** add new languages; language coverage is identical to ColorCode.Core's 25 built-ins.<br>
+  It does not affect the terminal ANSI renderer at all.
 
 **MUSH Special Character Escaping:**<br>
 When using markdown features with square brackets `[` `]` or parentheses `(` `)`, you must escape them using `%`:
