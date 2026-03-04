@@ -42,11 +42,54 @@ def greet(name):
     return "Hello, " + name
 ```
 
-Other supported language tags: `csharp`, `javascript`, `typescript`, `sql`, `xml`,<br>
-`html`, `css`, `java`, `powershell`, `fsharp`, `python`, `json`, `cpp`.
+**All supported language tags (ColorCode.Core 2.0.15):**
+
+| Language | Primary tag | Accepted aliases |
+|---|---|---|
+| ASAX | `asax` | |
+| ASHX | `ashx` | |
+| ASPX | `aspx` | |
+| ASPX (C#) | `aspx(c#)` | |
+| ASPX (VB.NET) | `aspx(vb.net)` | |
+| C++ | `cpp` | `c++` |
+| C# | `c#` | `csharp` |
+| CSS | `css` | |
+| F# | `f#` | `fsharp` |
+| Fortran | `fortran` | |
+| Haskell | `haskell` | |
+| HTML | `html` | |
+| Java | `java` | |
+| JavaScript | `javascript` | |
+| JSON | `json` | |
+| Koka | `koka` | |
+| Markdown | `markdown` | |
+| MATLAB | `matlab` | |
+| PHP | `php` | |
+| PowerShell | `powershell` | |
+| Python | `python` | |
+| SQL | `sql` | |
+| TypeScript | `typescript` | |
+| VB.NET | `vb.net` | `vbnet` |
+| XML | `xml` | |
+
+Language tags are matched case-insensitively (`Python`, `PYTHON`, and `python` all work).
 
 Blocks without a language tag, or with an unrecognised tag, fall back to plain<br>
 2-space-indented text with no colour.
+
+**Extending language support:**
+
+Additional languages can be made available by adding NuGet packages to the project:
+
+- **`TextMateSharp` + `TextMateSharp.Grammars`** — a C# port of the VS Code TextMate<br>
+  grammar engine. Covers the full set of languages that VS Code highlights (hundreds),<br>
+  including Bash, Go, Rust, Swift, Kotlin, Dart, Scala, R, and many more. Requires<br>
+  more complex setup (grammar registry, theme files) and is not currently integrated.
+
+- **`Markdown.ColorCode`** — a Markdig pipeline extension built on top of<br>
+  ColorCode.Core that adds inline-styled HTML syntax highlighting to the Blazor wiki<br>
+  client. It covers the same languages as ColorCode.Core and is already referenced in<br>
+  `SharpMUSH.Client`; it does not add new languages to the terminal renderer.
 
 **MUSH Special Character Escaping:**<br>
 When using markdown features with square brackets `[` `]` or parentheses `(` `)`, you must escape them using `%`:
