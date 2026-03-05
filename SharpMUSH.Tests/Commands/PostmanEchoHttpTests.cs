@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Diagnostics;
 using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
@@ -26,6 +27,13 @@ public class PostmanEchoHttpTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private const string PostmanEchoBase = "https://postman-echo.com";
+	private const int MaxWaitSeconds = 15;
+
+	/// <summary>
+	/// Generates a unique MUSH attribute name for a test (max 20 uppercase chars).
+	/// </summary>
+	private static string GenerateAttributeName(string prefix)
+		=> $"{prefix.ToUpperInvariant()}{Guid.NewGuid():N}"[..20];
 
 	/// <summary>
 	/// Sets an attribute on the #1 player object for use as a callback by @http.
@@ -42,21 +50,47 @@ public class PostmanEchoHttpTests
 			playerOne);
 	}
 
-	/// <summary>Generous wait for the background @http task to complete (queue + network).</summary>
-	private static Task WaitForHttpTask() => Task.Delay(TimeSpan.FromSeconds(15));
+	/// <summary>
+	/// Polls until a matching <see cref="INotifyService.Notify"/> call is observed, or the
+	/// <paramref name="timeout"/> elapses. This keeps individual test durations short on fast
+	/// networks while still allowing generous headroom for slow or busy environments.
+	/// </summary>
+	private async Task WaitForNotify(
+		Func<OneOf<MString, string>, bool> predicate,
+		TimeSpan? timeout = null)
+	{
+		var deadline = Stopwatch.GetTimestamp()
+			+ Stopwatch.Frequency * (long)(timeout?.TotalSeconds ?? MaxWaitSeconds);
+
+		while (Stopwatch.GetTimestamp() < deadline)
+		{
+			var received = NotifyService.ReceivedCalls()
+				.Any(call =>
+				{
+					var args = call.GetArguments();
+					return args.Length >= 2
+						&& args[1] is OneOf<MString, string> msg
+						&& predicate(msg);
+				});
+
+			if (received)
+				return;
+
+			await Task.Delay(200);
+		}
+	}
 
 	[Test]
 	public async ValueTask HttpGet_ReturnsJsonWithEchoedUrl()
 	{
-		var attrName = $"HTTPGET{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPGET");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get"));
 
-		await WaitForHttpTask();
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/get"));
 
-		// The callback attribute executes "think %0" which notifies the executor with the body.
 		// postman-echo.com/get echoes the request back, including its own URL.
 		await NotifyService
 			.Received()
@@ -69,13 +103,13 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpPost_WithFormData_EchoesFormFields()
 	{
-		var attrName = $"HTTPPOST{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPPOST");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http/post #1/{attrName}={PostmanEchoBase}/post,key=value"));
 
-		await WaitForHttpTask();
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/post"));
 
 		// postman-echo.com/post echoes the submitted form data under the "form" field.
 		await NotifyService
@@ -89,13 +123,13 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpPut_WithBody_EchoesData()
 	{
-		var attrName = $"HTTPPUT{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPPUT");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http/put #1/{attrName}={PostmanEchoBase}/put,test=update"));
 
-		await WaitForHttpTask();
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/put"));
 
 		await NotifyService
 			.Received()
@@ -108,13 +142,13 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpDelete_ReturnsOkResponse()
 	{
-		var attrName = $"HTTPDEL{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPDEL");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http/delete #1/{attrName}={PostmanEchoBase}/delete"));
 
-		await WaitForHttpTask();
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/delete"));
 
 		await NotifyService
 			.Received()
@@ -127,13 +161,13 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpPatch_WithBody_EchoesData()
 	{
-		var attrName = $"HTTPPATCH{Guid.NewGuid():N}"[..19].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPPATCH");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http/patch #1/{attrName}={PostmanEchoBase}/patch,patch=data"));
 
-		await WaitForHttpTask();
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/patch"));
 
 		await NotifyService
 			.Received()
@@ -146,13 +180,13 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpGet_GzipEndpoint_DecompressesResponse()
 	{
-		var attrName = $"HTTPGZIP{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPGZIP");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/gzip"));
 
-		await WaitForHttpTask();
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "gzipped"));
 
 		// The /gzip endpoint always returns a gzip-compressed body.
 		// Automatic decompression must be configured for the "api" HttpClient.
@@ -168,13 +202,13 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpGet_DeflateEndpoint_DecompressesResponse()
 	{
-		var attrName = $"HTTPDEFL{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPDEFL");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/deflate"));
 
-		await WaitForHttpTask();
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "deflated"));
 
 		// The /deflate endpoint always returns a deflate-compressed body.
 		// Automatic decompression must be configured for the "api" HttpClient.
@@ -190,13 +224,14 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpGet_WithQueryParams_EchoesArgsField()
 	{
-		var attrName = $"HTTPQP{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPQP");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get?foo=bar"));
 
-		await WaitForHttpTask();
+		await WaitForNotify(msg =>
+			TestHelpers.MessageContains(msg, "foo") && TestHelpers.MessageContains(msg, "bar"));
 
 		// postman-echo.com echoes query params back in the "args" JSON field.
 		await NotifyService
@@ -211,7 +246,7 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpCommand_InvalidUrl_ReturnsErrorImmediately()
 	{
-		var attrName = $"HTTPERR{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPERR");
 		await SetCallbackAttribute(attrName);
 
 		var result = await Parser.CommandParse(1, ConnectionService,
@@ -224,7 +259,7 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpCommand_GetWithBody_RejectsImmediately()
 	{
-		var attrName = $"HTTPGERR{Guid.NewGuid():N}"[..20].ToUpperInvariant();
+		var attrName = GenerateAttributeName("HTTPGERR");
 		await SetCallbackAttribute(attrName);
 
 		await Parser.CommandParse(1, ConnectionService,
@@ -239,4 +274,5 @@ public class PostmanEchoHttpTests
 					TestHelpers.MessageContains(msg, "GET requests cannot have a body")));
 	}
 }
+
 
