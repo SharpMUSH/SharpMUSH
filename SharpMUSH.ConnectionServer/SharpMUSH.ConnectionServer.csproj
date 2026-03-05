@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Messages\SharpMUSH.Messages.csproj" />
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
   </ItemGroup>
 

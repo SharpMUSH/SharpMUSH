@@ -1,6 +1,6 @@
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.ConnectionServer.Consumers;

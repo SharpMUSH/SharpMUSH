@@ -1,4 +1,4 @@
-namespace SharpMUSH.Messages;
+namespace SharpMUSH.Messaging.Messages;
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when a player submits input

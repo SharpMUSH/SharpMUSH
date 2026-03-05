@@ -38,7 +38,6 @@
 
   <ItemGroup>
 	  <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
-	  <ProjectReference Include="..\SharpMUSH.Messages\SharpMUSH.Messages.csproj" />
 	  <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
 	  <ProjectReference Include="..\SharpMUSH.Parser.Generated\SharpMUSH.Parser.Generated.csproj" />
 	  <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />

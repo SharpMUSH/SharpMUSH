@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Notifications;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.Implementation.Handlers.Telnet;
