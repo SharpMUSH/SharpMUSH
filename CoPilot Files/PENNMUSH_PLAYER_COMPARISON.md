@@ -395,15 +395,14 @@ This was assumed in the original document; now fully verified.
 - God sees: `Player emits this.`
 
 **When god does `@emit A magical wind sweeps through the hall.`:**
-- God sees: *(nothing — empty response)*
+- God sees: `A magical wind sweeps through the hall.`
 - Mortal sees: `A magical wind sweeps through the hall.`
 
 **Proven pattern for @emit:**
-- **Mortal @emit:** Both sender AND receiver see the text. **The sender IS included.**
-- **God @emit:** Sender does NOT see their own @emit (goes to others only).
+- **Mortal @emit:** Both sender AND receiver see the text.
+- **Wizard @emit:** Both sender AND receiver see the text.
 
-This is because god is WIZARD — wizards' @emit outputs go to everyone EXCEPT themselves.
-Mortals' @emit outputs go to ALL in the room including themselves.
+`@emit` broadcasts equally to everyone in the room including the sender, regardless of wizard status.
 
 ### `|` (pipe emit)
 
@@ -414,13 +413,16 @@ Mortals' @emit outputs go to ALL in the room including themselves.
 **The `|` character is NOT an emit shortcut in PennMUSH.** It is not a valid command prefix.
 The `:` prefix (shortpose/pose) IS valid but `|` is not.
 
-### @NSEMIT (noisy emit — different from @emit/noisy)
+### @NSEMIT (noisy-spoof emit — suppresses nospoof notification)
 
 **God does `@nsemit An authoritative announcement.`:**
 - God sees: `An authoritative announcement.`
 - Mortal sees: `An authoritative announcement.`
 
-`@nsemit` sends to ALL in the room including the wizard sender.
+`@nsemit` behaves identically to `@emit` for content delivery. The difference is that `@nsemit`
+suppresses the **nospoof notification** that would normally appear for players with the NOSPOOF
+flag when a wizard runs `@emit`. It is intended for softcoded commands in the master room where
+nospoof attribution is unwanted. It is **not** about sender visibility.
 `@nssay` and `@nspose` do NOT exist in PennMUSH (return `Huh?`).
 
 ### @PEMIT (private emit)
@@ -694,10 +696,9 @@ The previous comparison document contained some assumptions that are now proven 
 
 2. **POSE: No "You" prefix for sender** ✓ **CONFIRMED but different from SAY** — both sender and receiver see identical `Name poses action.` text.
 
-3. **@EMIT: Sender visibility depends on wizard status:**
-   - Wizard @emit: sender does NOT see their own emit
-   - Mortal @emit: sender DOES see their own emit
-   - This is a nuanced difference not captured before
+3. **@EMIT: Sender always sees their own emit** — Both wizard and mortal @emit: all players
+   in the room including the sender see the text. No asymmetry. The previous claim that
+   "wizard @emit is silent to the sender" was incorrect and has been disproven by live testing.
 
 4. **`|` is NOT a valid emit shortcut** — returns `Huh?`. Only `:` (pose) and `;` (semipose) are prefix shortcuts.
 
@@ -717,7 +718,7 @@ The previous comparison document contained some assumptions that are now proven 
 | WHO columns differ by privilege | **High** | Proven: wizard gets 7 cols, mortal gets 4 |
 | LOOK shows plain names to mortals (no #dbref) | **High** | Proven: `Chest` vs `Chest(#5Tn)` |
 | EXAMINE heavily filtered for mortals | **High** | Proven: mortal sees description+owner only |
-| @EMIT sender visibility (wizard doesn't see own emit) | **Medium** | Proven: wizard @emit silent to self |
+| @EMIT sender visibility (same for wizard and mortal — all see it) | **Corrected** | Proven: both wizard and mortal @emit visible to sender |
 | POSE is same for sender and receiver | **Low** | Proven: no "You" prefix for poser |
 | Mortal @set restrictions (DARK not allowed) | **Low** | Proven |
 | Attribute flag filtering in lattr | **Low** | Proven: RQUOTA, LASTLOGOUT hidden from mortals |
