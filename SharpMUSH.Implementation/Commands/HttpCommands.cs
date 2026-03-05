@@ -76,7 +76,7 @@ public partial class Commands
 					return new CallState("#-1 INVALID URI FORMAT.");
 				}
 
-				var message = new HttpRequestMessage
+				using var message = new HttpRequestMessage
 				{
 					Headers =
 					{
