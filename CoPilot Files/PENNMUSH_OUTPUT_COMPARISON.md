@@ -444,28 +444,80 @@ SharpMUSH may only send the error return.
 
 ## 18. Function Comparison
 
-### Functions in PennMUSH NOT Found by SharpMUSH-style Names
+### Function Inventory (Verified via `@list/functions`)
 
-PennMUSH does NOT have these functions (they return `#-1 FUNCTION (X) NOT FOUND`):
+The authoritative function list was obtained by running `@list/functions` as wizard in PennMUSH
+and grepping `[SharpFunction]` attribute declarations in the SharpMUSH source.
 
-| Called Name | PennMUSH Result | PennMUSH Equivalent |
-|-------------|-----------------|---------------------|
-| `dbref()` | `#-1 FUNCTION (DBREF) NOT FOUND` | Use `num()` |
-| `concat()` | `#-1 FUNCTION (CONCAT) NOT FOUND` | Use `cat()` |
-| `upper()` | `#-1 FUNCTION (UPPER) NOT FOUND` | Use `ucstr()` |
-| `lower()` | `#-1 FUNCTION (LOWER) NOT FOUND` | Use `lcstr()` |
-| `ltrim()` | `#-1 FUNCTION (LTRIM) NOT FOUND` | Use `trim(l,...)` |
-| `rtrim()` | `#-1 FUNCTION (RTRIM) NOT FOUND` | Use `trim(r,...)` |
-| `mod()` | `#-1 FUNCTION (MOD) NOT FOUND` | Use `remainder()` or `modulo()` |
-| `word()` | `#-1 FUNCTION (WORD) NOT FOUND` | Use `extract()` |
-| `subst()` | `#-1 FUNCTION (SUBST) NOT FOUND` | Use `edit()` |
-| `count()` | `#-1 FUNCTION (COUNT) NOT FOUND` | Use `words()` |
-| `attrcnt()` | `#-1 FUNCTION (ATTRCNT) NOT FOUND` | Use `words(lattr(obj))` |
-| `flag()` | `#-1 FUNCTION (FLAG) NOT FOUND` | Use `flags()` |
+- **PennMUSH:** 527 functions
+- **SharpMUSH:** 540 functions
 
-**SharpMUSH notes:** SharpMUSH has `ucstr()`, `lcstr()`, `capstr()`, `trim()`, `remainder()`,
-`modulo()`, `num()`, `cat()`, `words()`, `lattr()`, etc. — matching PennMUSH naming.
-SharpMUSH also provides *additional* aliases like `dbref()` (extension, not in PennMUSH).
+### Functions in PennMUSH NOT in SharpMUSH (5)
+
+These PennMUSH functions are currently missing from SharpMUSH:
+
+| Function | Notes |
+|----------|-------|
+| `convutcsecs()` | Convert UTC time string to epoch seconds |
+| `convutctime()` | Convert epoch seconds to UTC time string |
+| `ncand()` | Negated conditional AND (SharpMUSH uses `cnand()` instead) |
+| `reglmatchalli()` | Case-insensitive regex list match all (SharpMUSH uses `regmatchalli()`) |
+| `xmwho()` | Extended who list for zones |
+
+**Note:** `ncand()` (PennMUSH) and `cnand()` (SharpMUSH) are confirmed to be the same function
+— both implement short-circuit conditional NAND (equivalent to `not(cand())`). PennMUSH's help
+for `ncand` says it's the conditional (short-circuit) version; SharpMUSH names the same
+operation `cnand`. Verified truth table: both return `1` for any false input, `0` only when all true.
+
+`reglmatch*` (PennMUSH "list regex" family) and `regmatchalli` (SharpMUSH) are **different
+functions** — they are not simply renamed versions of each other. PennMUSH's `regl*` family
+operates on a list of words (each word tested against the pattern), while SharpMUSH's
+`regmatchalli` matches substrings within a single string. See the behavioral difference below.
+
+### SharpMUSH-Only Functions (18, not in PennMUSH)
+
+These exist in SharpMUSH as extensions:
+
+| Function | Purpose |
+|----------|---------|
+| `attrib_set#()` | Internal attribute set variant |
+| `cinfo()` | Channel info |
+| `cnand()` | Negated conditional AND (PennMUSH uses `ncand()`) |
+| `decomposeweb()` | Web-specific decompose |
+| `delete()` | String/list delete (PennMUSH uses `strdelete()`/`ldelete()`) |
+| `downmotd()` | Shutdown MOTD text |
+| `fullmotd()` | Full MOTD text |
+| `idlesecs()` | Idle seconds (PennMUSH uses `idle()`) |
+| `insert()` | List insert (PennMUSH uses `linsert()`/`strinsert()`) |
+| `motd()` | MOTD text |
+| `regmatchalli()` | Case-insensitive regex match all (PennMUSH uses `reglmatchalli()`) |
+| `regreplace()` | Regex string replace (PennMUSH uses `regedit()`) |
+| `rendermarkdown()` | Render Markdown to MUSH output |
+| `rendermarkdowncustom()` | Render Markdown with custom settings |
+| `websocket_html()` | WebSocket HTML output |
+| `websocket_json()` | WebSocket JSON output |
+| `wizmotd()` | Wizard-only MOTD text |
+| `zfind()` | Zone find |
+
+### Common Function Names NOT in Either System
+
+The following function names do **not** exist in either PennMUSH or SharpMUSH. Code using
+these names will get `#-1 FUNCTION (X) NOT FOUND` in both systems:
+
+| Name | Correct Function to Use |
+|------|------------------------|
+| `dbref()` | Use `num()` |
+| `concat()` | Use `cat()` |
+| `upper()` | Use `ucstr()` |
+| `lower()` | Use `lcstr()` |
+| `ltrim()` | Use `trim(l,...)` |
+| `rtrim()` | Use `trim(r,...)` |
+| `mod()` | Use `remainder()` or `modulo()` |
+| `word()` | Use `extract()` |
+| `subst()` | Use `edit()` |
+| `count()` | Use `words()` |
+| `attrcnt()` | Use `words(lattr(obj))` |
+| `flag()` | Use `flags()` |
 
 ### Function Behavioral Differences
 
@@ -515,11 +567,13 @@ Passing `world` as the position returns unchanged list.
 |------|----------|-----------|
 | `flags(me)` | `PUWc` (abbreviated) | Abbreviated flags |
 
-#### `num()` vs `dbref()`
+#### `num()` — the canonical dbref function
 | Call | PennMUSH | SharpMUSH |
 |------|----------|-----------|
 | `num(me)` | `#1` | `#1` ✓ |
-| `dbref(me)` | `#-1 FUNCTION (DBREF) NOT FOUND` | `#1` (SharpMUSH extension) |
+| `dbref(me)` | `#-1 FUNCTION (DBREF) NOT FOUND` | `#-1 FUNCTION (DBREF) NOT FOUND` |
+
+Neither PennMUSH nor SharpMUSH has `dbref()`. The correct function is `num()`.
 
 ### Functions in Both Systems (Matching Behavior)
 | Function | PennMUSH | SharpMUSH |
@@ -647,20 +701,20 @@ Uses `@ccreate`, `+channel message` and channel commands via `@channel`.
 
 ### Low Priority (Minor/Extension Differences)
 
-9. **`dbref()` function** — SharpMUSH extension not in PennMUSH (PennMUSH uses `num()`).
-   Both are compatible if code uses `num()`.
+9. **`ncand()` vs `cnand()`** — PennMUSH uses `ncand()`, SharpMUSH uses `cnand()` for the
+   same short-circuit conditional NAND operation (confirmed via truth table). Naming inconsistency only.
 
-10. **`concat()` function** — SharpMUSH may support it; PennMUSH does not (use `cat()`).
+10. **`reglmatch*` vs `regmatch*` family** — PennMUSH's `reglmatch*` functions operate on a
+    **list** of words (each word tested against pattern). SharpMUSH's `regmatchalli` operates on a
+    single string finding all substring matches. These are different functions, not just renamed.
 
-11. **`upper()`/`lower()`** — PennMUSH doesn't have these; use `ucstr()`/`lcstr()`.
-    SharpMUSH has both naming conventions.
+11. **SharpMUSH-only functions** — `rendermarkdown()`, `websocket_html()`, `websocket_json()`,
+    `regreplace()`, `zfind()` and MOTD functions (`motd()`, `wizmotd()`, `downmotd()`, `fullmotd()`)
+    exist in SharpMUSH but not PennMUSH — these are SharpMUSH extensions.
 
-12. **`mod()`** — PennMUSH doesn't have `mod()`; use `remainder()` or `modulo()`.
-    SharpMUSH has both.
+12. **`@DIG` room number with #** — Minor cosmetic difference.
 
-13. **`@DIG` room number with #** — Minor cosmetic difference.
-
-14. **WHO footer** — PennMUSH: `There is one player connected.` / SharpMUSH: `1 players logged in.`
+13. **WHO footer** — PennMUSH: `There is one player connected.` / SharpMUSH: `1 players logged in.`
 
 ---
 
