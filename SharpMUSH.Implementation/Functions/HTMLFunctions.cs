@@ -136,7 +136,7 @@ public partial class Functions
 				continue;
 			}
 
-			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
+			await Mediator!.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
 				connection.Handle,
 				wsMessage));
 		}
@@ -203,7 +203,7 @@ public partial class Functions
 				continue;
 			}
 
-			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
+			await Mediator!.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
 				connection.Handle,
 				wsMessage));
 		}

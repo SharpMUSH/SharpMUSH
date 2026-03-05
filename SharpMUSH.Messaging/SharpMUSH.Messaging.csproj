@@ -17,8 +17,5 @@
     <PackageReference Include="Testcontainers" Version="4.10.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\SharpMUSH.Messages\SharpMUSH.Messages.csproj" />
-  </ItemGroup>
 
 </Project>
