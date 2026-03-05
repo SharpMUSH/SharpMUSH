@@ -85,6 +85,10 @@ public partial class Functions
 		return "0";
 	}
 
+	[SharpFunction(Name = "ncand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
+	public static ValueTask<CallState> NCand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> CancellingNegativeAnd(parser, _2);
+
 	[SharpFunction(Name = "neq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public static ValueTask<CallState> Neq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments

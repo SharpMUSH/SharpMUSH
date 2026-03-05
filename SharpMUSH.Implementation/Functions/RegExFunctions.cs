@@ -63,6 +63,12 @@ public partial class Functions
 		return RegLMatchInternal(parser, false, true);
 	}
 
+	[SharpFunction(Name = "reglmatchalli", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
+	public static ValueTask<CallState> reglmatchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		return RegLMatchInternal(parser, true, true);
+	}
+
 	[SharpFunction(Name = "regmatchalli", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public static ValueTask<CallState> regmatchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
