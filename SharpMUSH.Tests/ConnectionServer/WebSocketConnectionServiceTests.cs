@@ -152,7 +152,7 @@ public class WebSocketConnectionServiceTests
 
 		// Assert - verify ConnectionEstablishedMessage was published with correct connection type
 		await publishEndpoint.Received(1).Publish(
-			Arg.Is<SharpMUSH.Messages.ConnectionEstablishedMessage>(m =>
+			Arg.Is<SharpMUSH.Messaging.Messages.ConnectionEstablishedMessage>(m =>
 				m.Handle == handle &&
 				m.ConnectionType == "websocket" &&
 				m.IpAddress == "192.168.1.100"),
