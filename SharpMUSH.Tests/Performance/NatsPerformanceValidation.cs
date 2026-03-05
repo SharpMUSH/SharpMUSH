@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.NATS;
 using System.Diagnostics;

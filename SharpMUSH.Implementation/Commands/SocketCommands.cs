@@ -11,7 +11,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands;

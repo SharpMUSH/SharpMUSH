@@ -1,4 +1,4 @@
-namespace SharpMUSH.Messages;
+namespace SharpMUSH.Messaging.Messages;
 
 /// <summary>
 /// Request for server information (API call)

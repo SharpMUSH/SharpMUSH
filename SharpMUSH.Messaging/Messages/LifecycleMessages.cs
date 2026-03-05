@@ -1,4 +1,4 @@
-namespace SharpMUSH.Messages;
+namespace SharpMUSH.Messaging.Messages;
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer when MainProcess is ready to process commands
