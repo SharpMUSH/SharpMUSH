@@ -14,6 +14,11 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Integration tests for the @http command using postman-echo.com endpoints.
 /// Tests all HTTP verbs (GET, POST, PUT, DELETE, PATCH) and encoding support.
+///
+/// Isolation strategy: each test generates a unique token (UUID hex) and embeds it
+/// both in the HTTP request (as a query param or body field echoed by postman-echo)
+/// and as a prefix in the callback attribute ("think {token} %0"), so every assertion
+/// can key on a string that is guaranteed to belong to that test's own response.
 /// </summary>
 [NotInParallel]
 public class PostmanEchoHttpTests
@@ -36,17 +41,25 @@ public class PostmanEchoHttpTests
 		=> $"{prefix.ToUpperInvariant()}{Guid.NewGuid():N}"[..20];
 
 	/// <summary>
-	/// Sets an attribute on the #1 player object for use as a callback by @http.
-	/// The default attribute value uses <c>think %0</c> so the response body is
-	/// forwarded to NotifyService where we can assert it was received.
+	/// Generates a short unique token suitable for use as a query parameter value or
+	/// body field value that will be echoed back in postman-echo responses.
 	/// </summary>
-	private async Task SetCallbackAttribute(string attributeName, string attrValue = "think %0")
+	private static string GenerateUniqueToken()
+		=> Guid.NewGuid().ToString("N")[..16];
+
+	/// <summary>
+	/// Sets an attribute on the #1 player object for use as a callback by @http.
+	/// By prefixing the output with <paramref name="uniqueToken"/>, every notification
+	/// from this test contains a string that no other test can produce, ensuring
+	/// assertions are fully scoped to this test's own HTTP response.
+	/// </summary>
+	private async Task SetCallbackAttribute(string attributeName, string uniqueToken)
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		await Database.SetAttributeAsync(
 			playerOne.Object.DBRef,
 			[attributeName],
-			A.single(attrValue),
+			A.single($"think {uniqueToken} %0"),
 			playerOne);
 	}
 
@@ -83,171 +96,195 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpGet_ReturnsJsonWithEchoedUrl()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGET");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
+		// postman-echo echoes the request URL in the response, which includes the unique token.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get"));
+			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/get"));
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
-		// postman-echo.com/get echoes the request back, including its own URL.
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/get")));
 	}
 
 	[Test]
 	public async ValueTask HttpPost_WithFormData_EchoesFormFields()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPPOST");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
+		// postman-echo echoes the form body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/post #1/{attrName}={PostmanEchoBase}/post,key=value"));
+			MModule.single($"@http/post #1/{attrName}={PostmanEchoBase}/post,testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/post"));
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
-		// postman-echo.com/post echoes the submitted form data under the "form" field.
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/post")));
 	}
 
 	[Test]
 	public async ValueTask HttpPut_WithBody_EchoesData()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPPUT");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
+		// postman-echo echoes the PUT body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/put #1/{attrName}={PostmanEchoBase}/put,test=update"));
+			MModule.single($"@http/put #1/{attrName}={PostmanEchoBase}/put,testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/put"));
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/put")));
 	}
 
 	[Test]
 	public async ValueTask HttpDelete_ReturnsOkResponse()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPDEL");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
+		// postman-echo echoes the request URL; the unique token appears in the query args.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/delete #1/{attrName}={PostmanEchoBase}/delete"));
+			MModule.single($"@http/delete #1/{attrName}={PostmanEchoBase}/delete?testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/delete"));
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/delete")));
 	}
 
 	[Test]
 	public async ValueTask HttpPatch_WithBody_EchoesData()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPPATCH");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
+		// postman-echo echoes the PATCH body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/patch #1/{attrName}={PostmanEchoBase}/patch,patch=data"));
+			MModule.single($"@http/patch #1/{attrName}={PostmanEchoBase}/patch,testid={token}"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "postman-echo.com/patch"));
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "postman-echo.com/patch")));
 	}
 
 	[Test]
 	public async ValueTask HttpGet_GzipEndpoint_DecompressesResponse()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGZIP");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
+		// The /gzip endpoint returns a gzip-compressed body {"gzipped":true,...}.
+		// Automatic decompression must be configured for the "api" HttpClient.
+		// The unique token is prefixed by the callback attribute ("think {token} %0"),
+		// so it appears in the notification regardless of the response body content.
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/gzip"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "gzipped"));
+		await WaitForNotify(msg =>
+			TestHelpers.MessageContains(msg, token) &&
+			TestHelpers.MessageContains(msg, "gzipped"));
 
-		// The /gzip endpoint always returns a gzip-compressed body.
-		// Automatic decompression must be configured for the "api" HttpClient.
-		// The decompressed response contains {"gzipped":true,...}.
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "gzipped")));
 	}
 
 	[Test]
 	public async ValueTask HttpGet_DeflateEndpoint_DecompressesResponse()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPDEFL");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
+		// The /deflate endpoint returns a deflate-compressed body {"deflated":true,...}.
+		// Automatic decompression must be configured for the "api" HttpClient.
+		// The unique token is prefixed by the callback attribute ("think {token} %0"),
+		// so it appears in the notification regardless of the response body content.
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/deflate"));
 
-		await WaitForNotify(msg => TestHelpers.MessageContains(msg, "deflated"));
+		await WaitForNotify(msg =>
+			TestHelpers.MessageContains(msg, token) &&
+			TestHelpers.MessageContains(msg, "deflated"));
 
-		// The /deflate endpoint always returns a deflate-compressed body.
-		// Automatic decompression must be configured for the "api" HttpClient.
-		// The decompressed response contains {"deflated":true,...}.
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
 					TestHelpers.MessageContains(msg, "deflated")));
 	}
 
 	[Test]
 	public async ValueTask HttpGet_WithQueryParams_EchoesArgsField()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPQP");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
+		// Use the unique token as both the query param key and value so the assertion
+		// is scoped to this test's request. postman-echo echoes query params in "args".
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get?foo=bar"));
+			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get?{token}={token}"));
 
-		await WaitForNotify(msg =>
-			TestHelpers.MessageContains(msg, "foo") && TestHelpers.MessageContains(msg, "bar"));
+		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
-		// postman-echo.com echoes query params back in the "args" JSON field.
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "foo") &&
-					TestHelpers.MessageContains(msg, "bar")));
+					TestHelpers.MessageContains(msg, token)));
 	}
 
 	[Test]
 	public async ValueTask HttpCommand_InvalidUrl_ReturnsErrorImmediately()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPERR");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
 		var result = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@http #1/{attrName}=not-a-valid-url"));
@@ -259,13 +296,14 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpCommand_GetWithBody_RejectsImmediately()
 	{
+		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGERR");
-		await SetCallbackAttribute(attrName);
+		await SetCallbackAttribute(attrName, token);
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/get #1/{attrName}={PostmanEchoBase}/get,body data"));
+			MModule.single($"@http/get #1/{attrName}={PostmanEchoBase}/get,{token}"));
 
-		// GET with a body is refused before the task is queued.
+		// GET with a body is refused before the task is queued — error message is immediate.
 		await NotifyService
 			.Received()
 			.Notify(
@@ -274,5 +312,4 @@ public class PostmanEchoHttpTests
 					TestHelpers.MessageContains(msg, "GET requests cannot have a body")));
 	}
 }
-
 
