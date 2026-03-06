@@ -2471,7 +2471,6 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = executorLocation.Content(Mediator!);
 		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
@@ -2483,18 +2482,9 @@ public partial class Commands
 			? MModule.concat(executorName, MModule.trim(message, MModule.single(" "), MModule.TrimType.TrimStart))
 			: MModule.concat(MModule.concat(executorName, MModule.single(" ")), message);
 
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
-
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService!.Notify(
-				obj.WithRoomOption(),
-				poseMessage,
-				executor,
-				INotifyService.NotificationType.Pose);
-		}
+		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+			_ => poseMessage,
+			INotifyService.NotificationType.Pose);
 
 		return new CallState(message);
 	}
@@ -2545,7 +2535,6 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
@@ -2554,18 +2543,9 @@ public partial class Commands
 		var executorName = MModule.single(executor.Object().Name);
 		var semiposeMessage = MModule.concat(executorName, message);
 
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
-
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService!.Notify(
-				obj.WithRoomOption(),
-				semiposeMessage,
-				executor,
-				INotifyService.NotificationType.SemiPose);
-		}
+		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+			_ => semiposeMessage,
+			INotifyService.NotificationType.SemiPose);
 
 		return new CallState(message);
 	}
