@@ -307,7 +307,7 @@ public partial class Functions
 
 		// Multi-argument case: parse each argument and check
 		var allTruthy = await args.ToAsyncEnumerable()
-			.AllAsync(async (arg, ct) =>
+			.AllAsync(async (arg, _) =>
 			{
 				var result = await parser.FunctionParse(arg.Value.Message!);
 				var resultStr = MModule.plainText(result!.Message).Trim();

@@ -2342,7 +2342,7 @@ LOCATE()
 			{
 				var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 				return new CallState(await flags.ToAsyncEnumerable()
-					.AnyAsync(async (flag, ct) => await found.HasFlag(flag)));
+					.AnyAsync(async (flag, _) => await found.HasFlag(flag)));
 			});
 	}
 
@@ -2358,13 +2358,13 @@ LOCATE()
 		var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
 		return new CallState(await objList.ToAsyncEnumerable()
-			.AnyAsync(async (objRef, ct) =>
+			.AnyAsync(async (objRef, _) =>
 			{
 				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 				if (!maybeObj.IsValid()) return false;
 				var found = maybeObj.AsAnyObject;
 				return await flags.ToAsyncEnumerable()
-					.AnyAsync(async (flag, ct2) => await found.HasFlag(flag));
+					.AnyAsync(async (flag, _) => await found.HasFlag(flag));
 			}));
 	}
 
@@ -2380,13 +2380,13 @@ LOCATE()
 		var powers = powersArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
 		return new CallState(await objList.ToAsyncEnumerable()
-			.AnyAsync(async (objRef, ct) =>
+			.AnyAsync(async (objRef, _) =>
 			{
 				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 				if (!maybeObj.IsValid()) return false;
 				var found = maybeObj.AsAnyObject;
 				return await powers.ToAsyncEnumerable()
-					.AnyAsync(async (power, ct2) => await found.HasPower(power));
+					.AnyAsync(async (power, _) => await found.HasPower(power));
 			}));
 	}
 
@@ -2404,7 +2404,7 @@ LOCATE()
 			{
 				var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 				return new CallState(await flags.ToAsyncEnumerable()
-					.AllAsync(async (flag, ct) => await found.HasFlag(flag)));
+					.AllAsync(async (flag, _) => await found.HasFlag(flag)));
 			});
 	}
 
@@ -2425,13 +2425,13 @@ LOCATE()
 		}
 
 		return new CallState(await objList.ToAsyncEnumerable()
-			.AllAsync(async (objRef, ct) =>
+			.AllAsync(async (objRef, _) =>
 			{
 				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 				if (!maybeObj.IsValid()) return false;
 				var found = maybeObj.AsAnyObject;
 				return await flags.ToAsyncEnumerable()
-					.AllAsync(async (flag, ct2) => await found.HasFlag(flag));
+					.AllAsync(async (flag, _) => await found.HasFlag(flag));
 			}));
 	}
 
@@ -2451,13 +2451,13 @@ LOCATE()
 		}
 
 		return new CallState(await objList.ToAsyncEnumerable()
-			.AllAsync(async (objRef, ct) =>
+			.AllAsync(async (objRef, _) =>
 			{
 				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
 				if (!maybeObj.IsValid()) return false;
 				var found = maybeObj.AsAnyObject;
 				return await powers.ToAsyncEnumerable()
-					.AllAsync(async (power, ct2) => await found.HasPower(power));
+					.AllAsync(async (power, _) => await found.HasPower(power));
 			}));
 	}
 

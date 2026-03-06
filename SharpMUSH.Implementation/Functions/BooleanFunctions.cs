@@ -74,7 +74,7 @@ public partial class Functions
 		=> await parser.CurrentState.ArgumentsOrdered
 			.Select(x => x.Value.Message!)
 			.ToAsyncEnumerable()
-			.AnyAsync(async (m, ct) =>
+			.AnyAsync(async (m, _) =>
 			{
 				var parsed = await parser.FunctionParse(m);
 				return parsed!.Message.Falsy();

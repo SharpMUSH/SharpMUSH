@@ -181,7 +181,7 @@ public class ManipulateSharpObjectService(
 		if (requiredPermissions is not null && requiredPermissions.Length > 0)
 		{
 			var hasPermission = await requiredPermissions.ToAsyncEnumerable()
-				.AnyAsync(async (permission, ct) =>
+				.AnyAsync(async (permission, _) =>
 					await executor.HasFlag(permission) || await executor.HasPower(permission));
 
 			if (!hasPermission)

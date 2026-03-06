@@ -157,7 +157,7 @@ public partial class Functions
 		}
 
 		var result = await list.ToAsyncEnumerable()
-			.Where(async (item, ct) =>
+			.Where(async (item, _) =>
 			{
 				var newParser = parser.Push(parser.CurrentState with
 				{
@@ -235,7 +235,7 @@ public partial class Functions
 		}
 
 		var result = await list.ToAsyncEnumerable()
-			.Where(async (item, ct) =>
+			.Where(async (item, _) =>
 			{
 				var newParser = parser.Push(parser.CurrentState with
 				{

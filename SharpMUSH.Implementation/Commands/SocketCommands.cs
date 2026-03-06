@@ -305,10 +305,10 @@ public partial class Commands
 			// Limited to maxGuests total connections
 			// Count total guest connections
 			var totalGuestConnections = await guestPlayers.ToAsyncEnumerable()
-				.Select(async (guest, ct) =>
+				.Select((SharpPlayer guest, CancellationToken ct) =>
 				{
 					var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-					return await ConnectionService!.Get(guestDbRef).CountAsync(ct);
+					return ConnectionService!.Get(guestDbRef).CountAsync(ct);
 				})
 				.SumAsync();
 

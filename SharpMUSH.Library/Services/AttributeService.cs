@@ -283,7 +283,7 @@ public class AttributeService(
 				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
 				{
 					var hasRestriction = await applyFunction.LibraryInformation.Attribute.Restrict.ToAsyncEnumerable()
-						.AnyAsync(async (restriction, ct) => await realExecutor.HasPower(restriction));
+						.AnyAsync(async (restriction, _) => await realExecutor.HasPower(restriction));
 					if (!hasRestriction)
 					{
 						return MModule.single(Errors.ErrorAttrEvalPermissions);

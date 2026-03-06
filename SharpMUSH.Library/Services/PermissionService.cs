@@ -132,7 +132,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		// Check all attributes in the path for execution permissions
 		// All must allow evaluation for the final attribute to be executable
 		return await attribute.ToAsyncEnumerable()
-			.AllAsync(async (attr, ct) => await CanEvalAttr(viewer, target, attr));
+			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
 	}
 
 	/// <summary>
@@ -148,7 +148,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		// Check all attributes in the path for execution permissions
 		// All must allow evaluation for the final attribute to be executable
 		return await attribute.ToAsyncEnumerable()
-			.AllAsync(async (attr, ct) => await CanEvalAttr(viewer, target, attr));
+			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
