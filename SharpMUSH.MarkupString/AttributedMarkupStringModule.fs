@@ -193,21 +193,24 @@ module AttributedMarkupStringModule =
             if runs.Length = 0 then
                 strategy.EncodeText(text)
             else
-                let sb = StringBuilder(text.Length * 2)
-                let mutable hasAnyMarkup = false
-
-                for run in runs do
+                let renderRun (run: AttributeRun) =
                     let segment = strategy.EncodeText(text.Substring(run.Start, run.Length))
                     if run.Markups.Length = 0 then
-                        sb.Append(segment) |> ignore
+                        (false, segment)
                     else
-                        hasAnyMarkup <- true
-                        let mutable result = segment
-                        for markup in run.Markups do
-                            result <- strategy.ApplyMarkup markup result
-                        sb.Append(result) |> ignore
+                        let wrapped = run.Markups |> Seq.fold (fun acc markup -> strategy.ApplyMarkup markup acc) segment
+                        (true, wrapped)
 
-                let rendered = sb.ToString()
+                let (hasAnyMarkup, rendered) =
+                    let sb = StringBuilder(text.Length * 2)
+                    let hasMarkup =
+                        runs |> Seq.fold (fun foundMarkup run ->
+                            let (hadMarkup, rendered) = renderRun run
+                            sb.Append(rendered) |> ignore
+                            foundMarkup || hadMarkup
+                        ) false
+                    (hasMarkup, sb.ToString())
+
                 if hasAnyMarkup then
                     let prefix = strategy.Prefix
                     let postfix = strategy.Postfix
@@ -344,28 +347,33 @@ module AttributedMarkupStringModule =
             let actualEnd = min ams.Length (actualStart + length)
             let actualLength = actualEnd - actualStart
             let subText = ams.Text.Substring(actualStart, actualLength)
-            let builder = ImmutableArray.CreateBuilder<AttributeRun>()
             let startIdx = findFirstOverlappingRunIndex ams.Runs actualStart
-            let mutable i = startIdx
-            let mutable pastRange = false
-            while i < ams.Runs.Length && not pastRange do
-                let run = ams.Runs[i]
-                if run.Start >= actualEnd then
-                    pastRange <- true
+
+            let rec collectRuns i acc =
+                if i >= ams.Runs.Length then List.rev acc
                 else
-                    let runEnd = run.End
-                    if runEnd > actualStart then
-                        let clippedStart = max run.Start actualStart
-                        let clippedEnd = min runEnd actualEnd
-                        let clippedLength = clippedEnd - clippedStart
-                        if clippedLength > 0 then
-                            builder.Add({
-                                Start = clippedStart - actualStart
-                                Length = clippedLength
-                                Markups = run.Markups
-                            })
-                    i <- i + 1
-            AttributedMarkupString(subText, builder.ToImmutable())
+                    let run = ams.Runs[i]
+                    if run.Start >= actualEnd then List.rev acc
+                    else
+                        let runEnd = run.End
+                        if runEnd > actualStart then
+                            let clippedStart = max run.Start actualStart
+                            let clippedEnd = min runEnd actualEnd
+                            let clippedLength = clippedEnd - clippedStart
+                            if clippedLength > 0 then
+                                let clipped = {
+                                    Start = clippedStart - actualStart
+                                    Length = clippedLength
+                                    Markups = run.Markups
+                                }
+                                collectRuns (i + 1) (clipped :: acc)
+                            else
+                                collectRuns (i + 1) acc
+                        else
+                            collectRuns (i + 1) acc
+
+            let clippedRuns = collectRuns startIdx []
+            AttributedMarkupString(subText, ImmutableArray.CreateRange(clippedRuns))
 
     /// <summary>
     /// Splits an AttributedMarkupString by a string delimiter.
@@ -435,26 +443,20 @@ module AttributedMarkupStringModule =
         if ams.Runs.Length <= 1 then ams
         else
             let markupsEqual (a: ImmutableArray<Markup>) (b: ImmutableArray<Markup>) =
-                if a.Length <> b.Length then false
-                else
-                    let mutable allEqual = true
-                    let mutable i = 0
-                    while allEqual && i < a.Length do
-                        if a[i] <> b[i] then allEqual <- false
-                        i <- i + 1
-                    allEqual
+                a.Length = b.Length && Seq.forall2 (=) a b
 
-            let builder = ImmutableArray.CreateBuilder<AttributeRun>()
-            let mutable current = ams.Runs[0]
-            for i in 1 .. ams.Runs.Length - 1 do
-                let next = ams.Runs[i]
-                if current.End = next.Start && markupsEqual current.Markups next.Markups then
-                    current <- { Start = current.Start; Length = current.Length + next.Length; Markups = current.Markups }
+            let rec mergeRuns i (current: AttributeRun) acc =
+                if i >= ams.Runs.Length then
+                    List.rev (current :: acc)
                 else
-                    builder.Add(current)
-                    current <- next
-            builder.Add(current)
-            AttributedMarkupString(ams.Text, builder.ToImmutable())
+                    let next = ams.Runs[i]
+                    if current.End = next.Start && markupsEqual current.Markups next.Markups then
+                        mergeRuns (i + 1) { Start = current.Start; Length = current.Length + next.Length; Markups = current.Markups } acc
+                    else
+                        mergeRuns (i + 1) next (current :: acc)
+
+            let merged = mergeRuns 1 ams.Runs[0] []
+            AttributedMarkupString(ams.Text, ImmutableArray.CreateRange(merged))
 
     /// <summary>
     /// Returns the first index where a search string occurs.
