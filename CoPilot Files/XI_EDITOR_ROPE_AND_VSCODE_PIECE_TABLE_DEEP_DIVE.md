@@ -11,6 +11,7 @@ A detailed exploration of the two most influential text-buffer data structures i
 3. [Mapping to AttributedMarkupString](#3-mapping-to-attributedmarkupstring)
 4. [Comparison & Applicability](#4-comparison--applicability)
 5. [Scenario Analysis: 32KB Average String Size](#5-scenario-analysis-32kb-average-string-size)
+6. [.NET Immutable Collection Choices for Run Storage](#6-net-immutable-collection-choices-for-run-storage)
 
 ---
 
@@ -1368,6 +1369,161 @@ graph TD
 │                                                                      │
 └──────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 6. .NET Immutable Collection Choices for Run Storage
+
+### 6.1 ImmutableSortedSet\<T\> vs ImmutableArray\<T\> + BinarySearch
+
+.NET's `System.Collections.Immutable` provides two candidates for storing sorted `AttributeRun` data:
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  ImmutableArray<T> + BinarySearch (CURRENT IMPLEMENTATION)          │
+│                                                                      │
+│  Backing store: contiguous array (struct[])                          │
+│  Sort invariant: maintained by construction (builder adds in order)  │
+│  Lookup by position: O(log n) via BinarySearch + IComparer<T>       │
+│  Sequential iteration: O(n) with excellent cache locality            │
+│  Insert/Remove single element: O(n) — must rebuild array            │
+│  Memory per run: sizeof(AttributeRun) only — no tree node overhead  │
+│  Index access: O(1) — direct array indexing                          │
+│  Struct-friendly: ✅ no boxing — runs stored inline in array         │
+│                                                                      │
+│  Memory layout:                                                      │
+│  ┌──────┬──────┬──────┬──────┬──────┐                               │
+│  │Run 0 │Run 1 │Run 2 │Run 3 │Run 4 │  ← contiguous, cache-friendly│
+│  │S:0   │S:5   │S:12  │S:20  │S:25  │                               │
+│  └──────┴──────┴──────┴──────┴──────┘                               │
+├──────────────────────────────────────────────────────────────────────┤
+│  ImmutableSortedSet<T>                                               │
+│                                                                      │
+│  Backing store: immutable AVL tree (balanced binary tree)            │
+│  Sort invariant: enforced by tree structure                          │
+│  Lookup by position: O(log n) via tree traversal                     │
+│  Sequential iteration: O(n) but with pointer chasing (poor cache)   │
+│  Insert/Remove single element: O(log n) with structural sharing     │
+│  Memory per run: sizeof(node) + left/right pointers + height        │
+│  Index access: O(n) — no index-based access                         │
+│  Struct-friendly: ❌ boxes structs into heap-allocated tree nodes    │
+│                                                                      │
+│  Memory layout:                                                      │
+│           ┌─────────┐                                                │
+│           │ Node    │                                                │
+│           │ Run S:12│                                                │
+│           └─┬───┬───┘                                                │
+│         ┌───┘   └───┐                                                │
+│    ┌────┴───┐  ┌────┴───┐    ← scattered in heap, pointer chasing   │
+│    │Node    │  │Node    │                                            │
+│    │Run S:5 │  │Run S:25│                                            │
+│    └─┬──┬───┘  └─┬──┬───┘                                           │
+│   ┌──┘  └──┐  ┌──┘  └──┐                                            │
+│  ┌┴──┐  ┌──┴┐ null  null                                            │
+│  │S:0│  │S:20│                                                       │
+│  └───┘  └───┘                                                        │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.2 Why ImmutableSortedSet\<T\> Is Not a Good Fit
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  PROBLEM 1: Set Semantics                                            │
+│                                                                      │
+│  ImmutableSortedSet enforces uniqueness via the comparer.            │
+│  If we compare by Start position, two runs with the same Start      │
+│  (e.g., during construction before deduplication) would be silently  │
+│  dropped as duplicates. This is a correctness risk.                  │
+│                                                                      │
+│  PROBLEM 2: Struct Boxing                                            │
+│                                                                      │
+│  AttributeRun is [<Struct>] — a value type stored inline.            │
+│  ImmutableSortedSet stores elements in heap-allocated AVL nodes.     │
+│  Each struct is boxed into a node object:                            │
+│                                                                      │
+│  ImmutableArray: 200 runs × 24 bytes/struct = 4.8 KB (one alloc)   │
+│  ImmutableSortedSet: 200 runs × (24 + ~40 bytes/node) = 12.8 KB    │
+│                      + 200 individual heap allocations               │
+│                                                                      │
+│  2.7× more memory, 200× more GC objects.                            │
+│                                                                      │
+│  PROBLEM 3: Rendering Cache Locality                                 │
+│                                                                      │
+│  Rendering iterates ALL runs sequentially — this is the hot path.   │
+│  ImmutableArray: sequential memory reads (CPU prefetcher friendly)  │
+│  ImmutableSortedSet: in-order tree traversal with pointer chasing   │
+│                      (cache misses on every node)                    │
+│                                                                      │
+│  At 200 runs, the cache miss penalty is measurable (~2-3× slower    │
+│  for the iteration-heavy rendering pipeline).                        │
+│                                                                      │
+│  PROBLEM 4: No Index-Based Access                                    │
+│                                                                      │
+│  ImmutableSortedSet has no runs[i] indexing.                         │
+│  Operations like optimize() that compare adjacent runs (runs[i]     │
+│  vs runs[i+1]) would require materialization to a list/array first, │
+│  defeating the purpose.                                              │
+│                                                                      │
+│  PROBLEM 5: Workload Mismatch                                        │
+│                                                                      │
+│  ImmutableSortedSet excels at: incremental persistent updates        │
+│  (add one element, get new set sharing structure with old).           │
+│                                                                      │
+│  SharpMUSH's workload is: build ALL runs at once via Builder,       │
+│  then iterate sequentially for rendering. No incremental updates.    │
+│  This is exactly ImmutableArray's sweet spot.                        │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.3 Comparison Table
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│              ImmutableArray<T>         ImmutableSortedSet<T>         │
+│              + BinarySearch                                          │
+│  ───────────────────────────────────────────────────────────────── │
+│  Lookup        O(log n) ✅              O(log n) ✅                 │
+│  Iteration     O(n), cache-friendly ✅  O(n), pointer-chasing ❌   │
+│  Insert one    O(n) ❌                  O(log n) ✅                 │
+│  Build all     O(n) via Builder ✅      O(n log n) ❌               │
+│  Index access  O(1) ✅                  N/A ❌                      │
+│  Memory        Low (contiguous) ✅      High (tree nodes) ❌        │
+│  Struct boxing  No ✅                   Yes ❌                      │
+│  Duplicates    Allowed ✅               Dropped silently ❌         │
+│  Sharing       None (full copy) ❌      Structural (COW) ✅         │
+│                                                                      │
+│  SharpMUSH fit: ImmutableArray ★★★★★   ImmutableSortedSet ★★☆☆☆  │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.4 When ImmutableSortedSet\<T\> *Would* Be the Right Choice
+
+ImmutableSortedSet becomes advantageous when:
+- **Frequent single-element updates**: Adding/removing individual runs without rebuilding the whole array (e.g., an interactive editor where the user types character by character)
+- **Persistent versioning**: Needing to keep old versions of the run set efficiently (undo history, CRDT sync)
+- **Reference-type elements**: When elements are already heap objects, the boxing penalty doesn't apply
+
+None of these match SharpMUSH's one-shot evaluation pipeline (build → render → discard).
+
+### 6.5 The Implemented Optimization
+
+The current implementation uses `ImmutableArray<T>.BinarySearch()` with a custom `IComparer<AttributeRun>` — achieving O(log n) sorted lookup while retaining ImmutableArray's strengths:
+
+```fsharp
+/// Comparer for binary search — compares runs by Start position.
+let private runStartComparer =
+    { new IComparer<AttributeRun> with
+        member _.Compare(a, b) = compare a.Start b.Start }
+
+/// O(log n) lookup: find first run that could overlap a position.
+let private findFirstOverlappingRunIndex (runs: ImmutableArray<AttributeRun>) (position: int) =
+    let probe = { Start = position; Length = 0; Markups = ImmutableArray<Markup>.Empty }
+    let idx = runs.BinarySearch(probe, runStartComparer)
+    // ... handle exact match vs insertion point
+```
+
+This gives O(log n + k) for substring operations (k = overlapping runs), compared to the previous O(n) linear scan — without sacrificing cache locality for rendering.
 
 ---
 

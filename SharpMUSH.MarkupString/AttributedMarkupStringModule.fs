@@ -37,6 +37,38 @@ module AttributedMarkupStringModule =
         }
         member this.End = this.Start + this.Length
 
+    /// <summary>
+    /// Comparer for binary search over the ImmutableArray&lt;AttributeRun&gt;.
+    /// Compares runs by their Start position, enabling O(log n) lookup
+    /// of the first run at or near a given character position.
+    /// Used with ImmutableArray&lt;T&gt;.BinarySearch — .NET's built-in
+    /// "immutable sorted array" search capability.
+    /// </summary>
+    let private runStartComparer =
+        { new System.Collections.Generic.IComparer<AttributeRun> with
+            member _.Compare(a, b) = compare a.Start b.Start }
+
+    /// <summary>
+    /// Finds the index of the first run that could overlap with the given position.
+    /// Uses ImmutableArray.BinarySearch for O(log n) lookup instead of O(n) linear scan.
+    /// Returns 0 if no runs exist or the position precedes all runs.
+    /// </summary>
+    let private findFirstOverlappingRunIndex (runs: ImmutableArray<AttributeRun>) (position: int) : int =
+        if runs.Length = 0 then 0
+        else
+            let probe = { Start = position; Length = 0; Markups = ImmutableArray<Markup>.Empty }
+            let idx = runs.BinarySearch(probe, runStartComparer)
+            if idx >= 0 then
+                // Exact match on Start — but a previous run might extend into this position
+                max 0 (idx - 1)
+            else
+                // BinarySearch returns ~insertionPoint when not found (bitwise complement).
+                // ~~~idx (F#'s bitwise NOT, equivalent to C#'s ~idx) recovers the insertion
+                // point — the index of the first element greater than the probe.
+                // The run before that point might overlap the target position.
+                let insertionPoint = ~~~idx
+                max 0 (insertionPoint - 1)
+
     // ── Render Strategy Pattern (5.2 Option A) ─────────────────────
 
     /// <summary>
@@ -300,6 +332,9 @@ module AttributedMarkupStringModule =
     /// <summary>
     /// Returns a substring of an AttributedMarkupString, preserving markup runs.
     /// Runs that partially overlap the range are clipped to the range boundaries.
+    /// Uses binary search to find the first overlapping run in O(log n),
+    /// then scans forward only through overlapping runs — O(log n + k) total
+    /// where k is the number of runs in the range (vs O(n) linear scan).
     /// </summary>
     let substring (start: int) (length: int) (ams: AttributedMarkupString) : AttributedMarkupString =
         if length <= 0 || start >= ams.Length then
@@ -310,18 +345,26 @@ module AttributedMarkupStringModule =
             let actualLength = actualEnd - actualStart
             let subText = ams.Text.Substring(actualStart, actualLength)
             let builder = ImmutableArray.CreateBuilder<AttributeRun>()
-            for run in ams.Runs do
-                let runEnd = run.End
-                if runEnd > actualStart && run.Start < actualEnd then
-                    let clippedStart = max run.Start actualStart
-                    let clippedEnd = min runEnd actualEnd
-                    let clippedLength = clippedEnd - clippedStart
-                    if clippedLength > 0 then
-                        builder.Add({
-                            Start = clippedStart - actualStart
-                            Length = clippedLength
-                            Markups = run.Markups
-                        })
+            let startIdx = findFirstOverlappingRunIndex ams.Runs actualStart
+            let mutable i = startIdx
+            let mutable pastRange = false
+            while i < ams.Runs.Length && not pastRange do
+                let run = ams.Runs[i]
+                if run.Start >= actualEnd then
+                    pastRange <- true
+                else
+                    let runEnd = run.End
+                    if runEnd > actualStart then
+                        let clippedStart = max run.Start actualStart
+                        let clippedEnd = min runEnd actualEnd
+                        let clippedLength = clippedEnd - clippedStart
+                        if clippedLength > 0 then
+                            builder.Add({
+                                Start = clippedStart - actualStart
+                                Length = clippedLength
+                                Markups = run.Markups
+                            })
+                    i <- i + 1
             AttributedMarkupString(subText, builder.ToImmutable())
 
     /// <summary>
