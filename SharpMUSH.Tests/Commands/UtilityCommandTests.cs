@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -75,25 +77,114 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	public async ValueTask ExamineObject()
+	public async ValueTask ExamineObject_HeaderContainsNameAndDbref()
 	{
+		// Verify the name row has "Name(#dbref)" format (no space before '(') in plain text.
+		// We use plain-text check because name.Hilight() inserts ANSI codes around the name.
+		// Player #1 is named "God" in the test database.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
-		// Verify notify was called (exact count may vary based on object attributes)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "God(#1")));
 	}
 
 	[Test]
-	public async ValueTask ExamineObjectBriefSwitch()
+	public async ValueTask ExamineObject_HeaderContainsOwnerRow()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
+		// Owner row uses proper MModule composition; plain-text must contain "Owner: "
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
-		// /brief should show header info but skip attributes
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Owner: ")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_HeaderContainsZoneAndPowers()
+	{
+		// Zone and Powers are always shown (even when empty/nothing)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Zone: *NOTHING*")));
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Powers: ")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_HeaderContainsWarningsChecked()
+	{
+		// "Warnings checked:" is always shown (even when empty)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Warnings checked:")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_AttributeWithAnsi_PreservesMarkup()
+	{
+		// Create an object, set a DESCRIBE with ANSI color, then examine it.
+		// The attribute value (an MString with markup) must survive through examine output.
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create AnsiExamineTestObj"));
+		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		// [ansi(rh,...)] evaluates to an MString with red+bold markup
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"examine {objDbRef}"));
+
+		// Plain-text content of the attribute value must appear in examine output
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText")));
+
+		// The ANSI-rendered output must contain actual ANSI escape codes
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText") &&
+				msg.IsT0 && msg.AsT0.ToString().Contains("\x1b[")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_BriefSwitch_ShowsHeaderNotDescription()
+	{
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create BriefExamineTestObj"));
+		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@desc {objDbRef}=BriefShouldNotSeeThis"));
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"examine/brief {objDbRef}"));
+
+		// Brief MUST show owner header (in plain text because owner name is hilighted)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Owner: ")));
+
+		// Brief must NOT show description text
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "BriefShouldNotSeeThis")));
 	}
 
 	[Test]
@@ -101,10 +192,10 @@ public class UtilityCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/opaque #1"));
 
-		// /opaque should skip contents display
+		// /opaque should still show header
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -116,7 +207,7 @@ public class UtilityCommandTests
 		// Should display matching attributes
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -128,7 +219,7 @@ public class UtilityCommandTests
 		// Should display current location
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]

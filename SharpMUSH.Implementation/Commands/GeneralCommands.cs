@@ -620,8 +620,9 @@ public partial class Commands
 		}
 
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
-		var defaultFormattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
-			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+		var defaultFormattedName = MModule.concat(
+			baseName.Hilight(),
+			MModule.single($"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})"));
 
 		var formattedName = defaultFormattedName;
 		if (realViewing.IsRoom && viewingFromInside)
@@ -905,78 +906,93 @@ public partial class Commands
 		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = obj.Powers.Value;
+		var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
 
 		var outputSections = new List<MString>();
 
 		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
-		var nameRow = showFlags
-			? MModule.multiple([
-				name.Hilight(),
-				MModule.single(" "),
-				MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
-			])
-			: MModule.concat(name.Hilight(), MModule.single($" (#{obj.DBRef.Number})"));
 
+		// Name row: Name(#flagSymbols) — no space before (
+		var nameRow = MModule.concat(
+			name.Hilight(),
+			MModule.single(showFlags
+				? $"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})"
+				: $"(#{obj.DBRef.Number})"));
 		outputSections.Add(nameRow);
 
-		if (showFlags)
-		{
-			outputSections.Add(MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
-		}
-		else
-		{
-			outputSections.Add(MModule.single($"Type: {obj.Type}"));
-		}
+		// Type / Flags row
+		outputSections.Add(showFlags
+			? MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}")
+			: MModule.single($"Type: {obj.Type}"));
 
+		// Description — only in full examine, not brief
 		if (!switches.Contains("BRIEF"))
 		{
 			outputSections.Add(description);
 		}
 
-		var ownerRow = showFlags
-			? MModule.single($"Owner: {ownerName.Hilight()}" +
-											 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
-			: MModule.single($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
+		// Zone section (for owner row)
+		MString zoneSection;
+		if (objZone.IsNone)
+		{
+			zoneSection = MModule.single("  Zone: *NOTHING*");
+		}
+		else
+		{
+			var zoneObject = objZone.Known.Object();
+			var zoneFlags = await zoneObject.Flags.Value.ToArrayAsync();
+			zoneSection = MModule.multiple([
+				MModule.single("  Zone: "),
+				zoneObject.Name.Hilight(),
+				MModule.single($"(#{zoneObject.DBRef.Number}{string.Join(string.Empty, zoneFlags.Select(x => x.Symbol))})")
+			]);
+		}
+
+		// Owner row: "Owner: Name(#flags)  Zone: ..." — owner name hilighted as MString
+		var ownerRow = MModule.multiple([
+			MModule.single("Owner: "),
+			ownerName.Hilight(),
+			MModule.single(showFlags
+				? $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})"
+				: $"(#{ownerObj.DBRef.Number})"),
+			zoneSection
+		]);
 		outputSections.Add(ownerRow);
 
-		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
-
-		// Display locks with flags
-		if (obj.Locks.Count > 0)
+		// Parent row: "Parent: Name(#flags)" or "Parent: *NOTHING*"
+		var parentObject = objParent.Object();
+		if (parentObject == null)
 		{
-			var lockLines = obj.Locks
-				.Select(kvp =>
-				{
-					var lockName = kvp.Key;
-					var lockData = kvp.Value;
-					var flagsStr = LockService!.FormatLockFlags(lockData.Flags);
-					var flagsDisplay = string.IsNullOrEmpty(flagsStr) ? "" : $"[{flagsStr}]";
-					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
-				})
-				.ToList();
-
-			outputSections.Add(MModule.single($"Locks:"));
-			foreach (var lockLine in lockLines)
-			{
-				outputSections.Add(MModule.single($"  {lockLine}"));
-			}
+			outputSections.Add(MModule.single("Parent: *NOTHING*"));
+		}
+		else
+		{
+			var parentFlags = await parentObject.Flags.Value.ToArrayAsync();
+			outputSections.Add(MModule.multiple([
+				MModule.single("Parent: "),
+				parentObject.Name.Hilight(),
+				MModule.single($"(#{parentObject.DBRef.Number}{string.Join(string.Empty, parentFlags.Select(x => x.Symbol))})")
+			]));
 		}
 
+		// Locks: one line per lock — no "Locks:" header
+		// Output format: "{LockName} Lock [#<dbrefNumber><flagChars>]: <lockExpression>"
+		foreach (var lockKvp in obj.Locks)
+		{
+			var flagsStr = LockService!.FormatLockFlags(lockKvp.Value.Flags);
+			outputSections.Add(MModule.single(
+				$"{lockKvp.Key} Lock [#{obj.DBRef.Number}{flagsStr}]: {lockKvp.Value.LockString}"));
+		}
+
+		// Powers — always show even when empty
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
-		if (powersList.Length > 0)
-		{
-			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
-		}
+		outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
 
-		// Display warnings if any are set
-		if (obj.Warnings != WarningType.None)
-		{
-			var warningsList = WarningTypeHelper.UnparseWarnings(obj.Warnings);
-			outputSections.Add(MModule.single($"Warnings: {warningsList}"));
-		}
-
-		// Display channels if player is on any (would require channel membership query)
-		// For now, this would need channel service integration
+		// Warnings checked — always show even when empty
+		var warningsStr = obj.Warnings != WarningType.None
+			? WarningTypeHelper.UnparseWarnings(obj.Warnings)
+			: string.Empty;
+		outputSections.Add(MModule.single($"Warnings checked: {warningsStr}"));
 
 		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
@@ -984,7 +1000,6 @@ public partial class Commands
 		}
 		else
 		{
-			// Match PennMUSH date format: "ddd MMM dd HH:mm:ss yyyy"
 			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
 		}
 
@@ -1039,48 +1054,69 @@ public partial class Commands
 							attr.Value));
 				}
 			}
-		}
 
-		if (!switches.Contains("OPAQUE") && !switches.Contains("BRIEF") && contents.Length > 0)
-		{
-			// Use CONFORMAT attribute if present, following PennMUSH conventions
-			var conFormatResult = await AttributeService!.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
-				IAttributeService.AttributeMode.Read, false);
-
-			if (conFormatResult.IsAttribute)
+			// Contents — only if not OPAQUE
+			if (!switches.Contains("OPAQUE") && contents.Length > 0)
 			{
-				// Format with CONFORMAT: %0 = space-separated dbrefs, %1 = pipe-separated names
-				var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
-				var contentNames = string.Join("|", contentKeys);
+				var conFormatResult = await AttributeService!.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
+					IAttributeService.AttributeMode.Read, false);
 
-				var formatArgs = new Dictionary<string, CallState>
+				if (conFormatResult.IsAttribute)
 				{
-					["0"] = new CallState(contentDbrefs),
-					["1"] = new CallState(contentNames)
-				};
+					var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
+					var contentNames = string.Join("|", contents.Select(x => x.Object().Name));
 
-				var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
-					parser, executor, viewingKnown, "CONFORMAT", formatArgs);
+					var formatArgs = new Dictionary<string, CallState>
+					{
+						["0"] = new CallState(contentDbrefs),
+						["1"] = new CallState(contentNames)
+					};
 
-				await NotifyService!.Notify(enactor, formattedContents);
+					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+						parser, executor, viewingKnown, "CONFORMAT", formatArgs);
+
+					await NotifyService!.Notify(enactor, formattedContents);
+				}
+				else
+				{
+					// Default: "Carrying:" for non-rooms, "Contents:" for rooms; each item as Name(#flags)
+					var contentsLabel = viewingKnown.IsRoom ? "Contents:" : "Carrying:";
+					var contentLines = new List<MString> { MModule.single(contentsLabel) };
+					foreach (var content in contents)
+					{
+						var cObj = content.Object();
+						var cFlags = await cObj.Flags.Value.ToArrayAsync();
+						contentLines.Add(MModule.concat(
+							cObj.Name.Hilight(),
+							MModule.single($"(#{cObj.DBRef.Number}{string.Join(string.Empty, cFlags.Select(x => x.Symbol))})")));
+					}
+					await NotifyService!.Notify(enactor,
+						MModule.multipleWithDelimiter(MModule.single("\n"), contentLines));
+				}
 			}
-			else
+
+			// Home and Location — non-room objects only
+			if (!viewingKnown.IsRoom)
 			{
-				// Default format when CONFORMAT is not set
-				await NotifyService!.Notify(enactor, $"Contents:\n" +
-																						$"{string.Join("\n", contentKeys)}");
+				var homeContainer = await viewingKnown.MinusRoom().Home();
+				var locationContainer = await viewingKnown.AsContent.Location();
+
+				var homeObject = homeContainer.Object();
+				var locationObject = locationContainer.Object();
+				var homeFlags = await homeObject.Flags.Value.ToArrayAsync();
+				var locationFlags = await locationObject.Flags.Value.ToArrayAsync();
+
+				await NotifyService.Notify(enactor, MModule.multiple([
+					MModule.single("Home: "),
+					homeObject.Name.Hilight(),
+					MModule.single($"(#{homeObject.DBRef.Number}{string.Join(string.Empty, homeFlags.Select(x => x.Symbol))})")
+				]));
+				await NotifyService.Notify(enactor, MModule.multiple([
+					MModule.single("Location: "),
+					locationObject.Name.Hilight(),
+					MModule.single($"(#{locationObject.DBRef.Number}{string.Join(string.Empty, locationFlags.Select(x => x.Symbol))})")
+				]));
 			}
-		}
-
-		if (!switches.Contains("BRIEF") && !viewingKnown.IsRoom)
-		{
-			// Format Home and Location display
-			var homeObj = await viewingKnown.MinusRoom().Home();
-			var locationObj = await viewingKnown.AsContent.Location();
-
-			await NotifyService.Notify(enactor, $"Home: {homeObj.Object().Name}");
-			await NotifyService.Notify(enactor,
-				$"Location: {locationObj.Object().Name}");
 		}
 
 		return new CallState(obj.DBRef.ToString());
