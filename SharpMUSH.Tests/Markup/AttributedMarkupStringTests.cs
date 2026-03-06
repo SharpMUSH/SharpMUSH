@@ -416,92 +416,6 @@ public class MarkupStringTests
 		await Assert.That(htmlOutput).IsEqualTo("<b>Bold</b>");
 	}
 
-	// ── Conversion ─────────────────────────────────────────────────
-
-	[Test]
-	public async Task FromMarkupString_PlainText_ConvertsFaithfully()
-	{
-		var ms = global::MarkupString.TreeMarkupStringModule.single("Hello, World!");
-		var ams = AMS.fromMarkupString(ms);
-
-		await Assert.That(ams.ToPlainText()).IsEqualTo("Hello, World!");
-		await Assert.That(ams.Length).IsEqualTo(13);
-	}
-
-	[Test]
-	public async Task FromMarkupString_MarkupText_PreservesMarkup()
-	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ms = global::MarkupString.TreeMarkupStringModule.markupSingle(redMarkup, "Red Text");
-		var ams = AMS.fromMarkupString(ms);
-
-		await Assert.That(ams.ToPlainText()).IsEqualTo("Red Text");
-		await Assert.That(ams.Runs.Length).IsEqualTo(1);
-		await Assert.That(ams.Runs[0].Markups.Length).IsEqualTo(1);
-	}
-
-	[Test]
-	public async Task FromMarkupString_NestedMarkup_FlattensToCombinedRuns()
-	{
-		// Create: red(hello blue(world))
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var innerMs = global::MarkupString.TreeMarkupStringModule.markupSingle(blueMarkup, "world");
-		var outerMs = new global::MarkupString.TreeMarkupStringModule.TreeMarkupString(
-			FSharpOption<MarkupImplementation.Markup>.Some(redMarkup),
-			Microsoft.FSharp.Collections.ListModule.OfSeq(new global::MarkupString.TreeMarkupStringModule.Content[]
-			{
-				global::MarkupString.TreeMarkupStringModule.Content.NewText("hello "),
-				global::MarkupString.TreeMarkupStringModule.Content.NewMarkupText(innerMs)
-			})
-		);
-
-		var ams = AMS.fromMarkupString(outerMs);
-
-		await Assert.That(ams.ToPlainText()).IsEqualTo("hello world");
-		await Assert.That(ams.Runs.Length).IsEqualTo(2);
-		// "hello " has only the red markup
-		await Assert.That(ams.Runs[0].Markups.Length).IsEqualTo(1);
-		// "world" has red + blue (parent + child)
-		await Assert.That(ams.Runs[1].Markups.Length).IsEqualTo(2);
-	}
-
-	[Test]
-	public async Task ToMarkupString_PlainText_ConvertsFaithfully()
-	{
-		var ams = AMS.single("Hello");
-		var ms = AMS.toMarkupString(ams);
-
-		await Assert.That(ms.ToPlainText()).IsEqualTo("Hello");
-		await Assert.That(ms.Length).IsEqualTo(5);
-	}
-
-	[Test]
-	public async Task ToMarkupString_MarkupText_PreservesMarkup()
-	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Red");
-		var ms = AMS.toMarkupString(ams);
-
-		await Assert.That(ms.ToPlainText()).IsEqualTo("Red");
-		// Should contain ANSI escape codes when rendered
-		await Assert.That(ms.ToString()).Contains("\u001b[");
-	}
-
-	[Test]
-	public async Task RoundTrip_MarkupString_PreservesText()
-	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var original = global::MarkupString.TreeMarkupStringModule.markupSingle(redMarkup, "Test");
-		var ams = AMS.fromMarkupString(original);
-		var roundTrip = AMS.toMarkupString(ams);
-
-		await Assert.That(roundTrip.ToPlainText()).IsEqualTo(original.ToPlainText());
-		// Verify markup is preserved through conversion (both should contain ANSI codes)
-		await Assert.That(roundTrip.ToString()).Contains("\u001b[");
-		await Assert.That(roundTrip.ToString()).Contains("Test");
-	}
-
 	// ── IndexOf ────────────────────────────────────────────────────
 
 	[Test]
@@ -930,20 +844,6 @@ public class MarkupStringTests
 
 		await Assert.That(result.Runs.Length).IsEqualTo(5);
 		await AssertRunsSortedByStart(result);
-	}
-
-	[Test]
-	public async Task SortOrder_FromMarkupString_RunsRemainSorted()
-	{
-		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-
-		var ms = global::MarkupString.TreeMarkupStringModule.markupSingle(red, "Hello ");
-		var ms2 = global::MarkupString.TreeMarkupStringModule.markupSingle(blue, "World");
-		var combined = global::MarkupString.TreeMarkupStringModule.concat(ms, ms2);
-		var ams = AMS.fromMarkupString(combined);
-
-		await AssertRunsSortedByStart(ams);
 	}
 
 	[Test]

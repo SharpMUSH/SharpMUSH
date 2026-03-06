@@ -693,71 +693,6 @@ module MarkupStringModule =
                         }
                         concatMany parts
 
-    // ── Conversion functions ───────────────────────────────────────
-
-    /// <summary>
-    /// Converts a tree-based MarkupString to the flat MarkupString.
-    /// Walks the tree depth-first, collecting text and attribute runs.
-    /// </summary>
-    let fromMarkupString (ms: TreeMarkupStringModule.TreeMarkupString) : MarkupString =
-        let textSb = StringBuilder()
-        let runs = ImmutableArray.CreateBuilder<AttributeRun>()
-
-        let rec collect (ms: TreeMarkupStringModule.TreeMarkupString) (parentMarkups: Markup list) =
-            let currentMarkups =
-                match ms.MarkupDetails with
-                | Some m -> m :: parentMarkups
-                | None -> parentMarkups
-
-            for content in ms.Content do
-                match content with
-                | TreeMarkupStringModule.Content.Text str ->
-                    if str.Length > 0 then
-                        let startPos = textSb.Length
-                        textSb.Append(str) |> ignore
-                        runs.Add({
-                            Start = startPos
-                            Length = str.Length
-                            Markups = ImmutableArray.CreateRange(currentMarkups |> List.rev)
-                        })
-                | TreeMarkupStringModule.Content.MarkupText childMs ->
-                    collect childMs currentMarkups
-
-        collect ms []
-        let finalText = textSb.ToString()
-        if finalText.Length = 0 then
-            empty ()
-        else
-            MarkupString(finalText, runs.ToImmutable())
-
-    /// <summary>
-    /// Converts a flat MarkupString back to the tree-based MarkupString.
-    /// Each run becomes a leaf in the tree. Runs with the same markup can be
-    /// grouped under a single parent node.
-    /// </summary>
-    let toMarkupString (ams: MarkupString) : TreeMarkupStringModule.TreeMarkupString =
-        if ams.Length = 0 then
-            TreeMarkupStringModule.empty ()
-        elif ams.Runs.Length = 0 then
-            TreeMarkupStringModule.single ams.Text
-        else
-            let contentList = ResizeArray<TreeMarkupStringModule.Content>()
-            for run in ams.Runs do
-                let segment = ams.Text.Substring(run.Start, run.Length)
-                if run.Markups.Length = 0 then
-                    contentList.Add(TreeMarkupStringModule.Content.Text segment)
-                else
-                    let rec buildNested (markups: Markup list) (text: string) : TreeMarkupStringModule.TreeMarkupString =
-                        match markups with
-                        | [] -> TreeMarkupStringModule.TreeMarkupString(None, [ TreeMarkupStringModule.Content.Text text ])
-                        | [m] -> TreeMarkupStringModule.TreeMarkupString(Some m, [ TreeMarkupStringModule.Content.Text text ])
-                        | m :: rest ->
-                            let inner = buildNested rest text
-                            TreeMarkupStringModule.TreeMarkupString(Some m, [ TreeMarkupStringModule.Content.MarkupText inner ])
-                    let nested = buildNested (run.Markups |> Seq.toList) segment
-                    contentList.Add(TreeMarkupStringModule.Content.MarkupText nested)
-            TreeMarkupStringModule.TreeMarkupString(None, contentList |> Seq.toList)
-
     /// <summary>
     /// Creates an MarkupString by interspersing a delimiter between elements.
     /// Uses single-pass builder — O(n) instead of O(n²) from left-fold concat.
@@ -1036,23 +971,31 @@ module MarkupStringModule =
 
     open System.Text.Json
     open System.Text.Json.Serialization
+    open System.Drawing
+
+    /// JSON converter for System.Drawing.Color, serializing to/from hex color strings.
+    type ColorJsonConverter() =
+        inherit JsonConverter<Color>()
+
+        override _.Read(reader, _typeToConvert, _options) =
+            ColorTranslator.FromHtml(reader.GetString())
+
+        override _.Write(writer, value, _) =
+            writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
 
     /// Serialization options for MarkupString.
     let serializationOptions =
         let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
-        serializeOption.Converters.Add(TreeMarkupStringModule.ColorJsonConverter())
+        serializeOption.Converters.Add(ColorJsonConverter())
         serializeOption
 
     /// Serializes to JSON string.
     let serialize (ams: MarkupString) : string =
-        // Convert to MarkupString for serialization compatibility
-        let ms = toMarkupString ams
-        JsonSerializer.Serialize(ms, serializationOptions)
+        JsonSerializer.Serialize(ams, serializationOptions)
 
     /// Deserializes from JSON string.
     let deserialize (jsonString: string) : MarkupString =
         if jsonString.Length = 0 then
             empty ()
         else
-            let ms = JsonSerializer.Deserialize<TreeMarkupStringModule.TreeMarkupString>(jsonString, serializationOptions)
-            fromMarkupString ms
+            JsonSerializer.Deserialize<MarkupString>(jsonString, serializationOptions)
