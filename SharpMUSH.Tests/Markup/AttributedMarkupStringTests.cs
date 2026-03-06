@@ -400,6 +400,9 @@ public class AttributedMarkupStringTests
 		var roundTrip = AMS.toMarkupString(ams);
 
 		await Assert.That(roundTrip.ToPlainText()).IsEqualTo(original.ToPlainText());
+		// Verify markup is preserved through conversion (both should contain ANSI codes)
+		await Assert.That(roundTrip.ToString()).Contains("\u001b[");
+		await Assert.That(roundTrip.ToString()).Contains("Test");
 	}
 
 	// ── IndexOf ────────────────────────────────────────────────────

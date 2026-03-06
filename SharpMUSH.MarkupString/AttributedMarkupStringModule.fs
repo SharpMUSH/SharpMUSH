@@ -310,8 +310,9 @@ module AttributedMarkupStringModule =
 
     /// <summary>
     /// Applies a text transformation function to all text content, preserving runs.
-    /// Note: This only works correctly for character-preserving transforms (same length).
-    /// For length-changing transforms, runs would need to be recalculated.
+    /// For transforms that preserve text length (e.g., ToUpper), attribute runs are
+    /// preserved exactly. For length-changing transforms, the result is treated as
+    /// plain text with no markup (attribute information is lost).
     /// </summary>
     let apply (ams: AttributedMarkupString) (transform: string -> string) : AttributedMarkupString =
         let newText = transform ams.Text
