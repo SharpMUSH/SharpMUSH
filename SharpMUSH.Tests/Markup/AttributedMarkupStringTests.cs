@@ -2,17 +2,17 @@ using System.Collections.Immutable;
 using System.Drawing;
 using Microsoft.FSharp.Core;
 using MarkupString;
-using AMS = MarkupString.AttributedMarkupStringModule;
-using A = MarkupString.AttributedMarkupStringModule;
+using AMS = MarkupString.MarkupStringModule;
+using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using H = MarkupString.MarkupImplementation.HtmlMarkup;
 
 namespace SharpMUSH.Tests.Markup;
 
 /// <summary>
-/// Unit tests for the NSAttributedString-inspired AttributedMarkupString.
+/// Unit tests for the NSAttributedString-inspired MarkupString.
 /// </summary>
-public class AttributedMarkupStringTests
+public class MarkupStringTests
 {
 	// ── Construction ───────────────────────────────────────────────
 
@@ -157,7 +157,7 @@ public class AttributedMarkupStringTests
 	[Test]
 	public async Task ConcatMany_EmptySequence_ReturnsEmpty()
 	{
-		var result = AMS.concatMany(Array.Empty<AMS.AttributedMarkupString>());
+		var result = AMS.concatMany(Array.Empty<AMS.MarkupString>());
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 		await Assert.That(result.Length).IsEqualTo(0);
@@ -421,7 +421,7 @@ public class AttributedMarkupStringTests
 	[Test]
 	public async Task FromMarkupString_PlainText_ConvertsFaithfully()
 	{
-		var ms = global::MarkupString.MarkupStringModule.single("Hello, World!");
+		var ms = global::MarkupString.TreeMarkupStringModule.single("Hello, World!");
 		var ams = AMS.fromMarkupString(ms);
 
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Hello, World!");
@@ -432,7 +432,7 @@ public class AttributedMarkupStringTests
 	public async Task FromMarkupString_MarkupText_PreservesMarkup()
 	{
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ms = global::MarkupString.MarkupStringModule.markupSingle(redMarkup, "Red Text");
+		var ms = global::MarkupString.TreeMarkupStringModule.markupSingle(redMarkup, "Red Text");
 		var ams = AMS.fromMarkupString(ms);
 
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Red Text");
@@ -446,13 +446,13 @@ public class AttributedMarkupStringTests
 		// Create: red(hello blue(world))
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var innerMs = global::MarkupString.MarkupStringModule.markupSingle(blueMarkup, "world");
-		var outerMs = new MarkupStringModule.MarkupString(
+		var innerMs = global::MarkupString.TreeMarkupStringModule.markupSingle(blueMarkup, "world");
+		var outerMs = new global::MarkupString.TreeMarkupStringModule.TreeMarkupString(
 			FSharpOption<MarkupImplementation.Markup>.Some(redMarkup),
-			Microsoft.FSharp.Collections.ListModule.OfSeq(new MarkupStringModule.Content[]
+			Microsoft.FSharp.Collections.ListModule.OfSeq(new global::MarkupString.TreeMarkupStringModule.Content[]
 			{
-				MarkupStringModule.Content.NewText("hello "),
-				MarkupStringModule.Content.NewMarkupText(innerMs)
+				global::MarkupString.TreeMarkupStringModule.Content.NewText("hello "),
+				global::MarkupString.TreeMarkupStringModule.Content.NewMarkupText(innerMs)
 			})
 		);
 
@@ -492,7 +492,7 @@ public class AttributedMarkupStringTests
 	public async Task RoundTrip_MarkupString_PreservesText()
 	{
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var original = global::MarkupString.MarkupStringModule.markupSingle(redMarkup, "Test");
+		var original = global::MarkupString.TreeMarkupStringModule.markupSingle(redMarkup, "Test");
 		var ams = AMS.fromMarkupString(original);
 		var roundTrip = AMS.toMarkupString(ams);
 
@@ -783,7 +783,7 @@ public class AttributedMarkupStringTests
 	// Runs must always be sorted ascending by Start position.
 	// These tests verify the invariant is maintained across all operations.
 
-	private static async Task AssertRunsSortedByStart(AMS.AttributedMarkupString ams)
+	private static async Task AssertRunsSortedByStart(AMS.MarkupString ams)
 	{
 		for (int i = 1; i < ams.Runs.Length; i++)
 		{
@@ -938,9 +938,9 @@ public class AttributedMarkupStringTests
 		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
 
-		var ms = global::MarkupString.MarkupStringModule.markupSingle(red, "Hello ");
-		var ms2 = global::MarkupString.MarkupStringModule.markupSingle(blue, "World");
-		var combined = global::MarkupString.MarkupStringModule.concat(ms, ms2);
+		var ms = global::MarkupString.TreeMarkupStringModule.markupSingle(red, "Hello ");
+		var ms2 = global::MarkupString.TreeMarkupStringModule.markupSingle(blue, "World");
+		var combined = global::MarkupString.TreeMarkupStringModule.concat(ms, ms2);
 		var ams = AMS.fromMarkupString(combined);
 
 		await AssertRunsSortedByStart(ams);

@@ -2,7 +2,7 @@ using Microsoft.FSharp.Collections;
 using Serilog;
 using SharpMUSH.MarkupString;
 using SharpMUSH.Tests.Markup.Data;
-using A = MarkupString.AttributedMarkupStringModule;
+using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Markup;
 

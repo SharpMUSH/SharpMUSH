@@ -1,4 +1,4 @@
-using A = MarkupString.AttributedMarkupStringModule;
+using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using System.Drawing;
 using StringExtensions = ANSILibrary.StringExtensions;

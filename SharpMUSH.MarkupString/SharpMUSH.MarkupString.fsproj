@@ -8,8 +8,8 @@
     <ItemGroup>
         <Compile Include="Markup\ANSILibrary\ANSI.fs" />
         <Compile Include="Markup\Markup.fs" />
+        <Compile Include="TreeMarkupStringModule.fs" />
         <Compile Include="MarkupStringModule.fs" />
-        <Compile Include="AttributedMarkupStringModule.fs" />
         <Compile Include="ColumnModule.fs" />
         <Compile Include="TextAlignerModule.fs" />
     </ItemGroup>

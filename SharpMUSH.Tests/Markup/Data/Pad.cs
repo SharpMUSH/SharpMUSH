@@ -1,4 +1,4 @@
-﻿using A = MarkupString.AttributedMarkupStringModule;
+﻿using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Markup.Data;
 

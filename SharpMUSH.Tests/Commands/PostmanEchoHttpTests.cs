@@ -7,7 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
-using A = MarkupString.AttributedMarkupStringModule;
+using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
