@@ -26,7 +26,6 @@ using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
-using System.Linq.Async;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
@@ -1102,17 +1101,15 @@ public partial class Commands
 				{
 					// Default: "Carrying:" for non-rooms, "Contents:" for rooms; each item as Name(#flags)
 					var contentsLabel = viewingKnown.IsRoom ? "Contents:" : "Carrying:";
-					var contentLines = await contents
-						.SelectAwait(async content =>
-						{
-							var cObj = content.Object();
-							var cFlags = await cObj.Flags.Value.ToArrayAsync();
-							return MModule.concat(
-								cObj.Name.Hilight(),
-								MModule.single($"(#{cObj.DBRef.Number}{string.Join(string.Empty, cFlags.Select(x => x.Symbol))})"));
-						})
-						.ToListAsync();
-					contentLines.Insert(0, MModule.single(contentsLabel));
+					var contentLines = new List<MString> { MModule.single(contentsLabel) };
+					foreach (var content in contents)
+					{
+						var cObj = content.Object();
+						var cFlags = await cObj.Flags.Value.ToArrayAsync();
+						contentLines.Add(MModule.concat(
+							cObj.Name.Hilight(),
+							MModule.single($"(#{cObj.DBRef.Number}{string.Join(string.Empty, cFlags.Select(x => x.Symbol))})")));
+					}
 					await NotifyService!.Notify(enactor,
 						MModule.multipleWithDelimiter(MModule.single("\n"), contentLines));
 				}
@@ -1127,18 +1124,14 @@ public partial class Commands
 				if (exits.Length > 0)
 				{
 					var exitLines = new List<MString> { MModule.single("Exits:") };
-					var exitContentLines = await exits
-						.ToAsyncEnumerable()
-						.SelectAwait(async exit =>
-						{
-							var eObj = exit.Object;
-							var eFlags = await eObj.Flags.Value.ToArrayAsync();
-							return MModule.concat(
-								eObj.Name.Hilight(),
-								MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})"));
-						})
-						.ToListAsync();
-					exitLines.AddRange(exitContentLines);
+					foreach (var exit in exits)
+					{
+						var eObj = exit.Object;
+						var eFlags = await eObj.Flags.Value.ToArrayAsync();
+						exitLines.Add(MModule.concat(
+							eObj.Name.Hilight(),
+							MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})")));
+					}
 					await NotifyService!.Notify(enactor,
 						MModule.multipleWithDelimiter(MModule.single("\n"), exitLines));
 				}
