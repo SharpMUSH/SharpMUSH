@@ -156,61 +156,41 @@ module MarkupImplementation =
         if details.Inverted then details.Background, details.Foreground
         else details.Foreground, details.Background
 
-      let mutable result = text
-
-      // Apply formatting tags (innermost first, so order matters for correct nesting)
-      if details.StrikeThrough then result <- sprintf "<S>%s</S>" result
-      if details.Overlined then result <- sprintf "<SPAN STYLE=\"text-decoration: overline\">%s</SPAN>" result
-      if details.Underlined then result <- sprintf "<U>%s</U>" result
-      if details.Italic then result <- sprintf "<I>%s</I>" result
-      if details.Bold then result <- sprintf "<B>%s</B>" result
-
-      // Apply link
-      match details.LinkUrl with
-      | Some url when url.Length > 0 ->
-        result <- sprintf "<A HREF=\"%s\">%s</A>" (System.Net.WebUtility.HtmlEncode url) result
-      | _ -> ()
-
-      // Apply background color (Pueblo uses BODY BGCOLOR or SPAN STYLE)
-      match AnsiMarkup.colorToHex bg with
-      | Some hex -> result <- sprintf "<SPAN STYLE=\"background-color: %s\">%s</SPAN>" hex result
-      | None -> ()
-
-      // Apply foreground color using FONT COLOR (Pueblo-standard)
-      match AnsiMarkup.colorToHex fg with
-      | Some hex -> result <- sprintf "<FONT COLOR=\"%s\">%s</FONT>" hex result
-      | None -> ()
-
-      result
+      text
+      |> (fun t -> if details.StrikeThrough then sprintf "<S>%s</S>" t else t)
+      |> (fun t -> if details.Overlined then sprintf "<SPAN STYLE=\"text-decoration: overline\">%s</SPAN>" t else t)
+      |> (fun t -> if details.Underlined then sprintf "<U>%s</U>" t else t)
+      |> (fun t -> if details.Italic then sprintf "<I>%s</I>" t else t)
+      |> (fun t -> if details.Bold then sprintf "<B>%s</B>" t else t)
+      |> (fun t -> match details.LinkUrl with
+                   | Some url when url.Length > 0 -> sprintf "<A HREF=\"%s\">%s</A>" (System.Net.WebUtility.HtmlEncode url) t
+                   | _ -> t)
+      |> (fun t -> match AnsiMarkup.colorToHex bg with
+                   | Some hex -> sprintf "<SPAN STYLE=\"background-color: %s\">%s</SPAN>" hex t
+                   | None -> t)
+      |> (fun t -> match AnsiMarkup.colorToHex fg with
+                   | Some hex -> sprintf "<FONT COLOR=\"%s\">%s</FONT>" hex t
+                   | None -> t)
 
     /// Renders an AnsiStructure as BBCode.
     /// Uses standard BBCode tags: [b], [i], [u], [s], [color=X].
     /// Text is passed through unchanged (BBCode does not use HTML encoding).
     static member wrapAsBBCode (details: AnsiStructure) (text: string) : string =
-      let fg, bg =
+      let fg, _ =
         if details.Inverted then details.Background, details.Foreground
         else details.Foreground, details.Background
 
-      let mutable result = text
-
-      // Apply formatting tags
-      if details.StrikeThrough then result <- sprintf "[s]%s[/s]" result
-      if details.Underlined then result <- sprintf "[u]%s[/u]" result
-      if details.Italic then result <- sprintf "[i]%s[/i]" result
-      if details.Bold then result <- sprintf "[b]%s[/b]" result
-
-      // Apply link
-      match details.LinkUrl with
-      | Some url when url.Length > 0 ->
-        result <- sprintf "[url=%s]%s[/url]" url result
-      | _ -> ()
-
-      // Apply foreground color
-      match AnsiMarkup.colorToHex fg with
-      | Some hex -> result <- sprintf "[color=%s]%s[/color]" hex result
-      | None -> ()
-
-      result
+      text
+      |> (fun t -> if details.StrikeThrough then sprintf "[s]%s[/s]" t else t)
+      |> (fun t -> if details.Underlined then sprintf "[u]%s[/u]" t else t)
+      |> (fun t -> if details.Italic then sprintf "[i]%s[/i]" t else t)
+      |> (fun t -> if details.Bold then sprintf "[b]%s[/b]" t else t)
+      |> (fun t -> match details.LinkUrl with
+                   | Some url when url.Length > 0 -> sprintf "[url=%s]%s[/url]" url t
+                   | _ -> t)
+      |> (fun t -> match AnsiMarkup.colorToHex fg with
+                   | Some hex -> sprintf "[color=%s]%s[/color]" hex t
+                   | None -> t)
 
     /// Renders an AnsiStructure as MXP (MUD eXtension Protocol) tags.
     /// MXP uses HTML-like tags: <B>, <I>, <U>, <COLOR FORE=X BACK=Y>.
@@ -220,30 +200,19 @@ module MarkupImplementation =
         if details.Inverted then details.Background, details.Foreground
         else details.Foreground, details.Background
 
-      let mutable result = text
-
-      // Apply formatting tags
-      if details.StrikeThrough then result <- sprintf "<S>%s</S>" result
-      if details.Underlined then result <- sprintf "<U>%s</U>" result
-      if details.Italic then result <- sprintf "<I>%s</I>" result
-      if details.Bold then result <- sprintf "<B>%s</B>" result
-
-      // Apply link using MXP SEND element
-      match details.LinkUrl with
-      | Some url when url.Length > 0 ->
-        result <- sprintf "<SEND HREF=\"%s\">%s</SEND>" (System.Net.WebUtility.HtmlEncode url) result
-      | _ -> ()
-
-      // Apply colors using MXP COLOR element
-      let fgHex = AnsiMarkup.colorToHex fg
-      let bgHex = AnsiMarkup.colorToHex bg
-      match fgHex, bgHex with
-      | Some fh, Some bh -> result <- sprintf "<COLOR FORE=\"%s\" BACK=\"%s\">%s</COLOR>" fh bh result
-      | Some fh, None -> result <- sprintf "<COLOR FORE=\"%s\">%s</COLOR>" fh result
-      | None, Some bh -> result <- sprintf "<COLOR BACK=\"%s\">%s</COLOR>" bh result
-      | None, None -> ()
-
-      result
+      text
+      |> (fun t -> if details.StrikeThrough then sprintf "<S>%s</S>" t else t)
+      |> (fun t -> if details.Underlined then sprintf "<U>%s</U>" t else t)
+      |> (fun t -> if details.Italic then sprintf "<I>%s</I>" t else t)
+      |> (fun t -> if details.Bold then sprintf "<B>%s</B>" t else t)
+      |> (fun t -> match details.LinkUrl with
+                   | Some url when url.Length > 0 -> sprintf "<SEND HREF=\"%s\">%s</SEND>" (System.Net.WebUtility.HtmlEncode url) t
+                   | _ -> t)
+      |> (fun t -> match AnsiMarkup.colorToHex fg, AnsiMarkup.colorToHex bg with
+                   | Some fh, Some bh -> sprintf "<COLOR FORE=\"%s\" BACK=\"%s\">%s</COLOR>" fh bh t
+                   | Some fh, None -> sprintf "<COLOR FORE=\"%s\">%s</COLOR>" fh t
+                   | None, Some bh -> sprintf "<COLOR BACK=\"%s\">%s</COLOR>" bh t
+                   | None, None -> t)
 
     static member applyDetails (details: AnsiStructure) (text: string) =
         StringExtensions.toANSI text
