@@ -11,6 +11,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using System.Text.RegularExpressions;
 
@@ -24,10 +25,24 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Who(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var isWizard = await executor.IsWizard();
 
 		var everyone = ConnectionService!.GetAll();
-		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
-		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
+
+		// PennMUSH wizard format: Player Name (18), Loc # (7), On For (7), Idle (5), Cmds (4), Des (3), Host
+		const string wizFmt = "{0,-18} {1,7} {2,7} {3,5} {4,4} {5,3} {6}";
+		// PennMUSH mortal format: Player Name (21), On For (9), Idle (6), Doing (text)
+		const string mortFmt = "{0,-21} {1,9} {2,6}  {3}";
+
+		string header;
+		if (isWizard)
+		{
+			header = string.Format(wizFmt, "Player Name", "Loc #", "On For", "Idle", "Cmds", "Des", "Host");
+		}
+		else
+		{
+			header = string.Format(mortFmt, "Player Name", "On For", "Idle", "Doing");
+		}
 
 		var filteredPlayers = await everyone
 			.Where(player => player.Ref.HasValue)
@@ -36,19 +51,43 @@ public partial class Commands
 				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
 				var doingText = await Commands.GetDoingText(executor, obj.Known);
 
-				return (string.Format(
-					fmt,
-					obj.Known.Object().Name,
-					TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
-					TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
-					doingText), obj.Known);
+				string line;
+				if (isWizard)
+				{
+					var location = obj.Known.IsContent
+						? (await obj.Known.AsContent.Location())?.Object().DBRef.ToString() ?? "*NOWHERE*"
+						: "*NOWHERE*";
+					var doing = await AttributeService!.GetAttributeAsync(executor, obj.Known, "DOING",
+						IAttributeService.AttributeMode.Read, false);
+					var doingLength = doing.IsAttribute ? MModule.getLength(doing.AsAttribute.Last().Value) : 0;
+					line = string.Format(wizFmt,
+						obj.Known.Object().Name,
+						location,
+						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
+						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
+						player.CommandCount,
+						doingLength,
+						player.HostName);
+				}
+				else
+				{
+					line = string.Format(mortFmt,
+						obj.Known.Object().Name,
+						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
+						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
+						doingText);
+				}
+
+				return (line, obj.Known);
 			})
 			.Where(async (player, _) => await PermissionService!.CanSee(executor, player.Known))
 			.ToListAsync();
 
 		var sortedPlayers = filteredPlayers.Select(x => x.Item1).ToArray();
-
-		var footer = $"{sortedPlayers.Length} players logged in.";
+		var count = sortedPlayers.Length;
+		var footer = count == 1
+			? "There is 1 player connected."
+			: $"There are {count} players connected.";
 
 		var message = $"{header}\n{string.Join('\n', sortedPlayers)}\n{footer}";
 

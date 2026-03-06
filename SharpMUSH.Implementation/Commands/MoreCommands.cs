@@ -2126,10 +2126,11 @@ public partial class Commands
 		var container = executor.AsContainer;
 		var contents = container.Content(Mediator!);
 
+		// PennMUSH: own inventory always shows Name(#dbrefFlags)
 		var items = new System.Collections.Generic.List<string>();
 		await foreach (var item in contents)
 		{
-			items.Add(item.Object().Name);
+			items.Add(await MessageHelpers.FormatObjectWithDbref(item.Object()));
 		}
 
 		if (items.Count == 0)
@@ -2141,7 +2142,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "You are carrying:");
 			foreach (var itemName in items)
 			{
-				await NotifyService!.Notify(executor, $"  {itemName}");
+				await NotifyService!.Notify(executor, itemName);
 			}
 		}
 

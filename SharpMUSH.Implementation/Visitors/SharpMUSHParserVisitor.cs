@@ -667,6 +667,7 @@ public class SharpMUSHParserVisitor(
 			{
 				ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
 					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
+				ConnectionService.IncrementMetadata(parser.CurrentState.Handle.Value, "CommandCount");
 			}
 
 			// Step 1: Check if it's a SOCKET command

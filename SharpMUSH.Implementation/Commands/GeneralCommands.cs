@@ -710,7 +710,17 @@ public partial class Commands
 				var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
 				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
-				var defaultContents = MModule.single($"{contentsLabel}\n{string.Join("\n", visibleContents.Select(x => x.Object().Name))}");
+
+				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
+				var contentLines = await Task.WhenAll(visibleContents.Select(async item =>
+				{
+					if (canSeeAll)
+					{
+						return await MessageHelpers.FormatObjectWithDbref(item.Object());
+					}
+					return item.Object().Name;
+				}));
+				var defaultContents = MModule.single($"{contentsLabel}\n{string.Join("\n", contentLines)}");
 
 				var conFormatArgs = new Dictionary<string, CallState>
 				{
