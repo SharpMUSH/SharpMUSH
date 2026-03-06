@@ -143,7 +143,7 @@ public class NotifyService(
 	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MarkupStringModule.getLength(markupString) == 0,
+			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 		))
 		{
@@ -174,7 +174,7 @@ public class NotifyService(
 	public async ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MarkupStringModule.getLength(markupString) == 0,
+			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 		))
 		{

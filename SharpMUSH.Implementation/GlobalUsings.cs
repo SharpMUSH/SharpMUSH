@@ -1,3 +1,3 @@
 ﻿global using Ansi = MarkupString.MarkupImplementation.AnsiMarkup;
-global using MModule = MarkupString.MarkupStringModule;
-global using MString = MarkupString.MarkupStringModule.MarkupString;
+global using MModule = MarkupString.AttributedMarkupStringModule;
+global using MString = MarkupString.AttributedMarkupStringModule.AttributedMarkupString;

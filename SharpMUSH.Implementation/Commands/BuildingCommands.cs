@@ -178,7 +178,7 @@ public partial class Commands
 		// Attr Flag Path
 		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
-			foreach (var flag in MModule.split(" ", args["1"].Message!))
+			foreach (var flag in MModule.split2(MModule.single(" "), args["1"].Message!))
 			{
 				var plainFlag = MModule.plainText(flag);
 				if (plainFlag.StartsWith('!'))
@@ -195,7 +195,7 @@ public partial class Commands
 		}
 
 		// Attr Set Path
-		var maybeColonLocation = MModule.indexOf(args["1"].Message!, MModule.single(":"));
+		var maybeColonLocation = MModule.indexOf(args["1"].Message!, ":");
 		if (maybeColonLocation > -1)
 		{
 			var arg1 = args["1"].Message!;
@@ -217,7 +217,7 @@ public partial class Commands
 		}
 
 		// Object Flag Set Path
-		foreach (var flag in MModule.split(" ", args["1"].Message!))
+		foreach (var flag in MModule.split2(MModule.single(" "), args["1"].Message!))
 		{
 			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
 		}

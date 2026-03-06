@@ -29,7 +29,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
-				command: MarkupStringModule.single(message.Input),
+				command: MModule.single(message.Input),
 				state: ParserState.Empty with { Handle = message.Handle });
 		}
 		catch (Exception ex)

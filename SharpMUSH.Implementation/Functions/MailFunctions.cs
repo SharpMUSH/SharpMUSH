@@ -361,7 +361,7 @@ public partial class Functions
 		}
 
 		// Parse subject and message (split on /)
-		var subjectBodySplit = MModule.indexOf(messageArg, MModule.single("/"));
+		var subjectBodySplit = MModule.indexOf(messageArg, "/");
 
 		var subject = subjectBodySplit > -1
 			? MModule.substring(0, subjectBodySplit, messageArg)

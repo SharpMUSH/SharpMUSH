@@ -1592,10 +1592,10 @@ public partial class Functions
 				fieldWidth,
 				fieldAlignment switch
 				{
-					">" => MModule.PadType.Right,
-					"-" => MModule.PadType.Center,
-					_ => MModule.PadType.Left
-				}, MModule.TruncationType.Truncate));
+					">" => global::MarkupString.MarkupStringModule.PadType.Right,
+					"-" => global::MarkupString.MarkupStringModule.PadType.Center,
+					_ => global::MarkupString.MarkupStringModule.PadType.Left
+				}, global::MarkupString.MarkupStringModule.TruncationType.Truncate));
 
 		var lines = resultFields.Chunk(fieldsPerLine);
 		var linesWithSeparators = lines.Select(x => MModule.multipleWithDelimiter(separatorArg, x));

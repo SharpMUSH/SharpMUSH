@@ -14,7 +14,6 @@ using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using MString = MarkupString.MarkupStringModule.MarkupString;
 
 namespace SharpMUSH.Database.Memgraph;
 
@@ -122,8 +121,8 @@ content: $content, subject: $subject})
 			forwarded = mail.Forwarded,
 			cleared = mail.Cleared,
 			folder = mail.Folder,
-			content = MarkupStringModule.serialize(mail.Content),
-			subject = MarkupStringModule.serialize(mail.Subject)
+			content = MModule.serialize(mail.Content),
+			subject = MModule.serialize(mail.Subject)
 		}, cancellationToken);
 
 		// RECEIVED_MAIL: Player -> Mail
@@ -201,8 +200,8 @@ SET m.folder = $newFolder
 			Forwarded = node["forwarded"].As<bool>(),
 			Cleared = node["cleared"].As<bool>(),
 			Folder = node["folder"].As<string>(),
-			Content = MarkupStringModule.deserialize(node["content"].As<string>()),
-			Subject = MarkupStringModule.deserialize(node["subject"].As<string>()),
+			Content = MModule.deserialize(node["content"].As<string>()),
+			Subject = MModule.deserialize(node["subject"].As<string>()),
 			From = new AsyncLazy<AnyOptionalSharpObject>(async ct => await MailFromAsync(mailKey, ct))
 		};
 	}

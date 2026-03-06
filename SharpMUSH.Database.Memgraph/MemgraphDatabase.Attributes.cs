@@ -14,7 +14,6 @@ using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using MString = MarkupString.MarkupStringModule.MarkupString;
 
 namespace SharpMUSH.Database.Memgraph;
 
@@ -217,7 +216,7 @@ RETURN child ORDER BY child.longName
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var objKey = dbref.Number;
 		var ownerKey = ExtractKey(owner.Id!);
-		var serializedValue = MarkupStringModule.serialize(value);
+		var serializedValue = MModule.serialize(value);
 		var emptyValue = "";
 
 		// Build a single atomic MERGE query for the entire attribute path.
@@ -369,7 +368,7 @@ RETURN count(child) AS cnt
 
 		if (hasChildren)
 		{
-			await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) SET a.value = $value", new { key = attrKey, value = MarkupStringModule.serialize(MarkupStringModule.empty()) }, cancellationToken);
+			await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) SET a.value = $value", new { key = attrKey, value = MModule.serialize(MModule.empty()) }, cancellationToken);
 		}
 		else
 		{

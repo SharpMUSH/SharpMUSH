@@ -4,7 +4,7 @@ using Serilog;
 using SharpMUSH.Tests.Markup.Data;
 using System.Drawing;
 using System.Text;
-using A = MarkupString.MarkupStringModule;
+using A = MarkupString.AttributedMarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using StringExtensions = ANSILibrary.StringExtensions;
 

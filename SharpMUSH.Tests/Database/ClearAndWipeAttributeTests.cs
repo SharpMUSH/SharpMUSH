@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
-using A = MarkupString.MarkupStringModule;
+using A = MarkupString.AttributedMarkupStringModule;
 
 namespace SharpMUSH.Tests.Database;
 

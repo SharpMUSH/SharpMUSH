@@ -3,7 +3,7 @@ using System.Drawing;
 using Microsoft.FSharp.Core;
 using MarkupString;
 using AMS = MarkupString.AttributedMarkupStringModule;
-using A = MarkupString.MarkupStringModule;
+using A = MarkupString.AttributedMarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using H = MarkupString.MarkupImplementation.HtmlMarkup;
 
@@ -447,7 +447,7 @@ public class AttributedMarkupStringTests
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
 		var innerMs = A.markupSingle(blueMarkup, "world");
-		var outerMs = new MarkupStringModule.MarkupString(
+		var outerMs = new MString(
 			FSharpOption<MarkupImplementation.Markup>.Some(redMarkup),
 			Microsoft.FSharp.Collections.ListModule.OfSeq(new MarkupStringModule.Content[]
 			{

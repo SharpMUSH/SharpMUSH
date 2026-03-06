@@ -2487,7 +2487,7 @@ public partial class Commands
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
 				isNoSpace
-					? MModule.trim(message, MModule.single(" "), MModule.TrimType.TrimStart)
+					? MModule.trim(message, " ", global::MarkupString.MarkupStringModule.TrimType.TrimStart)
 					: message,
 				executor,
 				INotifyService.NotificationType.Pose);

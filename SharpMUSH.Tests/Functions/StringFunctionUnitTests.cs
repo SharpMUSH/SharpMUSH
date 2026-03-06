@@ -2,7 +2,7 @@
 using Serilog;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text;
-using A = MarkupString.MarkupStringModule;
+using A = MarkupString.AttributedMarkupStringModule;
 using StringExtensions = ANSILibrary.StringExtensions;
 
 namespace SharpMUSH.Tests.Functions;

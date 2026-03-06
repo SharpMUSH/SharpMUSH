@@ -1,5 +1,5 @@
 using System.Drawing;
-using A = MarkupString.MarkupStringModule;
+using A = MarkupString.AttributedMarkupStringModule;
 using H = MarkupString.MarkupImplementation.HtmlMarkup;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 

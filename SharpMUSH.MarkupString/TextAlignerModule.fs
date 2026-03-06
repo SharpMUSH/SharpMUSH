@@ -1,9 +1,9 @@
 /// <summary>
-/// Provides functions for aligning and justifying text using MarkupString.
+/// Provides functions for aligning and justifying text using AttributedMarkupString.
 /// </summary>
 module SharpMUSH.MarkupString.TextAlignerModule
 
-open MarkupString.MarkupStringModule
+open MarkupString.AttributedMarkupStringModule
 
 open SharpMUSH.MarkupString.ColumnModule
     (*
@@ -81,14 +81,14 @@ ALIGN()
   xxxxxxxxxWalkerxStaff & Developer
     *)
 
-    type private ColumnState = ColumnSpec * MarkupString
-    type private LineResult = ColumnSpec * MarkupString * MarkupString
+    type private ColumnState = ColumnSpec * AttributedMarkupString
+    type private LineResult = ColumnSpec * AttributedMarkupString * AttributedMarkupString
 
     /// <summary>
     /// Finds the best word-wrap point in text within the specified width.
     /// Returns the split position and whether a space was found.
     /// </summary>
-    let private findWrapPoint (text: MarkupString) (width: int) : int * bool =
+    let private findWrapPoint (text: AttributedMarkupString) (width: int) : int * bool =
         let mutable splitPoint = width
         let mutable foundSpace = false
 
@@ -102,7 +102,7 @@ ALIGN()
     /// <summary>
     /// Handles extraction with Repeat option logic.
     /// </summary>
-    let private applyRepeatOption (spec: ColumnSpec) (text: MarkupString) (remainder: MarkupString) : MarkupString =
+    let private applyRepeatOption (spec: ColumnSpec) (text: AttributedMarkupString) (remainder: AttributedMarkupString) : AttributedMarkupString =
         if
             spec.Options.HasFlag(ColumnOptions.Repeat)
             && remainder.Length = 0
@@ -117,9 +117,9 @@ ALIGN()
     /// </summary>
     let private extractLineWithNewline
         (spec: ColumnSpec)
-        (text: MarkupString)
+        (text: AttributedMarkupString)
         (rowSepIndex: int)
-        : MarkupString * MarkupString =
+        : AttributedMarkupString * AttributedMarkupString =
         let lineText = substring 0 rowSepIndex text
 
         let remainder =
@@ -133,7 +133,7 @@ ALIGN()
     /// <summary>
     /// Extracts a line when text fits within column width.
     /// </summary>
-    let private extractLineFitting (spec: ColumnSpec) (text: MarkupString) : MarkupString * MarkupString =
+    let private extractLineFitting (spec: ColumnSpec) (text: AttributedMarkupString) : AttributedMarkupString * AttributedMarkupString =
         let remainder =
             if spec.Options.HasFlag(ColumnOptions.Repeat) then
                 text
@@ -145,7 +145,7 @@ ALIGN()
     /// <summary>
     /// Extracts a line when text needs word wrapping.
     /// </summary>
-    let private extractLineWithWrap (spec: ColumnSpec) (text: MarkupString) : MarkupString * MarkupString =
+    let private extractLineWithWrap (spec: ColumnSpec) (text: AttributedMarkupString) : AttributedMarkupString * AttributedMarkupString =
         let splitPoint, foundSpace = findWrapPoint text spec.Width
         let splitPoint = if not foundSpace then spec.Width else splitPoint
 
@@ -170,9 +170,9 @@ ALIGN()
     /// </summary>
     let private extractLineTruncated
         (spec: ColumnSpec)
-        (text: MarkupString)
+        (text: AttributedMarkupString)
         (rowSepIndex: int)
-        : MarkupString * MarkupString =
+        : AttributedMarkupString * AttributedMarkupString =
         let splitPoint =
             if rowSepIndex >= 0 && rowSepIndex < spec.Width then
                 rowSepIndex
@@ -186,15 +186,15 @@ ALIGN()
         (lineText, empty ())
 
     /// <summary>
-    /// Extracts one line from a MarkupString based on column width and truncation settings.
+    /// Extracts one line from a AttributedMarkupString based on column width and truncation settings.
     /// Returns (extracted line, remainder).
     /// </summary>
-    let extractLine (spec: ColumnSpec) (text: MarkupString) : MarkupString * MarkupString =
+    let extractLine (spec: ColumnSpec) (text: AttributedMarkupString) : AttributedMarkupString * AttributedMarkupString =
         match text.Length, spec.Options.HasFlag(ColumnOptions.TruncateV2) with
         | 0, _ -> (empty (), empty ())
         | _, true -> (text, empty ())
         | _ ->
-            let rowSepIndex = indexOf text (single "\n")
+            let rowSepIndex = indexOf text "\n"
             // Always prefer explicit newline if present, regardless of width
             if rowSepIndex >= 0 && rowSepIndex < spec.Width then
                 extractLineWithNewline spec text rowSepIndex
@@ -206,18 +206,18 @@ ALIGN()
                 extractLineWithWrap spec text
 
     /// <summary>
-    /// Justifies a MarkupString according to the specified justification and width.
+    /// Justifies a AttributedMarkupString according to the specified justification and width.
     /// </summary>
-    let justify (justification: Justification) (text: MarkupString) (width: int) (fill: MarkupString) : MarkupString =
+    let justify (justification: Justification) (text: AttributedMarkupString) (width: int) (fill: AttributedMarkupString) : AttributedMarkupString =
         let padType =
             match justification with
-            | Justification.Left -> PadType.Right
-            | Justification.Center -> PadType.Center
-            | Justification.Full -> PadType.Full
+            | Justification.Left -> MarkupString.MarkupStringModule.PadType.Right
+            | Justification.Center -> MarkupString.MarkupStringModule.PadType.Center
+            | Justification.Full -> MarkupString.MarkupStringModule.PadType.Full
             | Justification.Right
-            | Justification.Paragraph -> PadType.Left
+            | Justification.Paragraph -> MarkupString.MarkupStringModule.PadType.Left
 
-        pad text fill width padType TruncationType.Truncate
+        pad text fill width padType MarkupString.MarkupStringModule.TruncationType.Truncate
 
     /// <summary>
     /// Merges a column to the left, inheriting options.
@@ -295,7 +295,7 @@ ALIGN()
     /// Justifies a single column line with proper handling of NoFill option.
     /// If NoFill is set, the text is not padded beyond its natural length.
     /// </summary>
-    let private justifyColumnLine (spec: ColumnSpec) (line: MarkupString) (filler: MarkupString) : MarkupString =
+    let private justifyColumnLine (spec: ColumnSpec) (line: AttributedMarkupString) (filler: AttributedMarkupString) : AttributedMarkupString =
         if spec.Options.HasFlag(ColumnOptions.NoFill) then
             line
         else
@@ -306,9 +306,9 @@ ALIGN()
     /// </summary>
     let private buildOutputParts
         (lineResults: LineResult seq)
-        (columnSeparator: MarkupString)
-        (filler: MarkupString)
-        : MarkupString seq =
+        (columnSeparator: AttributedMarkupString)
+        (filler: AttributedMarkupString)
+        : AttributedMarkupString seq =
         lineResults
         |> Seq.mapi (fun i (spec, _, line) ->
             let justifiedLine = justifyColumnLine spec line filler
@@ -323,7 +323,7 @@ ALIGN()
 
                     if prevSpec.Options.HasFlag(ColumnOptions.MergeToRight) then
                         let extraPadding = single (String.replicate prevSpec.Width " ")
-                        concat extraPadding columnSeparator None
+                        concat extraPadding columnSeparator
                     else
                         columnSeparator
                 else
@@ -342,9 +342,9 @@ ALIGN()
     /// </summary>
     let private doLine
         (columns: ColumnState seq)
-        (filler: MarkupString)
-        (columnSeparator: MarkupString)
-        : ColumnState seq * MarkupString =
+        (filler: AttributedMarkupString)
+        (columnSeparator: AttributedMarkupString)
+        : ColumnState seq * AttributedMarkupString =
 
         let mergedColumns =
             Seq.fold handleMerging columns [ 0 .. Seq.length columns - 1 ]
@@ -375,11 +375,11 @@ ALIGN()
     /// </summary>
     let rec private alignLoop
         (columns: ColumnState seq)
-        (filler: MarkupString)
-        (columnSeparator: MarkupString)
-        (rowSeparator: MarkupString)
-        (accumulator: MarkupString seq)
-        : MarkupString =
+        (filler: AttributedMarkupString)
+        (columnSeparator: AttributedMarkupString)
+        (rowSeparator: AttributedMarkupString)
+        (accumulator: AttributedMarkupString seq)
+        : AttributedMarkupString =
 
         if not (moreToDo columns) then
             accumulator |> Seq.rev |> multipleWithDelimiter rowSeparator
@@ -392,8 +392,8 @@ ALIGN()
     /// </summary>
     let private validateParameters
         (columnSpecs: ColumnSpec seq)
-        (columns: MarkupString seq)
-        (filler: MarkupString)
+        (columns: AttributedMarkupString seq)
+        (filler: AttributedMarkupString)
         : Result<unit, string> =
 
         if Seq.length columnSpecs <> Seq.length columns then
@@ -419,11 +419,11 @@ ALIGN()
     /// </summary>
     let align
         (widths: string)
-        (columns: MarkupString seq)
-        (filler: MarkupString)
-        (columnSeparator: MarkupString)
-        (rowSeparator: MarkupString)
-        : MarkupString =
+        (columns: AttributedMarkupString seq)
+        (filler: AttributedMarkupString)
+        (columnSeparator: AttributedMarkupString)
+        (rowSeparator: AttributedMarkupString)
+        : AttributedMarkupString =
 
         let columnSpecs = ColumnSpec.parseList widths
 

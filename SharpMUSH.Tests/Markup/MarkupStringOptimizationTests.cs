@@ -1,7 +1,7 @@
 using Microsoft.FSharp.Core;
 using MarkupString;
 using System.Drawing;
-using A = MarkupString.MarkupStringModule;
+using A = MarkupString.AttributedMarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 
 namespace SharpMUSH.Tests.Markup;

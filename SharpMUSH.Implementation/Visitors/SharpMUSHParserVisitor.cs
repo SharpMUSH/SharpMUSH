@@ -1083,7 +1083,7 @@ public class SharpMUSHParserVisitor(
 
 		// Skip past the command name to get just the arguments
 		// The command format is: @attrname object=value
-		var spaceIndex = MModule.indexOf(fullText, MModule.single(" "));
+		var spaceIndex = MModule.indexOf(fullText, " ");
 		if (spaceIndex == -1)
 		{
 			// No space, no arguments - show usage
@@ -1575,7 +1575,7 @@ public class SharpMUSHParserVisitor(
 			context.evaluationString().Start.StartIndex,
 			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
 			src);
-		var spaceInContext = MModule.indexOf(realSubtext, MModule.single(" "));
+		var spaceInContext = MModule.indexOf(realSubtext, " ");
 
 		// command (space) argument(s)
 		if (spaceInContext != -1)

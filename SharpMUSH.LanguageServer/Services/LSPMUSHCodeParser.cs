@@ -1,6 +1,6 @@
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using MModule = MarkupString.MarkupStringModule;
+using MModule = MarkupString.AttributedMarkupStringModule;
 
 namespace SharpMUSH.LanguageServer.Services;
 

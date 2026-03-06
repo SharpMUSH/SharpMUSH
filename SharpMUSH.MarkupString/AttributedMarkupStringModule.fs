@@ -609,7 +609,29 @@ module AttributedMarkupStringModule =
                 | MarkupStringModule.TruncationType.Truncate -> substring 0 width result
                 | _ -> result
             | MarkupStringModule.PadType.Full ->
-                ams
+                match truncType with
+                | MarkupStringModule.TruncationType.Truncate when ams.Length > width -> substring 0 width ams
+                | MarkupStringModule.TruncationType.Overflow when ams.Length > width -> ams
+                | _ ->
+                    let wordArr = split " " ams
+                    let fences = Math.Max(wordArr.Length - 1, 0)
+                    if fences = 0 then ams
+                    else
+                        let totalSpaces = fences + lengthToPad
+                        let space = single " "
+                        let minimumFenceWidth = totalSpaces / fences
+                        let thickerFences = totalSpaces % fences
+                        let fenceStr = repeat space minimumFenceWidth
+                        let thickFenceStr = repeat space (minimumFenceWidth + 1)
+                        let delFunc = (fun i -> if i <= thickerFences then thickFenceStr else fenceStr)
+                        // Inline intersperse + concatMany to avoid forward reference
+                        let parts = seq {
+                            for i, word in wordArr |> Seq.indexed do
+                                if i > 0 then
+                                    yield delFunc i
+                                yield word
+                        }
+                        concatMany parts
 
     // ── Conversion functions ───────────────────────────────────────
 
@@ -708,3 +730,236 @@ module AttributedMarkupStringModule =
             let before = substring 0 index input
             let after = substring index (input.Length - index) input
             concatMany [before; insert; after]
+
+    // ── Additional functions for API compatibility ──────────────────
+
+    /// Creates an AttributedMarkupString from a sequence of AttributedMarkupStrings.
+    let multiple (items: seq<AttributedMarkupString>) : AttributedMarkupString =
+        concatMany items
+
+    /// Creates an AttributedMarkupString wrapping another with the given markup.
+    let markupSingle2 (markup: Markup, inner: AttributedMarkupString) : AttributedMarkupString =
+        if inner.Length = 0 then empty ()
+        else
+            let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>(inner.Runs.Length)
+            for run in inner.Runs do
+                let newMarkups = ImmutableArray.CreateBuilder<Markup>(run.Markups.Length + 1)
+                newMarkups.Add(markup)
+                newMarkups.AddRange(run.Markups)
+                runsBuilder.Add({ Start = run.Start; Length = run.Length; Markups = newMarkups.ToImmutable() })
+            AttributedMarkupString(inner.Text, runsBuilder.ToImmutable())
+
+    /// Creates an AttributedMarkupString from a markup and a sequence of AttributedMarkupStrings.
+    let markupMultiple (markup: Markup, items: seq<AttributedMarkupString>) : AttributedMarkupString =
+        markupSingle2 (markup, concatMany items)
+
+    /// Returns an AttributedMarkupString containing only the plain text (no markup).
+    let plainText2 (ams: AttributedMarkupString) : AttributedMarkupString =
+        single (ams.ToPlainText())
+
+    /// Returns the first index where a search AttributedMarkupString occurs.
+    /// Returns -1 if not found.
+    let indexOf2 (ams: AttributedMarkupString) (search: AttributedMarkupString) : int =
+        ams.Text.IndexOf(search.Text, StringComparison.Ordinal)
+
+    /// Returns all indexes where a search string occurs.
+    let indexesOf (ams: AttributedMarkupString) (search: AttributedMarkupString) : seq<int> =
+        let text = ams.Text
+        let srch = search.Text
+
+        let rec findDelimiters pos acc =
+            if pos < text.Length then
+                match text.IndexOf(srch, pos, StringComparison.Ordinal) with
+                | -1 -> Seq.rev acc
+                | foundPos ->
+                    let newAcc = foundPos :: acc
+                    if srch <> String.Empty then
+                        findDelimiters (foundPos + srch.Length) newAcc
+                    else
+                        findDelimiters (foundPos + 1) newAcc
+            else
+                Seq.rev acc
+
+        findDelimiters 0 []
+
+    /// Returns the last index where a search AttributedMarkupString occurs.
+    /// Returns -1 if not found.
+    let indexOfLast2 (ams: AttributedMarkupString) (search: AttributedMarkupString) : int =
+        ams.Text.LastIndexOf(search.Text, StringComparison.Ordinal)
+
+    /// Splits by an AttributedMarkupString delimiter (uses plain text of delimiter).
+    let split2 (delimiter: AttributedMarkupString) (ams: AttributedMarkupString) : AttributedMarkupString array =
+        split (delimiter.ToPlainText()) ams
+
+    /// Applies a transformation function, operating on each segment individually.
+    let apply2 (ams: AttributedMarkupString) (transform: AttributedMarkupString -> AttributedMarkupString) : AttributedMarkupString =
+        let segments =
+            ams.Runs |> Seq.map (fun run ->
+                let segment = substring run.Start run.Length ams
+                transform segment)
+        concatMany segments
+
+    /// Trims an AttributedMarkupString using another AttributedMarkupString as trim characters.
+    let trim2 (ams: AttributedMarkupString) (trimStr: AttributedMarkupString) (trimType: MarkupStringModule.TrimType) : AttributedMarkupString =
+        trim ams (trimStr.ToPlainText()) trimType
+
+    /// Concatenates and attaches (same as concat for flat model).
+    let concatAttach (a: AttributedMarkupString) (b: AttributedMarkupString) : AttributedMarkupString =
+        concat a b
+
+    /// Intersperses a function-generated separator between elements of a sequence.
+    let intersperseFunc (sepFunc: int -> AttributedMarkupString) (items: AttributedMarkupString seq) : AttributedMarkupString seq =
+        seq {
+            for i, element in items |> Seq.indexed do
+                if i > 0 then
+                    yield sepFunc i
+                yield element
+        }
+
+    /// Creates by interspersing a function-generated delimiter between elements.
+    let multipleWithDelimiterFunc (delimiterFunc: int -> AttributedMarkupString) (items: AttributedMarkupString seq) : AttributedMarkupString =
+        items |> intersperseFunc delimiterFunc |> concatMany
+
+    /// Renders an AttributedMarkupString to the specified output format.
+    let render (format: string) (ams: AttributedMarkupString) : string =
+        ams.Render(format)
+
+    /// Evaluates an AttributedMarkupString using a custom evaluator function.
+    let evaluateWith (evaluator: System.Func<Markup option, string, string>) (ams: AttributedMarkupString) : string =
+        ams.EvaluateWith(evaluator)
+
+    /// The fixed CSS rules for formatting classes emitted by Render("html").
+    let fixedCss =
+        ".ms-bold { font-weight: bold; }\n" +
+        ".ms-faint { opacity: 0.5; }\n" +
+        ".ms-italic { font-style: italic; }\n" +
+        ".ms-underline { text-decoration: underline; }\n" +
+        ".ms-strike { text-decoration: line-through; }\n" +
+        ".ms-overline { text-decoration: overline; }\n" +
+        ".ms-blink { animation: blink 1s step-start infinite; }\n"
+
+    /// Generates a CSS stylesheet (returns fixed CSS rules).
+    let cssSheet (_ams: AttributedMarkupString) : string =
+        fixedCss
+
+    /// Centers an AttributedMarkupString with different left/right padding.
+    let center2
+        (ams: AttributedMarkupString)
+        (padStr: AttributedMarkupString)
+        (padStrRight: AttributedMarkupString)
+        (width: int)
+        (truncType: MarkupStringModule.TruncationType)
+        : AttributedMarkupString =
+        let len = ams.Length
+        let lengthToPad = width - len
+
+        if lengthToPad <= 0 then
+            match truncType with
+            | MarkupStringModule.TruncationType.Overflow -> ams
+            | MarkupStringModule.TruncationType.Truncate ->
+                if lengthToPad = 0 then ams
+                else substring 0 width ams
+        else
+            let leftPadLength = lengthToPad / 2
+            let rightPadLength = lengthToPad - leftPadLength
+            let leftPad = buildPadding padStr leftPadLength
+            let rightPad = buildPadding padStrRight rightPadLength
+            let result = concatMany [leftPad; ams; rightPad]
+            match truncType with
+            | MarkupStringModule.TruncationType.Truncate -> substring 0 width result
+            | _ -> result
+
+    // ── Wildcard/regex functions ────────────────────────────────────
+
+    open System.Text.RegularExpressions
+
+    /// Constant function: always returns the given value regardless of input.
+    let private konst value _ = value
+
+    type private GlobPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\*" >
+    type private QuestionPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\?" >
+    type private KindPatternRegex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\*" >
+    type private KindPattern2Regex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\?" >
+
+    let private globPatternRegexInstance = GlobPatternRegex()
+    let private questionPatternRegexInstance = QuestionPatternRegex()
+    let private kindPatternRegexInstance = KindPatternRegex()
+    let private kindPattern2RegexInstance = KindPattern2Regex()
+
+    /// Converts a wildcard pattern to a regex string.
+    let getWildcardMatchAsRegex (pattern: AttributedMarkupString) : string =
+        let applyRegexPattern (pat: string) =
+            pat
+            |> fun x -> globPatternRegexInstance.TypedReplace(x, konst @"(.*?)")
+            |> fun x -> questionPatternRegexInstance.TypedReplace(x, konst @"(.)")
+            |> fun x -> kindPatternRegexInstance.TypedReplace(x, konst @"\*")
+            |> fun x -> kindPattern2RegexInstance.TypedReplace(x, konst @"\?")
+
+        pattern |> plainText |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
+
+    /// Converts a wildcard pattern string to a regex string.
+    let getWildcardMatchAsRegex2 (pattern: string) : string =
+        let applyRegexPattern (pat: string) =
+            pat
+            |> fun x -> globPatternRegexInstance.TypedReplace(x, konst @"(.*?)")
+            |> fun x -> questionPatternRegexInstance.TypedReplace(x, konst @"(.)")
+            |> fun x -> kindPatternRegexInstance.TypedReplace(x, konst @"\*")
+            |> fun x -> kindPattern2RegexInstance.TypedReplace(x, konst @"\?")
+
+        pattern |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
+
+    /// Determines if the input matches the wildcard pattern.
+    let isWildcardMatch (input: AttributedMarkupString) (pattern: AttributedMarkupString) : bool =
+        let newPattern = getWildcardMatchAsRegex pattern
+        (plainText input, newPattern) |> Regex.IsMatch
+
+    /// Determines if the input matches the wildcard pattern string.
+    let isWildcardMatch2 (input: AttributedMarkupString) (pattern: string) : bool =
+        let newPattern = getWildcardMatchAsRegex2 pattern
+        (plainText input, newPattern) |> Regex.IsMatch
+
+    /// Gets regex matches from input and pattern.
+    let getMatches (input: AttributedMarkupString) (pattern: string) : (Match * AttributedMarkupString seq) seq =
+        let captureToString (captureGroup: Group) =
+            substring captureGroup.Index captureGroup.Length input
+
+        let allMatches (mtch: Match) =
+            (mtch, mtch.Groups |> Seq.map captureToString)
+
+        ((plainText input), pattern)
+        |> Regex.Matches
+        |> Seq.cast<Match>
+        |> Seq.map allMatches
+
+    /// Gets regex matches from input and pattern AttributedMarkupStrings.
+    let getRegexpMatches (input: AttributedMarkupString) (pattern: AttributedMarkupString) : (Match * AttributedMarkupString seq) seq =
+        getMatches input (plainText pattern)
+
+    /// Gets wildcard matches from input and pattern.
+    let getWildcardMatches (input: AttributedMarkupString) (pattern: AttributedMarkupString) : (Match * AttributedMarkupString seq) seq =
+        getMatches input (getWildcardMatchAsRegex pattern)
+
+    // ── Serialization ──────────────────────────────────────────────
+
+    open System.Text.Json
+    open System.Text.Json.Serialization
+
+    /// Serialization options for AttributedMarkupString.
+    let serializationOptions =
+        let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
+        serializeOption.Converters.Add(MarkupStringModule.ColorJsonConverter())
+        serializeOption
+
+    /// Serializes to JSON string.
+    let serialize (ams: AttributedMarkupString) : string =
+        // Convert to MarkupString for serialization compatibility
+        let ms = toMarkupString ams
+        JsonSerializer.Serialize(ms, serializationOptions)
+
+    /// Deserializes from JSON string.
+    let deserialize (jsonString: string) : AttributedMarkupString =
+        if jsonString.Length = 0 then
+            empty ()
+        else
+            let ms = JsonSerializer.Deserialize<MarkupStringModule.MarkupString>(jsonString, serializationOptions)
+            fromMarkupString ms

@@ -3,7 +3,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using System.Drawing;
-using A = MarkupString.MarkupStringModule;
+using A = MarkupString.AttributedMarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using StringExtensions = ANSILibrary.StringExtensions;
 
