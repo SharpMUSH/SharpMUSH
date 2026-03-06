@@ -1,15 +1,17 @@
 namespace MarkupString
 
 open System
+open System.Collections.Immutable
 open System.Text
 open MarkupString.MarkupImplementation
 open ANSILibrary.ANSI
 
 /// <summary>
 /// NSAttributedString-inspired flat markup string model.
-/// Uses a contiguous string with an array of attribute runs describing formatting.
-/// This eliminates tree traversal, provides O(1) plain text access, and enables
-/// single-pass rendering with excellent cache locality.
+/// Uses a contiguous string with an immutable array of attribute runs describing formatting.
+/// All types are fully immutable — text is a .NET string (inherently immutable),
+/// runs use ImmutableArray (struct-based, no defensive copies needed), and
+/// markup arrays within runs are also ImmutableArray.
 ///
 /// Includes a Strategy Pattern render pipeline (section 5.2 Option A) that replaces
 /// string-based format dispatch with typed render strategies, enabling extensibility
@@ -20,6 +22,7 @@ module AttributedMarkupStringModule =
     /// <summary>
     /// Describes a contiguous range of characters that share the same markup attributes.
     /// Runs are non-overlapping and ordered by Start position.
+    /// All fields are immutable — Markups uses ImmutableArray to prevent external mutation.
     /// </summary>
     [<Struct>]
     type AttributeRun =
@@ -29,8 +32,8 @@ module AttributedMarkupStringModule =
             /// Number of characters this run covers.
             Length: int
             /// The markup attributes applied to this range.
-            /// Empty array means plain/unformatted text.
-            Markups: Markup array
+            /// Empty ImmutableArray means plain/unformatted text.
+            Markups: ImmutableArray<Markup>
         }
         member this.End = this.Start + this.Length
 
@@ -138,9 +141,12 @@ module AttributedMarkupStringModule =
 
     /// <summary>
     /// A flat, attributed markup string inspired by NSAttributedString.
-    /// Stores text contiguously with a parallel array of attribute runs.
+    /// Stores text contiguously with an immutable array of attribute runs.
+    /// Fully immutable — text is a .NET string, runs are ImmutableArray&lt;AttributeRun&gt;,
+    /// and markups within each run are ImmutableArray&lt;Markup&gt;.
+    /// Safe for concurrent access without synchronization.
     /// </summary>
-    type AttributedMarkupString(text: string, runs: AttributeRun array) =
+    type AttributedMarkupString(text: string, runs: ImmutableArray<AttributeRun>) =
 
         // ── Private rendering helpers ──────────────────────────────────
 
@@ -244,27 +250,27 @@ module AttributedMarkupStringModule =
     /// Creates an AttributedMarkupString from a plain string with no markup.
     let single (str: string) : AttributedMarkupString =
         if str.Length = 0 then
-            AttributedMarkupString(String.Empty, Array.empty)
+            AttributedMarkupString(String.Empty, ImmutableArray<AttributeRun>.Empty)
         else
-            AttributedMarkupString(str, [| { Start = 0; Length = str.Length; Markups = Array.empty } |])
+            AttributedMarkupString(str, ImmutableArray.Create({ Start = 0; Length = str.Length; Markups = ImmutableArray<Markup>.Empty }))
 
     /// Returns an empty AttributedMarkupString.
     let empty () : AttributedMarkupString =
-        AttributedMarkupString(String.Empty, Array.empty)
+        AttributedMarkupString(String.Empty, ImmutableArray<AttributeRun>.Empty)
 
     /// Creates an AttributedMarkupString from a markup and a plain string.
     let markupSingle (markup: Markup, str: string) : AttributedMarkupString =
         if str.Length = 0 then
-            AttributedMarkupString(String.Empty, Array.empty)
+            AttributedMarkupString(String.Empty, ImmutableArray<AttributeRun>.Empty)
         else
-            AttributedMarkupString(str, [| { Start = 0; Length = str.Length; Markups = [| markup |] } |])
+            AttributedMarkupString(str, ImmutableArray.Create({ Start = 0; Length = str.Length; Markups = ImmutableArray.Create(markup) }))
 
-    /// Creates an AttributedMarkupString from a markup and multiple markups applied to a string.
-    let markupSingleMulti (markups: Markup array, str: string) : AttributedMarkupString =
+    /// Creates an AttributedMarkupString from multiple markups applied to a string.
+    let markupSingleMulti (markups: ImmutableArray<Markup>, str: string) : AttributedMarkupString =
         if str.Length = 0 then
-            AttributedMarkupString(String.Empty, Array.empty)
+            AttributedMarkupString(String.Empty, ImmutableArray<AttributeRun>.Empty)
         else
-            AttributedMarkupString(str, [| { Start = 0; Length = str.Length; Markups = markups } |])
+            AttributedMarkupString(str, ImmutableArray.Create({ Start = 0; Length = str.Length; Markups = markups }))
 
     // ── Core operations ────────────────────────────────────────────
 
@@ -284,11 +290,12 @@ module AttributedMarkupStringModule =
         else
             let combinedText = a.Text + b.Text
             let offset = a.Text.Length
-            let shiftedBRuns =
-                b.Runs |> Array.map (fun r ->
-                    { Start = r.Start + offset; Length = r.Length; Markups = r.Markups })
-            let combinedRuns = Array.append a.Runs shiftedBRuns
-            AttributedMarkupString(combinedText, combinedRuns)
+            let builder = ImmutableArray.CreateBuilder<AttributeRun>(a.Runs.Length + b.Runs.Length)
+            for run in a.Runs do
+                builder.Add(run)
+            for run in b.Runs do
+                builder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+            AttributedMarkupString(combinedText, builder.ToImmutable())
 
     /// <summary>
     /// Returns a substring of an AttributedMarkupString, preserving markup runs.
@@ -302,7 +309,7 @@ module AttributedMarkupStringModule =
             let actualEnd = min ams.Length (actualStart + length)
             let actualLength = actualEnd - actualStart
             let subText = ams.Text.Substring(actualStart, actualLength)
-            let newRuns = ResizeArray<AttributeRun>()
+            let builder = ImmutableArray.CreateBuilder<AttributeRun>()
             for run in ams.Runs do
                 let runEnd = run.End
                 if runEnd > actualStart && run.Start < actualEnd then
@@ -310,12 +317,12 @@ module AttributedMarkupStringModule =
                     let clippedEnd = min runEnd actualEnd
                     let clippedLength = clippedEnd - clippedStart
                     if clippedLength > 0 then
-                        newRuns.Add({
+                        builder.Add({
                             Start = clippedStart - actualStart
                             Length = clippedLength
                             Markups = run.Markups
                         })
-            AttributedMarkupString(subText, newRuns.ToArray())
+            AttributedMarkupString(subText, builder.ToImmutable())
 
     /// <summary>
     /// Splits an AttributedMarkupString by a string delimiter.
@@ -384,21 +391,27 @@ module AttributedMarkupStringModule =
     let optimize (ams: AttributedMarkupString) : AttributedMarkupString =
         if ams.Runs.Length <= 1 then ams
         else
-            let markupsEqual (a: Markup array) (b: Markup array) =
+            let markupsEqual (a: ImmutableArray<Markup>) (b: ImmutableArray<Markup>) =
                 if a.Length <> b.Length then false
-                else Array.forall2 (fun (x: Markup) (y: Markup) -> x = y) a b
+                else
+                    let mutable allEqual = true
+                    let mutable i = 0
+                    while allEqual && i < a.Length do
+                        if a[i] <> b[i] then allEqual <- false
+                        i <- i + 1
+                    allEqual
 
-            let merged = ResizeArray<AttributeRun>()
+            let builder = ImmutableArray.CreateBuilder<AttributeRun>()
             let mutable current = ams.Runs[0]
             for i in 1 .. ams.Runs.Length - 1 do
                 let next = ams.Runs[i]
                 if current.End = next.Start && markupsEqual current.Markups next.Markups then
                     current <- { Start = current.Start; Length = current.Length + next.Length; Markups = current.Markups }
                 else
-                    merged.Add(current)
+                    builder.Add(current)
                     current <- next
-            merged.Add(current)
-            AttributedMarkupString(ams.Text, merged.ToArray())
+            builder.Add(current)
+            AttributedMarkupString(ams.Text, builder.ToImmutable())
 
     /// <summary>
     /// Returns the first index where a search string occurs.
@@ -425,7 +438,7 @@ module AttributedMarkupStringModule =
         if newText.Length = ams.Text.Length then
             AttributedMarkupString(newText, ams.Runs)
         else
-            AttributedMarkupString(newText, [| { Start = 0; Length = newText.Length; Markups = Array.empty } |])
+            AttributedMarkupString(newText, ImmutableArray.Create({ Start = 0; Length = newText.Length; Markups = ImmutableArray<Markup>.Empty }))
 
     /// <summary>
     /// Removes a range of characters from the string and adjusts runs accordingly.
@@ -514,7 +527,7 @@ module AttributedMarkupStringModule =
     /// </summary>
     let fromMarkupString (ms: MarkupStringModule.MarkupString) : AttributedMarkupString =
         let textSb = StringBuilder()
-        let runs = ResizeArray<AttributeRun>()
+        let runs = ImmutableArray.CreateBuilder<AttributeRun>()
 
         let rec collect (ms: MarkupStringModule.MarkupString) (parentMarkups: Markup list) =
             let currentMarkups =
@@ -531,7 +544,7 @@ module AttributedMarkupStringModule =
                         runs.Add({
                             Start = startPos
                             Length = str.Length
-                            Markups = currentMarkups |> List.rev |> Array.ofList
+                            Markups = ImmutableArray.CreateRange(currentMarkups |> List.rev)
                         })
                 | MarkupStringModule.Content.MarkupText childMs ->
                     collect childMs currentMarkups
@@ -541,7 +554,7 @@ module AttributedMarkupStringModule =
         if finalText.Length = 0 then
             empty ()
         else
-            AttributedMarkupString(finalText, runs.ToArray())
+            AttributedMarkupString(finalText, runs.ToImmutable())
 
     /// <summary>
     /// Converts a flat AttributedMarkupString back to the tree-based MarkupString.
@@ -567,7 +580,7 @@ module AttributedMarkupStringModule =
                         | m :: rest ->
                             let inner = buildNested rest text
                             MarkupStringModule.MarkupString(MarkupStringModule.MarkupTypes.MarkedupText m, [ MarkupStringModule.Content.MarkupText inner ])
-                    let nested = buildNested (Array.toList run.Markups) segment
+                    let nested = buildNested (run.Markups |> Seq.toList) segment
                     contentList.Add(MarkupStringModule.Content.MarkupText nested)
             MarkupStringModule.MarkupString(MarkupStringModule.MarkupTypes.Empty, contentList |> Seq.toList)
 

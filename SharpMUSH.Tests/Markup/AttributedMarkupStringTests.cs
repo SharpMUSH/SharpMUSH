@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Drawing;
 using MarkupString;
 using AMS = MarkupString.AttributedMarkupStringModule;
@@ -62,7 +63,7 @@ public class AttributedMarkupStringTests
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var htmlMarkup = H.Create("b");
 		var ams = AMS.markupSingleMulti(
-			new MarkupImplementation.Markup[] { redMarkup, htmlMarkup },
+			ImmutableArray.Create<MarkupImplementation.Markup>(redMarkup, htmlMarkup),
 			"Mixed Markup");
 
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Mixed Markup");
@@ -591,5 +592,94 @@ public class AttributedMarkupStringTests
 		var result = AMS.apply(ams, Microsoft.FSharp.Core.FuncConvert.FromFunc(transform));
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("HELLO");
+	}
+
+	// ── Immutability guarantees ───────────────────────────────────
+
+	[Test]
+	public async Task Immutability_RunsAreImmutableArray()
+	{
+		var ams = AMS.single("Hello");
+
+		// Runs property returns ImmutableArray — a value type that cannot be mutated
+		var runs = ams.Runs;
+		await Assert.That(runs).IsTypeOf<ImmutableArray<AMS.AttributeRun>>();
+	}
+
+	[Test]
+	public async Task Immutability_MarkupsAreImmutableArray()
+	{
+		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var ams = AMS.markupSingle(redMarkup, "Red");
+
+		// Markups within each run are ImmutableArray — cannot be mutated
+		var markups = ams.Runs[0].Markups;
+		await Assert.That(markups).IsTypeOf<ImmutableArray<MarkupImplementation.Markup>>();
+	}
+
+	[Test]
+	public async Task Immutability_ConcatDoesNotMutateOriginals()
+	{
+		var a = AMS.single("Hello");
+		var b = AMS.single(" World");
+		var combined = AMS.concat(a, b);
+
+		// Originals should be unchanged
+		await Assert.That(a.ToPlainText()).IsEqualTo("Hello");
+		await Assert.That(a.Length).IsEqualTo(5);
+		await Assert.That(b.ToPlainText()).IsEqualTo(" World");
+		await Assert.That(b.Length).IsEqualTo(6);
+
+		// Combined is a new instance
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
+		await Assert.That(combined.Length).IsEqualTo(11);
+	}
+
+	[Test]
+	public async Task Immutability_SubstringDoesNotMutateOriginal()
+	{
+		var ams = AMS.single("Hello, World!");
+		var sub = AMS.substring(7, 5, ams);
+
+		// Original unchanged
+		await Assert.That(ams.ToPlainText()).IsEqualTo("Hello, World!");
+		await Assert.That(ams.Length).IsEqualTo(13);
+
+		// Substring is independent
+		await Assert.That(sub.ToPlainText()).IsEqualTo("World");
+	}
+
+	[Test]
+	public async Task Immutability_OptimizeDoesNotMutateOriginal()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var part1 = AMS.markupSingle(red, "Hello");
+		var part2 = AMS.markupSingle(red, " World");
+		var combined = AMS.concat(part1, part2);
+
+		var optimized = AMS.optimize(combined);
+
+		// Original combined still has 2 runs
+		await Assert.That(combined.Runs.Length).IsEqualTo(2);
+
+		// Optimized has 1 merged run
+		await Assert.That(optimized.Runs.Length).IsEqualTo(1);
+
+		// Both have the same text
+		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
+		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello World");
+	}
+
+	[Test]
+	public async Task Immutability_RemoveDoesNotMutateOriginal()
+	{
+		var ams = AMS.single("Hello World");
+		var removed = AMS.remove(ams, 5, 1);
+
+		// Original unchanged
+		await Assert.That(ams.ToPlainText()).IsEqualTo("Hello World");
+
+		// Removed is independent
+		await Assert.That(removed.ToPlainText()).IsEqualTo("HelloWorld");
 	}
 }
