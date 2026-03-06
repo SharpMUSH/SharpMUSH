@@ -421,7 +421,7 @@ public class AttributedMarkupStringTests
 	[Test]
 	public async Task FromMarkupString_PlainText_ConvertsFaithfully()
 	{
-		var ms = A.single("Hello, World!");
+		var ms = global::MarkupString.MarkupStringModule.single("Hello, World!");
 		var ams = AMS.fromMarkupString(ms);
 
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Hello, World!");
@@ -432,7 +432,7 @@ public class AttributedMarkupStringTests
 	public async Task FromMarkupString_MarkupText_PreservesMarkup()
 	{
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ms = A.markupSingle(redMarkup, "Red Text");
+		var ms = global::MarkupString.MarkupStringModule.markupSingle(redMarkup, "Red Text");
 		var ams = AMS.fromMarkupString(ms);
 
 		await Assert.That(ams.ToPlainText()).IsEqualTo("Red Text");
@@ -446,8 +446,8 @@ public class AttributedMarkupStringTests
 		// Create: red(hello blue(world))
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
-		var innerMs = A.markupSingle(blueMarkup, "world");
-		var outerMs = new MString(
+		var innerMs = global::MarkupString.MarkupStringModule.markupSingle(blueMarkup, "world");
+		var outerMs = new MarkupStringModule.MarkupString(
 			FSharpOption<MarkupImplementation.Markup>.Some(redMarkup),
 			Microsoft.FSharp.Collections.ListModule.OfSeq(new MarkupStringModule.Content[]
 			{
@@ -492,7 +492,7 @@ public class AttributedMarkupStringTests
 	public async Task RoundTrip_MarkupString_PreservesText()
 	{
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var original = A.markupSingle(redMarkup, "Test");
+		var original = global::MarkupString.MarkupStringModule.markupSingle(redMarkup, "Test");
 		var ams = AMS.fromMarkupString(original);
 		var roundTrip = AMS.toMarkupString(ams);
 
@@ -938,9 +938,9 @@ public class AttributedMarkupStringTests
 		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
 
-		var ms = A.markupSingle(red, "Hello ");
-		var ms2 = A.markupSingle(blue, "World");
-		var combined = A.concat(ms, ms2);
+		var ms = global::MarkupString.MarkupStringModule.markupSingle(red, "Hello ");
+		var ms2 = global::MarkupString.MarkupStringModule.markupSingle(blue, "World");
+		var combined = global::MarkupString.MarkupStringModule.concat(ms, ms2);
 		var ams = AMS.fromMarkupString(combined);
 
 		await AssertRunsSortedByStart(ams);

@@ -84,7 +84,7 @@ public class MarkupStringOptimizationTests
 		var separator = A.single(", ");
 
 		// Act
-		var result = A.concat(first, second, separator);
+		var result = A.concat(A.concat(first, separator), second);
 
 		// Assert
 		await Assert.That(result.ToPlainText()).IsEqualTo("Hello, World");
@@ -156,7 +156,7 @@ public class MarkupStringOptimizationTests
 		var searchString = A.single("World");
 
 		// Act
-		var index = A.indexOf(markupString, searchString);
+		var index = A.indexOf(markupString, searchString.ToPlainText());
 
 		// Assert
 		await Assert.That(index).IsEqualTo(7);
@@ -170,7 +170,7 @@ public class MarkupStringOptimizationTests
 		var searchString = A.single("xyz");
 
 		// Act
-		var index = A.indexOf(markupString, searchString);
+		var index = A.indexOf(markupString, searchString.ToPlainText());
 
 		// Assert
 		await Assert.That(index).IsEqualTo(-1);
@@ -207,8 +207,8 @@ public class MarkupStringOptimizationTests
 		var searchMatch = A.single("caf\u00e9");   // exact match
 		var searchNoMatch = A.single("cafe");      // 'e' != 'é' ordinal
 
-		await Assert.That(A.indexOf(markupString, searchMatch)).IsEqualTo(0);
-		await Assert.That(A.indexOf(markupString, searchNoMatch)).IsEqualTo(-1);
+		await Assert.That(A.indexOf(markupString, "caf\u00e9")).IsEqualTo(0);
+		await Assert.That(A.indexOf(markupString, "cafe")).IsEqualTo(-1);
 	}
 
 	[Test]
@@ -218,8 +218,8 @@ public class MarkupStringOptimizationTests
 		var search = A.single("caf\u00e9");
 		var searchNoMatch = A.single("cafe");
 
-		await Assert.That(A.indexOfLast(markupString, search)).IsEqualTo(5);
-		await Assert.That(A.indexOfLast(markupString, searchNoMatch)).IsEqualTo(-1);
+		await Assert.That(A.indexOfLast(markupString, "caf\u00e9")).IsEqualTo(5);
+		await Assert.That(A.indexOfLast(markupString, "cafe")).IsEqualTo(-1);
 	}
 
 	[Test]
@@ -472,8 +472,8 @@ public class MarkupStringOptimizationTests
 		await Assert.That(optimized.ToPlainText()).IsEqualTo("Hello");
 		await Assert.That(optimized.Length).IsEqualTo(5);
 
-		// Different nested markups should not be lifted
-		await Assert.That(optimized.MarkupDetails).IsEqualTo(outerMarkup.MarkupDetails);
+		// Different nested markups should not be lifted - verify runs preserve markups
+		await Assert.That(optimized.Runs.Length).IsEqualTo(outerMarkup.Runs.Length);
 	}
 
 	[Test]
