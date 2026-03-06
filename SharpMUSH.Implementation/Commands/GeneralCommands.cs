@@ -809,7 +809,7 @@ public partial class Commands
 
 		if (args.Count == 1)
 		{
-			var argText = args["0"].Message!.ToString();
+			var argText = args["0"].Message!.ToPlainText();
 			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
 
 			if (split.TryPickT0(out var details, out _))
@@ -875,7 +875,12 @@ public partial class Commands
 		{
 			var limitedObj = viewingKnown.Object();
 			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
-			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.");
+			await NotifyService!.Notify(enactor, MModule.multiple([
+				limitedObj.Name.Hilight(),
+				MModule.single(" is owned by "),
+				limitedOwnerObj.Name.Hilight(),
+				MModule.single(".")
+			]));
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
@@ -888,11 +893,6 @@ public partial class Commands
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
-		var location = obj.Key;
-		var contentKeys = contents!.Select(x => x.Object().Name);
-		// var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
-		// THIS FAILS ^ -- Mediator.InvalidMessageException:
-		// Tried to send/publish invalid message type to Mediator: SharpMUSH.Library.Queries.Database.GetExitsQuery
 		var description = (await AttributeService!.GetAttributeAsync(enactor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
@@ -1003,6 +1003,15 @@ public partial class Commands
 			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
 		}
 
+		// Last modified — always shown in both examine and brief
+		outputSections.Add(MModule.single($"Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(obj.ModifiedTime):ddd MMM dd HH:mm:ss yyyy}"));
+
+		// Quota — player objects only, shown in both examine and brief
+		if (viewingKnown.IsPlayer)
+		{
+			outputSections.Add(MModule.single($"Quota: {viewingKnown.AsPlayer.Quota}"));
+		}
+
 		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
 
 		if (!switches.Contains("BRIEF"))
@@ -1092,6 +1101,28 @@ public partial class Commands
 					}
 					await NotifyService!.Notify(enactor,
 						MModule.multipleWithDelimiter(MModule.single("\n"), contentLines));
+				}
+			}
+
+			// Exits — only if not OPAQUE and object can contain exits (not itself an exit)
+			if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
+			{
+				var exits = await Mediator!.CreateStream(new GetExitsQuery(viewingKnown.AsContainer))
+					.ToArrayAsync();
+
+				if (exits.Length > 0)
+				{
+					var exitLines = new List<MString> { MModule.single("Exits:") };
+					foreach (var exit in exits)
+					{
+						var eObj = exit.Object;
+						var eFlags = await eObj.Flags.Value.ToArrayAsync();
+						exitLines.Add(MModule.concat(
+							eObj.Name.Hilight(),
+							MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})")));
+					}
+					await NotifyService!.Notify(enactor,
+						MModule.multipleWithDelimiter(MModule.single("\n"), exitLines));
 				}
 			}
 

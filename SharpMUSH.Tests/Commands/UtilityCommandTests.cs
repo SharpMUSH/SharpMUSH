@@ -131,6 +131,63 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	public async ValueTask ExamineObject_HeaderContainsLastModified()
+	{
+		// "Last modified:" is always shown in both examine and brief
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Last modified:")));
+	}
+
+	[Test]
+	public async ValueTask ExaminePlayer_HeaderContainsQuota()
+	{
+		// "Quota:" is shown for player objects (God is player #1)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Quota:")));
+	}
+
+	[Test]
+	public async ValueTask ExamineRoom_ShowsExits()
+	{
+		// Dig a room with exits; the new room gets the return exit → examine should show Exits:
+		var digResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dig ExitTestSource=North;N,South;S"));
+		var digMessage = digResult?.Message?.ToPlainText();
+		await Assert.That(digMessage).IsNotNull();
+		var roomDbRef = DBRef.Parse(digMessage!);
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"examine {roomDbRef}"));
+
+		// The Exits: section should appear because the new room has the return exit (South;S)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Exits:")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_BriefSwitch_AlsoShowsLastModified()
+	{
+		// Brief mode should also show Last modified: (it's a header field)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Last modified:")));
+	}
+
+	[Test]
 	public async ValueTask ExamineObject_AttributeWithAnsi_PreservesMarkup()
 	{
 		// Create an object, set a DESCRIBE with ANSI color, then examine it.
