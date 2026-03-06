@@ -180,16 +180,9 @@ public class ManipulateSharpObjectService(
 		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
 		if (requiredPermissions is not null && requiredPermissions.Length > 0)
 		{
-			var hasPermission = false;
-			foreach (var permission in requiredPermissions)
-			{
-				// Check if executor has the required flag or power
-				if (await executor.HasFlag(permission) || await executor.HasPower(permission))
-				{
-					hasPermission = true;
-					break;
-				}
-			}
+			var hasPermission = await requiredPermissions.ToAsyncEnumerable()
+				.AnyAsync(async (permission, ct) =>
+					await executor.HasFlag(permission) || await executor.HasPower(permission));
 
 			if (!hasPermission)
 			{

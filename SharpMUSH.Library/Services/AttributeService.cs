@@ -282,15 +282,8 @@ public class AttributeService(
 				// Check custom restrictions
 				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
 				{
-					var hasRestriction = false;
-					foreach (var restriction in applyFunction.LibraryInformation.Attribute.Restrict)
-					{
-						if (await realExecutor.HasPower(restriction))
-						{
-							hasRestriction = true;
-							break;
-						}
-					}
+					var hasRestriction = await applyFunction.LibraryInformation.Attribute.Restrict.ToAsyncEnumerable()
+						.AnyAsync(async (restriction, ct) => await realExecutor.HasPower(restriction));
 					if (!hasRestriction)
 					{
 						return MModule.single(Errors.ErrorAttrEvalPermissions);

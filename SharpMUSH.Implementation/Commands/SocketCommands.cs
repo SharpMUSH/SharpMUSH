@@ -270,17 +270,12 @@ public partial class Commands
 		if (maxGuests == -1)
 		{
 			// Find a guest that's not currently connected
-			foreach (var guest in guestPlayers)
-			{
-				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-				var guestConnectionCount = await ConnectionService!.Get(guestDbRef).CountAsync();
-
-				if (guestConnectionCount == 0)
+			selectedGuest = await guestPlayers.ToAsyncEnumerable()
+				.FirstOrDefaultAsync(async (guest, ct) =>
 				{
-					selectedGuest = guest;
-					break;
-				}
-			}
+					var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
+					return await ConnectionService!.Get(guestDbRef).CountAsync(ct) == 0;
+				});
 
 			if (selectedGuest == null)
 			{
@@ -309,12 +304,13 @@ public partial class Commands
 		{
 			// Limited to maxGuests total connections
 			// Count total guest connections
-			var totalGuestConnections = 0;
-			foreach (var guest in guestPlayers)
-			{
-				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-				totalGuestConnections += await ConnectionService!.Get(guestDbRef).CountAsync();
-			}
+			var totalGuestConnections = await guestPlayers.ToAsyncEnumerable()
+				.Select(async (guest, ct) =>
+				{
+					var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
+					return await ConnectionService!.Get(guestDbRef).CountAsync(ct);
+				})
+				.SumAsync();
 
 			if (totalGuestConnections >= maxGuests)
 			{

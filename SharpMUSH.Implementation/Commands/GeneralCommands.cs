@@ -1501,15 +1501,13 @@ public partial class Commands
 		var results = await Mediator!.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
 
 		// Filter to only objects the executor controls
-		var controlledResults = new List<SharpObject>();
-		foreach (var obj in results)
-		{
-			var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-			if (!objNode.IsNone() && await PermissionService!.Controls(executor, objNode.WithoutNone()))
+		var controlledResults = await results.ToAsyncEnumerable()
+			.Where(async (obj, ct) =>
 			{
-				controlledResults.Add(obj);
-			}
-		}
+				var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef), ct);
+				return !objNode.IsNone() && await PermissionService!.Controls(executor, objNode.WithoutNone());
+			})
+			.ToListAsync();
 
 		matchCount = controlledResults.Count;
 

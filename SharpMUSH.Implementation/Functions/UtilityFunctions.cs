@@ -306,21 +306,16 @@ public partial class Functions
 		}
 
 		// Multi-argument case: parse each argument and check
-		var allTruthy = true;
-		foreach (var arg in args)
-		{
-			var result = await parser.FunctionParse(arg.Value.Message!);
-			var resultStr = MModule.plainText(result!.Message).Trim();
-
-			if (string.IsNullOrEmpty(resultStr) ||
-					resultStr == "0" ||
-					resultStr.StartsWith("#-1") ||
-					resultStr.Equals("false", StringComparison.OrdinalIgnoreCase))
+		var allTruthy = await args.ToAsyncEnumerable()
+			.AllAsync(async (arg, ct) =>
 			{
-				allTruthy = false;
-				break;
-			}
-		}
+				var result = await parser.FunctionParse(arg.Value.Message!);
+				var resultStr = MModule.plainText(result!.Message).Trim();
+				return !string.IsNullOrEmpty(resultStr) &&
+					resultStr != "0" &&
+					!resultStr.StartsWith("#-1") &&
+					!resultStr.Equals("false", StringComparison.OrdinalIgnoreCase);
+			});
 
 		return new CallState(allTruthy ? "1" : "0");
 	}

@@ -71,19 +71,15 @@ public partial class Functions
 
 	[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
 	public static async ValueTask<CallState> CancellingNegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		foreach (var m in parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message!))
-		{
-			var parsed = await parser.FunctionParse(m);
-
-			if (parsed!.Message.Falsy())
+		=> await parser.CurrentState.ArgumentsOrdered
+			.Select(x => x.Value.Message!)
+			.ToAsyncEnumerable()
+			.AnyAsync(async (m, ct) =>
 			{
-				return "1";
-			}
-		}
-
-		return "0";
-	}
+				var parsed = await parser.FunctionParse(m);
+				return parsed!.Message.Falsy();
+			})
+			? "1" : "0";
 
 	[SharpFunction(Name = "ncand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
 	public static ValueTask<CallState> NCand(IMUSHCodeParser parser, SharpFunctionAttribute _2)

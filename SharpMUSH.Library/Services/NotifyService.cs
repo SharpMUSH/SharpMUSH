@@ -209,15 +209,11 @@ public class NotifyService(
 		// Get all handles for the target location/object
 		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
 
-		// Get all handles to exclude
-		var excludeHandles = new HashSet<long>();
-		foreach (var exceptDbRef in except)
-		{
-			await foreach (var conn in connections.Get(exceptDbRef))
-			{
-				excludeHandles.Add(conn.Handle);
-			}
-		}
+		// Get all handles to exclude using async LINQ SelectMany over all except-DBRefs
+		var excludeHandles = await except.ToAsyncEnumerable()
+			.SelectMany(dbRef => connections.Get(dbRef))
+			.Select(conn => conn.Handle)
+			.ToHashSetAsync();
 
 		// Filter out excluded handles and notify the rest
 		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
