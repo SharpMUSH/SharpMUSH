@@ -148,6 +148,21 @@ module AttributedMarkupStringModule =
             member _.Optimize(text) = text
 
     /// <summary>
+    /// Native render strategy that delegates to each markup's own Wrap() method.
+    /// This preserves the behavior of the original MarkupString.ToString() which
+    /// dispatched rendering based on the concrete markup type (AnsiMarkup uses ANSI codes,
+    /// HtmlMarkup uses HTML tags, NeutralMarkup passes through). Unlike AnsiRenderStrategy,
+    /// this does not apply ANSI-specific post-processing or optimization.
+    /// </summary>
+    type NativeRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = text
+            member _.ApplyMarkup(markup)(text) = markup.Wrap(text)
+            member _.Prefix = String.Empty
+            member _.Postfix = String.Empty
+            member _.Optimize(text) = text
+
+    /// <summary>
     /// Registry of built-in render strategies, providing typed access and
     /// format-string lookup for backward compatibility.
     /// </summary>
@@ -161,6 +176,9 @@ module AttributedMarkupStringModule =
         /// Singleton plain text render strategy.
         let plainText : IRenderStrategy = PlainTextRenderStrategy()
 
+        /// Singleton native render strategy (delegates to markup.Wrap()).
+        let native : IRenderStrategy = NativeRenderStrategy()
+
         /// <summary>
         /// Looks up a render strategy by format name (case-insensitive).
         /// Returns the ANSI strategy for unknown formats (backward-compatible default).
@@ -169,6 +187,7 @@ module AttributedMarkupStringModule =
             match format.ToLowerInvariant() with
             | "html" -> html
             | "plaintext" | "plain" -> plainText
+            | "native" -> native
             | _ -> ansi  // "ansi" and any unknown format default to ANSI
 
     /// <summary>
@@ -223,7 +242,32 @@ module AttributedMarkupStringModule =
                 else
                     rendered
 
-        let cachedToString = Lazy<string>(fun () -> renderWith RenderStrategies.ansi)
+        /// Finds the first markup in any run, used to select the appropriate rendering strategy.
+        let findFirstMarkup () : Markup option =
+            runs |> Seq.tryPick (fun run ->
+                if run.Markups.Length > 0 then Some (run.Markups.[0])
+                else None)
+
+        /// Creates a render strategy based on the first markup type found.
+        /// This matches the original MarkupString.toString() behavior:
+        /// - Uses markup.Wrap() for applying markup (type-dispatched)
+        /// - Uses markup.Prefix/Postfix for wrapping
+        /// - Uses markup.Optimize for post-processing
+        let nativeToString () : string =
+            match findFirstMarkup () with
+            | None -> renderWith RenderStrategies.native
+            | Some markup ->
+                let strategy = {
+                    new IRenderStrategy with
+                        member _.EncodeText(t) = t
+                        member _.ApplyMarkup(m)(t) = m.Wrap(t)
+                        member _.Prefix = markup.Prefix
+                        member _.Postfix = markup.Postfix
+                        member _.Optimize(t) = markup.Optimize(t)
+                }
+                renderWith strategy
+
+        let cachedToString = Lazy<string>(fun () -> nativeToString ())
         let cachedPlainText = Lazy<string>(fun () -> text)
 
         // ── Public API ─────────────────────────────────────────────────
@@ -259,17 +303,22 @@ module AttributedMarkupStringModule =
         /// <summary>
         /// Evaluates the attributed string using a custom evaluation function.
         /// Groups consecutive characters by their markup and calls the evaluator per group.
+        /// For runs with multiple markups, evaluates from innermost to outermost,
+        /// matching the tree-based MarkupString's recursive evaluation behavior.
         /// </summary>
         member _.EvaluateWith(evaluator: Func<Markup option, string, string>) : string =
             let sb = StringBuilder(text.Length)
             for run in runs do
                 let segment = text.Substring(run.Start, run.Length)
-                let markupType =
-                    if run.Markups.Length > 0 then
-                        Some run.Markups[0]
-                    else
-                        None
-                sb.Append(evaluator.Invoke(markupType, segment)) |> ignore
+                if run.Markups.Length = 0 then
+                    sb.Append(evaluator.Invoke(None, segment)) |> ignore
+                else
+                    // Apply evaluator from innermost (index 0) to outermost (last index)
+                    // to match tree-based recursive behavior
+                    let mutable result = evaluator.Invoke(Some run.Markups.[0], segment)
+                    for i in 1 .. run.Markups.Length - 1 do
+                        result <- evaluator.Invoke(Some run.Markups.[i], result)
+                    sb.Append(result) |> ignore
             sb.ToString()
 
         override _.Equals(obj) =
@@ -295,17 +344,13 @@ module AttributedMarkupStringModule =
 
     /// Creates an AttributedMarkupString from a markup and a plain string.
     let markupSingle (markup: Markup, str: string) : AttributedMarkupString =
-        if str.Length = 0 then
-            AttributedMarkupString(String.Empty, ImmutableArray<AttributeRun>.Empty)
-        else
-            AttributedMarkupString(str, ImmutableArray.Create({ Start = 0; Length = str.Length; Markups = ImmutableArray.Create(markup) }))
+        let run = { Start = 0; Length = str.Length; Markups = ImmutableArray.Create(markup) }
+        AttributedMarkupString(str, ImmutableArray.Create(run))
 
     /// Creates an AttributedMarkupString from multiple markups applied to a string.
     let markupSingleMulti (markups: ImmutableArray<Markup>, str: string) : AttributedMarkupString =
-        if str.Length = 0 then
-            AttributedMarkupString(String.Empty, ImmutableArray<AttributeRun>.Empty)
-        else
-            AttributedMarkupString(str, ImmutableArray.Create({ Start = 0; Length = str.Length; Markups = markups }))
+        let run = { Start = 0; Length = str.Length; Markups = markups }
+        AttributedMarkupString(str, ImmutableArray.Create(run))
 
     // ── Core operations ────────────────────────────────────────────
 
@@ -729,7 +774,23 @@ module AttributedMarkupStringModule =
         else
             let before = substring 0 index input
             let after = substring index (input.Length - index) input
-            concatMany [before; insert; after]
+            // Find the run at the insertion point to inherit its markups
+            let runIndex = findFirstOverlappingRunIndex input.Runs index
+            let wrappedInsert =
+                if runIndex >= 0 && runIndex < input.Runs.Length then
+                    let run = input.Runs.[runIndex]
+                    if run.Markups.Length > 0 then
+                        // Wrap insert with the surrounding markup context
+                        let insertRuns = ImmutableArray.CreateBuilder<AttributeRun>(insert.Runs.Length)
+                        for r in insert.Runs do
+                            let newMarkups = ImmutableArray.CreateBuilder<Markup>(r.Markups.Length + run.Markups.Length)
+                            newMarkups.AddRange(r.Markups)
+                            newMarkups.AddRange(run.Markups)
+                            insertRuns.Add({ Start = r.Start; Length = r.Length; Markups = newMarkups.ToImmutable() })
+                        AttributedMarkupString(insert.Text, insertRuns.ToImmutable())
+                    else insert
+                else insert
+            concatMany [before; wrappedInsert; after]
 
     // ── Additional functions for API compatibility ──────────────────
 
@@ -739,13 +800,16 @@ module AttributedMarkupStringModule =
 
     /// Creates an AttributedMarkupString wrapping another with the given markup.
     let markupSingle2 (markup: Markup, inner: AttributedMarkupString) : AttributedMarkupString =
-        if inner.Length = 0 then empty ()
+        if inner.Length = 0 then
+            // Even for empty text, preserve the markup (e.g., <br></br>)
+            let run = { Start = 0; Length = 0; Markups = ImmutableArray.Create(markup) }
+            AttributedMarkupString("", ImmutableArray.Create(run))
         else
             let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>(inner.Runs.Length)
             for run in inner.Runs do
                 let newMarkups = ImmutableArray.CreateBuilder<Markup>(run.Markups.Length + 1)
-                newMarkups.Add(markup)
                 newMarkups.AddRange(run.Markups)
+                newMarkups.Add(markup)
                 runsBuilder.Add({ Start = run.Start; Length = run.Length; Markups = newMarkups.ToImmutable() })
             AttributedMarkupString(inner.Text, runsBuilder.ToImmutable())
 
@@ -803,9 +867,23 @@ module AttributedMarkupStringModule =
     let trim2 (ams: AttributedMarkupString) (trimStr: AttributedMarkupString) (trimType: MarkupStringModule.TrimType) : AttributedMarkupString =
         trim ams (trimStr.ToPlainText()) trimType
 
-    /// Concatenates and attaches (same as concat for flat model).
+    /// Concatenates and attaches: the last markup context of `a` extends to cover `b`.
+    /// In the tree model, this recursively nests `b` inside `a`'s last MarkupText node.
+    /// In the flat model, this finds the outermost markup from `a`'s last run and
+    /// applies it as a wrapper to all runs of `b`, then concatenates.
     let concatAttach (a: AttributedMarkupString) (b: AttributedMarkupString) : AttributedMarkupString =
-        concat a b
+        if a.Runs.Length = 0 then concat a b
+        else
+            let lastRun = a.Runs.[a.Runs.Length - 1]
+            if lastRun.Markups.Length = 0 then
+                // Last run of 'a' has no markup — just concat
+                concat a b
+            else
+                // Find the outermost markup (last in the markups array = outermost from markupSingle2)
+                let outerMarkup = lastRun.Markups.[lastRun.Markups.Length - 1]
+                // Wrap b with that outer markup, then concat
+                let wrappedB = markupSingle2(outerMarkup, b)
+                concat a wrappedB
 
     /// Intersperses a function-generated separator between elements of a sequence.
     let intersperseFunc (sepFunc: int -> AttributedMarkupString) (items: AttributedMarkupString seq) : AttributedMarkupString seq =
