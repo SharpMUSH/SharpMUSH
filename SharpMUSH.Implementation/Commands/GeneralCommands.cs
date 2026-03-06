@@ -1127,14 +1127,18 @@ public partial class Commands
 				if (exits.Length > 0)
 				{
 					var exitLines = new List<MString> { MModule.single("Exits:") };
-					foreach (var exit in exits)
-					{
-						var eObj = exit.Object;
-						var eFlags = await eObj.Flags.Value.ToArrayAsync();
-						exitLines.Add(MModule.concat(
-							eObj.Name.Hilight(),
-							MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})")));
-					}
+					var exitContentLines = await exits
+						.ToAsyncEnumerable()
+						.SelectAwait(async exit =>
+						{
+							var eObj = exit.Object;
+							var eFlags = await eObj.Flags.Value.ToArrayAsync();
+							return MModule.concat(
+								eObj.Name.Hilight(),
+								MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})"));
+						})
+						.ToListAsync();
+					exitLines.AddRange(exitContentLines);
 					await NotifyService!.Notify(enactor,
 						MModule.multipleWithDelimiter(MModule.single("\n"), exitLines));
 				}
