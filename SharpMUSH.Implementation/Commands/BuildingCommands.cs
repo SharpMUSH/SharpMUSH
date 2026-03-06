@@ -76,7 +76,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Created: Object #{thing.Number}.");
+		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
 		await EventService!.TriggerEventAsync(
 			parser,

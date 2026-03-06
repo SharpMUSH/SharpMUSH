@@ -209,7 +209,7 @@ public class ManipulateSharpObjectService(
 				{
 					if (notify)
 					{
-						await notifyService.Notify(executor, $"{obj.Object().Name} - {realFlag.Name} (already) reset.");
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Unset.");
 					}
 
 					break;
@@ -218,7 +218,7 @@ public class ManipulateSharpObjectService(
 				{
 					if (notify)
 					{
-						await notifyService.Notify(executor, $"{obj.Object().Name} - {realFlag.Name} reset.");
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} Unset.");
 					}
 
 					await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
@@ -237,7 +237,7 @@ public class ManipulateSharpObjectService(
 				{
 					if (notify)
 					{
-						await notifyService.Notify(executor, $"{obj.Object().Name} - {realFlag.Name} (already) set.");
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Set.");
 					}
 
 					break;
@@ -245,7 +245,7 @@ public class ManipulateSharpObjectService(
 			case false:
 				if (notify)
 				{
-					await notifyService.Notify(executor, $"{obj.Object().Name} - {realFlag.Name} set.");
+					await notifyService.Notify(executor, $"Flag: {realFlag.Name} Set.");
 				}
 
 				await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
