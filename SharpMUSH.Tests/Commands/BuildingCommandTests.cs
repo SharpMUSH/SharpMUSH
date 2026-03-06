@@ -64,7 +64,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number #{newDb.Number}")));
+				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number {newDb.Number}")));
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
@@ -100,7 +100,7 @@ public class BuildingCommandTests
 		// The important thing is that these specific messages were sent, not the exact count
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Foo Room created with room number #{newDb.Number}.");
+			.Notify(Arg.Any<DBRef>(), $"Foo Room created with room number {newDb.Number}.");
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number + 1} to #{newDb.Number}");
@@ -171,7 +171,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Room With Exits created with room number #{newObject.Object()!.DBRef.Number}.");
+			.Notify(Arg.Any<DBRef>(), $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.");
 	}
 
 	[Test]
@@ -184,7 +184,7 @@ public class BuildingCommandTests
 		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!);
 
 		var exitResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@open LinkExitTestExit"));
-		var exitDbRef = DBRef.Parse(exitResult.Message!.ToPlainText()!.Split("with dbref ")[1].TrimEnd('.'));
+		var exitDbRef = DBRef.Parse(exitResult.Message!.ToPlainText()!);
 
 		// Link them
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@link {exitDbRef}={roomDbRef}"));

@@ -76,7 +76,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
+		await NotifyService!.Notify(executor, $"Created: Object #{thing.Number}.");
 
 		await EventService!.TriggerEventAsync(
 			parser,
@@ -762,7 +762,7 @@ public partial class Commands
 		// CREATE ROOM
 		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
-		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
+		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number {response.Number}.");
 
 		// Inherit zone from creator
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
@@ -1076,7 +1076,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
+		await NotifyService!.Notify(executor, $"Opened exit #{exitDbRef.Number}");
 
 		// Link to destination if provided
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))

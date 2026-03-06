@@ -47,6 +47,21 @@ public static class MessageHelpers
 		};
 	}
 
+	/// <summary>
+	/// Formats a list of strings using Oxford comma style.
+	/// Examples: ["East"] → "East"; ["East", "West"] → "East and West";
+	/// ["East", "West", "North"] → "East, West, and North"
+	/// </summary>
+	/// <param name="items">The items to format</param>
+	/// <returns>The formatted string</returns>
+	public static string FormatWithOxfordComma(IReadOnlyList<string> items) => items.Count switch
+	{
+		0 => string.Empty,
+		1 => items[0],
+		2 => $"{items[0]} and {items[1]}",
+		_ => string.Join(", ", items.Take(items.Count - 1)) + ", and " + items[^1]
+	};
+
 	public static async ValueTask<CallState> ProcessMessageAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,

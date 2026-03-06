@@ -757,8 +757,8 @@ public partial class Commands
 				}
 				else
 				{
-					var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
-					defaultExits = MModule.single($"Obvious exits:\n{exitNames}");
+					var names = visibleExits.Select(x => x.Object().Name).ToList();
+					defaultExits = MModule.single($"Obvious exits:\n{MessageHelpers.FormatWithOxfordComma(names)}");
 				}
 
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
