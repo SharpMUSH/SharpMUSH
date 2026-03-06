@@ -111,6 +111,101 @@ public class AttributedMarkupStringTests
 		await Assert.That(result2.ToPlainText()).IsEqualTo("Hello");
 	}
 
+	// ── ConcatMany ────────────────────────────────────────────────
+
+	[Test]
+	public async Task ConcatMany_MultiplePlainStrings_CombinesAll()
+	{
+		var items = new[]
+		{
+			AMS.single("Hello"),
+			AMS.single(" "),
+			AMS.single("World"),
+			AMS.single("!")
+		};
+		var result = AMS.concatMany(items);
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("Hello World!");
+		await Assert.That(result.Length).IsEqualTo(12);
+	}
+
+	[Test]
+	public async Task ConcatMany_WithMarkups_PreservesAllRuns()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+
+		var items = new[]
+		{
+			AMS.markupSingle(red, "Red"),
+			AMS.markupSingle(blue, "Blue"),
+			AMS.markupSingle(green, "Green")
+		};
+		var result = AMS.concatMany(items);
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("RedBlueGreen");
+		await Assert.That(result.Runs.Length).IsEqualTo(3);
+		await Assert.That(result.Runs[0].Start).IsEqualTo(0);
+		await Assert.That(result.Runs[0].Length).IsEqualTo(3);
+		await Assert.That(result.Runs[1].Start).IsEqualTo(3);
+		await Assert.That(result.Runs[1].Length).IsEqualTo(4);
+		await Assert.That(result.Runs[2].Start).IsEqualTo(7);
+		await Assert.That(result.Runs[2].Length).IsEqualTo(5);
+	}
+
+	[Test]
+	public async Task ConcatMany_EmptySequence_ReturnsEmpty()
+	{
+		var result = AMS.concatMany(Array.Empty<AMS.AttributedMarkupString>());
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("");
+		await Assert.That(result.Length).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ConcatMany_SingleItem_ReturnsSame()
+	{
+		var item = AMS.single("Hello");
+		var result = AMS.concatMany(new[] { item });
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("Hello");
+	}
+
+	[Test]
+	public async Task ConcatMany_SkipsEmptyItems()
+	{
+		var items = new[]
+		{
+			AMS.single("Hello"),
+			AMS.empty(),
+			AMS.single(" World"),
+			AMS.empty()
+		};
+		var result = AMS.concatMany(items);
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("Hello World");
+	}
+
+	[Test]
+	public async Task ConcatMany_MatchesBinaryConcat()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+
+		var a = AMS.markupSingle(red, "AA");
+		var b = AMS.markupSingle(blue, "BB");
+		var c = AMS.markupSingle(green, "CC");
+
+		var binaryResult = AMS.concat(AMS.concat(a, b), c);
+		var manyResult = AMS.concatMany(new[] { a, b, c });
+
+		await Assert.That(manyResult.ToPlainText()).IsEqualTo(binaryResult.ToPlainText());
+		await Assert.That(manyResult.Runs.Length).IsEqualTo(binaryResult.Runs.Length);
+		await Assert.That(manyResult.Render("ansi")).IsEqualTo(binaryResult.Render("ansi"));
+	}
+
 	// ── Substring ──────────────────────────────────────────────────
 
 	[Test]
@@ -733,6 +828,24 @@ public class AttributedMarkupStringTests
 		var b = AMS.markupSingle(blue, "BB");
 		var c = AMS.markupSingle(green, "CC");
 		var result = AMS.concat(AMS.concat(a, b), c);
+
+		await Assert.That(result.Runs.Length).IsEqualTo(3);
+		await AssertRunsSortedByStart(result);
+	}
+
+	[Test]
+	public async Task SortOrder_ConcatMany_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+
+		var result = AMS.concatMany(new[]
+		{
+			AMS.markupSingle(red, "AA"),
+			AMS.markupSingle(blue, "BB"),
+			AMS.markupSingle(green, "CC")
+		});
 
 		await Assert.That(result.Runs.Length).IsEqualTo(3);
 		await AssertRunsSortedByStart(result);

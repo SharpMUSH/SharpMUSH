@@ -328,6 +328,14 @@ module MarkupStringModule =
         MarkupString(None, mu |> Seq.map MarkupText |> Seq.toList)
 
     /// <summary>
+    /// Concatenates any number of MarkupStrings under a single parent node.
+    /// Equivalent to <c>multiple</c> but named for symmetry with
+    /// <c>AttributedMarkupStringModule.concatMany</c>.
+    /// </summary>
+    /// <param name="items">The MarkupStrings to concatenate.</param>
+    let concatMany (items: seq<MarkupString>) : MarkupString = multiple items
+
+    /// <summary>
     /// Returns an empty MarkupString (cached singleton).
     /// </summary>
     let private emptyInstance = MarkupString(None, [ Text String.Empty ])

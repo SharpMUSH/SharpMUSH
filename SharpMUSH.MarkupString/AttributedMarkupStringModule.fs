@@ -333,6 +333,24 @@ module AttributedMarkupStringModule =
             AttributedMarkupString(combinedText, builder.ToImmutable())
 
     /// <summary>
+    /// Concatenates any number of AttributedMarkupStrings in a single pass — O(n) total
+    /// where n is the sum of all text lengths and run counts.
+    /// Avoids the O(n²) intermediate allocations from chained binary concat calls
+    /// like <c>concat(concat(a,b),c)</c>.
+    /// </summary>
+    let concatMany (items: AttributedMarkupString seq) : AttributedMarkupString =
+        let textSb = StringBuilder()
+        let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>()
+        for item in items do
+            if item.Length > 0 then
+                let offset = textSb.Length
+                textSb.Append(item.Text) |> ignore
+                for run in item.Runs do
+                    runsBuilder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+        if textSb.Length = 0 then empty ()
+        else AttributedMarkupString(textSb.ToString(), runsBuilder.ToImmutable())
+
+    /// <summary>
     /// Returns a substring of an AttributedMarkupString, preserving markup runs.
     /// Runs that partially overlap the range are clipped to the range boundaries.
     /// Uses binary search to find the first overlapping run in O(log n),
@@ -508,7 +526,7 @@ module AttributedMarkupStringModule =
             let left = substring 0 index ams
             let rightStart = min (index + length) ams.Length
             let right = substring rightStart (ams.Length - rightStart) ams
-            concat (concat left replacement) right
+            concatMany [left; replacement; right]
 
     /// <summary>
     /// Repeats an AttributedMarkupString the given number of times.
@@ -586,7 +604,7 @@ module AttributedMarkupStringModule =
                 let rightPadLength = lengthToPad - leftPadLength
                 let leftPad = buildPadding padStr leftPadLength
                 let rightPad = buildPadding padStr rightPadLength
-                let result = concat (concat leftPad ams) rightPad
+                let result = concatMany [leftPad; ams; rightPad]
                 match truncType with
                 | MarkupStringModule.TruncationType.Truncate -> substring 0 width result
                 | _ -> result
@@ -689,4 +707,4 @@ module AttributedMarkupStringModule =
         else
             let before = substring 0 index input
             let after = substring index (input.Length - index) input
-            concat (concat before insert) after
+            concatMany [before; insert; after]
