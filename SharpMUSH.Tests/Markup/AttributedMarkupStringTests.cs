@@ -682,4 +682,166 @@ public class AttributedMarkupStringTests
 		// Removed is independent
 		await Assert.That(removed.ToPlainText()).IsEqualTo("HelloWorld");
 	}
+
+	// ── Sort-order invariant tests ────────────────────────────────
+	// Runs must always be sorted ascending by Start position.
+	// These tests verify the invariant is maintained across all operations.
+
+	private static async Task AssertRunsSortedByStart(AMS.AttributedMarkupString ams)
+	{
+		for (int i = 1; i < ams.Runs.Length; i++)
+		{
+			await Assert.That(ams.Runs[i].Start)
+				.IsGreaterThanOrEqualTo(ams.Runs[i - 1].Start);
+		}
+	}
+
+	[Test]
+	public async Task SortOrder_Single_RunStartsAtZero()
+	{
+		var ams = AMS.single("Hello");
+
+		await Assert.That(ams.Runs.Length).IsEqualTo(1);
+		await Assert.That(ams.Runs[0].Start).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task SortOrder_Concat_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+
+		var a = AMS.markupSingle(red, "Hello");
+		var b = AMS.markupSingle(blue, " World");
+		var result = AMS.concat(a, b);
+
+		await Assert.That(result.Runs.Length).IsEqualTo(2);
+		await AssertRunsSortedByStart(result);
+		await Assert.That(result.Runs[0].Start).IsEqualTo(0);
+		await Assert.That(result.Runs[1].Start).IsEqualTo(5);
+	}
+
+	[Test]
+	public async Task SortOrder_MultipleConcat_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+
+		var a = AMS.markupSingle(red, "AA");
+		var b = AMS.markupSingle(blue, "BB");
+		var c = AMS.markupSingle(green, "CC");
+		var result = AMS.concat(AMS.concat(a, b), c);
+
+		await Assert.That(result.Runs.Length).IsEqualTo(3);
+		await AssertRunsSortedByStart(result);
+	}
+
+	[Test]
+	public async Task SortOrder_Substring_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+
+		var combined = AMS.concat(AMS.markupSingle(red, "Hello"), AMS.markupSingle(blue, " World"));
+		var sub = AMS.substring(3, 5, combined);
+
+		await AssertRunsSortedByStart(sub);
+		await Assert.That(sub.Runs[0].Start).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task SortOrder_Remove_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+		var green = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Green));
+
+		var abc = AMS.concat(AMS.concat(AMS.markupSingle(red, "AA"), AMS.markupSingle(blue, "BB")), AMS.markupSingle(green, "CC"));
+		var result = AMS.remove(abc, 2, 2);
+
+		await AssertRunsSortedByStart(result);
+	}
+
+	[Test]
+	public async Task SortOrder_Replace_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+
+		var original = AMS.markupSingle(red, "Hello World");
+		var replacement = AMS.markupSingle(blue, "XX");
+		var result = AMS.replace(original, replacement, 5, 1);
+
+		await AssertRunsSortedByStart(result);
+	}
+
+	[Test]
+	public async Task SortOrder_InsertAt_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+
+		var original = AMS.markupSingle(red, "HelloWorld");
+		var insert = AMS.markupSingle(blue, " ");
+		var result = AMS.insertAt(original, insert, 5);
+
+		await AssertRunsSortedByStart(result);
+	}
+
+	[Test]
+	public async Task SortOrder_Split_AllSegmentsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+
+		var combined = AMS.concat(AMS.markupSingle(red, "Hello"), AMS.markupSingle(blue, " World"));
+		var parts = AMS.split(" ", combined);
+
+		foreach (var part in parts)
+		{
+			await AssertRunsSortedByStart(part);
+			if (part.Runs.Length > 0)
+				await Assert.That(part.Runs[0].Start).IsEqualTo(0);
+		}
+	}
+
+	[Test]
+	public async Task SortOrder_Repeat_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+
+		var ams = AMS.markupSingle(red, "AB");
+		var result = AMS.repeat(ams, 5);
+
+		await Assert.That(result.Runs.Length).IsEqualTo(5);
+		await AssertRunsSortedByStart(result);
+	}
+
+	[Test]
+	public async Task SortOrder_FromMarkupString_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+		var blue = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
+
+		var ms = A.markupSingle(red, "Hello ");
+		var ms2 = A.markupSingle(blue, "World");
+		var combined = A.concat(ms, ms2);
+		var ams = AMS.fromMarkupString(combined);
+
+		await AssertRunsSortedByStart(ams);
+	}
+
+	[Test]
+	public async Task SortOrder_Optimize_RunsRemainSorted()
+	{
+		var red = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
+
+		var a = AMS.markupSingle(red, "Hello");
+		var b = AMS.markupSingle(red, " World");
+		var combined = AMS.concat(a, b);
+		var optimized = AMS.optimize(combined);
+
+		await AssertRunsSortedByStart(optimized);
+	}
 }
