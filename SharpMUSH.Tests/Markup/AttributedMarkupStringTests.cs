@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Drawing;
+using Microsoft.FSharp.Core;
 using MarkupString;
 using AMS = MarkupString.AttributedMarkupStringModule;
 using A = MarkupString.MarkupStringModule;
@@ -352,7 +353,7 @@ public class AttributedMarkupStringTests
 		var blueMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Blue));
 		var innerMs = A.markupSingle(blueMarkup, "world");
 		var outerMs = new MarkupStringModule.MarkupString(
-			MarkupStringModule.MarkupTypes.NewMarkedupText(redMarkup),
+			FSharpOption<MarkupImplementation.Markup>.Some(redMarkup),
 			Microsoft.FSharp.Collections.ListModule.OfSeq(new MarkupStringModule.Content[]
 			{
 				MarkupStringModule.Content.NewText("hello "),
@@ -490,11 +491,11 @@ public class AttributedMarkupStringTests
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var ams = AMS.markupSingle(redMarkup, "Test");
 
-		Func<MarkupStringModule.MarkupTypes, string, string> evaluator = (markupType, text) =>
+		Func<FSharpOption<MarkupImplementation.Markup>, string, string> evaluator = (markupType, text) =>
 		{
 			return markupType switch
 			{
-				MarkupStringModule.MarkupTypes.MarkedupText => $"[{text}]",
+				not null => $"[{text}]",
 				_ => text
 			};
 		};

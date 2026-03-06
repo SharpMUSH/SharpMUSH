@@ -4580,7 +4580,7 @@ public partial class Commands
 		var hasAnsi = false;
 		MModule.evaluateWith((markupType, innerText) =>
 		{
-			if (markupType is MModule.MarkupTypes.MarkedupText { Item: Ansi })
+			if (markupType is { Value: Ansi })
 			{
 				hasAnsi = true;
 			}
@@ -4599,7 +4599,7 @@ public partial class Commands
 		{
 			return markupType switch
 			{
-				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+				{ Value: Ansi ansiMarkup }
 					=> Functions.Functions.ReconstructAnsiCall(ansiMarkup.Details, innerText),
 				_ => innerText
 			};

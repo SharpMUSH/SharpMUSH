@@ -197,7 +197,7 @@ public class AnsiStringUnitTests
 
 		var result = redString.EvaluateWith((x, y) => x switch
 		{
-			MModule.MarkupTypes.MarkedupText { Item: M { Details: var structure } } =>
+			{ Value: M { Details: var structure } } =>
 				$"ansi({ItemName(structure)},{y})",
 			_ => y
 		});

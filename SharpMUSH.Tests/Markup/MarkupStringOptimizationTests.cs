@@ -1,3 +1,4 @@
+using Microsoft.FSharp.Core;
 using MarkupString;
 using System.Drawing;
 using A = MarkupString.MarkupStringModule;
@@ -347,11 +348,11 @@ public class MarkupStringOptimizationTests
 		var markupString = A.markupSingle(redMarkup, "Test");
 
 		// Custom evaluator that wraps marked up text in brackets
-		Func<MarkupStringModule.MarkupTypes, string, string> evaluator = (markupType, text) =>
+		Func<FSharpOption<MarkupImplementation.Markup>, string, string> evaluator = (markupType, text) =>
 		{
 			return markupType switch
 			{
-				MarkupStringModule.MarkupTypes.MarkedupText => $"[{text}]",
+				not null => $"[{text}]",
 				_ => text
 			};
 		};

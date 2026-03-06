@@ -22,29 +22,23 @@ module MarkupStringModule =
         open System.Threading
 
         let private maxPoolSize = 256
-        let private sbLock = Object()
-        
-        // Thread-local storage for per-thread StringBuilder stacks
+
+        // Thread-local storage — each thread owns its stack, no lock needed
         let private threadLocalPool = new ThreadLocal<Stack<System.Text.StringBuilder>>(fun () -> 
             new Stack<System.Text.StringBuilder>())
 
         /// Get a StringBuilder from the pool, or create a new one if pool is empty
         let getStringBuilder() : System.Text.StringBuilder =
             let stack = threadLocalPool.Value
-            lock sbLock (fun () ->
-                if stack.Count > 0 then 
-                    stack.Pop() 
-                else 
-                    new System.Text.StringBuilder())
+            if stack.Count > 0 then stack.Pop()
+            else new System.Text.StringBuilder()
 
         /// Return a StringBuilder to the pool after clearing it
         let returnStringBuilder(sb: System.Text.StringBuilder) : unit =
-            if sb.Length > 0 then
-                lock sbLock (fun () ->
-                    sb.Clear() |> ignore
-                    let stack = threadLocalPool.Value
-                    if stack.Count < maxPoolSize then
-                        stack.Push(sb))
+            sb.Clear() |> ignore
+            let stack = threadLocalPool.Value
+            if stack.Count < maxPoolSize then
+                stack.Push(sb)
 
     type Content =
         | Text of string
@@ -65,10 +59,6 @@ module MarkupStringModule =
         | Truncate
         | Overflow
 
-    and MarkupTypes = // TODO: Consider using built-in option type.
-        | MarkedupText of Markup
-        | Empty
-
     and ColorJsonConverter() =
         inherit JsonConverter<Color>()
 
@@ -78,9 +68,9 @@ module MarkupStringModule =
         override _.Write(writer, value, _) =
             writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
 
-    and MarkupString(markupDetails: MarkupTypes, content: Content list) as ms =
+    and MarkupString(markupDetails: Markup option, content: Content list) as ms =
         // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
-        let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
+        let rec getText (markupStr: MarkupString, outerMarkupType: Markup option) : string =
             let rec accumulate (sb: System.Text.StringBuilder) (items: Content list) =
                 match items with
                 | [] -> ()
@@ -90,8 +80,8 @@ module MarkupStringModule =
                 | MarkupText mStr :: tail ->
                     let inner =
                         match markupStr.MarkupDetails with
-                        | Empty -> getText (mStr, outerMarkupType)
-                        | MarkedupText _ -> getText (mStr, markupStr.MarkupDetails)
+                        | None -> getText (mStr, outerMarkupType)
+                        | Some _ -> getText (mStr, markupStr.MarkupDetails)
                     sb.Append(inner) |> ignore
                     accumulate sb tail
 
@@ -101,15 +91,15 @@ module MarkupStringModule =
                 let innerText = sb.ToString()
 
                 match markupStr.MarkupDetails with
-                | Empty -> innerText
-                | MarkedupText str ->
+                | None -> innerText
+                | Some str ->
                     match outerMarkupType with
-                    | Empty -> str.Wrap(innerText)
-                    | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
+                    | None -> str.Wrap(innerText)
+                    | Some outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
             finally
                 StringBuilderPool.returnStringBuilder sb
 
-        let rec getTextAs (format: string) (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
+        let rec getTextAs (format: string) (markupStr: MarkupString, outerMarkupType: Markup option) : string =
             let encodeText =
                 if format = "html" then System.Net.WebUtility.HtmlEncode
                 else id
@@ -122,8 +112,8 @@ module MarkupStringModule =
                 | MarkupText mStr :: tail ->
                     let inner =
                         match markupStr.MarkupDetails with
-                        | Empty -> getTextAs format (mStr, outerMarkupType)
-                        | MarkedupText _ -> getTextAs format (mStr, markupStr.MarkupDetails)
+                        | None -> getTextAs format (mStr, outerMarkupType)
+                        | Some _ -> getTextAs format (mStr, markupStr.MarkupDetails)
                     sb.Append(inner) |> ignore
                     accumulate sb tail
 
@@ -133,11 +123,11 @@ module MarkupStringModule =
                 let innerText = sb.ToString()
 
                 match markupStr.MarkupDetails with
-                | Empty -> innerText
-                | MarkedupText str ->
+                | None -> innerText
+                | Some str ->
                     match outerMarkupType with
-                    | Empty -> str.WrapAs(format, innerText)
-                    | MarkedupText outerMarkup -> str.WrapAndRestoreAs(format, innerText, outerMarkup)
+                    | None -> str.WrapAs(format, innerText)
+                    | Some outerMarkup -> str.WrapAndRestoreAs(format, innerText, outerMarkup)
             finally
                 StringBuilderPool.returnStringBuilder sb
 
@@ -155,27 +145,22 @@ module MarkupStringModule =
 
             getLengthInternal content
 
-        let isMarkedUp (m: MarkupTypes) =
-            match m with
-            | MarkedupText _ -> true
-            | Empty -> false
-
         // BUG: This is not correctly matching the first MarkedUp Text
         [<TailCall>]
-        let findFirstMarkedUpText (markupStr: MarkupString) : MarkupTypes =
-            let rec find (content: Content list) : MarkupTypes =
+        let findFirstMarkedUpText (markupStr: MarkupString) : Markup option =
+            let rec find (content: Content list) : Markup option =
                 match content with
-                | [] -> Empty
-                | MarkupText mStr :: _ when isMarkedUp mStr.MarkupDetails -> mStr.MarkupDetails
+                | [] -> None
+                | MarkupText mStr :: _ when Option.isSome mStr.MarkupDetails -> mStr.MarkupDetails
                 | MarkupText a :: tail ->
                     match (find a.Content, find tail) with
-                    | MarkedupText res, _ -> MarkedupText res
-                    | _, MarkedupText res -> MarkedupText res
-                    | _ -> Empty
-                | _ -> Empty
+                    | Some res, _ -> Some res
+                    | _, Some res -> Some res
+                    | _ -> None
+                | _ -> None
 
             match markupStr.MarkupDetails with
-            | MarkedupText _ -> markupStr.MarkupDetails
+            | Some _ -> markupStr.MarkupDetails
             | _ -> find markupStr.Content
 
         let len: Lazy<int> = Lazy<int>(length)
@@ -186,7 +171,7 @@ module MarkupStringModule =
         /// </summary>
         /// <param name="evaluator">Function that takes (markupType, innerText) and returns reconstructed string</param>
         [<TailCall>]
-        let rec evaluateWith (evaluator: MarkupTypes -> string -> string) : string =
+        let rec evaluateWith (evaluator: Markup option -> string -> string) : string =
             let rec evalContent (sb: System.Text.StringBuilder) (content: Content list) : unit =
                 match content with
                 | [] -> ()
@@ -227,37 +212,37 @@ module MarkupStringModule =
                 StringBuilderPool.returnStringBuilder sb
 
         let toString () : string =
-            let postfix (markupType: MarkupTypes) : string =
+            let postfix (markupType: Markup option) : string =
                 match markupType with
-                | MarkedupText markup -> markup.Postfix
-                | Empty -> String.Empty
+                | Some markup -> markup.Postfix
+                | None -> String.Empty
 
-            let prefix (markupType: MarkupTypes) : string =
+            let prefix (markupType: Markup option) : string =
                 match markupType with
-                | MarkedupText markup -> markup.Prefix
-                | Empty -> String.Empty
+                | Some markup -> markup.Prefix
+                | None -> String.Empty
 
-            let optimize (markupType: MarkupTypes) (text: string) : string =
+            let optimize (markupType: Markup option) (text: string) : string =
                 match markupType with
-                | MarkedupText markup -> markup.Optimize text
-                | Empty -> String.Empty
+                | Some markup -> markup.Optimize text
+                | None -> String.Empty
 
             let firstMarkedupTextType = findFirstMarkedUpText ms
 
             match firstMarkedupTextType with
-            | Empty -> getText (ms, Empty)
+            | None -> getText (ms, None)
             | _ ->
                 optimize
                     firstMarkedupTextType
                     (prefix firstMarkedupTextType
-                     + getText (ms, Empty)
+                     + getText (ms, None)
                      + postfix firstMarkedupTextType)
 
         let renderAs (format: string) : string =
             let fmt = format.ToLower()
             match fmt with
             | "ansi" -> toString()
-            | _ -> getTextAs fmt (ms, Empty)
+            | _ -> getTextAs fmt (ms, None)
 
         let strVal: Lazy<string> = Lazy<string>(toString)
 
@@ -282,15 +267,15 @@ module MarkupStringModule =
 
         let plainStrVal: Lazy<string> = Lazy<string>(toPlainText)
 
-        member val MarkupDetails = markupDetails with get, set
+        member val MarkupDetails = markupDetails
 
-        member val Content = content with get, set
+        member val Content = content
 
         member val Length = len.Value
 
         member this.ToPlainText() : string = plainStrVal.Value
 
-        member this.EvaluateWith(evaluator: System.Func<MarkupTypes, string, string>) : string =
+        member this.EvaluateWith(evaluator: System.Func<Markup option, string, string>) : string =
             evaluateWith (fun markup text -> evaluator.Invoke(markup, text))
 
         member this.Render(format: string) : string = renderAs format
@@ -321,7 +306,7 @@ module MarkupStringModule =
     /// <param name="markupDetails">The markup to apply.</param>
     /// <param name="str">The plain string content.</param>
     let markupSingle (markupDetails: Markup, str: string) : MarkupString =
-        MarkupString(MarkedupText markupDetails, [ Text str ])
+        MarkupString(Some markupDetails, [ Text str ])
 
     /// <summary>
     /// Creates a MarkupString from a markup and another MarkupString.
@@ -329,7 +314,7 @@ module MarkupStringModule =
     /// <param name="markupDetails">The markup to apply.</param>
     /// <param name="mu">The MarkupString content.</param>
     let markupSingle2 (markupDetails: Markup, mu: MarkupString) : MarkupString =
-        MarkupString(MarkedupText markupDetails, [ MarkupText mu ])
+        MarkupString(Some markupDetails, [ MarkupText mu ])
 
     /// <summary>
     /// Creates a MarkupString from a markup and a sequence of MarkupStrings.
@@ -337,26 +322,26 @@ module MarkupStringModule =
     /// <param name="markupDetails">The markup to apply.</param>
     /// <param name="mu">The sequence of MarkupStrings.</param>
     let markupMultiple (markupDetails: Markup, mu: seq<MarkupString>) : MarkupString =
-        MarkupString(MarkedupText markupDetails, mu |> Seq.map MarkupText |> Seq.toList)
+        MarkupString(Some markupDetails, mu |> Seq.map MarkupText |> Seq.toList)
 
     /// <summary>
     /// Creates a MarkupString from a plain string.
     /// </summary>
     /// <param name="str">The plain string content.</param>
-    let single (str: string) : MarkupString = MarkupString(Empty, [ Text str ])
+    let single (str: string) : MarkupString = MarkupString(None, [ Text str ])
 
     /// <summary>
     /// Creates a MarkupString from a sequence of MarkupStrings.
     /// </summary>
     /// <param name="mu">The sequence of MarkupStrings.</param>
     let multiple (mu: seq<MarkupString>) : MarkupString =
-        MarkupString(Empty, mu |> Seq.map MarkupText |> Seq.toList)
+        MarkupString(None, mu |> Seq.map MarkupText |> Seq.toList)
 
     /// <summary>
-    /// Returns an empty MarkupString.
+    /// Returns an empty MarkupString (cached singleton).
     /// </summary>
-    let empty () : MarkupString =
-        MarkupString(Empty, [ Text String.Empty ])
+    let private emptyInstance = MarkupString(None, [ Text String.Empty ])
+    let empty () : MarkupString = emptyInstance
 
     /// <summary>
     /// Creates a MarkupString by interspersing a delimiter between elements.
@@ -425,7 +410,7 @@ module MarkupStringModule =
     /// </summary>
     /// <param name="markupStr">The MarkupString to convert.</param>
     let plainText2 (markupStr: MarkupString) : MarkupString =
-        MarkupString(Empty, [ Text(markupStr.ToPlainText()) ])
+        MarkupString(None, [ Text(markupStr.ToPlainText()) ])
 
     /// <summary>
     /// Gets the length of the plain text in a MarkupString.
@@ -440,7 +425,7 @@ module MarkupStringModule =
     /// </summary>
     /// <param name="evaluator">Function that takes markup type and inner text, returns reconstructed string</param>
     /// <param name="markupStr">The MarkupString to evaluate</param>
-    let evaluateWith (evaluator: System.Func<MarkupTypes, string, string>) (markupStr: MarkupString) : string =
+    let evaluateWith (evaluator: System.Func<Markup option, string, string>) (markupStr: MarkupString) : string =
         markupStr.EvaluateWith(evaluator)
 
     /// <summary>
@@ -488,12 +473,9 @@ module MarkupStringModule =
             // As it travels up, it should also check that the current MarkupDetails is the same as the child MarkupDetails
             // If so, and the child is the only Content, it should lift the child's Content up to the parent.
             
-            // Helper function to check if two MarkupTypes are equivalent
-            let markupTypesEqual (a: MarkupTypes) (b: MarkupTypes) =
-                match a, b with
-                | Empty, Empty -> true
-                | MarkedupText markupA, MarkedupText markupB -> markupA = markupB
-                | _ -> false
+            // Helper function to check if two Markup options are equivalent
+            let markupTypesEqual (a: Markup option) (b: Markup option) =
+                a = b
             
             // First, recursively optimize all nested MarkupStrings (depth-first)
             let optimizedContent = 
@@ -544,16 +526,16 @@ module MarkupStringModule =
             | None -> []
 
         match originalMarkupStr.MarkupDetails with
-        | Empty ->
+        | None ->
             let combinedContent =
                 originalMarkupStr.Content @ separatorContent @ [ MarkupText newMarkupStr ]
-            MarkupString(Empty, combinedContent)
+            MarkupString(None, combinedContent)
         | _ ->
             let combinedContent =
                 [ MarkupText originalMarkupStr ]
                 @ separatorContent
                 @ [ MarkupText newMarkupStr ]
-            MarkupString(Empty, combinedContent)
+            MarkupString(None, combinedContent)
 
     /// <summary>
     /// Concatenates and attaches a MarkupString to another, handling nested structures.

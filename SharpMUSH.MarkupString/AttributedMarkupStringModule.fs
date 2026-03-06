@@ -260,15 +260,15 @@ module AttributedMarkupStringModule =
         /// Evaluates the attributed string using a custom evaluation function.
         /// Groups consecutive characters by their markup and calls the evaluator per group.
         /// </summary>
-        member _.EvaluateWith(evaluator: Func<MarkupStringModule.MarkupTypes, string, string>) : string =
+        member _.EvaluateWith(evaluator: Func<Markup option, string, string>) : string =
             let sb = StringBuilder(text.Length)
             for run in runs do
                 let segment = text.Substring(run.Start, run.Length)
                 let markupType =
                     if run.Markups.Length > 0 then
-                        MarkupStringModule.MarkupTypes.MarkedupText run.Markups[0]
+                        Some run.Markups[0]
                     else
-                        MarkupStringModule.MarkupTypes.Empty
+                        None
                 sb.Append(evaluator.Invoke(markupType, segment)) |> ignore
             sb.ToString()
 
@@ -577,8 +577,8 @@ module AttributedMarkupStringModule =
         let rec collect (ms: MarkupStringModule.MarkupString) (parentMarkups: Markup list) =
             let currentMarkups =
                 match ms.MarkupDetails with
-                | MarkupStringModule.MarkupTypes.MarkedupText m -> m :: parentMarkups
-                | MarkupStringModule.MarkupTypes.Empty -> parentMarkups
+                | Some m -> m :: parentMarkups
+                | None -> parentMarkups
 
             for content in ms.Content do
                 match content with
@@ -620,14 +620,14 @@ module AttributedMarkupStringModule =
                 else
                     let rec buildNested (markups: Markup list) (text: string) : MarkupStringModule.MarkupString =
                         match markups with
-                        | [] -> MarkupStringModule.MarkupString(MarkupStringModule.MarkupTypes.Empty, [ MarkupStringModule.Content.Text text ])
-                        | [m] -> MarkupStringModule.MarkupString(MarkupStringModule.MarkupTypes.MarkedupText m, [ MarkupStringModule.Content.Text text ])
+                        | [] -> MarkupStringModule.MarkupString(None, [ MarkupStringModule.Content.Text text ])
+                        | [m] -> MarkupStringModule.MarkupString(Some m, [ MarkupStringModule.Content.Text text ])
                         | m :: rest ->
                             let inner = buildNested rest text
-                            MarkupStringModule.MarkupString(MarkupStringModule.MarkupTypes.MarkedupText m, [ MarkupStringModule.Content.MarkupText inner ])
+                            MarkupStringModule.MarkupString(Some m, [ MarkupStringModule.Content.MarkupText inner ])
                     let nested = buildNested (run.Markups |> Seq.toList) segment
                     contentList.Add(MarkupStringModule.Content.MarkupText nested)
-            MarkupStringModule.MarkupString(MarkupStringModule.MarkupTypes.Empty, contentList |> Seq.toList)
+            MarkupStringModule.MarkupString(None, contentList |> Seq.toList)
 
     /// <summary>
     /// Creates an AttributedMarkupString by interspersing a delimiter between elements.

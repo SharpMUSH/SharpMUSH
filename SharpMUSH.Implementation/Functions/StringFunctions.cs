@@ -1038,7 +1038,7 @@ public partial class Functions
 			MModule.evaluateWith((markupType, innerText)
 				=> markupType switch
 				{
-					MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+					{ Value: Ansi ansiMarkup }
 						=> ReconstructWebCall(ansiMarkup.Details, WebEncodeAngleBrackets(innerText)),
 					_ => WebEncodeAngleBrackets(innerText)
 				},
@@ -1056,7 +1056,7 @@ public partial class Functions
 		{
 			return markupType switch
 			{
-				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+				{ Value: Ansi ansiMarkup }
 					=> ReconstructAnsiCall(ansiMarkup.Details, innerText),
 				_ => innerText
 			};
