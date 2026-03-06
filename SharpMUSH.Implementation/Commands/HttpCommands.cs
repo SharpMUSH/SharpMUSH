@@ -76,25 +76,27 @@ public partial class Commands
 					return new CallState("#-1 INVALID URI FORMAT.");
 				}
 
-				using var message = new HttpRequestMessage
-				{
-					Headers =
-					{
-						{ "User-Agent", "SharpMUSH" }
-					},
-					Method = method,
-					Content = dataArg is null
-						? null
-						: new StringContent(dataArg.Message!.ToString()),
-					RequestUri = uri
-				};
-
+				var requestUri = uri;
+				var requestBody = dataArg?.Message?.ToString();
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
 
 				await Mediator!.Send(new QueueAttributeRequest(
 					async () =>
 					{
 						var client = HttpClientFactory!.CreateClient("api");
+
+						using var message = new HttpRequestMessage
+						{
+							Headers =
+							{
+								{ "User-Agent", "SharpMUSH" }
+							},
+							Method = method,
+							Content = requestBody is null
+								? null
+								: new StringContent(requestBody),
+							RequestUri = requestUri
+						};
 
 						var response = await client.SendAsync(message);
 

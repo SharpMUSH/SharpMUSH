@@ -64,6 +64,19 @@ public class PostmanEchoHttpTests
 	}
 
 	/// <summary>
+	/// Sets an attribute on the #1 player object with custom MUSH code content.
+	/// </summary>
+	private async Task SetCallbackAttributeWithContent(string attributeName, string mushCode)
+	{
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		await Database.SetAttributeAsync(
+			playerOne.Object.DBRef,
+			[attributeName],
+			A.single(mushCode),
+			playerOne);
+	}
+
+	/// <summary>
 	/// Polls until a matching <see cref="INotifyService.Notify"/> call is observed, or the
 	/// <paramref name="timeout"/> elapses. This keeps individual test durations short on fast
 	/// networks while still allowing generous headroom for slow or busy environments.
@@ -310,6 +323,59 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "GET requests cannot have a body")));
+	}
+
+	[Test]
+	public async ValueTask HttpGet_StatusRegister_Contains200()
+	{
+		var token = GenerateUniqueToken();
+		var attrName = GenerateAttributeName("HTTPSTAT");
+
+		// Use %q<STATUS> to emit the HTTP status code alongside the unique token.
+		await SetCallbackAttributeWithContent(attrName, $"think {token} %q<STATUS>");
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
+
+		// The callback should emit "{token} 200" because postman-echo returns 200 OK.
+		await WaitForNotify(msg =>
+			TestHelpers.MessageContains(msg, token) &&
+			TestHelpers.MessageContains(msg, "200"));
+
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
+					TestHelpers.MessageContains(msg, "200")));
+	}
+
+	[Test]
+	public async ValueTask HttpGet_StatusRegister_Contains404ForNotFoundEndpoint()
+	{
+		var token = GenerateUniqueToken();
+		var attrName = GenerateAttributeName("HTTPST4");
+
+		// Use %q<STATUS> to emit the HTTP status code alongside the unique token.
+		await SetCallbackAttributeWithContent(attrName, $"think {token} %q<STATUS>");
+
+		// postman-echo.com/status/404 deliberately returns a 404 response.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/status/404"));
+
+		// The callback should emit "{token} 404".
+		await WaitForNotify(msg =>
+			TestHelpers.MessageContains(msg, token) &&
+			TestHelpers.MessageContains(msg, "404"));
+
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, token) &&
+					TestHelpers.MessageContains(msg, "404")));
 	}
 }
 
