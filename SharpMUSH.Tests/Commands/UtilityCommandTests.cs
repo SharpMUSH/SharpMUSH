@@ -83,7 +83,6 @@ public class UtilityCommandTests
 		// Verify the name row has "Name(#dbref)" format (no space before '(') in plain text.
 		// We use plain-text check because name.Hilight() inserts ANSI codes around the name.
 		// Player #1 is named "God" in the test database.
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
@@ -96,7 +95,6 @@ public class UtilityCommandTests
 	public async ValueTask ExamineObject_HeaderContainsOwnerRow()
 	{
 		// Owner row uses proper MModule composition; plain-text must contain "Owner: "
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
@@ -109,7 +107,6 @@ public class UtilityCommandTests
 	public async ValueTask ExamineObject_HeaderContainsZoneAndPowers()
 	{
 		// Zone and Powers are always shown (even when empty/nothing)
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
@@ -126,7 +123,6 @@ public class UtilityCommandTests
 	public async ValueTask ExamineObject_HeaderContainsWarningsChecked()
 	{
 		// "Warnings checked:" is always shown (even when empty)
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
@@ -139,7 +135,6 @@ public class UtilityCommandTests
 	public async ValueTask ExamineObject_HeaderContainsLastModified()
 	{
 		// "Last modified:" is always shown in both examine and brief
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
@@ -152,7 +147,6 @@ public class UtilityCommandTests
 	public async ValueTask ExaminePlayer_HeaderContainsQuota()
 	{
 		// "Quota:" is shown for player objects (God is player #1)
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
 		await NotifyService
@@ -171,7 +165,6 @@ public class UtilityCommandTests
 		await Assert.That(digMessage).IsNotNull();
 		var roomDbRef = DBRef.Parse(digMessage!);
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"examine {roomDbRef}"));
 
@@ -186,7 +179,6 @@ public class UtilityCommandTests
 	public async ValueTask ExamineObject_BriefSwitch_AlsoShowsLastModified()
 	{
 		// Brief mode should also show Last modified: (it's a header field)
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
 
 		await NotifyService
@@ -208,7 +200,6 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
 
-		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"examine {objDbRef}"));
 
@@ -235,7 +226,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@desc {objDbRef}=BriefShouldNotSeeThis"));
 
-		NotifyService.ClearReceivedCalls();		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"examine/brief {objDbRef}"));
 
 		// Brief MUST show owner header (in plain text because owner name is hilighted)
