@@ -315,9 +315,9 @@ module AttributedMarkupStringModule =
                 else
                     // Apply evaluator from innermost (index 0) to outermost (last index)
                     // to match tree-based recursive behavior
-                    let mutable result = evaluator.Invoke(Some run.Markups.[0], segment)
-                    for i in 1 .. run.Markups.Length - 1 do
-                        result <- evaluator.Invoke(Some run.Markups.[i], result)
+                    let result =
+                        run.Markups
+                        |> Seq.fold (fun acc markup -> evaluator.Invoke(Some markup, acc)) segment
                     sb.Append(result) |> ignore
             sb.ToString()
 
