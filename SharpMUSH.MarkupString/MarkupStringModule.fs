@@ -14,31 +14,21 @@ open System.Drawing
 /// </summary>
 module MarkupStringModule =
     /// <summary>
-    /// Thread-safe StringBuilder pool to reduce allocations in hot paths.
-    /// Uses ThreadLocal to maintain per-thread pools and avoid cross-thread contention.
+    /// Thread-safe StringBuilder pool using Microsoft.Extensions.ObjectPool.
+    /// DefaultObjectPool handles thread-local fast path + shared slow path internally,
+    /// and StringBuilderPooledObjectPolicy manages clearing and capacity limits.
     /// </summary>
     module StringBuilderPool =
-        open System.Collections.Generic
-        open System.Threading
+        open Microsoft.Extensions.ObjectPool
 
-        let private maxPoolSize = 256
-
-        // Thread-local storage — each thread owns its stack, no lock needed
-        let private threadLocalPool = new ThreadLocal<Stack<System.Text.StringBuilder>>(fun () -> 
-            new Stack<System.Text.StringBuilder>())
+        let private policy = StringBuilderPooledObjectPolicy(MaximumRetainedCapacity = 4096)
+        let private pool = DefaultObjectPool<System.Text.StringBuilder>(policy, maximumRetained = 256)
 
         /// Get a StringBuilder from the pool, or create a new one if pool is empty
-        let getStringBuilder() : System.Text.StringBuilder =
-            let stack = threadLocalPool.Value
-            if stack.Count > 0 then stack.Pop()
-            else new System.Text.StringBuilder()
+        let getStringBuilder() : System.Text.StringBuilder = pool.Get()
 
         /// Return a StringBuilder to the pool after clearing it
-        let returnStringBuilder(sb: System.Text.StringBuilder) : unit =
-            sb.Clear() |> ignore
-            let stack = threadLocalPool.Value
-            if stack.Count < maxPoolSize then
-                stack.Push(sb)
+        let returnStringBuilder(sb: System.Text.StringBuilder) : unit = pool.Return(sb)
 
     type Content =
         | Text of string

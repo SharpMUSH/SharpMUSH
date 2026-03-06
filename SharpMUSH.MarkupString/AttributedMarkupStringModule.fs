@@ -526,7 +526,36 @@ module AttributedMarkupStringModule =
             exponentialRepeat (empty ()) ams count
 
     /// <summary>
+    /// Creates padding of exact length by repeating padStr, avoiding intermediate allocations.
+    /// Constructs the result directly in a single pass instead of repeat+substring.
+    /// </summary>
+    let private buildPadding (padStr: AttributedMarkupString) (exactLength: int) : AttributedMarkupString =
+        if exactLength <= 0 then empty ()
+        elif padStr.Length = 0 then empty ()
+        else
+            let textSb = StringBuilder(exactLength)
+            let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>()
+            let mutable remaining = exactLength
+            while remaining > 0 do
+                let offset = textSb.Length
+                let charsToTake = min remaining padStr.Text.Length
+                if charsToTake = padStr.Text.Length then
+                    textSb.Append(padStr.Text) |> ignore
+                    for run in padStr.Runs do
+                        runsBuilder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+                else
+                    textSb.Append(padStr.Text.Substring(0, charsToTake)) |> ignore
+                    for run in padStr.Runs do
+                        if run.Start < charsToTake then
+                            let clippedLength = min run.Length (charsToTake - run.Start)
+                            if clippedLength > 0 then
+                                runsBuilder.Add({ Start = run.Start + offset; Length = clippedLength; Markups = run.Markups })
+                remaining <- remaining - charsToTake
+            AttributedMarkupString(textSb.ToString(), runsBuilder.ToImmutable())
+
+    /// <summary>
     /// Pads an AttributedMarkupString to a specified width.
+    /// Constructs padding directly to exact length — no intermediate repeat+truncate.
     /// </summary>
     let pad (ams: AttributedMarkupString) (padStr: AttributedMarkupString) (width: int) (padType: MarkupStringModule.PadType) (truncType: MarkupStringModule.TruncationType) : AttributedMarkupString =
         let len = ams.Length
@@ -539,15 +568,15 @@ module AttributedMarkupStringModule =
                 if lengthToPad = 0 then ams
                 else substring 0 width ams
         else
-            let repeatCount = (lengthToPad / padLen) + 1
-            let padding = repeat padStr repeatCount |> substring 0 lengthToPad
             match padType with
             | MarkupStringModule.PadType.Right ->
+                let padding = buildPadding padStr lengthToPad
                 let result = concat ams padding
                 match truncType with
                 | MarkupStringModule.TruncationType.Truncate -> substring 0 width result
                 | _ -> result
             | MarkupStringModule.PadType.Left ->
+                let padding = buildPadding padStr lengthToPad
                 let result = concat padding ams
                 match truncType with
                 | MarkupStringModule.TruncationType.Truncate -> substring 0 width result
@@ -555,8 +584,8 @@ module AttributedMarkupStringModule =
             | MarkupStringModule.PadType.Center ->
                 let leftPadLength = lengthToPad / 2
                 let rightPadLength = lengthToPad - leftPadLength
-                let leftPad = substring 0 leftPadLength padding
-                let rightPad = substring leftPadLength rightPadLength padding
+                let leftPad = buildPadding padStr leftPadLength
+                let rightPad = buildPadding padStr rightPadLength
                 let result = concat (concat leftPad ams) rightPad
                 match truncType with
                 | MarkupStringModule.TruncationType.Truncate -> substring 0 width result
@@ -631,15 +660,25 @@ module AttributedMarkupStringModule =
 
     /// <summary>
     /// Creates an AttributedMarkupString by interspersing a delimiter between elements.
+    /// Uses single-pass builder — O(n) instead of O(n²) from left-fold concat.
     /// </summary>
     let multipleWithDelimiter (delimiter: AttributedMarkupString) (items: AttributedMarkupString seq) : AttributedMarkupString =
-        items
-        |> Seq.fold (fun (acc: AttributedMarkupString option) item ->
-            match acc with
-            | None -> Some item
-            | Some a -> Some (concat (concat a delimiter) item)
-        ) None
-        |> Option.defaultWith empty
+        let textSb = StringBuilder()
+        let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>()
+        let mutable first = true
+        for item in items do
+            if not first then
+                let offset = textSb.Length
+                textSb.Append(delimiter.Text) |> ignore
+                for run in delimiter.Runs do
+                    runsBuilder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+            first <- false
+            let offset = textSb.Length
+            textSb.Append(item.Text) |> ignore
+            for run in item.Runs do
+                runsBuilder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+        if first then empty ()
+        else AttributedMarkupString(textSb.ToString(), runsBuilder.ToImmutable())
 
     /// <summary>
     /// Inserts an AttributedMarkupString at a specified index.
