@@ -118,6 +118,8 @@ public class ConnectionService(
 
 	public void IncrementMetadata(long handle, string key)
 	{
+		if (Get(handle) is null) return;
+
 		string? newValue = null;
 		_sessionState.AddOrUpdate(handle,
 			_ => throw new InvalidDataException("Tried to add a new handle during update."),
