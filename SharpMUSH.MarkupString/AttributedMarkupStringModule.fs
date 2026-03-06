@@ -10,6 +10,10 @@ open ANSILibrary.ANSI
 /// Uses a contiguous string with an array of attribute runs describing formatting.
 /// This eliminates tree traversal, provides O(1) plain text access, and enables
 /// single-pass rendering with excellent cache locality.
+///
+/// Includes a Strategy Pattern render pipeline (section 5.2 Option A) that replaces
+/// string-based format dispatch with typed render strategies, enabling extensibility
+/// without modifying core types.
 /// </summary>
 module AttributedMarkupStringModule =
 
@@ -30,6 +34,108 @@ module AttributedMarkupStringModule =
         }
         member this.End = this.Start + this.Length
 
+    // ── Render Strategy Pattern (5.2 Option A) ─────────────────────
+
+    /// <summary>
+    /// Defines how to render an AttributedMarkupString to a specific output format.
+    /// Replaces string-based format dispatch ("ansi", "html") with a typed, extensible
+    /// strategy pattern. New formats (BBCode, MXP, Pueblo, etc.) can be added by
+    /// implementing this interface without modifying core types.
+    /// </summary>
+    type IRenderStrategy =
+        /// <summary>
+        /// Encodes leaf text content for the target format.
+        /// For HTML, this would HTML-entity-encode the text.
+        /// For ANSI/plain text, this is typically the identity function.
+        /// </summary>
+        abstract member EncodeText: string -> string
+
+        /// <summary>
+        /// Applies a single markup to already-encoded inner text.
+        /// For ANSI, this wraps with escape codes. For HTML, this wraps with span tags.
+        /// </summary>
+        abstract member ApplyMarkup: Markup -> string -> string
+
+        /// <summary>
+        /// Returns a prefix to prepend to the overall rendered output.
+        /// </summary>
+        abstract member Prefix: string
+
+        /// <summary>
+        /// Returns a postfix to append to the overall rendered output.
+        /// For ANSI, this is typically the SGR reset code.
+        /// </summary>
+        abstract member Postfix: string
+
+        /// <summary>
+        /// Post-processes the fully rendered output string.
+        /// For ANSI, this eliminates redundant escape sequences.
+        /// For other formats, this is typically the identity function.
+        /// </summary>
+        abstract member Optimize: string -> string
+
+    /// <summary>
+    /// Renders to ANSI terminal escape codes.
+    /// Text is passed through unchanged; markups are applied via Markup.Wrap;
+    /// output is post-processed with ANSI optimization to eliminate redundant sequences.
+    /// </summary>
+    type AnsiRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = text
+            member _.ApplyMarkup(markup)(text) = markup.Wrap(text)
+            member _.Prefix = String.Empty
+            member _.Postfix = ANSILibrary.StringExtensions.endWithTrueClear(String.Empty).ToString()
+            member _.Optimize(text) = ANSILibrary.Optimization.optimize text
+
+    /// <summary>
+    /// Renders to HTML with inline styles and CSS classes.
+    /// Text is HTML-entity-encoded; markups are applied via Markup.WrapAs("html", ...);
+    /// no post-processing optimization is needed.
+    /// </summary>
+    type HtmlRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = System.Net.WebUtility.HtmlEncode(text)
+            member _.ApplyMarkup(markup)(text) = markup.WrapAs("html", text)
+            member _.Prefix = String.Empty
+            member _.Postfix = String.Empty
+            member _.Optimize(text) = text
+
+    /// <summary>
+    /// Renders to plain text with no formatting.
+    /// Text is passed through unchanged; all markups are stripped.
+    /// </summary>
+    type PlainTextRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = text
+            member _.ApplyMarkup(_markup)(text) = text
+            member _.Prefix = String.Empty
+            member _.Postfix = String.Empty
+            member _.Optimize(text) = text
+
+    /// <summary>
+    /// Registry of built-in render strategies, providing typed access and
+    /// format-string lookup for backward compatibility.
+    /// </summary>
+    module RenderStrategies =
+        /// Singleton ANSI render strategy.
+        let ansi : IRenderStrategy = AnsiRenderStrategy()
+
+        /// Singleton HTML render strategy.
+        let html : IRenderStrategy = HtmlRenderStrategy()
+
+        /// Singleton plain text render strategy.
+        let plainText : IRenderStrategy = PlainTextRenderStrategy()
+
+        /// <summary>
+        /// Looks up a render strategy by format name (case-insensitive).
+        /// Returns the ANSI strategy for unknown formats (backward-compatible default).
+        /// </summary>
+        let forFormat (format: string) : IRenderStrategy =
+            match format.ToLowerInvariant() with
+            | "html" -> html
+            | "plaintext" | "plain" -> plainText
+            | _ -> ansi  // "ansi" and any unknown format default to ANSI
+
     /// <summary>
     /// A flat, attributed markup string inspired by NSAttributedString.
     /// Stores text contiguously with a parallel array of attribute runs.
@@ -38,55 +144,45 @@ module AttributedMarkupStringModule =
 
         // ── Private rendering helpers ──────────────────────────────────
 
-        let renderAnsi () : string =
+        /// <summary>
+        /// Core rendering engine that performs single-pass rendering by iterating
+        /// attribute runs and delegating text encoding, markup application, and
+        /// post-processing to the provided <see cref="IRenderStrategy"/>.
+        /// For each run: encodes the text segment, then applies all markup layers.
+        /// After all runs are processed, applies prefix/postfix and optimization.
+        /// </summary>
+        let renderWith (strategy: IRenderStrategy) : string =
             if runs.Length = 0 then
-                text
+                strategy.EncodeText(text)
             else
                 let sb = StringBuilder(text.Length * 2)
                 let mutable hasAnyMarkup = false
 
                 for run in runs do
-                    let segment = text.Substring(run.Start, run.Length)
+                    let segment = strategy.EncodeText(text.Substring(run.Start, run.Length))
                     if run.Markups.Length = 0 then
                         sb.Append(segment) |> ignore
                     else
                         hasAnyMarkup <- true
                         let mutable result = segment
                         for markup in run.Markups do
-                            result <- markup.Wrap(result)
+                            result <- strategy.ApplyMarkup markup result
                         sb.Append(result) |> ignore
 
+                let rendered = sb.ToString()
                 if hasAnyMarkup then
-                    let firstMarkup = runs |> Array.tryFind (fun r -> r.Markups.Length > 0)
-                    match firstMarkup with
-                    | Some r ->
-                        let m = r.Markups[0]
-                        m.Optimize(m.Prefix + sb.ToString() + m.Postfix)
-                    | None -> sb.ToString()
+                    let prefix = strategy.Prefix
+                    let postfix = strategy.Postfix
+                    let withFixing =
+                        if prefix.Length > 0 || postfix.Length > 0 then
+                            prefix + rendered + postfix
+                        else
+                            rendered
+                    strategy.Optimize(withFixing)
                 else
-                    sb.ToString()
+                    rendered
 
-        let renderFormat (format: string) : string =
-            let fmt = format.ToLowerInvariant()
-            match fmt with
-            | "ansi" -> renderAnsi()
-            | _ ->
-                let sb = StringBuilder(text.Length * 2)
-                let encodeText =
-                    if fmt = "html" then System.Net.WebUtility.HtmlEncode
-                    else id
-                for run in runs do
-                    let segment = encodeText (text.Substring(run.Start, run.Length))
-                    if run.Markups.Length = 0 then
-                        sb.Append(segment) |> ignore
-                    else
-                        let mutable result = segment
-                        for markup in run.Markups do
-                            result <- markup.WrapAs(fmt, result)
-                        sb.Append(result) |> ignore
-                sb.ToString()
-
-        let cachedToString = Lazy<string>(renderAnsi)
+        let cachedToString = Lazy<string>(fun () -> renderWith RenderStrategies.ansi)
         let cachedPlainText = Lazy<string>(fun () -> text)
 
         // ── Public API ─────────────────────────────────────────────────
@@ -107,7 +203,17 @@ module AttributedMarkupStringModule =
         override _.ToString() : string = cachedToString.Value
 
         /// Renders to the specified format ("ansi", "html", etc.).
-        member _.Render(format: string) : string = renderFormat format
+        /// Uses the RenderStrategies registry for format lookup.
+        member _.Render(format: string) : string =
+            renderWith (RenderStrategies.forFormat format)
+
+        /// <summary>
+        /// Renders using a specific render strategy.
+        /// This is the primary rendering method — type-safe, extensible, no string dispatch.
+        /// Use this to render with custom strategies (BBCode, MXP, Pueblo, etc.).
+        /// </summary>
+        member _.RenderWith(strategy: IRenderStrategy) : string =
+            renderWith strategy
 
         /// <summary>
         /// Evaluates the attributed string using a custom evaluation function.
