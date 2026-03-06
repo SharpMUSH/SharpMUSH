@@ -1298,7 +1298,7 @@ type PieceTableMarkupString =
 │  ESTIMATED EFFORT:                                                   │
 │  Phase 1: ~2 days — modify substring/concat/replace internals        │
 │  Phase 2: ~1 day — new type + conversion functions                   │
-│  Phase 3: ~3 days — update all 938 MModule call sites                │
+│  Phase 3: ~3 days — update all MModule.* call sites                  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
