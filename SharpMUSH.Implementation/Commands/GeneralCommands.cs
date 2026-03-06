@@ -1101,17 +1101,21 @@ public partial class Commands
 				{
 					// Default: "Carrying:" for non-rooms, "Contents:" for rooms; each item as Name(#flags)
 					var contentsLabel = viewingKnown.IsRoom ? "Contents:" : "Carrying:";
-					var contentLines = new List<MString> { MModule.single(contentsLabel) };
-					foreach (var content in contents)
+					async ValueTask<MString> BuildContentLine(AnySharpContent content, CancellationToken _)
 					{
 						var cObj = content.Object();
 						var cFlags = await cObj.Flags.Value.ToArrayAsync();
-						contentLines.Add(MModule.concat(
+						return MModule.concat(
 							cObj.Name.Hilight(),
-							MModule.single($"(#{cObj.DBRef.Number}{string.Join(string.Empty, cFlags.Select(x => x.Symbol))})")));
+							MModule.single($"(#{cObj.DBRef.Number}{string.Join(string.Empty, cFlags.Select(x => x.Symbol))})"));
 					}
+					var contentItems = await contents
+						.ToAsyncEnumerable()
+						.Select(BuildContentLine)
+						.Prepend(MModule.single(contentsLabel))
+						.ToListAsync();
 					await NotifyService!.Notify(enactor,
-						MModule.multipleWithDelimiter(MModule.single("\n"), contentLines));
+						MModule.multipleWithDelimiter(MModule.single("\n"), contentItems));
 				}
 			}
 
@@ -1123,15 +1127,19 @@ public partial class Commands
 
 				if (exits.Length > 0)
 				{
-					var exitLines = new List<MString> { MModule.single("Exits:") };
-					foreach (var exit in exits)
+					async ValueTask<MString> BuildExitLine(SharpExit exit, CancellationToken _)
 					{
 						var eObj = exit.Object;
 						var eFlags = await eObj.Flags.Value.ToArrayAsync();
-						exitLines.Add(MModule.concat(
+						return MModule.concat(
 							eObj.Name.Hilight(),
-							MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})")));
+							MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})"));
 					}
+					var exitLines = await exits
+						.ToAsyncEnumerable()
+						.Select(BuildExitLine)
+						.Prepend(MModule.single("Exits:"))
+						.ToListAsync();
 					await NotifyService!.Notify(enactor,
 						MModule.multipleWithDelimiter(MModule.single("\n"), exitLines));
 				}
