@@ -3,7 +3,7 @@
 namespace SharpMUSH.Tests.Markup.Data;
 
 public record PadTestData(
-	MString input, MString padStr, int width, MModule.PadType padType, MModule.TruncationType truncType, MString expected);
+	MString input, MString padStr, int width, global::MarkupString.MarkupStringModule.PadType padType, global::MarkupString.MarkupStringModule.TruncationType truncType, MString expected);
 
 public static class Pad
 {
