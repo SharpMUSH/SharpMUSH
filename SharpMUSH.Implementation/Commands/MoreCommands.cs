@@ -2478,6 +2478,11 @@ public partial class Commands
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
+		var executorName = MModule.single(executor.Object().Name);
+		var poseMessage = isNoSpace
+			? MModule.concat(executorName, MModule.trim(message, MModule.single(" "), MModule.TrimType.TrimStart))
+			: MModule.concat(MModule.concat(executorName, MModule.single(" ")), message);
+
 		var interactableContents = contents
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
@@ -2486,9 +2491,7 @@ public partial class Commands
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
-				isNoSpace
-					? MModule.trim(message, MModule.single(" "), MModule.TrimType.TrimStart)
-					: message,
+				poseMessage,
 				executor,
 				INotifyService.NotificationType.Pose);
 		}
@@ -2520,6 +2523,11 @@ public partial class Commands
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
+		var executorName = MModule.single(executor.Object().Name);
+		var youSayMessage = MModule.multiple([MModule.single("You say, \""), message, MModule.single("\"")]);
+		var namesSaysMessage = MModule.multiple([executorName, MModule.single(" says, \""), message, MModule.single("\"")]);
+		var executorDbRef = executor.Object().DBRef;
+
 		var interactableContents = contents
 			.Where(async (obj, _) =>
 				await PermissionService!.CanInteract(executor, obj,
@@ -2527,9 +2535,10 @@ public partial class Commands
 
 		await foreach (var obj in interactableContents)
 		{
+			var formattedMessage = obj.Object().DBRef == executorDbRef ? youSayMessage : namesSaysMessage;
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
-				message,
+				formattedMessage,
 				executor,
 				INotifyService.NotificationType.Say);
 		}
@@ -2547,8 +2556,11 @@ public partial class Commands
 		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+
+		var executorName = MModule.single(executor.Object().Name);
+		var semiposeMessage = MModule.concat(executorName, message);
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
@@ -2558,7 +2570,7 @@ public partial class Commands
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
-				message,
+				semiposeMessage,
 				executor,
 				INotifyService.NotificationType.SemiPose);
 		}
