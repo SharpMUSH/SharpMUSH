@@ -102,6 +102,15 @@ module MarkupImplementation =
         if details.Blink then yield "ms-blink"
       ]
 
+    /// Converts an AnsiColor to a hex color string like "#ff0000".
+    static member private colorToHex (color: AnsiColor) : string option =
+      match color with
+      | NoAnsi -> None
+      | RGB c -> Some (sprintf "#%02x%02x%02x" c.R c.G c.B)
+      | ANSI bytes ->
+        let rgb = AnsiToRgb bytes
+        Some (sprintf "#%02x%02x%02x" rgb.R rgb.G rgb.B)
+
     /// Renders an AnsiStructure as an HTML span.
     /// Colors are emitted as an inline style attribute; formatting flags are emitted as CSS classes.
     /// The <paramref name="text"/> parameter is expected to already be HTML-entity-encoded
@@ -112,12 +121,9 @@ module MarkupImplementation =
         else details.Foreground, details.Background
 
       let colorStyle (property: string) (color: AnsiColor) =
-        match color with
-        | NoAnsi -> None
-        | RGB c -> Some (sprintf "%s: #%02x%02x%02x" property c.R c.G c.B)
-        | ANSI bytes ->
-          let rgb = AnsiToRgb bytes
-          Some (sprintf "%s: #%02x%02x%02x" property rgb.R rgb.G rgb.B)
+        match AnsiMarkup.colorToHex color with
+        | None -> None
+        | Some hex -> Some (sprintf "%s: %s" property hex)
 
       let styles = [
         match colorStyle "color" fg with Some s -> yield s | None -> ()
@@ -141,6 +147,103 @@ module MarkupImplementation =
 
       if styleAttr.Length = 0 && classAttr.Length = 0 then inner
       else sprintf "<span%s%s>%s</span>" styleAttr classAttr inner
+
+    /// Renders an AnsiStructure as Pueblo-compatible HTML.
+    /// Pueblo uses HTML 3.2-era tags: FONT COLOR for colors, B/I/U for formatting.
+    /// The text parameter is expected to already be HTML-entity-encoded.
+    static member wrapAsPueblo (details: AnsiStructure) (text: string) : string =
+      let fg, bg =
+        if details.Inverted then details.Background, details.Foreground
+        else details.Foreground, details.Background
+
+      let mutable result = text
+
+      // Apply formatting tags (innermost first, so order matters for correct nesting)
+      if details.StrikeThrough then result <- sprintf "<S>%s</S>" result
+      if details.Overlined then result <- sprintf "<SPAN STYLE=\"text-decoration: overline\">%s</SPAN>" result
+      if details.Underlined then result <- sprintf "<U>%s</U>" result
+      if details.Italic then result <- sprintf "<I>%s</I>" result
+      if details.Bold then result <- sprintf "<B>%s</B>" result
+
+      // Apply link
+      match details.LinkUrl with
+      | Some url when url.Length > 0 ->
+        result <- sprintf "<A HREF=\"%s\">%s</A>" (System.Net.WebUtility.HtmlEncode url) result
+      | _ -> ()
+
+      // Apply background color (Pueblo uses BODY BGCOLOR or SPAN STYLE)
+      match AnsiMarkup.colorToHex bg with
+      | Some hex -> result <- sprintf "<SPAN STYLE=\"background-color: %s\">%s</SPAN>" hex result
+      | None -> ()
+
+      // Apply foreground color using FONT COLOR (Pueblo-standard)
+      match AnsiMarkup.colorToHex fg with
+      | Some hex -> result <- sprintf "<FONT COLOR=\"%s\">%s</FONT>" hex result
+      | None -> ()
+
+      result
+
+    /// Renders an AnsiStructure as BBCode.
+    /// Uses standard BBCode tags: [b], [i], [u], [s], [color=X].
+    /// Text is passed through unchanged (BBCode does not use HTML encoding).
+    static member wrapAsBBCode (details: AnsiStructure) (text: string) : string =
+      let fg, bg =
+        if details.Inverted then details.Background, details.Foreground
+        else details.Foreground, details.Background
+
+      let mutable result = text
+
+      // Apply formatting tags
+      if details.StrikeThrough then result <- sprintf "[s]%s[/s]" result
+      if details.Underlined then result <- sprintf "[u]%s[/u]" result
+      if details.Italic then result <- sprintf "[i]%s[/i]" result
+      if details.Bold then result <- sprintf "[b]%s[/b]" result
+
+      // Apply link
+      match details.LinkUrl with
+      | Some url when url.Length > 0 ->
+        result <- sprintf "[url=%s]%s[/url]" url result
+      | _ -> ()
+
+      // Apply foreground color
+      match AnsiMarkup.colorToHex fg with
+      | Some hex -> result <- sprintf "[color=%s]%s[/color]" hex result
+      | None -> ()
+
+      result
+
+    /// Renders an AnsiStructure as MXP (MUD eXtension Protocol) tags.
+    /// MXP uses HTML-like tags: <B>, <I>, <U>, <COLOR FORE=X BACK=Y>.
+    /// The text parameter is expected to already be HTML-entity-encoded.
+    static member wrapAsMxp (details: AnsiStructure) (text: string) : string =
+      let fg, bg =
+        if details.Inverted then details.Background, details.Foreground
+        else details.Foreground, details.Background
+
+      let mutable result = text
+
+      // Apply formatting tags
+      if details.StrikeThrough then result <- sprintf "<S>%s</S>" result
+      if details.Underlined then result <- sprintf "<U>%s</U>" result
+      if details.Italic then result <- sprintf "<I>%s</I>" result
+      if details.Bold then result <- sprintf "<B>%s</B>" result
+
+      // Apply link using MXP SEND element
+      match details.LinkUrl with
+      | Some url when url.Length > 0 ->
+        result <- sprintf "<SEND HREF=\"%s\">%s</SEND>" (System.Net.WebUtility.HtmlEncode url) result
+      | _ -> ()
+
+      // Apply colors using MXP COLOR element
+      let fgHex = AnsiMarkup.colorToHex fg
+      let bgHex = AnsiMarkup.colorToHex bg
+      match fgHex, bgHex with
+      | Some fh, Some bh -> result <- sprintf "<COLOR FORE=\"%s\" BACK=\"%s\">%s</COLOR>" fh bh result
+      | Some fh, None -> result <- sprintf "<COLOR FORE=\"%s\">%s</COLOR>" fh result
+      | None, Some bh -> result <- sprintf "<COLOR BACK=\"%s\">%s</COLOR>" bh result
+      | None, None -> ()
+
+      result
 
     static member applyDetails (details: AnsiStructure) (text: string) =
         StringExtensions.toANSI text
@@ -195,11 +298,17 @@ module MarkupImplementation =
       override this.WrapAs(format: string, text: string) : string =
         match format.ToLower() with
         | "html" -> AnsiMarkup.wrapAsHtmlClass details text
+        | "pueblo" -> AnsiMarkup.wrapAsPueblo details text
+        | "bbcode" -> AnsiMarkup.wrapAsBBCode details text
+        | "mxp" -> AnsiMarkup.wrapAsMxp details text
         | _ -> (this :> Markup).Wrap(text)
 
       override this.WrapAndRestoreAs(format: string, text: string, outerDetails: Markup) : string =
         match format.ToLower() with
         | "html" -> AnsiMarkup.wrapAsHtmlClass details text
+        | "pueblo" -> AnsiMarkup.wrapAsPueblo details text
+        | "bbcode" -> AnsiMarkup.wrapAsBBCode details text
+        | "mxp" -> AnsiMarkup.wrapAsMxp details text
         | _ -> (this :> Markup).WrapAndRestore(text, outerDetails)
 
   and HtmlMarkup(details: HtmlStructure) =
@@ -228,10 +337,14 @@ module MarkupImplementation =
         // For HTML, we just wrap without restoring outer markup since HTML tags are independent
         (this :> Markup).Wrap(text)
 
-      override this.WrapAs(_format: string, text: string) : string =
-        (this :> Markup).Wrap(text)
+      override this.WrapAs(format: string, text: string) : string =
+        match format.ToLower() with
+        | "bbcode" -> text // HTML tags are not representable in BBCode; pass through text only
+        | _ -> (this :> Markup).Wrap(text)
 
-      override this.WrapAndRestoreAs(_format: string, text: string, _: Markup) : string =
-        (this :> Markup).Wrap(text)
+      override this.WrapAndRestoreAs(format: string, text: string, _: Markup) : string =
+        match format.ToLower() with
+        | "bbcode" -> text // HTML tags are not representable in BBCode; pass through text only
+        | _ -> (this :> Markup).Wrap(text)
 
       override this.Optimize (text: string) : string = text

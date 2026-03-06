@@ -178,6 +178,46 @@ module MarkupStringModule =
             member _.Optimize(text) = text
 
     /// <summary>
+    /// Renders to Pueblo-compatible HTML (HTML 3.2-era tags).
+    /// Text is HTML-entity-encoded; markups are applied via Markup.WrapAs("pueblo", ...).
+    /// Pueblo clients parse HTML tags like FONT COLOR, B, I, U.
+    /// </summary>
+    type PuebloRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = System.Net.WebUtility.HtmlEncode(text)
+            member _.ApplyMarkup(markup)(text) = markup.WrapAs("pueblo", text)
+            member _.Prefix = String.Empty
+            member _.Postfix = String.Empty
+            member _.Optimize(text) = text
+
+    /// <summary>
+    /// Renders to BBCode format (forum-style markup).
+    /// Text is passed through unchanged (BBCode is plain text);
+    /// markups are applied via Markup.WrapAs("bbcode", ...) which produces [b], [i], [color=X], etc.
+    /// </summary>
+    type BBCodeRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = text
+            member _.ApplyMarkup(markup)(text) = markup.WrapAs("bbcode", text)
+            member _.Prefix = String.Empty
+            member _.Postfix = String.Empty
+            member _.Optimize(text) = text
+
+    /// <summary>
+    /// Renders to MXP (MUD eXtension Protocol) tags.
+    /// Text is HTML-entity-encoded (MXP uses XML-like encoding);
+    /// markups are applied via Markup.WrapAs("mxp", ...) which produces MXP elements
+    /// like &lt;B&gt;, &lt;I&gt;, &lt;COLOR FORE=X&gt;, &lt;SEND HREF=X&gt;.
+    /// </summary>
+    type MxpRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = System.Net.WebUtility.HtmlEncode(text)
+            member _.ApplyMarkup(markup)(text) = markup.WrapAs("mxp", text)
+            member _.Prefix = String.Empty
+            member _.Postfix = String.Empty
+            member _.Optimize(text) = text
+
+    /// <summary>
     /// Registry of built-in render strategies, providing typed access and
     /// format-string lookup for backward compatibility.
     /// </summary>
@@ -194,6 +234,15 @@ module MarkupStringModule =
         /// Singleton native render strategy (delegates to markup.Wrap()).
         let native : IRenderStrategy = NativeRenderStrategy()
 
+        /// Singleton Pueblo render strategy.
+        let pueblo : IRenderStrategy = PuebloRenderStrategy()
+
+        /// Singleton BBCode render strategy.
+        let bbcode : IRenderStrategy = BBCodeRenderStrategy()
+
+        /// Singleton MXP render strategy.
+        let mxp : IRenderStrategy = MxpRenderStrategy()
+
         /// <summary>
         /// Looks up a render strategy by format name (case-insensitive).
         /// Returns the ANSI strategy for unknown formats (backward-compatible default).
@@ -201,6 +250,9 @@ module MarkupStringModule =
         let forFormat (format: string) : IRenderStrategy =
             match format.ToLowerInvariant() with
             | "html" -> html
+            | "pueblo" -> pueblo
+            | "bbcode" -> bbcode
+            | "mxp" -> mxp
             | "plaintext" | "plain" -> plainText
             | "native" -> native
             | _ -> ansi  // "ansi" and any unknown format default to ANSI
