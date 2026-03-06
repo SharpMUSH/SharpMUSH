@@ -48,9 +48,9 @@ A rope is a **weight-balanced B-tree** where:
         ┌────────┴────────┐
         │                 │
    ┌────┴────┐    ┌───────┴──────┐
-   │  Leaf   │    │  Leaf        │
+   │  Leaf   │    │  Leaf         │
    │  "Hello"│    │  ", World"   │
-   │  len: 5 │    │  len: 8     │
+   │  len: 5 │    │  len: 8      │
    └─────────┘    └──────────────┘
 ```
 
@@ -631,7 +631,7 @@ Each piece references a text span **and** carries its own markup runs (local to 
 │  │   buffer: Original, offset: 0, length: 6                │ │
 │  │   text: "Hello "                                        │ │
 │  │   runs: [{start:0, len:5, markups:[red,bold]},          │ │
-│  │          {start:5, len:1, markups:[]}]                    │ │
+│  │          {start:5, len:1, markups:[]}]                   │ │
 │  ├─────────────────────────────────────────────────────────┤ │
 │  │ Piece 1:                                                │ │
 │  │   buffer: Add, offset: 0, length: 10                    │ │
@@ -669,7 +669,8 @@ When splitting a piece (for insert/delete), the markup runs within that piece ar
 │      match node with                                           │
 │      | Leaf(text, runs) -> renderRuns(text, runs)              │
 │      | Internal(left, right) ->                                │
-│          renderInOrder left; renderInOrder right                │
+│          renderInOrder left                                    │
+│          renderInOrder right                                   │
 │    → O(n) but with pointer chasing (worse cache locality)      │
 │                                                                │
 │  Piece table:                                                  │
