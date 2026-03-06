@@ -2517,7 +2517,6 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
@@ -2526,22 +2525,15 @@ public partial class Commands
 		var executorName = MModule.single(executor.Object().Name);
 		var youSayMessage = MModule.multiple([MModule.single("You say, \""), message, MModule.single("\"")]);
 		var namesSaysMessage = MModule.multiple([executorName, MModule.single(" says, \""), message, MModule.single("\"")]);
-		var executorDbRef = executor.Object().DBRef;
 
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(executor, obj,
-					IPermissionService.InteractType.Hear));
+		// Tell the executor what they said
+		await NotifyService!.Notify(executor, youSayMessage, executor, INotifyService.NotificationType.Say);
 
-		await foreach (var obj in interactableContents)
-		{
-			var formattedMessage = obj.Object().DBRef == executorDbRef ? youSayMessage : namesSaysMessage;
-			await NotifyService!.Notify(
-				obj.WithRoomOption(),
-				formattedMessage,
-				executor,
-				INotifyService.NotificationType.Say);
-		}
+		// Tell everyone else in the room
+		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+			_ => namesSaysMessage,
+			INotifyService.NotificationType.Say,
+			excludeObjects: [executor]);
 
 		return new CallState(message);
 	}
