@@ -68,14 +68,22 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask DolistCommand()
+	public async ValueTask DolistDoubleHashReplacement()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=think ##"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=dolist-hash-##"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "dolist-hash-1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "dolist-hash-2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "dolist-hash-3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
