@@ -116,6 +116,43 @@ public class ConnectionService(
 		}
 	}
 
+	public void IncrementMetadata(long handle, string key)
+	{
+		if (Get(handle) is null) return;
+
+		string? newValue = null;
+		_sessionState.AddOrUpdate(handle,
+			_ => throw new InvalidDataException("Tried to add a new handle during update."),
+			(_, y) =>
+			{
+				y.Metadata.AddOrUpdate(key, "1",
+					(_, existing) =>
+					{
+						var next = (int.TryParse(existing, out var current) ? current : 0) + 1;
+						return next.ToString();
+					});
+				newValue = y.Metadata[key];
+				return y;
+			});
+
+		// Update Redis if available (fire and forget for performance)
+		if (stateStore != null && newValue != null)
+		{
+			var captured = newValue;
+			_ = Task.Run(async () =>
+			{
+				try
+				{
+					await stateStore.UpdateMetadataAsync(handle, key, captured);
+				}
+				catch
+				{
+					// Ignore errors in background update
+				}
+			});
+		}
+	}
+
 	public async ValueTask Register(long handle, string ipaddr, string host,
 		string connectionType,
 		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,

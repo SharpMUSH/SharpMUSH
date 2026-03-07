@@ -93,20 +93,13 @@ public class SharpMUSHParserVisitor(
 			if (!string.IsNullOrWhiteSpace(forwardListText))
 			{
 				var targets = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				foreach (var targetStr in targets)
+				await foreach (var locateResult in targets.ToAsyncEnumerable()
+					.Select((string targetStr, CancellationToken _) => LocateService.Locate(
+						parser, executor, executor, targetStr, LocateFlags.AbsoluteMatch))
+					.Where(result => result.IsValid()))
 				{
-					var locateResult = await LocateService.Locate(
-						parser,
-						executor,
-						executor,
-						targetStr,
-						LocateFlags.AbsoluteMatch);
-
-					if (locateResult.IsValid())
-					{
-						var forwardTarget = locateResult.WithoutError().WithoutNone();
-						await NotifyService.Notify(forwardTarget, MModule.single(message));
-					}
+					var forwardTarget = locateResult.WithoutError().WithoutNone();
+					await NotifyService.Notify(forwardTarget, MModule.single(message));
 				}
 			}
 		}
@@ -205,15 +198,12 @@ public class SharpMUSHParserVisitor(
 	{
 		var result = await DefaultResult;
 
-		foreach (var child in Enumerable
-							 .Range(0, node.ChildCount)
-							 .Select(node.GetChild))
+		await foreach (var child in Enumerable
+								 .Range(0, node.ChildCount)
+								 .Select(node.GetChild)
+								 .ToAsyncEnumerable()
+								 .TakeWhile(_ => !haltPredicate()))
 		{
-			if (haltPredicate())
-			{
-				break;
-			}
-
 			result = AggregateResult(result, await child.Accept(this));
 		}
 
@@ -667,6 +657,7 @@ public class SharpMUSHParserVisitor(
 			{
 				ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
 					DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
+				ConnectionService.IncrementMetadata(parser.CurrentState.Handle.Value, "CommandCount");
 			}
 
 			// Step 1: Check if it's a SOCKET command
@@ -1641,11 +1632,11 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				foreach (var argument in argCallState.Arguments.Skip(1))
-				{
-					// This is done to avoid allocation with ValueTask.
-					arguments.Add((await prs.FunctionParse(argument))!);
-				}
+				arguments.AddRange(await argCallState.Arguments.Skip(1)
+					.ToAsyncEnumerable()
+					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument))
+					.Select(cs => cs!)
+					.ToListAsync());
 			}
 		}
 		else
@@ -1657,11 +1648,11 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				foreach (var argument in argCallState.Arguments ?? [])
-				{
-					// This is done to avoid allocation with ValueTask.
-					arguments.Add((await prs.FunctionParse(argument))!);
-				}
+				arguments.AddRange(await (argCallState.Arguments ?? [])
+					.ToAsyncEnumerable()
+					.Select((MString argument, CancellationToken _) => prs.FunctionParse(argument))
+					.Select(cs => cs!)
+					.ToListAsync());
 			}
 		}
 
