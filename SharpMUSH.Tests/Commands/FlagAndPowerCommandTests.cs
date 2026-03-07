@@ -487,4 +487,31 @@ public class FlagAndPowerCommandTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
+
+	[Test]
+	public async ValueTask God_CanSetTrustFlag()
+	{
+		// God (#1) should be able to set any flag, including TRUST
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create GodTrustFlagTestObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set GodTrustFlagTestObj=TRUST"));
+
+		// Verify the TRUST flag was set (not denied)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "TRUST Set")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Verify no permission denied message was sent
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Permission denied") && TestHelpers.MessageContains(s, "TRUST")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy GodTrustFlagTestObj"));
+	}
 }

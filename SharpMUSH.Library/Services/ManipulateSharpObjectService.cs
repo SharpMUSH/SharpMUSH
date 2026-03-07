@@ -176,9 +176,9 @@ public class ManipulateSharpObjectService(
 			return Errors.InvalidFlag;
 		}
 
-		// Check flag set/unset permissions
+		// Check flag set/unset permissions (God bypasses all flag permission checks)
 		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
-		if (requiredPermissions is not null && requiredPermissions.Length > 0)
+		if (!executor.IsGod() && requiredPermissions is not null && requiredPermissions.Length > 0)
 		{
 			var hasPermission = await requiredPermissions.ToAsyncEnumerable()
 				.AnyAsync(async (permission, _) =>
