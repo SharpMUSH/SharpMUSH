@@ -165,61 +165,6 @@ module MarkupStringModule =
             member _.Optimize(text) = text
 
     /// <summary>
-    /// Native render strategy that delegates to each markup's own Wrap() method.
-    /// This preserves the behavior of the original MarkupString.ToString() which
-    /// dispatched rendering based on the concrete markup type (AnsiMarkup uses ANSI codes,
-    /// HtmlMarkup uses HTML tags, NeutralMarkup passes through). Unlike AnsiRenderStrategy,
-    /// this does not apply ANSI-specific post-processing or optimization.
-    /// </summary>
-    type NativeRenderStrategy() =
-        interface IRenderStrategy with
-            member _.EncodeText(text) = text
-            member _.ApplyMarkup(markup)(text) = markup.Wrap(text)
-            member _.Prefix = String.Empty
-            member _.Postfix = String.Empty
-            member _.Optimize(text) = text
-
-    /// <summary>
-    /// Renders to Pueblo-compatible HTML (HTML 3.2-era tags).
-    /// Text is HTML-entity-encoded; markups are applied via Markup.WrapAs("pueblo", ...).
-    /// Pueblo clients parse HTML tags like FONT COLOR, B, I, U.
-    /// </summary>
-    type PuebloRenderStrategy() =
-        interface IRenderStrategy with
-            member _.EncodeText(text) = System.Net.WebUtility.HtmlEncode(text)
-            member _.ApplyMarkup(markup)(text) = markup.WrapAs("pueblo", text)
-            member _.Prefix = String.Empty
-            member _.Postfix = String.Empty
-            member _.Optimize(text) = text
-
-    /// <summary>
-    /// Renders to BBCode format (forum-style markup).
-    /// Text is passed through unchanged (BBCode is plain text);
-    /// markups are applied via Markup.WrapAs("bbcode", ...) which produces [b], [i], [color=X], etc.
-    /// </summary>
-    type BBCodeRenderStrategy() =
-        interface IRenderStrategy with
-            member _.EncodeText(text) = text
-            member _.ApplyMarkup(markup)(text) = markup.WrapAs("bbcode", text)
-            member _.Prefix = String.Empty
-            member _.Postfix = String.Empty
-            member _.Optimize(text) = text
-
-    /// <summary>
-    /// Renders to MXP (MUD eXtension Protocol) tags.
-    /// Text is HTML-entity-encoded (MXP uses XML-like encoding);
-    /// markups are applied via Markup.WrapAs("mxp", ...) which produces MXP elements
-    /// like &lt;B&gt;, &lt;I&gt;, &lt;COLOR FORE=X&gt;, &lt;SEND HREF=X&gt;.
-    /// </summary>
-    type MxpRenderStrategy() =
-        interface IRenderStrategy with
-            member _.EncodeText(text) = System.Net.WebUtility.HtmlEncode(text)
-            member _.ApplyMarkup(markup)(text) = markup.WrapAs("mxp", text)
-            member _.Prefix = String.Empty
-            member _.Postfix = String.Empty
-            member _.Optimize(text) = text
-
-    /// <summary>
     /// Registry of built-in render strategies, providing typed access and
     /// format-string lookup for backward compatibility.
     /// </summary>
@@ -233,18 +178,6 @@ module MarkupStringModule =
         /// Singleton plain text render strategy.
         let plainText : IRenderStrategy = PlainTextRenderStrategy()
 
-        /// Singleton native render strategy (delegates to markup.Wrap()).
-        let native : IRenderStrategy = NativeRenderStrategy()
-
-        /// Singleton Pueblo render strategy.
-        let pueblo : IRenderStrategy = PuebloRenderStrategy()
-
-        /// Singleton BBCode render strategy.
-        let bbcode : IRenderStrategy = BBCodeRenderStrategy()
-
-        /// Singleton MXP render strategy.
-        let mxp : IRenderStrategy = MxpRenderStrategy()
-
         /// <summary>
         /// Looks up a render strategy by format name (case-insensitive).
         /// Returns the ANSI strategy for unknown formats (backward-compatible default).
@@ -252,11 +185,7 @@ module MarkupStringModule =
         let forFormat (format: string) : IRenderStrategy =
             match format.ToLowerInvariant() with
             | "html" -> html
-            | "pueblo" -> pueblo
-            | "bbcode" -> bbcode
-            | "mxp" -> mxp
             | "plaintext" | "plain" -> plainText
-            | "native" -> native
             | _ -> ansi  // "ansi" and any unknown format default to ANSI
 
     /// <summary>
@@ -273,14 +202,6 @@ module MarkupStringModule =
         | Html
         /// Render to plain text with no formatting.
         | PlainText
-        /// Render using Pueblo-compatible HTML (HTML 3.2-era tags).
-        | Pueblo
-        /// Render to BBCode format (forum-style markup).
-        | BBCode
-        /// Render using MXP (MUD eXtension Protocol) tags.
-        | Mxp
-        /// Render using each markup's native Wrap()/Prefix/Postfix/Optimize.
-        | Native
         /// Custom render format: (encodeText, applyMarkup).
         | Custom of encodeText: (string -> string) * applyMarkup: (Markup -> string -> string)
     with
@@ -290,10 +211,6 @@ module MarkupStringModule =
             | Ansi -> RenderStrategies.ansi
             | Html -> RenderStrategies.html
             | PlainText -> RenderStrategies.plainText
-            | Pueblo -> RenderStrategies.pueblo
-            | BBCode -> RenderStrategies.bbcode
-            | Mxp -> RenderStrategies.mxp
-            | Native -> RenderStrategies.native
             | Custom (encodeText, applyMarkup) ->
                 { new IRenderStrategy with
                     member _.EncodeText(text) = encodeText text
@@ -367,7 +284,7 @@ module MarkupStringModule =
         /// - Uses markup.Optimize for post-processing
         let nativeToString () : string =
             match findFirstMarkup () with
-            | None -> renderWith RenderStrategies.native
+            | None -> renderWith RenderStrategies.plainText
             | Some markup ->
                 let strategy = {
                     new IRenderStrategy with
@@ -379,8 +296,12 @@ module MarkupStringModule =
                 }
                 renderWith strategy
 
+        // ── Render cache (Lazy per built-in format) ────────────────────
         let cachedToString = Lazy<string>(fun () -> nativeToString ())
         let cachedPlainText = Lazy<string>(fun () -> text)
+        let cachedAnsiRender = Lazy<string>(fun () -> renderWith RenderStrategies.ansi)
+        let cachedHtmlRender = Lazy<string>(fun () -> renderWith RenderStrategies.html)
+        let cachedPlainTextRender = Lazy<string>(fun () -> renderWith RenderStrategies.plainText)
 
         // ── Public API ─────────────────────────────────────────────────
 
@@ -399,23 +320,30 @@ module MarkupStringModule =
         /// Renders to ANSI escape codes (default format).
         override _.ToString() : string = cachedToString.Value
 
-        /// Renders to the specified format ("ansi", "html", etc.).
-        /// Uses the RenderStrategies registry for format lookup.
+        /// Renders to the specified format ("ansi", "html", "plaintext").
+        /// Results for built-in formats are cached.
         member _.Render(format: string) : string =
-            renderWith (RenderStrategies.forFormat format)
+            match format.ToLowerInvariant() with
+            | "html" -> cachedHtmlRender.Value
+            | "plaintext" | "plain" -> cachedPlainTextRender.Value
+            | _ -> cachedAnsiRender.Value
 
         /// <summary>
         /// Renders to the specified format using the type-safe RenderFormat union.
-        /// Provides compile-time safety over string-based format dispatch.
-        /// The Custom case allows ad-hoc strategies inline.
+        /// Results for built-in formats (Ansi, Html, PlainText) are cached.
+        /// The Custom case is not cached.
         /// </summary>
         member _.Render(format: RenderFormat) : string =
-            renderWith (format.ToStrategy())
+            match format with
+            | RenderFormat.Ansi -> cachedAnsiRender.Value
+            | RenderFormat.Html -> cachedHtmlRender.Value
+            | RenderFormat.PlainText -> cachedPlainTextRender.Value
+            | RenderFormat.Custom _ -> renderWith (format.ToStrategy())
 
         /// <summary>
         /// Renders using a specific render strategy.
         /// This is the primary rendering method — type-safe, extensible, no string dispatch.
-        /// Use this to render with custom strategies (BBCode, MXP, Pueblo, etc.).
+        /// Use this to render with custom strategies.
         /// </summary>
         member _.RenderWith(strategy: IRenderStrategy) : string =
             renderWith strategy

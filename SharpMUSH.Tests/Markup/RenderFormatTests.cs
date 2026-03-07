@@ -457,54 +457,6 @@ public class RenderFormatTests
 	}
 
 	[Test]
-	public async Task RenderFormat_Pueblo_MatchesStringBasedRender()
-	{
-		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
-		var markupString = A.markupSingle(ansiMarkup, "RenderFormat Pueblo");
-
-		var duResult = markupString.Render(A.RenderFormat.Pueblo);
-		var stringResult = markupString.Render("pueblo");
-
-		await Assert.That(duResult).IsEqualTo(stringResult);
-	}
-
-	[Test]
-	public async Task RenderFormat_BBCode_MatchesStringBasedRender()
-	{
-		var ansiMarkup = M.Create(bold: true);
-		var markupString = A.markupSingle(ansiMarkup, "RenderFormat BBCode");
-
-		var duResult = markupString.Render(A.RenderFormat.BBCode);
-		var stringResult = markupString.Render("bbcode");
-
-		await Assert.That(duResult).IsEqualTo(stringResult);
-	}
-
-	[Test]
-	public async Task RenderFormat_Mxp_MatchesStringBasedRender()
-	{
-		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
-		var markupString = A.markupSingle(ansiMarkup, "RenderFormat Mxp");
-
-		var duResult = markupString.Render(A.RenderFormat.Mxp);
-		var stringResult = markupString.Render("mxp");
-
-		await Assert.That(duResult).IsEqualTo(stringResult);
-	}
-
-	[Test]
-	public async Task RenderFormat_Native_MatchesStringBasedRender()
-	{
-		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
-		var markupString = A.markupSingle(ansiMarkup, "RenderFormat Native");
-
-		var duResult = markupString.Render(A.RenderFormat.Native);
-		var stringResult = markupString.Render("native");
-
-		await Assert.That(duResult).IsEqualTo(stringResult);
-	}
-
-	[Test]
 	public async Task RenderFormat_Custom_AppliesEncodeAndApplyMarkup()
 	{
 		var ansiMarkup = M.Create(bold: true);
@@ -546,6 +498,68 @@ public class RenderFormatTests
 		var stringResult = A.render("html", markupString);
 
 		await Assert.That(duResult).IsEqualTo(stringResult);
+	}
+
+	// ── Render caching tests ──────────────────────────────────────────
+
+	[Test]
+	public async Task RenderCache_Ansi_ReturnsSameInstance()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache ansi test");
+
+		var result1 = markupString.Render("ansi");
+		var result2 = markupString.Render("ansi");
+
+		await Assert.That(ReferenceEquals(result1, result2)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCache_Html_ReturnsSameInstance()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache html test");
+
+		var result1 = markupString.Render("html");
+		var result2 = markupString.Render("html");
+
+		await Assert.That(ReferenceEquals(result1, result2)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCache_PlainText_ReturnsSameInstance()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache plain test");
+
+		var result1 = markupString.Render("plaintext");
+		var result2 = markupString.Render("plaintext");
+
+		await Assert.That(ReferenceEquals(result1, result2)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCache_DU_ReturnsSameInstanceAsStringBased()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache du test");
+
+		var duResult = markupString.Render(A.RenderFormat.Html);
+		var stringResult = markupString.Render("html");
+
+		await Assert.That(ReferenceEquals(duResult, stringResult)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCache_UnknownFormat_DefaultsToAnsiCache()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache unknown test");
+
+		var unknownResult = markupString.Render("xyz");
+		var ansiResult = markupString.Render("ansi");
+
+		await Assert.That(ReferenceEquals(unknownResult, ansiResult)).IsTrue();
 	}
 }
 
