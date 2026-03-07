@@ -27,7 +27,7 @@ public static partial class Substitutions
 			"R" or "r" => "\n",
 			"T" or "t" => "\t",
 			"#" => $"#{parser.CurrentState.Enactor!.Value.Number}",
-			":" => $"#{parser.CurrentState.Enactor!.Value}",
+			":" => parser.CurrentState.Enactor!.Value.ToString(),
 			"n" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name,
 			"N" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name.ApplyCase(LetterCasing.Sentence),
 			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Accented name - using regular name as fallback
