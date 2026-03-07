@@ -565,7 +565,9 @@ public class ManipulateSharpObjectService(
 	private static async ValueTask<bool> HasFlagPermission(AnySharpObject executor, AnySharpObject obj, string permission) =>
 		permission.ToLowerInvariant() switch
 		{
-			// F_INHERIT: Wizard(player) || (Inheritable(player) && Owns(player, thing))
+			// F_INHERIT: !Wizard(player) && (!Inheritable(player) || !Owns(player, thing))
+			// In PennMUSH, Wizard(x) = God(x) || has_wizard_flag(x).
+			// SharpMUSH's IsWizard() only checks the flag, so God is checked separately.
 			"trusted" => executor.IsGod() || await executor.IsWizard()
 				|| (await executor.Inheritable() && await executor.Owns(obj)),
 			// F_ROYAL: Hasprivs(player) = God || Royalty || Wizard
