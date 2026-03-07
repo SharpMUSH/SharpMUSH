@@ -226,10 +226,15 @@ public class AttributeService(
 		var split = MModule.split("/", objAndAttribute);
 		var obj = split.First();
 		var attribute = MModule.multiple(split.Skip(1))!;
-		var applyPredicate = obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase);
-		var lambdaPredicate = obj.ToPlainText().StartsWith("#LAMBDA", StringComparison.InvariantCultureIgnoreCase);
+		var objPlainText = obj.ToPlainText();
+		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
+		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
 
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
+		// Skip attribute name validation for lambda/apply: the "attribute" part is
+		// executable code, not a database attribute name, and can contain characters
+		// (e.g. '[', ']', '\') that are not valid in attribute names.
+		if (!applyPredicate && !lambdaPredicate &&
+		    !await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
 		{
 			return MModule.single(Errors.ErrorObjectAttributeString);
 		}
@@ -246,17 +251,21 @@ public class AttributeService(
 		if (applyPredicate && !ignoreLambda)
 		{
 			var argN = 1;
-			if (!string.IsNullOrWhiteSpace(attribute.ToPlainText()) && !int.TryParse(attribute.ToPlainText(), out argN))
+			// The optional argument count is embedded in the obj portion after "#apply" (e.g. "#apply2" -> argN=2).
+			// The function name is in the attribute portion (e.g. "#apply/strlen" -> funcname="strlen").
+			var applyArgCountStr = objPlainText.Remove(0, 6); // part after "#apply"
+			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
 			{
-				// Invalid argument to #apply 
+				// Invalid argument count in #apply 
 				return MModule.single(string.Format(Errors.ErrorBadArgumentFormat, "#APPLY"));
 			}
 
 			var slimArgs = Enumerable
 				.Range(0, argN)
-				.ToDictionary(argK => argK.ToString(), argK => args[argK.ToString()]);
+				.Select(i => i.ToString())
+				.ToDictionary(k => k, k => args.TryGetValue(k, out var v) ? v : CallState.Empty);
 
-			if (parser.FunctionLibrary.TryGetValue(obj.ToPlainText().Remove(0, 6).ToLower(), out var applyFunction))
+			if (parser.FunctionLibrary.TryGetValue(attribute.ToPlainText().ToLower(), out var applyFunction))
 			{
 				// Check function permission flags
 				var functionFlags = applyFunction.LibraryInformation.Attribute.Flags;
@@ -320,6 +329,7 @@ public class AttributeService(
 			var result = await parser.With(s => s with
 			{
 				Arguments = args,
+				EnvironmentRegisters = args,
 				CallDepth = s.CallDepth,
 				FunctionRecursionDepths = s.FunctionRecursionDepths,
 				TotalInvocations = s.TotalInvocations,
@@ -331,7 +341,7 @@ public class AttributeService(
 
 		// Standard Object/Attribute evaluation
 		var maybeObject =
-			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
+			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objPlainText,
 				LocateFlags.All);
 
 		return maybeObject switch
