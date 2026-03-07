@@ -178,9 +178,38 @@ public partial class Functions
 	public static async ValueTask<CallState> FilterBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
+		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
+
+		// Handle #lambda and #apply anonymous attribute forms
+		if (rawAttrStr.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase) ||
+			rawAttrStr.StartsWith("#apply", StringComparison.OrdinalIgnoreCase))
+		{
+			var lambdaResults = new List<MString>();
+			foreach (var item in list)
+			{
+				var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
+					parser,
+					executor,
+					rawAttrArg,
+					new Dictionary<string, CallState> { { "0", new CallState(item) } });
+				lambdaResults.Add(evaluated);
+			}
+
+			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
+				.Where(pair => pair.boolResult.Truthy())
+				.Select(pair => pair.item);
+
+			return new CallState(MModule.multipleWithDelimiter(sep, filteredItems));
+		}
+
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
 		var objAttr =
-			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
+			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
@@ -222,10 +251,6 @@ public partial class Functions
 
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		// Build environment registers for additional arguments (v(1) to v(30))
 		var environmentRegisters = new Dictionary<string, CallState>();
@@ -639,15 +664,39 @@ public partial class Functions
 	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> Map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Arg0: Object/Attribute
+		// Arg0: Object/Attribute (or #lambda/code or #apply[N]/funcname)
 		// Arg1: List
 		// Arg2: Delim
 		// Arg3: Sep
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
+		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
+
+		// Handle #lambda and #apply anonymous attribute forms
+		if (rawAttrStr.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase) ||
+			rawAttrStr.StartsWith("#apply", StringComparison.OrdinalIgnoreCase))
+		{
+			var lambdaResults = new List<MString>();
+			foreach (var item in list)
+			{
+				var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
+					parser,
+					executor,
+					rawAttrArg,
+					new Dictionary<string, CallState> { { "0", new CallState(item) } });
+				lambdaResults.Add(evaluated);
+			}
+
+			return new CallState(MModule.multipleWithDelimiter(sep, lambdaResults));
+		}
+
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known();
-		var objAttr =
-			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
+		var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
 			return new CallState(Errors.ErrorObjectAttributeString);
@@ -689,12 +738,8 @@ public partial class Functions
 
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
 
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
-
-		var result = await list.ToAsyncEnumerable()
+		var mapResult = await list.ToAsyncEnumerable()
 			.Select((MString item, CancellationToken _) =>
 			{
 				var newParser = parser.Push(parser.CurrentState with
@@ -707,7 +752,7 @@ public partial class Functions
 			.Select(cs => cs!.Message!)
 			.ToListAsync();
 
-		return new CallState(MModule.multipleWithDelimiter(sep, result));
+		return new CallState(MModule.multipleWithDelimiter(sep, mapResult));
 	}
 
 	[SharpFunction(Name = "match", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
