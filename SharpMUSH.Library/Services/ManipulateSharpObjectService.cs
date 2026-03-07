@@ -176,13 +176,17 @@ public class ManipulateSharpObjectService(
 			return Errors.InvalidFlag;
 		}
 
-		// Check flag set/unset permissions (God bypasses all flag permission checks)
+		// Check flag set/unset permissions using named permission levels.
+		// See help "flag permissions" for the mapping:
+		//   "trusted" → must pass a TRUST check (Inheritable)
+		//   "royalty" → must be ROYALTY or WIZARD
+		//   "wizard"  → must be WIZARD
+		//   "god"     → must be God (#1)
 		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
-		if (!executor.IsGod() && requiredPermissions is not null && requiredPermissions.Length > 0)
+		if (requiredPermissions is not null && requiredPermissions.Length > 0)
 		{
 			var hasPermission = await requiredPermissions.ToAsyncEnumerable()
-				.AnyAsync(async (permission, _) =>
-					await executor.HasFlag(permission) || await executor.HasPower(permission));
+				.AnyAsync(async (permission, _) => await HasFlagPermission(executor, permission));
 
 			if (!hasPermission)
 			{
@@ -544,4 +548,18 @@ public class ManipulateSharpObjectService(
 
 		return true;
 	}
+
+	/// <summary>
+	/// Resolves a named flag permission level to the appropriate privilege check.
+	/// See help "flag permissions" for the documented permission levels.
+	/// </summary>
+	private static async ValueTask<bool> HasFlagPermission(AnySharpObject executor, string permission) =>
+		permission.ToLowerInvariant() switch
+		{
+			"trusted" => executor.IsGod() || await executor.Inheritable(),
+			"royalty" => executor.IsGod() || await executor.IsRoyalty() || await executor.IsWizard(),
+			"wizard" => executor.IsGod() || await executor.IsWizard(),
+			"god" => executor.IsGod(),
+			_ => await executor.HasFlag(permission) || await executor.HasPower(permission)
+		};
 }
