@@ -17,7 +17,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
-		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK") || executor.IsGod()))
+		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
 			return new CallState(Errors.ErrorPerm);
 		}
@@ -115,7 +115,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 
-		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK") || executor.IsGod()))
+		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
 			return new CallState(Errors.ErrorPerm);
 		}

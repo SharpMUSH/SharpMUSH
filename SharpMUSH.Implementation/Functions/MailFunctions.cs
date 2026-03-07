@@ -92,7 +92,7 @@ public partial class Functions
 		}
 
 		// Two arguments - must be wizard to view other player's mail
-		if (!executor.IsGod() && !await executor.IsWizard())
+		if (!await executor.IsWizard())
 		{
 			return PlayerMessageResult.FromError("#-1 PERMISSION DENIED");
 		}
@@ -119,7 +119,7 @@ public partial class Functions
 	/// </summary>
 	private static async ValueTask<bool> CanViewOtherPlayerMail(AnySharpObject executor)
 	{
-		return executor.IsGod() || await executor.IsWizard();
+		return await executor.IsWizard();
 	}
 
 	[SharpFunction(Name = "mail", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "status"])]

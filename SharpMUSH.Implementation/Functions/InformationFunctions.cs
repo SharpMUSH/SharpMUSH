@@ -83,7 +83,7 @@ public partial class Functions
 			else
 			{
 				// Must be wizard to view other player's mail
-				if (!(executor.IsGod() || await executor.IsWizard()))
+				if (!await executor.IsWizard())
 				{
 					return new CallState("#-1 PERMISSION DENIED");
 				}
@@ -108,7 +108,7 @@ public partial class Functions
 		else if (args.Count == 2)
 		{
 			// Must be wizard to view other player's mail
-			if (!(executor.IsGod() || await executor.IsWizard()))
+			if (!await executor.IsWizard())
 			{
 				return new CallState("#-1 PERMISSION DENIED");
 			}

@@ -565,15 +565,13 @@ public class ManipulateSharpObjectService(
 	private static async ValueTask<bool> HasFlagPermission(AnySharpObject executor, AnySharpObject obj, string permission) =>
 		permission.ToLowerInvariant() switch
 		{
-			// F_INHERIT: !Wizard(player) && (!Inheritable(player) || !Owns(player, thing))
-			// In PennMUSH, Wizard(x) = God(x) || has_wizard_flag(x).
-			// SharpMUSH's IsWizard() only checks the flag, so God is checked separately.
-			"trusted" => executor.IsGod() || await executor.IsWizard()
+			// F_INHERIT: Wizard(player) || (Inheritable(player) && Owns(player, thing))
+			"trusted" => await executor.IsWizard()
 				|| (await executor.Inheritable() && await executor.Owns(obj)),
-			// F_ROYAL: Hasprivs(player) = God || Royalty || Wizard
-			"royalty" => executor.IsGod() || await executor.IsRoyalty() || await executor.IsWizard(),
-			// F_WIZARD: Wizard(player) = God || has_wizard_flag
-			"wizard" => executor.IsGod() || await executor.IsWizard(),
+			// F_ROYAL: Hasprivs(player) = IsPriv
+			"royalty" => await executor.IsPriv(),
+			// F_WIZARD: Wizard(player)
+			"wizard" => await executor.IsWizard(),
 			// F_GOD: God(player)
 			"god" => executor.IsGod(),
 			_ => await executor.HasFlag(permission) || await executor.HasPower(permission)
@@ -592,11 +590,11 @@ public class ManipulateSharpObjectService(
 		// CHOWN_OK and DESTROY_OK: must own the target or be Wizard
 		if (flagName is "CHOWN_OK" or "DESTROY_OK")
 		{
-			return !(await executor.Owns(obj) || executor.IsGod() || await executor.IsWizard());
+			return !(await executor.Owns(obj) || await executor.IsWizard());
 		}
 
 		// Can't gag wizards/God, but can ungag them
-		if (flagName == "GAGGED" && (obj.IsGod() || await obj.IsWizard()))
+		if (flagName == "GAGGED" && await obj.IsWizard())
 			return !negate; // deny setting, allow unsetting
 
 		// God can do (almost) anything after the generic check passes

@@ -23,8 +23,11 @@ public static partial class HelperFunctions
 	public static async ValueTask<AnySharpObject> GetGod(IMediator mediator)
 		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
 
+	/// <summary>
+	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
+	/// </summary>
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> await (obj.Object().Flags.Value)
+		=> obj.IsGod() || await (obj.Object().Flags.Value)
 			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase));
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
