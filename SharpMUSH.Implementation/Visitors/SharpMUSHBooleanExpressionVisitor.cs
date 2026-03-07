@@ -127,7 +127,6 @@ public class SharpMUSHBooleanExpressionVisitor(
 				var parsedTargetOpt = HelperFunctions.ParseDbRef(target);
 if (parsedTargetOpt.IsSome())
 {
-var parsedTargetRef = parsedTargetOpt;
 					// Get the target object by DBRef (validates creation timestamp if objid format)
 					var targetObjResult = med.Send(
 							new GetObjectNodeQuery(parsedTargetOpt.AsValue()),
@@ -205,7 +204,6 @@ var parsedTargetRef = parsedTargetOpt;
 			var parsedCarryOpt = HelperFunctions.ParseDbRef(target);
 if (parsedCarryOpt.IsSome())
 {
-var parsedCarryRef = parsedCarryOpt;
 				try
 				{
 					if (unlockerObj.IsContainer)
