@@ -257,7 +257,8 @@ public class AttributeService(
 
 			var slimArgs = Enumerable
 				.Range(0, argN)
-				.ToDictionary(argK => argK.ToString(), argK => args.TryGetValue(argK.ToString(), out var v) ? v : CallState.Empty);
+				.Select(i => i.ToString())
+				.ToDictionary(k => k, k => args.TryGetValue(k, out var v) ? v : CallState.Empty);
 
 			if (parser.FunctionLibrary.TryGetValue(attribute.ToPlainText().ToLower(), out var applyFunction))
 			{

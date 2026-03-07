@@ -4,6 +4,7 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -189,17 +190,7 @@ public partial class Functions
 		if (rawAttrStr.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase) ||
 			rawAttrStr.StartsWith("#apply", StringComparison.OrdinalIgnoreCase))
 		{
-			var lambdaResults = new List<MString>();
-			foreach (var item in list)
-			{
-				var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
-					parser,
-					executor,
-					rawAttrArg,
-					new Dictionary<string, CallState> { { "0", new CallState(item) } });
-				lambdaResults.Add(evaluated);
-			}
-
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
 				.Where(pair => pair.boolResult.Truthy())
 				.Select(pair => pair.item);
@@ -681,17 +672,7 @@ public partial class Functions
 		if (rawAttrStr.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase) ||
 			rawAttrStr.StartsWith("#apply", StringComparison.OrdinalIgnoreCase))
 		{
-			var lambdaResults = new List<MString>();
-			foreach (var item in list)
-			{
-				var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
-					parser,
-					executor,
-					rawAttrArg,
-					new Dictionary<string, CallState> { { "0", new CallState(item) } });
-				lambdaResults.Add(evaluated);
-			}
-
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
 			return new CallState(MModule.multipleWithDelimiter(sep, lambdaResults));
 		}
 
@@ -1889,5 +1870,28 @@ public partial class Functions
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
+	}
+
+	/// <summary>
+	/// Evaluates a #lambda or #apply expression for each item in a list.
+	/// </summary>
+	private static async ValueTask<List<MString>> EvaluateLambdaOrApplyForEachItemAsync(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		MString rawAttrArg,
+		MString[] list)
+	{
+		var results = new List<MString>(list.Length);
+		foreach (var item in list)
+		{
+			var evaluated = await AttributeService!.EvaluateAttributeFunctionAsync(
+				parser,
+				executor,
+				rawAttrArg,
+				new Dictionary<string, CallState> { { "0", new CallState(item) } });
+			results.Add(evaluated);
+		}
+
+		return results;
 	}
 }
