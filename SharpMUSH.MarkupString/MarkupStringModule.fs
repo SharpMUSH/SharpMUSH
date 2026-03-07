@@ -260,6 +260,49 @@ module MarkupStringModule =
             | _ -> ansi  // "ansi" and any unknown format default to ANSI
 
     /// <summary>
+    /// Type-safe discriminated union for selecting a render format.
+    /// Provides compile-time safety over string-based format dispatch.
+    /// Use with <c>Render(format: RenderFormat)</c> or <c>renderFormat</c>.
+    /// The <c>Custom</c> case allows ad-hoc strategies without implementing IRenderStrategy:
+    /// the first function encodes text, the second applies markup to encoded text.
+    /// </summary>
+    type RenderFormat =
+        /// Render to ANSI terminal escape codes.
+        | Ansi
+        /// Render to HTML with inline styles and CSS classes.
+        | Html
+        /// Render to plain text with no formatting.
+        | PlainText
+        /// Render using Pueblo-compatible HTML (HTML 3.2-era tags).
+        | Pueblo
+        /// Render to BBCode format (forum-style markup).
+        | BBCode
+        /// Render using MXP (MUD eXtension Protocol) tags.
+        | Mxp
+        /// Render using each markup's native Wrap()/Prefix/Postfix/Optimize.
+        | Native
+        /// Custom render format: (encodeText, applyMarkup).
+        | Custom of encodeText: (string -> string) * applyMarkup: (Markup -> string -> string)
+    with
+        /// Converts a RenderFormat to the corresponding IRenderStrategy.
+        member this.ToStrategy() : IRenderStrategy =
+            match this with
+            | Ansi -> RenderStrategies.ansi
+            | Html -> RenderStrategies.html
+            | PlainText -> RenderStrategies.plainText
+            | Pueblo -> RenderStrategies.pueblo
+            | BBCode -> RenderStrategies.bbcode
+            | Mxp -> RenderStrategies.mxp
+            | Native -> RenderStrategies.native
+            | Custom (encodeText, applyMarkup) ->
+                { new IRenderStrategy with
+                    member _.EncodeText(text) = encodeText text
+                    member _.ApplyMarkup(markup)(text) = applyMarkup markup text
+                    member _.Prefix = String.Empty
+                    member _.Postfix = String.Empty
+                    member _.Optimize(text) = text }
+
+    /// <summary>
     /// A flat, attributed markup string inspired by NSAttributedString.
     /// Stores text contiguously with an immutable array of attribute runs.
     /// Fully immutable — text is a .NET string, runs are ImmutableArray&lt;AttributeRun&gt;,
@@ -360,6 +403,14 @@ module MarkupStringModule =
         /// Uses the RenderStrategies registry for format lookup.
         member _.Render(format: string) : string =
             renderWith (RenderStrategies.forFormat format)
+
+        /// <summary>
+        /// Renders to the specified format using the type-safe RenderFormat union.
+        /// Provides compile-time safety over string-based format dispatch.
+        /// The Custom case allows ad-hoc strategies inline.
+        /// </summary>
+        member _.Render(format: RenderFormat) : string =
+            renderWith (format.ToStrategy())
 
         /// <summary>
         /// Renders using a specific render strategy.
@@ -904,6 +955,10 @@ module MarkupStringModule =
 
     /// Renders an MarkupString to the specified output format.
     let render (format: string) (ams: MarkupString) : string =
+        ams.Render(format)
+
+    /// Renders an MarkupString using the type-safe RenderFormat union.
+    let renderFormat (format: RenderFormat) (ams: MarkupString) : string =
         ams.Render(format)
 
     /// Evaluates an MarkupString using a custom evaluator function.
