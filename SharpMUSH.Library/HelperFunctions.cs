@@ -398,4 +398,14 @@ public static partial class HelperFunctions
 
 		return AttributeNameValidationRegex.IsMatch(attributeName);
 	}
+
+	/// <summary>
+	/// Returns <see langword="true"/> when the attribute specifier is an anonymous
+	/// <c>#lambda/…</c> or <c>#apply[N]/…</c> expression rather than an
+	/// <c>object/attribute</c> database reference.
+	/// </summary>
+	/// <param name="attributeSpecifier">The plain-text attribute specifier string.</param>
+	public static bool IsLambdaOrApply(string attributeSpecifier)
+		=> attributeSpecifier.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase)
+		|| attributeSpecifier.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 }
