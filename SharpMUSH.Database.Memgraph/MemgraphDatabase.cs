@@ -14,7 +14,6 @@ using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using MString = MarkupString.MarkupStringModule.MarkupString;
 
 namespace SharpMUSH.Database.Memgraph;
 
@@ -542,7 +541,7 @@ RETURN o, p
 		new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 		new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
 		{
-			Value = MarkupStringModule.deserialize(
+			Value = MModule.deserialize(
 		node.Properties.ContainsKey("value") ? node["value"].As<string>() ?? "" : "")
 		};
 	}
@@ -563,7 +562,7 @@ RETURN o, p
 		new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 		new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),
 		Value: new AsyncLazy<MString>(innerCt =>
-		Task.FromResult(MarkupStringModule.deserialize(
+		Task.FromResult(MModule.deserialize(
 		node.Properties.ContainsKey("value") ? node["value"].As<string>() ?? "" : ""))));
 	}
 

@@ -10,7 +10,7 @@ public static class ReviewMail
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService, IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, MString? arg0, MString? msgListArg, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
+		var line = MModule.repeat(MModule.single("-"), 78);
 		var name = arg0?.ToPlainText() ?? "all";
 
 		var target = executor.AsPlayer;
@@ -50,8 +50,8 @@ public static class ReviewMail
 				MModule.single(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
 				MModule.single(" "),
 				25,
-				MModule.PadType.Right,
-				MModule.TruncationType.Truncate);
+				global::MarkupString.MarkupStringModule.PadType.Right,
+				global::MarkupString.MarkupStringModule.TruncationType.Truncate);
 
 			var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
 			var messageBuilder = new List<MString>

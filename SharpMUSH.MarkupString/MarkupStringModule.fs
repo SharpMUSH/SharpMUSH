@@ -1,653 +1,818 @@
-﻿namespace MarkupString
+namespace MarkupString
 
-open System.Text.Json
-open System.Text.RegularExpressions
-open System.Runtime.InteropServices
 open System
+open System.Collections.Immutable
+open System.Text
 open MarkupString.MarkupImplementation
-open System.Text.Json.Serialization
-open FSharpPlus
-open System.Drawing
+open ANSILibrary.ANSI
 
 /// <summary>
-/// Provides core types and functions for working with markup-aware strings.
+/// NSAttributedString-inspired flat markup string model.
+/// Uses a contiguous string with an immutable array of attribute runs describing formatting.
+/// All types are fully immutable — text is a .NET string (inherently immutable),
+/// runs use ImmutableArray (struct-based, no defensive copies needed), and
+/// markup arrays within runs are also ImmutableArray.
+///
+/// Includes a Strategy Pattern render pipeline (section 5.2 Option A) that replaces
+/// string-based format dispatch with typed render strategies, enabling extensibility
+/// without modifying core types.
 /// </summary>
 module MarkupStringModule =
+
     /// <summary>
-    /// Thread-safe StringBuilder pool to reduce allocations in hot paths.
-    /// Uses ThreadLocal to maintain per-thread pools and avoid cross-thread contention.
+    /// Describes a contiguous range of characters that share the same markup attributes.
+    /// Runs are non-overlapping and ordered by Start position.
+    /// All fields are immutable — Markups uses ImmutableArray to prevent external mutation.
     /// </summary>
-    module StringBuilderPool =
-        open System.Collections.Generic
-        open System.Threading
+    [<Struct>]
+    type AttributeRun =
+        {
+            /// Start index within the parent string (inclusive).
+            Start: int
+            /// Number of characters this run covers.
+            Length: int
+            /// The markup attributes applied to this range.
+            /// Empty ImmutableArray means plain/unformatted text.
+            Markups: ImmutableArray<Markup>
+        }
+        member this.End = this.Start + this.Length
 
-        let private maxPoolSize = 256
-        let private sbLock = Object()
-        
-        // Thread-local storage for per-thread StringBuilder stacks
-        let private threadLocalPool = new ThreadLocal<Stack<System.Text.StringBuilder>>(fun () -> 
-            new Stack<System.Text.StringBuilder>())
-
-        /// Get a StringBuilder from the pool, or create a new one if pool is empty
-        let getStringBuilder() : System.Text.StringBuilder =
-            let stack = threadLocalPool.Value
-            lock sbLock (fun () ->
-                if stack.Count > 0 then 
-                    stack.Pop() 
-                else 
-                    new System.Text.StringBuilder())
-
-        /// Return a StringBuilder to the pool after clearing it
-        let returnStringBuilder(sb: System.Text.StringBuilder) : unit =
-            if sb.Length > 0 then
-                lock sbLock (fun () ->
-                    sb.Clear() |> ignore
-                    let stack = threadLocalPool.Value
-                    if stack.Count < maxPoolSize then
-                        stack.Push(sb))
-
-    type Content =
-        | Text of string
-        | MarkupText of MarkupString
-
-    and TrimType =
+    type TrimType =
         | TrimStart
         | TrimEnd
         | TrimBoth
 
-    and PadType =
+    type PadType =
         | Left
         | Right
         | Center
         | Full
 
-    and TruncationType =
+    type TruncationType =
         | Truncate
         | Overflow
 
-    and MarkupTypes = // TODO: Consider using built-in option type.
-        | MarkedupText of Markup
-        | Empty
+    /// <summary>
+    /// Comparer for binary search over the ImmutableArray&lt;AttributeRun&gt;.
+    /// Compares runs by their Start position, enabling O(log n) lookup
+    /// of the first run at or near a given character position.
+    /// Used with ImmutableArray&lt;T&gt;.BinarySearch — .NET's built-in
+    /// "immutable sorted array" search capability.
+    /// </summary>
+    let private runStartComparer =
+        { new System.Collections.Generic.IComparer<AttributeRun> with
+            member _.Compare(a, b) = compare a.Start b.Start }
 
-    and ColorJsonConverter() =
-        inherit JsonConverter<Color>()
+    /// <summary>
+    /// Finds the index of the first run that could overlap with the given position.
+    /// Uses ImmutableArray.BinarySearch for O(log n) lookup instead of O(n) linear scan.
+    /// Returns 0 if no runs exist or the position precedes all runs.
+    /// </summary>
+    let private findFirstOverlappingRunIndex (runs: ImmutableArray<AttributeRun>) (position: int) : int =
+        if runs.Length = 0 then 0
+        else
+            let probe = { Start = position; Length = 0; Markups = ImmutableArray<Markup>.Empty }
+            let idx = runs.BinarySearch(probe, runStartComparer)
+            if idx >= 0 then
+                // Exact match on Start — but a previous run might extend into this position
+                max 0 (idx - 1)
+            else
+                // BinarySearch returns ~insertionPoint when not found (bitwise complement).
+                // ~~~idx (F#'s bitwise NOT, equivalent to C#'s ~idx) recovers the insertion
+                // point — the index of the first element greater than the probe.
+                // The run before that point might overlap the target position.
+                let insertionPoint = ~~~idx
+                max 0 (insertionPoint - 1)
 
-        override _.Read(reader, _typeToConvert, _options) =
-            ColorTranslator.FromHtml(reader.GetString())
+    // ── Render Strategy Pattern (5.2 Option A) ─────────────────────
 
-        override _.Write(writer, value, _) =
-            writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
-
-    and MarkupString(markupDetails: MarkupTypes, content: Content list) as ms =
-        // TODO: Optimize the ansi strings, so we don't re-initialize at least the exact same tag sequentially.
-        let rec getText (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
-            let rec accumulate (sb: System.Text.StringBuilder) (items: Content list) =
-                match items with
-                | [] -> ()
-                | Text str :: tail -> 
-                    sb.Append(str) |> ignore
-                    accumulate sb tail
-                | MarkupText mStr :: tail ->
-                    let inner =
-                        match markupStr.MarkupDetails with
-                        | Empty -> getText (mStr, outerMarkupType)
-                        | MarkedupText _ -> getText (mStr, markupStr.MarkupDetails)
-                    sb.Append(inner) |> ignore
-                    accumulate sb tail
-
-            let sb = StringBuilderPool.getStringBuilder()
-            try
-                accumulate sb markupStr.Content
-                let innerText = sb.ToString()
-
-                match markupStr.MarkupDetails with
-                | Empty -> innerText
-                | MarkedupText str ->
-                    match outerMarkupType with
-                    | Empty -> str.Wrap(innerText)
-                    | MarkedupText outerMarkup -> str.WrapAndRestore(innerText, outerMarkup)
-            finally
-                StringBuilderPool.returnStringBuilder sb
-
-        let rec getTextAs (format: string) (markupStr: MarkupString, outerMarkupType: MarkupTypes) : string =
-            let encodeText =
-                if format = "html" then System.Net.WebUtility.HtmlEncode
-                else id
-            let rec accumulate (sb: System.Text.StringBuilder) (items: Content list) =
-                match items with
-                | [] -> ()
-                | Text str :: tail ->
-                    sb.Append(encodeText str) |> ignore
-                    accumulate sb tail
-                | MarkupText mStr :: tail ->
-                    let inner =
-                        match markupStr.MarkupDetails with
-                        | Empty -> getTextAs format (mStr, outerMarkupType)
-                        | MarkedupText _ -> getTextAs format (mStr, markupStr.MarkupDetails)
-                    sb.Append(inner) |> ignore
-                    accumulate sb tail
-
-            let sb = StringBuilderPool.getStringBuilder()
-            try
-                accumulate sb markupStr.Content
-                let innerText = sb.ToString()
-
-                match markupStr.MarkupDetails with
-                | Empty -> innerText
-                | MarkedupText str ->
-                    match outerMarkupType with
-                    | Empty -> str.WrapAs(format, innerText)
-                    | MarkedupText outerMarkup -> str.WrapAndRestoreAs(format, innerText, outerMarkup)
-            finally
-                StringBuilderPool.returnStringBuilder sb
-
-        [<TailCall>]
-        let rec length () : int =
-            let rec getLengthInternal (internalContent: Content list) : int =
-                internalContent
-                |> List.fold
-                    (fun acc item ->
-                        acc
-                        + (match item with
-                           | Text str -> str.Length
-                           | MarkupText mStr -> getLengthInternal mStr.Content))
-                    0
-
-            getLengthInternal content
-
-        let isMarkedUp (m: MarkupTypes) =
-            match m with
-            | MarkedupText _ -> true
-            | Empty -> false
-
-        // BUG: This is not correctly matching the first MarkedUp Text
-        [<TailCall>]
-        let findFirstMarkedUpText (markupStr: MarkupString) : MarkupTypes =
-            let rec find (content: Content list) : MarkupTypes =
-                match content with
-                | [] -> Empty
-                | MarkupText mStr :: _ when isMarkedUp mStr.MarkupDetails -> mStr.MarkupDetails
-                | MarkupText a :: tail ->
-                    match (find a.Content, find tail) with
-                    | MarkedupText res, _ -> MarkedupText res
-                    | _, MarkedupText res -> MarkedupText res
-                    | _ -> Empty
-                | _ -> Empty
-
-            match markupStr.MarkupDetails with
-            | MarkedupText _ -> markupStr.MarkupDetails
-            | _ -> find markupStr.Content
-
-        let len: Lazy<int> = Lazy<int>(length)
+    /// <summary>
+    /// Defines how to render an MarkupString to a specific output format.
+    /// Replaces string-based format dispatch ("ansi", "html") with a typed, extensible
+    /// strategy pattern. New formats (BBCode, MXP, Pueblo, etc.) can be added by
+    /// implementing this interface without modifying core types.
+    /// </summary>
+    type IRenderStrategy =
+        /// <summary>
+        /// Encodes leaf text content for the target format.
+        /// For HTML, this would HTML-entity-encode the text.
+        /// For ANSI/plain text, this is typically the identity function.
+        /// </summary>
+        abstract member EncodeText: string -> string
 
         /// <summary>
-        /// Evaluates the MarkupString using a custom evaluation function that receives markup information.
-        /// This allows reconstructing original function calls like ansi() from the markup data.
+        /// Applies a single markup to already-encoded inner text.
+        /// For ANSI, this wraps with escape codes. For HTML, this wraps with span tags.
         /// </summary>
-        /// <param name="evaluator">Function that takes (markupType, innerText) and returns reconstructed string</param>
-        [<TailCall>]
-        let rec evaluateWith (evaluator: MarkupTypes -> string -> string) : string =
-            let rec evalContent (sb: System.Text.StringBuilder) (content: Content list) : unit =
-                match content with
-                | [] -> ()
-                | Text str :: tail ->
-                    sb.Append(str) |> ignore
-                    evalContent sb tail
-                | MarkupText mStr :: tail ->
-                    let innerText = evalContent2 mStr
-                    sb.Append(innerText) |> ignore
-                    evalContent sb tail
+        abstract member ApplyMarkup: Markup -> string -> string
 
-            and evalContent2 (markupStr: MarkupString) : string =
-                let innerSb = StringBuilderPool.getStringBuilder()
-                try
-                    let rec innerLoop (sb: System.Text.StringBuilder) (content: Content list) : unit =
-                        match content with
-                        | [] -> ()
-                        | Text str :: tail ->
-                            sb.Append(str) |> ignore
-                            innerLoop sb tail
-                        | MarkupText mStr :: tail ->
-                            let text = evalContent2 mStr
-                            sb.Append(text) |> ignore
-                            innerLoop sb tail
-                    innerLoop innerSb markupStr.Content
-                    let innerText = innerSb.ToString()
-                    evaluator markupStr.MarkupDetails innerText
-                finally
-                    StringBuilderPool.returnStringBuilder innerSb
+        /// <summary>
+        /// Returns a prefix to prepend to the overall rendered output.
+        /// </summary>
+        abstract member Prefix: string
 
-            // Evaluate content first, then apply evaluator to top-level markup
-            let sb = StringBuilderPool.getStringBuilder()
-            try
-                evalContent sb ms.Content
-                let contentText = sb.ToString()
-                evaluator ms.MarkupDetails contentText
-            finally
-                StringBuilderPool.returnStringBuilder sb
+        /// <summary>
+        /// Returns a postfix to append to the overall rendered output.
+        /// For ANSI, this is typically the SGR reset code.
+        /// </summary>
+        abstract member Postfix: string
 
-        let toString () : string =
-            let postfix (markupType: MarkupTypes) : string =
-                match markupType with
-                | MarkedupText markup -> markup.Postfix
-                | Empty -> String.Empty
+        /// <summary>
+        /// Post-processes the fully rendered output string.
+        /// For ANSI, this eliminates redundant escape sequences.
+        /// For other formats, this is typically the identity function.
+        /// </summary>
+        abstract member Optimize: string -> string
 
-            let prefix (markupType: MarkupTypes) : string =
-                match markupType with
-                | MarkedupText markup -> markup.Prefix
-                | Empty -> String.Empty
+    /// <summary>
+    /// Renders to ANSI terminal escape codes.
+    /// Text is passed through unchanged; markups are applied via Markup.WrapAs("ansi", ...);
+    /// output is post-processed with ANSI optimization to eliminate redundant sequences.
+    /// HtmlMarkup tags (b, i, u, s) are converted to their ANSI equivalents;
+    /// unknown HTML tags are stripped.
+    /// </summary>
+    type AnsiRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = text
+            member _.ApplyMarkup(markup)(text) = markup.WrapAs("ansi", text)
+            member _.Prefix = String.Empty
+            member _.Postfix = ANSILibrary.StringExtensions.endWithTrueClear(String.Empty).ToString()
+            member _.Optimize(text) = ANSILibrary.Optimization.optimize text
 
-            let optimize (markupType: MarkupTypes) (text: string) : string =
-                match markupType with
-                | MarkedupText markup -> markup.Optimize text
-                | Empty -> String.Empty
+    /// <summary>
+    /// Renders to HTML with inline styles and CSS classes.
+    /// Text is HTML-entity-encoded; markups are applied via Markup.WrapAs("html", ...);
+    /// no post-processing optimization is needed.
+    /// </summary>
+    type HtmlRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = System.Net.WebUtility.HtmlEncode(text)
+            member _.ApplyMarkup(markup)(text) = markup.WrapAs("html", text)
+            member _.Prefix = String.Empty
+            member _.Postfix = String.Empty
+            member _.Optimize(text) = text
 
-            let firstMarkedupTextType = findFirstMarkedUpText ms
+    /// <summary>
+    /// Renders to plain text with no formatting.
+    /// Text is passed through unchanged; all markups are stripped.
+    /// </summary>
+    type PlainTextRenderStrategy() =
+        interface IRenderStrategy with
+            member _.EncodeText(text) = text
+            member _.ApplyMarkup(_markup)(text) = text
+            member _.Prefix = String.Empty
+            member _.Postfix = String.Empty
+            member _.Optimize(text) = text
 
-            match firstMarkedupTextType with
-            | Empty -> getText (ms, Empty)
-            | _ ->
-                optimize
-                    firstMarkedupTextType
-                    (prefix firstMarkedupTextType
-                     + getText (ms, Empty)
-                     + postfix firstMarkedupTextType)
+    /// <summary>
+    /// Registry of built-in render strategies, providing typed access and
+    /// format-string lookup for backward compatibility.
+    /// </summary>
+    module RenderStrategies =
+        /// Singleton ANSI render strategy.
+        let ansi : IRenderStrategy = AnsiRenderStrategy()
 
-        let renderAs (format: string) : string =
-            let fmt = format.ToLower()
-            match fmt with
-            | "ansi" -> toString()
-            | _ -> getTextAs fmt (ms, Empty)
+        /// Singleton HTML render strategy.
+        let html : IRenderStrategy = HtmlRenderStrategy()
 
-        let strVal: Lazy<string> = Lazy<string>(toString)
+        /// Singleton plain text render strategy.
+        let plainText : IRenderStrategy = PlainTextRenderStrategy()
 
-        [<TailCall>]
-        let rec toPlainText () : string =
-            let rec loop (sb: System.Text.StringBuilder) (content: Content list) =
-                match content with
-                | [] -> ()
-                | Text str :: tail -> 
-                    sb.Append(str) |> ignore
-                    loop sb tail
-                | MarkupText mStr :: tail -> 
-                    loop sb mStr.Content
-                    loop sb tail
+    /// <summary>
+    /// Type-safe discriminated union for selecting a render format.
+    /// Provides compile-time safety over string-based format dispatch.
+    /// Use with <c>Render(format: RenderFormat)</c> or <c>renderFormat</c>.
+    /// The <c>Custom</c> case allows ad-hoc strategies without implementing IRenderStrategy:
+    /// the first function encodes text, the second applies markup to encoded text.
+    /// </summary>
+    type RenderFormat =
+        /// Render to ANSI terminal escape codes.
+        | Ansi
+        /// Render to HTML with inline styles and CSS classes.
+        | Html
+        /// Render to plain text with no formatting.
+        | PlainText
+        /// Custom render format: (encodeText, applyMarkup).
+        | Custom of encodeText: (string -> string) * applyMarkup: (Markup -> string -> string)
+    with
+        /// Converts a RenderFormat to the corresponding IRenderStrategy.
+        member this.ToStrategy() : IRenderStrategy =
+            match this with
+            | Ansi -> RenderStrategies.ansi
+            | Html -> RenderStrategies.html
+            | PlainText -> RenderStrategies.plainText
+            | Custom (encodeText, applyMarkup) ->
+                { new IRenderStrategy with
+                    member _.EncodeText(text) = encodeText text
+                    member _.ApplyMarkup(markup)(text) = applyMarkup markup text
+                    member _.Prefix = String.Empty
+                    member _.Postfix = String.Empty
+                    member _.Optimize(text) = text }
 
-            let sb = StringBuilderPool.getStringBuilder()
-            try
-                loop sb ms.Content
-                sb.ToString()
-            finally
-                StringBuilderPool.returnStringBuilder sb
+    /// <summary>
+    /// Resolves a RenderFormat to the corresponding IRenderStrategy.
+    /// For built-in formats (Ansi, Html, PlainText), returns a cached singleton.
+    /// For Custom formats, creates a new strategy instance.
+    /// This is a module-level curried function suitable for pipelines and partial application,
+    /// equivalent to calling <c>format.ToStrategy()</c>.
+    /// </summary>
+    let forFormat (format: RenderFormat) : IRenderStrategy =
+        format.ToStrategy()
 
-        let plainStrVal: Lazy<string> = Lazy<string>(toPlainText)
+    /// <summary>
+    /// A flat, attributed markup string inspired by NSAttributedString.
+    /// Stores text contiguously with an immutable array of attribute runs.
+    /// Fully immutable — text is a .NET string, runs are ImmutableArray&lt;AttributeRun&gt;,
+    /// and markups within each run are ImmutableArray&lt;Markup&gt;.
+    /// Safe for concurrent access without synchronization.
+    /// </summary>
+    type MarkupString(text: string, runs: ImmutableArray<AttributeRun>) =
 
-        member val MarkupDetails = markupDetails with get, set
+        // ── Private rendering helpers ──────────────────────────────────
 
-        member val Content = content with get, set
+        /// <summary>
+        /// Core rendering engine that performs single-pass rendering by iterating
+        /// attribute runs and delegating text encoding, markup application, and
+        /// post-processing to the provided <see cref="IRenderStrategy"/>.
+        /// For each run: encodes the text segment, then applies all markup layers.
+        /// After all runs are processed, applies prefix/postfix and optimization.
+        /// </summary>
+        let renderWith (strategy: IRenderStrategy) : string =
+            if runs.Length = 0 then
+                strategy.EncodeText(text)
+            else
+                let renderRun (run: AttributeRun) =
+                    let segment = strategy.EncodeText(text.Substring(run.Start, run.Length))
+                    if run.Markups.Length = 0 then
+                        (false, segment)
+                    else
+                        let wrapped = run.Markups |> Seq.fold (fun acc markup -> strategy.ApplyMarkup markup acc) segment
+                        (true, wrapped)
 
-        member val Length = len.Value
+                let (hasAnyMarkup, rendered) =
+                    let sb = StringBuilder(text.Length * 2)
+                    let hasMarkup =
+                        runs |> Seq.fold (fun foundMarkup run ->
+                            let (hadMarkup, rendered) = renderRun run
+                            sb.Append(rendered) |> ignore
+                            foundMarkup || hadMarkup
+                        ) false
+                    (hasMarkup, sb.ToString())
 
-        member this.ToPlainText() : string = plainStrVal.Value
+                if hasAnyMarkup then
+                    let prefix = strategy.Prefix
+                    let postfix = strategy.Postfix
+                    let withFixing =
+                        if prefix.Length > 0 || postfix.Length > 0 then
+                            prefix + rendered + postfix
+                        else
+                            rendered
+                    strategy.Optimize(withFixing)
+                else
+                    rendered
 
-        member this.EvaluateWith(evaluator: System.Func<MarkupTypes, string, string>) : string =
-            evaluateWith (fun markup text -> evaluator.Invoke(markup, text))
+        /// Finds the first markup in any run, used to select the appropriate rendering strategy.
+        let findFirstMarkup () : Markup option =
+            runs |> Seq.tryPick (fun run ->
+                if run.Markups.Length > 0 then Some (run.Markups.[0])
+                else None)
 
-        member this.Render(format: string) : string = renderAs format
-            
-        override this.ToString() : string = strVal.Value
-        
-        override this.Equals(obj) =
-            let myPlainText = toPlainText()
+        /// Creates a render strategy based on the first markup type found.
+        /// This matches the original MarkupString.toString() behavior:
+        /// - Uses markup.Wrap() for applying markup (type-dispatched)
+        /// - Uses markup.Prefix/Postfix for wrapping
+        /// - Uses markup.Optimize for post-processing
+        let nativeToString () : string =
+            match findFirstMarkup () with
+            | None -> renderWith RenderStrategies.plainText
+            | Some markup ->
+                let strategy = {
+                    new IRenderStrategy with
+                        member _.EncodeText(t) = t
+                        member _.ApplyMarkup(m)(t) = m.Wrap(t)
+                        member _.Prefix = markup.Prefix
+                        member _.Postfix = markup.Postfix
+                        member _.Optimize(t) = markup.Optimize(t)
+                }
+                renderWith strategy
+
+        // ── Render cache (Lazy per built-in format) ────────────────────
+        let cachedToString = Lazy<string>(fun () -> nativeToString ())
+        let cachedPlainText = Lazy<string>(fun () -> text)
+        let cachedAnsiRender = Lazy<string>(fun () -> renderWith RenderStrategies.ansi)
+        let cachedHtmlRender = Lazy<string>(fun () -> renderWith RenderStrategies.html)
+        let cachedPlainTextRender = Lazy<string>(fun () -> renderWith RenderStrategies.plainText)
+
+        // ── Public API ─────────────────────────────────────────────────
+
+        /// The raw underlying text with no markup.
+        member _.Text = text
+
+        /// The attribute runs describing formatting ranges.
+        member _.Runs = runs
+
+        /// The plain text length.
+        member _.Length = text.Length
+
+        /// Returns the plain text with no formatting.
+        member _.ToPlainText() : string = cachedPlainText.Value
+
+        /// Renders to ANSI escape codes (default format).
+        override _.ToString() : string = cachedToString.Value
+
+        /// Renders to the specified format ("ansi", "html", "plaintext").
+        /// Results for built-in formats are cached.
+        member _.Render(format: string) : string =
+            match format.ToLowerInvariant() with
+            | "html" -> cachedHtmlRender.Value
+            | "plaintext" | "plain" -> cachedPlainTextRender.Value
+            | _ -> cachedAnsiRender.Value
+
+        /// <summary>
+        /// Renders to the specified format using the type-safe RenderFormat union.
+        /// Results for built-in formats (Ansi, Html, PlainText) are cached.
+        /// The Custom case is not cached.
+        /// </summary>
+        member _.Render(format: RenderFormat) : string =
+            match format with
+            | RenderFormat.Ansi -> cachedAnsiRender.Value
+            | RenderFormat.Html -> cachedHtmlRender.Value
+            | RenderFormat.PlainText -> cachedPlainTextRender.Value
+            | RenderFormat.Custom _ -> renderWith (format.ToStrategy())
+
+        /// <summary>
+        /// Renders using a specific render strategy.
+        /// This is the primary rendering method — type-safe, extensible, no string dispatch.
+        /// Use this to render with custom strategies.
+        /// </summary>
+        member _.RenderWith(strategy: IRenderStrategy) : string =
+            renderWith strategy
+
+        /// <summary>
+        /// Evaluates the attributed string using a custom evaluation function.
+        /// Groups consecutive characters by their markup and calls the evaluator per group.
+        /// For runs with multiple markups, evaluates from innermost to outermost,
+        /// matching the tree-based MarkupString's recursive evaluation behavior.
+        /// </summary>
+        member _.EvaluateWith(evaluator: Func<Markup option, string, string>) : string =
+            let sb = StringBuilder(text.Length)
+            for run in runs do
+                let segment = text.Substring(run.Start, run.Length)
+                if run.Markups.Length = 0 then
+                    sb.Append(evaluator.Invoke(None, segment)) |> ignore
+                else
+                    // Apply evaluator from innermost (index 0) to outermost (last index)
+                    // to match tree-based recursive behavior
+                    let result =
+                        run.Markups
+                        |> Seq.fold (fun acc markup -> evaluator.Invoke(Some markup, acc)) segment
+                    sb.Append(result) |> ignore
+            sb.ToString()
+
+        override _.Equals(obj) =
             match obj with
-            | :? MarkupString as other ->
-                myPlainText.Equals(other.ToPlainText())
-            | :? string as other ->
-                myPlainText.Equals(other)
+            | :? MarkupString as other -> text.Equals(other.Text)
+            | :? string as other -> text.Equals(other)
             | _ -> false
-        
-        override this.GetHashCode() = toPlainText().GetHashCode()
 
-    /// <summary>
-    /// Active pattern for extracting markup details and content from a MarkupString.
-    /// </summary>
-    /// <param name="markupStr">The MarkupString to extract from.</param>
-    let (|MarkupStringPattern|) (markupStr: MarkupString) =
-        (markupStr.MarkupDetails, markupStr.Content)
+        override _.GetHashCode() = text.GetHashCode()
 
-    /// <summary>
-    /// Creates a MarkupString from a markup and a plain string.
-    /// </summary>
-    /// <param name="markupDetails">The markup to apply.</param>
-    /// <param name="str">The plain string content.</param>
-    let markupSingle (markupDetails: Markup, str: string) : MarkupString =
-        MarkupString(MarkedupText markupDetails, [ Text str ])
+    // ── Construction functions ──────────────────────────────────────
 
-    /// <summary>
-    /// Creates a MarkupString from a markup and another MarkupString.
-    /// </summary>
-    /// <param name="markupDetails">The markup to apply.</param>
-    /// <param name="mu">The MarkupString content.</param>
-    let markupSingle2 (markupDetails: Markup, mu: MarkupString) : MarkupString =
-        MarkupString(MarkedupText markupDetails, [ MarkupText mu ])
+    /// Creates an MarkupString from a plain string with no markup.
+    let single (str: string) : MarkupString =
+        if str.Length = 0 then
+            MarkupString(String.Empty, ImmutableArray<AttributeRun>.Empty)
+        else
+            MarkupString(str, ImmutableArray.Create({ Start = 0; Length = str.Length; Markups = ImmutableArray<Markup>.Empty }))
 
-    /// <summary>
-    /// Creates a MarkupString from a markup and a sequence of MarkupStrings.
-    /// </summary>
-    /// <param name="markupDetails">The markup to apply.</param>
-    /// <param name="mu">The sequence of MarkupStrings.</param>
-    let markupMultiple (markupDetails: Markup, mu: seq<MarkupString>) : MarkupString =
-        MarkupString(MarkedupText markupDetails, mu |> Seq.map MarkupText |> Seq.toList)
-
-    /// <summary>
-    /// Creates a MarkupString from a plain string.
-    /// </summary>
-    /// <param name="str">The plain string content.</param>
-    let single (str: string) : MarkupString = MarkupString(Empty, [ Text str ])
-
-    /// <summary>
-    /// Creates a MarkupString from a sequence of MarkupStrings.
-    /// </summary>
-    /// <param name="mu">The sequence of MarkupStrings.</param>
-    let multiple (mu: seq<MarkupString>) : MarkupString =
-        MarkupString(Empty, mu |> Seq.map MarkupText |> Seq.toList)
-
-    /// <summary>
     /// Returns an empty MarkupString.
-    /// </summary>
     let empty () : MarkupString =
-        MarkupString(Empty, [ Text String.Empty ])
+        MarkupString(String.Empty, ImmutableArray<AttributeRun>.Empty)
+
+    /// Creates an MarkupString from a markup and a plain string.
+    let markupSingle (markup: Markup, str: string) : MarkupString =
+        let run = { Start = 0; Length = str.Length; Markups = ImmutableArray.Create(markup) }
+        MarkupString(str, ImmutableArray.Create(run))
+
+    /// Creates an MarkupString from multiple markups applied to a string.
+    let markupSingleMulti (markups: ImmutableArray<Markup>, str: string) : MarkupString =
+        let run = { Start = 0; Length = str.Length; Markups = markups }
+        MarkupString(str, ImmutableArray.Create(run))
+
+    // ── Core operations ────────────────────────────────────────────
+
+    /// Returns the plain text of an MarkupString.
+    let plainText (ams: MarkupString) : string = ams.ToPlainText()
+
+    /// Returns the plain text length.
+    let getLength (ams: MarkupString) : int = ams.Length
 
     /// <summary>
-    /// Creates a MarkupString by interspersing a delimiter between elements.
+    /// Concatenates two MarkupStrings.
+    /// Runs from the second string are shifted by the length of the first.
     /// </summary>
-    /// <param name="delimiter">The delimiter MarkupString.</param>
-    /// <param name="mu">The sequence of MarkupStrings.</param>
-    let multipleWithDelimiter (delimiter: MarkupString) (mu: MarkupString seq) : MarkupString =
-        mu |> Seq.intersperse delimiter |> multiple
+    let concat (a: MarkupString) (b: MarkupString) : MarkupString =
+        if a.Length = 0 then b
+        elif b.Length = 0 then a
+        else
+            let combinedText = a.Text + b.Text
+            let offset = a.Text.Length
+            let builder = ImmutableArray.CreateBuilder<AttributeRun>(a.Runs.Length + b.Runs.Length)
+            for run in a.Runs do
+                builder.Add(run)
+            for run in b.Runs do
+                builder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+            MarkupString(combinedText, builder.ToImmutable())
 
     /// <summary>
-    /// Intersperses a function-generated separator between elements of a list.
+    /// Concatenates any number of MarkupStrings in a single pass — O(n) total
+    /// where n is the sum of all text lengths and run counts.
+    /// Avoids the O(n²) intermediate allocations from chained binary concat calls
+    /// like <c>concat(concat(a,b),c)</c>.
     /// </summary>
-    /// <param name="sepFunc">Function to generate separator MarkupString given index.</param>
-    /// <param name="list">The list to intersperse.</param>
-    let intersperseFunc sepFunc list =
-        seq {
-            for i, element in list |> Seq.indexed do
-                if i > 0 then
-                    yield sepFunc i
-
-                yield element
-        }
-
-    /// <summary>
-    /// Creates a MarkupString by interspersing a function-generated delimiter between elements.
-    /// </summary>
-    /// <param name="delimiterFunc">Function to generate delimiter MarkupString given index.</param>
-    /// <param name="mu">The sequence of MarkupStrings.</param>
-    let multipleWithDelimiterFunc (delimiterFunc: int -> MarkupString) (mu: MarkupString seq) : MarkupString =
-        mu |> intersperseFunc delimiterFunc |> multiple
+    let concatMany (items: MarkupString seq) : MarkupString =
+        let textSb = StringBuilder()
+        let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>()
+        for item in items do
+            if item.Length > 0 then
+                let offset = textSb.Length
+                textSb.Append(item.Text) |> ignore
+                for run in item.Runs do
+                    runsBuilder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+        if textSb.Length = 0 then empty ()
+        else MarkupString(textSb.ToString(), runsBuilder.ToImmutable())
 
     /// <summary>
-    /// Serialization options for MarkupString, including color support.
+    /// Returns a substring of an MarkupString, preserving markup runs.
+    /// Runs that partially overlap the range are clipped to the range boundaries.
+    /// Uses binary search to find the first overlapping run in O(log n),
+    /// then scans forward only through overlapping runs — O(log n + k) total
+    /// where k is the number of runs in the range (vs O(n) linear scan).
     /// </summary>
-    let serializationOptions =
-        let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
-        serializeOption.Converters.Add(ColorJsonConverter())
-        serializeOption
-
-    /// <summary>
-    /// Serializes a MarkupString to a JSON string.
-    /// </summary>
-    /// <param name="markupStr">The MarkupString to serialize.</param>
-    let serialize (markupStr: MarkupString) : string =
-        JsonSerializer.Serialize(markupStr, serializationOptions)
-
-    /// <summary>
-    /// Deserializes a JSON string into a MarkupString.
-    /// </summary>
-    /// <param name="markupString">The JSON string to deserialize.</param>
-    let deserialize (markupString: string) : MarkupString =
-        if markupString.Length = 0 then
+    let substring (start: int) (length: int) (ams: MarkupString) : MarkupString =
+        if length <= 0 || start >= ams.Length then
             empty ()
         else
-            JsonSerializer.Deserialize(markupString, serializationOptions)
+            let actualStart = max 0 start
+            let actualEnd = min ams.Length (actualStart + length)
+            let actualLength = actualEnd - actualStart
+            let subText = ams.Text.Substring(actualStart, actualLength)
+            let startIdx = findFirstOverlappingRunIndex ams.Runs actualStart
 
-    /// <summary>
-    /// Returns the plain text representation of a MarkupString.
-    /// </summary>
-    /// <param name="markupStr">The MarkupString to extract plain text from.</param>
-    [<TailCall>]
-    let rec plainText (markupStr: MarkupString) : string = markupStr.ToPlainText()
-
-    /// <summary>
-    /// Returns a MarkupString containing only the plain text of the input.
-    /// </summary>
-    /// <param name="markupStr">The MarkupString to convert.</param>
-    let plainText2 (markupStr: MarkupString) : MarkupString =
-        MarkupString(Empty, [ Text(markupStr.ToPlainText()) ])
-
-    /// <summary>
-    /// Gets the length of the plain text in a MarkupString.
-    /// </summary>
-    /// <param name="markupStr">The MarkupString to measure.</param>
-    [<TailCall>]
-    let rec getLength (markupStr: MarkupString) : int = markupStr.Length
-
-    /// <summary>
-    /// Evaluates a MarkupString using a custom evaluator function.
-    /// Useful for reconstructing original function calls like ansi() from markup information.
-    /// </summary>
-    /// <param name="evaluator">Function that takes markup type and inner text, returns reconstructed string</param>
-    /// <param name="markupStr">The MarkupString to evaluate</param>
-    let evaluateWith (evaluator: System.Func<MarkupTypes, string, string>) (markupStr: MarkupString) : string =
-        markupStr.EvaluateWith(evaluator)
-
-    /// <summary>
-    /// Renders a MarkupString to the specified output format.
-    /// </summary>
-    /// <param name="format">The output format: "ansi" for ANSI escape codes (default), "html" for HTML spans.</param>
-    /// <param name="markupStr">The MarkupString to render.</param>
-    let render (format: string) (markupStr: MarkupString) : string =
-        markupStr.Render(format)
-
-    /// <summary>
-    /// The fixed CSS rules for the formatting classes emitted by Render("html").
-    /// Include this once in any page that displays HTML-rendered MarkupString output.
-    /// Color classes (e.g. .fg-ff0000, .bg-008000) are dynamic and generated by cssSheet.
-    /// </summary>
-    let fixedCss =
-        ".ms-bold { font-weight: bold; }\n" +
-        ".ms-faint { opacity: 0.5; }\n" +
-        ".ms-italic { font-style: italic; }\n" +
-        ".ms-underline { text-decoration: underline; }\n" +
-        ".ms-strike { text-decoration: line-through; }\n" +
-        ".ms-overline { text-decoration: overline; }\n" +
-        ".ms-blink { animation: blink 1s step-start infinite; }\n"
-
-    /// <summary>
-    /// Generates a CSS stylesheet for the given MarkupString.
-    /// Colors are emitted as inline style attributes in the HTML output, so only the fixed
-    /// formatting rules (ms-bold, ms-italic, etc.) are included in the stylesheet.
-    /// </summary>
-    /// <param name="markupStr">The MarkupString (unused; accepted for API compatibility).</param>
-    let cssSheet (_markupStr: MarkupString) : string =
-        fixedCss
-
-    /// <summary>
-    /// Optimizes a MarkupString by merging adjacent content with the same markup details
-    /// and lifting child content when the parent and child have the same markup details.
-    /// </summary>
-    /// <param name="markupStr">The MarkupString to optimize.</param>
-    let optimize (markupStr: MarkupString) : MarkupString =
-        let rec msOptimize (ms: MarkupString) =
-            // Depth-First optimization of nested MarkupStrings
-            // This function should go to the bottom of each tree branch first
-            // From there, it looks for any Content that, left to right, have the same MarkupDetails
-            // If so, it should merge their Content lists together.
-            // As it travels up, it should also check that the current MarkupDetails is the same as the child MarkupDetails
-            // If so, and the child is the only Content, it should lift the child's Content up to the parent.
-            
-            // Helper function to check if two MarkupTypes are equivalent
-            let markupTypesEqual (a: MarkupTypes) (b: MarkupTypes) =
-                match a, b with
-                | Empty, Empty -> true
-                | MarkedupText markupA, MarkedupText markupB -> markupA = markupB
-                | _ -> false
-            
-            // First, recursively optimize all nested MarkupStrings (depth-first)
-            let optimizedContent = 
-                ms.Content 
-                |> List.map (function
-                    | Text t -> Text t
-                    | MarkupText nestedMs -> MarkupText (msOptimize nestedMs))
-            
-            // Merge adjacent MarkupText items with the same MarkupDetails
-            let rec mergeAdjacent (contentList: Content list) (acc: Content list) =
-                match contentList with
-                | [] -> List.rev acc
-                | [single] -> List.rev (single :: acc)
-                | MarkupText a :: MarkupText b :: tail when markupTypesEqual a.MarkupDetails b.MarkupDetails ->
-                    // Merge the content lists of a and b
-                    let mergedContent = a.Content @ b.Content
-                    let merged = MarkupString(a.MarkupDetails, mergedContent)
-                    mergeAdjacent (MarkupText merged :: tail) acc
-                | head :: tail ->
-                    mergeAdjacent tail (head :: acc)
-            
-            let mergedContent = mergeAdjacent optimizedContent []
-            
-            // Check if we can lift child content up to parent
-            match mergedContent with
-            | [MarkupText child] when markupTypesEqual ms.MarkupDetails child.MarkupDetails ->
-                // Lift the child's content up to the parent level
-                MarkupString(ms.MarkupDetails, child.Content)
-            | _ ->
-                MarkupString(ms.MarkupDetails, mergedContent)
-        
-        msOptimize markupStr
-
-    /// <summary>
-    /// Concatenates two MarkupStrings, optionally inserting a separator.
-    /// </summary>
-    /// <param name="originalMarkupStr">The first MarkupString.</param>
-    /// <param name="newMarkupStr">The second MarkupString.</param>
-    /// <param name="optionalSeparator">An optional separator MarkupString.</param>
-    let concat
-        (originalMarkupStr: MarkupString)
-        (newMarkupStr: MarkupString)
-        ([<Optional; DefaultParameterValue(null)>] optionalSeparator: MarkupString option)
-        : MarkupString =
-        let separatorContent =
-            match optionalSeparator with
-            | Some separator -> [ MarkupText separator ]
-            | None -> []
-
-        match originalMarkupStr.MarkupDetails with
-        | Empty ->
-            let combinedContent =
-                originalMarkupStr.Content @ separatorContent @ [ MarkupText newMarkupStr ]
-            MarkupString(Empty, combinedContent)
-        | _ ->
-            let combinedContent =
-                [ MarkupText originalMarkupStr ]
-                @ separatorContent
-                @ [ MarkupText newMarkupStr ]
-            MarkupString(Empty, combinedContent)
-
-    /// <summary>
-    /// Concatenates and attaches a MarkupString to another, handling nested structures.
-    /// </summary>
-    /// <remarks>
-    /// This type of concatenation specifically extends the Markup that applies to the
-    /// last element of the original MarkupString to the concatenated value.
-    /// </remarks>
-    /// <param name="originalMarkupStr">The original MarkupString.</param>
-    /// <param name="newMarkupStr">The MarkupString to attach.</param>
-    /// <param name="optionalSeparator">An optional separator MarkupString.</param>
-    let rec concatAttach
-        (originalMarkupStr: MarkupString)
-        (newMarkupStr: MarkupString)
-        ([<Optional; DefaultParameterValue(null)>] optionalSeparator: MarkupString option)
-        : MarkupString =
-        if originalMarkupStr.Content |> List.last |> _.IsText then
-            MarkupString(originalMarkupStr.MarkupDetails, originalMarkupStr.Content @ [ MarkupText newMarkupStr ])
-        else
-            let split =
-                originalMarkupStr.Content |> List.splitAt (originalMarkupStr.Content.Length - 1)
-
-            match split with
-            | [ MarkupText oneElement ], [] ->
-                MarkupString(
-                    originalMarkupStr.MarkupDetails,
-                    [] @ [ MarkupText(concatAttach oneElement newMarkupStr optionalSeparator) ]
-                )
-            | list, [ MarkupText lastElement ] ->
-                MarkupString(
-                    originalMarkupStr.MarkupDetails,
-                    list @ [ MarkupText(concatAttach lastElement newMarkupStr optionalSeparator) ]
-                )
-            | _, [ Text _ ] -> concat originalMarkupStr newMarkupStr optionalSeparator
-            | _ -> failwith "concatAttach should never see an empty list."
-
-    /// <summary>
-    /// Returns a substring of a MarkupString, preserving markup.
-    /// </summary>
-    /// <param name="start">Start index.</param>
-    /// <param name="length">Length of substring.</param>
-    /// <param name="markupStr">Input MarkupString.</param>
-    [<TailCall>]
-    let rec substring (start: int) (length: int) (markupStr: MarkupString) : MarkupString =
-        let inline extractText str start length =
-            if length <= 0 || str = String.Empty then
-                None
-            else
-                Some(str.Substring(start, min (str.Length - start) length))
-
-        let rec substringAux contents start length acc =
-            if length <= 0 then
-                List.rev acc
-            else
-                match contents with
-                | [] -> List.rev acc
-                | head :: tail ->
-                    match head with
-                    | Text str when start < str.Length ->
-                        let skip = max start 0
-                        let take = min (str.Length - skip) length
-
-                        match extractText str skip take with
-                        | Some result -> substringAux tail (start - str.Length) (length - take) (Text result :: acc)
-                        | None -> substringAux tail (start - str.Length) length acc
-                    | Text str when start >= str.Length -> substringAux tail (start - str.Length) length acc
-                    | MarkupText innerMarkup ->
-                        let strLen = getLength innerMarkup
-
-                        if start < strLen then
-                            let skip = max start 0
-                            let take = min strLen length
-                            let subMarkup = substring skip take innerMarkup
-                            let subLength = getLength subMarkup
-
-                            if subLength > 0 then
-                                substringAux tail 0 (length - subLength) (MarkupText subMarkup :: acc)
+            let rec collectRuns i acc =
+                if i >= ams.Runs.Length then List.rev acc
+                else
+                    let run = ams.Runs[i]
+                    if run.Start >= actualEnd then List.rev acc
+                    else
+                        let runEnd = run.End
+                        if runEnd > actualStart then
+                            let clippedStart = max run.Start actualStart
+                            let clippedEnd = min runEnd actualEnd
+                            let clippedLength = clippedEnd - clippedStart
+                            if clippedLength > 0 then
+                                let clipped = {
+                                    Start = clippedStart - actualStart
+                                    Length = clippedLength
+                                    Markups = run.Markups
+                                }
+                                collectRuns (i + 1) (clipped :: acc)
                             else
-                                substringAux tail (start - strLen) length acc
+                                collectRuns (i + 1) acc
                         else
-                            substringAux tail (start - strLen) length acc
-                    | _ -> raise (InvalidOperationException "Encountered unexpected content type in substring operation.")
+                            collectRuns (i + 1) acc
 
-        MarkupString(markupStr.MarkupDetails, substringAux markupStr.Content start length [])
+            let clippedRuns = collectRuns startIdx []
+            MarkupString(subText, ImmutableArray.CreateRange(clippedRuns))
 
     /// <summary>
-    /// Returns all indexes where a search MarkupString occurs in another MarkupString.
+    /// Splits an MarkupString by a string delimiter.
     /// </summary>
-    /// <param name="markupStr">Input MarkupString.</param>
-    /// <param name="search">Search MarkupString.</param>
-    [<TailCall>]
-    let rec indexesOf (markupStr: MarkupString) (search: MarkupString) : seq<int> =
-        let text = plainText markupStr
-        let srch = plainText search
+    let split (delimiter: string) (ams: MarkupString) : MarkupString array =
+        if ams.Length = 0 then
+            [| ams |]
+        else
+            let text = ams.Text
+            let rec findPositions (pos: int) acc =
+                if pos >= text.Length then
+                    List.rev acc
+                else
+                    match text.IndexOf(delimiter, pos, StringComparison.Ordinal) with
+                    | -1 -> List.rev acc
+                    | idx ->
+                        let nextPos = if delimiter.Length > 0 then idx + delimiter.Length else idx + 1
+                        findPositions nextPos (idx :: acc)
+            let positions = findPositions 0 []
+            match positions with
+            | [] -> [| ams |]
+            | _ ->
+                let rec buildSegments (positions: int list) (lastPos: int) acc =
+                    match positions with
+                    | [] ->
+                        let seg = substring lastPos (text.Length - lastPos) ams
+                        List.rev (seg :: acc)
+                    | pos :: tail ->
+                        let len = pos - lastPos
+                        let seg = substring lastPos len ams
+                        buildSegments tail (pos + delimiter.Length) (seg :: acc)
+                buildSegments positions 0 [] |> Array.ofList
+
+    /// <summary>
+    /// Trims characters from the start, end, or both of an MarkupString.
+    /// </summary>
+    let trim (ams: MarkupString) (trimChars: string) (trimType: TrimType) : MarkupString =
+        let text = ams.Text
+        let len = text.Length
+        if len = 0 then ams
+        else
+            let rec countLeft i =
+                if i >= len || not (trimChars.Contains(text.[i])) then i
+                else countLeft (i + 1)
+            let rec countRight i =
+                if i < 0 || not (trimChars.Contains(text.[i])) then i + 1
+                else countRight (i - 1)
+            match trimType with
+            | TrimType.TrimStart ->
+                let leftTrim = countLeft 0
+                if leftTrim = 0 then ams
+                else substring leftTrim (len - leftTrim) ams
+            | TrimType.TrimEnd ->
+                let rightBoundary = countRight (len - 1)
+                if rightBoundary = len then ams
+                else substring 0 rightBoundary ams
+            | TrimType.TrimBoth ->
+                let leftTrim = countLeft 0
+                let rightBoundary = countRight (len - 1)
+                if leftTrim = 0 && rightBoundary = len then ams
+                else substring leftTrim (rightBoundary - leftTrim) ams
+
+    /// <summary>
+    /// Optimizes an MarkupString by merging adjacent runs with identical markups.
+    /// </summary>
+    let optimize (ams: MarkupString) : MarkupString =
+        if ams.Runs.Length <= 1 then ams
+        else
+            let markupsEqual (a: ImmutableArray<Markup>) (b: ImmutableArray<Markup>) =
+                a.Length = b.Length && Seq.forall2 (=) a b
+
+            let rec mergeRuns i (current: AttributeRun) acc =
+                if i >= ams.Runs.Length then
+                    List.rev (current :: acc)
+                else
+                    let next = ams.Runs[i]
+                    if current.End = next.Start && markupsEqual current.Markups next.Markups then
+                        mergeRuns (i + 1) { Start = current.Start; Length = current.Length + next.Length; Markups = current.Markups } acc
+                    else
+                        mergeRuns (i + 1) next (current :: acc)
+
+            let merged = mergeRuns 1 ams.Runs[0] []
+            MarkupString(ams.Text, ImmutableArray.CreateRange(merged))
+
+    /// <summary>
+    /// Returns the first index where a search string occurs.
+    /// Returns -1 if not found.
+    /// </summary>
+    let indexOf (ams: MarkupString) (search: string) : int =
+        ams.Text.IndexOf(search, StringComparison.Ordinal)
+
+    /// <summary>
+    /// Returns the last index where a search string occurs.
+    /// Returns -1 if not found.
+    /// </summary>
+    let indexOfLast (ams: MarkupString) (search: string) : int =
+        ams.Text.LastIndexOf(search, StringComparison.Ordinal)
+
+    /// <summary>
+    /// Applies a text transformation function to all text content, preserving runs.
+    /// For transforms that preserve text length (e.g., ToUpper), attribute runs are
+    /// preserved exactly. For length-changing transforms, the result is treated as
+    /// plain text with no markup (attribute information is lost).
+    /// </summary>
+    let apply (ams: MarkupString) (transform: string -> string) : MarkupString =
+        let newText = transform ams.Text
+        if newText.Length = ams.Text.Length then
+            MarkupString(newText, ams.Runs)
+        else
+            MarkupString(newText, ImmutableArray.Create({ Start = 0; Length = newText.Length; Markups = ImmutableArray<Markup>.Empty }))
+
+    /// <summary>
+    /// Removes a range of characters from the string and adjusts runs accordingly.
+    /// </summary>
+    let remove (ams: MarkupString) (index: int) (length: int) : MarkupString =
+        if length <= 0 || index >= ams.Length then ams
+        else
+            let left = substring 0 index ams
+            let rightStart = index + length
+            let right = substring rightStart (ams.Length - rightStart) ams
+            concat left right
+
+    /// <summary>
+    /// Replaces a range of characters with a new MarkupString.
+    /// </summary>
+    let replace (ams: MarkupString) (replacement: MarkupString) (index: int) (length: int) : MarkupString =
+        if index >= ams.Length then
+            concat ams replacement
+        elif index < 0 then
+            concat replacement ams
+        else
+            let left = substring 0 index ams
+            let rightStart = min (index + length) ams.Length
+            let right = substring rightStart (ams.Length - rightStart) ams
+            concatMany [left; replacement; right]
+
+    /// <summary>
+    /// Repeats an MarkupString the given number of times.
+    /// Uses exponential doubling for O(log n) concat operations.
+    /// </summary>
+    let repeat (ams: MarkupString) (count: int) : MarkupString =
+        if count <= 0 then empty ()
+        elif count = 1 then ams
+        else
+            let rec exponentialRepeat acc current remaining =
+                if remaining <= 0 then acc
+                elif remaining = 1 then concat acc current
+                elif remaining % 2 = 0 then exponentialRepeat acc (concat current current) (remaining / 2)
+                else exponentialRepeat (concat acc current) (concat current current) (remaining / 2)
+            exponentialRepeat (empty ()) ams count
+
+    /// <summary>
+    /// Creates padding of exact length by repeating padStr, avoiding intermediate allocations.
+    /// Constructs the result directly in a single pass instead of repeat+substring.
+    /// </summary>
+    let private buildPadding (padStr: MarkupString) (exactLength: int) : MarkupString =
+        if exactLength <= 0 then empty ()
+        elif padStr.Length = 0 then empty ()
+        else
+            let textSb = StringBuilder(exactLength)
+            let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>()
+            let mutable remaining = exactLength
+            while remaining > 0 do
+                let offset = textSb.Length
+                let charsToTake = min remaining padStr.Text.Length
+                if charsToTake = padStr.Text.Length then
+                    textSb.Append(padStr.Text) |> ignore
+                    for run in padStr.Runs do
+                        runsBuilder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+                else
+                    textSb.Append(padStr.Text.Substring(0, charsToTake)) |> ignore
+                    for run in padStr.Runs do
+                        if run.Start < charsToTake then
+                            let clippedLength = min run.Length (charsToTake - run.Start)
+                            if clippedLength > 0 then
+                                runsBuilder.Add({ Start = run.Start + offset; Length = clippedLength; Markups = run.Markups })
+                remaining <- remaining - charsToTake
+            MarkupString(textSb.ToString(), runsBuilder.ToImmutable())
+
+    /// <summary>
+    /// Pads an MarkupString to a specified width.
+    /// Constructs padding directly to exact length — no intermediate repeat+truncate.
+    /// </summary>
+    let pad (ams: MarkupString) (padStr: MarkupString) (width: int) (padType: PadType) (truncType: TruncationType) : MarkupString =
+        let len = ams.Length
+        let padLen = padStr.Length
+        let lengthToPad = width - len
+        if lengthToPad <= 0 then
+            match truncType with
+            | TruncationType.Overflow -> ams
+            | TruncationType.Truncate ->
+                if lengthToPad = 0 then ams
+                else substring 0 width ams
+        else
+            match padType with
+            | PadType.Right ->
+                let padding = buildPadding padStr lengthToPad
+                let result = concat ams padding
+                match truncType with
+                | TruncationType.Truncate -> substring 0 width result
+                | _ -> result
+            | PadType.Left ->
+                let padding = buildPadding padStr lengthToPad
+                let result = concat padding ams
+                match truncType with
+                | TruncationType.Truncate -> substring 0 width result
+                | _ -> result
+            | PadType.Center ->
+                let leftPadLength = lengthToPad / 2
+                let rightPadLength = lengthToPad - leftPadLength
+                let leftPad = buildPadding padStr leftPadLength
+                let rightPad = buildPadding padStr rightPadLength
+                let result = concatMany [leftPad; ams; rightPad]
+                match truncType with
+                | TruncationType.Truncate -> substring 0 width result
+                | _ -> result
+            | PadType.Full ->
+                match truncType with
+                | TruncationType.Truncate when ams.Length > width -> substring 0 width ams
+                | TruncationType.Overflow when ams.Length > width -> ams
+                | _ ->
+                    let wordArr = split " " ams
+                    let fences = Math.Max(wordArr.Length - 1, 0)
+                    if fences = 0 then ams
+                    else
+                        let totalSpaces = fences + lengthToPad
+                        let space = single " "
+                        let minimumFenceWidth = totalSpaces / fences
+                        let thickerFences = totalSpaces % fences
+                        let fenceStr = repeat space minimumFenceWidth
+                        let thickFenceStr = repeat space (minimumFenceWidth + 1)
+                        let delFunc = (fun i -> if i <= thickerFences then thickFenceStr else fenceStr)
+                        // Inline intersperse + concatMany to avoid forward reference
+                        let parts = seq {
+                            for i, word in wordArr |> Seq.indexed do
+                                if i > 0 then
+                                    yield delFunc i
+                                yield word
+                        }
+                        concatMany parts
+
+    /// <summary>
+    /// Creates an MarkupString by interspersing a delimiter between elements.
+    /// Uses single-pass builder — O(n) instead of O(n²) from left-fold concat.
+    /// </summary>
+    let multipleWithDelimiter (delimiter: MarkupString) (items: MarkupString seq) : MarkupString =
+        let textSb = StringBuilder()
+        let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>()
+        let mutable first = true
+        for item in items do
+            if not first then
+                let offset = textSb.Length
+                textSb.Append(delimiter.Text) |> ignore
+                for run in delimiter.Runs do
+                    runsBuilder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+            first <- false
+            let offset = textSb.Length
+            textSb.Append(item.Text) |> ignore
+            for run in item.Runs do
+                runsBuilder.Add({ Start = run.Start + offset; Length = run.Length; Markups = run.Markups })
+        if first then empty ()
+        else MarkupString(textSb.ToString(), runsBuilder.ToImmutable())
+
+    /// <summary>
+    /// Inserts an MarkupString at a specified index.
+    /// </summary>
+    let insertAt (input: MarkupString) (insert: MarkupString) (index: int) : MarkupString =
+        if index <= 0 then concat insert input
+        elif index >= input.Length then concat input insert
+        else
+            let before = substring 0 index input
+            let after = substring index (input.Length - index) input
+            // Find the run at the insertion point to inherit its markups
+            let runIndex = findFirstOverlappingRunIndex input.Runs index
+            let wrappedInsert =
+                if runIndex >= 0 && runIndex < input.Runs.Length then
+                    let run = input.Runs.[runIndex]
+                    if run.Markups.Length > 0 then
+                        // Wrap insert with the surrounding markup context
+                        let insertRuns = ImmutableArray.CreateBuilder<AttributeRun>(insert.Runs.Length)
+                        for r in insert.Runs do
+                            let newMarkups = ImmutableArray.CreateBuilder<Markup>(r.Markups.Length + run.Markups.Length)
+                            newMarkups.AddRange(r.Markups)
+                            newMarkups.AddRange(run.Markups)
+                            insertRuns.Add({ Start = r.Start; Length = r.Length; Markups = newMarkups.ToImmutable() })
+                        MarkupString(insert.Text, insertRuns.ToImmutable())
+                    else insert
+                else insert
+            concatMany [before; wrappedInsert; after]
+
+    // ── Additional functions for API compatibility ──────────────────
+
+    /// Creates an MarkupString from a sequence of MarkupStrings.
+    let multiple (items: seq<MarkupString>) : MarkupString =
+        concatMany items
+
+    /// Creates an MarkupString wrapping another with the given markup.
+    let markupSingle2 (markup: Markup, inner: MarkupString) : MarkupString =
+        if inner.Length = 0 then
+            // Even for empty text, preserve the markup (e.g., <br></br>)
+            let run = { Start = 0; Length = 0; Markups = ImmutableArray.Create(markup) }
+            MarkupString("", ImmutableArray.Create(run))
+        else
+            let runsBuilder = ImmutableArray.CreateBuilder<AttributeRun>(inner.Runs.Length)
+            for run in inner.Runs do
+                let newMarkups = ImmutableArray.CreateBuilder<Markup>(run.Markups.Length + 1)
+                newMarkups.AddRange(run.Markups)
+                newMarkups.Add(markup)
+                runsBuilder.Add({ Start = run.Start; Length = run.Length; Markups = newMarkups.ToImmutable() })
+            MarkupString(inner.Text, runsBuilder.ToImmutable())
+
+    /// Creates an MarkupString from a markup and a sequence of MarkupStrings.
+    let markupMultiple (markup: Markup, items: seq<MarkupString>) : MarkupString =
+        markupSingle2 (markup, concatMany items)
+
+    /// Returns an MarkupString containing only the plain text (no markup).
+    let plainText2 (ams: MarkupString) : MarkupString =
+        single (ams.ToPlainText())
+
+    /// Returns the first index where a search MarkupString occurs.
+    /// Returns -1 if not found.
+    let indexOf2 (ams: MarkupString) (search: MarkupString) : int =
+        ams.Text.IndexOf(search.Text, StringComparison.Ordinal)
+
+    /// Returns all indexes where a search string occurs.
+    let indexesOf (ams: MarkupString) (search: MarkupString) : seq<int> =
+        let text = ams.Text
+        let srch = search.Text
 
         let rec findDelimiters pos acc =
             if pos < text.Length then
@@ -655,7 +820,6 @@ module MarkupStringModule =
                 | -1 -> Seq.rev acc
                 | foundPos ->
                     let newAcc = foundPos :: acc
-
                     if srch <> String.Empty then
                         findDelimiters (foundPos + srch.Length) newAcc
                     else
@@ -665,342 +829,129 @@ module MarkupStringModule =
 
         findDelimiters 0 []
 
-    /// <summary>
-    /// Returns the first index where a search MarkupString occurs.
-    /// Returns -1 if the item is not found.
-    /// </summary>
-    /// <param name="markupStr">Input MarkupString.</param>
-    /// <param name="search">Search MarkupString.</param>
-    [<TailCall>]
-    let rec indexOf (markupStr: MarkupString) (search: MarkupString) : int =
-        let text = plainText markupStr
-        let srch = plainText search
-        text.IndexOf(srch, StringComparison.Ordinal)
-        
-    [<TailCall>]
-    let rec indexOf2 (markupStr: MarkupString) (search: string) : int =
-        (plainText markupStr).IndexOf(search, StringComparison.Ordinal)
-        
-    /// <summary>
     /// Returns the last index where a search MarkupString occurs.
-    /// </summary>
-    /// <param name="markupStr">Input MarkupString.</param>
-    /// <param name="search">Search MarkupString.</param>
-    [<TailCall>]
-    let rec indexOfLast (markupStr: MarkupString) (search: MarkupString) : int =
-        let text = plainText markupStr
-        let srch = plainText search
-        text.LastIndexOf(srch, StringComparison.Ordinal)
+    /// Returns -1 if not found.
+    let indexOfLast2 (ams: MarkupString) (search: MarkupString) : int =
+        ams.Text.LastIndexOf(search.Text, StringComparison.Ordinal)
 
-    /// <summary>
-    /// Splits a MarkupString by a string delimiter.
-    /// </summary>
-    /// <param name="delimiter">The delimiter string.</param>
-    /// <param name="markupStr">The MarkupString to split.</param>
-    [<TailCall>]
-    let rec split (delimiter: string) (markupStr: MarkupString) : MarkupString[] =
-        if markupStr.Length = 0 then
-            [| markupStr |]
+    /// Splits by an MarkupString delimiter (uses plain text of delimiter).
+    let split2 (delimiter: MarkupString) (ams: MarkupString) : MarkupString array =
+        split (delimiter.ToPlainText()) ams
+
+    /// Applies a transformation function, operating on each segment individually.
+    let apply2 (ams: MarkupString) (transform: MarkupString -> MarkupString) : MarkupString =
+        let segments =
+            ams.Runs |> Seq.map (fun run ->
+                let segment = substring run.Start run.Length ams
+                transform segment)
+        concatMany segments
+
+    /// Trims an MarkupString using another MarkupString as trim characters.
+    let trim2 (ams: MarkupString) (trimStr: MarkupString) (trimType: TrimType) : MarkupString =
+        trim ams (trimStr.ToPlainText()) trimType
+
+    /// Concatenates and attaches: the last markup context of `a` extends to cover `b`.
+    /// In the tree model, this recursively nests `b` inside `a`'s last MarkupText node.
+    /// In the flat model, this finds the outermost markup from `a`'s last run and
+    /// applies it as a wrapper to all runs of `b`, then concatenates.
+    let concatAttach (a: MarkupString) (b: MarkupString) : MarkupString =
+        if a.Runs.Length = 0 then concat a b
         else
-            let fullText = plainText markupStr
-            
-            let rec findDelimiters (text: string) (pos: int) acc =
-                if pos >= text.Length then
-                    List.rev acc
-                else
-                    match text.IndexOf(delimiter, pos, StringComparison.Ordinal) with
-                    | -1 -> List.rev acc
-                    | idx ->
-                        let nextPos = if delimiter.Length > 0 then idx + delimiter.Length else idx + 1
-                        findDelimiters text nextPos (idx :: acc)
+            let lastRun = a.Runs.[a.Runs.Length - 1]
+            if lastRun.Markups.Length = 0 then
+                // Last run of 'a' has no markup — just concat
+                concat a b
+            else
+                // Find the outermost markup (last in the markups array = outermost from markupSingle2)
+                let outerMarkup = lastRun.Markups.[lastRun.Markups.Length - 1]
+                // Wrap b with that outer markup, then concat
+                let wrappedB = markupSingle2(outerMarkup, b)
+                concat a wrappedB
 
-            let delimiterPositions = findDelimiters fullText 0 []
+    /// Intersperses a function-generated separator between elements of a sequence.
+    let intersperseFunc (sepFunc: int -> MarkupString) (items: MarkupString seq) : MarkupString seq =
+        seq {
+            for i, element in items |> Seq.indexed do
+                if i > 0 then
+                    yield sepFunc i
+                yield element
+        }
 
-            match delimiterPositions with
-            | [] -> [| markupStr |]  // No delimiters found, return original
-            | positions ->
-                let rec buildSplits (positions: int list) (lastPos: int) (segments: MarkupString list) =
-                    match positions with
-                    | [] ->
-                        let lastSegment = substring lastPos (fullText.Length - lastPos) markupStr
-                        List.rev (lastSegment :: segments)
-                    | pos :: tail ->
-                        let length = pos - lastPos
-                        let segment = substring lastPos length markupStr
-                        buildSplits tail (pos + delimiter.Length) (segment :: segments)
+    /// Creates by interspersing a function-generated delimiter between elements.
+    let multipleWithDelimiterFunc (delimiterFunc: int -> MarkupString) (items: MarkupString seq) : MarkupString =
+        items |> intersperseFunc delimiterFunc |> concatMany
 
-                buildSplits positions 0 [] |> Array.ofList
+    /// Renders an MarkupString to the specified output format.
+    let render (format: string) (ams: MarkupString) : string =
+        ams.Render(format)
 
-    /// <summary>
-    /// Splits a MarkupString by another MarkupString as delimiter.
-    /// </summary>
-    /// <param name="delimiter">The delimiter MarkupString.</param>
-    /// <param name="markupStr">The MarkupString to split.</param>
-    let split2 (delimiter: MarkupString) (markupStr: MarkupString) = split (plainText delimiter) markupStr
+    /// Renders an MarkupString using the type-safe RenderFormat union.
+    let renderFormat (format: RenderFormat) (ams: MarkupString) : string =
+        ams.Render(format)
 
-    /// <summary>
-    /// Applies a transformation function to the text content of a MarkupString.
-    /// </summary>
-    /// <param name="str">The MarkupString to transform.</param>
-    /// <param name="transform">The transformation function.</param>
-    [<TailCall>]
-    let rec apply (str: MarkupString) (transform: string -> string) : MarkupString =
-        let rec mapContent content =
-            content
-            |> List.map (function
-                | Text s -> Text(transform s)
-                | MarkupText m -> MarkupText(apply m transform))
+    /// Evaluates an MarkupString using a custom evaluator function.
+    let evaluateWith (evaluator: System.Func<Markup option, string, string>) (ams: MarkupString) : string =
+        ams.EvaluateWith(evaluator)
 
-        MarkupString(str.MarkupDetails, mapContent str.Content)
-        
-    /// <summary>
-    /// Applies a transformation function to the text content of a MarkupString.
-    /// </summary>
-    /// <param name="str">The MarkupString to transform.</param>
-    /// <param name="transform">The transformation function.</param>
-    [<TailCall>]
-    let rec apply2 (str: MarkupString) (transform: MarkupString -> MarkupString) : MarkupString =
-        let rec mapContent content =
-            content
-            |> List.map (function
-                | Text s -> MarkupText (transform (single s))
-                | MarkupText m -> MarkupText (apply2 m transform))
+    /// The fixed CSS rules for formatting classes emitted by Render("html").
+    let fixedCss =
+        ".ms-bold { font-weight: bold; }\n" +
+        ".ms-faint { opacity: 0.5; }\n" +
+        ".ms-italic { font-style: italic; }\n" +
+        ".ms-underline { text-decoration: underline; }\n" +
+        ".ms-strike { text-decoration: line-through; }\n" +
+        ".ms-overline { text-decoration: overline; }\n" +
+        ".ms-blink { animation: blink 1s step-start infinite; }\n"
 
-        MarkupString(str.MarkupDetails, mapContent str.Content)
+    /// Generates a CSS stylesheet (returns fixed CSS rules).
+    let cssSheet (_ams: MarkupString) : string =
+        fixedCss
 
-    /// <summary>
-    /// Inserts a MarkupString at a specified index in another MarkupString.
-    /// </summary>
-    /// <param name="input">The original MarkupString.</param>
-    /// <param name="insert">The MarkupString to insert.</param>
-    /// <param name="index">The index at which to insert.</param>
-    let insertAt (input: MarkupString) (insert: MarkupString) (index: int) : MarkupString =
-        let len = getLength input
-
-        if index <= 0 then
-            concat insert input None
-        elif index >= len then
-            concat input insert None
-        else
-            let before = substring 0 index input
-            let after = substring index (len - index) input
-            let wrappedInsert = MarkupString(before.MarkupDetails, [ MarkupText insert ])
-            concat (concat before wrappedInsert None) after None
-
-    /// <summary>
-    /// Trim a string from the start, end, or both ends based on the specified TrimType.
-    /// Optimized to avoid building sequences of all match positions.
-    /// </summary>
-    /// <param name="markupStr">Input MarkupString.</param>
-    /// <param name="trimStr">String to trim.</param>
-    /// <param name="trimType">Trim type (start, end, both).</param>
-    let trim (markupStr: MarkupString) (trimStr: MarkupString) (trimType: TrimType) : MarkupString =
-        let text = plainText markupStr
-        let trimChars = plainText trimStr
-        let len = text.Length
-
-        let rec countLeft i =
-            if i >= len || not (trimChars.Contains(text.[i])) then i
-            else countLeft (i + 1)
-
-        let rec countRight i =
-            if i < 0 || not (trimChars.Contains(text.[i])) then i + 1
-            else countRight (i - 1)
-
-        match trimType with
-        | TrimStart ->
-            let leftTrim = countLeft 0
-            if leftTrim = 0 then markupStr
-            else substring leftTrim (len - leftTrim) markupStr
-        | TrimEnd ->
-            let rightBoundary = countRight (len - 1)
-            if rightBoundary = len then markupStr
-            else substring 0 rightBoundary markupStr
-        | TrimBoth ->
-            let leftTrim = countLeft 0
-            let rightBoundary = countRight (len - 1)
-            if leftTrim = 0 && rightBoundary = len then markupStr
-            else substring leftTrim (rightBoundary - leftTrim) markupStr
-
-    /// <summary>
-    /// Repeat a MarkupString a specified number of times, concatenating them to the aggregator.
-    /// Uses exponential growth strategy for O(log n) concat operations instead of O(n).
-    /// </summary>
-    /// <param name="markupStr">The MarkupString to repeat.</param>
-    /// <param name="count">The number of times to repeat.</param>
-    /// <param name="aggregator">The initial MarkupString to aggregate into.</param>
-    [<TailCall>]
-    let rec repeat (markupStr: MarkupString) (count: int) (aggregator: MarkupString) =
-        if count <= 0 then
-            aggregator
-        else
-            let rec exponentialRepeat acc current remaining =
-                if remaining <= 0 then
-                    acc
-                else if remaining = 1 then
-                    concat acc current None
-                else if remaining % 2 = 0 then
-                    exponentialRepeat acc (concat current current None) (remaining / 2)
-                else
-                    exponentialRepeat (concat acc current None) (concat current current None) (remaining / 2)
-            exponentialRepeat aggregator markupStr count
-
-    /// <summary>
-    /// Centers a MarkupString within a specified width using a padding string on the right.
-    /// </summary>
-    /// <param name="markupStr">Input MarkupString.</param>
-    /// <param name="padStr">Padding MarkupString for left side.</param>
-    /// <param name="padStrRight">Padding MarkupString for right side.</param>
-    /// <param name="width">Total width.</param>
-    /// <param name="truncType">Truncation type.</param>
+    /// Centers an MarkupString with different left/right padding.
     let center2
-        (markupStr: MarkupString)
+        (ams: MarkupString)
         (padStr: MarkupString)
         (padStrRight: MarkupString)
         (width: int)
         (truncType: TruncationType)
         : MarkupString =
-        let len = getLength markupStr
-        let padLen = getLength padStr
-        let padLenRight = getLength padStrRight
+        let len = ams.Length
         let lengthToPad = width - len
-        let lengthTooLongPredicate = lengthToPad <= 0
 
-        match truncType with
-        | Overflow when lengthTooLongPredicate -> markupStr
-        | Truncate when lengthTooLongPredicate -> substring 0 lengthToPad markupStr
-        | Overflow ->
+        if lengthToPad <= 0 then
+            match truncType with
+            | TruncationType.Overflow -> ams
+            | TruncationType.Truncate ->
+                if lengthToPad = 0 then ams
+                else substring 0 width ams
+        else
             let leftPadLength = lengthToPad / 2
             let rightPadLength = lengthToPad - leftPadLength
+            let leftPad = buildPadding padStr leftPadLength
+            let rightPad = buildPadding padStrRight rightPadLength
+            let result = concatMany [leftPad; ams; rightPad]
+            match truncType with
+            | TruncationType.Truncate -> substring 0 width result
+            | _ -> result
 
-            let padding =
-                repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
+    // ── Wildcard/regex functions ────────────────────────────────────
 
-            let paddingRight =
-                repeat padStrRight ((width / padLenRight) + 1) (empty ())
-                |> substring 0 lengthToPad
+    open System.Text.RegularExpressions
 
-            let leftPad = substring 0 leftPadLength padding
-            let rightPad = substring leftPadLength rightPadLength paddingRight
-
-            concat leftPad markupStr None |> fun x -> concat x rightPad None
-        | Truncate ->
-            let leftPadLength = lengthToPad / 2
-            let rightPadLength = lengthToPad - leftPadLength
-
-            let padding =
-                repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
-
-            let paddingRight =
-                repeat padStrRight ((width / padLenRight) + 1) (empty ())
-                |> substring 0 lengthToPad
-
-            let leftPad = substring 0 leftPadLength padding
-            let rightPad = substring leftPadLength rightPadLength paddingRight
-
-            concat leftPad markupStr None
-            |> fun x -> concat x rightPad None
-            |> substring 0 width
-
-
-    /// <summary>
-    /// Pads a MarkupString to a specified width using a padding string and pad type.
-    /// </summary>
-    /// <param name="markupStr">Input MarkupString.</param>
-    /// <param name="padStr">Padding MarkupString.</param>
-    /// <param name="width">Total width.</param>
-    /// <param name="padType">Pad type (left, right, center, full).</param>
-    /// <param name="truncType">Truncation type.</param>
-    let pad
-        (markupStr: MarkupString)
-        (padStr: MarkupString)
-        (width: int)
-        (padType: PadType)
-        (truncType: TruncationType)
-        : MarkupString =
-        let len = getLength markupStr
-        let padLen = getLength padStr
-        let lengthToPad = width - len
-        let repeatCount = (lengthToPad / padLen) + 1
-        let lengthTooLongPredicate = lengthToPad <= 0
-
-        match padType, truncType with
-        | _, Overflow when lengthTooLongPredicate -> markupStr
-        | _, Truncate when lengthToPad = 0 -> markupStr
-        | _, Truncate when lengthTooLongPredicate -> substring 0 width markupStr
-        | Right, Overflow ->
-            repeat padStr repeatCount (empty ())
-            |> substring 0 lengthToPad
-            |> fun x -> concat markupStr x None
-        | Right, Truncate ->
-            repeat padStr repeatCount (empty ())
-            |> substring 0 lengthToPad
-            |> fun x -> concat markupStr x None
-            |> substring 0 width
-        | Left, Overflow ->
-            repeat padStr repeatCount (empty ())
-            |> substring 0 lengthToPad
-            |> fun x -> concat x markupStr None
-        | Left, Truncate ->
-            repeat padStr repeatCount (empty ())
-            |> substring 0 lengthToPad
-            |> fun x -> concat x markupStr None
-            |> substring 0 width
-        | Center, Overflow ->
-            let leftPadLength = lengthToPad / 2
-            let rightPadLength = lengthToPad - leftPadLength
-
-            let padding =
-                repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
-
-            let leftPad = substring 0 leftPadLength padding
-            let rightPad = substring leftPadLength rightPadLength padding
-
-            concat leftPad markupStr None |> fun x -> concat x rightPad None
-        | Center, Truncate ->
-            let leftPadLength = lengthToPad / 2
-            let rightPadLength = lengthToPad - leftPadLength
-
-            let padding =
-                repeat padStr ((width / padLen) + 1) (empty ()) |> substring 0 lengthToPad
-
-            let leftPad = substring 0 leftPadLength padding
-            let rightPad = substring leftPadLength rightPadLength padding
-
-            concat leftPad markupStr None
-            |> fun x -> concat x rightPad None
-            |> substring 0 width
-        // Full Justification requires the Padding String to be a space.
-        | Full, Truncate when markupStr.Length > width -> substring 0 width markupStr
-        | Full, Overflow when markupStr.Length > width -> markupStr
-        | Full, _ ->
-            let wordArr = split " " markupStr
-            let fences = Math.Max(wordArr.Length - 1, 0)
-            let totalSpaces = fences + lengthToPad
-            let space = single " "
-            let minimumFenceWidth = totalSpaces / fences
-            let thickerFences = totalSpaces % fences
-            let fenceStr = (repeat space minimumFenceWidth (empty ()))
-            let thickFenceStr = (repeat space (minimumFenceWidth + 1) (empty ()))
-            let delFunc = (fun i -> if i <= thickerFences then thickFenceStr else fenceStr)
-
-            multipleWithDelimiterFunc delFunc wordArr
+    /// Constant function: always returns the given value regardless of input.
+    let private konst value _ = value
 
     type private GlobPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\*" >
     type private QuestionPatternRegex = FSharp.Text.RegexProvider.Regex< @"(?<!\\)\\\?" >
     type private KindPatternRegex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\*" >
     type private KindPattern2Regex = FSharp.Text.RegexProvider.Regex< @"\\\\\\\?" >
 
-    // Cache compiled regex instances to avoid repeated allocations
     let private globPatternRegexInstance = GlobPatternRegex()
     let private questionPatternRegexInstance = QuestionPatternRegex()
     let private kindPatternRegexInstance = KindPatternRegex()
     let private kindPattern2RegexInstance = KindPattern2Regex()
 
-    /// <summary>
-    /// Converts a wildcard pattern MarkupString to a regex string.
-    /// </summary>
-    /// <param name="pattern">The wildcard pattern as a MarkupString.</param>
+    /// Converts a wildcard pattern to a regex string.
     let getWildcardMatchAsRegex (pattern: MarkupString) : string =
         let applyRegexPattern (pat: string) =
             pat
@@ -1010,11 +961,8 @@ module MarkupStringModule =
             |> fun x -> kindPattern2RegexInstance.TypedReplace(x, konst @"\?")
 
         pattern |> plainText |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
-        
-    /// <summary>
+
     /// Converts a wildcard pattern string to a regex string.
-    /// </summary>
-    /// <param name="pattern">The wildcard pattern as a string.</param>
     let getWildcardMatchAsRegex2 (pattern: string) : string =
         let applyRegexPattern (pat: string) =
             pat
@@ -1025,29 +973,17 @@ module MarkupStringModule =
 
         pattern |> Regex.Escape |> (fun x -> $"^{x}$") |> applyRegexPattern
 
-    /// <summary>
-    /// Determines if the input MarkupString matches the wildcard pattern.
-    /// </summary>
-    /// <param name="input">The input MarkupString.</param>
-    /// <param name="pattern">The wildcard pattern MarkupString.</param>
+    /// Determines if the input matches the wildcard pattern.
     let isWildcardMatch (input: MarkupString) (pattern: MarkupString) : bool =
         let newPattern = getWildcardMatchAsRegex pattern
         (plainText input, newPattern) |> Regex.IsMatch
-        
-    /// <summary>
-    /// Determines if the input MarkupString matches the wildcard pattern.
-    /// </summary>
-    /// <param name="input">The input MarkupString.</param>
-    /// <param name="pattern">The wildcard pattern MarkupString.</param>
+
+    /// Determines if the input matches the wildcard pattern string.
     let isWildcardMatch2 (input: MarkupString) (pattern: string) : bool =
         let newPattern = getWildcardMatchAsRegex2 pattern
         (plainText input, newPattern) |> Regex.IsMatch
 
-    /// <summary>
-    /// Gets regex matches from a MarkupString input and pattern.
-    /// </summary>
-    /// <param name="input">The input MarkupString.</param>
-    /// <param name="pattern">The regex pattern string.</param>
+    /// Gets regex matches from input and pattern.
     let getMatches (input: MarkupString) (pattern: string) : (Match * MarkupString seq) seq =
         let captureToString (captureGroup: Group) =
             substring captureGroup.Index captureGroup.Length input
@@ -1060,55 +996,43 @@ module MarkupStringModule =
         |> Seq.cast<Match>
         |> Seq.map allMatches
 
-    /// <summary>
-    /// Gets regex matches from a MarkupString input and MarkupString pattern.
-    /// </summary>
-    /// <param name="input">The input MarkupString.</param>
-    /// <param name="pattern">The regex pattern as a MarkupString.</param>
+    /// Gets regex matches from input and pattern MarkupStrings.
     let getRegexpMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
         getMatches input (plainText pattern)
 
-    /// <summary>
-    /// Gets wildcard matches from a MarkupString input and pattern.
-    /// </summary>
-    /// <param name="input">The input MarkupString.</param>
-    /// <param name="pattern">The wildcard pattern MarkupString.</param>
+    /// Gets wildcard matches from input and pattern.
     let getWildcardMatches (input: MarkupString) (pattern: MarkupString) : (Match * MarkupString seq) seq =
         getMatches input (getWildcardMatchAsRegex pattern)
 
-    /// <summary>
-    /// Removes a substring from a MarkupString at a given index and length.
-    /// </summary>
-    /// <param name="markupStr">The MarkupString to remove from.</param>
-    /// <param name="index">The starting index to remove.</param>
-    /// <param name="length">The number of characters to remove.</param>
-    [<TailCall>]
-    let rec remove (markupStr: MarkupString) (index: int) (length: int) : MarkupString =
-        let rightStart = index + length
-        let rightEnd = markupStr.Length - rightStart
-        let left = markupStr |> substring 0 index
-        let right = markupStr |> substring rightStart rightEnd
-        (concat left right None)
+    // ── Serialization ──────────────────────────────────────────────
 
-    /// <summary>
-    /// Replaces a value in markupStr with the one in replacementStr,
-    /// writing over position 'index' to 'index + length'.
-    /// Optimized to perform single-pass replacement instead of remove+insertAt.
-    /// </summary>
-    /// <param name="markupStr">Original String</param>
-    /// <param name="replacementStr">Replacement String</param>
-    /// <param name="index">Index where to replace</param>
-    /// <param name="length">Length of the area to replace over.</param>
-    [<TailCall>]
-    let rec replace (markupStr: MarkupString) (replacementStr: MarkupString) (index: int) (length: int) : MarkupString =
-        if index >= markupStr.Length then
-            concat markupStr replacementStr None
-        elif index < 0 then
-            concat replacementStr markupStr None
+    open System.Text.Json
+    open System.Text.Json.Serialization
+    open System.Drawing
+
+    /// JSON converter for System.Drawing.Color, serializing to/from hex color strings.
+    type ColorJsonConverter() =
+        inherit JsonConverter<Color>()
+
+        override _.Read(reader, _typeToConvert, _options) =
+            ColorTranslator.FromHtml(reader.GetString())
+
+        override _.Write(writer, value, _) =
+            writer.WriteStringValue($"#{value.R:X2}{value.G:X2}{value.B:X2}".ToLower())
+
+    /// Serialization options for MarkupString.
+    let serializationOptions =
+        let serializeOption = JsonFSharpOptions.Default().ToJsonSerializerOptions()
+        serializeOption.Converters.Add(ColorJsonConverter())
+        serializeOption
+
+    /// Serializes to JSON string.
+    let serialize (ams: MarkupString) : string =
+        JsonSerializer.Serialize(ams, serializationOptions)
+
+    /// Deserializes from JSON string.
+    let deserialize (jsonString: string) : MarkupString =
+        if jsonString.Length = 0 then
+            empty ()
         else
-            let trueLength = Math.Min(index + length, markupStr.Length) - index
-            let rightStart = index + trueLength
-            let rightEnd = markupStr.Length - rightStart
-            let left = substring 0 index markupStr
-            let right = substring rightStart rightEnd markupStr
-            concat left replacementStr None |> (fun x -> concat x right None)
+            JsonSerializer.Deserialize<MarkupString>(jsonString, serializationOptions)

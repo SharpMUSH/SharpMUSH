@@ -180,8 +180,8 @@ public class AnsiStringUnitTests
 	{
 		var simpleString = A.single("ab de ef de");
 
-		var overflow = A.pad(simpleString, A.single(" "), 15, MModule.PadType.Full, MModule.TruncationType.Overflow);
-		var truncated = A.pad(simpleString, A.single(" "), 15, MModule.PadType.Full, MModule.TruncationType.Truncate);
+		var overflow = A.pad(simpleString, A.single(" "), 15, global::MarkupString.MarkupStringModule.PadType.Full, global::MarkupString.MarkupStringModule.TruncationType.Overflow);
+		var truncated = A.pad(simpleString, A.single(" "), 15, global::MarkupString.MarkupStringModule.PadType.Full, global::MarkupString.MarkupStringModule.TruncationType.Truncate);
 
 		await Assert.That(overflow.ToString()).IsEqualTo("ab   de  ef  de");
 		await Assert.That(truncated.ToString()).IsEqualTo("ab   de  ef  de");
@@ -197,7 +197,7 @@ public class AnsiStringUnitTests
 
 		var result = redString.EvaluateWith((x, y) => x switch
 		{
-			MModule.MarkupTypes.MarkedupText { Item: M { Details: var structure } } =>
+			{ Value: M { Details: var structure } } =>
 				$"ansi({ItemName(structure)},{y})",
 			_ => y
 		});

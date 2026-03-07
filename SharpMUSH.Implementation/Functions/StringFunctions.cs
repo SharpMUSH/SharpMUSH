@@ -35,7 +35,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var fullString = args["0"].Message;
 		var search = args["1"].Message;
-		var idx = MModule.indexOf(fullString, search);
+		var idx = MModule.indexOf(fullString, MModule.plainText(search));
 
 		if (idx == -1)
 		{
@@ -345,9 +345,9 @@ public partial class Functions
 
 	[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public static ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.ArgumentsOrdered
-			.Select(x => x.Value.Message)
-			.Aggregate((x, y) => MModule.concat(x, y, MModule.single(" "))));
+		=> ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(
+			MModule.single(" "),
+			parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message)));
 
 	[SharpFunction(Name = "accent", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "template"])]
 	public static ValueTask<CallState> Accent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -627,7 +627,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var fullString = args["0"].Message;
 		var search = args["1"].Message;
-		var idx = MModule.indexOf(fullString, search);
+		var idx = MModule.indexOf(fullString, MModule.plainText(search));
 
 		if (idx == -1)
 		{
@@ -668,7 +668,7 @@ public partial class Functions
 		var leftSide = MModule.substring(0, 1, arg0);
 		var rightSide = MModule.substring(1, arg0.Length - 1, arg0);
 		var capitalized = MModule.apply(leftSide, FuncConvert.FromFunc<string, string>(x => x.ToUpperInvariant()));
-		var concat = MModule.concat(capitalized, rightSide, FSharpOption<MString>.None);
+		var concat = MModule.concat(capitalized, rightSide);
 
 		return new ValueTask<CallState>(new CallState(concat));
 	}
@@ -734,7 +734,7 @@ public partial class Functions
 			return new ValueTask<CallState>(new CallState(Errors.ErrorPositiveInteger));
 		}
 
-		var result = MModule.center2(str, fill, rightFill, widthInt, MModule.TruncationType.Overflow);
+		var result = MModule.center2(str, fill, rightFill, widthInt, global::MarkupString.MarkupStringModule.TruncationType.Overflow);
 
 		return new ValueTask<CallState>(new CallState(result));
 	}
@@ -1038,7 +1038,7 @@ public partial class Functions
 			MModule.evaluateWith((markupType, innerText)
 				=> markupType switch
 				{
-					MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+					{ Value: Ansi ansiMarkup }
 						=> ReconstructWebCall(ansiMarkup.Details, WebEncodeAngleBrackets(innerText)),
 					_ => WebEncodeAngleBrackets(innerText)
 				},
@@ -1056,7 +1056,7 @@ public partial class Functions
 		{
 			return markupType switch
 			{
-				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+				{ Value: Ansi ansiMarkup }
 					=> ReconstructAnsiCall(ansiMarkup.Details, innerText),
 				_ => innerText
 			};
@@ -1414,8 +1414,8 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, MModule.PadType.Right,
-			MModule.TruncationType.Overflow));
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, global::MarkupString.MarkupStringModule.PadType.Right,
+			global::MarkupString.MarkupStringModule.TruncationType.Overflow));
 	}
 
 	[SharpFunction(Name = "lpos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["target", "list", "delimiter"])]
@@ -1598,7 +1598,7 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var arg1 = parser.CurrentState.Arguments["1"].Message!;
 
-		return new ValueTask<CallState>(MModule.indexOf(arg0, arg1) + 1);
+		return new ValueTask<CallState>(MModule.indexOf(arg0, MModule.plainText(arg1)) + 1);
 	}
 
 	[SharpFunction(Name = "repeat", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "count"])]
@@ -1612,7 +1612,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
 		}
 
-		var repeat = MModule.repeat(str, repeatNumber, MModule.empty())!;
+		var repeat = MModule.repeat(str, repeatNumber)!;
 		return ValueTask.FromResult(new CallState(repeat));
 	}
 
@@ -1646,8 +1646,8 @@ public partial class Functions
 			return new ValueTask<CallState>(Errors.ErrorPositiveInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, MModule.PadType.Left,
-			MModule.TruncationType.Overflow));
+		return ValueTask.FromResult<CallState>(MModule.pad(str, fill, widthInt, global::MarkupString.MarkupStringModule.PadType.Left,
+			global::MarkupString.MarkupStringModule.TruncationType.Overflow));
 	}
 
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1677,7 +1677,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorPositiveInteger));
 		}
 
-		var repeat = MModule.repeat(MModule.single(" "), repeatNumber, MModule.empty())!;
+		var repeat = MModule.repeat(MModule.single(" "), repeatNumber)!;
 		return ValueTask.FromResult(new CallState(repeat));
 	}
 
@@ -1956,13 +1956,13 @@ public partial class Functions
 
 		var trimType = arg2 switch
 		{
-			"l" => MModule.TrimType.TrimStart,
-			"r" => MModule.TrimType.TrimEnd,
-			_ => MModule.TrimType.TrimBoth,
+			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
+			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
+			_ => global::MarkupString.MarkupStringModule.TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
-			MModule.trim(arg0, arg1, trimType));
+			MModule.trim(arg0, MModule.plainText(arg1), trimType));
 	}
 
 	[SharpFunction(Name = "trimpenn", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1979,13 +1979,13 @@ public partial class Functions
 
 		var trimType = arg2 switch
 		{
-			"l" => MModule.TrimType.TrimStart,
-			"r" => MModule.TrimType.TrimEnd,
-			_ => MModule.TrimType.TrimBoth,
+			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
+			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
+			_ => global::MarkupString.MarkupStringModule.TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
-			MModule.trim(arg0, arg1, trimType));
+			MModule.trim(arg0, MModule.plainText(arg1), trimType));
 	}
 
 	[SharpFunction(Name = "trimtiny", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -2002,13 +2002,13 @@ public partial class Functions
 
 		var trimType = arg2 switch
 		{
-			"l" => MModule.TrimType.TrimStart,
-			"r" => MModule.TrimType.TrimEnd,
-			_ => MModule.TrimType.TrimBoth,
+			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
+			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
+			_ => global::MarkupString.MarkupStringModule.TrimType.TrimBoth,
 		};
 
 		return ValueTask.FromResult<CallState>(
-			MModule.trim(arg0, arg1, trimType));
+			MModule.trim(arg0, MModule.plainText(arg1), trimType));
 	}
 
 	[SharpFunction(Name = "ucstr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
