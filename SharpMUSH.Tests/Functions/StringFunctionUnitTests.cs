@@ -244,6 +244,12 @@ public class StringFunctionUnitTests
 	[Arguments("comp(abc,abc)", "0")]
 	[Arguments("comp(abc,def)", "-1")]
 	[Arguments("comp(def,abc)", "1")]
+	[Arguments("comp(#1,#2,D)", "-1")]
+	[Arguments("comp(#2,#1,D)", "1")]
+	[Arguments("comp(#1,#1,D)", "0")]
+	[Arguments("comp(#1:12345,#2:12345,D)", "-1")]
+	[Arguments("comp(#2:12345,#1:12345,D)", "1")]
+	[Arguments("comp(#1:12345,#1:99999,D)", "0")]
 	public async Task Comp(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
