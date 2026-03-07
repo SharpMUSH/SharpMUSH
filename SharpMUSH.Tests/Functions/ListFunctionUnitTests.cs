@@ -235,6 +235,47 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	[Test, NotInParallel]
+	[Arguments(@"filter(#lambda/mod\(\%0\,2\),1 2 3 4 5 6)", "1 3 5")]
+	[Arguments(@"filter(#apply/isnum,1 foo 3 bar 5 6)", "1 3 5 6")]
+	public async Task FilterWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments("map(test/is_odd,1 2 3 4 5 6)", "1 0 1 0 1 0")]
+	public async Task Map(string function, string expected)
+	{
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"map(#lambda/strlen\(\%0\),hello world foo)", "5 5 3")]
+	[Arguments(@"map(#lambda/strlen\(\%0\),hello;world;foo,;)", "5;5;3")]
+	[Arguments(@"map(#lambda/\%0,a b c)", "a b c")]
+	// Bracket-form lambda: verify [func()] syntax in lambda code passes attribute validation
+	[Arguments(@"map(#lambda/[strlen\(\%0\)],hello world foo)", "5 5 3")]
+	public async Task MapWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"map(#apply/strlen,hello world foo)", "5 5 3")]
+	[Arguments(@"map(#apply/strlen,hello;world;foo,;)", "5;5;3")]
+	public async Task MapWithApply(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
 	[Test]
 	[Arguments("fold(test/add_func,1 2 3)", "6")]
 	public async Task Fold(string function, string expected)
@@ -243,6 +284,16 @@ public class ListFunctionUnitTests
 		// Replace "test" with actual DBRef
 		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"fold(#lambda/add\(\%0\,\%1\),1 2 3)", "6")]
+	[Arguments(@"fold(#lambda/add\(\%0\,\%1\),1 2 3 4,0)", "10")]
+	[Arguments(@"fold(#apply2/add,1 2 3)", "6")]
+	public async Task FoldWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -423,8 +474,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsNotNull();
 	}
 
-	[Test]
-	[Skip("Lambda function syntax not fully supported - #lambda/\\%0 pattern needs implementation")]
+	[Test, NotInParallel]
 	[Arguments(@"filterbool(#lambda/\%0,1 0 1)", "1 1")]
 	public async Task FilterBool(string function, string expected)
 	{
