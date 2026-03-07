@@ -2,7 +2,7 @@ using MarkupString;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Globalization;
 
@@ -29,7 +29,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
-				command: MarkupStringModule.single(message.Input.TrimStart(' ')),
+				command: MModule.single(message.Input),
 				state: ParserState.Empty with { Handle = message.Handle });
 		}
 		catch (Exception ex)

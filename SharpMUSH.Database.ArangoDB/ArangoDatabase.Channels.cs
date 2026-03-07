@@ -63,7 +63,7 @@ public partial class ArangoDatabase
 						Gagged: x.Status.Gagged,
 						Hide: x.Status.Hide,
 						Mute: x.Status.Mute,
-						Title: MarkupStringModule.deserialize(x.Status.Title ?? string.Empty)
+						Title: MModule.deserialize(x.Status.Title ?? string.Empty)
 					)));
 
 		return result;
@@ -73,8 +73,8 @@ public partial class ArangoDatabase
 		new()
 		{
 			Id = x.Id,
-			Name = MarkupStringModule.deserialize(x.MarkedUpName),
-			Description = MarkupStringModule.deserialize(x.Description ?? string.Empty),
+			Name = MModule.deserialize(x.MarkedUpName),
+			Description = MModule.deserialize(x.Description ?? string.Empty),
 			Privs = x.Privs,
 			JoinLock = x.JoinLock,
 			SpeakLock = x.SpeakLock,
@@ -113,7 +113,7 @@ public partial class ArangoDatabase
 				}, cancellationToken: ct)
 			.Select(SharpChannelQueryToSharpChannel);
 
-	public async ValueTask CreateChannelAsync(MarkupStringModule.MarkupString channel, string[] privs,
+	public async ValueTask CreateChannelAsync(MString channel, string[] privs,
 		SharpPlayer owner, CancellationToken ct = default)
 	{
 		var transaction = await arangoDb.Transaction.BeginAsync(handle,
@@ -129,7 +129,7 @@ public partial class ArangoDatabase
 		{
 			var newChannel = new SharpChannelCreateRequest(
 				Name: channel.ToPlainText(),
-				MarkedUpName: MarkupStringModule.serialize(channel),
+				MarkedUpName: MModule.serialize(channel),
 				Privs: privs
 			);
 
@@ -151,8 +151,8 @@ public partial class ArangoDatabase
 		}
 	}
 
-	public async ValueTask UpdateChannelAsync(SharpChannel channel, MarkupStringModule.MarkupString? name,
-		MarkupStringModule.MarkupString? description, string[]? privs,
+	public async ValueTask UpdateChannelAsync(SharpChannel channel, MString? name,
+		MString? description, string[]? privs,
 		string? joinLock, string? speakLock, string? seeLock, string? hideLock, string? modLock, string? mogrifier,
 		int? buffer, CancellationToken ct = default)
 		=> await arangoDb.Graph.Vertex.UpdateAsync(handle,
@@ -160,14 +160,14 @@ public partial class ArangoDatabase
 			new
 			{
 				Name = name is not null
-					? MarkupStringModule.serialize(name)
-					: MarkupStringModule.serialize(channel.Name),
+					? MModule.serialize(name)
+					: MModule.serialize(channel.Name),
 				MarkedUpName = name is not null
 					? name.ToPlainText()
 					: channel.Name.ToPlainText(),
 				Description = description is not null
-					? MarkupStringModule.serialize(description)
-					: MarkupStringModule.serialize(channel.Description),
+					? MModule.serialize(description)
+					: MModule.serialize(channel.Description),
 				Privs = privs ?? channel.Privs,
 				JoinLock = joinLock ?? channel.JoinLock,
 				SpeakLock = speakLock ?? channel.SpeakLock,
@@ -261,7 +261,7 @@ public partial class ArangoDatabase
 
 		if (status.Title is { } title)
 		{
-			updates.Add(new KeyValuePair<string, object>(nameof(status.Title), MarkupStringModule.serialize(title)));
+			updates.Add(new KeyValuePair<string, object>(nameof(status.Title), MModule.serialize(title)));
 		}
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,

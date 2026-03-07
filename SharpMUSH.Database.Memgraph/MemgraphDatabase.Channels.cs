@@ -14,7 +14,6 @@ using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using MString = MarkupString.MarkupStringModule.MarkupString;
 
 namespace SharpMUSH.Database.Memgraph;
 
@@ -50,7 +49,7 @@ RETURN c
 	public async ValueTask CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default)
 	{
 		var channelName = name.ToPlainText();
-		var serializedName = MarkupStringModule.serialize(name);
+		var serializedName = MModule.serialize(name);
 		var ownerObjKey = owner.Object.Key;
 
 		// Single atomic query: create channel, link owner, add owner as member
@@ -70,8 +69,8 @@ CREATE (o)-[:ON_CHANNEL {combine: false, gagged: false, hide: false, mute: false
 	{
 		var channelName = channel.Name.ToPlainText();
 		var newName = name is not null ? name.ToPlainText() : channelName;
-		var newMarkedUpName = name is not null ? MarkupStringModule.serialize(name) : MarkupStringModule.serialize(channel.Name);
-		var newDescription = description is not null ? MarkupStringModule.serialize(description) : MarkupStringModule.serialize(channel.Description);
+		var newMarkedUpName = name is not null ? MModule.serialize(name) : MModule.serialize(channel.Name);
+		var newDescription = description is not null ? MModule.serialize(description) : MModule.serialize(channel.Description);
 
 		await ExecuteWithRetryAsync("""
 MATCH (c:Channel {name: $oldName})
@@ -171,7 +170,7 @@ DELETE r
 		if (status.Title is { } title)
 		{
 			setClauses.Add("r.title = $title");
-			parameters["title"] = MarkupStringModule.serialize(title);
+			parameters["title"] = MModule.serialize(title);
 		}
 
 		if (setClauses.Count == 0) return;
@@ -193,8 +192,8 @@ DELETE r
 		return new SharpChannel
 		{
 			Id = ChannelId(channelName),
-			Name = MarkupStringModule.deserialize(markedUpName),
-			Description = MarkupStringModule.deserialize(description),
+			Name = MModule.deserialize(markedUpName),
+			Description = MModule.deserialize(description),
 			Privs = node.Properties.ContainsKey("privs")
 		? node["privs"].As<List<object>>().Select(x => x.ToString()!).ToArray()
 		: [],
@@ -241,7 +240,7 @@ RETURN o, r
 			Gagged: rel.Properties.ContainsKey("gagged") ? rel["gagged"].As<bool>() : false,
 			Hide: rel.Properties.ContainsKey("hide") ? rel["hide"].As<bool>() : false,
 			Mute: rel.Properties.ContainsKey("mute") ? rel["mute"].As<bool>() : false,
-			Title: MarkupStringModule.deserialize(
+			Title: MModule.deserialize(
 			rel.Properties.ContainsKey("title") ? rel["title"].As<string>() ?? "" : ""));
 
 			yield return new SharpChannel.MemberAndStatus(memberObj.Known(), status);

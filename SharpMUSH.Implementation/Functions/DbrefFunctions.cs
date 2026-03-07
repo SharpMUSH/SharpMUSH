@@ -2341,14 +2341,8 @@ LOCATE()
 			async found =>
 			{
 				var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				foreach (var flag in flags)
-				{
-					if (await found.HasFlag(flag))
-					{
-						return new CallState(true);
-					}
-				}
-				return new CallState(false);
+				return new CallState(await flags.ToAsyncEnumerable()
+					.AnyAsync(async (flag, _) => await found.HasFlag(flag)));
 			});
 	}
 
@@ -2363,22 +2357,15 @@ LOCATE()
 		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-		foreach (var objRef in objList)
-		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
-			if (maybeObj.IsValid())
+		return new CallState(await objList.ToAsyncEnumerable()
+			.AnyAsync(async (objRef, _) =>
 			{
+				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+				if (!maybeObj.IsValid()) return false;
 				var found = maybeObj.AsAnyObject;
-				foreach (var flag in flags)
-				{
-					if (await found.HasFlag(flag))
-					{
-						return new CallState(true);
-					}
-				}
-			}
-		}
-		return new CallState(false);
+				return await flags.ToAsyncEnumerable()
+					.AnyAsync(async (flag, _) => await found.HasFlag(flag));
+			}));
 	}
 
 	[SharpFunction(Name = "orlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
@@ -2392,22 +2379,15 @@ LOCATE()
 		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var powers = powersArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-		foreach (var objRef in objList)
-		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
-			if (maybeObj.IsValid())
+		return new CallState(await objList.ToAsyncEnumerable()
+			.AnyAsync(async (objRef, _) =>
 			{
+				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+				if (!maybeObj.IsValid()) return false;
 				var found = maybeObj.AsAnyObject;
-				foreach (var power in powers)
-				{
-					if (await found.HasPower(power))
-					{
-						return new CallState(true);
-					}
-				}
-			}
-		}
-		return new CallState(false);
+				return await powers.ToAsyncEnumerable()
+					.AnyAsync(async (power, _) => await found.HasPower(power));
+			}));
 	}
 
 	[SharpFunction(Name = "andflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
@@ -2423,14 +2403,8 @@ LOCATE()
 			async found =>
 			{
 				var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				foreach (var flag in flags)
-				{
-					if (!await found.HasFlag(flag))
-					{
-						return new CallState(false);
-					}
-				}
-				return new CallState(true);
+				return new CallState(await flags.ToAsyncEnumerable()
+					.AllAsync(async (flag, _) => await found.HasFlag(flag)));
 			});
 	}
 
@@ -2450,24 +2424,15 @@ LOCATE()
 			return new CallState(false);
 		}
 
-		foreach (var objRef in objList)
-		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
-			if (!maybeObj.IsValid())
+		return new CallState(await objList.ToAsyncEnumerable()
+			.AllAsync(async (objRef, _) =>
 			{
-				return new CallState(false);
-			}
-
-			var found = maybeObj.AsAnyObject;
-			foreach (var flag in flags)
-			{
-				if (!await found.HasFlag(flag))
-				{
-					return new CallState(false);
-				}
-			}
-		}
-		return new CallState(true);
+				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+				if (!maybeObj.IsValid()) return false;
+				var found = maybeObj.AsAnyObject;
+				return await flags.ToAsyncEnumerable()
+					.AllAsync(async (flag, _) => await found.HasFlag(flag));
+			}));
 	}
 
 	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
@@ -2485,24 +2450,15 @@ LOCATE()
 			return new CallState(false);
 		}
 
-		foreach (var objRef in objList)
-		{
-			var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
-			if (!maybeObj.IsValid())
+		return new CallState(await objList.ToAsyncEnumerable()
+			.AllAsync(async (objRef, _) =>
 			{
-				return new CallState(false);
-			}
-
-			var found = maybeObj.AsAnyObject;
-			foreach (var power in powers)
-			{
-				if (!await found.HasPower(power))
-				{
-					return new CallState(false);
-				}
-			}
-		}
-		return new CallState(true);
+				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
+				if (!maybeObj.IsValid()) return false;
+				var found = maybeObj.AsAnyObject;
+				return await powers.ToAsyncEnumerable()
+					.AllAsync(async (power, _) => await found.HasPower(power));
+			}));
 	}
 
 	[SharpFunction(Name = "ncon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

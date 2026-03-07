@@ -156,24 +156,20 @@ public partial class Functions
 			environmentRegisters[(i - 3).ToString()] = parser.CurrentState.ArgumentsOrdered[i.ToString()];
 		}
 
-		var result = new List<MString>();
-		foreach (var item in list)
-		{
-			var newParser = parser.Push(parser.CurrentState with
+		var result = await list.ToAsyncEnumerable()
+			.Where(async (item, _) =>
 			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
+				var newParser = parser.Push(parser.CurrentState with
 				{
-					["0"] = new CallState(item)
-				}
-			});
-			var parsed = (await newParser.FunctionParse(attrValue))!.Message!;
-
-			if (parsed.ToPlainText() == "1")
-			{
-				result.Add(item);
-			}
-		}
+					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+					EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
+					{
+						["0"] = new CallState(item)
+					}
+				});
+				return (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText() == "1";
+			})
+			.ToListAsync();
 
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
@@ -238,25 +234,21 @@ public partial class Functions
 			environmentRegisters[(i - 3).ToString()] = parser.CurrentState.ArgumentsOrdered[i.ToString()];
 		}
 
-		var result = new List<MString>();
-		foreach (var item in list)
-		{
-			var newParser = parser.Push(parser.CurrentState with
+		var result = await list.ToAsyncEnumerable()
+			.Where(async (item, _) =>
 			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
+				var newParser = parser.Push(parser.CurrentState with
 				{
-					["0"] = new CallState(item)
-				}
-			});
-			var parsed = (await newParser.FunctionParse(attrValue))!;
-
-			// FilterBool returns items where the function evaluates to a boolean true
-			if (parsed.Message!.Truthy())
-			{
-				result.Add(item);
-			}
-		}
+					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+					EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
+					{
+						["0"] = new CallState(item)
+					}
+				});
+				// FilterBool returns items where the function evaluates to a boolean true
+				return (await newParser.FunctionParse(attrValue))!.Message!.Truthy();
+			})
+			.ToListAsync();
 
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
@@ -702,16 +694,18 @@ public partial class Functions
 
 		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
 
-		var result = new List<MString>();
-		foreach (var item in list)
-		{
-			var newParser = parser.Push(parser.CurrentState with
+		var result = await list.ToAsyncEnumerable()
+			.Select((MString item, CancellationToken _) =>
 			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState> { { "0", new CallState(item) } }
-			});
-			result.Add((await newParser.FunctionParse(attrValue))!.Message!);
-		}
+				var newParser = parser.Push(parser.CurrentState with
+				{
+					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+					EnvironmentRegisters = new Dictionary<string, CallState> { { "0", new CallState(item) } }
+				});
+				return newParser.FunctionParse(attrValue);
+			})
+			.Select(cs => cs!.Message!)
+			.ToListAsync();
 
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
@@ -1356,17 +1350,18 @@ public partial class Functions
 		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		// Generate keys for each element
-		var keys = new List<string>();
-		foreach (var item in list)
-		{
-			var newParser = parser.Push(parser.CurrentState with
+		var keys = await list.ToAsyncEnumerable()
+			.Select((MString item, CancellationToken _) =>
 			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
-			});
-			var key = (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText();
-			keys.Add(key);
-		}
+				var newParser = parser.Push(parser.CurrentState with
+				{
+					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
+				});
+				return newParser.FunctionParse(attrValue);
+			})
+			.Select(cs => cs!.Message!.ToPlainText())
+			.ToListAsync();
 
 		// Sort keys with their indices and use standard LINQ OrderBy with a comparison
 		var sortTypeStr = sortType.ToPlainText().ToLower();
@@ -1592,10 +1587,10 @@ public partial class Functions
 				fieldWidth,
 				fieldAlignment switch
 				{
-					">" => MModule.PadType.Right,
-					"-" => MModule.PadType.Center,
-					_ => MModule.PadType.Left
-				}, MModule.TruncationType.Truncate));
+					">" => global::MarkupString.MarkupStringModule.PadType.Right,
+					"-" => global::MarkupString.MarkupStringModule.PadType.Center,
+					_ => global::MarkupString.MarkupStringModule.PadType.Left
+				}, global::MarkupString.MarkupStringModule.TruncationType.Truncate));
 
 		var lines = resultFields.Chunk(fieldsPerLine);
 		var linesWithSeparators = lines.Select(x => MModule.multipleWithDelimiter(separatorArg, x));

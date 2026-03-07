@@ -178,7 +178,7 @@ public partial class Commands
 		// Attr Flag Path
 		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
-			foreach (var flag in MModule.split(" ", args["1"].Message!))
+			foreach (var flag in MModule.split2(MModule.single(" "), args["1"].Message!))
 			{
 				var plainFlag = MModule.plainText(flag);
 				if (plainFlag.StartsWith('!'))
@@ -195,7 +195,7 @@ public partial class Commands
 		}
 
 		// Attr Set Path
-		var maybeColonLocation = MModule.indexOf(args["1"].Message!, MModule.single(":"));
+		var maybeColonLocation = MModule.indexOf(args["1"].Message!, ":");
 		if (maybeColonLocation > -1)
 		{
 			var arg1 = args["1"].Message!;
@@ -217,7 +217,7 @@ public partial class Commands
 		}
 
 		// Object Flag Set Path
-		foreach (var flag in MModule.split(" ", args["1"].Message!))
+		foreach (var flag in MModule.split2(MModule.single(" "), args["1"].Message!))
 		{
 			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
 		}
@@ -762,7 +762,7 @@ public partial class Commands
 		// CREATE ROOM
 		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
-		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
+		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number {response.Number}.");
 
 		// Inherit zone from creator
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
@@ -1076,7 +1076,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
+		await NotifyService!.Notify(executor, $"Opened exit #{exitDbRef.Number}");
 
 		// Link to destination if provided
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))

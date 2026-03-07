@@ -16,7 +16,7 @@ public static class ReadMail
 		int messageNumber, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
+		var line = MModule.repeat(MModule.single("-"), 78);
 		var folder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
 
 		var actualMail = await mediator.Send(new GetMailQuery(executor.AsPlayer, messageNumber, folder));
@@ -31,8 +31,8 @@ public static class ReadMail
 			MModule.single(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
 			MModule.single(" "),
 			25,
-			MModule.PadType.Right,
-			MModule.TruncationType.Truncate);
+			global::MarkupString.MarkupStringModule.PadType.Right,
+			global::MarkupString.MarkupStringModule.TruncationType.Truncate);
 
 		var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
 		var messageBuilder = new List<MString>

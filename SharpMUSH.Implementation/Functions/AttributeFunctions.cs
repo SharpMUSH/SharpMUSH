@@ -1332,7 +1332,7 @@ public partial class Functions
 				await SetAttributeFlag(split),
 
 			// set(<object>, <attribute>:<value>)
-			(_, _) when MModule.indexOf2(arg1, ":") > 1
+			(_, _) when MModule.indexOf(arg1, ":") > 1
 				=> await SetAttributeValue(),
 
 			// set(<object>, <flag>)
@@ -1363,7 +1363,7 @@ public partial class Functions
 				arg0, LocateFlags.All,
 				async found =>
 				{
-					var splitIndex = MModule.indexOf(arg1, MModule.single(":"));
+					var splitIndex = MModule.indexOf(arg1, ":");
 					var attribute = MModule.substring(0, splitIndex, arg1);
 					var value = MModule.substring(splitIndex + 1, arg1.Length - (splitIndex + 1), arg1);
 

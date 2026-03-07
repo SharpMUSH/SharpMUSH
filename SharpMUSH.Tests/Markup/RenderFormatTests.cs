@@ -1,4 +1,6 @@
 using System.Drawing;
+using Microsoft.FSharp.Core;
+using MarkupString;
 using A = MarkupString.MarkupStringModule;
 using H = MarkupString.MarkupImplementation.HtmlMarkup;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
@@ -403,6 +405,161 @@ public class RenderFormatTests
 		var css = A.cssSheet(combined);
 
 		await Assert.That(css).IsEqualTo(A.fixedCss);
+	}
+
+	// ── RenderFormat discriminated union tests ──────────────────────
+
+	[Test]
+	public async Task RenderFormat_Ansi_MatchesStringBasedRender()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "RenderFormat Ansi");
+
+		var duResult = markupString.Render(A.RenderFormat.Ansi);
+		var stringResult = markupString.Render("ansi");
+
+		await Assert.That(duResult).IsEqualTo(stringResult);
+	}
+
+	[Test]
+	public async Task RenderFormat_Html_MatchesStringBasedRender()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "RenderFormat Html");
+
+		var duResult = markupString.Render(A.RenderFormat.Html);
+		var stringResult = markupString.Render("html");
+
+		await Assert.That(duResult).IsEqualTo(stringResult);
+	}
+
+	[Test]
+	public async Task RenderFormat_PlainText_MatchesStringBasedRender()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "RenderFormat Plain");
+
+		var duResult = markupString.Render(A.RenderFormat.PlainText);
+		var stringResult = markupString.Render("plaintext");
+
+		await Assert.That(duResult).IsEqualTo(stringResult);
+	}
+
+	[Test]
+	public async Task RenderFormat_PlainText_StripsMarkup()
+	{
+		var ansiMarkup = M.Create(bold: true, foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(0, 255, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "no formatting");
+
+		var result = markupString.Render(A.RenderFormat.PlainText);
+
+		await Assert.That(result).IsEqualTo("no formatting");
+	}
+
+	[Test]
+	public async Task RenderFormat_Custom_AppliesEncodeAndApplyMarkup()
+	{
+		var ansiMarkup = M.Create(bold: true);
+		var markupString = A.markupSingle(ansiMarkup, "Custom Text");
+
+		// Custom: uppercase encode, wrap with [STYLED]...[/STYLED]
+		var encodeText = FuncConvert.FromFunc<string, string>(t => t.ToUpperInvariant());
+		var applyMarkup = FuncConvert.FromFunc<MarkupImplementation.Markup, string, string>(
+			(_, text) => "[STYLED]" + text + "[/STYLED]");
+
+		var format = A.RenderFormat.NewCustom(encodeText, applyMarkup);
+		var result = markupString.Render(format);
+
+		await Assert.That(result).IsEqualTo("[STYLED]CUSTOM TEXT[/STYLED]");
+	}
+
+	[Test]
+	public async Task RenderFormat_Custom_NoMarkup_ReturnsEncodedText()
+	{
+		var markupString = A.single("plain custom");
+
+		var encodeText = FuncConvert.FromFunc<string, string>(t => t.ToUpperInvariant());
+		var applyMarkup = FuncConvert.FromFunc<MarkupImplementation.Markup, string, string>(
+			(_, text) => "[WRAP]" + text + "[/WRAP]");
+
+		var format = A.RenderFormat.NewCustom(encodeText, applyMarkup);
+		var result = markupString.Render(format);
+
+		await Assert.That(result).IsEqualTo("PLAIN CUSTOM");
+	}
+
+	[Test]
+	public async Task RenderFormat_ModuleLevelFunction_WorksCorrectly()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "module level");
+
+		var duResult = A.renderFormat(A.RenderFormat.Html, markupString);
+		var stringResult = A.render("html", markupString);
+
+		await Assert.That(duResult).IsEqualTo(stringResult);
+	}
+
+	// ── Render caching tests ──────────────────────────────────────────
+
+	[Test]
+	public async Task RenderCache_Ansi_ReturnsSameInstance()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache ansi test");
+
+		var result1 = markupString.Render("ansi");
+		var result2 = markupString.Render("ansi");
+
+		await Assert.That(ReferenceEquals(result1, result2)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCache_Html_ReturnsSameInstance()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache html test");
+
+		var result1 = markupString.Render("html");
+		var result2 = markupString.Render("html");
+
+		await Assert.That(ReferenceEquals(result1, result2)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCache_PlainText_ReturnsSameInstance()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache plain test");
+
+		var result1 = markupString.Render("plaintext");
+		var result2 = markupString.Render("plaintext");
+
+		await Assert.That(ReferenceEquals(result1, result2)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCache_DU_ReturnsSameInstanceAsStringBased()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache du test");
+
+		var duResult = markupString.Render(A.RenderFormat.Html);
+		var stringResult = markupString.Render("html");
+
+		await Assert.That(ReferenceEquals(duResult, stringResult)).IsTrue();
+	}
+
+	[Test]
+	public async Task RenderCache_UnknownFormat_DefaultsToAnsiCache()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "cache unknown test");
+
+		var unknownResult = markupString.Render("xyz");
+		var ansiResult = markupString.Render("ansi");
+
+		await Assert.That(ReferenceEquals(unknownResult, ansiResult)).IsTrue();
 	}
 }
 

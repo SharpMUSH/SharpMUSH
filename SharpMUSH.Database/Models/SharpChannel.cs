@@ -35,12 +35,3 @@ public record SharpChannelUserStatusQueryResult(
 	bool? Combine,
 	string? Title
 );
-
-public record SharpChannelUserStatusUpdateRequest(
-	string Key,
-	bool? Gagged,
-	bool? Mute,
-	bool? Hide,
-	bool? Combine,
-	string? Title
-);

@@ -15,7 +15,7 @@ public partial class RecursiveMarkdownRenderer
 		};
 
 		var content = RenderInlines(heading.Inline);
-		return MModule.concat(MModule.markupSingle(style, ""), content);
+		return MModule.markupSingle(style, content.ToPlainText());
 	}
 
 	private MString RenderParagraph(ParagraphBlock para)
@@ -24,7 +24,7 @@ public partial class RecursiveMarkdownRenderer
 		// Trim trailing whitespace because EnableTrackTrivia appends a soft
 		// LineBreakInline (rendered as " ") at the end of many paragraphs.
 		var content = RenderInlines(para.Inline);
-		return MModule.trim(content, MModule.single(" "), trimType: MModule.TrimType.TrimEnd);
+		return MModule.trim(content, " ", global::MarkupString.MarkupStringModule.TrimType.TrimEnd);
 	}
 
 	private MString RenderList(ListBlock list)
@@ -64,7 +64,7 @@ public partial class RecursiveMarkdownRenderer
 
 		var combined = MModule.multiple(parts);
 
-		var trimmed = MModule.trim(combined, MModule.single(" "), trimType: MModule.TrimType.TrimBoth);
+		var trimmed = MModule.trim(combined, " ", global::MarkupString.MarkupStringModule.TrimType.TrimBoth);
 		return trimmed;
 	}
 

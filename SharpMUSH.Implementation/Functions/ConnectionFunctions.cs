@@ -1041,6 +1041,33 @@ public partial class Functions
 			});
 	}
 
+	[SharpFunction(Name = "xmwho", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "count"])]
+	public static async ValueTask<CallState> NumberRangeMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+
+		if (!int.TryParse(arg0, out var start) || !int.TryParse(arg1, out var count))
+		{
+			return new CallState(Errors.ErrorIntegers);
+		}
+
+		if (start < 1 || count < 0)
+		{
+			return new CallState(Errors.ErrorArgRange);
+		}
+
+		var allDbrefs = ConnectionService!
+			.GetAll()
+			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, ct) => (await Mediator!.Send(new GetObjectNodeQuery(x.Ref!.Value), ct)).Known)
+			.Where(async (x, _) => !await x.HasFlag("DARK"))
+			.Select(x => $"#{x.Object().DBRef.Number}");
+
+		var result = allDbrefs.Skip(start - 1).Take(count);
+		return new CallState(string.Join(" ", await result.ToArrayAsync()));
+	}
+
 	[SharpFunction(Name = "xmwhoid", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
 	public static async ValueTask<CallState> NumberRangeMortalWhoObjectId(IMUSHCodeParser parser,
 		SharpFunctionAttribute _2)

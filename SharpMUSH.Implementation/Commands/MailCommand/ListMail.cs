@@ -13,7 +13,7 @@ public static class ListMail
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, MString? arg0, MString? arg1, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
-		var line = MModule.repeat(MModule.single("-"), 78, MModule.empty());
+		var line = MModule.repeat(MModule.single("-"), 78);
 
 		var filteredList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor);
 
@@ -29,11 +29,11 @@ public static class ListMail
 		await foreach (var folder in list.GroupBy(x => x.Folder))
 		{
 			var center = MModule.pad(
-				markupStr: MModule.single($"  MAIL (folder {folder.Key})  "),
-				padStr: MModule.single("-"),
-				width: 78,
-				MModule.PadType.Center,
-				MModule.TruncationType.Truncate);
+				MModule.single($"  MAIL (folder {folder.Key})  "),
+				MModule.single("-"),
+				78,
+				global::MarkupString.MarkupStringModule.PadType.Center,
+				global::MarkupString.MarkupStringModule.TruncationType.Truncate);
 
 			var folderTasks = await folder.ToAsyncEnumerable().Select((x, y, _) => DisplayMailLine(x, y)).ToArrayAsync();
 

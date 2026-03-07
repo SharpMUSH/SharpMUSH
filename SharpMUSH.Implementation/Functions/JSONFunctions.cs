@@ -11,6 +11,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -433,7 +434,7 @@ public partial class Functions
 					continue;
 				}
 
-				await MessageBus!.Publish(new Messages.GMCPOutputMessage(
+				await MessageBus!.Publish(new GMCPOutputMessage(
 					connection.Handle,
 					package,
 					message));

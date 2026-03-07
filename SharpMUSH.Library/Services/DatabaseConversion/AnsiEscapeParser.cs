@@ -19,14 +19,14 @@ public static class AnsiEscapeParser
 	/// </summary>
 	/// <param name="text">Text potentially containing ANSI escape sequences</param>
 	/// <returns>MarkupString with ANSI formatting applied</returns>
-	public static MarkupStringModule.MarkupString ConvertAnsiToMarkupString(string? text)
+	public static MString ConvertAnsiToMarkupString(string? text)
 	{
 		if (string.IsNullOrEmpty(text))
 		{
-			return MarkupStringModule.single(string.Empty);
+			return MModule.single(string.Empty);
 		}
 
-		var segments = new List<MarkupStringModule.MarkupString>();
+		var segments = new List<MString>();
 		var currentState = new AnsiState();
 		var position = 0;
 		var textBuilder = new StringBuilder();
@@ -65,7 +65,7 @@ public static class AnsiEscapeParser
 		// Combine all segments
 		if (segments.Count == 0)
 		{
-			return MarkupStringModule.single(string.Empty);
+			return MModule.single(string.Empty);
 		}
 		else if (segments.Count == 1)
 		{
@@ -73,7 +73,7 @@ public static class AnsiEscapeParser
 		}
 		else
 		{
-			return MarkupStringModule.multiple(segments);
+			return MModule.multiple(segments);
 		}
 	}
 
@@ -370,11 +370,11 @@ public static class AnsiEscapeParser
 	/// <summary>
 	/// Creates a MarkupString from text and ANSI state
 	/// </summary>
-	private static MarkupStringModule.MarkupString CreateMarkupStringFromState(string text, AnsiState state)
+	private static MString CreateMarkupStringFromState(string text, AnsiState state)
 	{
 		if (state.IsEmpty())
 		{
-			return MarkupStringModule.single(text);
+			return MModule.single(text);
 		}
 
 		// Build the markup based on state, including hyperlink support if present
@@ -420,7 +420,7 @@ public static class AnsiEscapeParser
 			);
 		}
 
-		return MarkupStringModule.markupSingle(markup, text);
+		return MModule.markupSingle(markup, text);
 	}
 
 	/// <summary>

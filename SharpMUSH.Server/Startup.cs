@@ -163,6 +163,13 @@ services.AddOptions<ColorsOptions>().ValidateOnStart();
 services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>, Library.Services.OptionsWrapper<SharpMUSHOptions>>();
 services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();
 services.AddHttpClient();
+services.AddHttpClient("api")
+	.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+	{
+		AutomaticDecompression = System.Net.DecompressionMethods.GZip
+			| System.Net.DecompressionMethods.Deflate
+			| System.Net.DecompressionMethods.Brotli
+	});
 services.AddMediator();
 
 if (databaseProvider == DatabaseProvider.ArangoDB && arangoConfig is not null)

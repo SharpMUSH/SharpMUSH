@@ -281,72 +281,51 @@ public partial class ArangoDatabase
 
 	public async IAsyncEnumerable<SharpExit> GetExitsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken ct = default)
 	{
-		// This is bad code. We can't use graphExits for this.
 		var baseObject = await GetObjectNodeAsync(obj, ct);
 		if (baseObject.IsNone) yield break;
 
-		// Optimized query: Get exit IDs and their object data in a single query by traversing both graphs
-		const string exitQuery = $@"
-			FOR exit IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits}
-			FOR obj IN 0..1 OUTBOUND exit GRAPH {DatabaseConstants.GraphObjects}
-			RETURN {{exit: exit, obj: obj}}";
+		// Exits are stored in GraphLocations (exitNode --AtLocation--> sourceRoom).
+		// Use same pattern as GetContentsAsync but filter to the exits collection only.
+		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
+		                         $"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Exits}', v) RETURN v._id";
 
-		var query = arangoDb.Query.ExecuteStreamAsync<SharpExitQuery>(handle, exitQuery,
+		var ids = arangoDb.Query.ExecuteStreamAsync<string>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, baseObject.Known().Id()! }
 			}, cancellationToken: ct);
 
-		await foreach (var exitData in query.WithCancellation(ct))
+		await foreach (var id in ids.WithCancellation(ct))
 		{
-			var exit = exitData.Exit;
-			var convertObject = SharpObjectQueryToSharpObject(exitData.Obj);
-
-			yield return new SharpExit
-			{
-				Id = exit.Id,
-				Object = convertObject,
-				Aliases = exit.Aliases,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(exit.Id), ct)),
-				Home = new(async ct => await GetHomeAsync(exit.Id, ct))
-			};
+			var node = await GetObjectNodeAsync(id, ct);
+			if (node.IsNone) continue;
+			var exitNode = node.Known().AsExit;
+			yield return exitNode;
 		}
 	}
 
-	public IAsyncEnumerable<SharpExit> GetExitsAsync(AnySharpContainer node,
-		CancellationToken ct = default)
+	public async IAsyncEnumerable<SharpExit> GetExitsAsync(AnySharpContainer node,
+		[EnumeratorCancellation] CancellationToken ct = default)
 	{
-		// This is bad code. We can't use graphExits for this.
 		var startVertex = node.Id;
 
-		// Optimized query: Get exit IDs and their object data in a single query by traversing both graphs
-		const string exitQuery = $@"
-			FOR exit IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphExits}
-			FOR obj IN 0..1 OUTBOUND exit GRAPH {DatabaseConstants.GraphObjects}
-			RETURN {{exit: exit, obj: obj}}";
+		// Exits are stored in GraphLocations (exitNode --AtLocation--> sourceRoom).
+		// Use same pattern as GetContentsAsync but filter to the exits collection only.
+		const string exitQuery = $"FOR v IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
+		                         $"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Exits}', v) RETURN v._id";
 
-		var query = arangoDb.Query.ExecuteStreamAsync<SharpExitQuery>(handle, exitQuery,
+		var ids = arangoDb.Query.ExecuteStreamAsync<string>(handle, exitQuery,
 			new Dictionary<string, object>
 			{
 				{ StartVertex, startVertex }
 			}, cancellationToken: ct);
 
-		return query
-			.Select<SharpExitQuery, SharpExit>(exitData =>
-			{
-				var exit = exitData.Exit;
-				var obj = exitData.Obj;
-				var convertObject = SharpObjectQueryToSharpObject(obj);
-
-				return new SharpExit
-				{
-					Id = exit.Id,
-					Object = convertObject,
-					Aliases = exit.Aliases,
-					Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(exit.Id), ct)),
-					Home = new(async ct => await GetHomeAsync(exit.Id, ct))
-				};
-			});
+		await foreach (var id in ids.WithCancellation(ct))
+		{
+			var exitObjNode = await GetObjectNodeAsync(id, ct);
+			if (exitObjNode.IsNone) continue;
+			yield return exitObjNode.Known().AsExit;
+		}
 	}
 	public async IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone,
 		[EnumeratorCancellation] CancellationToken ct = default)

@@ -243,7 +243,7 @@ public partial class ArangoDatabase
 
 		return new DBRef(int.Parse(obj.Key), time);
 	}
-	public async ValueTask SetObjectName(AnySharpObject obj, MarkupStringModule.MarkupString value,
+	public async ValueTask SetObjectName(AnySharpObject obj, MString value,
 		CancellationToken ct = default)
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
 			new

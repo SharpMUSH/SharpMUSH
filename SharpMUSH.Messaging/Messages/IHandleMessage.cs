@@ -1,4 +1,4 @@
-namespace SharpMUSH.Messages;
+namespace SharpMUSH.Messaging.Messages;
 
 public interface IHandleMessage
 {

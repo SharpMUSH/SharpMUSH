@@ -1,13 +1,14 @@
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.API;
 
 /// <summary>
 /// Builds enhanced configuration schema from SharpMUSHOptions
 /// </summary>
-public static class SchemaBuilder
+public static partial class SchemaBuilder
 {
 	public static ConfigurationSchema BuildSchema(SharpMUSHOptions options)
 	{
@@ -136,7 +137,7 @@ public static class SchemaBuilder
 		}
 
 		// Handle PascalCase/camelCase: MudName -> Mud Name, mudName -> Mud Name
-		return System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
+		return PascalCaseSplitRegex().Replace(name, " $1").Trim();
 	}
 
 	private static object? GetDefaultInstance(Type type)
@@ -198,7 +199,7 @@ public static class SchemaBuilder
 		}
 
 		// Add spaces before capital letters
-		return System.Text.RegularExpressions.Regex.Replace(categoryName, "([A-Z])", " $1").Trim();
+		return PascalCaseSplitRegex().Replace(categoryName, " $1").Trim();
 	}
 
 	private static string? GetCategoryDescription(string categoryName)
@@ -259,4 +260,7 @@ public static class SchemaBuilder
 			return obj.Name.GetHashCode();
 		}
 	}
+
+	[GeneratedRegex("([A-Z])")]
+	private static partial Regex PascalCaseSplitRegex();
 }

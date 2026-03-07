@@ -1,8 +1,11 @@
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -33,72 +36,89 @@ public partial class Commands
 			return new CallState("#-1 Query where?");
 		}
 
-		var method = switches.FirstOrDefault() switch
+		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
+		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
+		if (maybeObjAttr.IsT1)
 		{
-			"DELETE" => HttpMethod.Delete,
-			"POST" => HttpMethod.Post,
-			"PUT" => HttpMethod.Put,
-			"GET" => HttpMethod.Get,
-			"HEAD" => HttpMethod.Head,
-			"CONNECT" => HttpMethod.Connect,
-			"OPTIONS" => HttpMethod.Options,
-			"TRACE" => HttpMethod.Trace,
-			"PATCH" => HttpMethod.Patch,
-			_ => HttpMethod.Get
-		};
-
-		if (method == HttpMethod.Get && dataArg is not null)
-		{
-			await NotifyService!.Notify(executor, "GET requests cannot have a body.");
-			return new CallState("#-1 GET requests cannot have a body.");
+			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE");
+			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
 		}
 
-		if (!Uri.TryCreate(uriArg.Message?.ToPlainText() ?? string.Empty, UriKind.Absolute, out var uri))
-		{
-			await NotifyService!.Notify(executor, "Invalid URI format.");
-			return new CallState("#-1 INVALID URI FORMAT.");
-		}
+		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
 
-		var message = new HttpRequestMessage
-		{
-			Headers =
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
+			LocateFlags.All,
+			async found =>
 			{
-				{"User-Agent", "SharpMUSH"}
-			},
-			Method = method,
-			Content = dataArg is null
-				? null
-				: new StringContent(dataArg.Message!.ToString()),
-			RequestUri = uri
-		};
-
-		await Mediator!.Publish(new QueueAttributeRequest(
-			async () =>
-			{
-				var client = HttpClientFactory!.CreateClient("api");
-
-				var response = await client.SendAsync(message);
-
-				parser.CurrentState.AddRegister("status",
-					MModule.single(response.StatusCode.ToString()));
-				parser.CurrentState.AddRegister("content-type",
-					MModule.single(string.Join(" ", response.Headers.GetValues("Content-Type"))));
-
-				var content = await response.Content.ReadAsStringAsync();
-
-				parser.Push(parser.CurrentState with
+				var method = switches.FirstOrDefault() switch
 				{
-					Arguments = new Dictionary<string, CallState>
+					"DELETE" => HttpMethod.Delete,
+					"POST" => HttpMethod.Post,
+					"PUT" => HttpMethod.Put,
+					"GET" => HttpMethod.Get,
+					"HEAD" => HttpMethod.Head,
+					"CONNECT" => HttpMethod.Connect,
+					"OPTIONS" => HttpMethod.Options,
+					"TRACE" => HttpMethod.Trace,
+					"PATCH" => HttpMethod.Patch,
+					_ => HttpMethod.Get
+				};
+
+				if (method == HttpMethod.Get && dataArg is not null)
+				{
+					await NotifyService!.Notify(executor, "GET requests cannot have a body.");
+					return new CallState("#-1 GET requests cannot have a body.");
+				}
+
+				if (!Uri.TryCreate(uriArg.Message?.ToPlainText() ?? string.Empty, UriKind.Absolute, out var uri))
+				{
+					await NotifyService!.Notify(executor, "Invalid URI format.");
+					return new CallState("#-1 INVALID URI FORMAT.");
+				}
+
+				var requestUri = uri;
+				var requestBody = dataArg?.Message?.ToString();
+				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
+
+				await Mediator!.Send(new QueueAttributeRequest(
+					async () =>
 					{
-						{ "0", new CallState(MModule.single(content)) }
-					}
-				});
+						var client = HttpClientFactory!.CreateClient("api");
 
-				return parser.CurrentState;
-			},
-			new DbRefAttribute()));
+						using var message = new HttpRequestMessage
+						{
+							Headers =
+							{
+								{ "User-Agent", "SharpMUSH" }
+							},
+							Method = method,
+							Content = requestBody is null
+								? null
+								: new StringContent(requestBody),
+							RequestUri = requestUri
+						};
 
-		return CallState.Empty;
+						var response = await client.SendAsync(message);
+
+						parser.CurrentState.AddRegister("STATUS",
+							MModule.single(((int)response.StatusCode).ToString()));
+						parser.CurrentState.AddRegister("CONTENT-TYPE",
+							MModule.single(response.Content.Headers.ContentType?.ToString() ?? string.Empty));
+
+						var content = await response.Content.ReadAsStringAsync();
+						var contentState = new CallState(MModule.single(content));
+						var contentDict = new Dictionary<string, CallState> { { "0", contentState } };
+
+						return parser.CurrentState with
+						{
+							Arguments = contentDict,
+							EnvironmentRegisters = contentDict
+						};
+					},
+					dbRefAttribute));
+
+				return CallState.Empty;
+			});
 	}
 
 	[SharpCommand(Name = "@RESPOND", Switches = ["HEADER", "TYPE"], Behavior = CB.Default | CB.NoGagged | CB.EqSplit,

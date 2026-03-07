@@ -1,6 +1,6 @@
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Collections.Concurrent;
 using System.Text;
