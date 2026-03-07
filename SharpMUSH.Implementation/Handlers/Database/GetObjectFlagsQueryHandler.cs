@@ -28,24 +28,12 @@ public class GetObjectFlagQueryHandler(ISharpDatabase database)
 
 		// If no exact match, try partial match (prefix matching)
 		// Get all flags and find the first one that matches as a prefix (case-insensitive)
-		await foreach (var flag in database.GetObjectFlagsAsync(cancellationToken))
-		{
-			// Check if the flag name starts with the search term
-			if (flag.Name.StartsWith(request.FlagName, StringComparison.InvariantCultureIgnoreCase))
-			{
-				return flag;
-			}
-
-			// Check aliases too
-			if (flag.Aliases is not null &&
-					flag.Aliases.Any(alias =>
-						alias.StartsWith(request.FlagName, StringComparison.InvariantCultureIgnoreCase)))
-			{
-				return flag;
-			}
-		}
-
-		return null;
+		return await database.GetObjectFlagsAsync(cancellationToken)
+			.FirstOrDefaultAsync(
+				flag => flag.Name.StartsWith(request.FlagName, StringComparison.InvariantCultureIgnoreCase)
+					|| (flag.Aliases?.Any(alias =>
+						alias.StartsWith(request.FlagName, StringComparison.InvariantCultureIgnoreCase)) ?? false),
+				cancellationToken);
 	}
 }
 

@@ -795,4 +795,45 @@ public partial class Functions
 		// Assume local time if no timezone specified
 		return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
 	}
+
+	[SharpFunction(Name = "CONVUTCSECS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
+		ParameterNames = ["seconds"])]
+	public static ValueTask<CallState> ConvUtcSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Convert seconds since epoch to UTC time string
+		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		if (!long.TryParse(secsStr, out var seconds))
+		{
+			return ValueTask.FromResult<CallState>("#-1 INVALID SECONDS");
+		}
+
+		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);
+		return ValueTask.FromResult<CallState>(dateTime.UtcDateTime.ToString("ddd MMM dd HH:mm:ss yyyy", System.Globalization.CultureInfo.InvariantCulture));
+	}
+
+	[SharpFunction(Name = "CONVUTCTIME", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
+		ParameterNames = ["time-string"])]
+	public static ValueTask<CallState> ConvUtcTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		// Convert UTC time string to seconds since epoch
+		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		// Try standard format first: Ddd Mmm DD HH:MM:SS YYYY
+		if (DateTimeOffset.TryParseExact(timeStr, "ddd MMM dd HH:mm:ss yyyy",
+			System.Globalization.CultureInfo.InvariantCulture,
+			System.Globalization.DateTimeStyles.AssumeUniversal, out var dateTime))
+		{
+			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
+		}
+
+		// Fallback: try generic UTC parse
+		if (DateTimeOffset.TryParse(timeStr, null,
+			System.Globalization.DateTimeStyles.AssumeUniversal, out dateTime))
+		{
+			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
+		}
+
+		return ValueTask.FromResult<CallState>("#-1");
+	}
 }
