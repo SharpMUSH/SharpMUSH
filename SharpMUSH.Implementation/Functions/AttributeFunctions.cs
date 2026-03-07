@@ -1635,7 +1635,8 @@ public partial class Functions
 
 				return maybeAttr switch
 				{
-					{ IsError: true } or { IsNone: true } => maybeAttr.AsCallStateError,
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
 					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
 				};
 		}

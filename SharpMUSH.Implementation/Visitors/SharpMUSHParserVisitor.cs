@@ -161,9 +161,13 @@ public class SharpMUSHParserVisitor(
 				var iterValue = iter.Value?.ToString() ?? string.Empty;
 				if (iterIndex == 0)
 				{
+					// %iL is an alias for the top (most recent) iteration value
 					iterRegisters.Add($"%iL:{iterValue}");
 				}
-				iterRegisters.Add($"%i{iterIndex}:{iterValue}");
+				else
+				{
+					iterRegisters.Add($"%i{iterIndex}:{iterValue}");
+				}
 				iterIndex++;
 			}
 		}
