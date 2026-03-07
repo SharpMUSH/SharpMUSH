@@ -507,7 +507,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.DidNotReceive()
 			.Notify(Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Permission denied") && TestHelpers.MessageContains(s, "TRUST")),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Permission denied")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
