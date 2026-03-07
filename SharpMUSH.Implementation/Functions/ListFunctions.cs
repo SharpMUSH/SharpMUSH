@@ -462,9 +462,9 @@ public partial class Functions
 
 		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
 		var patternArg = parser.CurrentState.Arguments["1"];
-		var patternText = MModule.plainText(patternArg.Message!);
-		MString? modifiedPattern = patternText.Contains("##")
-			? MModule.single(patternText.Replace("##", "%iL"))
+		var patternParts = MModule.split("##", patternArg.Message!);
+		MString? modifiedPattern = patternParts.Length > 1
+			? MModule.multipleWithDelimiter(MModule.single("%iL"), patternParts)
 			: null;
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);

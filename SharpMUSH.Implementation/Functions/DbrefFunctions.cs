@@ -1149,32 +1149,17 @@ LOCATE()
 						break;
 					}
 
-					// Replace ## with %iL for PennMUSH backward compatibility
-					// Set up an iteration register with the object's dbref so %iL resolves correctly
+					// Replace ## with the object's dbref number in the expression
+					// Use just the number (e.g., "1") for numeric comparisons
 					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
-					var expression = evalExpression.Replace("##", "%iL");
-					var iterWrapper = new IterationWrapper<MString>
-					{
-						Value = MModule.single(objectDbRefNum),
-						Break = false,
-						NoBreak = false,
-						Iteration = 0
-					};
-					parser.CurrentState.IterationRegisters.Push(iterWrapper);
+					var expression = evalExpression.Replace("##", objectDbRefNum);
 
-					try
+					// Evaluate the expression
+					var evalResult = await parser.FunctionParse(MModule.single(expression));
+					if (evalResult == null || !evalResult.Message.Truthy())
 					{
-						// Evaluate the expression
-						var evalResult = await parser.FunctionParse(MModule.single(expression));
-						if (evalResult == null || !evalResult.Message.Truthy())
-						{
-							matches = false;
-							break;
-						}
-					}
-					finally
-					{
-						parser.CurrentState.IterationRegisters.TryPop(out _);
+						matches = false;
+						break;
 					}
 				}
 			}
