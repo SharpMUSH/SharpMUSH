@@ -1157,7 +1157,7 @@ LOCATE()
 					{
 						Value = MModule.single(objectDbRefNum),
 						Break = false,
-						NoBreak = true,
+						NoBreak = false,
 						Iteration = 0
 					};
 					parser.CurrentState.IterationRegisters.Push(iterWrapper);
