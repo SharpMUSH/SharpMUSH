@@ -394,7 +394,7 @@ public partial class Functions
 			}
 		}
 
-		var isWizard = executor.IsGod() || await executor.IsWizard();
+		var isWizard = await executor.IsWizard();
 		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
 
 		int sentCount = 0;

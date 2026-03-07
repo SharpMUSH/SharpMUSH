@@ -1600,21 +1600,46 @@ public partial class Functions
 	public static async ValueTask<CallState> Variable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var plainText = arg0.ToPlainText();
 
-		return arg0.ToPlainText() switch
+		switch (plainText)
 		{
-			"#" => (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().DBRef,
-			"@" => (await parser.CurrentState.KnownCallerObject(Mediator!)).Object().DBRef,
-			"!" => (await parser.CurrentState.KnownExecutorObject(Mediator!)).Object().DBRef,
-			"n" or "N" => (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().Name,
-			"l" or "L" => (await (await parser.CurrentState.KnownEnactorObject(Mediator!)).Where()).Object().DBRef,
-			"c" or "C" => Substitutions.Substitutions.LastCommandBeforeEvaluation(parser),
-			var number when int.TryParse(number, out _)
-				=> parser.CurrentState.EnvironmentRegisters.TryGetValue(number, out var value)
-					? value
-					: CallState.Empty,
-			_ => Errors.ErrorArgRange
-		};
+			case "#":
+				return (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().DBRef;
+			case "@":
+				return (await parser.CurrentState.KnownCallerObject(Mediator!)).Object().DBRef;
+			case "!":
+				return (await parser.CurrentState.KnownExecutorObject(Mediator!)).Object().DBRef;
+			case "n" or "N":
+				return (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().Name;
+			case "l" or "L":
+				return (await (await parser.CurrentState.KnownEnactorObject(Mediator!)).Where()).Object().DBRef;
+			case "c" or "C":
+				return Substitutions.Substitutions.LastCommandBeforeEvaluation(parser);
+			default:
+				if (int.TryParse(plainText, out _))
+				{
+					return parser.CurrentState.EnvironmentRegisters.TryGetValue(plainText, out var value)
+						? value
+						: CallState.Empty;
+				}
+
+				// v(attributename) is equivalent to get(me/attributename)
+				var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+				var maybeAttr = await AttributeService!.GetAttributeAsync(
+					executor,
+					executor,
+					plainText,
+					mode: IAttributeService.AttributeMode.Read,
+					parent: false);
+
+				return maybeAttr switch
+				{
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
+					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+				};
+		}
 	}
 
 	[SharpFunction(Name = "valid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["type", "name"])]

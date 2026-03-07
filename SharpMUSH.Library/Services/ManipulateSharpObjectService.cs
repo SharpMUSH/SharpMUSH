@@ -176,24 +176,36 @@ public class ManipulateSharpObjectService(
 			return Errors.InvalidFlag;
 		}
 
-		// Check flag set/unset permissions
+		// Generic flag permission check, matching PennMUSH's can_set_flag_generic().
+		// Permission levels: trusted, royalty, wizard, god (see help "flag permissions").
 		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
 		if (requiredPermissions is not null && requiredPermissions.Length > 0)
 		{
 			var hasPermission = await requiredPermissions.ToAsyncEnumerable()
-				.AnyAsync(async (permission, _) =>
-					await executor.HasFlag(permission) || await executor.HasPower(permission));
+				.AnyAsync(async (permission, _) => await HasFlagPermission(executor, obj, permission));
 
 			if (!hasPermission)
 			{
 				if (notify)
 				{
-					var action = unset ? "unset" : "set";
-					await notifyService.Notify(executor, $"Permission denied: You lack the required permissions to {action} flag {realFlag.Name}.");
+					await notifyService.Notify(executor, "Permission denied.");
 				}
 
 				return Errors.ErrorPerm;
 			}
+		}
+
+		// Flag-specific permission checks, matching PennMUSH's can_set_flag().
+		// These additional restrictions apply on top of the generic permission check.
+		var flagSpecificDenied = await CheckFlagSpecificPermissions(executor, obj, realFlag, unset);
+		if (flagSpecificDenied)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Permission denied.");
+			}
+
+			return Errors.ErrorPerm;
 		}
 
 		switch (unset)
@@ -543,5 +555,76 @@ public class ManipulateSharpObjectService(
 		}
 
 		return true;
+	}
+
+	/// <summary>
+	/// Resolves a named flag permission level to the appropriate privilege check.
+	/// Matches PennMUSH's can_set_flag_generic() logic from flags.c.
+	/// See help "flag permissions" for the documented permission levels.
+	/// </summary>
+	private static async ValueTask<bool> HasFlagPermission(AnySharpObject executor, AnySharpObject obj, string permission) =>
+		permission.ToLowerInvariant() switch
+		{
+			// F_INHERIT: Wizard(player) || (Inheritable(player) && Owns(player, thing))
+			"trusted" => await executor.IsWizard()
+				|| (await executor.Inheritable() && await executor.Owns(obj)),
+			// F_ROYAL: Hasprivs(player) = IsPriv
+			"royalty" => await executor.IsPriv(),
+			// F_WIZARD: Wizard(player)
+			"wizard" => await executor.IsWizard(),
+			// F_GOD: God(player)
+			"god" => executor.IsGod(),
+			_ => await executor.HasFlag(permission) || await executor.HasPower(permission)
+		};
+
+	/// <summary>
+	/// Checks flag-specific permission restrictions beyond the generic permission check.
+	/// Matches PennMUSH's can_set_flag() logic from flags.c.
+	/// Returns true if the operation should be DENIED.
+	/// </summary>
+	private static async ValueTask<bool> CheckFlagSpecificPermissions(
+		AnySharpObject executor, AnySharpObject obj, SharpObjectFlag flag, bool negate)
+	{
+		var flagName = flag.Name.ToUpperInvariant();
+
+		// CHOWN_OK and DESTROY_OK: must own the target or be Wizard
+		if (flagName is "CHOWN_OK" or "DESTROY_OK")
+		{
+			return !(await executor.Owns(obj) || await executor.IsWizard());
+		}
+
+		// Can't gag wizards/God, but can ungag them
+		if (flagName == "GAGGED" && await obj.IsWizard())
+			return !negate; // deny setting, allow unsetting
+
+		// God can do (almost) anything after the generic check passes
+		if (executor.IsGod())
+			return false;
+
+		// WIZARD flag: special restrictions
+		if (flagName == "WIZARD")
+		{
+			if (!negate)
+			{
+				// Setting WIZARD: must be Wizard, own the target, and target must not be a player
+				return !(await executor.IsWizard() && await executor.Owns(obj) && !obj.IsPlayer);
+			}
+			else
+			{
+				// Unsetting WIZARD: must be Wizard and target must not be a player
+				return !(await executor.IsWizard() && !obj.IsPlayer);
+			}
+		}
+
+		// ROYALTY flag: special restrictions
+		if (flagName == "ROYALTY")
+		{
+			// Must not be guest target, and either Wizard or (Royalty + owns + not player)
+			return await obj.IsGuest()
+				|| !(await executor.IsWizard()
+					|| (await executor.IsRoyalty() && await executor.Owns(obj) && !obj.IsPlayer));
+		}
+
+		return false; // no additional restriction
 	}
 }

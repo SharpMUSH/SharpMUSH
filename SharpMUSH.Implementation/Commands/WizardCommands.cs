@@ -861,7 +861,7 @@ public partial class Commands
 		if (switches.Contains("LIST"))
 		{
 			// Permission check - must be wizard/royalty
-			if (!executor.IsGod() && !await executor.IsWizard())
+			if (!await executor.IsWizard())
 			{
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return CallState.Empty;
@@ -898,7 +898,7 @@ public partial class Commands
 		if (motdType == "connect")
 		{
 			// Need Announce power for connect MOTD
-			if (!executor.IsGod() && !await executor.HasPower("ANNOUNCE"))
+			if (!await executor.IsWizard() && !await executor.HasPower("ANNOUNCE"))
 			{
 				await NotifyService!.Notify(executor, "Permission denied. You need the Announce power.");
 				return CallState.Empty;
@@ -907,7 +907,7 @@ public partial class Commands
 		else
 		{
 			// Need wizard/royalty for other MOTDs
-			if (!executor.IsGod() && !await executor.IsWizard())
+			if (!await executor.IsWizard())
 			{
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return CallState.Empty;
@@ -1873,7 +1873,7 @@ public partial class Commands
 
 		await NotifyService!.Notify(executor, details);
 
-		if ((!await executor.IsWizard() && !executor.IsGod()) || parser.CurrentState.Switches.Contains("MORTAL"))
+		if (!await executor.IsWizard() || parser.CurrentState.Switches.Contains("MORTAL"))
 		{
 			return new CallState(details);
 		}
@@ -2560,7 +2560,7 @@ public partial class Commands
 		if (switches.Contains("CLEAR"))
 		{
 			// Check permission - wizard or poll power
-			if (!executor.IsGod() && !await executor.IsWizard() && !await executor.HasPower("POLL"))
+			if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
 			{
 				return await NotifyService!.NotifyAndReturn(
 					executor.Object().DBRef,
@@ -2590,7 +2590,7 @@ public partial class Commands
 		}
 
 		// Set poll message - requires permissions
-		if (!executor.IsGod() && !await executor.IsWizard() && !await executor.HasPower("POLL"))
+		if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
 		{
 			return await NotifyService!.NotifyAndReturn(
 				executor.Object().DBRef,

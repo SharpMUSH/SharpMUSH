@@ -557,4 +557,14 @@ public class AttributeFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/Test_V_AttrName,groupsvalue)][v(Test_V_AttrName)]", "groupsvalue")]
+	[Arguments("[attrib_set(%!/Test_V_AttrName2,hello world)][v(Test_V_AttrName2)]", "hello world")]
+	public async Task Test_V_AttributeName(string str, string expected)
+	{
+		var result = await Parser.FunctionParse(MModule.single(str));
+		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
+	}
 }

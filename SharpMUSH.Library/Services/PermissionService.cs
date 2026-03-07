@@ -365,5 +365,5 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			 || await ChannelCanModifyAsync(target, channel);
 
 	public async ValueTask<bool> CanNoSpoof(AnySharpObject executor)
-		=> await executor.HasPower("NOSPOOF") || await executor.IsWizard() || executor.IsGod();
+		=> await executor.HasPower("NOSPOOF") || await executor.IsWizard();
 }

@@ -353,4 +353,33 @@ public class DebugVerboseTests
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugBothRegObj"));
 	}
+
+	[Test]
+	public async Task DebugFlag_OutputsIterRegisters_WhenInIter()
+	{
+		// Arrange - Create test object and set DEBUG flag
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugIterRegObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugIterRegObj=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugIterRegObj=!no_command"));
+
+		// Create command that uses iter() with a function inside
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&test_cmd_iter DebugIterRegObj=$test6command:@pemit me=[iter(apple banana,strlen(%iL))]"));
+
+		// Act
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugIterRegObj=test6command"));
+
+		// Assert - Verify iteration register output appears with %iL
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("Iter-Registers") && mstr.ToString().Contains("%iL"),
+						str => str.Contains("Iter-Registers") && str.Contains("%iL"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugIterRegObj"));
+	}
 }

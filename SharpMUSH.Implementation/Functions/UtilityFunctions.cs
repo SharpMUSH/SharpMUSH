@@ -1011,7 +1011,7 @@ public partial class Functions
 		static async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string option)
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-			if (!(executor.IsGod() || await executor.IsWizard()))
+			if (!await executor.IsWizard())
 			{
 				return new CallState("#-1 PERMISSION DENIED");
 			}

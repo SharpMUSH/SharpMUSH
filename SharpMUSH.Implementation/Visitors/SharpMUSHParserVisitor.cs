@@ -106,7 +106,8 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
-	/// Formats register output for DEBUG mode, showing q-registers and stack registers separately.
+	/// Formats register output for DEBUG mode, showing q-registers, stack registers,
+	/// and iteration registers separately.
 	/// </summary>
 	/// <param name="state">Parser state containing registers</param>
 	/// <param name="dbrefNumber">DBRef number for output prefix</param>
@@ -117,6 +118,7 @@ public class SharpMUSHParserVisitor(
 		var output = new System.Text.StringBuilder();
 		var qRegisters = new List<string>();
 		var stackRegisters = new List<string>();
+		var iterRegisters = new List<string>();
 
 		// Get q-registers from Registers stack (set via setq())
 		if (state.Registers.TryPeek(out var registers) && registers.Count > 0)
@@ -150,6 +152,26 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
+		// Get iteration registers from IterationRegisters stack (set via iter())
+		if (!state.IterationRegisters.IsEmpty)
+		{
+			var iterIndex = 0;
+			foreach (var iter in state.IterationRegisters)
+			{
+				var iterValue = iter.Value?.ToString() ?? string.Empty;
+				if (iterIndex == 0)
+				{
+					// %iL is an alias for the top (most recent) iteration value
+					iterRegisters.Add($"%iL:{iterValue}");
+				}
+				else
+				{
+					iterRegisters.Add($"%i{iterIndex}:{iterValue}");
+				}
+				iterIndex++;
+			}
+		}
+
 		// Output q-registers if any exist
 		if (qRegisters.Count > 0)
 		{
@@ -164,6 +186,16 @@ public class SharpMUSHParserVisitor(
 				output.AppendLine();
 			}
 			output.Append($"#{dbrefNumber}! {indent}[Registers: {string.Join(", ", stackRegisters)}]");
+		}
+
+		// Output iteration registers if any exist
+		if (iterRegisters.Count > 0)
+		{
+			if (output.Length > 0)
+			{
+				output.AppendLine();
+			}
+			output.Append($"#{dbrefNumber}! {indent}[Iter-Registers: {string.Join(", ", iterRegisters)}]");
 		}
 
 		return output.ToString();
