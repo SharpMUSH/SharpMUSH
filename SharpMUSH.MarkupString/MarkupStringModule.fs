@@ -126,13 +126,15 @@ module MarkupStringModule =
 
     /// <summary>
     /// Renders to ANSI terminal escape codes.
-    /// Text is passed through unchanged; markups are applied via Markup.Wrap;
+    /// Text is passed through unchanged; markups are applied via Markup.WrapAs("ansi", ...);
     /// output is post-processed with ANSI optimization to eliminate redundant sequences.
+    /// HtmlMarkup tags (b, i, u, s) are converted to their ANSI equivalents;
+    /// unknown HTML tags are stripped.
     /// </summary>
     type AnsiRenderStrategy() =
         interface IRenderStrategy with
             member _.EncodeText(text) = text
-            member _.ApplyMarkup(markup)(text) = markup.Wrap(text)
+            member _.ApplyMarkup(markup)(text) = markup.WrapAs("ansi", text)
             member _.Prefix = String.Empty
             member _.Postfix = ANSILibrary.StringExtensions.endWithTrueClear(String.Empty).ToString()
             member _.Optimize(text) = ANSILibrary.Optimization.optimize text

@@ -290,6 +290,20 @@ module MarkupImplementation =
       }
       |> HtmlMarkup
 
+    /// Converts an HTML tag to ANSI codes by mapping known formatting tags
+    /// to their ANSI equivalents. Unknown tags are stripped (text passed through).
+    static member wrapAsAnsi (details: HtmlStructure) (text: string) : string =
+      let ansiDetails =
+        match details.TagName.ToLowerInvariant() with
+        | "b" | "strong" -> Some (AnsiMarkup.Create(bold = true)).Details
+        | "i" | "em" -> Some (AnsiMarkup.Create(italic = true)).Details
+        | "u" -> Some (AnsiMarkup.Create(underlined = true)).Details
+        | "s" | "strike" | "del" -> Some (AnsiMarkup.Create(strikeThrough = true)).Details
+        | _ -> None
+      match ansiDetails with
+      | Some d -> StringExtensions.endWithTrueClear((AnsiMarkup.applyDetails d text).ToString()).ToString()
+      | None -> text
+
     interface Markup with
       // For HTML, we use empty prefix/postfix since Wrap handles everything
       override this.Postfix: string = System.String.Empty
@@ -308,12 +322,14 @@ module MarkupImplementation =
 
       override this.WrapAs(format: string, text: string) : string =
         match format.ToLower() with
-        | "bbcode" -> text // HTML tags are not representable in BBCode; pass through text only
-        | _ -> (this :> Markup).Wrap(text)
+        | "ansi" -> HtmlMarkup.wrapAsAnsi details text
+        | "bbcode" | "plaintext" | "plain" -> text // These formats cannot represent HTML tags; pass through text only
+        | _ -> (this :> Markup).Wrap(text) // html, pueblo, mxp all understand HTML tags
 
       override this.WrapAndRestoreAs(format: string, text: string, _: Markup) : string =
         match format.ToLower() with
-        | "bbcode" -> text // HTML tags are not representable in BBCode; pass through text only
-        | _ -> (this :> Markup).Wrap(text)
+        | "ansi" -> HtmlMarkup.wrapAsAnsi details text
+        | "bbcode" | "plaintext" | "plain" -> text // These formats cannot represent HTML tags; pass through text only
+        | _ -> (this :> Markup).Wrap(text) // html, pueblo, mxp all understand HTML tags
 
       override this.Optimize (text: string) : string = text

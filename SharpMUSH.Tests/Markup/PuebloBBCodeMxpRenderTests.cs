@@ -468,4 +468,205 @@ public class PuebloBBCodeMxpRenderTests
 		await Assert.That(result).Contains("COLOR FORE=\"#ffa500\"");
 		await Assert.That(result).Contains("mxp_module_orange_unique");
 	}
+
+	// ── HtmlMarkup → ANSI (Telnet) Cross-format ─────────────────────
+
+	[Test]
+	public async Task Render_AnsiFormat_HtmlBoldTag_ProducesAnsiBold()
+	{
+		var htmlMarkup = H.Create("b");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_ansi_bold_unique");
+
+		var result = markupString.Render("ansi");
+
+		// Should contain ANSI bold escape code ESC[1m and the text, not <b> tags
+		await Assert.That(result).Contains("html_to_ansi_bold_unique");
+		await Assert.That(result).DoesNotContain("<b>");
+		await Assert.That(result).DoesNotContain("</b>");
+		await Assert.That(result).Contains("\u001b["); // ANSI escape sequence present
+	}
+
+	[Test]
+	public async Task Render_AnsiFormat_HtmlItalicTag_ProducesAnsiItalic()
+	{
+		var htmlMarkup = H.Create("i");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_ansi_italic_unique");
+
+		var result = markupString.Render("ansi");
+
+		await Assert.That(result).Contains("html_to_ansi_italic_unique");
+		await Assert.That(result).DoesNotContain("<i>");
+		await Assert.That(result).DoesNotContain("</i>");
+		await Assert.That(result).Contains("\u001b["); // ANSI escape sequence present
+	}
+
+	[Test]
+	public async Task Render_AnsiFormat_HtmlUnderlineTag_ProducesAnsiUnderline()
+	{
+		var htmlMarkup = H.Create("u");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_ansi_underline_unique");
+
+		var result = markupString.Render("ansi");
+
+		await Assert.That(result).Contains("html_to_ansi_underline_unique");
+		await Assert.That(result).DoesNotContain("<u>");
+		await Assert.That(result).DoesNotContain("</u>");
+		await Assert.That(result).Contains("\u001b["); // ANSI escape sequence present
+	}
+
+	[Test]
+	public async Task Render_AnsiFormat_HtmlStrikeTag_ProducesAnsiStrikeThrough()
+	{
+		var htmlMarkup = H.Create("s");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_ansi_strike_unique");
+
+		var result = markupString.Render("ansi");
+
+		await Assert.That(result).Contains("html_to_ansi_strike_unique");
+		await Assert.That(result).DoesNotContain("<s>");
+		await Assert.That(result).DoesNotContain("</s>");
+		await Assert.That(result).Contains("\u001b["); // ANSI escape sequence present
+	}
+
+	[Test]
+	public async Task Render_AnsiFormat_HtmlStrongTag_ProducesAnsiBold()
+	{
+		var htmlMarkup = H.Create("strong");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_ansi_strong_unique");
+
+		var result = markupString.Render("ansi");
+
+		await Assert.That(result).Contains("html_to_ansi_strong_unique");
+		await Assert.That(result).DoesNotContain("<strong>");
+		await Assert.That(result).Contains("\u001b["); // ANSI escape sequence present
+	}
+
+	[Test]
+	public async Task Render_AnsiFormat_HtmlEmTag_ProducesAnsiItalic()
+	{
+		var htmlMarkup = H.Create("em");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_ansi_em_unique");
+
+		var result = markupString.Render("ansi");
+
+		await Assert.That(result).Contains("html_to_ansi_em_unique");
+		await Assert.That(result).DoesNotContain("<em>");
+		await Assert.That(result).Contains("\u001b["); // ANSI escape sequence present
+	}
+
+	[Test]
+	public async Task Render_AnsiFormat_HtmlUnknownTag_StripsTag()
+	{
+		var htmlMarkup = H.Create("div");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_ansi_unknown_unique");
+
+		var result = markupString.Render("ansi");
+
+		// Unknown HTML tags should be stripped, leaving just the text
+		await Assert.That(result).Contains("html_to_ansi_unknown_unique");
+		await Assert.That(result).DoesNotContain("<div>");
+		await Assert.That(result).DoesNotContain("</div>");
+	}
+
+	[Test]
+	public async Task Render_AnsiFormat_HtmlPreTag_StripsTag()
+	{
+		var htmlMarkup = H.Create("pre");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_ansi_pre_unique");
+
+		var result = markupString.Render("ansi");
+
+		// <pre> tags should be stripped for ANSI output
+		await Assert.That(result).Contains("html_to_ansi_pre_unique");
+		await Assert.That(result).DoesNotContain("<pre>");
+		await Assert.That(result).DoesNotContain("</pre>");
+	}
+
+	// ── HtmlMarkup → Plaintext Cross-format ─────────────────────────
+
+	[Test]
+	public async Task Render_PlaintextFormat_HtmlBoldTag_StripsTag()
+	{
+		var htmlMarkup = H.Create("b");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_plain_bold_unique");
+
+		var result = markupString.Render("plaintext");
+
+		await Assert.That(result).IsEqualTo("html_to_plain_bold_unique");
+	}
+
+	[Test]
+	public async Task Render_PlaintextFormat_HtmlItalicTag_StripsTag()
+	{
+		var htmlMarkup = H.Create("i");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_plain_italic_unique");
+
+		var result = markupString.Render("plaintext");
+
+		await Assert.That(result).IsEqualTo("html_to_plain_italic_unique");
+	}
+
+	[Test]
+	public async Task Render_PlaintextFormat_AnsiMarkup_StripsAnsi()
+	{
+		var ansiMarkup = M.Create(bold: true, foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var markupString = A.markupSingle(ansiMarkup, "ansi_to_plain_unique");
+
+		var result = markupString.Render("plaintext");
+
+		await Assert.That(result).IsEqualTo("ansi_to_plain_unique");
+	}
+
+	// ── HtmlMarkup → HTML Cross-format ──────────────────────────────
+
+	[Test]
+	public async Task Render_HtmlFormat_HtmlBoldTag_PreservesHtmlTag()
+	{
+		var htmlMarkup = H.Create("b");
+		var markupString = A.markupSingle(htmlMarkup, "html_to_html_bold_unique");
+
+		var result = markupString.Render("html");
+
+		// HTML format should preserve HTML tags
+		await Assert.That(result).IsEqualTo("<b>html_to_html_bold_unique</b>");
+	}
+
+	// ── Combined AnsiMarkup + HtmlMarkup Cross-format ───────────────
+
+	[Test]
+	public async Task Render_AnsiFormat_MixedMarkups_ConvertsBothCorrectly()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var htmlMarkup = H.Create("b");
+
+		var ansiText = A.markupSingle(ansiMarkup, "mixed_ansi_red_unique");
+		var htmlText = A.markupSingle(htmlMarkup, "mixed_html_bold_unique");
+		var combined = A.concat(ansiText, htmlText);
+
+		var result = combined.Render("ansi");
+
+		// AnsiMarkup should produce ANSI codes, HtmlMarkup <b> should produce ANSI bold
+		await Assert.That(result).Contains("mixed_ansi_red_unique");
+		await Assert.That(result).Contains("mixed_html_bold_unique");
+		await Assert.That(result).DoesNotContain("<b>");
+		await Assert.That(result).Contains("\u001b["); // ANSI escape sequences present
+	}
+
+	[Test]
+	public async Task Render_HtmlFormat_MixedMarkups_ConvertsBothCorrectly()
+	{
+		var ansiMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
+		var htmlMarkup = H.Create("b");
+
+		var ansiText = A.markupSingle(ansiMarkup, "mixed_html_out_red_unique");
+		var htmlText = A.markupSingle(htmlMarkup, "mixed_html_out_bold_unique");
+		var combined = A.concat(ansiText, htmlText);
+
+		var result = combined.Render("html");
+
+		// AnsiMarkup should produce HTML spans, HtmlMarkup should produce HTML tags
+		await Assert.That(result).Contains("color: #ff0000");
+		await Assert.That(result).Contains("<b>mixed_html_out_bold_unique</b>");
+		await Assert.That(result).DoesNotContain("\u001b["); // No ANSI escape sequences
+	}
 }
