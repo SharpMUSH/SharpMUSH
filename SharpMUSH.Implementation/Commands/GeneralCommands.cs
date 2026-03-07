@@ -448,6 +448,13 @@ public partial class Commands
 		var list = MModule.split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
+		// Replace ## with %iL in the command for PennMUSH backward compatibility
+		var commandText = MModule.plainText(command);
+		if (commandText.Contains("##"))
+		{
+			command = MModule.single(commandText.Replace("##", "%iL"));
+		}
+
 		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
 
 		if (isInline)

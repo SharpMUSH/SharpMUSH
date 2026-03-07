@@ -71,6 +71,9 @@ public class ListFunctionUnitTests
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	// TODO: %iL does not evaluate to the correct value.
 	// [Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%iL)),|,-)", "2 3 4-3 4 5-4 5 6")]
+	[Arguments("iter(1 2 3,##)", "1 2 3")]
+	[Arguments("iter(1 2 3,add(##,1))", "2 3 4")]
+	[Arguments("iter(1|2|3,##,|,-)", "1-2-3")]
 	public async Task IterationValue(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
