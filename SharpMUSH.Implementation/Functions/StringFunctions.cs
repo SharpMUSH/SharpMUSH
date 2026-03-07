@@ -782,27 +782,17 @@ public partial class Functions
 
 	private static int CompareDbRefs(string value1, string value2)
 	{
-		// Try to parse as dbrefs (#123 format)
-		var dbref1 = ParseDbRef(value1);
-		var dbref2 = ParseDbRef(value2);
+		// Try to parse as dbrefs (#123 or objid #123:timestamp format)
+		var dbref1 = HelperFunctions.ParseDbRef(value1);
+		var dbref2 = HelperFunctions.ParseDbRef(value2);
 
-		if (dbref1.HasValue && dbref2.HasValue)
+		if (dbref1.IsSome() && dbref2.IsSome())
 		{
-			return dbref1.Value.CompareTo(dbref2.Value);
+			return dbref1.AsValue().Number.CompareTo(dbref2.AsValue().Number);
 		}
 
 		// Fall back to string comparison if not valid dbrefs
 		return string.Compare(value1, value2, StringComparison.Ordinal);
-	}
-
-	private static int? ParseDbRef(string value)
-	{
-		if (value.StartsWith("#") && int.TryParse(value[1..], out var dbref))
-		{
-			return dbref;
-		}
-
-		return null;
 	}
 
 	[SharpFunction(Name = "cond", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...|result...", "default"])]

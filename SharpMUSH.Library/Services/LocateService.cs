@@ -441,7 +441,7 @@ public partial class LocateService(
 			}
 
 			var abs = HelperFunctions.ParseDbRef(name);
-			if (abs.IsSome() && cur.Object().DBRef == abs.AsValue())
+			if (abs.IsSome() && cur.Object().DBRef.Matches(abs.AsValue()))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
