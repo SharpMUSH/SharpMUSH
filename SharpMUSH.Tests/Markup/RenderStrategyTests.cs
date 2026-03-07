@@ -259,12 +259,12 @@ public class RenderStrategyTests
 		await Assert.That(result).IsEqualTo("");
 	}
 
-	// ── RenderStrategies.forFormat registry ────────────────────────
+	// ── forFormat function ────────────────────────
 
 	[Test]
 	public async Task ForFormat_Ansi_ReturnsAnsiStrategy()
 	{
-		var strategy = AMS.RenderStrategies.forFormat("ansi");
+		var strategy = AMS.forFormat(AMS.RenderFormat.Ansi);
 		var ams = AMS.single("Test");
 		var result = ams.RenderWith(strategy);
 
@@ -274,7 +274,7 @@ public class RenderStrategyTests
 	[Test]
 	public async Task ForFormat_Html_ReturnsHtmlStrategy()
 	{
-		var strategy = AMS.RenderStrategies.forFormat("html");
+		var strategy = AMS.forFormat(AMS.RenderFormat.Html);
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
 		var ams = AMS.markupSingle(redMarkup, "Test");
 		var result = ams.RenderWith(strategy);
@@ -285,7 +285,7 @@ public class RenderStrategyTests
 	[Test]
 	public async Task ForFormat_PlainText_ReturnsPlainTextStrategy()
 	{
-		var strategy = AMS.RenderStrategies.forFormat("plaintext");
+		var strategy = AMS.forFormat(AMS.RenderFormat.PlainText);
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var ams = AMS.markupSingle(redMarkup, "Test");
 		var result = ams.RenderWith(strategy);
@@ -294,40 +294,15 @@ public class RenderStrategyTests
 	}
 
 	[Test]
-	public async Task ForFormat_Plain_ReturnsPlainTextStrategy()
-	{
-		var strategy = AMS.RenderStrategies.forFormat("plain");
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
-		var ams = AMS.markupSingle(redMarkup, "Test");
-		var result = ams.RenderWith(strategy);
-
-		await Assert.That(result).IsEqualTo("Test");
-	}
-
-	[Test]
-	public async Task ForFormat_CaseInsensitive_Works()
-	{
-		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.FromArgb(255, 0, 0)));
-		var ams = AMS.markupSingle(redMarkup, "Test");
-
-		var result1 = ams.RenderWith(AMS.RenderStrategies.forFormat("HTML"));
-		var result2 = ams.RenderWith(AMS.RenderStrategies.forFormat("Html"));
-		var result3 = ams.RenderWith(AMS.RenderStrategies.forFormat("html"));
-
-		await Assert.That(result1).IsEqualTo(result2);
-		await Assert.That(result2).IsEqualTo(result3);
-	}
-
-	[Test]
-	public async Task ForFormat_Unknown_DefaultsToAnsi()
+	public async Task ForFormat_MatchesToStrategy()
 	{
 		var redMarkup = M.Create(foreground: ANSILibrary.ANSI.AnsiColor.NewRGB(Color.Red));
 		var ams = AMS.markupSingle(redMarkup, "Test");
 
-		var unknownResult = ams.RenderWith(AMS.RenderStrategies.forFormat("unknown"));
-		var ansiResult = ams.RenderWith(AMS.RenderStrategies.ansi);
+		var forFormatResult = ams.RenderWith(AMS.forFormat(AMS.RenderFormat.Ansi));
+		var toStrategyResult = ams.RenderWith(AMS.RenderFormat.Ansi.ToStrategy());
 
-		await Assert.That(unknownResult).IsEqualTo(ansiResult);
+		await Assert.That(forFormatResult).IsEqualTo(toStrategyResult);
 	}
 
 	// ── RenderWith method ─────────────────────────────────────────

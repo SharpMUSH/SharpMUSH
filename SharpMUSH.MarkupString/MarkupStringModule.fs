@@ -178,16 +178,6 @@ module MarkupStringModule =
         /// Singleton plain text render strategy.
         let plainText : IRenderStrategy = PlainTextRenderStrategy()
 
-        /// <summary>
-        /// Looks up a render strategy by format name (case-insensitive).
-        /// Returns the ANSI strategy for unknown formats (backward-compatible default).
-        /// </summary>
-        let forFormat (format: string) : IRenderStrategy =
-            match format.ToLowerInvariant() with
-            | "html" -> html
-            | "plaintext" | "plain" -> plainText
-            | _ -> ansi  // "ansi" and any unknown format default to ANSI
-
     /// <summary>
     /// Type-safe discriminated union for selecting a render format.
     /// Provides compile-time safety over string-based format dispatch.
@@ -218,6 +208,16 @@ module MarkupStringModule =
                     member _.Prefix = String.Empty
                     member _.Postfix = String.Empty
                     member _.Optimize(text) = text }
+
+    /// <summary>
+    /// Resolves a RenderFormat to the corresponding IRenderStrategy.
+    /// For built-in formats (Ansi, Html, PlainText), returns a cached singleton.
+    /// For Custom formats, creates a new strategy instance.
+    /// This is a module-level curried function suitable for pipelines and partial application,
+    /// equivalent to calling <c>format.ToStrategy()</c>.
+    /// </summary>
+    let forFormat (format: RenderFormat) : IRenderStrategy =
+        format.ToStrategy()
 
     /// <summary>
     /// A flat, attributed markup string inspired by NSAttributedString.
