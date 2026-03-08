@@ -5,6 +5,8 @@ using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -489,29 +491,23 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async ValueTask God_CanSetTrustFlag()
 	{
 		// God (#1) should be able to set any flag, including TRUST
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create GodTrustFlagTestObj"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set GodTrustFlagTestObj=TRUST"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create GodTrustFlagTestObj"));
+		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// Verify the TRUST flag was set (not denied)
-		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "TRUST Set")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {newDb}=TRUST"));
 
-		// Verify no permission denied message was sent
-		await NotifyService
-			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Permission denied")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+		// Verify the TRUST flag was set by checking the database state directly
+		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
+		await Assert.That(newObject.Object()).IsNotNull();
+		var flags = await newObject.Object()!.Flags.Value.ToArrayAsync();
+
+		await Assert.That(flags.Any(f => f.Name.Equals("TRUST", StringComparison.OrdinalIgnoreCase))).IsTrue();
 
 		// Cleanup
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy GodTrustFlagTestObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 }
