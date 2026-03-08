@@ -33,8 +33,8 @@ int line, int charPositionInLine, string msg, RecognitionException e)
 // DiagnosticErrorListener reports through SyntaxError with messages like
 // "reportAttemptingFullContext" and "reportAmbiguity" - these are NOT real errors.
 // Filter them out.
-if (msg.StartsWith("report"))
-return; // Handled by ReportAttemptingFullContext/ReportAmbiguity overrides
+if (msg.StartsWith("report", StringComparison.Ordinal))
+return;
 
 RealSyntaxErrors.Add($"  Line {line}:{charPositionInLine} - {msg}");
 }
@@ -146,7 +146,7 @@ for (var i = 0; i < tokens.Count; i++)
 {
 var token = tokens[i];
 var tokenName = lexer.Vocabulary.GetSymbolicName(token.Type);
-if (token.Type == -1) tokenName = "EOF";
+if (token.Type == TokenConstants.EOF) tokenName = "EOF";
 sb.AppendLine($"  [{i}] {tokenName,-20} = \"{token.Text}\"  (pos {token.StartIndex}..{token.StopIndex})");
 }
 sb.AppendLine();
@@ -308,10 +308,7 @@ await Assert.That(sllResult.RealSyntaxErrorCount).IsEqualTo(0)
 await Assert.That(llResult.ParseTree).IsEqualTo(sllResult.ParseTree)
 .Because("LL and SLL modes should produce identical parse trees for this input");
 
-// Verify correct parse tree structure:
-// lit() should receive TWO arguments: "#lambda/add(1" and "2)"
-// Wait - this is actually how the parser splits it due to COMMAWS being a function separator
-// Let's just verify the tree is structurally correct
+// Verify the parse tree contains the expected function rule nodes
 await Assert.That(llResult.ParseTree).Contains("function")
 .Because("parse tree should contain function rules for ulambda and lit");
 }
