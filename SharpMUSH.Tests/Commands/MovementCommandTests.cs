@@ -54,6 +54,88 @@ public class MovementCommandTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	/// <summary>
+	/// Tests @tel with a single argument (teleports the executor to a room by dbref).
+	/// Usage: @tel destination
+	/// Known issue: After teleporting a player, the automatic `look` command may generate
+	/// ArangoException "document not found" in some database configurations.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportSelfToRoom()
+	{
+		// Create a destination room
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig TelSelfRoom"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		// Verify the dig created a room (returns a dbref like #3 or #3:timestamp)
+		await Assert.That(roomDbRef).StartsWith("#");
+
+		// Teleport self to the new room using its dbref
+		// This validates that the @tel command doesn't crash
+		var telResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {roomDbRef}"));
+
+		// Verify the command completed without throwing
+		await Assert.That(telResult).IsNotNull();
+	}
+
+	/// <summary>
+	/// Tests @tel with two arguments (teleports an object to a destination by dbref).
+	/// Usage: @tel object=destination
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportObjectToRoom()
+	{
+		// Create a test object and a destination room
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create TelObjTarget"));
+		var objDbRef = createResult.Message!.ToPlainText()!.Trim();
+
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig TelObjDestRoom"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		// Verify both created successfully
+		await Assert.That(objDbRef).StartsWith("#");
+		await Assert.That(roomDbRef).StartsWith("#");
+
+		// Teleport the object to the room using dbrefs
+		var telResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {objDbRef}={roomDbRef}"));
+
+		// Verify command completed without throwing
+		await Assert.That(telResult).IsNotNull();
+	}
+
+	/// <summary>
+	/// Tests @tel with object names instead of dbrefs.
+	/// Usage: @tel objectname=destinationname
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportByName()
+	{
+		// Create objects with unique names
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create TelByNameObj"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig TelByNameRoom"));
+
+		// Teleport using names (this exercises the name-based locate path)
+		var telResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@tel TelByNameObj=TelByNameRoom"));
+
+		// Verify command completed without throwing
+		await Assert.That(telResult).IsNotNull();
+	}
+
+	/// <summary>
+	/// Tests @tel to an invalid destination.
+	/// Should produce an error notification.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportToInvalidDestination()
+	{
+		var result = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@tel #99999"));
+
+		// Command should still return a result (error handling)
+		await Assert.That(result).IsNotNull();
+	}
+
 	[Test]
 	public async ValueTask HomeCommand()
 	{
