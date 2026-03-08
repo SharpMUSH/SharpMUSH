@@ -26,41 +26,28 @@ namespace SharpMUSH.Tests.Integration;
 /// - @tel within @wait callback can't locate objects by name (timing/context issue)
 /// - +bbread output shows #-1 errors for group objects not being locatable
 ///
-/// ANTLR PARSER ERRORS:
-/// The following BBS script lines produce ANTLR parser errors on stderr.
-/// These are caused by MUSH escape sequences (\[, \%, \(, \,) that the ANTLR
-/// grammar does not fully support:
+/// ANTLR PARSER ERRORS (Post Fix A+B+C):
+/// After implementing grammar fixes A (bracket depth), B (brace function semantics),
+/// and C (paren depth), only 1 of the original 8 error-producing lines remains:
 ///
-/// Line 74: &amp;CMD_+BBLOCK - contains \[or(hasflag(\%0,...) escape patterns
-///   Errors: "extraneous input ')' expecting CBRACK", "mismatched input ',' expecting EOF"
+/// Line 57: &amp;TR_POST_NOTIFY - contains bare parens (New BB message ...) followed by
+///   bracket pattern [ifelse(hasattr(...),...)] — Fix C's inParenDepth leaks into
+///   the bracket scope causing CPARENs inside ifelse to be consumed as generic text.
+///   Errors: "mismatched input ']' expecting {CPAREN, COMMAWS}",
+///           "extraneous input ')' expecting CBRACE"
 ///
-/// Line 83: &amp;CMD_+BBREAD2 - longest line (1886 chars), contains \([name(...)]\) patterns
-///   Errors: "extraneous input ')' expecting CBRACK", "missing CBRACK at ')'",
-///           "mismatched input ']' expecting CBRACE", "extraneous input '}' expecting EOF"
+/// PREVIOUSLY FIXED (7 lines):
+/// Lines 74, 83, 96: Fixed by Fix A — orphaned ] from \[ escapes now treated as generic text
+/// Lines 91, 109, 110, 111: Fixed by Fix B — multi-arg functions now parse inside braces
+/// Line 101: Fixed by Fix C — bare parens (text) no longer close functions
+/// Lines 118, 128: Fixed by Fix A — bracket depth tracking
 ///
-/// Line 89: &amp;CMD_+BBSCAN - contains \(#[member(...)]\) and \% escape patterns
-///   Errors: "no viable alternative at input", "extraneous input ')' expecting CBRACK"
-///
-/// Line 96: &amp;CMD_+BBWRITELOCK - same \[or(hasflag(\%0,...) pattern as line 74
-///   Errors: "extraneous input ')' expecting CBRACK"
-///
-/// Line 101: &amp;CMD_+BBREAD - contains \(-\) and \, escape sequences
-///   Errors: "no viable alternative at input", "mismatched input 'EOF' expecting..."
-///
-/// Line 118: &amp;FN_SETR - contains \%q%0 escape pattern
-///   Errors: "no viable alternative at input", "mismatched input 'EOF' expecting..."
-///
-/// Line 128: @switch version() - contains \%q0 escape pattern
-///   Errors: "no viable alternative at input", "extraneous input ')' expecting CBRACK"
-///
+/// NON-PARSER ERRORS (lock evaluator):
 /// Lines 134, 136, 138: &amp;bb_read/bb_omit/bb_silent me - attribute clear commands
 ///   parsed by lock evaluator which expects flag/attribute names, not bare 'me'
 ///   Errors: "mismatched input 'me' expecting {NAME, BIT_FLAG, ...}"
 ///
-/// Root cause: The MUSH escape sequences \[, \(, \), \,, \% are used in PennMUSH
-/// to store literal characters in attribute values without evaluation. The ANTLR
-/// grammar treats \ as an escape character differently, causing bracket/paren
-/// mismatch errors when the escaped delimiters confuse the parser's nesting logic.
+/// See CoPilot Files/FIX_B_BBS_TEST_RESULTS.md for full analysis.
 /// </summary>
 [NotInParallel]
 public class MyrddinBBSIntegrationTests
