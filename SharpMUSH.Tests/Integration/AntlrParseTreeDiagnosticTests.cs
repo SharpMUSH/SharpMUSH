@@ -461,8 +461,9 @@ await Assert.That(syntaxErrorInputs).IsEmpty()
 /// Demonstrates that after function closure, remaining ) tokens become generic text
 /// appended to the output.
 ///
-/// ulambda(lit(#lambda/add(1,2)))) → one extra ) → "3)"
-/// ulambda(lit(#lambda/add(1,2))))) → two extra ) → "3))"
+/// Balanced: ulambda(lit(#lambda/add(1,2))) has 3 matched ) → "3"
+/// +1 extra: ulambda(lit(#lambda/add(1,2)))) has 4th unmatched ) → "3)"
+/// +2 extra: ulambda(lit(#lambda/add(1,2))))) has 4th+5th unmatched ) → "3))"
 /// </summary>
 [Test]
 public async Task FixC_ParseTree_ExtraTrailingParens()
