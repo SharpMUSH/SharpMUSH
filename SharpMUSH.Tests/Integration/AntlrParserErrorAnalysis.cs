@@ -258,9 +258,9 @@ public class AntlrParserErrorAnalysis
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"\n[ANALYSIS] Full output written to: {outputPath}");
 
-		// After Fixes A+B+C+D, all BBS lines parse without ANTLR errors
+		// After Fixes A+B and inFunction scope isolation, all BBS lines parse without ANTLR errors
 		await Assert.That(linesWithErrors.Count).IsEqualTo(0)
-			.Because("all BBS script lines should parse without ANTLR parser errors after fixes A, B, C, and D");
+			.Because("all BBS script lines should parse without ANTLR parser errors after fixes A, B, and inFunction save/restore in bracePattern");
 	}
 
 	/// <summary>

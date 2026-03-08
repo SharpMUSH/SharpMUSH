@@ -26,30 +26,37 @@ namespace SharpMUSH.Tests.Integration;
 /// - @tel within @wait callback can't locate objects by name (timing/context issue)
 /// - +bbread output shows #-1 errors for group objects not being locatable
 ///
-/// ANTLR PARSER ERRORS (Post Fix A+B):
-/// After implementing grammar fixes A (bracket depth) and B (brace function semantics),
-/// all 8 of the original error-producing lines have been resolved.
-/// Fix C (inParenDepth tracking) was removed as it conflicted with PennMUSH behavior:
-/// PennMUSH does not match bare parentheses — ) always closes the innermost function.
+/// ANTLR PARSER ERRORS: 0 remaining (all 8 original lines resolved)
 ///
-/// FIXED BY FIX A (3 lines):
-/// Lines 74, 83, 96: Orphaned ] from \[ escapes now treated as generic text
+/// FIXED BY FIX A (3 lines) — bracket depth tracking:
+///   Lines 74, 83, 96: Orphaned ] from \[ escapes now treated as generic text
+///   via { inBracketDepth == 0 }? predicate in beginGenericText
 ///
-/// FIXED BY FIX B (4 lines):
-/// Lines 91, 109, 110, 111: Multi-arg functions now parse inside braces
+/// FIXED BY FIX B (4 lines) — brace function semantics:
+///   Lines 91, 109, 110, 111: Multi-arg functions now parse inside braces
+///   via inFunctionInsideBrace counter with save/restore stack
 ///
-/// FIXED BY REMOVING FIX C (2 lines):
-/// Line 101: Was masked by inParenDepth paren matching — now works correctly
-///   because { inFunction == 0 }? predicate handles the pattern without counters
-/// Line 57: Was caused by inParenDepth scope leakage into bracketPattern —
-///   eliminated entirely since inParenDepth no longer exists
+/// FIXED BY inFunction save/restore in bracePattern (1 line):
+///   Line 57: Bare parens before bracket patterns no longer cause scope leakage.
+///   inFunction is saved/restored in bracePattern (reset to 0 on entry, restore on exit)
+///   so ) inside brackets always correctly closes functions.
+///   Fix C (inParenDepth) was removed — PennMUSH does not match bare parentheses.
+///   Line 101: Also resolved — { inFunction == 0 }? predicate handles this correctly.
 ///
-/// NON-PARSER ERRORS (lock evaluator):
-/// Lines 134, 136, 138: &amp;bb_read/bb_omit/bb_silent me - attribute clear commands
-///   parsed by lock evaluator which expects flag/attribute names, not bare 'me'
+/// REMAINING NON-PARSER ERRORS:
+///
+/// Lock evaluator errors (3 lines — not parser errors):
+///   Lines 134, 136, 138: &amp;bb_read/bb_omit/bb_silent me — attribute clear commands
+///   These are parsed by the lock evaluator which expects flag/attribute names,
+///   not the bare identifier 'me'.
 ///   Errors: "mismatched input 'me' expecting {NAME, BIT_FLAG, ...}"
 ///
-/// See CoPilot Files/FIX_B_BBS_TEST_RESULTS.md for full analysis.
+/// Runtime #-1 errors (functional, not parser):
+///   #-1 NO SUCH OBJECT VISIBLE — objects not locatable after @tel in @wait
+///   #-1 CAN'T SEE THAT HERE — +bbread can't find board objects
+///   #-1 BAD ARGUMENT FORMAT TO GET — get() on non-existent objects
+///   These are caused by timing/context issues with @wait callbacks and
+///   object visibility, not parser problems.
 /// </summary>
 [NotInParallel]
 public class MyrddinBBSIntegrationTests
