@@ -19,11 +19,11 @@ namespace SharpMUSH.Tests.Integration;
 /// runs each line of the installer through CommandParse, then executes +bbread
 /// to verify the installation produces output without #-1 errors.
 ///
-/// KNOWN ISSUES (documented, not fixed):
+/// KNOWN ISSUES (documented):
 /// - Parser errors (mismatched input, extraneous input) for some complex MUSH syntax
-/// - Database error (ArangoException) during @name command with special characters
-/// - Type cast error (InvalidOperationException) in get() function for non-player objects
-/// - Some #-1 errors in notification output
+///   emitted to stderr during ANTLR parsing
+/// - @tel within @wait callback can't locate objects by name (timing/context issue)
+/// - +bbread output shows #-1 errors for group objects not being locatable
 /// </summary>
 [NotInParallel]
 public class MyrddinBBSIntegrationTests
