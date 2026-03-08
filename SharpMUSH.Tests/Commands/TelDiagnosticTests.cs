@@ -33,7 +33,6 @@ return null;
 
 /// <summary>
 /// Verify @tel thing-into-thing by name works without errors.
-/// Reproduces the BBS scenario: @tel bbpocket=mbboard
 /// </summary>
 [Test]
 public async ValueTask TelThingIntoThingByName()
@@ -95,5 +94,49 @@ var errorMessages = NotifyService.ReceivedCalls().Skip(preCount)
 foreach (var e in errorMessages) Console.WriteLine($"ERROR: {e}");
 await Assert.That(errorMessages).IsEmpty()
 .Because("@tel self into a container should work without errors");
+}
+
+/// <summary>
+/// Test name() and get() with various object patterns to verify they work.
+/// </summary>
+[Test]
+public async ValueTask NameAndGetFunctions()
+{
+// Create an object and set an attribute on it
+var r = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ngtest_obj"));
+var dbref = r.Message!.ToPlainText()!.Trim();
+await Parser.CommandParse(1, ConnectionService, MModule.single($"&last_mod {dbref}=2024-01-01"));
+
+Console.WriteLine($"Created ngtest_obj = {dbref}");
+
+// Test name() by dbref
+var nameResult = (await Parser.CommandParse(1, ConnectionService,
+MModule.single($"think name({dbref})"))).Message?.ToPlainText()?.Trim();
+Console.WriteLine($"name({dbref}) = {nameResult}");
+
+// Test get() by dbref
+var getResult = (await Parser.CommandParse(1, ConnectionService,
+MModule.single($"think get({dbref}/last_mod)"))).Message?.ToPlainText()?.Trim();
+Console.WriteLine($"get({dbref}/last_mod) = {getResult}");
+
+// Test name() by name
+var nameResult2 = (await Parser.CommandParse(1, ConnectionService,
+MModule.single("think name(ngtest_obj)"))).Message?.ToPlainText()?.Trim();
+Console.WriteLine($"name(ngtest_obj) = {nameResult2}");
+
+// Test get() by name
+var getResult2 = (await Parser.CommandParse(1, ConnectionService,
+MModule.single("think get(ngtest_obj/last_mod)"))).Message?.ToPlainText()?.Trim();
+Console.WriteLine($"get(ngtest_obj/last_mod) = {getResult2}");
+
+// Verify
+await Assert.That(nameResult).IsEqualTo("ngtest_obj")
+.Because("name() should return the object name");
+await Assert.That(getResult).IsEqualTo("2024-01-01")
+.Because("get() should return the attribute value");
+await Assert.That(nameResult2).IsEqualTo("ngtest_obj")
+.Because("name() by name should return the object name");
+await Assert.That(getResult2).IsEqualTo("2024-01-01")
+.Because("get() by name should return the attribute value");
 }
 }
