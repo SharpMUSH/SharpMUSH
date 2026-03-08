@@ -65,6 +65,10 @@ namespace SharpMUSH.Tests.Integration;
 [NotInParallel]
 public class MyrddinBBSIntegrationTests
 {
+	private const string TestDataDir = "Integration/TestData";
+	private const string ScriptFileName = "MyrddinBBS_v406.txt";
+	private const string OutputFileName = "MyrddinBBS_v406_TestOutput.txt";
+
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
@@ -77,7 +81,7 @@ public class MyrddinBBSIntegrationTests
 	/// </summary>
 	private static string[] ReadBBSInstallScript()
 	{
-		var scriptPath = Path.Combine(AppContext.BaseDirectory, "Integration", "TestData", "MyrddinBBS_v406.txt");
+		var scriptPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, ScriptFileName);
 		if (!File.Exists(scriptPath))
 		{
 			throw new FileNotFoundException(
@@ -351,7 +355,7 @@ public class MyrddinBBSIntegrationTests
 		// ====================================================================
 		// Step 5: Write output to text file
 		// ====================================================================
-		var outputPath = Path.Combine(AppContext.BaseDirectory, "Integration", "TestData", "MyrddinBBS_v406_TestOutput.txt");
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, OutputFileName);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"[BBS INSTALL] Full test output written to: {outputPath}");
 
