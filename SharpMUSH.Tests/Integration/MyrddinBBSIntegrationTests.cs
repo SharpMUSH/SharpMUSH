@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.Core;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -17,6 +18,12 @@ namespace SharpMUSH.Tests.Integration;
 /// The test sets #1 to DEBUG and VERBOSE to capture detailed evaluation output,
 /// runs each line of the installer through CommandParse, then executes +bbread
 /// to verify the installation produces output without #-1 errors.
+///
+/// KNOWN ISSUES (documented, not fixed):
+/// - Parser errors (mismatched input, extraneous input) for some complex MUSH syntax
+/// - Database error (ArangoException) during @name command with special characters
+/// - Type cast error (InvalidOperationException) in get() function for non-player objects
+/// - Some #-1 errors in notification output
 /// </summary>
 [NotInParallel]
 public class MyrddinBBSIntegrationTests
@@ -64,6 +71,33 @@ public class MyrddinBBSIntegrationTests
 	}
 
 	/// <summary>
+	/// Extracts the message text from a notification call's arguments.
+	/// </summary>
+	private static string? ExtractMessageText(ICall call)
+	{
+		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
+			return null;
+
+		var args = call.GetArguments();
+		if (args.Length < 2) return null;
+
+		if (args[1] is OneOf<MString, string> oneOf)
+		{
+			return oneOf.Match(
+				mstr => mstr.ToString(),
+				str => str);
+		}
+
+		if (args[1] is string str2)
+			return str2;
+
+		if (args[1] is MString mstr2)
+			return mstr2.ToString();
+
+		return null;
+	}
+
+	/// <summary>
 	/// Integration test: Install Myrddin's BBS v4.0.6 and run +bbread.
 	///
 	/// This test:
@@ -90,10 +124,15 @@ public class MyrddinBBSIntegrationTests
 		// ====================================================================
 		var scriptLines = ReadBBSInstallScript();
 		var executedLines = 0;
-		var errors = new List<string>();
+		var executionExceptions = new List<(int LineNumber, string Line, string Error)>();
 
-		foreach (var line in scriptLines)
+		// Track notification count before installation to separate install output from other test output
+		var preInstallNotificationCount = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
+		for (var i = 0; i < scriptLines.Length; i++)
 		{
+			var line = scriptLines[i];
 			if (!IsExecutableLine(line))
 				continue;
 
@@ -104,13 +143,17 @@ public class MyrddinBBSIntegrationTests
 			}
 			catch (Exception ex)
 			{
-				var errorMsg = $"Line {Array.IndexOf(scriptLines, line) + 1}: Exception executing '{Truncate(line, 80)}': {ex.Message}";
-				errors.Add(errorMsg);
-				Console.WriteLine($"[BBS ERROR] {errorMsg}");
+				executionExceptions.Add((i + 1, line, ex.Message));
+				Console.WriteLine($"[BBS ERROR] Line {i + 1}: Exception: {ex.Message}");
+				Console.WriteLine($"[BBS ERROR]   Command: {Truncate(line, 100)}");
 			}
 		}
 
 		Console.WriteLine($"[BBS INSTALL] Executed {executedLines} commands from {scriptLines.Length} total lines.");
+
+		// Track notification count after installation but before +bbread
+		var postInstallNotificationCount = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
 		// ====================================================================
 		// Step 3: Run +bbread to verify the installation
@@ -122,95 +165,116 @@ public class MyrddinBBSIntegrationTests
 		}
 		catch (Exception ex)
 		{
-			var errorMsg = $"+bbread execution failed: {ex.Message}";
-			errors.Add(errorMsg);
-			Console.WriteLine($"[BBS ERROR] {errorMsg}");
+			executionExceptions.Add((-1, "+bbread", ex.Message));
+			Console.WriteLine($"[BBS ERROR] +bbread execution failed: {ex.Message}");
 		}
 
 		// ====================================================================
 		// Step 4: Document results
 		// ====================================================================
 
-		// Collect all notifications that were sent
+		// Collect all notification messages from the installation and +bbread
 		var allCalls = NotifyService.ReceivedCalls().ToList();
-		var notifyMessages = new List<string>();
-		var errorMessages = new List<string>();
+		var installMessages = new List<string>();
+		var bbreadMessages = new List<string>();
+		var installErrorMessages = new List<string>();
+		var bbreadErrorMessages = new List<string>();
 
+		var notifyIndex = 0;
 		foreach (var call in allCalls)
 		{
-			if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
-				continue;
+			var messageText = ExtractMessageText(call);
+			if (messageText == null) continue;
 
-			var args = call.GetArguments();
-			if (args.Length < 2) continue;
+			notifyIndex++;
 
-			string? messageText = null;
+			if (notifyIndex <= preInstallNotificationCount)
+				continue; // Skip pre-existing notifications from other tests
 
-			if (args[1] is OneOf<MString, string> oneOf)
+			if (notifyIndex <= postInstallNotificationCount)
 			{
-				messageText = oneOf.Match(
-					mstr => mstr.ToString(),
-					str => str);
-			}
-			else if (args[1] is string str)
-			{
-				messageText = str;
-			}
-			else if (args[1] is MString mstr)
-			{
-				messageText = mstr.ToString();
-			}
-
-			if (messageText != null)
-			{
-				notifyMessages.Add(messageText);
-
-				// Track #-1 errors
+				installMessages.Add(messageText);
 				if (messageText.Contains("#-1"))
-				{
-					errorMessages.Add(messageText);
-				}
+					installErrorMessages.Add(messageText);
 			}
-		}
-
-		// Log the summary
-		Console.WriteLine($"\n{'=',-78}");
-		Console.WriteLine("MYRDDIN BBS v4.0.6 INSTALLATION TEST RESULTS");
-		Console.WriteLine($"{'=',-78}");
-		Console.WriteLine($"Total script lines: {scriptLines.Length}");
-		Console.WriteLine($"Executed commands: {executedLines}");
-		Console.WriteLine($"Execution exceptions: {errors.Count}");
-		Console.WriteLine($"Total notifications sent: {notifyMessages.Count}");
-		Console.WriteLine($"Messages containing #-1: {errorMessages.Count}");
-
-		if (errors.Count > 0)
-		{
-			Console.WriteLine($"\n{'-',-78}");
-			Console.WriteLine("EXECUTION EXCEPTIONS:");
-			Console.WriteLine($"{'-',-78}");
-			foreach (var error in errors)
+			else
 			{
-				Console.WriteLine($"  {error}");
+				bbreadMessages.Add(messageText);
+				if (messageText.Contains("#-1"))
+					bbreadErrorMessages.Add(messageText);
 			}
 		}
 
-		if (errorMessages.Count > 0)
+		// Log the comprehensive summary
+		Console.WriteLine($"\n{"",78}");
+		Console.WriteLine(new string('=', 78));
+		Console.WriteLine("MYRDDIN BBS v4.0.6 INSTALLATION TEST RESULTS");
+		Console.WriteLine(new string('=', 78));
+		Console.WriteLine($"Total script lines: {scriptLines.Length}");
+		Console.WriteLine($"Executable commands: {scriptLines.Count(IsExecutableLine)}");
+		Console.WriteLine($"Successfully executed: {executedLines}");
+		Console.WriteLine($"Execution exceptions: {executionExceptions.Count}");
+		Console.WriteLine($"Install notifications: {installMessages.Count}");
+		Console.WriteLine($"Install #-1 errors: {installErrorMessages.Count}");
+		Console.WriteLine($"+bbread notifications: {bbreadMessages.Count}");
+		Console.WriteLine($"+bbread #-1 errors: {bbreadErrorMessages.Count}");
+
+		if (executionExceptions.Count > 0)
 		{
-			Console.WriteLine($"\n{'-',-78}");
-			Console.WriteLine("#-1 ERRORS IN OUTPUT:");
-			Console.WriteLine($"{'-',-78}");
-			foreach (var msg in errorMessages.Take(50))
+			Console.WriteLine($"\n{new string('-', 78)}");
+			Console.WriteLine("EXECUTION EXCEPTIONS:");
+			Console.WriteLine(new string('-', 78));
+			foreach (var (lineNumber, line, error) in executionExceptions)
+			{
+				Console.WriteLine($"  Line {lineNumber}: {Truncate(error, 100)}");
+				Console.WriteLine($"    Command: {Truncate(line, 100)}");
+			}
+		}
+
+		if (installErrorMessages.Count > 0)
+		{
+			Console.WriteLine($"\n{new string('-', 78)}");
+			Console.WriteLine("#-1 ERRORS DURING INSTALLATION:");
+			Console.WriteLine(new string('-', 78));
+			foreach (var msg in installErrorMessages.Take(50))
 			{
 				Console.WriteLine($"  {Truncate(msg, 120)}");
 			}
 
-			if (errorMessages.Count > 50)
+			if (installErrorMessages.Count > 50)
 			{
-				Console.WriteLine($"  ... and {errorMessages.Count - 50} more #-1 errors");
+				Console.WriteLine($"  ... and {installErrorMessages.Count - 50} more #-1 errors");
 			}
 		}
 
-		Console.WriteLine($"\n{'=',-78}");
+		if (bbreadErrorMessages.Count > 0)
+		{
+			Console.WriteLine($"\n{new string('-', 78)}");
+			Console.WriteLine("#-1 ERRORS IN +BBREAD OUTPUT:");
+			Console.WriteLine(new string('-', 78));
+			foreach (var msg in bbreadErrorMessages.Take(50))
+			{
+				Console.WriteLine($"  {Truncate(msg, 120)}");
+			}
+
+			if (bbreadErrorMessages.Count > 50)
+			{
+				Console.WriteLine($"  ... and {bbreadErrorMessages.Count - 50} more #-1 errors");
+			}
+		}
+
+		if (bbreadMessages.Count > 0)
+		{
+			Console.WriteLine($"\n{new string('-', 78)}");
+			Console.WriteLine("+BBREAD OUTPUT:");
+			Console.WriteLine(new string('-', 78));
+			foreach (var msg in bbreadMessages)
+			{
+				Console.WriteLine($"  {msg}");
+			}
+		}
+
+		Console.WriteLine($"\n{new string('=', 78)}");
 
 		// ====================================================================
 		// Step 5: Assertions
@@ -220,11 +284,10 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(executedLines).IsGreaterThan(0)
 			.Because("at least some commands from the BBS script should have been executed");
 
-		// Document but do not fail on #-1 errors (the issue asks to document, not fix)
-		// Log them for visibility
-		if (errorMessages.Count > 0)
+		// Log summary warnings for visibility
+		if (installErrorMessages.Count > 0 || bbreadErrorMessages.Count > 0)
 		{
-			Console.WriteLine($"\n[BBS INSTALL] WARNING: Found {errorMessages.Count} messages containing #-1 errors.");
+			Console.WriteLine($"\n[BBS INSTALL] WARNING: Found {installErrorMessages.Count} install #-1 errors and {bbreadErrorMessages.Count} +bbread #-1 errors.");
 			Console.WriteLine("[BBS INSTALL] These are documented above for future investigation.");
 		}
 	}
