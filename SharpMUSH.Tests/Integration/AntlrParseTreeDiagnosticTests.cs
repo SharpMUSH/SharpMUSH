@@ -196,7 +196,7 @@ sb.AppendLine(attempt);
 sb.AppendLine();
 sb.AppendLine("  NOTE: Full Context Scans are expected with semantic predicates.");
 sb.AppendLine("  ANTLR4's LL prediction mode uses full context to evaluate predicates");
-sb.AppendLine("  like { inParenDepth > 0 }? which depend on parser state at parse time.");
+sb.AppendLine("  like { inFunction == 0 }? which depend on parser state at parse time.");
 sb.AppendLine("  This is correct behavior, not a performance bug.");
 }
 sb.AppendLine();
@@ -248,7 +248,6 @@ sb.AppendLine("PARSER STATE AFTER PARSE:");
 sb.AppendLine($"  inFunction    = {parser.inFunction}");
 sb.AppendLine($"  inBraceDepth  = {parser.inBraceDepth}");
 sb.AppendLine($"  inBracketDepth= {parser.inBracketDepth}");
-sb.AppendLine($"  inParenDepth  = {parser.inParenDepth}");
 
 return new DiagnosticResult(
 sb.ToString(),
@@ -259,32 +258,35 @@ parseTree);
 }
 
 /// <summary>
-/// Shows the parse tree and Full Context Scan analysis for the Fix C test case:
-/// ulambda(lit(#lambda/add(1,2)))
+/// Shows the parse tree for ulambda(lit(#lambda/add(1,2)))
 /// 
-/// This demonstrates how Fix C's inParenDepth tracking correctly handles
-/// bare parentheses inside function calls.
-/// 
-/// Parse tree analysis (with Fix C):
-/// - Token [3] OPAREN "(" → consumed as beginGenericText, ++inParenDepth to 1
-/// - Token [7] CPAREN ")" → predicate {inFunction==0 || inParenDepth>0} = TRUE (inParenDepth=1)
-///   → consumed as beginGenericText, --inParenDepth to 0
-/// - Token [8] CPAREN ")" → predicate FALSE (inParenDepth=0, inFunction>0)
-///   → NOT generic text → closes lit() function
-/// - Token [9] CPAREN ")" → closes ulambda() function
-/// 
-/// Without Fix C (old behavior):
+/// PennMUSH-compatible behavior (no inParenDepth):
+/// The lexer tokenizes #lambda/add as OTHER and ( as OPAREN (not FUNCHAR).
+/// This means there are only 2 function opens (ulambda, lit) but 4 tokens 
+/// that could be CPARENs. The first ) after "2" closes lit() because
+/// inFunction > 0 and there's no paren depth counter to override.
+///
+/// Parse tree analysis:
+/// - Token [3] OPAREN "(" → consumed as beginGenericText (just text)
+/// - Token [5] COMMAWS "," → lit()'s 2nd argument separator
 /// - Token [7] CPAREN ")" → predicate {inFunction==0} = FALSE (inFunction=2)
-///   → NOT generic text → closes lit() prematurely
-/// - Remaining ")" would close ulambda(), but the extra ")" becomes generic text "3)"
+///   → NOT generic text → closes lit()
+/// - Token [8] CPAREN ")" → closes ulambda()
+/// - Token [9] CPAREN ")" → inFunction=0 → generic text
+///
+/// Note: To pass add(1,2) literally to lit(), use escaped parens:
+///   ulambda(#lambda/add\(1\,2\)) — produces "3"
+/// Or bracket evaluation:
+///   ulambda(#lambda/[add(1,2)]) — produces "3"
 /// </summary>
 [Test]
-public async Task FixC_ParseTree_UlambdaLitLambdaAdd()
+public async Task ParseTree_UlambdaLitLambdaAdd()
 {
 var input = "ulambda(lit(#lambda/add(1,2)))";
 
 Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-Console.WriteLine("║  FIX C PARSE TREE ANALYSIS: ulambda(lit(#lambda/add(1,2)))          ║");
+Console.WriteLine("║  PARSE TREE ANALYSIS: ulambda(lit(#lambda/add(1,2)))                ║");
+Console.WriteLine("║  PennMUSH-compatible: ) always closes innermost function            ║");
 Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
 Console.WriteLine();
 
@@ -300,15 +302,15 @@ Console.WriteLine(sllResult.FullOutput);
 
 // Assertions
 await Assert.That(llResult.RealSyntaxErrorCount).IsEqualTo(0)
-.Because("Fix C should eliminate real syntax errors for this input");
+.Because("Should parse without syntax errors - extra ) becomes generic text");
 await Assert.That(sllResult.RealSyntaxErrorCount).IsEqualTo(0)
-.Because("Fix C should eliminate real syntax errors in SLL mode too");
+.Because("Should parse without syntax errors in SLL mode too");
 
 // Parse trees should be identical in both modes
 await Assert.That(llResult.ParseTree).IsEqualTo(sllResult.ParseTree)
 .Because("LL and SLL modes should produce identical parse trees for this input");
 
-// Verify the parse tree contains the expected function rule nodes
+// Verify the parse tree contains function rule nodes for ulambda and lit
 await Assert.That(llResult.ParseTree).Contains("function")
 .Because("parse tree should contain function rules for ulambda and lit");
 }
@@ -317,10 +319,11 @@ await Assert.That(llResult.ParseTree).Contains("function")
 /// Shows the parse tree for the inner expression that lit() receives:
 /// #lambda/add(1,2)
 /// 
-/// When parsed standalone (outside a function), ( and ) are always generic text.
+/// When parsed standalone (outside a function), ( and ) are always generic text
+/// because inFunction == 0. This produces the full text "#lambda/add(1,2)".
 /// </summary>
 [Test]
-public async Task FixC_ParseTree_InnerExpression()
+public async Task ParseTree_InnerExpression()
 {
 var input = "#lambda/add(1,2)";
 
@@ -340,26 +343,35 @@ await Assert.That(result.RealSyntaxErrorCount).IsEqualTo(0)
 /// Shows the parse tree for bare parens inside a function:
 /// lit((text))
 /// 
-/// With Fix C:
-/// - First ( → OPAREN, ++inParenDepth to 1
-/// - ) after "text" → CPAREN, inParenDepth=1 > 0 so generic text, --inParenDepth to 0
-/// - Final ) → CPAREN, inParenDepth=0 so NOT generic text → closes lit()
+/// Without paren depth tracking (PennMUSH-compatible):
+/// - ( → OPAREN, just generic text (no counter)
+/// - ) after "text" → CPAREN, inFunction=1 so NOT generic text → closes lit()
+/// - Final ) → CPAREN, inFunction=0 so generic text (trailing paren)
+///
+/// In PennMUSH, ) always closes the innermost function. Bare ( doesn't create
+/// a matching scope. Use escaped parens \(\) or bracket evaluation [...] instead.
 /// </summary>
 [Test]
-public async Task FixC_ParseTree_BareParensInFunction()
+public async Task ParseTree_BareParensInFunction()
 {
 var input = "lit((text))";
 
 Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-Console.WriteLine("║  FIX C BARE PARENS: lit((text))                                    ║");
+Console.WriteLine("║  BARE PARENS IN FUNCTION: lit((text))                               ║");
+Console.WriteLine("║  PennMUSH-compatible: ) always closes innermost function            ║");
 Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
 Console.WriteLine();
 
 var result = ParseAndDiagnose(input, PredictionMode.LL);
 Console.WriteLine(result.FullOutput);
 
+// With PennMUSH-compatible behavior:
+// The ) after "text" closes lit(), the final ) is extra generic text.
+// This may produce a parser error (extraneous input) since the first ) closes
+// the function leaving text behind, but it should not produce a syntax error
+// in the parse itself since the trailing ) becomes generic text.
 await Assert.That(result.RealSyntaxErrorCount).IsEqualTo(0)
-.Because("Fix C should handle bare parens inside function calls");
+.Because("Bare parens inside functions should parse without syntax errors - ) closes the function, extra ) is generic text");
 }
 
 /// <summary>
@@ -368,16 +380,16 @@ await Assert.That(result.RealSyntaxErrorCount).IsEqualTo(0)
 /// 
 /// Full Context Scans occur in LL mode when the parser encounters semantic
 /// predicates that create context-dependent alternatives. This is EXPECTED
-/// behavior with the predicate-based approach used in Fixes A, B, and C.
+/// behavior with the predicate-based approach used in Fixes A and B.
 /// </summary>
 [Test]
-public async Task FixC_FullContextScan_Analysis()
+public async Task FullContextScan_Analysis()
 {
 var testCases = new[]
 {
 ("add(1,2)", "Simple function"),
 ("lit(hello world)", "Function with space-separated args"),
-("ulambda(lit(#lambda/add(1,2)))", "Nested functions with bare parens (Fix C case)"),
+("ulambda(lit(#lambda/add(1,2)))", "Nested functions (PennMUSH: ) closes innermost)"),
 (@"ulambda(#lambda/add\(1\,2\))", "Escaped parens"),
 ("ulambda(#lambda/[add(1,2)])", "Bracket evaluation"),
 ("ulambda(#lambda/3)", "Simple lambda"),
@@ -445,9 +457,9 @@ foreach (var (input, description, count) in fullContextScanInputs)
 Console.WriteLine($"  {description}: \"{input}\" ({count} scan(s))");
 }
 Console.WriteLine("\nNOTE: Full Context Scans with semantic predicates are expected behavior.");
-Console.WriteLine("They occur because ANTLR4's LL prediction must evaluate predicates like");
-Console.WriteLine("{ inParenDepth > 0 }? in full parser context to determine which alternative");
-Console.WriteLine("to choose. This is NOT a performance bug - it's how predicate-based");
+Console.WriteLine("They occur because ANTLR4's LL prediction must evaluate predicates");
+Console.WriteLine("in full parser context to determine which alternative to choose.");
+Console.WriteLine("This is NOT a performance bug - it's how predicate-based");
 Console.WriteLine("context-sensitive parsing works.");
 }
 
@@ -461,12 +473,12 @@ await Assert.That(syntaxErrorInputs).IsEmpty()
 /// Demonstrates that after function closure, remaining ) tokens become generic text
 /// appended to the output.
 ///
-/// Balanced: ulambda(lit(#lambda/add(1,2))) has 3 matched ) → "3"
-/// +1 extra: ulambda(lit(#lambda/add(1,2)))) has 4th unmatched ) → "3)"
-/// +2 extra: ulambda(lit(#lambda/add(1,2))))) has 4th+5th unmatched ) → "3))"
+/// PennMUSH-compatible: ) always closes the innermost function, no paren matching.
+/// ulambda(lit(#lambda/add(1,2))) has bare ( in add(, so ) closes lit() early.
+/// The remaining ) close ulambda and become extra generic text.
 /// </summary>
 [Test]
-public async Task FixC_ParseTree_ExtraTrailingParens()
+public async Task ParseTree_ExtraTrailingParens()
 {
 var testCases = new[]
 {
@@ -500,25 +512,24 @@ await Assert.That(llResult.ParseTree).IsEqualTo(sllResult.ParseTree)
 }
 
 /// <summary>
-/// Deep analysis of BBS line 57 inParenDepth scope leakage.
+/// Analysis of BBS line 57 pattern with bare parentheses before bracket patterns.
 ///
-/// The issue: bare parentheses in outer text like "(New BB message" elevate inParenDepth,
-/// and when a bracketPattern like [name(%0)] is encountered, the elevated inParenDepth
-/// leaks into the bracket scope. Inside the bracket, function-closing CPARENs are
-/// misclassified as generic text because the CPAREN predicate
-/// {inFunction==0 || inParenDepth>0}? evaluates to TRUE due to the leaked inParenDepth.
+/// Without inParenDepth (PennMUSH-compatible): bare ( is just text, and ) always
+/// closes the innermost function. No paren depth leakage is possible because
+/// there's no paren depth counter to leak. Bracket patterns naturally isolate
+/// their function scope via inFunction tracking.
 ///
 /// Minimal reproduction: "(text [name(%0)])"
-/// 1. "(" → OPAREN, ++inParenDepth to 1
-/// 2. "[" → OBRACK, enters bracketPattern — inParenDepth is STILL 1
+/// 1. "(" → OPAREN, just generic text
+/// 2. "[" → OBRACK, enters bracketPattern
 /// 3. "name(" → FUNCHAR, ++inFunction to 1
 /// 4. "%0" → substitution
-/// 5. ")" → CPAREN predicate: {inFunction==0 || inParenDepth>0} = {false || true} = TRUE
-///    → consumed as GENERIC TEXT instead of closing name()!
-/// 6. "]" → parser expects CPAREN/COMMAWS but gets CBRACK → ERROR
+/// 5. ")" → CPAREN, inFunction=1 so NOT generic text → closes name() correctly
+/// 6. "]" → CBRACK, exits bracketPattern
+/// 7. ")" → CPAREN, inFunction=0 so generic text → trailing paren text
 /// </summary>
 [Test]
-public async Task Line57_InParenDepth_ScopeLeakage_Analysis()
+public async Task Line57_BareParensBeforeBrackets_Analysis()
 {
 // Minimal reproduction patterns — from simplest to line 57 fragment
 var testCases = new[]
@@ -540,7 +551,7 @@ var testCases = new[]
 };
 
 Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-Console.WriteLine("║  LINE 57 ANALYSIS: inParenDepth Scope Leakage into BracketPattern  ║");
+Console.WriteLine("║  LINE 57 ANALYSIS: Bare Parens Before Brackets (PennMUSH-compatible)║");
 Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
 Console.WriteLine();
 
@@ -580,23 +591,10 @@ var failingCount = results.Count(r => r.Result.RealSyntaxErrorCount > 0);
 Console.WriteLine($"Patterns with errors: {failingCount}/{results.Count}");
 Console.WriteLine();
 
-if (failingCount > 0)
-{
-Console.WriteLine("ROOT CAUSE CONFIRMED: inParenDepth leaks from outer text into");
-Console.WriteLine("bracketPattern scope, causing function-closing CPARENs inside brackets");
-Console.WriteLine("to be consumed as generic text when bare parens from outer context");
-Console.WriteLine("elevate inParenDepth > 0.");
-Console.WriteLine();
-Console.WriteLine("PROPOSED FIX: Save/restore inParenDepth in bracketPattern rule:");
-Console.WriteLine("  bracketPattern:");
-Console.WriteLine("    OBRACK { ++inBracketDepth; savedParenDepth.Push(inParenDepth); inParenDepth = 0; }");
-Console.WriteLine("    evaluationString");
-Console.WriteLine("    CBRACK { --inBracketDepth; inParenDepth = savedParenDepth.Pop(); }");
-Console.WriteLine("  ;");
-}
-
-// After Fix D (inParenDepth scope isolation in bracketPattern), all patterns pass
+// Without inParenDepth, there's no scope leakage possible.
+// The { inFunction == 0 }? predicate is purely based on function nesting,
+// which is correctly tracked by the parser.
 await Assert.That(failingCount).IsEqualTo(0)
-.Because("Fix D: saving/restoring inParenDepth in bracketPattern isolates bare paren scope from function parsing inside brackets");
+.Because("Without inParenDepth, bare parens don't affect CPAREN predicate - no scope leakage possible");
 }
 }

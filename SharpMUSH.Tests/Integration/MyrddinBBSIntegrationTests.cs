@@ -26,10 +26,11 @@ namespace SharpMUSH.Tests.Integration;
 /// - @tel within @wait callback can't locate objects by name (timing/context issue)
 /// - +bbread output shows #-1 errors for group objects not being locatable
 ///
-/// ANTLR PARSER ERRORS (Post Fix A+B+C+D):
-/// After implementing grammar fixes A (bracket depth), B (brace function semantics),
-/// C (paren depth), and D (inParenDepth scope isolation in bracketPattern),
-/// all 8 of the original error-producing lines have been resolved:
+/// ANTLR PARSER ERRORS (Post Fix A+B):
+/// After implementing grammar fixes A (bracket depth) and B (brace function semantics),
+/// all 8 of the original error-producing lines have been resolved.
+/// Fix C (inParenDepth tracking) was removed as it conflicted with PennMUSH behavior:
+/// PennMUSH does not match bare parentheses — ) always closes the innermost function.
 ///
 /// FIXED BY FIX A (3 lines):
 /// Lines 74, 83, 96: Orphaned ] from \[ escapes now treated as generic text
@@ -37,13 +38,11 @@ namespace SharpMUSH.Tests.Integration;
 /// FIXED BY FIX B (4 lines):
 /// Lines 91, 109, 110, 111: Multi-arg functions now parse inside braces
 ///
-/// FIXED BY FIX C (1 line):
-/// Line 101: Bare parens (text) no longer close functions
-///
-/// FIXED BY FIX D (1 line):
-/// Line 57: &amp;TR_POST_NOTIFY - inParenDepth from bare parens (New BB message ...)
-///   now isolated from bracket patterns, so function CPARENs inside [ifelse(...)]
-///   are no longer consumed as generic text.
+/// FIXED BY REMOVING FIX C (2 lines):
+/// Line 101: Was masked by inParenDepth paren matching — now works correctly
+///   because { inFunction == 0 }? predicate handles the pattern without counters
+/// Line 57: Was caused by inParenDepth scope leakage into bracketPattern —
+///   eliminated entirely since inParenDepth no longer exists
 ///
 /// NON-PARSER ERRORS (lock evaluator):
 /// Lines 134, 136, 138: &amp;bb_read/bb_omit/bb_silent me - attribute clear commands

@@ -11,12 +11,14 @@ public class LambdaUnitTests
 
 	[Test]
 	[Arguments(@"ulambda(#lambda/add\(1\,2\))", "3")]
-	[Arguments("ulambda(lit(#lambda/add(1,2)))", "3")]
+	// Without paren depth tracking (PennMUSH-compatible): bare ( in #lambda/add( is just text,
+	// and the first ) closes lit() instead of matching the bare (. Use escaped parens or brackets instead.
+	[Arguments("ulambda(lit(#lambda/add(1,2)))", "3)")]
 	[Arguments("ulambda(#lambda/[add(1,2)])", "3")]
 	[Arguments("ulambda(#lambda/3)", "3")]
 	// Extra trailing parens: after the function closes, remaining ) become generic text
-	[Arguments("ulambda(lit(#lambda/add(1,2))))", "3)")]
-	[Arguments("ulambda(lit(#lambda/add(1,2)))))", "3))")]
+	[Arguments("ulambda(lit(#lambda/add(1,2))))", "3))")]
+	[Arguments("ulambda(lit(#lambda/add(1,2)))))", "3)))")]
 	public async Task BasicLambdaTest(string call, string expected)
 	{
 		var res = (await Parser.FunctionParse(MModule.single(call)))!.Message!;
