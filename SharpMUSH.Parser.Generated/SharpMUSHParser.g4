@@ -7,6 +7,7 @@ options {
 @parser::members {
     public int inFunction = 0;
     public int inBraceDepth = 0;
+    public int inBracketDepth = 0;
     public bool inCommandList = false;
     public bool lookingForCommandArgCommas = false;
     public bool lookingForCommandArgEquals = false;
@@ -78,7 +79,7 @@ bracePattern:
 ;
 
 bracketPattern:
-    OBRACK evaluationString CBRACK
+    OBRACK { ++inBracketDepth; } evaluationString CBRACK { --inBracketDepth; }
 ;
 
 function: 
@@ -135,6 +136,7 @@ genericText: beginGenericText | FUNCHAR;
 
 beginGenericText:
       { inFunction == 0 }? CPAREN
+    | { inBracketDepth == 0 }? CBRACK
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
