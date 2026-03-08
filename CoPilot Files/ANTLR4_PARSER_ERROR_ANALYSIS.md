@@ -150,7 +150,7 @@ tokenized as its special meaning (e.g., `\[` does NOT become `OBRACK`).
 
 ```
 Input:  \[or(hasflag(\%0,%2),hasflag(\%0,wizard))]
-Tokens: ESCAPE ANY('['') FUNCHAR('or(') FUNCHAR('hasflag(') ESCAPE ANY('%') ...
+Tokens: ESCAPE ANY('[') FUNCHAR('or(') FUNCHAR('hasflag(') ESCAPE ANY('%') ...
         ... CPAREN(')') COMMAWS(',') ... CPAREN(')') CBRACK(']')
                                                               ^^^^^^^^^^^^
                                                               No matching OBRACK!

@@ -9,6 +9,9 @@ namespace SharpMUSH.Tests.Integration;
 /// Research test: Systematic analysis of ANTLR4 parser errors on Myrddin BBS script lines.
 /// This test does NOT execute the commands - it only validates them through the parser
 /// to catalog the exact errors, positions, and grammar rules involved.
+/// Output is written to Integration/TestData/AntlrParserErrorAnalysis_Output.txt
+/// in the build output directory with per-line error details, escape sequence analysis,
+/// root cause classification, and error category statistics.
 /// </summary>
 [NotInParallel]
 public class AntlrParserErrorAnalysis
