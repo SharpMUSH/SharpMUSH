@@ -779,13 +779,13 @@ genericText: beginGenericText | FUNCHAR;
 // Fix A: Added CBRACK as generic text when not in bracket
 // Fix C: Modified CPAREN predicate and added OPAREN tracking
 beginGenericText:
-      { inFunction == 0 || inParenDepth > 0 }? CPAREN { if (inParenDepth > 0) inParenDepth--; }
+      { inFunction == 0 || inParenDepth > 0 }? CPAREN { if (inParenDepth > 0) --inParenDepth; }
     | { inBracketDepth == 0 }? CBRACK
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (escapedText|OPAREN { ++inParenDepth; }|OTHER|ansi)
+    | (escapedText|OPAREN {++inParenDepth;}|OTHER|ansi)
 ;
 
 escapedText: ESCAPE ANY;
