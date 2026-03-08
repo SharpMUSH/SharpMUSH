@@ -74,29 +74,80 @@ runtime flag system to ANTLR4's phased architecture:
 
 ---
 
-## 2. Grammar Recommendation: Remove Brace Depth Predicate
+## 2. Grammar Changes (Implemented)
 
-### 2.1 The Change
+### 2.1 Change 1: Remove Brace Depth Predicate from Function Rule
 
 Remove `{inBraceDepth == 0}?` from the `function` rule's `COMMAWS`:
 
 ```antlr
-// CURRENT (incorrect):
+// BEFORE:
 function: 
     FUNCHAR {++inFunction;} 
     (evaluationString? ({inBraceDepth == 0}? COMMAWS evaluationString?)*)?
     CPAREN {--inFunction;} 
 ;
 
-// RECOMMENDED (correct):
+// AFTER:
 function: 
-    FUNCHAR {++inFunction;} 
+    FUNCHAR {++inFunction; ++inFunctionInsideBrace;} 
     (evaluationString? (COMMAWS evaluationString?)*)?
-    CPAREN {--inFunction;} 
+    CPAREN {--inFunction; --inFunctionInsideBrace;} 
 ;
 ```
 
-### 2.2 Why This is Correct
+### 2.2 Change 2: Allow Function Recognition Inside Braces
+
+Change `bracePattern` from `explicitEvaluationString` to `evaluationString`:
+
+```antlr
+// BEFORE:
+bracePattern:
+    OBRACE { ++inBraceDepth; } explicitEvaluationString? CBRACE { --inBraceDepth; }
+;
+
+// AFTER:
+bracePattern:
+    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; }
+    evaluationString?
+    CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); }
+;
+```
+
+The key change: `explicitEvaluationString` → `evaluationString`. This allows function calls to
+be recognized inside braces (the `function` alternative is only in `evaluationString`, not
+`explicitEvaluationString`). The `inFunctionInsideBrace` counter is saved/restored per brace
+level via a stack so that comma handling is correct at each nesting level.
+
+### 2.3 Change 3: Fix Comma Predicate for Functions Inside Braces
+
+Update the `beginGenericText` COMMAWS predicate to use `inFunctionInsideBrace`:
+
+```antlr
+// BEFORE:
+| { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
+
+// AFTER:
+| { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
+```
+
+The old predicate `inBraceDepth > 0` made ALL commas generic text inside braces, even
+commas inside function calls within brackets inside braces. The new predicate
+`inBraceDepth > 0 && inFunctionInsideBrace == 0` only makes commas generic text when at the
+brace content level (no function calls started inside the brace). When a function call IS
+active inside the brace (e.g., `{[add(1,2)]}`), commas serve as function arg separators.
+
+### 2.4 New Parser Members
+
+```antlr
+@parser::members {
+    // ... existing members ...
+    public int inFunctionInsideBrace = 0;
+    public System.Collections.Generic.Stack<int> savedFunctionInsideBrace = new();
+}
+```
+
+### 2.5 Why This is Correct
 
 1. **Command braces**: PennMUSH DOES evaluate functions inside command braces with
    multiple arguments. The predicate currently blocks this. Removing it allows proper
@@ -117,7 +168,7 @@ function:
    are generic text. Commas inside a nested function call `{add(1,2)}` are parsed by the
    function rule (where `inFunction > 0`), which is correct.
 
-### 2.3 What NOT to Change
+### 2.6 What NOT to Change
 
 These existing predicates remain **correct and unchanged**:
 
@@ -132,120 +183,104 @@ commaCommandArgs:
     )* {lookingForCommandArgCommas = false;}
 ;
 
-// beginGenericText — commas as generic text inside braces ✅
-| { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
+// beginGenericText — commas as generic text inside braces (UPDATED predicate) ✅
+| { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
 ```
 
 ---
 
-## 3. Visitor Recommendations
+## 3. Visitor Changes (Implemented)
 
-### 3.1 Current VisitBracePattern Behavior
+### 3.1 Implementation Approach: Suppression Counter
+
+The implemented approach uses **Option 1 (parse tree ancestry check)** combined with a
+suppression counter. This is cleaner than selective child visitation because it leverages
+the existing `VisitChildren()` mechanism while controlling function evaluation via a flag.
+
+#### New Visitor State
+
+```csharp
+private int _suppressFunctionEval;  // When > 0, functions return literal text
+```
+
+#### IsInsideFunctionArg Helper
+
+A static helper walks up the parse tree to detect function-arg brace context:
+
+```csharp
+private static bool IsInsideFunctionArg(ParserRuleContext context)
+{
+    var parent = context.Parent;
+    while (parent is not null)
+    {
+        if (parent is SharpMUSHParser.FunctionContext)
+            return true;
+        parent = parent.Parent;
+    }
+    return false;
+}
+```
+
+### 3.2 VisitBracePattern (Implemented)
 
 ```csharp
 public override async ValueTask<CallState?> VisitBracePattern(BracePatternContext context)
 {
     _braceDepthCounter++;
-    var vc = await VisitChildren(context);  // Always evaluates everything
+
+    // Detect function-arg braces by checking parse tree ancestry
+    var isFunctionArgBrace = IsInsideFunctionArg(context);
+    if (isFunctionArgBrace)
+        _suppressFunctionEval++;
+
+    CallState? result;
+    var vc = await VisitChildren(context);  // VisitFunction checks _suppressFunctionEval
 
     if (_braceDepthCounter <= 1)
-        result = vc ?? new CallState(...);   // Strip braces (depth 1)
+        result = vc ?? new CallState(GetContextText(context), context.Depth());
     else
-        result = vc with { Message = "{" + vc.Message + "}" };  // Preserve inner braces
+        result = vc with { Message = "{" + vc.Message + "}" };
 
+    if (isFunctionArgBrace)
+        _suppressFunctionEval--;
     _braceDepthCounter--;
     return result;
 }
 ```
 
-**Problem**: `VisitChildren(context)` always evaluates all child nodes, including function
-calls. This is correct for command braces but incorrect for function argument braces.
+### 3.3 VisitFunction (Implemented)
 
-### 3.2 Recommended VisitBracePattern Behavior
+```csharp
+public override async ValueTask<CallState?> VisitFunction(FunctionContext context)
+{
+    if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
+        return new CallState(context.GetText());
 
-The visitor needs to distinguish two contexts:
+    // PennMUSH: Inside function-arg braces, PE_FUNCTION_CHECK is removed
+    if (_suppressFunctionEval > 0)
+        return new CallState(context.GetText());
 
-#### Context Detection
-
-Determine whether the current brace is a **command brace** or **function argument brace**
-by checking the parse tree ancestry:
-
-```
-Command braces: bracePattern is child of commandList/command/startCommandString
-Function arg braces: bracePattern is child of a function's evaluationString
-```
-
-In practice, this can be detected by checking if the bracePattern appears inside a
-`function` node's argument list. There are multiple ways to implement this:
-
-**Option 1: Check parser context ancestry**
-Walk up the parse tree from the bracePattern to see if an ancestor is a `function` context.
-If so, this is a function argument brace.
-
-**Option 2: Use visitor state**
-Track whether we're currently inside a function's argument list via a boolean or counter
-in the visitor state. When entering `VisitFunction`, set a flag; when entering
-`VisitBracePattern`, check the flag.
-
-**Option 3: Use the existing `_braceDepthCounter`**
-The current `_braceDepthCounter <= 1` check is a rough proxy for "command brace" vs
-"function argument brace." However, this doesn't handle all cases correctly (e.g., braces
-in command braces inside function arguments). A proper implementation would need explicit
-context tracking.
-
-#### Recommended Visitor Behavior by Context
-
-**For command braces** (braces in command/commandList context):
-- Evaluate everything normally (current behavior at depth 1)
-- Strip outer braces
-- This matches PennMUSH's `PE_COMMAND_BRACES` mode
-
-**For function argument braces** (braces inside a function's argument):
-- **DO NOT evaluate function calls** — if a `function` node appears inside the brace
-  content, return its literal text instead of calling `VisitFunction`
-- **DO evaluate `%` substitutions** — `VisitValidSubstitution` should still be called
-- **DO evaluate `[...]` brackets** — `VisitBracketPattern` should still be called,
-  which re-enables full evaluation (matching PennMUSH's bracket handler that re-adds
-  `PE_FUNCTION_CHECK`)
-- **Strip outer braces** (matching PennMUSH's brace-stripping behavior)
-
-### 3.3 Selective Evaluation Pattern
-
-The key visitor pattern for function-arg braces is **selective child visitation**:
-
-```
-Instead of:
-    VisitChildren(context)  // Evaluates ALL children including functions
-
-Do:
-    For each child node in bracePattern's content:
-        if child is function node AND we're in function-arg-brace context:
-            → Return literal text of the function node (context.GetText())
-        if child is bracketPattern:
-            → Visit normally (brackets re-enable function evaluation)
-        if child is PERCENT validSubstitution:
-            → Visit normally (% subs are always evaluated)
-        if child is genericText/beginGenericText:
-            → Visit normally (literal text)
-        if child is bracePattern (nested):
-            → Visit with same function-arg-brace suppression
+    // ... existing function evaluation logic ...
+}
 ```
 
-This maps directly to PennMUSH's behavior:
+### 3.4 VisitBracketPattern (Implemented)
 
-| Parse Tree Node | PennMUSH Equivalent | Behavior in Function-Arg Braces |
-|-----------------|---------------------|----------------------------------|
-| `function` | `(` with `PE_FUNCTION_CHECK` removed | Return literal text |
-| `bracketPattern` | `[` re-enables `PE_FUNCTION_CHECK` | Evaluate normally |
-| `PERCENT validSubstitution` | `%` with `PE_EVALUATE` preserved | Evaluate normally |
-| `bracePattern` (nested) | `{` recurses with same flags | Apply same suppression |
-| `genericText` | Literal characters | Pass through |
+Brackets re-enable function evaluation, matching PennMUSH's `[` handler that adds
+`PE_FUNCTION_CHECK | PE_FUNCTION_MANDATORY`:
 
-### 3.4 Edge Case: Nested Brackets Inside Braces
+```csharp
+public override async ValueTask<CallState?> VisitBracketPattern(BracketPatternContext context)
+{
+    // Save and clear suppression — brackets re-enable function evaluation
+    var savedSuppress = _suppressFunctionEval;
+    _suppressFunctionEval = 0;
 
-PennMUSH behavior:
-```
-strcat(a, {[add(1,2)]}, b)  →  "a3b"
+    // ... existing bracket evaluation logic ...
+
+    _suppressFunctionEval = savedSuppress;
+    return result;
+}
 ```
 
 Inside `{...}`, the `[...]` bracket handler re-enables `PE_FUNCTION_CHECK`:
@@ -261,7 +296,28 @@ calls), this "just works" — when the visitor encounters a `bracketPattern` ins
 function-arg brace, it evaluates the bracket normally, which evaluates the function
 inside.
 
-### 3.5 Edge Case: Double Braces
+### 3.5 Edge Case: Nested Brackets Inside Braces (Verified)
+
+PennMUSH behavior:
+```
+strcat(a, {[add(1,2)]}, b)  →  "a3b"
+```
+
+Inside `{...}`, the `[...]` bracket handler re-enables `PE_FUNCTION_CHECK`:
+```c
+case '[':
+    if (eflags & PE_EVALUATE)
+        temp_eflags = eflags | PE_FUNCTION_CHECK | PE_FUNCTION_MANDATORY;
+```
+
+In ANTLR4, `bracketPattern` contains an `evaluationString` which can include `function`
+nodes. The `VisitBracketPattern` implementation saves `_suppressFunctionEval`, sets it
+to 0, evaluates children (including function calls), then restores the saved value.
+This correctly re-enables function evaluation inside brackets.
+
+**Test**: `strcat(a,{[add(1,2)]},b)` → `"a3b"` ✅
+
+### 3.6 Edge Case: Double Braces (Verified)
 
 PennMUSH behavior:
 ```
@@ -287,12 +343,12 @@ These are deactivated by setting `tflags = PT_BRACE` (only `}` terminates) and r
 
 | Feature | PennMUSH Mechanism | ANTLR4 Grammar Handling | ANTLR4 Visitor Handling |
 |---------|-------------------|------------------------|------------------------|
-| `,` as function arg separator | `PT_COMMA` not in tflags | `{inBraceDepth > 0}? COMMAWS` in `beginGenericText` makes commas generic text at brace level | N/A — parser handles this |
+| `,` as function arg separator | `PT_COMMA` not in tflags | `{inBraceDepth > 0 && inFunctionInsideBrace == 0}? COMMAWS` in `beginGenericText` makes commas generic text at brace level when no function is active inside | N/A — parser handles this |
 | `,` as command arg separator | `PT_COMMA` not in tflags | `{inBraceDepth == 0}? COMMAWS` in `commaCommandArgs` | N/A — parser handles this |
 | `;` as command separator | `PT_SEMI` not in tflags | `{inBraceDepth == 0}? SEMICOLON` in `commandList` | N/A — parser handles this |
-| `)` as function closer | `PT_PAREN` not in tflags | Parsed by `function` rule — `)` always closes the FUNCHAR's function | **Visitor must suppress function evaluation** |
+| `)` as function closer | `PT_PAREN` not in tflags | Parsed by `function` rule — `)` always closes the FUNCHAR's function | **Visitor suppresses function evaluation via `_suppressFunctionEval`** |
 | `=` as command split | `PT_EQUALS` not in tflags | `{!lookingForCommandArgEquals}?` in `beginGenericText` | N/A — parser handles this |
-| Function recognition `func()` | `PE_FUNCTION_CHECK` removed | FUNCHAR always tokenized — parser always sees functions | **Visitor must suppress function evaluation** |
+| Function recognition `func()` | `PE_FUNCTION_CHECK` removed | FUNCHAR always tokenized — parser recognizes function structure via `evaluationString` in bracePattern | **Visitor returns literal text when `_suppressFunctionEval > 0`** |
 
 ### 4.2 What PennMUSH Keeps Active Inside Function-Arg Braces
 
@@ -321,76 +377,85 @@ Everything is active — command braces preserve all evaluation flags:
 
 ---
 
-## 5. Implementation Summary
+## 5. Implementation Summary (Completed)
 
-### 5.1 Grammar Change (Fix B)
+### 5.1 Grammar Changes
 
-**One line change** in `SharpMUSHParser.g4`:
+Three changes in `SharpMUSHParser.g4`:
 
 ```antlr
-// Remove {inBraceDepth == 0}? from function rule:
+// 1. Function rule: removed {inBraceDepth == 0}?, added inFunctionInsideBrace tracking
 function: 
-    FUNCHAR {++inFunction;} 
+    FUNCHAR {++inFunction; ++inFunctionInsideBrace;} 
     (evaluationString? (COMMAWS evaluationString?)*)?
-    CPAREN {--inFunction;} 
+    CPAREN {--inFunction; --inFunctionInsideBrace;} 
 ;
+
+// 2. bracePattern: changed from explicitEvaluationString to evaluationString,
+//    added inFunctionInsideBrace save/restore via stack
+bracePattern:
+    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; }
+    evaluationString?
+    CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); }
+;
+
+// 3. beginGenericText: updated COMMAWS predicate to use inFunctionInsideBrace
+| { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
 ```
 
-**No other grammar changes needed.** The existing predicates on `commandList`,
-`commaCommandArgs`, and `beginGenericText` are already correct.
+### 5.2 Visitor Changes
 
-### 5.2 Visitor Change (New)
+Three changes in `SharpMUSHParserVisitor.cs`:
 
-Add function-evaluation suppression to `VisitBracePattern`:
+1. **`VisitBracePattern`**: Detect function-arg braces via `IsInsideFunctionArg()` ancestry
+   check, increment `_suppressFunctionEval` counter
+2. **`VisitFunction`**: When `_suppressFunctionEval > 0`, return `context.GetText()` as
+   literal text instead of evaluating the function
+3. **`VisitBracketPattern`**: Save `_suppressFunctionEval`, set to 0, visit children,
+   restore (brackets re-enable function evaluation)
 
-1. **Detect context**: Is this brace inside a function's argument list?
-2. **If function-arg brace**: Walk children selectively — literalize `function` nodes,
-   evaluate `bracketPattern` and `%` substitutions normally
-3. **If command brace**: Full evaluation (existing behavior)
+### 5.3 Test Results
 
-### 5.3 What This Achieves
-
-After both changes:
+All 2273 existing tests pass. Three new test cases added:
 
 ```
 // Function arg braces — functions literalized:
 strcat(a,{add(1,2)},b)        → "aadd(1,2)b"     ✅ (function not evaluated)
-strcat(a,{[add(1,2)]},b)      → "a3b"             ✅ (brackets re-enable evaluation)
-strcat(a,{%#},b)               → "a#123b"          ✅ (% subs still active)
-strcat(a,{b,c},d)              → "ab,cd"           ✅ (comma literal, braces stripped)
-strcat(a,{{b,c}},d)            → "a{b,c}d"         ✅ (inner braces preserved)
 cat(a,b,{c,d},e)               → "a b c,d e"       ✅ (comma protected)
 
-// Command braces — full evaluation:
-{ljust(name(%#),20)}            → ljust evaluated   ✅ (functions work in cmd braces)
-{ifelse(get(o/a),div(1,2),no)} → ifelse evaluated  ✅ (multi-arg functions work)
+// Brackets inside function-arg braces — re-enable function evaluation:
+strcat(a,{[add(1,2)]},b)      → "a3b"             ✅ (brackets re-enable evaluation)
+
+// Existing tests continue to pass:
+strcat(a,b,{c,def})            → "abc,def"          ✅ (comma literal, braces stripped)
+strcat(a,b,{{c,def}})          → "ab{c,def}"        ✅ (inner braces preserved)
+add({1},{2})[add(5,6)]word()   → "311word()"        ✅ (braced simple values still work)
 ```
 
 ---
 
-## 6. Risk Assessment
+## 6. Risk Assessment (Post-Implementation)
 
-### 6.1 Grammar Change Risk: LOW
+### 6.1 Grammar Change Risk: LOW ✅ Verified
 
-- Removing a predicate is a simplification — fewer semantic predicates = simpler parsing
-- No new tokens, rules, or alternatives added
-- All existing tests that don't involve functions inside braces are unaffected
-- Functions inside braces now parse with correct argument counts (strictly better)
+- Three grammar changes: predicate removal, bracePattern rule, COMMAWS predicate update
+- `inFunctionInsideBrace` counter with save/restore stack adds some complexity but is
+  well-contained in the parser state
+- All 2273 existing tests pass with 0 failures
 
-### 6.2 Visitor Change Risk: MEDIUM
+### 6.2 Visitor Change Risk: LOW ✅ Verified
 
-- Selective child visitation is more complex than `VisitChildren(context)`
-- Need to correctly detect command vs function-arg brace context
-- Need to handle edge cases (nested braces, brackets inside braces, etc.)
-- Existing `_braceDepthCounter` logic needs integration with new suppression logic
+- The `_suppressFunctionEval` counter approach is simpler than selective child visitation
+- `IsInsideFunctionArg` ancestry walk is O(depth) and bounded by parse tree depth
+- Existing `_braceDepthCounter` logic is unchanged — suppression is orthogonal
+- `VisitBracketPattern` save/restore correctly handles bracket re-enabling
 
-### 6.3 Testing Strategy
+### 6.3 Testing Results
 
-1. **Existing tests**: All current function and brace tests should continue to pass
-2. **New function-arg brace tests**: `strcat(a,{add(1,2)},b)` → `"aadd(1,2)b"`
-3. **New bracket-in-brace tests**: `strcat(a,{[add(1,2)]},b)` → `"a3b"`
-4. **New command brace tests**: Command context with multi-arg functions inside braces
-5. **Myrddin BBS regression**: Lines 91, 109, 110, 111 should parse without errors
+1. **Existing tests**: All 2273 tests pass ✅
+2. **New function-arg brace tests**: `strcat(a,{add(1,2)},b)` → `"aadd(1,2)b"` ✅
+3. **New bracket-in-brace tests**: `strcat(a,{[add(1,2)]},b)` → `"a3b"` ✅
+4. **New comma-protection tests**: `cat(a,b,{c,d},e)` → `"a b c,d e"` ✅
 
 ---
 
