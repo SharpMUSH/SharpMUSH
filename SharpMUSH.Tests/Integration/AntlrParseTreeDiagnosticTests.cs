@@ -385,6 +385,9 @@ var testCases = new[]
 ("strcat(a,b,c)", "Multi-arg function"),
 ("switch(1,1,yes,no)", "Switch function"),
 ("if(1,yes,no)", "If function"),
+// Extra trailing parens - these should be consumed as generic text
+("ulambda(lit(#lambda/add(1,2))))", "One extra trailing paren"),
+("ulambda(lit(#lambda/add(1,2)))))", "Two extra trailing parens"),
 };
 
 Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
@@ -451,5 +454,47 @@ Console.WriteLine("context-sensitive parsing works.");
 // The key assertion: NO syntax errors
 await Assert.That(syntaxErrorInputs).IsEmpty()
 .Because("All common MUSH patterns should parse without syntax errors");
+}
+
+/// <summary>
+/// Shows detailed ANTLR4 parse tree output for extra trailing parens.
+/// Demonstrates that after function closure, remaining ) tokens become generic text
+/// appended to the output.
+///
+/// ulambda(lit(#lambda/add(1,2)))) → one extra ) → "3)"
+/// ulambda(lit(#lambda/add(1,2))))) → two extra ) → "3))"
+/// </summary>
+[Test]
+public async Task FixC_ParseTree_ExtraTrailingParens()
+{
+var testCases = new[]
+{
+("ulambda(lit(#lambda/add(1,2))))", "One extra trailing paren"),
+("ulambda(lit(#lambda/add(1,2)))))", "Two extra trailing parens"),
+};
+
+foreach (var (input, description) in testCases)
+{
+Console.WriteLine($"╔══════════════════════════════════════════════════════════════════════╗");
+Console.WriteLine($"║  EXTRA TRAILING PARENS: {description,-44} ║");
+Console.WriteLine($"╚══════════════════════════════════════════════════════════════════════╝");
+Console.WriteLine();
+
+Console.WriteLine("═══════════════════ LL MODE ═══════════════════");
+var llResult = ParseAndDiagnose(input, PredictionMode.LL);
+Console.WriteLine(llResult.FullOutput);
+
+Console.WriteLine("═══════════════════ SLL MODE ═══════════════════");
+var sllResult = ParseAndDiagnose(input, PredictionMode.SLL);
+Console.WriteLine(sllResult.FullOutput);
+
+// Assertions: no real syntax errors, parse trees match
+await Assert.That(llResult.RealSyntaxErrorCount).IsEqualTo(0)
+.Because($"'{input}' should parse without syntax errors - extra ) become generic text");
+await Assert.That(sllResult.RealSyntaxErrorCount).IsEqualTo(0)
+.Because($"'{input}' should parse without syntax errors in SLL mode too");
+await Assert.That(llResult.ParseTree).IsEqualTo(sllResult.ParseTree)
+.Because("LL and SLL modes should produce identical parse trees");
+}
 }
 }

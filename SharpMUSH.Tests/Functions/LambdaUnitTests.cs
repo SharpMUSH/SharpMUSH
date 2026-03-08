@@ -14,6 +14,9 @@ public class LambdaUnitTests
 	[Arguments("ulambda(lit(#lambda/add(1,2)))", "3")]
 	[Arguments("ulambda(#lambda/[add(1,2)])", "3")]
 	[Arguments("ulambda(#lambda/3)", "3")]
+	// Extra trailing parens: after the function closes, remaining ) become generic text
+	[Arguments("ulambda(lit(#lambda/add(1,2))))", "3)")]
+	[Arguments("ulambda(lit(#lambda/add(1,2)))))", "3))")]
 	public async Task BasicLambdaTest(string call, string expected)
 	{
 		var res = (await Parser.FunctionParse(MModule.single(call)))!.Message!;
