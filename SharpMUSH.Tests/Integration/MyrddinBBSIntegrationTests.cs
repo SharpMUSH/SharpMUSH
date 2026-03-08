@@ -206,7 +206,7 @@ public class MyrddinBBSIntegrationTests
 		}
 
 		// Log the comprehensive summary
-		Console.WriteLine($"\n{"",78}");
+		Console.WriteLine();
 		Console.WriteLine(new string('=', 78));
 		Console.WriteLine("MYRDDIN BBS v4.0.6 INSTALLATION TEST RESULTS");
 		Console.WriteLine(new string('=', 78));
