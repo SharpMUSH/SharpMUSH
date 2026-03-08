@@ -8,6 +8,7 @@ options {
     public int inFunction = 0;
     public int inBraceDepth = 0;
     public int inBracketDepth = 0;
+    public int inParenDepth = 0;
     public bool inCommandList = false;
     public bool lookingForCommandArgCommas = false;
     public bool lookingForCommandArgEquals = false;
@@ -135,13 +136,13 @@ substitutionSymbol: (
 genericText: beginGenericText | FUNCHAR;
 
 beginGenericText:
-      { inFunction == 0 }? CPAREN
+      { inFunction == 0 || inParenDepth > 0 }? CPAREN { if (inParenDepth > 0) --inParenDepth; }
     | { inBracketDepth == 0 }? CBRACK
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (escapedText|OPAREN|OTHER|ansi) 
+    | (escapedText|OPAREN { ++inParenDepth; }|OTHER|ansi) 
 ;
 
 escapedText: ESCAPE ANY;
