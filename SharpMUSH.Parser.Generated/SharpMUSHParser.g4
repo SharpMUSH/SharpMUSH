@@ -7,6 +7,10 @@ options {
 @parser::members {
     public int inFunction = 0;
     public int inBraceDepth = 0;
+    public int inBracketDepth = 0;
+    public int inParenDepth = 0;
+    public int inFunctionInsideBrace = 0;
+    public System.Collections.Generic.Stack<int> savedFunctionInsideBrace = new();
     public bool inCommandList = false;
     public bool lookingForCommandArgCommas = false;
     public bool lookingForCommandArgEquals = false;
@@ -74,17 +78,17 @@ explicitEvaluationString:
 ;
 
 bracePattern:
-    OBRACE { ++inBraceDepth; } explicitEvaluationString? CBRACE { --inBraceDepth; }
+    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; } evaluationString? CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); }
 ;
 
 bracketPattern:
-    OBRACK evaluationString CBRACK
+    OBRACK { ++inBracketDepth; } evaluationString CBRACK { --inBracketDepth; }
 ;
 
 function: 
-    FUNCHAR {++inFunction;} 
-    (evaluationString? ({inBraceDepth == 0}? COMMAWS evaluationString?)*)?
-    CPAREN {--inFunction;} 
+    FUNCHAR {++inFunction; ++inFunctionInsideBrace;} 
+    (evaluationString? (COMMAWS evaluationString?)*)?
+    CPAREN {--inFunction; --inFunctionInsideBrace;} 
 ;
 
 validSubstitution:
@@ -134,12 +138,13 @@ substitutionSymbol: (
 genericText: beginGenericText | FUNCHAR;
 
 beginGenericText:
-      { inFunction == 0 }? CPAREN
+      { inFunction == 0 || inParenDepth > 0 }? CPAREN { if (inParenDepth > 0) --inParenDepth; }
+    | { inBracketDepth == 0 }? CBRACK
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
-    | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
+    | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (escapedText|OPAREN|OTHER|ansi) 
+    | (escapedText|OPAREN { ++inParenDepth; }|OTHER|ansi) 
 ;
 
 escapedText: ESCAPE ANY;

@@ -59,6 +59,7 @@ public class SharpMUSHParserVisitor(
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
 	private int _braceDepthCounter;
+	private int _suppressFunctionEval;
 
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
 
@@ -71,6 +72,24 @@ public class SharpMUSHParserVisitor(
 		=> parser is MUSHCodeParser mushParser
 			? mushParser.ServiceProvider.GetService<ITelemetryService>()
 			: null;
+
+	/// <summary>
+	/// Determines if a bracePattern is inside a function's argument list.
+	/// PennMUSH has two brace modes: command braces (full evaluation) and function-arg
+	/// braces (suppress function recognition). This detects function-arg braces by
+	/// checking if the parse tree has a FunctionContext ancestor.
+	/// </summary>
+	private static bool IsInsideFunctionArg(ParserRuleContext context)
+	{
+		var parent = context.Parent;
+		while (parent is not null)
+		{
+			if (parent is SharpMUSHParser.FunctionContext)
+				return true;
+			parent = parent.Parent;
+		}
+		return false;
+	}
 
 	/// <summary>
 	/// Sends debug or verbose output to owner and DEBUGFORWARDLIST recipients.
@@ -300,6 +319,13 @@ public class SharpMUSHParserVisitor(
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
 			// var a = await VisitChildren(context);
+			return new CallState(context.GetText());
+		}
+
+		// PennMUSH: Inside function-arg braces, PE_FUNCTION_CHECK is removed.
+		// Functions are not recognized — return literal text of the function call.
+		if (_suppressFunctionEval > 0)
+		{
 			return new CallState(context.GetText());
 		}
 
@@ -1723,6 +1749,14 @@ public class SharpMUSHParserVisitor(
 	{
 		_braceDepthCounter++;
 
+		// PennMUSH has two brace modes:
+		// 1. Command braces: full evaluation (functions work normally)
+		// 2. Function-arg braces: suppress function recognition (but % subs and [...] still work)
+		// Detect function-arg braces by checking if this brace has a FunctionContext ancestor.
+		var isFunctionArgBrace = IsInsideFunctionArg(context);
+		if (isFunctionArgBrace)
+			_suppressFunctionEval++;
+
 		CallState? result;
 		var vc = await VisitChildren(context);
 
@@ -1744,6 +1778,8 @@ public class SharpMUSHParserVisitor(
 				: new CallState(GetContextText(context), context.Depth());
 		}
 
+		if (isFunctionArgBrace)
+			_suppressFunctionEval--;
 		_braceDepthCounter--;
 		return result;
 	}
@@ -1751,6 +1787,12 @@ public class SharpMUSHParserVisitor(
 	public override async ValueTask<CallState?> VisitBracketPattern(
 		[NotNull] BracketPatternContext context)
 	{
+		// PennMUSH: [...] bracket evaluation inside braces RE-ENABLES PE_FUNCTION_CHECK.
+		// So {[add(1,2)]} evaluates add() to 3, even inside function-arg braces.
+		// Save and clear suppression so functions work inside brackets.
+		var savedSuppress = _suppressFunctionEval;
+		_suppressFunctionEval = 0;
+
 		if (parser.CurrentState.ParseMode is not ParseMode.NoParse and not ParseMode.NoEval)
 		{
 			/*
@@ -1761,11 +1803,12 @@ public class SharpMUSHParserVisitor(
 			var resultQ = await VisitChildren(context)
 										?? new CallState(GetContextText(context), context.Depth());
 
-
+			_suppressFunctionEval = savedSuppress;
 			return resultQ;
 		}
 
 		var result = await VisitChildren(context);
+		_suppressFunctionEval = savedSuppress;
 		if (result is null)
 		{
 			return new CallState(GetContextText(context), context.Depth());

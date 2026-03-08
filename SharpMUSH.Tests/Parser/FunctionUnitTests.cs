@@ -24,6 +24,11 @@ public class FunctionUnitTests
 	[Arguments("add(1,2)[add(5,5)]", "310")]
 	[Arguments("add(1,2)[add(5,5)]word()", "310word()")]
 	[Arguments("add({1},{2})[add(5,6)]word()", "311word()")]
+	// Fix B: Function-arg braces suppress function evaluation (PennMUSH PE_FUNCTION_CHECK removal)
+	[Arguments("strcat(a,{add(1,2)},b)", "aadd(1,2)b")]
+	[Arguments("cat(a,b,{c,d},e)", "a b c,d e")]
+	// Fix B: Brackets inside function-arg braces re-enable function evaluation
+	[Arguments("strcat(a,{[add(1,2)]},b)", "a3b")]
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);
