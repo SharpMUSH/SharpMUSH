@@ -11,6 +11,7 @@ options {
     public int inParenDepth = 0;
     public int inFunctionInsideBrace = 0;
     public System.Collections.Generic.Stack<int> savedFunctionInsideBrace = new();
+    public System.Collections.Generic.Stack<int> savedParenDepth = new();
     public bool inCommandList = false;
     public bool lookingForCommandArgCommas = false;
     public bool lookingForCommandArgEquals = false;
@@ -82,7 +83,7 @@ bracePattern:
 ;
 
 bracketPattern:
-    OBRACK { ++inBracketDepth; } evaluationString CBRACK { --inBracketDepth; }
+    OBRACK { ++inBracketDepth; savedParenDepth.Push(inParenDepth); inParenDepth = 0; } evaluationString CBRACK { --inBracketDepth; inParenDepth = savedParenDepth.Pop(); }
 ;
 
 function: 

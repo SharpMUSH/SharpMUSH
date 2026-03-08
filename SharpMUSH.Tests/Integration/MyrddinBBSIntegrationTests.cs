@@ -26,21 +26,24 @@ namespace SharpMUSH.Tests.Integration;
 /// - @tel within @wait callback can't locate objects by name (timing/context issue)
 /// - +bbread output shows #-1 errors for group objects not being locatable
 ///
-/// ANTLR PARSER ERRORS (Post Fix A+B+C):
+/// ANTLR PARSER ERRORS (Post Fix A+B+C+D):
 /// After implementing grammar fixes A (bracket depth), B (brace function semantics),
-/// and C (paren depth), only 1 of the original 8 error-producing lines remains:
+/// C (paren depth), and D (inParenDepth scope isolation in bracketPattern),
+/// all 8 of the original error-producing lines have been resolved:
 ///
-/// Line 57: &amp;TR_POST_NOTIFY - contains bare parens (New BB message ...) followed by
-///   bracket pattern [ifelse(hasattr(...),...)] — Fix C's inParenDepth leaks into
-///   the bracket scope causing CPARENs inside ifelse to be consumed as generic text.
-///   Errors: "mismatched input ']' expecting {CPAREN, COMMAWS}",
-///           "extraneous input ')' expecting CBRACE"
+/// FIXED BY FIX A (3 lines):
+/// Lines 74, 83, 96: Orphaned ] from \[ escapes now treated as generic text
 ///
-/// PREVIOUSLY FIXED (7 lines):
-/// Lines 74, 83, 96: Fixed by Fix A — orphaned ] from \[ escapes now treated as generic text
-/// Lines 91, 109, 110, 111: Fixed by Fix B — multi-arg functions now parse inside braces
-/// Line 101: Fixed by Fix C — bare parens (text) no longer close functions
-/// Lines 118, 128: Fixed by Fix A — bracket depth tracking
+/// FIXED BY FIX B (4 lines):
+/// Lines 91, 109, 110, 111: Multi-arg functions now parse inside braces
+///
+/// FIXED BY FIX C (1 line):
+/// Line 101: Bare parens (text) no longer close functions
+///
+/// FIXED BY FIX D (1 line):
+/// Line 57: &amp;TR_POST_NOTIFY - inParenDepth from bare parens (New BB message ...)
+///   now isolated from bracket patterns, so function CPARENs inside [ifelse(...)]
+///   are no longer consumed as generic text.
 ///
 /// NON-PARSER ERRORS (lock evaluator):
 /// Lines 134, 136, 138: &amp;bb_read/bb_omit/bb_silent me - attribute clear commands

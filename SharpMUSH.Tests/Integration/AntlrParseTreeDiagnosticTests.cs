@@ -498,4 +498,105 @@ await Assert.That(llResult.ParseTree).IsEqualTo(sllResult.ParseTree)
 .Because("LL and SLL modes should produce identical parse trees");
 }
 }
+
+/// <summary>
+/// Deep analysis of BBS line 57 inParenDepth scope leakage.
+///
+/// The issue: bare parentheses in outer text like "(New BB message" elevate inParenDepth,
+/// and when a bracketPattern like [name(%0)] is encountered, the elevated inParenDepth
+/// leaks into the bracket scope. Inside the bracket, function-closing CPARENs are
+/// misclassified as generic text because the CPAREN predicate
+/// {inFunction==0 || inParenDepth>0}? evaluates to TRUE due to the leaked inParenDepth.
+///
+/// Minimal reproduction: "(text [name(%0)])"
+/// 1. "(" → OPAREN, ++inParenDepth to 1
+/// 2. "[" → OBRACK, enters bracketPattern — inParenDepth is STILL 1
+/// 3. "name(" → FUNCHAR, ++inFunction to 1
+/// 4. "%0" → substitution
+/// 5. ")" → CPAREN predicate: {inFunction==0 || inParenDepth>0} = {false || true} = TRUE
+///    → consumed as GENERIC TEXT instead of closing name()!
+/// 6. "]" → parser expects CPAREN/COMMAWS but gets CBRACK → ERROR
+/// </summary>
+[Test]
+public async Task Line57_InParenDepth_ScopeLeakage_Analysis()
+{
+// Minimal reproduction patterns — from simplest to line 57 fragment
+var testCases = new[]
+{
+// Pattern 1: Simplest — bare paren before bracket with function
+("(x [name(%0)])", "Bare paren before bracket function"),
+
+// Pattern 2: Like BBS — text before bracket with function
+("(text [name(%0)] more)", "Bare paren text with bracket function"),
+
+// Pattern 3: Multiple bracket functions after bare paren
+("(text [add(1,2)] and [name(%0)])", "Two bracket functions after bare paren"),
+
+// Pattern 4: Nested function inside bracket after bare paren
+("(text [ifelse(1,name(%0),name(%1))])", "Nested function in bracket after bare paren"),
+
+// Pattern 5: BBS line 57 fragment — the actual failing content
+("(New BB message ([member(v(groups),%1)]/%2) posted to '[name(%1)]' by [ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0))]: %3)", "BBS line 57 paren section"),
+};
+
+Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
+Console.WriteLine("║  LINE 57 ANALYSIS: inParenDepth Scope Leakage into BracketPattern  ║");
+Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
+Console.WriteLine();
+
+var results = new List<(string Input, string Desc, DiagnosticResult Result)>();
+
+foreach (var (input, description) in testCases)
+{
+Console.WriteLine($"═══════════════════════════════════════════════════════════════");
+Console.WriteLine($"  TEST: {description}");
+Console.WriteLine($"  INPUT: {input}");
+Console.WriteLine($"═══════════════════════════════════════════════════════════════");
+Console.WriteLine();
+
+var result = ParseAndDiagnose(input, PredictionMode.LL);
+Console.WriteLine(result.FullOutput);
+results.Add((input, description, result));
+
+Console.WriteLine();
+}
+
+// Summary
+Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
+Console.WriteLine("║  SUMMARY                                                           ║");
+Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
+Console.WriteLine();
+
+foreach (var (input, desc, result) in results)
+{
+var status = result.RealSyntaxErrorCount == 0 ? "✅ OK" : $"❌ {result.RealSyntaxErrorCount} error(s)";
+Console.WriteLine($"  {status} | {desc}");
+Console.WriteLine($"         | Input: {input}");
+Console.WriteLine();
+}
+
+// Document which patterns fail
+var failingCount = results.Count(r => r.Result.RealSyntaxErrorCount > 0);
+Console.WriteLine($"Patterns with errors: {failingCount}/{results.Count}");
+Console.WriteLine();
+
+if (failingCount > 0)
+{
+Console.WriteLine("ROOT CAUSE CONFIRMED: inParenDepth leaks from outer text into");
+Console.WriteLine("bracketPattern scope, causing function-closing CPARENs inside brackets");
+Console.WriteLine("to be consumed as generic text when bare parens from outer context");
+Console.WriteLine("elevate inParenDepth > 0.");
+Console.WriteLine();
+Console.WriteLine("PROPOSED FIX: Save/restore inParenDepth in bracketPattern rule:");
+Console.WriteLine("  bracketPattern:");
+Console.WriteLine("    OBRACK { ++inBracketDepth; savedParenDepth.Push(inParenDepth); inParenDepth = 0; }");
+Console.WriteLine("    evaluationString");
+Console.WriteLine("    CBRACK { --inBracketDepth; inParenDepth = savedParenDepth.Pop(); }");
+Console.WriteLine("  ;");
+}
+
+// After Fix D (inParenDepth scope isolation in bracketPattern), all patterns pass
+await Assert.That(failingCount).IsEqualTo(0)
+.Because("Fix D: saving/restoring inParenDepth in bracketPattern isolates bare paren scope from function parsing inside brackets");
+}
 }
