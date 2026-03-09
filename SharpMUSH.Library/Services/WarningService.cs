@@ -42,7 +42,7 @@ public class WarningService(
 		{
 			owner = await targetObj.Owner.WithCancellation(CancellationToken.None);
 		}
-		catch (InvalidOperationException)
+		catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
 		{
 			// Object has no owner edge in the database - skip it
 			return false;
@@ -99,7 +99,7 @@ public class WarningService(
 			{
 				objectOwner = await obj.Owner.WithCancellation(CancellationToken.None);
 			}
-			catch (InvalidOperationException)
+			catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
 			{
 				// Object has no owner edge in the database - skip it
 				continue;
@@ -151,7 +151,7 @@ public class WarningService(
 			{
 				owner = await obj.Owner.WithCancellation(CancellationToken.None);
 			}
-			catch (InvalidOperationException)
+			catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
 			{
 				// Object has no owner edge in the database - skip it
 				continue;
@@ -215,7 +215,7 @@ public class WarningService(
 		{
 			checkerOwner = await checkerObj.Owner.WithCancellation(CancellationToken.None);
 		}
-		catch (InvalidOperationException)
+		catch (InvalidOperationException ex) when (ex.Message.StartsWith("No owner found"))
 		{
 			// Checker has no owner edge - fall back to checker's own warnings or None
 			return checkerObj.Warnings;
