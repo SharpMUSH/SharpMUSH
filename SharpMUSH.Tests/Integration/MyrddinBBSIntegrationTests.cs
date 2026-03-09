@@ -20,12 +20,6 @@ namespace SharpMUSH.Tests.Integration;
 /// runs each line of the installer through CommandParse, then executes +bbread
 /// to verify the installation produces output without #-1 errors.
 ///
-/// KNOWN ISSUES (documented):
-/// - Parser errors (mismatched input, extraneous input) for some complex MUSH syntax
-///   emitted to stderr during ANTLR parsing
-/// - @tel within @wait callback can't locate objects by name (timing/context issue)
-/// - +bbread output shows #-1 errors for group objects not being locatable
-///
 /// ANTLR PARSER ERRORS: 0 remaining (all 8 original lines resolved)
 ///
 /// FIXED BY FIX A (3 lines) — bracket depth tracking:
@@ -43,6 +37,15 @@ namespace SharpMUSH.Tests.Integration;
 ///   Fix C (inParenDepth) was removed — PennMUSH does not match bare parentheses.
 ///   Line 101: Also resolved — { inFunction == 0 }? predicate handles this correctly.
 ///
+/// FIXED: +bbread runtime #-1 errors — iter() phantom iteration:
+///   Root cause: MModule.split() returned [| empty |] for empty input, causing
+///   iter() to produce one phantom iteration with empty value. This led to:
+///     name("") → #-1 CAN'T SEE THAT HERE
+///     get(/LAST_MOD) → #-1 BAD ARGUMENT FORMAT TO GET
+///     words(error_string) → misleading count displayed as message count
+///   Fix: split() now returns empty array for empty input (PennMUSH behavior).
+///   +bbread #-1 errors: 0 (was 1).
+///
 /// REMAINING NON-PARSER ERRORS:
 ///
 /// Lock evaluator errors (3 lines — not parser errors):
@@ -51,12 +54,10 @@ namespace SharpMUSH.Tests.Integration;
 ///   not the bare identifier 'me'.
 ///   Errors: "mismatched input 'me' expecting {NAME, BIT_FLAG, ...}"
 ///
-/// Runtime #-1 errors (functional, not parser):
-///   #-1 NO SUCH OBJECT VISIBLE — objects not locatable after @tel in @wait
-///   #-1 CAN'T SEE THAT HERE — +bbread can't find board objects
-///   #-1 BAD ARGUMENT FORMAT TO GET — get() on non-existent objects
-///   These are caused by timing/context issues with @wait callbacks and
-///   object visibility, not parser problems.
+/// Install #-1 false positives (3 — not actual errors):
+///   These are attribute values that contain "#-1" as part of conditional checks
+///   (e.g., @switch [first(grep(me,*,a))]=#-1,...). They are detected by the
+///   notification counter but are intentional error-checking patterns, not failures.
 /// </summary>
 [NotInParallel]
 public class MyrddinBBSIntegrationTests
