@@ -36,8 +36,18 @@ public class WarningService(
 			return false;
 		}
 
-		// Skip if owner has NO_WARN
-		var owner = await targetObj.Owner.WithCancellation(CancellationToken.None);
+		// Skip if owner relationship is missing, or if owner has NO_WARN
+		SharpPlayer owner;
+		try
+		{
+			owner = await targetObj.Owner.WithCancellation(CancellationToken.None);
+		}
+		catch (InvalidOperationException)
+		{
+			// Object has no owner edge in the database - skip it
+			return false;
+		}
+
 		if (await owner.Object.HasNoWarnFlagAsync())
 		{
 			return false;
@@ -83,8 +93,18 @@ public class WarningService(
 
 		await foreach (var obj in allObjects)
 		{
-			// Check if this object is owned by the player
-			var objectOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+			// Check if this object is owned by the player - skip if owner relationship is missing
+			SharpPlayer objectOwner;
+			try
+			{
+				objectOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+			}
+			catch (InvalidOperationException)
+			{
+				// Object has no owner edge in the database - skip it
+				continue;
+			}
+
 			if (!objectOwner.Object.DBRef.Equals(ownerObj.DBRef))
 			{
 				continue;
@@ -125,9 +145,18 @@ public class WarningService(
 		{
 			checkedCount++;
 
-			// Get the owner for this object
-			// TODO: There's a failure here with: System.InvalidOperationException: Sequence contains no elements
-			var owner = await obj.Owner.WithCancellation(CancellationToken.None);
+			// Get the owner for this object - skip if owner relationship is missing
+			SharpPlayer owner;
+			try
+			{
+				owner = await obj.Owner.WithCancellation(CancellationToken.None);
+			}
+			catch (InvalidOperationException)
+			{
+				// Object has no owner edge in the database - skip it
+				continue;
+			}
+
 			var ownerDbRef = owner.Object.DBRef;
 
 			// Get the full object nodes
@@ -180,7 +209,17 @@ public class WarningService(
 	private static async Task<WarningType> GetWarningsForCheck(AnySharpObject checker, SharpObject target, SharpObject owner)
 	{
 		var checkerObj = checker.Object();
-		var checkerOwner = await checkerObj.Owner.WithCancellation(CancellationToken.None);
+
+		SharpPlayer checkerOwner;
+		try
+		{
+			checkerOwner = await checkerObj.Owner.WithCancellation(CancellationToken.None);
+		}
+		catch (InvalidOperationException)
+		{
+			// Checker has no owner edge - fall back to checker's own warnings or None
+			return checkerObj.Warnings;
+		}
 
 		// If the checker's owner is the target's owner, use target warnings (fallback to owner)
 		if (checkerOwner.Object.DBRef.Equals(owner.DBRef))
