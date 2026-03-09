@@ -491,7 +491,7 @@ module MarkupStringModule =
     /// </summary>
     let split (delimiter: string) (ams: MarkupString) : MarkupString array =
         if ams.Length = 0 then
-            [| ams |]
+            [||]
         else
             let text = ams.Text
             let rec findPositions (pos: int) acc =
