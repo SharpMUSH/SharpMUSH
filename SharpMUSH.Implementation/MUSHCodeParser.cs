@@ -122,7 +122,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			ParserPredictionMode.SLL => PredictionMode.SLL,
 			ParserPredictionMode.LL => PredictionMode.LL,
-			_ => PredictionMode.LL // Default to LL
+			_ => PredictionMode.SLL // Default to SLL
 		};
 	}
 

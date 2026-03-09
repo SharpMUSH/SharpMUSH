@@ -29,7 +29,7 @@ parser_prediction_mode = LL
 - **SLL (Strong LL)**: Faster but less powerful. Good for most MUSH code.
 - **LL (Full LL\*)**: Slower but more powerful. Handles complex nested structures better.
 
-The default mode is **LL** for maximum compatibility.
+The default mode is **SLL** for maximum performance.
 
 ## Features
 
@@ -306,7 +306,7 @@ public enum ParseType
 ```csharp
 public enum ParserPredictionMode
 {
-    SLL,  // Strong LL - faster
-    LL    // Full LL(*) - more powerful (default)
+    SLL,  // Strong LL - faster (default)
+    LL    // Full LL(*) - more powerful
 }
 ```

@@ -39,8 +39,8 @@ Additionally, the parser now supports **configurable prediction modes** (SLL vs 
 ```csharp
 public enum ParserPredictionMode
 {
-    SLL,  // Strong LL - faster (10-30% speed increase)
-    LL    // Full LL(*) - more powerful (default)
+    SLL,  // Strong LL - faster (10-30% speed increase) (default)
+    LL    // Full LL(*) - more powerful
 }
 ```
 
@@ -53,7 +53,7 @@ parser_prediction_mode = SLL  # or LL
 **Implementation:**
 - Added `GetPredictionMode()` helper method
 - Updated all 9 parsing methods to use configured mode
-- Default remains LL for maximum compatibility
+- Default is SLL for maximum performance
 
 ### 2. Detailed Parser Error Explanations
 
