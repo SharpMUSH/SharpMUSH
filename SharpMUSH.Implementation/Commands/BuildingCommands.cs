@@ -1,4 +1,5 @@
-﻿using OneOf.Types;
+﻿using Microsoft.Extensions.Logging;
+using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -294,52 +295,239 @@ public partial class Commands
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService!.Controls(executor, obj))
-				{
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				if (await obj.HasFlag("SAFE") && !override_)
-				{
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.SafeObject,
-						notifyMessage: "That object is SAFE. Use @nuke to override.",
-						shouldNotify: true);
-				}
-
-				if (await obj.HasFlag("GOING"))
-				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
-					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
-
-					// NOTE: Actual object deletion from database requires a garbage collection system.
-					// Objects marked GOING_TWICE will be cleaned up by a future purge process.
-					return CallState.Empty;
-				}
-
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
-				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
-
-				try
-				{
-					await AttributeService!.EvaluateAttributeFunctionAsync(
-						parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
-				}
-				catch (Exception)
-				{
-					// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
-				}
-
-				return CallState.Empty;
-			}
+			async obj => await DestroyObjectAsync(parser, executor, obj, override_)
 		);
+	}
+
+	/// <summary>
+	/// Core destroy logic shared by <c>@destroy</c> and <c>@nuke</c>.
+	/// Mirrors PennMUSH <c>what_to_destroy()</c> + <c>pre_destroy()</c> + the player-specific parts
+	/// of <c>clear_player()</c> that must happen at the "mark GOING" phase (channel chown,
+	/// surviving-object chown) because SharpMUSH does not yet have a live purge cycle.
+	/// <para>
+	/// Attribute ownership is intentionally <b>not</b> reassigned here.
+	/// PennMUSH handles it inside <c>dbck()</c> — when that check detects an attribute
+	/// whose creator no longer exists it resets the owner to God.
+	/// SharpMUSH will do the same once its dbck pass is implemented
+	/// (<see cref="SharpMUSH.Library.Commands.Database.ReassignAttributeOwnerCommand"/>).
+	/// Lock expressions are also left unchanged per PennMUSH invariants
+	/// ("we allow indirect locks to refer to destroyed objects").
+	/// </para>
+	/// </summary>
+	private static async ValueTask<CallState> DestroyObjectAsync(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		AnySharpObject obj,
+		bool override_)
+	{
+		if (!await PermissionService!.Controls(executor, obj))
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
+		}
+
+		if (await obj.HasFlag("SAFE") && !override_)
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.SafeObject,
+				notifyMessage: "That object is SAFE. Use @nuke to override.",
+				shouldNotify: true);
+		}
+
+		// Player-specific guards (PennMUSH what_to_destroy, TYPE_PLAYER case)
+		if (obj.IsPlayer)
+		{
+			// Only a wizard can destroy a player.
+			if (!await executor.IsWizard())
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "Sorry, no suicide allowed.",
+					shouldNotify: true);
+			}
+
+			// Only God can destroy another wizard.
+			if (await obj.IsWizard() && !executor.IsGod())
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "Even you can't do that!",
+					shouldNotify: true);
+			}
+
+			// Connected players may not be destroyed.
+			var isConnected = await ConnectionService!
+				.Get(obj.Object().DBRef)
+				.AnyAsync(x => x.State == IConnectionService.ConnectionState.LoggedIn);
+			if (isConnected)
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "How gruesome. You may not destroy players who are connected.",
+					shouldNotify: true);
+			}
+
+			// Plain @destroy cannot target a player — @nuke (= override) is required.
+			if (!override_)
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "You must use @nuke to destroy a player.",
+					shouldNotify: true);
+			}
+		}
+
+		if (await obj.HasFlag("GOING"))
+		{
+			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
+			await NotifyService!.Notify(executor, "Destroyed.");
+
+			// NOTE: Actual object deletion from database requires a garbage collection system.
+			// Objects marked GOING_TWICE will be cleaned up by a future purge process.
+			return CallState.Empty;
+		}
+
+		// For players: handle possessions and channels before marking GOING.
+		// This combines PennMUSH's pre_destroy (mark possessions GOING) and the
+		// object/channel chown portion of clear_player (which runs at purge time in
+		// PennMUSH but is done here because SharpMUSH lacks a live purge cycle).
+		if (obj.IsPlayer)
+		{
+			await HandlePlayerPossessionsAsync(parser, executor, obj);
+		}
+
+		await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
+
+		var destroyMsg = obj.IsPlayer
+			? $"{obj.Object().Name} and their possessions are scheduled to be destroyed."
+			: $"{obj.Object().Name} is scheduled to be destroyed.";
+		await NotifyService!.Notify(executor, destroyMsg);
+
+		try
+		{
+			await AttributeService!.EvaluateAttributeFunctionAsync(
+				parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
+		}
+		catch (Exception)
+		{
+			// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
+		}
+
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// Handles the player-specific parts of destruction:
+	/// <list type="bullet">
+	///   <item>Channels owned by the player are chowned to the probate player.</item>
+	///   <item>
+	///     Objects owned by the player (other than the player themselves) are either
+	///     marked GOING (to be destroyed at the next purge cycle) or chowned to the
+	///     probate player, depending on <c>destroy_possessions</c> and <c>really_safe</c>
+	///     config options — matching <c>clear_player()</c> in PennMUSH.
+	///   </item>
+	/// </list>
+	/// <para>
+	/// Attribute ownership is not modified here.  PennMUSH reassigns stale attribute
+	/// owners to God inside <c>dbck()</c>; that same pass will be added to SharpMUSH
+	/// separately.  Lock expressions are also left unchanged.
+	/// </para>
+	/// </summary>
+	private static async ValueTask HandlePlayerPossessionsAsync(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		AnySharpObject playerObj)
+	{
+		var config = Configuration!.CurrentValue.Command;
+		var playerDbRefNumber = playerObj.Object().DBRef.Number;
+
+		// Resolve the probate player; fall back to God (#1) if the config value is invalid.
+		var probateDbRef = new DBRef((int)config.ProbateJudge);
+		var probateNode = await Mediator!.Send(new GetObjectNodeQuery(probateDbRef));
+		SharpPlayer probatePlayer;
+		if (!probateNode.IsNone && probateNode.Known.IsPlayer)
+		{
+			probatePlayer = probateNode.Known.AsPlayer;
+		}
+		else
+		{
+			Logger?.LogWarning(
+				"probate_judge config option (#{ProbateDbRef}) is set to an invalid object; falling back to God (#1).",
+				probateDbRef.Number);
+			var godNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+			if (godNode.IsNone || !godNode.Known.IsPlayer)
+			{
+				Logger?.LogError(
+					"God (#1) is not a valid player; cannot proceed with player possession chown during deletion.");
+				return; // Cannot proceed without a valid probate player.
+			}
+			probatePlayer = godNode.Known.AsPlayer;
+		}
+
+		// --- Channels: always chown to probate (PennMUSH chan_chownall) ---
+		var channels = Mediator.CreateStream(new GetChannelListQuery());
+		await foreach (var channel in channels)
+		{
+			var channelOwner = await channel.Owner.WithCancellation(CancellationToken.None);
+			if (channelOwner.Object.DBRef.Number != playerDbRefNumber)
+				continue;
+
+			await Mediator.Send(new UpdateChannelOwnerCommand(channel, probatePlayer));
+		}
+
+		// --- Possessions (PennMUSH clear_player object loop) ---
+		var objects = Mediator.CreateStream(new GetAllObjectsQuery());
+		await foreach (var obj in objects)
+		{
+			var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+			if (objOwner.Object.DBRef.Number != playerDbRefNumber)
+				continue;
+
+			if (obj.DBRef.Number == playerDbRefNumber)
+				continue; // Never process the player themselves.
+
+			var fullObjResult = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+			if (fullObjResult.IsNone)
+				continue;
+			var fullObj = fullObjResult.Known;
+
+			// Determine whether this object should be chowned to probate or destroyed.
+			// Logic mirrors PennMUSH clear_player():
+			//   chown  if: !destroy_possessions
+			//          or: really_safe && SAFE flag is set
+			//   destroy otherwise (when destroy_possessions is on)
+			bool chownToProbate;
+			if (!config.DestroyPossessions)
+			{
+				chownToProbate = true;
+			}
+			else if (config.ReallySafe && await fullObj.HasFlag("SAFE"))
+			{
+				chownToProbate = true;
+			}
+			else
+			{
+				chownToProbate = false;
+			}
+
+			if (chownToProbate)
+			{
+				await Mediator.Send(new SetObjectOwnerCommand(fullObj, probatePlayer));
+			}
+			else
+			{
+				// Pre-destroy: mark for destruction, matching PennMUSH pre_destroy().
+				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, fullObj, "GOING", false);
+			}
+		}
 	}
 
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
@@ -525,55 +713,14 @@ public partial class Commands
 	[SharpCommand(Name = "@NUKE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Nuke(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @nuke is an alias for @destroy/override - manually check for SAFE flag
+		// @nuke is @destroy/override: it bypasses the SAFE flag and the "use @nuke" player guard.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService!.Controls(executor, obj))
-				{
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				// @nuke bypasses SAFE flag
-
-				// Check if already marked GOING
-				if (await obj.HasFlag("GOING"))
-				{
-					// Mark as GOING_TWICE for immediate destruction
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
-					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
-
-					// NOTE: Actual object deletion from database requires a garbage collection system
-					// Objects marked GOING_TWICE will be cleaned up by a future purge process
-					return CallState.Empty;
-				}
-
-				// Mark as GOING
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
-				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
-
-				// Trigger @adestroy attribute if it exists
-				try
-				{
-					await AttributeService!.EvaluateAttributeFunctionAsync(
-						parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
-				}
-				catch (Exception)
-				{
-					// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
-				}
-
-				return CallState.Empty;
-			}
+			async obj => await DestroyObjectAsync(parser, executor, obj, override_: true)
 		);
 	}
 
