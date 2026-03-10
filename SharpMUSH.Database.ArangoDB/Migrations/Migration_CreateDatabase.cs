@@ -3260,6 +3260,23 @@ public class Migration_CreateDatabase : IArangoMigration
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesRoom
 		}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
+		{
+			Name = "GOING",
+			Symbol = "g",
+			System = true,
+			TypeRestrictions = DatabaseConstants.typesAll,
+			SetPermissions = DatabaseConstants.permissionsWizard,
+			UnSetPermissions = DatabaseConstants.permissionsWizard
+		}),
+		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
+		{
+			Name = "GOING_TWICE",
+			System = true,
+			TypeRestrictions = DatabaseConstants.typesAll,
+			SetPermissions = DatabaseConstants.permissionsWizard,
+			UnSetPermissions = DatabaseConstants.permissionsWizard
+		}),
 	];
 
 	public Task Down(IArangoMigrator migrator, ArangoHandle handle)
