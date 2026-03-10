@@ -513,6 +513,16 @@ public interface ISharpDatabase
 	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Bulk-reassigns all attributes owned by <paramref name="oldOwner"/> to <paramref name="newOwner"/>.
+	/// Used when a player is deleted so that surviving attributes are transferred to the probate player.
+	/// This operates at the edge/relationship level for efficiency.
+	/// </summary>
+	/// <param name="oldOwner">Player whose attribute ownership is being transferred</param>
+	/// <param name="newOwner">Player who will become the new owner of those attributes</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	ValueTask ReassignAttributeOwnerAsync(SharpPlayer oldOwner, SharpPlayer newOwner, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Set an attribute flag. This does not do any checks, as that is up to the functionality itself.
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
