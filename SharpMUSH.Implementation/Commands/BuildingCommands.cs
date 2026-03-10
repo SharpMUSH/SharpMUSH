@@ -434,12 +434,14 @@ public partial class Commands
 	///     probate player, depending on <c>destroy_possessions</c> and <c>really_safe</c>
 	///     config options — matching <c>clear_player()</c> in PennMUSH.
 	///   </item>
+	///   <item>
+	///     All attributes whose creator is the deleted player are bulk-reassigned to the
+	///     probate player via <see cref="ReassignAttributeOwnerCommand"/>.
+	///     PennMUSH defers this to <c>dbck()</c>, but SharpMUSH does it eagerly at
+	///     deletion time to avoid leaving dangling attribute-owner references in the database.
+	///   </item>
 	/// </list>
-	/// <para>
-	/// Attribute ownership is not modified here.  PennMUSH reassigns stale attribute
-	/// owners to God inside <c>dbck()</c>; that same pass will be added to SharpMUSH
-	/// separately.  Lock expressions are also left unchanged.
-	/// </para>
+	/// <para>Lock expressions are left unchanged per PennMUSH invariants.</para>
 	/// </summary>
 	private static async ValueTask HandlePlayerPossessionsAsync(
 		IMUSHCodeParser parser,
@@ -471,6 +473,10 @@ public partial class Commands
 			}
 			probatePlayer = godNode.Known.AsPlayer;
 		}
+
+		// --- Attribute ownership: bulk-reassign all attributes owned by the deleted player ---
+		// PennMUSH defers this to dbck(), but we do it eagerly to keep the database consistent.
+		await Mediator.Send(new ReassignAttributeOwnerCommand(playerObj.AsPlayer, probatePlayer));
 
 		// --- Channels: always chown to probate (PennMUSH chan_chownall) ---
 		var channels = Mediator.CreateStream(new GetChannelListQuery());
