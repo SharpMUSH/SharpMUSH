@@ -490,8 +490,9 @@ public partial class Commands
 		var objects = Mediator.CreateStream(new GetAllObjectsQuery());
 		await foreach (var obj in objects)
 		{
-			// Some objects (e.g. rooms created during migration) may lack an owner edge;
-			// skip them rather than propagating a database exception.
+			// Defensive: skip objects whose ownership edge cannot be resolved (e.g. legacy
+			// player records created before the ownership edge was fixed to use the objects/
+			// vertex as the FROM end, or any future edge-less objects in custom migrations).
 			SharpPlayer objOwner;
 			try
 			{

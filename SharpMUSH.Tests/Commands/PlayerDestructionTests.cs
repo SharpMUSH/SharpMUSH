@@ -59,7 +59,43 @@ public class PlayerDestructionTests
 	}
 
 	// -----------------------------------------------------------------------
-	// Test 1 – @destroy on a non-player (thing) marks it as GOING
+	// Test 1a – Players are always owned by themselves
+	//           Validates the ArangoDB ownership edge is stored correctly:
+	//           FROM objects/{key} TO players/{key} (not players/{key} TO players/{key}).
+	//           See: ArangoDatabase.Objects.cs CreatePlayerAsync
+	// -----------------------------------------------------------------------
+	[Test]
+	public async Task Player_SelfOwnership_OwnerEqualsPlayer()
+	{
+		// Arrange: create a fresh player
+		var playerDbRef = await CreateTestPlayerAsync("SelfOwnership");
+
+		// Act: query the player's owner through the standard DB path
+		var playerNode = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
+		await Assert.That(playerNode.IsNone).IsFalse();
+
+		var owner = await playerNode.Known.Object().Owner.WithCancellation(CancellationToken.None);
+
+		// Assert: the player owns themselves
+		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
+	}
+
+	// -----------------------------------------------------------------------
+	// Test 1b – God player (#1) is also owned by themselves (migration data)
+	// -----------------------------------------------------------------------
+	[Test]
+	public async Task GodPlayer_SelfOwnership_OwnerEqualsGod()
+	{
+		var godNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Assert.That(godNode.IsNone).IsFalse();
+
+		var owner = await godNode.Known.Object().Owner.WithCancellation(CancellationToken.None);
+
+		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(1);
+	}
+
+	// -----------------------------------------------------------------------
+	// Test 3 – @destroy on a non-player (thing) marks it as GOING
 	// -----------------------------------------------------------------------
 	[Test]
 	public async Task Destroy_NonPlayerThing_FirstDestroy_MarksObjectAsGoing()
@@ -83,7 +119,7 @@ public class PlayerDestructionTests
 	}
 
 	// -----------------------------------------------------------------------
-	// Test 2 – @destroy on a player is rejected; @nuke succeeds
+	// Test 4 – @destroy on a player is rejected; @nuke succeeds
 	// -----------------------------------------------------------------------
 	[Test]
 	public async Task Destroy_Player_RequiresNuke_NukeMarksPlayerAsGoing()
@@ -122,7 +158,7 @@ public class PlayerDestructionTests
 	}
 
 	// -----------------------------------------------------------------------
-	// Test 3 – @nuke marks the player itself as GOING
+	// Test 5 – @nuke marks the player itself as GOING
 	// -----------------------------------------------------------------------
 	[Test]
 	public async Task Nuke_Player_MarksPlayerAsGoing()
@@ -143,7 +179,7 @@ public class PlayerDestructionTests
 	}
 
 	// -----------------------------------------------------------------------
-	// Test 4 – @nuke transfers channel ownership to the probate player (#1)
+	// Test 6 – @nuke transfers channel ownership to the probate player (#1)
 	// -----------------------------------------------------------------------
 	[Test]
 	public async Task Nuke_Player_OwnedChannelTransfersToProbatePlayer()
@@ -176,7 +212,7 @@ public class PlayerDestructionTests
 	}
 
 	// -----------------------------------------------------------------------
-	// Test 5 – @nuke marks non-SAFE possessions as GOING
+	// Test 7 – @nuke marks non-SAFE possessions as GOING
 	//          (destroy_possessions=yes, really_safe=yes in test config)
 	// -----------------------------------------------------------------------
 	[Test]
@@ -212,7 +248,7 @@ public class PlayerDestructionTests
 	}
 
 	// -----------------------------------------------------------------------
-	// Test 6 – @nuke chowns SAFE possessions to probate, not marks them GOING
+	// Test 8 – @nuke chowns SAFE possessions to probate, not marks them GOING
 	//          (really_safe=yes in test config)
 	// -----------------------------------------------------------------------
 	[Test]
@@ -251,7 +287,7 @@ public class PlayerDestructionTests
 	}
 
 	// -----------------------------------------------------------------------
-	// Test 7 – @nuke reassigns attribute ownership to the probate player
+	// Test 9 – @nuke reassigns attribute ownership to the probate player
 	//          This validates that the attribute re-assignment step (which runs
 	//          AFTER channel-chown and possession processing per the PR) still
 	//          correctly reassigns all attributes owned by the deleted player.
@@ -303,7 +339,7 @@ public class PlayerDestructionTests
 	}
 
 	// -----------------------------------------------------------------------
-	// Test 8 – Combined: nuke a player who owns a channel, a non-SAFE thing,
+	// Test 10 – Combined: nuke a player who owns a channel, a non-SAFE thing,
 	//          a SAFE thing, and has attribute ownership; verify all three
 	//          phases (channel-chown, possession-processing, attr-reassign)
 	//          are completed in a single @nuke call.
