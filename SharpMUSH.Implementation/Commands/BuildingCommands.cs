@@ -490,19 +490,7 @@ public partial class Commands
 		var objects = Mediator.CreateStream(new GetAllObjectsQuery());
 		await foreach (var obj in objects)
 		{
-			// Defensive: skip objects whose ownership edge cannot be resolved (e.g. legacy
-			// player records created before the ownership edge was fixed to use the objects/
-			// vertex as the FROM end, or any future edge-less objects in custom migrations).
-			SharpPlayer objOwner;
-			try
-			{
-				objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
-			}
-			catch (InvalidOperationException)
-			{
-				Logger?.LogTrace("Skipping object {DbRef} during possession scan: owner edge missing", obj.DBRef);
-				continue;
-			}
+			var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
 
 			if (objOwner.Object.DBRef.Number != playerDbRefNumber)
 				continue;
