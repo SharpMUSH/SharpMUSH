@@ -561,5 +561,19 @@ RETURN zone
 		}
 	}
 
+	public async ValueTask ReassignAttributeOwnerAsync(SharpPlayer oldOwner, SharpPlayer newOwner, CancellationToken cancellationToken = default)
+	{
+		var oldKey = ExtractKey(oldOwner.Id!);
+		var newKey = ExtractKey(newOwner.Id!);
+
+		// Redirect all HAS_ATTRIBUTE_OWNER edges from oldOwner to newOwner in a single query.
+		await ExecuteWithRetryAsync("""
+MATCH (a:Attribute)-[r:HAS_ATTRIBUTE_OWNER]->(oldP:Player {key: $oldKey})
+MATCH (newP:Player {key: $newKey})
+CREATE (a)-[:HAS_ATTRIBUTE_OWNER]->(newP)
+DELETE r
+""", new { oldKey, newKey }, cancellationToken);
+	}
+
 	#endregion
 }
