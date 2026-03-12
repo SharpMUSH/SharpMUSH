@@ -59,6 +59,7 @@ public class AntlrParserErrorAnalysis
 	/// multiple ParseType modes, capturing all ANTLR errors, positions, and context.
 	/// </summary>
 	[Test]
+	[Timeout(180_000 /* 3 minutes */)]
 	public async Task AnalyzeAllBBSLinesForParserErrors()
 	{
 		var output = new StringBuilder();
