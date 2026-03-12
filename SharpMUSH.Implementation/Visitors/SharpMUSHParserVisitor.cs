@@ -1744,6 +1744,10 @@ public class SharpMUSHParserVisitor(
 		} */
 	}
 
+	public override async ValueTask<CallState?> VisitBraceExplicitEvaluationString(
+		[NotNull] BraceExplicitEvaluationStringContext context) => await VisitChildren(context)
+		?? new CallState(GetContextText(context), context.Depth());
+
 	public override async ValueTask<CallState?> VisitBracePattern(
 		[NotNull] BracePatternContext context)
 	{

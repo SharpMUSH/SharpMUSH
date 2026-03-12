@@ -620,6 +620,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			// ── The leading % of any %x substitution ─────────────────────────────────────────
 			// PERCENT is the only direct terminal child of ExplicitEvaluationStringContext.
 			SharpMUSHParser.ExplicitEvaluationStringContext
+			or SharpMUSHParser.BraceExplicitEvaluationStringContext
 				=> SemanticTokenType.Substitution,
 
 			// ── Structural operators — separators that act at command/argument scope ─────────

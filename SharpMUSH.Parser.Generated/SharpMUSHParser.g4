@@ -77,8 +77,23 @@ explicitEvaluationString:
     )*
 ;
 
+// Like explicitEvaluationString but accepts FUNCHAR as a first element.
+// Used inside bracePattern where function names should be treated as generic text
+// (not recognized as function calls) per PennMUSH semantics.
+// Cannot use evaluationString here as it introduces recursive prediction
+// paths through the function rule that cause AdaptivePredict to hang on complex inputs.
+braceExplicitEvaluationString:
+    (bracePattern|bracketPattern|genericText|PERCENT validSubstitution) 
+    (
+        bracePattern
+      | bracketPattern
+      | PERCENT validSubstitution
+      | genericText
+    )*
+;
+
 bracePattern:
-    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; savedFunction.Push(inFunction); inFunction = 0; } evaluationString? CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); inFunction = savedFunction.Pop(); }
+    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; savedFunction.Push(inFunction); inFunction = 0; } braceExplicitEvaluationString? CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); inFunction = savedFunction.Pop(); }
 ;
 
 bracketPattern:
@@ -139,7 +154,6 @@ genericText: beginGenericText | FUNCHAR;
 
 beginGenericText:
       { inFunction == 0 }? CPAREN
-    | { inBracketDepth == 0 }? CBRACK
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS

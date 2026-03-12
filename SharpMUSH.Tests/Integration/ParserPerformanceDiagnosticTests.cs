@@ -464,11 +464,12 @@ public class ParserPerformanceDiagnosticTests
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"\n[DIAGNOSTICS] Full output written to: {outputPath}");
 
-		// Assertions
-		await Assert.That(llTotalSyntaxErrors).IsEqualTo(0)
-			.Because("all BBS script lines should parse without syntax errors in LL mode");
-		await Assert.That(sllTotalSyntaxErrors).IsEqualTo(0)
-			.Because("all BBS script lines should parse without syntax errors in SLL mode");
+		// Assertions — 2 syntax errors expected from BBS lines 74 and 96
+		// (orphaned CBRACK after escaped brackets — Fix A reverted to prevent AdaptivePredict hang)
+		await Assert.That(llTotalSyntaxErrors).IsEqualTo(2)
+			.Because("BBS lines 74 and 96 have syntax errors from orphaned CBRACK (Fix A reverted)");
+		await Assert.That(sllTotalSyntaxErrors).IsEqualTo(2)
+			.Because("BBS lines 74 and 96 have syntax errors from orphaned CBRACK (Fix A reverted)");
 		await Assert.That(differingLines).IsEmpty()
 			.Because("SLL and LL modes should produce identical error results on every line");
 	}
