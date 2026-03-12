@@ -182,7 +182,7 @@ public partial class ArangoDatabase
 		CancellationToken ct = default)
 	{
 		var response = await arangoDb.Query.ExecuteAsync<string>(handle,
-			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.OwnerOfChannel} RETURN e._key",
+			$"FOR v,e IN 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN e._key",
 			new Dictionary<string, object> { { StartVertex, channel.Id! } }, cancellationToken: ct);
 		var ownerEdgeKey = response.First();
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OwnerOfChannel,

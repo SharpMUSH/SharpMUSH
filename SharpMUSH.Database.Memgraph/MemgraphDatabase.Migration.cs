@@ -202,6 +202,8 @@ MERGE (o)-[:HAS_FLAG]->(f)
 ("XTERM256", "", ["XTERM","COLOR256"], [], [], ["PLAYER"]),
 ("MONIKER", "", null, ["royalty"], ["royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 ("OPEN_OK", "", null, [], [], ["ROOM"]),
+("GOING", "g", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
+("GOING_TWICE", "", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
 		};
 
 		foreach (var f in flags)

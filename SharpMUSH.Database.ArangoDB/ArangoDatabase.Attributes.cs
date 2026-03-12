@@ -1085,5 +1085,24 @@ public partial class ArangoDatabase
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
 	private static partial Regex WildcardToRegex();
 
+	public async ValueTask ReassignAttributeOwnerAsync(SharpPlayer oldOwner, SharpPlayer newOwner, CancellationToken ct = default)
+	{
+		ArgumentException.ThrowIfNullOrEmpty(oldOwner.Id);
+		ArgumentException.ThrowIfNullOrEmpty(newOwner.Id);
+
+		// Efficiently redirect all attribute-owner edges that point to oldOwner so they point to newOwner.
+		// This avoids re-serialising every attribute value and is safe because we only update the edge target.
+		await arangoDb.Query.ExecuteAsync<string>(handle,
+			$@"FOR e IN {DatabaseConstants.HasAttributeOwner:@}
+				FILTER e._to == @oldOwnerId
+				UPDATE e WITH {{ _to: @newOwnerId }} IN {DatabaseConstants.HasAttributeOwner:@}",
+			new Dictionary<string, object>
+			{
+				{ "oldOwnerId", oldOwner.Id },
+				{ "newOwnerId", newOwner.Id }
+			},
+			cancellationToken: ct);
+	}
+
 	#endregion
 }

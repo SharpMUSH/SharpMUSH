@@ -77,7 +77,7 @@ public partial class ArangoDatabase
 			new SharpEdgeCreateRequest(playerResult.Id, obj.New.Id), cancellationToken: ct);
 
 		await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphObjectOwners,
-			DatabaseConstants.HasObjectOwner, new SharpEdgeCreateRequest(playerResult.Id, playerResult.Id),
+			DatabaseConstants.HasObjectOwner, new SharpEdgeCreateRequest(obj.New.Id, playerResult.Id),
 			cancellationToken: ct);
 
 		var idx = objectLocation.Match(
