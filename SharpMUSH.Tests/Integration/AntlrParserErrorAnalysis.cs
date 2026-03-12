@@ -60,7 +60,7 @@ public class AntlrParserErrorAnalysis
 	/// </summary>
 	[Test]
 	[Timeout(180_000 /* 3 minutes */)]
-	public async Task AnalyzeAllBBSLinesForParserErrors()
+	public async Task AnalyzeAllBBSLinesForParserErrors(CancellationToken cancellationToken)
 	{
 		var output = new StringBuilder();
 
