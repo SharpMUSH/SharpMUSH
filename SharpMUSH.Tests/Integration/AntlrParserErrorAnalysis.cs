@@ -259,12 +259,12 @@ public class AntlrParserErrorAnalysis
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"\n[ANALYSIS] Full output written to: {outputPath}");
 
-		// After Fix B (brace function semantics) and inFunction scope isolation,
-		// most BBS lines parse without ANTLR errors. Lines 74 and 96 still have errors
-		// because Fix A (CBRACK in beginGenericText) was reverted — it caused
-		// AdaptivePredict to hang on complex CommandList inputs.
-		await Assert.That(linesWithErrors.Count).IsEqualTo(2)
-			.Because("lines 74 and 96 have errors from orphaned CBRACK after escaped brackets (Fix A reverted to prevent AdaptivePredict hang)");
+		// After Fix B (brace function semantics), inFunction scope isolation,
+		// and token stream rewriting (RewriteOrphanedBracketClosers),
+		// all BBS lines parse without ANTLR errors. The token stream rewriting
+		// converts orphaned CBRACK tokens to OTHER after escaped bracket openers (\[).
+		await Assert.That(linesWithErrors.Count).IsEqualTo(0)
+			.Because("token stream rewriting converts orphaned CBRACKs to OTHER after escaped brackets");
 	}
 
 	/// <summary>
