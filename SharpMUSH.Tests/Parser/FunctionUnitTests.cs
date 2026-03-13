@@ -33,6 +33,10 @@ public class FunctionUnitTests
 	[Arguments("strcat(\\[,hello,\\])", "[hello]")]
 	// Token stream rewriting: escaped brackets inside real brackets are unaffected
 	[Arguments("[strcat(\\[,hello,\\])]", "[hello]")]
+	// Token stream rewriting: escaped braces become literal text
+	[Arguments("strcat(\\{,hello,\\})", "{hello}")]
+	// Token stream rewriting: escaped braces inside real braces are unaffected
+	[Arguments("strcat(a,{\\{json\\}},b)", "a{json}b")]
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);

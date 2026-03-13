@@ -152,6 +152,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
+		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
@@ -227,6 +228,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
+		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
@@ -361,6 +363,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
+		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
@@ -439,6 +442,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
 		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
+		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
@@ -803,6 +807,49 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				&& tokens[i + 1].Text == "[")
 			{
 				// Escaped bracket opener at depth 0
+				pendingEscapedOpeners++;
+			}
+		}
+	}
+
+	internal static void RewriteOrphanedBraceClosers(BufferedTokenSpanStream tokenStream)
+	{
+		var tokens = tokenStream.tokens;
+		var depth = 0;
+		var pendingEscapedOpeners = 0;
+
+		for (var i = 0; i < tokens.Count; i++)
+		{
+			var token = tokens[i];
+
+			if (token.Type == SharpMUSHLexer.OBRACE)
+			{
+				depth++;
+			}
+			else if (token.Type == SharpMUSHLexer.CBRACE)
+			{
+				if (depth > 0)
+				{
+					// Closes a real brace — decrement depth
+					depth--;
+				}
+				else if (pendingEscapedOpeners > 0)
+				{
+					// Orphaned CBRACE at depth 0 matching an escaped opener
+					if (token is IWritableToken writable)
+					{
+						writable.Type = SharpMUSHLexer.OTHER;
+					}
+					pendingEscapedOpeners--;
+				}
+			}
+			else if (depth == 0
+				&& token.Type == SharpMUSHLexer.ESCAPE
+				&& i + 1 < tokens.Count
+				&& tokens[i + 1].Type == SharpMUSHLexer.ANY
+				&& tokens[i + 1].Text == "{")
+			{
+				// Escaped brace opener at depth 0
 				pendingEscapedOpeners++;
 			}
 		}

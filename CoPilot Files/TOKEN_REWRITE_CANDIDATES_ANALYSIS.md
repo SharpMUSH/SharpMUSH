@@ -15,7 +15,7 @@ Seven tokens serve as both structural delimiters and potential generic text:
 | Token | Structural Role | Generic Text Fallback | Orphan Pattern | Risk |
 |-------|----------------|----------------------|----------------|------|
 | **CBRACK** `]` | bracketPattern closer | **NONE** — fixed via token rewriting | `\[text]` | ✅ **Fixed** |
-| **CBRACE** `}` | bracePattern closer | **NONE** | `\{text}` | ⚠️ **Candidate** |
+| **CBRACE** `}` | bracePattern closer | **NONE** — fixed via token rewriting | `\{text}` | ✅ **Fixed** |
 | **CPAREN** `)` | function closer | `{ inFunction == 0 }? CPAREN` | `\(text)` | ✓ Low |
 | **SEMICOLON** `;` | commandList separator | `{ !inCommandList \|\| inBraceDepth > 0 }?` | `\;` | ✓ None |
 | **COMMAWS** `,` | argument separator | Complex predicate (line 158) | `\,` | ✓ None |
@@ -26,7 +26,7 @@ Seven tokens serve as both structural delimiters and potential generic text:
 
 ## Detailed Analysis Per Token
 
-### 1. CBRACE `}` — Primary Candidate ⚠️
+### 1. CBRACE `}` — Implemented ✅
 
 **Why it's a candidate:** CBRACE has the **same structural pattern** as CBRACK — it closes `bracePattern` but has NO generic text fallback in `beginGenericText`. An orphaned CBRACE would be a syntax error.
 
@@ -43,21 +43,11 @@ Parser:   escapedText    ... ???  ← orphaned CBRACE, no rule can consume it
 ```
 &pretty_json_sub me=...switch(%1,\{*,\{%r[...]%r[...]\},...)]
 ```
-This uses `\{` and `\}` to output literal braces in formatted JSON output.
+This uses `\{` and `\}` to output literal braces in formatted JSON output. Regular users will encounter this pattern when escaping JSON input or output.
 
-**Token rewriting approach:**
-```csharp
-// Scan for ESCAPE+ANY('{') at brace depth 0
-// Track real OBRACE/CBRACE depth
-// Convert orphaned CBRACE to OTHER
-```
-This is structurally identical to `RewriteOrphanedBracketClosers()`.
+**Implementation:** `RewriteOrphanedBraceClosers()` in `MUSHCodeParser.cs` — structurally identical to `RewriteOrphanedBracketClosers()`. Scans for `ESCAPE+ANY('{')` at brace depth 0, tracks real `OBRACE`/`CBRACE` depth, converts orphaned CBRACE to OTHER. Called in all 4 token stream creation points.
 
-**Risk assessment:** Low — the algorithm is a direct mirror of the bracket rewriting. The same depth-tracking approach handles nested real braces correctly.
-
-**Frequency:** Common in JSON-handling softcode. While not present in BBS softcode, `\{...\}` is expected wherever users work with JSON output, API responses, or formatted data. The codebase already has `JSONFunctions.cs` (102 references) and `JsonHelpers.cs` as first-class features. PennMUSH docs show `\{` and `\}` in the JSON pretty-printer example (`&pretty_json_sub` in sharpfunc.md:6312-6313).
-
-**Recommendation:** **Implement proactively.** JSON is a first-class feature, making `\{...\}` patterns common enough that encountering orphaned CBRACE errors is a matter of when, not if. The rewriting algorithm is structurally identical to the bracket case — low implementation risk with high user-facing value.
+**Tests:** `strcat(\{,hello,\})` → `{hello}` and `strcat(a,{\{json\}},b)` → `a{json}b` (escaped braces inside real braces are evaluated by the escape handler, not rewritten).
 
 ---
 
@@ -126,7 +116,7 @@ However, there's a subtle observation: `\,` never creates an orphaned COMMAWS in
 | Token | Needs Token Rewriting? | Reason |
 |-------|----------------------|--------|
 | **CBRACK** `]` | ✅ **Already implemented** | No generic text fallback; predicate causes AdaptivePredict hang |
-| **CBRACE** `}` | ⚠️ **Recommended for proactive implementation** | Same structural pattern as CBRACK; JSON makes `\{...\}` common |
+| **CBRACE** `}` | ✅ **Implemented** | Same structural pattern as CBRACK; JSON makes `\{...\}` common |
 | **CPAREN** `)` | ❌ No | Existing predicate works; code escapes both parens symmetrically |
 | **SEMICOLON** `;` | ❌ No | Existing predicate works; escape prevents SEMICOLON tokenization |
 | **COMMAWS** `,` | ❌ No | Existing predicate works; escape prevents COMMAWS tokenization |
@@ -140,7 +130,7 @@ The token rewriting approach is specifically valuable for tokens that:
 2. **Cannot have a predicate added** without causing AdaptivePredict hang
 3. **Have an asymmetric escape pattern** where the opener is escaped but the closer is not
 
-Only **CBRACE** meets all three criteria. All other dual-role tokens already have working predicate-based fallbacks that don't cause prediction hangs, because their structural entry points have bounded prediction (function entry requires FUNCHAR, command lists use explicit flags, etc.).
+Both **CBRACK** and **CBRACE** met all three criteria and are now handled via token stream rewriting. All other dual-role tokens already have working predicate-based fallbacks that don't cause prediction hangs, because their structural entry points have bounded prediction (function entry requires FUNCHAR, command lists use explicit flags, etc.).
 
 ### Why CPAREN's predicate works but CBRACK/CBRACE's would hang
 
