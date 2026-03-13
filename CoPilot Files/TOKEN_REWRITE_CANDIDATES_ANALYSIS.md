@@ -10,7 +10,7 @@
 
 ## All Dual-Role Tokens in the Grammar
 
-Six tokens serve as both structural delimiters and potential generic text:
+Seven tokens serve as both structural delimiters and potential generic text:
 
 | Token | Structural Role | Generic Text Fallback | Orphan Pattern | Risk |
 |-------|----------------|----------------------|----------------|------|
@@ -102,7 +102,7 @@ beginGenericText:
 
 **Why:** Has a working predicate. Escaped `\,` produces `ESCAPE+ANY(',')` consumed as `escapedText`. The 2 BBS uses of `\,` (lines 34, 101) work correctly because the escape prevents the comma from being tokenized as COMMAWS in the first place.
 
-However, there's a subtle observation: if `\,` appears at the START of an expression (before any other token), the `ANY(',')` token would NOT be COMMAWS — it would be ANY in ESCAPING mode. So there's no orphaned COMMAWS created at all.
+However, there's a subtle observation: `\,` never creates an orphaned COMMAWS in the first place. The backslash pushes the lexer into ESCAPING mode (`SharpMUSHLexer.g4:12`), where the `,` is captured as an `ANY` token — NOT as COMMAWS. So the token sequence is `ESCAPE ANY(',')`, which the parser consumes as `escapedText`. No orphaned COMMAWS exists.
 
 **Recommendation:** **No action needed.**
 
