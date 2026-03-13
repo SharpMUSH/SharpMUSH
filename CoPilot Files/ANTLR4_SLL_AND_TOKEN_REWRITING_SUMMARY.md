@@ -1,6 +1,6 @@
 # ANTLR4 SLL Mode, Token Stream Rewriting & Syntax Highlighting
 
-Consolidated summary of parser analysis, grammar fixes, and token rewriting work for the SharpMUSH ANTLR4 parser. Covers the investigation, fixes, and rationale for SLL prediction mode, token stream rewriting of orphaned delimiters, and syntax highlighting/error reporting APIs.
+This document provides a consolidated summary of parser analysis, grammar fixes, and token rewriting work for the SharpMUSH ANTLR4 parser. It covers the investigation, fixes, and rationale for SLL prediction mode, token stream rewriting of orphaned delimiters, and syntax highlighting/error reporting APIs.
 
 ---
 
@@ -56,7 +56,7 @@ The `function` rule's COMMAWS alternative had `{inBraceDepth == 0}?`, blocking f
 
 `(` is always consumed as generic text via `beginGenericText`, but `)` is only generic text when `{inFunction == 0}?`. Inside function calls, bare `(text)` patterns cause `)` to prematurely close the enclosing function.
 
-**Resolution:** Rather than tracking `inParenDepth` (which doesn't match PennMUSH behavior), `inFunction` is saved/restored in `bracePattern` via a `savedFunction` Stack — braces isolate function scope, matching PennMUSH's rule that `)` always closes the innermost function outside braces.
+**Resolution:** Rather than tracking `inParenDepth` (which doesn't match PennMUSH behavior), `inFunction` is saved/restored in `bracePattern` via a `savedFunction` Stack. This ensures braces isolate function scope, matching PennMUSH's rule that `)` always closes the innermost function outside braces.
 
 ---
 
@@ -210,7 +210,7 @@ public record ParseError(
 public record TokenInfo(
     string Type,      // e.g., "FUNCHAR", "OBRACK", "ESCAPE"
     int StartIndex,
-    int StopIndex,
+    int EndIndex,
     string Text,
     int Line,
     int Column,
