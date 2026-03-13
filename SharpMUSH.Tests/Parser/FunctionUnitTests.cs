@@ -29,6 +29,10 @@ public class FunctionUnitTests
 	[Arguments("cat(a,b,{c,d},e)", "a b c,d e")]
 	// Fix B: Brackets inside function-arg braces re-enable function evaluation
 	[Arguments("strcat(a,{[add(1,2)]},b)", "a3b")]
+	// Token stream rewriting: escaped brackets become literal text
+	[Arguments("strcat(\\[,hello,\\])", "[hello]")]
+	// Token stream rewriting: escaped brackets inside real brackets are unaffected
+	[Arguments("[strcat(\\[,hello,\\])]", "[hello]")]
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);
