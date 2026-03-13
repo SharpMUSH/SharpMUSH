@@ -55,12 +55,9 @@ This is structurally identical to `RewriteOrphanedBracketClosers()`.
 
 **Risk assessment:** Low — the algorithm is a direct mirror of the bracket rewriting. The same depth-tracking approach handles nested real braces correctly.
 
-**Frequency:** Rare. `\{` is much less common than `\[` because:
-- Braces group commands but don't trigger evaluation (brackets do)
-- Softcode rarely needs to store literal brace content
-- No instances found in BBS softcode (MyrddinBBS_v406.txt)
+**Frequency:** Common in JSON-handling softcode. While not present in BBS softcode, `\{...\}` is expected wherever users work with JSON output, API responses, or formatted data. The codebase already has `JSONFunctions.cs` (102 references) and `JsonHelpers.cs` as first-class features. PennMUSH docs show `\{` and `\}` in the JSON pretty-printer example (`&pretty_json_sub` in sharpfunc.md:6312-6313).
 
-**Recommendation:** **Implement only when a real failure is encountered.** The pattern is rare enough that a proactive fix risks introducing edge cases without addressing actual user-visible bugs. The rewriting code structure already demonstrates the pattern if needed.
+**Recommendation:** **Implement proactively.** JSON is a first-class feature, making `\{...\}` patterns common enough that encountering orphaned CBRACE errors is a matter of when, not if. The rewriting algorithm is structurally identical to the bracket case — low implementation risk with high user-facing value.
 
 ---
 
@@ -129,7 +126,7 @@ However, there's a subtle observation: `\,` never creates an orphaned COMMAWS in
 | Token | Needs Token Rewriting? | Reason |
 |-------|----------------------|--------|
 | **CBRACK** `]` | ✅ **Already implemented** | No generic text fallback; predicate causes AdaptivePredict hang |
-| **CBRACE** `}` | ⚠️ **Possible future candidate** | Same structural pattern as CBRACK, but rare in practice |
+| **CBRACE** `}` | ⚠️ **Recommended for proactive implementation** | Same structural pattern as CBRACK; JSON makes `\{...\}` common |
 | **CPAREN** `)` | ❌ No | Existing predicate works; code escapes both parens symmetrically |
 | **SEMICOLON** `;` | ❌ No | Existing predicate works; escape prevents SEMICOLON tokenization |
 | **COMMAWS** `,` | ❌ No | Existing predicate works; escape prevents COMMAWS tokenization |
