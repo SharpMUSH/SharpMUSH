@@ -34,7 +34,8 @@ public partial class ArangoDatabase
 	{
 		var owner = (await arangoDb.Query.ExecuteAsync<string>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphObjectOwners} RETURN v._id", cancellationToken: ct))
-			.First();
+			.FirstOrDefault()
+			?? throw new InvalidOperationException($"No owner found for object {id}");
 
 		var populatedOwner = await GetObjectNodeAsync(owner, CancellationToken.None);
 
@@ -45,7 +46,9 @@ public partial class ArangoDatabase
 	{
 		var owner = (await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphAttributeOwners} RETURN v._id",
-			cancellationToken: ct)).First();
+			cancellationToken: ct))
+			.FirstOrDefault()
+			?? throw new InvalidOperationException($"No owner found for attribute {id}");
 
 		var populatedOwner = await GetObjectNodeAsync(owner, CancellationToken.None);
 

@@ -1305,7 +1305,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
-		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.ToString()) : args["0"].Message);
+		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.Object().DBRef.ToString()) : args["0"].Message);
 
 		var isList = parser.CurrentState.Switches.Contains("LIST");
 
@@ -1320,7 +1320,9 @@ public partial class Commands
 			toTeleportList = [isDbRef ? objToTeleport!.Value : toTeleport];
 		}
 
-		var toTeleportStringList = toTeleportList.Select(x => x.ToString());
+		var toTeleportStringList = toTeleportList.Select(x => x.Match(
+			dbref => dbref.ToString(),
+			str => str));
 
 		var destination = await LocateService!.LocateAndNotifyIfInvalid(parser,
 			executor,

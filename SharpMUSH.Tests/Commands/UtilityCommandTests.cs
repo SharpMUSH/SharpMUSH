@@ -43,16 +43,16 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask CommentCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@@ This is a comment"));
+		var guid = Guid.NewGuid();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@@ This is a comment {guid}"));
 
 		// Comment should not produce any output
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains("This is a comment")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(x
+				=> x.Value.ToString()!.Contains($"This is a comment {guid}")));
 	}
 
 	[Test]

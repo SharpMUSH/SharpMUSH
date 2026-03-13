@@ -248,8 +248,8 @@ public partial class ArangoDatabase
 		=> await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Objects,
 			new
 			{
-				Id = obj.Object().Id,
-				Name = value
+				_key = obj.Object().Key.ToString(),
+				Name = MModule.plainText(value)
 			}, cancellationToken: ct);
 
 	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken ct = default)

@@ -305,10 +305,11 @@ public partial class Functions
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
 
-		return await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			dbref,
+			LocateFlags.All,
 			async x =>
 			{
 				var maybeAttr = await AttributeService!.GetAttributeAsync(
