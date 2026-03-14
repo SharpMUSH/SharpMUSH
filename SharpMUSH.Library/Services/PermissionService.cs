@@ -19,6 +19,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	{
 		if (!await Controls(executor, target)) return false;
 
+		if (attribute.Length == 0) return true;
+
 		var compressedAttribute = attribute[^1] with
 		{
 			Flags = attribute.SelectMany(a => a.Flags)

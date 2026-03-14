@@ -4214,8 +4214,8 @@ public partial class Commands
 
 		if (attributeResult.IsNone)
 		{
-			// Empty attribute - nothing to trigger
-			return CallState.Empty;
+			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
 		var attribute = attributeResult.AsAttribute.Last();
@@ -6155,7 +6155,12 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var predicate = args["0"];
+
+		if (!args.TryGetValue("0", out var predicate))
+		{
+			await NotifyService!.Notify(executor, "Usage: @retry <condition>[=<arg0>,<arg1>,...]");
+			return new CallState("#-1 RETRY: NO CONDITION PROVIDED.");
+		}
 
 		var peek = parser.State.TakeLast(2);
 		if (peek.Count() != 2)

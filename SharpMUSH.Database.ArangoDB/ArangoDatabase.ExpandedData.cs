@@ -36,8 +36,14 @@ public partial class ArangoDatabase
 		var key = result.FirstOrDefault();
 		if (key is not null)
 		{
-			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphObjectData, DatabaseConstants.ObjectData,
-				key, new Dictionary<string, object> { { dataType, data } }, waitForSync: true, cancellationToken: ct, keepNull: true);
+			// Use AQL REPLACE with MERGE to ensure null values properly overwrite existing ones.
+			// MERGE(v, {[dataType]: data}) replaces the dataType key entirely (not recursively merged),
+			// so null fields in `data` correctly overwrite the previously stored values.
+			await arangoDb.Query.ExecuteAsync<object>(handle,
+				$"FOR v IN {DatabaseConstants.ObjectData} FILTER v._key == @key " +
+				$"REPLACE MERGE(v, {{[@dt]: @data}}) IN {DatabaseConstants.ObjectData} OPTIONS {{keepNull: true}}",
+				new Dictionary<string, object> { { "key", key }, { "dt", dataType }, { "data", (object)data } },
+				cancellationToken: ct);
 			return;
 		}
 
@@ -91,8 +97,8 @@ public partial class ArangoDatabase
 			_ = await arangoDb.Document.CreateAsync(transaction,
 				DatabaseConstants.ServerData,
 				newJson,
-				overwriteMode: ArangoOverwriteMode.Update,
-				mergeObjects: true,
+				overwriteMode: ArangoOverwriteMode.Replace,
+				mergeObjects: false,
 				keepNull: true,
 				waitForSync: true,
 				cancellationToken: ct);

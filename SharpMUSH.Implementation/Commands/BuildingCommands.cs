@@ -184,11 +184,11 @@ public partial class Commands
 				var plainFlag = MModule.plainText(flag);
 				if (plainFlag.StartsWith('!'))
 				{
-					await AttributeService!.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
+					await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
 				}
 				else
 				{
-					await AttributeService!.UnsetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag[1..]);
+					await AttributeService!.SetAttributeFlagAsync(executor, realLocated, maybeAttribute, plainFlag);
 				}
 			}
 

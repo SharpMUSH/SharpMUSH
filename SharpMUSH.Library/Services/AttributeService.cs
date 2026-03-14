@@ -469,7 +469,8 @@ public class AttributeService(
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
 		var returnedFlag = await allFlags
-			.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
+			.FirstOrDefaultAsync(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
 
 		if (returnedFlag is null)
 		{
@@ -509,7 +510,9 @@ public class AttributeService(
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var returnedFlag = await allFlags.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
+		var returnedFlag = await allFlags.FirstOrDefaultAsync(x =>
+			x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+			|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
 
 		if (returnedFlag is null)
 		{
@@ -598,7 +601,13 @@ public class AttributeService(
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr.Select(x => x.LongName!).ToArray()));
+		// Send one ClearAttributeCommand per attribute so the database function
+		// receives a single attribute path, not multiple names treated as one nested path.
+		foreach (var attrItem in attrArr)
+		{
+			var pathParts = attrItem.LongName!.Split('`');
+			await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
+		}
 
 		foreach (var attrDone in attrArr)
 		{
