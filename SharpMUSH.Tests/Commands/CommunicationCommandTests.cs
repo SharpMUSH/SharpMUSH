@@ -10,6 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -76,17 +77,19 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("@emit Test broadcast", "Test broadcast")]
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]
-	[Category("KnownBug")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask EmitBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// @emit broadcasts to room, so we expect at least one notification
+		// @emit broadcasts to room via CommunicationService.SendToRoomAsync which calls
+		// Notify(AnySharpObject, ..., NotificationType.Emit)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -250,7 +253,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Arguments("addcom=Public", "Alias name cannot be empty."), Skip("TODO")]
+	[Arguments("addcom=Public", "Alias name cannot be empty.")]
 	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
@@ -324,7 +327,6 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
 	[Category("KnownBug")]
-	[Skip("TOOD")]
 	public async ValueTask ComTitleBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -393,11 +395,12 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("comlist")]
 	[Category("KnownBug")]
-	[Skip("TODO: Failing Test. Requires investigation.")]
 	public async ValueTask ComListEmpty(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
-		// Make sure we have no aliases, just list
+		// Wipe all channel aliases for the executor to ensure an empty state
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe me/CHANALIAS*"));
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		// Verify the empty list message was sent

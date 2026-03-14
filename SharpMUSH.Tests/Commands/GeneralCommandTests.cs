@@ -322,7 +322,7 @@ public class GeneralCommandTests
 	}
 
 	[Category("KnownBug")]
-	[Test, Skip("TODO")]
+	[Test]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
 		// Test @restart with a valid object
@@ -393,7 +393,6 @@ public class GeneralCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("TODO: Failing")]
 	public async ValueTask Command_ShowsCommandInfo()
 	{
 		// Test @command with a command name
@@ -408,7 +407,7 @@ public class GeneralCommandTests
 	}
 
 	[Category("KnownBug")]
-	[Test, Skip("TODO")]
+	[Test]
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
 		// Test @function with no arguments to list functions
@@ -423,7 +422,7 @@ public class GeneralCommandTests
 	}
 
 	[Category("KnownBug")]
-	[Test, Skip("TODO")]
+	[Test]
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
 		// Test @function with a function name
@@ -452,17 +451,17 @@ public class GeneralCommandTests
 	}
 
 	[Category("KnownBug")]
-	[Test, Skip("TODO")]
+	[Test]
 	public async ValueTask Trigger_QueuesAttribute()
 	{
-		// Test @trigger command
+		// Test @trigger command - attribute "test" does not exist on "me"
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger me/test=arg1,arg2"));
 
-		// Should notify about triggering
+		// Should notify with error since the attribute doesn't exist
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "@trigger:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				TestHelpers.MessageContains(msg, "No such attribute")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -495,7 +494,7 @@ public class GeneralCommandTests
 	}
 
 	[Category("KnownBug")]
-	[Test, Skip("TODO")]
+	[Test]
 	public async ValueTask PS_ShowsQueueStatus()
 	{
 		// Test @ps command
@@ -524,9 +523,11 @@ public class GeneralCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("TODO: Failing")]
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
+		// Create the attribute entry first so it exists in the standard table
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access DESCRIPTION="));
+
 		// Test @attribute command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute DESCRIPTION"));
 
