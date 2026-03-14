@@ -766,10 +766,33 @@ public partial class Functions
 	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
-		// itext() returns 1 if the argument is text (not a number), 0 otherwise
-		// A string is "text" if it cannot be parsed as a number
-		return ValueTask.FromResult(new CallState(!decimal.TryParse(str, out _) ? "1" : "0"));
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var levelArg = args["0"].Message!.ToPlainText();
+		var maxCount = parser.CurrentState.IterationRegisters.Count;
+
+		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))
+		{
+			if (maxCount == 0)
+			{
+				return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+			}
+			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Value));
+		}
+
+		if (!int.TryParse(levelArg, out var level))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+		}
+
+		if (level < 0 || level >= maxCount)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+		}
+
+		// Iteration registers are stored innermost-first (stack top = current iteration),
+		// so level 0 = current (top), level 1 = parent, etc. requires reverse indexing.
+		var value = parser.CurrentState.IterationRegisters.ElementAt(maxCount - level - 1).Value;
+		return ValueTask.FromResult(new CallState(value));
 	}
 
 	[SharpFunction(Name = "letq", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
