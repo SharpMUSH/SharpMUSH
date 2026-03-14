@@ -102,7 +102,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
 		// First set an attribute with unique test string
@@ -111,9 +110,14 @@ public class AttributeCommandTests
 		// Copy it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_BASIC=#1/DEST_CPATTR_BASIC"));
 
-		// Verify command executed with success notification mentioning destination
+		// Verify command executed with success notification mentioning destination.
+		// Use Received() (at least once) rather than Exactly(1) because this test class uses
+		// SharedType.PerTestSession, meaning the INotifyService mock is shared across all tests
+		// and accumulates calls. Test_CopyAttribute_Direct (which runs before this test) already
+		// sent "Attribute copied to 1 destination." once, so Exactly(1) would fail with count=2.
+		// TODO: Consider using per-test mock isolation (SharedType.PerTest) to enable Exactly(1) assertions.
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				"Attribute copied to 1 destination."
@@ -135,7 +139,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
 		// Set source attribute with unique name
@@ -168,7 +171,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
 		// First set an attribute with unique test string
@@ -201,7 +203,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
 		// Set some attributes with unique test strings
@@ -237,7 +238,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_AtrLock_LockAndUnlock()
 	{
 		// Set an attribute with unique name

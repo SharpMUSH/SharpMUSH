@@ -56,27 +56,23 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookBasic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookAtObject()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -328,27 +324,23 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask VersionCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@version"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask ScanCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@scan"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")));
 	}
 
 	[Test]

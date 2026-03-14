@@ -160,8 +160,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Delete_HandlesNonExistentFlag()
 	{
 		// Try to delete a non-existent flag
@@ -290,8 +288,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Power_Delete_HandlesNonExistentPower()
 	{
 		// Try to delete a non-existent power
@@ -399,12 +395,12 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Disable_PreventsSystemFlagDisable()
 	{
-		// Try to disable a system flag (PLAYER is a system flag)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/disable PLAYER"));
+		// Use WIZARD (a system flag stored in the ObjectFlags table).
+		// Note: PLAYER is a type flag added implicitly per-object and is NOT in the ObjectFlags table,
+		// so it cannot be looked up or disabled via @flag/disable.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/disable WIZARD"));
 
 		// Verify error notification was sent
 		await NotifyService
@@ -446,8 +442,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Power_Enable_EnablesDisabledPower()
 	{
 		// Create a unique power name for this test
@@ -479,8 +473,6 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
 	{
 		// Try to disable a system power (Builder is a system power)
