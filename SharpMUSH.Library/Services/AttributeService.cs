@@ -479,7 +479,7 @@ public class AttributeService(
 
 		// Check if the flag is already set to avoid redundant operations
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
-		if (currentFlags.Contains(returnedFlag))
+		if (currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
 		{
 			await notifyService.Notify(executor,
 				$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
@@ -521,7 +521,7 @@ public class AttributeService(
 
 		// Check if the flag is actually set before unsetting
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
-		if (!currentFlags.Contains(returnedFlag))
+		if (!currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
 		{
 			await notifyService.Notify(executor,
 				$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);

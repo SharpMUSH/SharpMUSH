@@ -669,7 +669,7 @@ public partial class ArangoDatabase
 	public async ValueTask SetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag,
 		CancellationToken ct = default)
 		=> await arangoDb.Graph.Edge.CreateAsync(handle,
-			DatabaseConstants.AttributeFlags, DatabaseConstants.HasAttributeFlag,
+			DatabaseConstants.GraphAttributeFlags, DatabaseConstants.HasAttributeFlag,
 			new SharpEdgeCreateRequest(attr.Id, flag.Id!), cancellationToken: ct);
 
 
@@ -692,12 +692,26 @@ public partial class ArangoDatabase
 	}
 
 	public async ValueTask UnsetAttributeFlagAsync(SharpAttribute attr, SharpAttributeFlag flag,
-		CancellationToken ct = default) =>
-		await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes, new
+		CancellationToken ct = default)
+	{
+		// Flags are stored as edges in the HasAttributeFlag edge collection.
+		// Find the edge key and delete it directly from the collection.
+		var edgeKeys = await arangoDb.Query.ExecuteAsync<string>(handle,
+			$"FOR e IN @@col FILTER e._from == @attrId AND e._to == @flagId RETURN e._key",
+			new Dictionary<string, object>
+			{
+				{ "@col", DatabaseConstants.HasAttributeFlag },
+				{ "attrId", attr.Id },
+				{ "flagId", flag.Id! }
+			},
+			cancellationToken: ct);
+
+		foreach (var key in edgeKeys)
 		{
-			attr.Key,
-			Value = attr.Flags.ToImmutableArray().Remove(flag)
-		}, cancellationToken: ct);
+			await arangoDb.Document.DeleteAsync<object>(handle, DatabaseConstants.HasAttributeFlag, key,
+				cancellationToken: ct);
+		}
+	}
 
 	public async ValueTask<SharpAttributeFlag?> GetAttributeFlagAsync(string flagName, CancellationToken ct = default) =>
 		(await arangoDb.Query.ExecuteAsync<SharpAttributeFlagQueryResult>(handle,
@@ -722,9 +736,10 @@ public partial class ArangoDatabase
 		};
 
 	public IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(CancellationToken ct = default) =>
-		arangoDb.Query.ExecuteStreamAsync<SharpAttributeFlag>(handle,
+		arangoDb.Query.ExecuteStreamAsync<SharpAttributeFlagQueryResult>(handle,
 			$"FOR v in {DatabaseConstants.AttributeFlags:@} RETURN v",
-			cache: true, cancellationToken: ct);
+			cache: true, cancellationToken: ct)
+		.Select(SharpAttributeFlagQueryResultToSharpFlag);
 
 	public async ValueTask<bool> ClearAttributeAsync(DBRef dbref, string[] attribute, CancellationToken ct = default)
 	{
