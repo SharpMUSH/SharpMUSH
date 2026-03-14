@@ -1,4 +1,3 @@
-using System.Linq;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -170,7 +169,7 @@ public partial class Commands
 
 		// Parse destination(s) - can be comma-separated
 		var destText = MModule.plainText(destArg.Message!);
-		var destinations = destText.Split(',').Select(d => d.Trim()).ToList();
+		var destinations = destText.Split(',').Select(d => d.Trim());
 
 		int copiedCount = 0;
 
@@ -296,7 +295,7 @@ public partial class Commands
 
 		// Parse destination(s) - can be comma-separated
 		var destText = MModule.plainText(destArg.Message!);
-		var destinations = destText.Split(',').Select(d => d.Trim()).ToList();
+		var destinations = destText.Split(',').Select(d => d.Trim());
 
 		int copiedCount = 0;
 

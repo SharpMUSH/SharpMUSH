@@ -1,9 +1,4 @@
-using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Text;
-using System.Text.RegularExpressions;
 using Mediator;
-using Microsoft.Extensions.Options;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
@@ -12,6 +7,10 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
+using System.ComponentModel;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
 
@@ -59,9 +58,9 @@ public partial class ValidateService(
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.ChannelName when target is { IsT3: true }
 				=> ChannelNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.ChannelName when target is { IsT2: true, AsT2: var channel}
-				=> channel.Name.ToPlainText() == value.ToPlainText() 
-				   ||  ChannelNameRegex().IsMatch(value.ToPlainText()),
+			IValidateService.ValidationType.ChannelName when target is { IsT2: true, AsT2: var channel }
+				=> channel.Name.ToPlainText() == value.ToPlainText()
+					 || ChannelNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.Password
 				=> PasswordRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.QRegisterName
@@ -77,19 +76,19 @@ public partial class ValidateService(
 	private bool ValidateLockType(MString value)
 	{
 		var lockTypeName = value.ToPlainText();
-		
+
 		// Empty or null means "Basic" lock
 		if (string.IsNullOrEmpty(lockTypeName))
 		{
 			return true;
 		}
-		
+
 		// Check if it's a standard lock type (try to parse the enum)
 		if (Enum.TryParse<LockType>(lockTypeName, ignoreCase: true, out _))
 		{
 			return true;
 		}
-		
+
 		// Check for user-defined locks (format: "User:AttributeName")
 		if (lockTypeName.StartsWith("User:", StringComparison.OrdinalIgnoreCase))
 		{
@@ -98,20 +97,20 @@ public partial class ValidateService(
 			{
 				return false;
 			}
-			
+
 			// Extract the attribute name after "User:"
 			var colonIndex = lockTypeName.IndexOf(':');
 			if (colonIndex >= 0 && colonIndex < lockTypeName.Length - 1)
 			{
 				var attributeName = lockTypeName.Substring(colonIndex + 1).ToUpper();
-				
+
 				// Validate as attribute name
 				return ValidAttributeNameRegex().IsMatch(attributeName);
 			}
-			
+
 			return false;
 		}
-		
+
 		// Unknown lock type
 		return false;
 	}
@@ -131,7 +130,7 @@ public partial class ValidateService(
 		var reg = _regexCache.GetOrAdd(name, _ => new Regex(regex, RegexOptions.Compiled));
 		return reg.IsMatch(value);
 	}
-	
+
 	/// <summary>
 	/// Checks if an attribute value is valid against a SharpAttributeEntry.
 	/// Supports enum validation with wildcard globbing patterns.
@@ -146,18 +145,18 @@ public partial class ValidateService(
 		// Convert to plain text and measure UTF-8 bytes for multi-byte character support
 		var plainValue = value.ToPlainText();
 		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
-		
+
 		if (Encoding.UTF8.GetByteCount(plainValue) > maxBytes)
 		{
 			return false;
 		}
-		
+
 		return attribute switch
 		{
 			{ Limit: null } and { Enum: null } => true,
 			{ Limit: not null } and { Enum: not null }
 				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum)
-				   && CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
+					 && CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
 			{ Enum: not null }
 				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum),
 			{ Limit: not null }
@@ -165,7 +164,7 @@ public partial class ValidateService(
 			_ => false
 		};
 	}
-	
+
 	/// <summary>
 	/// Checks if a value matches any of the enum patterns, supporting glob wildcards (* and ?).
 	/// Uses thread-safe caching to avoid recompiling regex patterns.
@@ -186,7 +185,7 @@ public partial class ValidateService(
 				}
 				continue;
 			}
-			
+
 			// Thread-safe cache access for compiled regex patterns
 			var regex = _globCache.GetOrAdd(pattern, p =>
 			{
@@ -195,16 +194,16 @@ public partial class ValidateService(
 					.Replace("\\*", ".*")  // * matches any characters
 					.Replace("\\?", ".")   // ? matches single character
 					+ "$";
-				
+
 				return new Regex(regexPattern, RegexOptions.Compiled);
 			});
-			
+
 			if (regex.IsMatch(value))
 			{
 				return true;
 			}
 		}
-		
+
 		return false;
 	}
 
@@ -219,25 +218,25 @@ public partial class ValidateService(
 		// Player aliases should be non-empty and contain valid characters
 		// They're less strict than full player names but still need basic validation
 		var plainAlias = value.ToPlainText();
-		
+
 		if (string.IsNullOrWhiteSpace(plainAlias))
 		{
 			return false;
 		}
-		
+
 		// Aliases cannot be magic cookies
 		var magicCookie = new HashSet<string>((string[])["me", "here", "!", "home"]);
 		if (magicCookie.Contains(plainAlias.ToLower()))
 		{
 			return false;
 		}
-		
+
 		// Aliases should not contain control characters
 		if (plainAlias.Any(c => char.IsControl(c)))
 		{
 			return false;
 		}
-		
+
 		// Aliases must be ASCII
 		return plainAlias.EnumerateRunes().All(x => x.IsAscii);
 	}

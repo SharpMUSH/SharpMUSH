@@ -4,8 +4,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class RandomFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
@@ -21,7 +21,7 @@ public class RandomFunctionUnitTests
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsGreaterThan(0);
 	}
-	
+
 	[Test]
 	[Arguments("rand(10)", "")]
 	[Arguments("rand(100)", "")]

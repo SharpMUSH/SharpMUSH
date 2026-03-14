@@ -9,8 +9,8 @@ namespace SharpMUSH.Tests.Database;
 [NotInParallel]
 public class AttributeWithInheritanceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
@@ -260,7 +260,7 @@ public class AttributeWithInheritanceTests
 	{
 		// Test complex hierarchy: Child <- Parent <- Grandparent
 		// with zones at multiple levels
-		
+
 		// Create grandparent with attribute
 		var grandparentResult = await WebAppFactoryArg.CommandParser.CommandParse(
 			1,

@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -6,6 +5,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -24,7 +24,7 @@ public static class ChannelHide
 
 		var yesNoString = yesNo?.ToPlainText();
 		if (yesNoString is not null && !(yesNoString.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
-		                                 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
+																		 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
 		{
 			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.");
 			return new CallState("#-1 INVALID OPTION");
@@ -33,7 +33,7 @@ public static class ChannelHide
 		if (channelName != null)
 		{
 			var channelList = Mediator.CreateStream(new GetChannelListQuery());
-			channels = [..await channelList.ToArrayAsync()];
+			channels = [.. await channelList.ToArrayAsync()];
 		}
 		else
 		{
@@ -45,7 +45,7 @@ public static class ChannelHide
 
 			channels = [maybeChannel.AsChannel];
 		}
-		
+
 		var hideOn = yesNoString?.Equals("yes", StringComparison.OrdinalIgnoreCase) ?? true;
 
 		foreach (var channel in channels)
@@ -61,8 +61,8 @@ public static class ChannelHide
 
 			if (status?.Hide ?? false == hideOn)
 			{
-			    await NotifyService.Notify(executor, $"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.");
-			    continue;
+				await NotifyService.Notify(executor, $"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.");
+				continue;
 			}
 
 			await Mediator.Send(new UpdateChannelUserStatusCommand(

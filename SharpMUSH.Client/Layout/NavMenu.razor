@@ -1,16 +1,46 @@
-﻿<MudPaper Width="250px" Class="py-3" Elevation="0">
+@* NavMenu with support for collapsed (icon-only) mode *@
+
+<MudPaper Width="@(IsCollapsed ? "60px" : "250px")" Class="py-3" Elevation="0">
     <MudNavMenu>
-        <MudText Typo="Typo.h6" Class="px-4">My Application</MudText>
-        <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Secondary Text</MudText>
-        <MudDivider Class="my-2"/>
-        <MudNavLink Href="/">Home</MudNavLink>
-        <MudNavLink Href="/counter">Counter</MudNavLink>
-        <MudNavLink Href="/weather">Weather</MudNavLink>
-        <MudNavGroup Title="Settings" Expanded="true">
-            <MudNavLink Href="/admin/config">Config</MudNavLink>
-            <MudNavLink Href="/admin/suggestions">Suggestions</MudNavLink>
-            <MudNavLink Href="/security">Security</MudNavLink>
-        </MudNavGroup>
-        <MudNavLink Href="/about">About</MudNavLink>
+        @if (!IsCollapsed)
+        {
+            <MudText Typo="Typo.h6" Class="px-4">SharpMUSH</MudText>
+            <MudText Typo="Typo.body2" Class="px-4">Admin Panel</MudText>
+            <MudDivider Class="my-2"/>
+        }
+        
+        <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>Home</text> }
+        </MudNavLink>
+        
+        <MudNavLink Href="/counter" Icon="@Icons.Material.Filled.Add" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>Counter</text> }
+        </MudNavLink>
+        
+        <MudNavLink Href="/weather" Icon="@Icons.Material.Filled.Cloud" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>Weather</text> }
+        </MudNavLink>
+        
+        @if (!IsCollapsed)
+        {
+            <MudNavGroup Title="Settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" Expanded="true">
+                <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Tune">Config</MudNavLink>
+                <MudNavLink Href="/admin/suggestions" Icon="@Icons.Material.Filled.Lightbulb">Suggestions</MudNavLink>
+                <MudNavLink Href="/security" Icon="@Icons.Material.Filled.Security">Security</MudNavLink>
+            </MudNavGroup>
+        }
+        else
+        {
+            <MudNavLink Href="/admin/config" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Secondary" />
+        }
+        
+        <MudNavLink Href="/about" Icon="@Icons.Material.Filled.Info" IconColor="Color.Secondary">
+            @if (!IsCollapsed) { <text>About</text> }
+        </MudNavLink>
     </MudNavMenu>
 </MudPaper>
+
+@code {
+    [Parameter]
+    public bool IsCollapsed { get; set; } = false;
+}

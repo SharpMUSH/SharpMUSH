@@ -8,6 +8,9 @@ using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
+using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 
 namespace SharpMUSH.Library.Services;
 
@@ -33,10 +36,88 @@ public class TaskScheduler(
 	IConnectionService connectionService,
 	ISchedulerFactory schedulerFactory,
 	IAttributeService attributeService,
-	IMediator mediator) : ITaskScheduler
+	IMediator mediator,
+	ILogger<TaskScheduler> logger) : ITaskScheduler, IAsyncDisposable
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
+
+	/// <summary>
+	/// Represents a queued command entry for the FIFO immediate-execution queue.
+	/// </summary>
+	private sealed record QueueEntry(
+		long Pid,
+		string TriggerName,
+		string Group,
+		Func<ValueTask<CallState?>> Action,
+		CancellationTokenSource Cts
+	);
+
+	private const int ImmediateQueueCapacity = 10_000;
+
+	private readonly Channel<QueueEntry> _immediateQueue = Channel.CreateBounded<QueueEntry>(
+		new BoundedChannelOptions(ImmediateQueueCapacity)
+		{
+			SingleReader = true,
+			FullMode = BoundedChannelFullMode.Wait
+		});
+	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
+	private readonly CancellationTokenSource _shutdownCts = new();
+	private Task? _consumerTask;
+
+	private void EnsureConsumerStarted()
+	{
+		LazyInitializer.EnsureInitialized(ref _consumerTask, () => Task.Run(() => ProcessQueueAsync(_shutdownCts.Token)));
+	}
+
+	private async Task ProcessQueueAsync(CancellationToken shutdownToken)
+	{
+		try
+		{
+			await foreach (var entry in _immediateQueue.Reader.ReadAllAsync(shutdownToken))
+			{
+				if (entry.Cts.IsCancellationRequested)
+				{
+					_pendingEntries.TryRemove(entry.Pid, out _);
+					entry.Cts.Dispose();
+					continue;
+				}
+
+				try
+				{
+					await entry.Action();
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Error executing queued command (PID {Pid}, Group {Group})", entry.Pid, entry.Group);
+				}
+				finally
+				{
+					_pendingEntries.TryRemove(entry.Pid, out _);
+					entry.Cts.Dispose();
+				}
+			}
+		}
+		catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
+		{
+			// Graceful shutdown
+		}
+	}
+
+	public ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
+	{
+		EnsureConsumerStarted();
+		var pid = NextPid();
+		var entry = new QueueEntry(pid, triggerName, group, action, new CancellationTokenSource());
+		_pendingEntries[pid] = entry;
+		if (!_immediateQueue.Writer.TryWrite(entry))
+		{
+			_pendingEntries.TryRemove(pid, out _);
+			entry.Cts.Dispose();
+			logger.LogWarning("Failed to enqueue work (PID {Pid}, Group {Group}) - queue may be completed", pid, group);
+		}
+		return ValueTask.CompletedTask;
+	}
 
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
 	public const string DirectInputGroup = "direct-input";
@@ -67,25 +148,50 @@ public class TaskScheduler(
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	public async ValueTask WriteUserCommand(long handle, MString command, ParserState state) =>
-		await _scheduler.ScheduleJob(
-			() => parser.FromState(state).CommandParse(handle, connectionService, command).AsTask(),
-			builder => builder
-				.StartNow()
-				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"handle:{handle}-{Guid.NewGuid()}", DirectInputGroup)
+	public ValueTask WriteUserCommand(long handle, MString command, ParserState state)
+	{
+		EnsureConsumerStarted();
+		var pid = NextPid();
+		var entry = new QueueEntry(
+			pid,
+			$"handle:{handle}-{pid}",
+			DirectInputGroup,
+			async () => await parser.FromState(state).CommandParse(handle, connectionService, command),
+			new CancellationTokenSource()
 		);
+		_pendingEntries[pid] = entry;
+		if (!_immediateQueue.Writer.TryWrite(entry))
+		{
+			_pendingEntries.TryRemove(pid, out _);
+			entry.Cts.Dispose();
+			logger.LogWarning("Failed to enqueue user command (PID {Pid}) - queue may be completed", pid);
+		}
+		return ValueTask.CompletedTask;
+	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState state) =>
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
-			builder => builder
-				.StartNow()
-				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"dbref:{state.Executor}-{Guid.NewGuid()}", EnqueueGroup)
+	public ValueTask WriteCommandList(MString command, ParserState state)
+	{
+		EnsureConsumerStarted();
+		var pid = NextPid();
+		var entry = new QueueEntry(
+			pid,
+			$"dbref:{state.Executor}-{pid}",
+			EnqueueGroup,
+			() => parser.FromState(state).CommandListParse(command),
+			new CancellationTokenSource()
 		);
+		_pendingEntries[pid] = entry;
+		if (!_immediateQueue.Writer.TryWrite(entry))
+		{
+			_pendingEntries.TryRemove(pid, out _);
+			entry.Cts.Dispose();
+			logger.LogWarning("Failed to enqueue command list (PID {Pid}) - queue may be completed", pid);
+		}
+		return ValueTask.CompletedTask;
+	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
-		int oldValue)
+int oldValue)
 	{
 		if (oldValue < 0)
 		{
@@ -95,13 +201,13 @@ public class TaskScheduler(
 
 		var triggerIdentity = $"dbref:{state.Executor}-{NextPid()}";
 		var triggerGroup = $"{SemaphoreGroup}:{dbRefAttribute}";
-		
+
 		// DIAGNOSTIC: Log the group key being used for job creation
-		
+
 		await _scheduler.ScheduleJob(
 			JobBuilder
 				.CreateForAsync<SemaphoreTask>()
-				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
+				.SetJobData(new((IDictionary<string, object>)new Dictionary<string, object>
 				{
 					{ "Command", command },
 					{ "State", state },
@@ -111,26 +217,44 @@ public class TaskScheduler(
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
 				.StartAt(DateTimeOffset.UtcNow.AddYears(100))  // Far future - will be triggered manually by @notify
 				.WithIdentity(triggerIdentity, triggerGroup).Build());
-		
 	}
 
-	public async ValueTask WriteAsyncAttribute(Func<ValueTask<ParserState>> function,
+	public ValueTask WriteAsyncAttribute(Func<ValueTask<ParserState>> function,
 		DbRefAttribute dbAttribute)
 	{
-		var parserState = await function();
-		var executor = await parserState.KnownExecutorObject(mediator);
-		var obj = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef));
-		if (obj.IsNone) return;
+		EnsureConsumerStarted();
+		var pid = NextPid();
+		var entry = new QueueEntry(
+			pid,
+			$"async:{dbAttribute}-{pid}",
+			EnqueueGroup,
+			async () =>
+			{
+				var parserState = await function();
+				var executor = await parserState.KnownExecutorObject(mediator);
+				var obj = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef));
+				if (obj.IsNone) return new CallState("#-1");
 
-		var attr = await attributeService.GetAttributeAsync(
-			executor,
-			obj.Known,
-			string.Join('`', dbAttribute.Attribute),
-			IAttributeService.AttributeMode.Execute);
+				var attr = await attributeService.GetAttributeAsync(
+					executor,
+					obj.Known,
+					string.Join('`', dbAttribute.Attribute),
+					IAttributeService.AttributeMode.Execute);
 
-		if (!attr.IsAttribute) return;
+				if (!attr.IsAttribute) return new CallState("#-1");
 
-		await parser.FromState(parserState).CommandListParse(attr.AsAttribute.Last().Value);
+				return await parser.FromState(parserState).CommandListParse(attr.AsAttribute.Last().Value);
+			},
+			new CancellationTokenSource()
+		);
+		_pendingEntries[pid] = entry;
+		if (!_immediateQueue.Writer.TryWrite(entry))
+		{
+			_pendingEntries.TryRemove(pid, out _);
+			entry.Cts.Dispose();
+			logger.LogWarning("Failed to enqueue async attribute (PID {Pid}) - queue may be completed", pid);
+		}
+		return ValueTask.CompletedTask;
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
@@ -163,35 +287,51 @@ public class TaskScheduler(
 	public async ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		var groupKey = $"{SemaphoreGroup}:{dbAttribute}";
-		
+
 		// DIAGNOSTIC: Log the group key being used for notification lookup
-		
+
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(groupKey));
 
-		
+		// Sort by PID to ensure FIFO ordering for semaphore notifications
+		var sorted = semaphoresForObject
+			.OrderBy(k =>
+			{
+				var parts = k.Name.Split('-');
+				return parts.Length == 2 && long.TryParse(parts[1], out var pid) ? pid : long.MaxValue;
+			});
+
 		// If oldValue is negative, we notify the specified number of tasks
 		// If oldValue is >= 0, we notify based on count
 		var tasksToNotify = oldValue < 0 ? Math.Min(count, 0 - oldValue) : count;
 
-		var immediatelyRun = semaphoresForObject.Take(tasksToNotify).ToAsyncEnumerable();
-		await foreach (var trigger in immediatelyRun)
+		foreach (var triggerKey in sorted.Take(tasksToNotify))
 		{
 			try
 			{
-				var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
-				if (to == null)
+				var trigger = await _scheduler.GetTrigger(triggerKey, CancellationToken.None);
+				if (trigger == null) continue;
+
+				var job = await _scheduler.GetJobDetail(trigger.JobKey);
+				if (job == null) continue;
+
+				var command = job.JobDataMap.Get("Command") as MString;
+				var state = job.JobDataMap.Get("State") as ParserState;
+
+				await _scheduler.UnscheduleJob(triggerKey);
+				await _scheduler.DeleteJob(trigger.JobKey);
+
+				if (command != null && state != null)
 				{
-					continue;
+					await EnqueueWork(
+						() => parser.FromState(state).CommandListParse(command),
+						triggerKey.Name,
+						triggerKey.Group);
 				}
-				
-				var job = to.JobKey;
-				await _scheduler.TriggerJob(job);
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
-				// Job may have been removed between getting the trigger and triggering it
-				// This is expected in concurrent scenarios, so we continue processing other triggers
+				logger.LogWarning(ex, "Failed to notify semaphore task {TriggerKey}", triggerKey);
 			}
 		}
 	}
@@ -201,18 +341,33 @@ public class TaskScheduler(
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		var immediatelyRun = semaphoresForObject.ToAsyncEnumerable();
-		await foreach (var trigger in immediatelyRun)
+		foreach (var triggerKey in semaphoresForObject)
 		{
 			try
 			{
-				var to = await _scheduler.GetTrigger(trigger, CancellationToken.None);
-				var job = to.JobKey;
-				await _scheduler.TriggerJob(job);
+				var trigger = await _scheduler.GetTrigger(triggerKey, CancellationToken.None);
+				if (trigger == null) continue;
+
+				var job = await _scheduler.GetJobDetail(trigger.JobKey);
+				if (job == null) continue;
+
+				var command = job.JobDataMap.Get("Command") as MString;
+				var state = job.JobDataMap.Get("State") as ParserState;
+
+				await _scheduler.UnscheduleJob(triggerKey);
+				await _scheduler.DeleteJob(trigger.JobKey);
+
+				if (command != null && state != null)
+				{
+					await EnqueueWork(
+						() => parser.FromState(state).CommandListParse(command),
+						triggerKey.Name,
+						triggerKey.Group);
+				}
 			}
-			catch
+			catch (Exception ex)
 			{
-				// Intentionally do nothing for that job. It likely no longer exists somehow.
+				logger.LogWarning(ex, "Failed to notify semaphore task {TriggerKey}", triggerKey);
 			}
 		}
 	}
@@ -249,13 +404,13 @@ public class TaskScheduler(
 			}
 
 			var data = job.JobDataMap;
-			
+
 			// Get the current ParserState
 			if (!data.TryGetValue("State", out var stateObj) || stateObj is not ParserState state)
 			{
 				return false;
 			}
-			
+
 			// Modify the Q-registers in the state
 			// We need to get the top dictionary from the Registers stack and add/update the Q-registers
 			if (state.Registers.TryPeek(out var registers))
@@ -275,13 +430,13 @@ public class TaskScheduler(
 				}
 				state.Registers.Push(newRegisters);
 			}
-			
+
 			// Update the job data with the modified state
 			data["State"] = state;
-			
+
 			// Need to re-add the job to persist the changes
 			await _scheduler.AddJob(job, replace: true, storeNonDurableWhileAwaitingScheduling: true);
-			
+
 			return true;
 		}
 		catch (Exception)
@@ -315,50 +470,87 @@ public class TaskScheduler(
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{DelayGroup}:{dbRef}"));
 		await _scheduler.UnscheduleJobs(delayed);
 
-		var enqueued = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{EnqueueGroup}:{dbRef}"));
-		await _scheduler.UnscheduleJobs(enqueued);
+		// Cancel pending channel entries for this dbref
+		var dbRefPrefix = $"dbref:{dbRef}-";
+		foreach (var kvp in _pendingEntries)
+		{
+			if (kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
+			{
+				kvp.Value.Cts.Cancel();
+				if (_pendingEntries.TryRemove(kvp.Key, out var removed))
+				{
+					removed.Cts.Dispose();
+				}
+			}
+		}
 	}
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
-		// Search all trigger groups for the specific PID
+		// Check channel entries first
+		if (_pendingEntries.TryRemove(pid, out var entry))
+		{
+			entry.Cts.Cancel();
+			entry.Cts.Dispose();
+			return true;
+		}
+
+		// Fall back to Quartz for semaphore/delay tasks
 		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var pidString = $"-{pid}";
-		
+
 		var matchingKeys = allKeys.Where(key => key.Name.EndsWith(pidString)).ToList();
-		
+
 		if (matchingKeys.Count == 0)
 			return false;
-			
+
 		await _scheduler.UnscheduleJobs(matchingKeys);
 		return true;
 	}
 
-	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay) =>
-		await _scheduler.ScheduleJob(() => parser.FromState(state).CommandListParse(command).AsTask(),
+	public async ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay)
+	{
+		var pid = NextPid();
+		await _scheduler.ScheduleJob(
+			async () => await EnqueueWork(
+				() => parser.FromState(state).CommandListParse(command),
+				$"dbref:{state.Executor}-{pid}",
+				EnqueueGroup),
 			builder => builder
 				.StartAt(DateTimeOffset.UtcNow + delay)
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"dbref:{state.Executor}-{NextPid()}", $"{DelayGroup}:{state.Executor}"));
+				.WithIdentity($"dbref:{state.Executor}-{pid}", $"{DelayGroup}:{state.Executor}"));
+	}
 
 	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
 	{
+		var translate = new Func<string, string>(x =>
+			new string(x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
+				.TakeWhile(c => c != '-').ToArray()));
+
+		// Quartz tasks (semaphore, delay, scheduled)
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
 			.GroupBy(trigger => trigger.JobKey.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers)
 		{
-			var translate = new Func<string, string>(x =>
-				x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
-					.TakeWhile(c => c != '-').ToString()!);
-
 			yield return (key.Key, key.Select(x => (
 				x.Value,
 				DBRef.TryParse(translate(x.Name), out var dbref)
 					? OneOf<string, DBRef>.FromT1(dbref!.Value)
 					: OneOf<string, DBRef>.FromT0(x.Name)
+			)).ToArray());
+		}
+
+		// Channel tasks (enqueue, direct-input)
+		foreach (var group in _pendingEntries.Values.GroupBy(e => e.Group))
+		{
+			yield return (group.Key, group.Select(e => (
+				DateTimeOffset.UtcNow,
+				DBRef.TryParse(translate(e.TriggerName), out var dbref)
+					? OneOf<string, DBRef>.FromT1(dbref!.Value)
+					: OneOf<string, DBRef>.FromT0(e.TriggerName)
 			)).ToArray());
 		}
 	}
@@ -408,7 +600,7 @@ public class TaskScheduler(
 	{
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"));
-		
+
 		foreach (var key in keys)
 		{
 			// Extract PID from identity: "dbref:{executor}-{pid}"
@@ -420,22 +612,13 @@ public class TaskScheduler(
 		}
 	}
 
-	public async IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj)
+	public IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj)
 	{
-		var keys = await _scheduler.GetTriggerKeys(
-			GroupMatcher<TriggerKey>.GroupEquals(EnqueueGroup));
-		
-		// Filter by dbref in the identity
-		var filtered = keys.Where(k => k.Name.StartsWith($"dbref:{obj}-"));
-		
-		foreach (var key in filtered)
-		{
-			// Extract Guid from identity: "dbref:{executor}-{guid}"
-			// For enqueue tasks, we don't have PIDs in the current implementation
-			// We'll need to use a different approach or skip these
-			// For now, we can't return PIDs for enqueue tasks without modification
-			yield return 0; // Placeholder - EnqueueGroup doesn't currently track PIDs
-		}
+		var dbRefPrefix = $"dbref:{obj}-";
+		return _pendingEntries
+			.Where(kvp => kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
+			.Select(kvp => kvp.Key)
+			.ToAsyncEnumerable();
 	}
 
 	private static async ValueTask<SemaphoreTaskData> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)
@@ -465,5 +648,24 @@ public class TaskScheduler(
 			var trigger = await _scheduler.GetTrigger(key);
 			await _scheduler.RescheduleJob(key, trigger.GetTriggerBuilder().StartAt(DateTimeOffset.UtcNow + delay).Build());
 		}
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		_immediateQueue.Writer.TryComplete();
+		await _shutdownCts.CancelAsync();
+		if (_consumerTask is not null)
+		{
+			try
+			{
+				await _consumerTask;
+			}
+			catch (OperationCanceledException)
+			{
+				// Expected during shutdown
+			}
+		}
+		_shutdownCts.Dispose();
+		GC.SuppressFinalize(this);
 	}
 }

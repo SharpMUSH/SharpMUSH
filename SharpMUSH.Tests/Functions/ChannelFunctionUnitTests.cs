@@ -2,22 +2,21 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
+[NotInParallel]
 public class ChannelFunctionUnitTests
 {
 	private const string TestChannelName = "TestChannel";
 	private const string TestChannelPrivilege = "Open";
 	private const int TestPlayerDbRef = 1;
 
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
@@ -38,7 +37,7 @@ public class ChannelFunctionUnitTests
 			throw new InvalidOperationException($"Test player #{TestPlayerDbRef} not found");
 		}
 
-		// Create a test channel
+		// Create a test channel (owner is automatically added as a member)
 		await Mediator.Send(new CreateChannelCommand(
 			MModule.single(TestChannelName),
 			[TestChannelPrivilege],
@@ -48,12 +47,6 @@ public class ChannelFunctionUnitTests
 		// Retrieve the created channel
 		var channelQuery = new GetChannelQuery(TestChannelName);
 		_testChannel = await Mediator.Send(channelQuery);
-
-		// Add the test player to the channel
-		if (_testChannel != null && playerNode.IsPlayer)
-		{
-			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
-		}
 	}
 
 	[After(Test)]
@@ -131,7 +124,6 @@ public class ChannelFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Skip("TODO: Failing test - needs investigation")]
 	public async Task Cstatus_WithNonMember_ReturnsOff()
 	{
 		if (_testChannel == null)
@@ -139,7 +131,7 @@ public class ChannelFunctionUnitTests
 			throw new InvalidOperationException("Test channel is not initialized.");
 		}
 		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
-		
+
 		var userStartsOn = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
 		await Assert.That(userStartsOn.ToPlainText()).Contains("ON");
 
@@ -150,12 +142,9 @@ public class ChannelFunctionUnitTests
 		await Assert.That(userEndsOff.ToPlainText()).IsEqualTo("OFF");
 
 		// CLEANUP: Add the player back to the channel
-		// Commented out due to a weird bug.
-		// {"code":404,"error":true,"errorMessage":"edge collection not used in graph","errorNum":1930}
-		//
-		// await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
-		// var userIsPutBackOn = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
-		// await Assert.That(userIsPutBackOn.ToPlainText()).Contains("ON");
+		await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
+		var userIsPutBackOn = (await Parser.FunctionParse(MModule.single($"cstatus(%#,{TestChannelName})")))?.Message!;
+		await Assert.That(userIsPutBackOn.ToPlainText()).Contains("ON");
 	}
 
 	[Test]

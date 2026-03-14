@@ -9,8 +9,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class UtilityFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IPasswordService PasswordService => WebAppFactoryArg.Services.GetRequiredService<IPasswordService>(); 
@@ -447,5 +447,86 @@ public class UtilityFunctionUnitTests
 		
 		// Should indicate number of attributes wiped
 		await Assert.That(wipeResult.ToPlainText()).Contains("2");
+	}
+
+	[Test]
+	public async Task ANSI_NamedColor()
+	{
+		// Test named color from colors.json
+		var result = (await Parser.FunctionParse(MModule.single("ansi(+red,test)")))?.Message!;
+		var plainText = result.ToPlainText();
+		
+		// Should contain the text "test"
+		await Assert.That(plainText).IsEqualTo("test");
+		
+		// The full string should contain ANSI codes
+		var fullText = result.ToString();
+		await Assert.That(fullText).Contains("test");
+		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+	}
+
+	[Test]
+	public async Task ANSI_NamedBackgroundColor()
+	{
+		// Test named background color
+		var result = (await Parser.FunctionParse(MModule.single("ansi(/+blue,test)")))?.Message!;
+		var plainText = result.ToPlainText();
+		
+		// Should contain the text "test"
+		await Assert.That(plainText).IsEqualTo("test");
+		
+		// The full string should contain ANSI codes
+		var fullText = result.ToString();
+		await Assert.That(fullText).Contains("test");
+		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+	}
+
+	[Test]
+	public async Task ANSI_XtermColor()
+	{
+		// Test xterm color (0-255)
+		var result = (await Parser.FunctionParse(MModule.single("ansi(196,test)")))?.Message!;
+		var plainText = result.ToPlainText();
+		
+		// Should contain the text "test"
+		await Assert.That(plainText).IsEqualTo("test");
+		
+		// The full string should contain ANSI codes
+		var fullText = result.ToString();
+		await Assert.That(fullText).Contains("test");
+		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+	}
+
+	[Test]
+	public async Task ANSI_XtermWithPrefix()
+	{
+		// Test +xterm prefix format
+		var result = (await Parser.FunctionParse(MModule.single("ansi(+xterm196,test)")))?.Message!;
+		var plainText = result.ToPlainText();
+		
+		// Should contain the text "test"
+		await Assert.That(plainText).IsEqualTo("test");
+		
+		// The full string should contain ANSI codes
+		var fullText = result.ToString();
+		await Assert.That(fullText).Contains("test");
+		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+	}
+
+	[Test]
+	public async Task ANSI_RGBFormat()
+	{
+		// Test RGB format <r g b>
+		var result = (await Parser.FunctionParse(MModule.single("ansi(<255 0 0>,test)")))?.Message!;
+		var plainText = result.ToPlainText();
+		
+		// Should contain the text "test"
+		await Assert.That(plainText).IsEqualTo("test");
+		
+		// The full string should contain ANSI codes
+		var fullText = result.ToString();
+		await Assert.That(fullText).Contains("test");
+		await Assert.That(fullText).Contains("\u001b["); // Should have ANSI escape sequence
+		await Assert.That(fullText).Contains("38;2;255;0;0"); // RGB red color
 	}
 }

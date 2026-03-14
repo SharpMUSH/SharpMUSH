@@ -17,7 +17,7 @@ public interface IMoveService
 	/// <param name="destination">The destination container</param>
 	/// <returns>True if moving would create a loop, false otherwise</returns>
 	ValueTask<bool> WouldCreateLoop(AnySharpContent objectToMove, AnySharpContainer destination);
-	
+
 	/// <summary>
 	/// Executes a complete move operation including permission checks, cost calculation,
 	/// hook triggering, and notifications.
@@ -36,7 +36,7 @@ public interface IMoveService
 		DBRef? enactor = null,
 		string cause = "move",
 		bool silent = false);
-		
+
 	/// <summary>
 	/// Checks if a move is permitted based on locks and permissions.
 	/// </summary>
@@ -45,7 +45,7 @@ public interface IMoveService
 	/// <param name="destination">The destination container</param>
 	/// <returns>True if the move is permitted</returns>
 	ValueTask<bool> CanMoveAsync(AnySharpObject who, AnySharpContent objectToMove, AnySharpContainer destination);
-	
+
 	/// <summary>
 	/// Calculates the cost of moving an object.
 	/// </summary>

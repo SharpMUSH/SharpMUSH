@@ -1,0 +1,10 @@
+@page "/admin/restrictions"
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Redirect to new config URL
+        NavigationManager.NavigateTo("/admin/config/restrictions", replace: true);
+    }
+}

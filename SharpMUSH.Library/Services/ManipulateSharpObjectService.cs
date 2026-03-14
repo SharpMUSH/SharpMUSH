@@ -55,7 +55,7 @@ public class ManipulateSharpObjectService(
 				var tryFindPlayerByName = await (mediator.CreateStream(new GetPlayerQuery(name.ToPlainText())))
 					.ToArrayAsync();
 				if (tryFindPlayerByName.Any(x =>
-					    x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
+							x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
 				{
 					if (notify)
 					{
@@ -77,9 +77,9 @@ public class ManipulateSharpObjectService(
 				var aliases = playerSplit.Skip(1).Select(x => x.ToPlainText()).ToArray();
 
 				if (tryFindPlayerByName
-				    .SelectMany(x => x.Aliases ?? [])
-				    .Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
-				    .Any())
+						.SelectMany(x => x.Aliases ?? [])
+						.Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
+						.Any())
 				{
 					if (notify)
 					{
@@ -175,73 +175,78 @@ public class ManipulateSharpObjectService(
 
 			return Errors.InvalidFlag;
 		}
-		
-		// Check flag set/unset permissions
+
+		// Generic flag permission check, matching PennMUSH's can_set_flag_generic().
+		// Permission levels: trusted, royalty, wizard, god (see help "flag permissions").
 		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
 		if (requiredPermissions is not null && requiredPermissions.Length > 0)
 		{
-			var hasPermission = false;
-			foreach (var permission in requiredPermissions)
-			{
-				// Check if executor has the required flag or power
-				if (await executor.HasFlag(permission) || await executor.HasPower(permission))
-				{
-					hasPermission = true;
-					break;
-				}
-			}
-			
+			var hasPermission = await requiredPermissions.ToAsyncEnumerable()
+				.AnyAsync(async (permission, _) => await HasFlagPermission(executor, obj, permission));
+
 			if (!hasPermission)
 			{
 				if (notify)
 				{
-					var action = unset ? "unset" : "set";
-					await notifyService.Notify(executor, $"Permission denied: You lack the required permissions to {action} flag {realFlag.Name}.");
+					await notifyService.Notify(executor, "Permission denied.");
 				}
-				
+
 				return Errors.ErrorPerm;
 			}
 		}
 
+		// Flag-specific permission checks, matching PennMUSH's can_set_flag().
+		// These additional restrictions apply on top of the generic permission check.
+		var flagSpecificDenied = await CheckFlagSpecificPermissions(executor, obj, realFlag, unset);
+		if (flagSpecificDenied)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, "Permission denied.");
+			}
+
+			return Errors.ErrorPerm;
+		}
+
 		switch (unset)
 		{
-			case true when !await obj.HasFlag(plainFlag):
-			{
-				if (notify)
+			case true when !await obj.HasFlag(realFlag.Name):
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Unset.");
-				}
+					if (notify)
+					{
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Unset.");
+					}
 
-				break;
-			}
+					break;
+				}
 			case true:
-			{
-				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag.Name} Unset.");
+					if (notify)
+					{
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} Unset.");
+					}
+
+					await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
+
+					// Publish notification for OBJECT`FLAG event
+					await publisher.Publish(new ObjectFlagChangedNotification(
+						obj,
+						realFlag.Name,
+						"FLAG",
+						false, // IsSet = false (clearing)
+						executor.Object().DBRef));
+
+					break;
 				}
-
-				await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
-
-				// Publish notification for OBJECT`FLAG event
-				await publisher.Publish(new ObjectFlagChangedNotification(
-					obj,
-					realFlag.Name,
-					"FLAG",
-					false, // IsSet = false (clearing)
-					executor.Object().DBRef));
-
-				break;
-			}
-			case false when await obj.HasFlag(plainFlag):
-			{
-				if (notify)
+			case false when await obj.HasFlag(realFlag.Name):
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Set.");
-				}
+					if (notify)
+					{
+						await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Set.");
+					}
 
-				break;
-			}
+					break;
+				}
 			case false:
 				if (notify)
 				{
@@ -284,12 +289,12 @@ public class ManipulateSharpObjectService(
 			}
 			return true;
 		}
-		
+
 		var allPowers = mediator.CreateStream(new GetPowersQuery());
-		
+
 		var found = await allPowers
-			.FirstOrDefaultAsync(x => 
-				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)  
+			.FirstOrDefaultAsync(x =>
+				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
 				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
 
 		if (found is null)
@@ -315,7 +320,7 @@ public class ManipulateSharpObjectService(
 			"POWER",
 			true, // IsSet = true (setting)
 			executor.Object().DBRef));
-		
+
 		return true;
 	}
 
@@ -339,12 +344,12 @@ public class ManipulateSharpObjectService(
 			}
 			return true;
 		}
-		
+
 		var allPowers = mediator.CreateStream(new GetPowersQuery());
-		
+
 		var found = await allPowers
-			.FirstOrDefaultAsync(x => 
-				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)  
+			.FirstOrDefaultAsync(x =>
+				x.Name.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase)
 				|| x.Alias.Equals(powerOrPowerAlias, StringComparison.InvariantCultureIgnoreCase));
 
 		if (found is null)
@@ -370,7 +375,7 @@ public class ManipulateSharpObjectService(
 			"POWER",
 			false, // IsSet = false (clearing)
 			executor.Object().DBRef));
-		
+
 		return true;
 	}
 
@@ -399,7 +404,7 @@ public class ManipulateSharpObjectService(
 		{
 			// Unset each power
 			await mediator.Send(new UnsetObjectPowerCommand(obj, power));
-			
+
 			// Publish notification for each power cleared
 			await publisher.Publish(new ObjectFlagChangedNotification(
 				obj,
@@ -407,7 +412,7 @@ public class ManipulateSharpObjectService(
 				"POWER",
 				false, // IsSet = false (clearing)
 				executor.Object().DBRef));
-			
+
 			powersCleared++;
 		}
 
@@ -421,8 +426,8 @@ public class ManipulateSharpObjectService(
 
 	public async ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj) 
-		    || !await permissionService.Controls(executor, newOwner))
+		if (!await permissionService.Controls(executor, obj)
+				|| !await permissionService.Controls(executor, newOwner))
 		{
 			if (notify)
 			{
@@ -430,14 +435,14 @@ public class ManipulateSharpObjectService(
 			}
 			return Errors.ErrorPerm;
 		}
-		
+
 		// Ownership transfer logic confirmed:
 		// - Executor must control the object being transferred (prevents unauthorized changes)
 		// - Executor must control the new owner (prevents forcing ownership on others)
 		// This matches PennMUSH behavior where @chown requires control of both parties
-		
+
 		await mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
-		
+
 		return true;
 	}
 
@@ -449,7 +454,7 @@ public class ManipulateSharpObjectService(
 		var controls = await permissionService.Controls(executor, newParent);
 		var hasLinkOk = await obj.HasFlag("LINK_OK");
 		var passesLock = permissionService.PassesLock(executor, newParent, LockType.Parent);
-		
+
 		if (!controls && !hasLinkOk && !passesLock)
 		{
 			if (notify)
@@ -461,7 +466,7 @@ public class ManipulateSharpObjectService(
 		}
 
 		var safeToAdd = await HelperFunctions.SafeToAddParent(mediator, database, obj, newParent);
-		
+
 		if (!safeToAdd)
 		{
 			if (notify)
@@ -489,9 +494,9 @@ public class ManipulateSharpObjectService(
 			await notifyService.Notify(executor, "Permission denied.");
 			return Errors.ErrorPerm;
 		}
-		
+
 		await mediator.Send(new UnsetObjectParentCommand(obj));
-		
+
 		return true;
 	}
 
@@ -510,7 +515,7 @@ public class ManipulateSharpObjectService(
 		}
 
 		var safeToAdd = await HelperFunctions.SafeToAddZone(mediator, database, obj, newZone);
-		
+
 		if (!safeToAdd)
 		{
 			if (notify)
@@ -541,14 +546,85 @@ public class ManipulateSharpObjectService(
 			}
 			return Errors.ErrorPerm;
 		}
-		
+
 		await mediator.Send(new UnsetObjectZoneCommand(obj));
-		
+
 		if (notify)
 		{
 			await notifyService.Notify(executor, "Zone cleared.");
 		}
-		
+
 		return true;
+	}
+
+	/// <summary>
+	/// Resolves a named flag permission level to the appropriate privilege check.
+	/// Matches PennMUSH's can_set_flag_generic() logic from flags.c.
+	/// See help "flag permissions" for the documented permission levels.
+	/// </summary>
+	private static async ValueTask<bool> HasFlagPermission(AnySharpObject executor, AnySharpObject obj, string permission) =>
+		permission.ToLowerInvariant() switch
+		{
+			// F_INHERIT: Wizard(player) || (Inheritable(player) && Owns(player, thing))
+			"trusted" => await executor.IsWizard()
+				|| (await executor.Inheritable() && await executor.Owns(obj)),
+			// F_ROYAL: Hasprivs(player) = IsPriv
+			"royalty" => await executor.IsPriv(),
+			// F_WIZARD: Wizard(player)
+			"wizard" => await executor.IsWizard(),
+			// F_GOD: God(player)
+			"god" => executor.IsGod(),
+			_ => await executor.HasFlag(permission) || await executor.HasPower(permission)
+		};
+
+	/// <summary>
+	/// Checks flag-specific permission restrictions beyond the generic permission check.
+	/// Matches PennMUSH's can_set_flag() logic from flags.c.
+	/// Returns true if the operation should be DENIED.
+	/// </summary>
+	private static async ValueTask<bool> CheckFlagSpecificPermissions(
+		AnySharpObject executor, AnySharpObject obj, SharpObjectFlag flag, bool negate)
+	{
+		var flagName = flag.Name.ToUpperInvariant();
+
+		// CHOWN_OK and DESTROY_OK: must own the target or be Wizard
+		if (flagName is "CHOWN_OK" or "DESTROY_OK")
+		{
+			return !(await executor.Owns(obj) || await executor.IsWizard());
+		}
+
+		// Can't gag wizards/God, but can ungag them
+		if (flagName == "GAGGED" && await obj.IsWizard())
+			return !negate; // deny setting, allow unsetting
+
+		// God can do (almost) anything after the generic check passes
+		if (executor.IsGod())
+			return false;
+
+		// WIZARD flag: special restrictions
+		if (flagName == "WIZARD")
+		{
+			if (!negate)
+			{
+				// Setting WIZARD: must be Wizard, own the target, and target must not be a player
+				return !(await executor.IsWizard() && await executor.Owns(obj) && !obj.IsPlayer);
+			}
+			else
+			{
+				// Unsetting WIZARD: must be Wizard and target must not be a player
+				return !(await executor.IsWizard() && !obj.IsPlayer);
+			}
+		}
+
+		// ROYALTY flag: special restrictions
+		if (flagName == "ROYALTY")
+		{
+			// Must not be guest target, and either Wizard or (Royalty + owns + not player)
+			return await obj.IsGuest()
+				|| !(await executor.IsWizard()
+					|| (await executor.IsRoyalty() && await executor.Owns(obj) && !obj.IsPlayer));
+		}
+
+		return false; // no additional restriction
 	}
 }

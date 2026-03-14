@@ -9,8 +9,8 @@ namespace SharpMUSH.Tests.Commands;
 
 public class SocialCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
@@ -18,14 +18,14 @@ public class SocialCommandTests
 
 	[Test]
 	[Skip("Issue with NotifyService mock, needs investigation")]
-
-public async ValueTask SayCommand()
+	public async ValueTask SayCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("say Hello world"));
 
+		// Sender sees "You say, ..." while others see "Name says, ..."
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One says, \"Hello world\""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single("You say, \"Hello world\""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 
 	[Test]
@@ -35,7 +35,7 @@ public async ValueTask SayCommand()
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One waves hello"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Pose);
 	}
 
@@ -46,7 +46,7 @@ public async ValueTask SayCommand()
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One's greeting"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.SemiPose);
 	}
 

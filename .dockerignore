@@ -1,0 +1,46 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+
+# NuGet packages
+**/packages/
+*.nupkg
+
+# Visual Studio cache/options
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# IDE files
+.idea/
+*.swp
+*~
+.vscode/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*
+
+# Documentation
+*.md
+!README.md
+
+# CI/CD
+.github/
+.azure/
+
+# Other
+*.log

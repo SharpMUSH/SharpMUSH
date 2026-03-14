@@ -1,6 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using SharpMUSH.Library.Models;
+using System.Collections.Concurrent;
 using System.Text;
-using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -25,23 +25,26 @@ public interface IConnectionService
 		ConcurrentDictionary<string, string> Metadata
 	)
 	{
-		public TimeSpan? Connected 
+		public TimeSpan? Connected
 			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
-			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
+				DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
 			: null;
 
-		public TimeSpan? Idle 
+		public TimeSpan? Idle
 			=> State is ConnectionState.Connected or ConnectionState.LoggedIn
 			? DateTimeOffset.UtcNow -
-			  DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
+				DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
 			: null;
-		
+
 		public string InternetProtocolAddress => Metadata.GetValueOrDefault(nameof(InternetProtocolAddress), "UNKNOWN");
 
 		public string HostName => Metadata.GetValueOrDefault(nameof(HostName), InternetProtocolAddress);
-		
+
 		public string ConnectionType => Metadata[nameof(ConnectionType)];
+
+		public int CommandCount
+			=> int.TryParse(Metadata.GetValueOrDefault("CommandCount", "0"), out var cnt) ? cnt : 0;
 	}
 
 	ValueTask Register(long handle, string ipaddr, string host, string connectionType, Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
@@ -51,6 +54,12 @@ public interface IConnectionService
 
 	void Update(long handle, string key, string value);
 
+	/// <summary>
+	/// Atomically increments an integer metadata value for a connection handle.
+	/// Uses a thread-safe compare-and-update pattern to avoid race conditions.
+	/// </summary>
+	void IncrementMetadata(long handle, string key);
+
 	ValueTask Disconnect(long handle);
 
 	/// <summary>
@@ -58,7 +67,7 @@ public interface IConnectionService
 	/// </summary>
 	/// <param name="handle"></param>
 	ConnectionData? Get(long handle);
-	
+
 	/// <summary>
 	/// Get all handles connected to the DBRef
 	/// </summary>

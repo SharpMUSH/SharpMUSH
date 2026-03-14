@@ -104,8 +104,8 @@ If you have an @mailsignature attribute set on yourself, its contents will be ev
 * If no msg-list is specified, all messages in the current folder are tagged/untagged.
 * If "all" is given as the msg-list, all mail in **all** folders is tagged/untagged.
 
-Example:
-```
+### Example
+```sharp
 To clear all mail from Paul and Chani:
 @mail/tag *paul
 @mail/tag *chani
@@ -166,8 +166,8 @@ The MUSH mail system allows each player 16 folders, numbered from 0 to 15. Mail 
 
 This attribute allows wizards to change the maximum number of messages a player can have in their inbox, override the mail_limit @config option for specific people. *<limit>* should be a number between 1 and 50000, inclusive.
 
-Example:
-```
+### Example
+```sharp
 > @alias *Walker=Complaints_Department
 > @mailquota *Complaints_Department=50000
 > @wall Please @mail any and all problems to Complaints_Department.
@@ -184,8 +184,9 @@ The @mailfilter attribute specifies automatic filing of incoming @mail messages 
 
 If @mailfilter evaluates to a folder name or number, the message will be filed into that folder. If @mailfilter evaluates to a null string, the message remains in the incoming folder.
 
-Example: Filter urgent messages into folder 1
-```
+### Example
+Filter urgent messages into folder 1
+```sharp
 > @mailfilter me=if(strmatch(%3,*U*),1)
 ```
 
@@ -200,8 +201,8 @@ Example: Filter urgent messages into folder 1
 
 When set, this attribute is evaluated and appended to any @mail messages sent by *\<object\>*, unless the @mail/nosig command is used.
 
-Example:
-```
+### Example
+```sharp
 > @mailsignature me=%r%r-- %n%r%r[u(funny_quote)]
 ```
 
@@ -353,8 +354,8 @@ Without arguments, mail() returns the number of messages in all the player's mai
 
 When given numeric arguments, mail() returns the text of the corresponding message in the current folder. The message number may also be prefaced by the folder number and a colon, to indicate a message in a different folder.
 
-Example:
-```
+### Example
+```sharp
 > think mail(3:2)
 (text of the second message in the player's third folder)
 ```
@@ -370,8 +371,8 @@ Example:
 
 maillist() returns a list of all *<player>*'s @mail messages which match the given *<message-list>* (the same as @mail/list *<message-list>*). If no *<player>* is given, the executor's mail is matched. The *<message-list>* argument is described in [mail].
 
-Examples:
-```
+### Examples
+```sharp
 > think maillist()
 0:1 0:2 0:3
 > think maillist(all)
@@ -415,8 +416,8 @@ Examples:
 
 The mail*stats() functions return data like @mail/*stats does. You either must use this on yourself, or you must be a wizard. The information will be joined together as a space separated list of numbers.
 
-Example:
-```
+### Example
+```sharp
 > think mailstats(One)
 <# sent> <# received>
 > think mailfstats(One)

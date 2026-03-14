@@ -30,11 +30,48 @@ services.AddConnectionServerMessaging(options =>
 | `Port` | `5672` | Port (9092 for Kafka, 19092 for RedPanda default) |
 | `TelnetOutputTopic` | `telnet-output` | Topic name for telnet messages |
 | `ConsumerGroupId` | `sharpmush-consumer-group` | Consumer group ID |
+| `TopicPartitions` | `3` | Number of partitions per topic (affects parallelism) |
+| `TopicReplicationFactor` | `1` | Replication factor for topics |
 | `EnableIdempotence` | `true` | Ensures exactly-once message delivery |
 | `CompressionType` | `lz4` | Compression (none, gzip, snappy, lz4, zstd) |
 | `BatchSize` | `32768` | Batch size in bytes (32KB) |
 | `LingerMs` | `5` | How long to wait for batching (milliseconds) |
 | `MaxMessageBytes` | `6291456` | Maximum message size (6MB for production) |
+
+## Topic Management
+
+SharpMUSH automatically creates topics as needed with the configured partition count and replication factor. The `KafkaTopicManager` ensures topics exist before:
+- Publishing messages (producer)
+- Subscribing to topics (consumer)
+
+Topics are created with the following configuration:
+- **Partitions**: Controlled by `TopicPartitions` (default: 3)
+- **Replication Factor**: Controlled by `TopicReplicationFactor` (default: 1)
+- **Max Message Bytes**: Set to `MaxMessageBytes` (default: 6MB)
+- **Compression**: Set to `CompressionType` (default: lz4)
+
+### Manual Topic Management
+
+While topics are auto-created, you can also manage them manually:
+
+```bash
+# Create topic with custom configuration
+kafka-topics --bootstrap-server localhost:9092 --create \
+  --topic telnet-output \
+  --partitions 3 \
+  --replication-factor 1 \
+  --config max.message.bytes=6291456 \
+  --config compression.type=lz4
+
+# List topics
+kafka-topics --bootstrap-server localhost:9092 --list
+
+# Describe topic
+kafka-topics --bootstrap-server localhost:9092 --describe --topic telnet-output
+
+# Delete topic (use with caution!)
+kafka-topics --bootstrap-server localhost:9092 --delete --topic telnet-output
+```
 
 ## RedPanda Setup
 

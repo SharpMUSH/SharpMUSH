@@ -1,17 +1,14 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
-using Mediator;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
 public class PasswordServiceTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IPasswordService PasswordService =>
 		WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();

@@ -1,0 +1,57 @@
+@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@using SharpMUSH.Client.Components
+
+<MudContainer MaxWidth="MaxWidth.False" Class="config-layout pa-0">
+    <MudGrid Spacing="0" Class="config-grid">
+        @* Secondary Drawer - Config Navigation *@
+        <MudItem xs="12" md="3" lg="2" Class="config-drawer-item">
+            <MudPaper Elevation="1" Square="true" Class="config-drawer">
+                <ConfigNavDrawer />
+            </MudPaper>
+        </MudItem>
+
+        @* Main Content Area *@
+        <MudItem xs="12" md="9" lg="10" Class="config-content-item">
+            <div class="config-content">
+                @Body
+            </div>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<style>
+    .config-layout {
+        height: calc(100vh - 64px); /* Subtract appbar height */
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .config-grid {
+        height: 100%;
+    }
+
+    .config-drawer-item {
+        height: 100%;
+    }
+
+    .config-drawer {
+        height: 100%;
+        overflow-y: auto;
+        border-right: 1px solid var(--mud-palette-divider);
+    }
+
+    .config-content-item {
+        height: 100%;
+    }
+
+    .config-content {
+        height: 100%;
+        overflow-y: auto;
+        background: var(--mud-palette-background);
+    }
+</style>
+
+@code {
+    // This layout is applied to all /admin/config/* routes
+}

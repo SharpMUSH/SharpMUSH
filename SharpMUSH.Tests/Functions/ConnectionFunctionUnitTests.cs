@@ -4,8 +4,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class ConnectionFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
@@ -87,7 +87,7 @@ public class ConnectionFunctionUnitTests
 			"doing(0)",
 			"doing(1)"
 		};
-		
+
 		foreach (var testCase in testCases)
 		{
 			var result = (await Parser.FunctionParse(MModule.single(testCase)))?.Message!;

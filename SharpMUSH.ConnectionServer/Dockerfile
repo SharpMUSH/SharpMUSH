@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/dotnet/nightly/sdk:10.0 AS build
 WORKDIR /src
 COPY . .
-RUN dotnet publish SharpMUSH.ConnectionServer/SharpMUSH.ConnectionServer.csproj -c Release -o /app
+RUN dotnet restore && dotnet publish SharpMUSH.ConnectionServer/SharpMUSH.ConnectionServer.csproj -c Release -o /app
 
 # Stage 2: Run
 FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0

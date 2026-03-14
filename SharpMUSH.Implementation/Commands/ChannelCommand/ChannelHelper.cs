@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using Mediator;
 using OneOf;
 using OneOf.Types;
@@ -9,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.ObjectModel;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -68,7 +68,7 @@ public static class ChannelHelper
 	public static async ValueTask<bool> IsMemberOfChannel(AnySharpObject member, SharpChannel channel)
 		=> await channel.Members
 			.Value
-			.AnyAsync(x => 
+			.AnyAsync(x =>
 				x.Member.Id() == member.Id()
 				);
 
@@ -106,13 +106,13 @@ public static class ChannelHelper
 
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, string channelName)
 		=> Configuration.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
-		   && channelName.Length > 3
-		   && !channelName.Contains(' ');
+			 && channelName.Length > 3
+			 && !channelName.Contains(' ');
 
 	public static async ValueTask<ChannelOrError> GetChannelOrError(
-		IMUSHCodeParser parser, 
-		ILocateService LocateService, 
-		IPermissionService PermissionService, 
+		IMUSHCodeParser parser,
+		ILocateService LocateService,
+		IPermissionService PermissionService,
 		IMediator Mediator,
 		INotifyService NotifyService,
 		MString channelName,
@@ -123,19 +123,19 @@ public static class ChannelHelper
 		switch (channel, notify)
 		{
 			case (null, true):
-			{
-				await NotifyService.Notify(await parser.CurrentState.KnownExecutorObject(Mediator),
-					"Channel not found.");
-				return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
-			}
+				{
+					await NotifyService.Notify(await parser.CurrentState.KnownExecutorObject(Mediator),
+						"Channel not found.");
+					return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
+				}
 			case (null, false):
-			{
-				return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
-			}
+				{
+					return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
+				}
 			case ({ } foundChannel, _):
-			{
-				return new ChannelOrError(foundChannel);
-			}
+				{
+					return new ChannelOrError(foundChannel);
+				}
 		}
 	}
 }

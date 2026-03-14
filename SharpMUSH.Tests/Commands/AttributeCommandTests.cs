@@ -15,8 +15,8 @@ namespace SharpMUSH.Tests.Commands;
 [NotInParallel]
 public class AttributeCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
@@ -72,12 +72,12 @@ public class AttributeCommandTests
 		// Set attribute directly via database with unique name
 		var player = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"], A.single("test_string_CPATTR_direct"), player);
-		
+
 		// Verify source exists
-		var sourceAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"]);
+		var sourceAttr = Database.GetAttributeAsync(player.Object.DBRef, ["SOURCE_DIRECT_CPATTR"]);
 		var sourceList = await sourceAttr!.ToListAsync();
 		await Assert.That(sourceList).Count().IsEqualTo(1);
-		
+
 		// Copy it using command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_DIRECT_CPATTR=#1/DEST_DIRECT_CPATTR"));
 
@@ -90,9 +90,9 @@ public class AttributeCommandTests
 			);
 
 		// Verify destination attribute was created
-		var destAttr = await Database.GetAttributeAsync(player.Object.DBRef, ["DEST_DIRECT_CPATTR"]);
+		var destAttr = Database.GetAttributeAsync(player.Object.DBRef, ["DEST_DIRECT_CPATTR"]);
 		var destList = destAttr == null ? null : await destAttr.ToListAsync();
-		
+
 		await Assert.That(destList).IsNotNull();
 		if (destList != null)
 		{
@@ -106,7 +106,7 @@ public class AttributeCommandTests
 	{
 		// First set an attribute with unique test string
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_BASIC #1=test_string_CPATTR_basic_unique"));
-		
+
 		// Copy it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_BASIC=#1/DEST_CPATTR_BASIC"));
 
@@ -125,7 +125,7 @@ public class AttributeCommandTests
 
 		await Assert.That(destAttr.IsAttribute).IsTrue();
 		await Assert.That(MModule.plainText(destAttr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_basic_unique");
-		
+
 		// Verify source still exists
 		var sourceAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "SOURCE_CPATTR_BASIC",
 			IAttributeService.AttributeMode.Read, false);
@@ -138,7 +138,7 @@ public class AttributeCommandTests
 	{
 		// Set source attribute with unique name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&SOURCE_CPATTR_MULTI_UNIQUE #1=test_string_CPATTR_multi_value"));
-		
+
 		// Copy to multiple destinations
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_MULTI_UNIQUE=#1/DEST1_CPATTR_MULTI,#1/DEST2_CPATTR_MULTI"));
 
@@ -151,13 +151,13 @@ public class AttributeCommandTests
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
-		
+
 		// Verify both destinations
 		var dest1Attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "DEST1_CPATTR_MULTI",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(dest1Attr.IsAttribute).IsTrue();
 		await Assert.That(MModule.plainText(dest1Attr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_multi_value");
-		
+
 		var dest2Attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "DEST2_CPATTR_MULTI",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(dest2Attr.IsAttribute).IsTrue();
@@ -170,7 +170,7 @@ public class AttributeCommandTests
 	{
 		// First set an attribute with unique test string
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&MOVESOURCE_UNIQUE #1=test_string_MVATTR_basic_moved"));
-		
+
 		// Move it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mvattr #1/MOVESOURCE_UNIQUE=#1/MOVEDEST_UNIQUE"));
 
@@ -183,13 +183,13 @@ public class AttributeCommandTests
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
-		
+
 		// Verify destination attribute was created
 		var destAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "MOVEDEST_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(destAttr.IsAttribute).IsTrue();
 		await Assert.That(MModule.plainText(destAttr.AsAttribute.Last().Value)).IsEqualTo("test_string_MVATTR_basic_moved");
-		
+
 		// Verify source no longer exists
 		var sourceAttr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "MOVESOURCE_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
@@ -203,13 +203,13 @@ public class AttributeCommandTests
 		// Set some attributes with unique test strings
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE1_UNIQUE #1=test_string_WIPE_val1_unique"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&WIPE2_UNIQUE #1=test_string_WIPE_val2_unique"));
-		
+
 		// Verify they exist
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
 		var attr1Before = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE1_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr1Before.IsAttribute).IsTrue();
-		
+
 		// Wipe them with pattern
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe #1/WIPE*_UNIQUE"));
 
@@ -225,7 +225,7 @@ public class AttributeCommandTests
 		var attr1After = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE1_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr1After.IsAttribute).IsFalse();
-		
+
 		var attr2After = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "WIPE2_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr2After.IsAttribute).IsFalse();
@@ -237,7 +237,7 @@ public class AttributeCommandTests
 	{
 		// Set an attribute with unique name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&LOCKTEST_UNIQUE_ATTR #1=test_string_ATRLOCK_value_unique"));
-		
+
 		// Lock it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/LOCKTEST_UNIQUE_ATTR=on"));
 
@@ -252,16 +252,16 @@ public class AttributeCommandTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "LOCKTEST_UNIQUE_ATTR",
 			IAttributeService.AttributeMode.Read, false);
-		
+
 		await Assert.That(attr.IsAttribute).IsTrue();
-		
+
 		// Check that it's locked (would need to check flags)
 		var isLocked = attr.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(isLocked).IsTrue();
-		
+
 		// Unlock it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/LOCKTEST_UNIQUE_ATTR=off"));
-		
+
 		// Verify unlock notification sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -281,7 +281,7 @@ public class AttributeCommandTests
 	{
 		// Set an attribute with unique name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&QUERYLOCK_UNIQUE_ATTR #1=test_value_unique_query"));
-		
+
 		// Query lock status (no =on or =off)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/QUERYLOCK_UNIQUE_ATTR"));
 
@@ -289,7 +289,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(
-				Arg.Any<AnySharpObject>(), 
+				Arg.Any<AnySharpObject>(),
 				"Attribute QUERYLOCK_UNIQUE_ATTR is unlocked."
 			);
 	}
@@ -341,7 +341,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_TEST=World,Universe"));
 
 		// Verify the attribute was changed
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Hello Universe");
 	}
@@ -358,7 +358,7 @@ public class AttributeCommandTests
 
 		// Verify the attribute was changed
 		// Note: RSArgs parser trims whitespace from arguments, so " End" becomes "End"
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_APPEND_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_APPEND_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("StartEnd");
 	}
@@ -374,7 +374,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_PREPEND_TEST=^,Start "));
 
 		// Verify the attribute was changed
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_PREPEND_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_PREPEND_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Start End");
 	}
@@ -390,7 +390,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/first #1/EDIT_FIRST_TEST=foo,qux"));
 
 		// Verify only first occurrence was replaced
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_FIRST_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_FIRST_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("qux bar foo baz");
 	}
@@ -406,7 +406,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/EDIT_ALL_TEST=foo,qux"));
 
 		// Verify all occurrences were replaced
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_ALL_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_ALL_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("qux bar qux baz");
 	}
@@ -422,7 +422,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/check #1/EDIT_CHECK_TEST=Original,Changed"));
 
 		// Verify the attribute was NOT changed
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_CHECK_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_CHECK_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("Original");
 	}
@@ -438,7 +438,7 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit/regexp #1/EDIT_REGEX_TEST=\\\\d+,XXX"));
 
 		// Verify the regex replacement worked
-		var attr = await Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_REGEX_TEST"]);
+		var attr = Database.GetAttributeAsync(player.Object.DBRef, ["EDIT_REGEX_TEST"]);
 		var attrList = await attr!.ToListAsync();
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("fooXXXbar");
 	}

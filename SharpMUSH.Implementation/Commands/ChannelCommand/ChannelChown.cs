@@ -16,7 +16,7 @@ public static class ChannelChown
 			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
-		
+
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -25,7 +25,7 @@ public static class ChannelChown
 		}
 
 		var channel = maybeChannel.AsChannel;
-		
+
 		if (await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("#-1 YOU CANNOT MODIFY THIS CHANNEL.");

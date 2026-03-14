@@ -1,23 +1,23 @@
-﻿using System.Globalization;
-using OneOf.Types;
+﻿using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using System.Globalization;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
 public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<ValueTask<MString?>> ParsedMessage)
 {
-    public static implicit operator CallState(MString? m) => new(m);
-    public static implicit operator CallState(DBRef m) => new(m);
-    public static implicit operator CallState(AnySharpObject m) => new(m.Object().DBRef);
-    public static implicit operator CallState(bool m) => new(m);
-    public static implicit operator CallState(int m) => new(m);
-    public static implicit operator CallState(long m) => new(m);
-    public static implicit operator CallState(double m) => new(m);
-    public static implicit operator CallState(decimal m) => new(m);
-    public static implicit operator CallState(string m) => new(m);
-    public static implicit operator CallState(Error<string> m) => new(m.Value);
+	public static implicit operator CallState(MString? m) => new(m);
+	public static implicit operator CallState(DBRef m) => new(m);
+	public static implicit operator CallState(AnySharpObject m) => new(m.Object().DBRef);
+	public static implicit operator CallState(bool m) => new(m);
+	public static implicit operator CallState(int m) => new(m);
+	public static implicit operator CallState(long m) => new(m);
+	public static implicit operator CallState(double m) => new(m);
+	public static implicit operator CallState(decimal m) => new(m);
+	public static implicit operator CallState(string m) => new(m);
+	public static implicit operator CallState(Error<string> m) => new(m.Value);
 
 	public CallState(MString? Message, int Depth)
 		: this(Message ?? MModule.empty(), Depth, null, () => ValueTask.FromResult(Message)) { }
@@ -26,11 +26,11 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 		: this(Message ?? MModule.empty(), 0, null, () => ValueTask.FromResult(Message)) { }
 
 	public CallState(int Message) : this(Message.ToString()) { }
-	
+
 	public CallState(long Message) : this(Message.ToString()) { }
-	
+
 	public CallState(Error<string> Message) : this(Message.Value) { }
-	
+
 	public CallState(DBRef Message) : this(Message.ToString()) { }
 
 	public CallState(double Message) : this(Message.ToString(CultureInfo.InvariantCulture)) { }

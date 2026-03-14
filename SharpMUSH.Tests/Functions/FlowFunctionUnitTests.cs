@@ -4,8 +4,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class FlowFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
@@ -20,7 +20,7 @@ public class FlowFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 
 	[Test]
 	[Arguments("if(1,True,False)", "True")]
@@ -33,5 +33,5 @@ public class FlowFunctionUnitTests
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
-	
+
 }

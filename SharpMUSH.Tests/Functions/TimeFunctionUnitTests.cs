@@ -4,8 +4,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class TimeFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
@@ -70,7 +70,7 @@ public class TimeFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("ctime(#0)", "")]
 	public async Task Ctime(string str, string expected)

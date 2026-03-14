@@ -1,0 +1,172 @@
+@page "/admin/config/sitelock"
+@page "/admin/config/sitelockrules"
+@layout SharpMUSH.Client.Layout.ConfigLayout
+@using SharpMUSH.Client.Services
+@inject SitelockService SitelockService
+@inject ISnackbar Snackbar
+
+<PageTitle>Sitelock Rules - Configuration</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
+    <MudText Typo="Typo.h4" GutterBottom="true">Sitelock Rules</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Control which sites can connect, create players, or use guest accounts.
+        Access rules: <code>!connect</code>, <code>!create</code>, <code>!guest</code>, <code>register</code>, <code>suspect</code>
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Add Sitelock Rule</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="5">
+                    <MudTextField @bind-Value="_newHostPattern" 
+                                  Label="Host Pattern" 
+                                  Variant="Variant.Outlined"
+                                  HelperText="e.g., *.example.com or 192.168.1.*" />
+                </MudItem>
+                <MudItem xs="12" md="5">
+                    <MudTextField @bind-Value="_newAccessRulesText" 
+                                  Label="Access Rules (comma-separated)" 
+                                  Variant="Variant.Outlined"
+                                  HelperText="e.g., !connect, suspect" />
+                </MudItem>
+                <MudItem xs="12" md="2">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               OnClick="AddSitelockRule"
+                               Disabled="string.IsNullOrWhiteSpace(_newHostPattern) || string.IsNullOrWhiteSpace(_newAccessRulesText)"
+                               FullWidth="true"
+                               StartIcon="@Icons.Material.Filled.Add">
+                        Add
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Configured Rules</MudText>
+            
+            @if (_sitelockRules == null || !_sitelockRules.Any())
+            {
+                <MudAlert Severity="Severity.Info">No sitelock rules configured.</MudAlert>
+            }
+            else
+            {
+                <MudList T="string">
+                    @foreach (var rule in _sitelockRules.OrderBy(r => r.Key))
+                    {
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between align-center" style="width: 100%">
+                                <div>
+                                    <MudText Typo="Typo.body1"><strong>@rule.Key</strong></MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @string.Join(", ", rule.Value)
+                                    </MudText>
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => DeleteSitelockRule(rule.Key))" />
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private bool _loading = true;
+    private Dictionary<string, string[]> _sitelockRules = new();
+    private string _newHostPattern = string.Empty;
+    private string _newAccessRulesText = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSitelockRules();
+    }
+
+    private async Task LoadSitelockRules()
+    {
+        _loading = true;
+        try
+        {
+            var rules = await SitelockService.GetSitelockRulesAsync();
+            _sitelockRules = rules ?? new Dictionary<string, string[]>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading sitelock rules: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task AddSitelockRule()
+    {
+        if (string.IsNullOrWhiteSpace(_newHostPattern) || string.IsNullOrWhiteSpace(_newAccessRulesText))
+            return;
+
+        try
+        {
+            var accessRules = _newAccessRulesText
+                .Split(',')
+                .Select(r => r.Trim())
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .ToArray();
+
+            if (accessRules.Length == 0)
+            {
+                Snackbar.Add("At least one access rule is required", Severity.Warning);
+                return;
+            }
+
+            var success = await SitelockService.AddSitelockRuleAsync(_newHostPattern.Trim(), accessRules);
+            if (success)
+            {
+                Snackbar.Add($"Sitelock rule for '{_newHostPattern}' added successfully", Severity.Success);
+                _newHostPattern = string.Empty;
+                _newAccessRulesText = string.Empty;
+                await LoadSitelockRules();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add sitelock rule", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding sitelock rule: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteSitelockRule(string hostPattern)
+    {
+        try
+        {
+            var success = await SitelockService.DeleteSitelockRuleAsync(hostPattern);
+            if (success)
+            {
+                Snackbar.Add($"Sitelock rule for '{hostPattern}' removed successfully", Severity.Success);
+                await LoadSitelockRules();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to remove sitelock rule", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error removing sitelock rule: {ex.Message}", Severity.Error);
+        }
+    }
+}

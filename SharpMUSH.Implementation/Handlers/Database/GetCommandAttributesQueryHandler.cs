@@ -1,7 +1,5 @@
 using Mediator;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Text.RegularExpressions;
@@ -28,14 +26,14 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 
 			var plainValue = attr.Value.ToPlainText();
 			var match = CommandDiscoveryService.CommandPatternRegex().Match(plainValue);
-			
+
 			if (!match.Success)
 				continue;
 
 			// Extract command pattern and determine if it's REGEX or wildcard
 			var pattern = match.Value.Remove(match.Length - 1, 1).Remove(0, 1);
 			var isRegex = attr.Flags.Any(flag => flag.Name == "REGEX");
-			
+
 			try
 			{
 				// Pre-compile the regex pattern

@@ -10,18 +10,18 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class ForwardMail
 {
-	public static async ValueTask<MString>  Handle(IMUSHCodeParser parser,
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser,
 		IExpandedObjectDataService objectDataService,
-		ILocateService? locateService, 
+		ILocateService? locateService,
 		IPermissionService? permissionService,
-		IMediator? mediator, 
+		IMediator? mediator,
 		int mailNumber, string target)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
 		var maybeLocate = await locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
-		
+
 		if (maybeLocate.IsError)
 		{
 			return maybeLocate.AsError.Message!;
@@ -31,14 +31,14 @@ public static class ForwardMail
 		{
 			return MModule.single("MAIL: Cannot forward to non-player.");
 		}
-		
+
 		var targetPlayer = maybeLocate.AsSharpObject.AsPlayer;
-		
+
 		if (!permissionService!.PassesLock(executor, targetPlayer, LockType.Mail))
 		{
 			return MModule.single($"MAIL: {targetPlayer.Object.Name} does not wish to receive mail from you.");
 		}
-		
+
 		var mail = await mediator!.Send(new GetMailQuery(executor.AsPlayer, mailNumber, currentFolder));
 
 		if (mail is null)
@@ -49,9 +49,9 @@ public static class ForwardMail
 		mail.Forwarded = true;
 		mail.Subject = MModule.concat(MModule.single("Fwd: "), mail.Subject);
 		mail.DateSent = DateTimeOffset.UtcNow;
-		
+
 		await mediator.Send(new SendMailCommand(executor.Object(), targetPlayer, mail));
-		
+
 		return MModule.single(targetPlayer.Object.DBRef.ToString());
 	}
 }

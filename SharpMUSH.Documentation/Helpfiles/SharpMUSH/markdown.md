@@ -13,11 +13,42 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 - **Links**: `[text](url)` or `<url>` (rendered as ANSI OSC 8 hyperlinks, clickable in compatible terminals)
 - **Lists**: Ordered (`1. Item`) and unordered (`- Item`) with proper indentation and ANSI-styled bullets
 - **Tables**: Pipe-delimited tables with column alignment (`:---` left, `:---:` center, `---:` right)
-- **Code Blocks**: Triple-backtick code blocks with 2-space indentation
+- **Code Blocks**: Triple-backtick fenced code blocks with optional language tag for syntax highlighting (see below)
 - **Block Quotes**: `> Quote` rendered with 2-space indentation
 - **HTML Entities**: `&amp;`, `&lt;`, etc.
 
-**MUSH Special Character Escaping:**
+**Syntax Highlighting in Code Blocks:**
+
+Fenced code blocks support ANSI syntax highlighting when a language tag is specified.
+
+Use `` ```sharp `` for SharpMUSH/MUSH softcode — the full semantic token pipeline<br>
+(functions, substitutions, object references, registers, etc.) is used:
+
+```sharp
+name(%#)              -- function call + substitution
+get(#1/ATTR)          -- object reference
+%q<myvar>             -- register read
+```
+
+Standard programming languages are also supported via ColorCode and render with<br>
+`StyleDictionary.DefaultDark` colours:
+
+```json
+{"hello": 42, "active": true}
+```
+
+```python
+def greet(name):
+    return "Hello, " + name
+```
+
+Other supported language tags: `csharp`, `javascript`, `typescript`, `sql`, `xml`,<br>
+`html`, `css`, `java`, `powershell`, `fsharp`, `python`, `json`, `cpp`.
+
+Blocks without a language tag, or with an unrecognised tag, fall back to plain<br>
+2-space-indented text with no colour.
+
+**MUSH Special Character Escaping:**<br>
 When using markdown features with square brackets `[` `]` or parentheses `(` `)`, you must escape them using `%`:
 - `%[` for `[`
 - `%]` for `]`
@@ -27,7 +58,7 @@ When using markdown features with square brackets `[` `]` or parentheses `(` `)`
 **Examples:**
 
 Basic text formatting:
-```
+```sharp
 think rendermarkdown(This is **bold** and *italic* text)
 ```
 Output:
@@ -37,7 +68,7 @@ This is bold and italic text
 (with ANSI codes for bold and italic styling)
 
 Headings:
-```
+```sharp
 think rendermarkdown(# My Heading%r%rThis is a paragraph)
 ```
 Output:
@@ -50,7 +81,7 @@ This is a paragraph
 (heading is underlined and bold with ANSI codes)
 
 Links (note the escaping):
-```
+```sharp
 think rendermarkdown(%[Click here%]%(https://example.com%))
 ```
 Output:
@@ -64,7 +95,7 @@ Tables:
 think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |%r| Bob | 25 |)
 ```
 Output:
-```
+```markdown
 | Name                          | Age                           |
 |-------------------------------|-------------------------------|
 | Alice                         | 30                            |
@@ -77,7 +108,7 @@ Tables with custom width:
 think rendermarkdown(| Name | Age |%r|------|-----|%r| Alice | 30 |, 50)
 ```
 Output:
-```
+```markdown
 | Name              | Age               |
 |-------------------|-------------------|
 | Alice             | 30                |
@@ -85,23 +116,35 @@ Output:
 ```
 (table fits within 50 character width)
 
-Code blocks:
+Code blocks with syntax highlighting (use `sharp` tag for SharpMUSH softcode):
+```sharp
+think rendermarkdown(``````sharp%rname(%#)%rget(#1/ATTR)%r```````)
+```
+Output (with ANSI colour):
+```
+  name(                    <- yellow (function call)
+  %#                       <- bright blue (substitution)
+  )
+  get(#1/ATTR)             <- yellow / light blue (function + object ref)
+```
+
+Code blocks (plain, no language tag):
 ```
 think rendermarkdown(``````%rvar x = 42;%rvar y = 100;%r```````)
 ```
 Output:
-```
+```javascript
   var x = 42;
   var y = 100;
 ```
-(2-space indentation on all code lines)
+(2-space indentation, no colour)
 
 Ordered lists:
-```
+```sharp
 think rendermarkdown(1. First item%r2. Second item%r3. Third item)
 ```
 Output:
-```
+```markdown
 1. First item
 2. Second item
 3. Third item
@@ -109,11 +152,11 @@ Output:
 (numbers styled with ANSI faint)
 
 Unordered lists:
-```
+```sharp
 think rendermarkdown(- First item%r- Second item%r- Third item)
 ```
 Output:
-```
+```markdown
 - First item
 - Second item
 - Third item
@@ -121,7 +164,7 @@ Output:
 (bullets styled with ANSI faint)
 
 Block quotes:
-```
+```sharp
 think rendermarkdown(> This is a quote%r> spanning multiple lines)
 ```
 Output:
@@ -187,20 +230,20 @@ The function looks for attributes on `<object>` with specific names that define 
 **Example Usage:**
 
 Set up custom green color for headings:
-```
+```sharp
 &RENDERMARKUP`H1 #123=[ansi(hg,%0)]
 &RENDERMARKUP`H2 #123=[ansi(hc,%0)]
 think rendermarkdowncustom(# My Heading, #123)
 ```
 Output:
-```
+```markdown
 My Heading
 ==========
 ```
 (heading rendered in bright green with ANSI code hg)
 
 Set up custom code block with yellow header:
-```
+```sharp
 &RENDERMARKUP`CODEBLOCK #123=[ansi(hy,CODE:)]%r[ansi(h,%0)]
 think rendermarkdowncustom(``````%rvar x = 42;%r```````, #123)
 ```
@@ -212,12 +255,12 @@ CODE:
 (CODE: in bright yellow, code content in white)
 
 Set up custom list items with colored bullets:
-```
+```sharp
 &RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,[add(%1,1)].) %2,ansi(hb,*) %2)]
 think rendermarkdowncustom(- First%r- Second%r- Third, #123)
 ```
 Output:
-```
+```markdown
 * First
 * Second
 * Third
@@ -225,12 +268,12 @@ Output:
 (bullets in bright blue via ANSI code hb)
 
 Ordered list with custom template:
-```
+```sharp
 &RENDERMARKUP`LISTITEM #123=[if(%0,ansi(hr,[add(%1,1)].) %2,ansi(hb,*) %2)]
 think rendermarkdowncustom(1. First%r2. Second%r3. Third, #123)
 ```
 Output:
-```
+```markdown
 1. First
 2. Second
 3. Third
@@ -238,19 +281,19 @@ Output:
 (numbers in bright red via ANSI code hr)
 
 Complete example with multiple custom elements:
-```
+```sharp
 &RENDERMARKUP`H1 #123=[ansi(hc,%0)]
-&RENDERMARKUP`LISTITEM #123=[ansi(hg,→)] %2
+&RENDERMARKUP`LISTITEM #123=[ansi(hg,->)] %2
 &RENDERMARKUP`QUOTE #123=[ansi(hy,%0)]
 think rendermarkdowncustom(# Tasks%r%r- Do this%r- Do that%r%r> Important note, #123)
 ```
 Output:
-```
+```markdown
 Tasks
 =====
 
-→ Do this
-→ Do that
+-> Do this
+-> Do that
 
   Important note
 ```

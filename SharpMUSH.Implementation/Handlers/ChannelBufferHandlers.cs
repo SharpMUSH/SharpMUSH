@@ -9,7 +9,7 @@ namespace SharpMUSH.Implementation.Handlers;
 /// <summary>
 /// Handler for adding messages to channel recall buffers
 /// </summary>
-public class AddChannelMessageCommandHandler(IChannelBufferService bufferService) 
+public class AddChannelMessageCommandHandler(IChannelBufferService bufferService)
 	: ICommandHandler<AddChannelMessageCommand>
 {
 	public async ValueTask<Unit> Handle(AddChannelMessageCommand command, CancellationToken cancellationToken)

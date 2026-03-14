@@ -4,8 +4,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class InformationFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
@@ -82,11 +82,15 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("quota(%#)", "0 999999")]
-	public async Task Quota(string str, string expected)
+	public async Task Quota()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		var result = (await Parser.FunctionParse(MModule.single("quota(%#)")))?.Message!;
+		var text = result.ToPlainText();
+		// Format is "<owned_count> <max_quota>". Owned count varies by test order; max quota is always 999999.
+		var parts = text.Split(' ');
+		await Assert.That(parts).Count().IsEqualTo(2);
+		await Assert.That(int.TryParse(parts[0], out var owned) && owned >= 3).IsTrue();
+		await Assert.That(parts[1]).IsEqualTo("999999");
 	}
 
 	[Test]
@@ -122,7 +126,7 @@ public class InformationFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
-	
+
 	[Test]
 	[Arguments("version()", "")]
 	public async Task Version(string str, string expected)
@@ -165,11 +169,11 @@ public class InformationFunctionUnitTests
 		// lstats() with no arguments should return counts for all types
 		var result = (await Parser.FunctionParse(MModule.single("lstats()")))?.Message!;
 		var stats = result.ToPlainText();
-		
+
 		// Should return 5 space-separated numbers: players things exits rooms garbage
 		var parts = stats.Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(5);
-		
+
 		// Each should be a valid number
 		foreach (var part in parts)
 		{
@@ -187,7 +191,7 @@ public class InformationFunctionUnitTests
 		// lstats() with a type filter should return a single count
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var count = result.ToPlainText();
-		
+
 		// Should return a single number
 		await Assert.That(int.TryParse(count, out var num)).IsTrue();
 		await Assert.That(num).IsGreaterThanOrEqualTo(0);
@@ -227,7 +231,7 @@ public class InformationFunctionUnitTests
 		// In a live environment with actual tasks, this would return task info
 		var result = (await Parser.FunctionParse(MModule.single("pidinfo(1)")))?.Message!;
 		var text = result.ToPlainText();
-		
+
 		// Should either be "#-1 NO SUCH PID" (if no task) or task info
 		await Assert.That(text).IsNotNull();
 		await Assert.That(text).IsNotEmpty();
@@ -250,10 +254,10 @@ public class InformationFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single("colors()")))?.Message!;
 		var colors = result.ToPlainText();
-		
+
 		// Should return a non-empty list of colors
 		await Assert.That(colors).IsNotEmpty();
-		
+
 		// Should contain some known color names
 		await Assert.That(colors).Contains("red");
 		await Assert.That(colors).Contains("blue");
@@ -266,7 +270,7 @@ public class InformationFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var colors = result.ToPlainText();
-		
+
 		// Should return colors matching the wildcard
 		await Assert.That(colors).IsNotEmpty();
 		await Assert.That(colors).Contains(expectedContains);
@@ -294,7 +298,7 @@ public class InformationFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var xterm = result.ToPlainText();
-		
+
 		// Should return a valid xterm number
 		await Assert.That(int.TryParse(xterm, out var xtermNum)).IsTrue();
 		await Assert.That(xtermNum).IsGreaterThanOrEqualTo(0);
@@ -307,7 +311,7 @@ public class InformationFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var ansiCode = result.ToPlainText();
-		
+
 		// Should return a valid ANSI color code
 		await Assert.That(ansiCode).IsNotEmpty();
 		// Yellow should map to 'y' or 'hy' (highlight yellow)
@@ -320,7 +324,7 @@ public class InformationFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		var names = result.ToPlainText();
-		
+
 		// Should return color names matching the hex value
 		await Assert.That(names).IsNotEmpty();
 		await Assert.That(names).Contains(expectedContains);

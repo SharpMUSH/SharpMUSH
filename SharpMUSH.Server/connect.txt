@@ -1,0 +1,18 @@
+          ==         ==          
+         ====       ====         
+       =======     =======                  Welcome to SharpMUSH!
+      =========   =========      
+     =========== ===========         
+    =================== =====          
+  ======-  ===========   ======      The following commands are available:
+ ======     =========     ======       
+======   =   =======   =   ======    - Connect to a Character
+======   ==   =====   ==   ======        connect <name> <password>
+ =====   ===   ===   ===   =====     - Create a new Character  
+ =====   ====   =   ====   =====         create <name> <password>
+  ====   =====     =====   ====      - See who is online
+   ===    ====     ====    ===           WHO
+   ===     ===     ===-    ===   
+    ==     ===     ===     ==        
+     =      ==     ==      =     
+             =     =             

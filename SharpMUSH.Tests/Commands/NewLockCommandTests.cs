@@ -1,12 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -17,8 +12,8 @@ namespace SharpMUSH.Tests.Commands;
 [NotInParallel]
 public class NewLockCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
@@ -34,7 +29,7 @@ public class NewLockCommandTests
 
 		// Execute @elock command - should not throw
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@elock #{newDb.Number}=#TRUE"));
-		
+
 		// Command should execute without error
 		await Assert.That(result).IsNotNull();
 	}
@@ -48,7 +43,7 @@ public class NewLockCommandTests
 
 		// Execute @eunlock command - should not throw
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@eunlock #{newDb.Number}"));
-		
+
 		// Command should execute without error
 		await Assert.That(result).IsNotNull();
 	}
@@ -62,7 +57,7 @@ public class NewLockCommandTests
 
 		// Execute @ulock command - should not throw
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@ulock #{newDb.Number}=#TRUE"));
-		
+
 		// Command should execute without error
 		await Assert.That(result).IsNotNull();
 	}
@@ -76,7 +71,7 @@ public class NewLockCommandTests
 
 		// Execute @uunlock command - should not throw
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@uunlock #{newDb.Number}"));
-		
+
 		// Command should execute without error
 		await Assert.That(result).IsNotNull();
 	}

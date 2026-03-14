@@ -9,12 +9,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Markdig" Version="0.44.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+		<PackageReference Include="ColorCode.Core" Version="2.0.15" />
+		<PackageReference Include="Markdig" Version="1.1.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
 		<PackageReference Include="OneOf" Version="3.0.271" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
 		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
 	</ItemGroup>
 

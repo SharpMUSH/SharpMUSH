@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -7,8 +6,8 @@ namespace SharpMUSH.Tests.Configuration;
 
 public class ColorTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 	private IOptionsWrapper<ColorsOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<ColorsOptions>>();
 
 	[Test]

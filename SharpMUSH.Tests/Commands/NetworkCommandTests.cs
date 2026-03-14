@@ -9,8 +9,8 @@ namespace SharpMUSH.Tests.Commands;
 
 public class NetworkCommandTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
@@ -57,7 +57,7 @@ public class NetworkCommandTests
 		// Verify the command executed and sent output to the user
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 

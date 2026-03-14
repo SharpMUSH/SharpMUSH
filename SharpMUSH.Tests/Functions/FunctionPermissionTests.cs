@@ -1,16 +1,13 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
@@ -19,8 +16,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class FunctionPermissionTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IServiceProvider Services => WebAppFactoryArg.Services;
@@ -40,6 +37,7 @@ public class FunctionPermissionTests
 				Registers: new ConcurrentStack<Dictionary<string, MString>>([[]]),
 				IterationRegisters: [],
 				RegexRegisters: [],
+				SwitchStack: [],
 				ExecutionStack: [],
 				EnvironmentRegisters: [],
 				CurrentEvaluation: null,
@@ -66,7 +64,7 @@ public class FunctionPermissionTests
 		// Test that a wizard can call a WizardOnly function (e.g., pcreate)
 		var parser = WebAppFactoryArg.FunctionParser;
 		var result = await parser.FunctionParse(MModule.single("pcreate(TestWiz,password)"));
-		
+
 		// Should not return a permission error
 		await Assert.That(result?.Message?.ToPlainText()).DoesNotContain("PERMISSION DENIED");
 	}
@@ -87,7 +85,7 @@ public class FunctionPermissionTests
 
 		// Try to call a WizardOnly function (pcreate)
 		var result = await parser.FunctionParse(MModule.single("pcreate(AnotherPlayer,password)"));
-		
+
 		// Should return a permission error
 		await Assert.That(result?.Message?.ToPlainText()).Contains("PERMISSION DENIED");
 	}
@@ -98,7 +96,7 @@ public class FunctionPermissionTests
 		// Test that a wizard can call an AdminOnly function (e.g., beep)
 		var parser = WebAppFactoryArg.FunctionParser;
 		var result = await parser.FunctionParse(MModule.single("beep()"));
-		
+
 		// Should not return a permission error
 		await Assert.That(result?.Message?.ToPlainText()).DoesNotContain("PERMISSION DENIED");
 	}
@@ -119,7 +117,7 @@ public class FunctionPermissionTests
 
 		// Try to call an AdminOnly function (beep)
 		var result = await parser.FunctionParse(MModule.single("beep()"));
-		
+
 		// Should return a permission error
 		await Assert.That(result?.Message?.ToPlainText()).Contains("PERMISSION DENIED");
 	}

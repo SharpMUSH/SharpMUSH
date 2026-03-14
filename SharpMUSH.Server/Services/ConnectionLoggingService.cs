@@ -7,7 +7,7 @@ namespace SharpMUSH.Server.Services;
 /// <summary>
 /// Background service that listens to connection state changes and logs them using structured logging.
 /// </summary>
-public class ConnectionLoggingService(IConnectionService connectionService, ILogger<ConnectionLoggingService> logger) 
+public class ConnectionLoggingService(IConnectionService connectionService, ILogger<ConnectionLoggingService> logger)
 	: IHostedService
 {
 	public Task StartAsync(CancellationToken cancellationToken)
@@ -26,7 +26,7 @@ public class ConnectionLoggingService(IConnectionService connectionService, ILog
 	private void LogConnectionStateChange((long Handle, Library.Models.DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState) change)
 	{
 		var (handle, dbRef, oldState, newState) = change;
-		
+
 		using (logger.BeginScope(new Dictionary<string, string>
 		{
 			["Category"] = "Connection",

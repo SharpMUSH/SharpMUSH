@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
@@ -8,20 +7,21 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Immutable;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class FolderMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, 
-		IExpandedObjectDataService objectDataService, 
-		IMediator? mediator, 
-		INotifyService? notifyService, 
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser,
+		IExpandedObjectDataService objectDataService,
+		IMediator? mediator,
+		INotifyService? notifyService,
 		MString? arg0, MString? arg1, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
 		var executorPlayer = executor.AsPlayer;
-		
+
 		var folderInfo =
 			await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
 
@@ -37,7 +37,7 @@ public static class FolderMail
 				return await RenameMailFolder(parser, objectDataService, mediator, notifyService, folder, executor, executorPlayer, newName, folderInfo);
 
 			case ["UNFOLDER"] when (arg0, arg1) is ({ } folder, null):
-				return await UnMailFolder(parser,objectDataService, mediator, notifyService, executorPlayer, folder, executor, folderInfo);
+				return await UnMailFolder(parser, objectDataService, mediator, notifyService, executorPlayer, folder, executor, folderInfo);
 
 			case ["FILE"] when (arg0, arg1) is ({ } msgList, { } folder):
 				return await MoveToMailFolder(parser, objectDataService, mediator, notifyService, msgList, executor, folder, folderInfo);
@@ -73,13 +73,13 @@ public static class FolderMail
 				.ToImmutableHashSet()
 				.Add(folder.ToPlainText())
 				.ToArray()),
-			executor.Object(), 
+			executor.Object(),
 			ignoreNull: true);
 
 		return folder;
 	}
 
-	private static async Task<MString> UnMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService,  SharpPlayer executorPlayer, MString folder,
+	private static async Task<MString> UnMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, SharpPlayer executorPlayer, MString folder,
 		AnySharpObject executor, ExpandedMailData? folderInfo)
 	{
 		await mediator!.Send(new RenameMailFolderCommand(executorPlayer, folder.ToPlainText(), "INBOX"));
@@ -90,7 +90,7 @@ public static class FolderMail
 				.ToImmutableArray()
 				.Remove(folder.ToPlainText())
 				.ToArray()),
-			executor.Object(), 
+			executor.Object(),
 			ignoreNull: true);
 		return MModule.single("");
 	}
@@ -113,7 +113,7 @@ public static class FolderMail
 				.ToImmutableHashSet()
 				.Remove(folder.ToPlainText()).Add(newName.ToPlainText())
 				.ToArray()),
-			executor.Object(), 
+			executor.Object(),
 			ignoreNull: true);
 
 		return MModule.single("");

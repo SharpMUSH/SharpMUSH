@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using DotNext.Collections.Generic;
+﻿using DotNext.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
@@ -12,6 +11,9 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -23,31 +25,69 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Who(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var isWizard = await executor.IsWizard();
 
 		var everyone = ConnectionService!.GetAll();
-		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
-		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
-		
+
+		// PennMUSH wizard format: Player Name (18), Loc # (7), On For (7), Idle (5), Cmds (4), Des (3), Host
+		const string wizFmt = "{0,-18} {1,7} {2,7} {3,5} {4,4} {5,3} {6}";
+		// PennMUSH mortal format: Player Name (21), On For (9), Idle (6), Doing (text)
+		const string mortFmt = "{0,-21} {1,9} {2,6}  {3}";
+
+		string header;
+		if (isWizard)
+		{
+			header = string.Format(wizFmt, "Player Name", "Loc #", "On For", "Idle", "Cmds", "Des", "Host");
+		}
+		else
+		{
+			header = string.Format(mortFmt, "Player Name", "On For", "Idle", "Doing");
+		}
+
 		var filteredPlayers = await everyone
 			.Where(player => player.Ref.HasValue)
-			.Select(async (player,i,ct) =>
+			.Select(async (player, i, ct) =>
 			{
 				var obj = await Mediator!.Send(new GetObjectNodeQuery(player.Ref!.Value), ct);
 				var doingText = await Commands.GetDoingText(executor, obj.Known);
-				
-				return (string.Format(
-					fmt,
-					obj.Known.Object().Name,
-					TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
-					TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
-					doingText), obj.Known);
+
+				string line;
+				if (isWizard)
+				{
+					var location = obj.Known.IsContent
+						? (await obj.Known.AsContent.Location())?.Object().DBRef.ToString() ?? "*NOWHERE*"
+						: "*NOWHERE*";
+					var doing = await AttributeService!.GetAttributeAsync(executor, obj.Known, "DOING",
+						IAttributeService.AttributeMode.Read, false);
+					var doingLength = doing.IsAttribute ? MModule.getLength(doing.AsAttribute.Last().Value) : 0;
+					line = string.Format(wizFmt,
+						obj.Known.Object().Name,
+						location,
+						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
+						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
+						player.CommandCount,
+						doingLength,
+						player.HostName);
+				}
+				else
+				{
+					line = string.Format(mortFmt,
+						obj.Known.Object().Name,
+						TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3),
+						TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero),
+						doingText);
+				}
+
+				return (line, obj.Known);
 			})
 			.Where(async (player, _) => await PermissionService!.CanSee(executor, player.Known))
 			.ToListAsync();
 
 		var sortedPlayers = filteredPlayers.Select(x => x.Item1).ToArray();
-		
-		var footer = $"{sortedPlayers.Length} players logged in.";
+		var count = sortedPlayers.Length;
+		var footer = count == 1
+			? "There is 1 player connected."
+			: $"There are {count} players connected.";
 
 		var message = $"{header}\n{string.Join('\n', sortedPlayers)}\n{footer}";
 
@@ -104,13 +144,13 @@ public partial class Commands
 				"invalid player name",
 				"#-1", // no valid player
 				username);
-			
+
 			await NotifyService!.Notify(handle, "Could not find that player.");
 			return new CallState("#-1 PLAYER NOT FOUND");
 		}
 
 		var nameItem = nameItems.First();
-		
+
 		var foundDB = await nameItem.Match(
 			async dbref => (await Mediator!.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
 				? player
@@ -131,7 +171,7 @@ public partial class Commands
 				"player not found",
 				"#-1", // no valid player
 				username);
-			
+
 			await NotifyService!.Notify(handle, "Could not find that player.");
 			return new CallState("#-1 PLAYER NOT FOUND");
 		}
@@ -153,7 +193,7 @@ public partial class Commands
 				"invalid password",
 				$"#{foundDB.Object.Key}", // valid player objid
 				foundDB.Object.Name);
-			
+
 			await NotifyService!.Notify(handle, "Invalid Password.");
 			return new CallState("#-1 INVALID PASSWORD");
 		}
@@ -180,7 +220,11 @@ public partial class Commands
 			connectionCount.ToString(),
 			parser.CurrentState.Handle!.Value.ToString());
 
-		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, "Connected!");
+		// Query player flags and send preferences to ConnectionServer for protocol-aware output formatting
+		await SyncPlayerOutputPreferences(parser.CurrentState.Handle!.Value, foundDB.Object);
+
+		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
+		await ShowPostLoginMessages(parser, parser.CurrentState.Handle!.Value, new AnySharpObject(foundDB));
 		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
 		return new CallState(playerDbRef);
 	}
@@ -226,17 +270,12 @@ public partial class Commands
 		if (maxGuests == -1)
 		{
 			// Find a guest that's not currently connected
-			foreach (var guest in guestPlayers)
-			{
-				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-				var guestConnectionCount = await ConnectionService!.Get(guestDbRef).CountAsync();
-				
-				if (guestConnectionCount == 0)
+			selectedGuest = await guestPlayers.ToAsyncEnumerable()
+				.FirstOrDefaultAsync(async (guest, ct) =>
 				{
-					selectedGuest = guest;
-					break;
-				}
-			}
+					var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
+					return await ConnectionService!.Get(guestDbRef).CountAsync(ct) == 0;
+				});
 
 			if (selectedGuest == null)
 			{
@@ -265,12 +304,13 @@ public partial class Commands
 		{
 			// Limited to maxGuests total connections
 			// Count total guest connections
-			var totalGuestConnections = 0;
-			foreach (var guest in guestPlayers)
-			{
-				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
-				totalGuestConnections += await ConnectionService!.Get(guestDbRef).CountAsync();
-			}
+			var totalGuestConnections = await guestPlayers.ToAsyncEnumerable()
+				.Select((SharpPlayer guest, CancellationToken ct) =>
+				{
+					var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
+					return ConnectionService!.Get(guestDbRef).CountAsync(ct);
+				})
+				.SumAsync();
 
 			if (totalGuestConnections >= maxGuests)
 			{
@@ -298,7 +338,7 @@ public partial class Commands
 			{
 				var guestDbRef = new DBRef(guest.Object.Key, guest.Object.CreationTime);
 				var guestConnections = await ConnectionService!.Get(guestDbRef).CountAsync();
-				
+
 				if (guestConnections < minConnections)
 				{
 					minConnections = guestConnections;
@@ -342,7 +382,11 @@ public partial class Commands
 			connectionCount.ToString(),
 			handle.ToString());
 
-		await NotifyService!.Notify(handle, "Connected!");
+		// Query player flags and send preferences to ConnectionServer for protocol-aware output formatting
+		await SyncPlayerOutputPreferences(handle, selectedGuest.Object);
+
+		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
+		await ShowPostLoginMessages(parser, handle, new AnySharpObject(selectedGuest), isGuest: true);
 		Logger?.LogDebug("Successful guest login for {@guest}", selectedGuest.Object);
 		return new CallState(playerDbRef);
 	}
@@ -350,18 +394,112 @@ public partial class Commands
 	[SharpCommand(Name = "QUIT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Quit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		var handle = parser.CurrentState.Handle!.Value;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
-		
-		// Display Disconnect Banner (DownMotd) if configured
-		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
-		if (!string.IsNullOrWhiteSpace(motdData?.DownMotd))
+
+		// Display quit file if configured
+		var quitText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.QuitFile);
+		if (!string.IsNullOrWhiteSpace(quitText))
 		{
-			await NotifyService!.Notify(executor, motdData.DownMotd);
+			await NotifyService!.Notify(executor, quitText);
 		}
-		
-		await ConnectionService!.Disconnect(parser.CurrentState.Handle!.Value);
+
+		// Clean up Server-side connection state
+		await ConnectionService!.Disconnect(handle);
+
+		// Tell ConnectionServer to close the actual socket connection
+		if (MessageBus != null)
+		{
+			await MessageBus.Publish(new DisconnectConnectionMessage(handle, "QUIT"));
+		}
+
 		return new None();
+	}
+
+	/// <summary>
+	/// Query player flags and send output preferences to ConnectionServer
+	/// </summary>
+	private static async Task SyncPlayerOutputPreferences(long handle, SharpObject player)
+	{
+		// Query player flags: ANSI, COLOR, XTERM256
+		var ansiEnabled = await player.Flags.Value.AnyAsync(f =>
+			string.Equals(f.Name, "ANSI", StringComparison.OrdinalIgnoreCase));
+		var colorEnabled = await player.Flags.Value.AnyAsync(f =>
+			string.Equals(f.Name, "COLOR", StringComparison.OrdinalIgnoreCase));
+		var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
+			string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase));
+
+		// Send preferences to ConnectionServer via Kafka
+		if (MessageBus != null)
+		{
+			await MessageBus.Publish(new UpdatePlayerPreferencesMessage(
+				handle,
+				ansiEnabled,
+				colorEnabled,
+				xterm256Enabled
+			));
+
+			Logger?.LogDebug("Synced output preferences for handle {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}",
+				handle, ansiEnabled, colorEnabled, xterm256Enabled);
+		}
+	}
+
+	/// <summary>
+	/// Reads a message file by path, returning its content or null if the file does not exist.
+	/// </summary>
+	private static async Task<string?> ReadMessageFileAsync(string? filePath)
+	{
+		if (string.IsNullOrEmpty(filePath)) return null;
+		if (!File.Exists(filePath)) return null;
+		return await File.ReadAllTextAsync(filePath);
+	}
+
+	/// <summary>
+	/// Shows post-login messages (MOTD, wizard MOTD, guest file) and performs an auto-look.
+	/// Matches PennMUSH login experience.
+	/// </summary>
+	private static async Task ShowPostLoginMessages(IMUSHCodeParser parser, long handle, AnySharpObject player, bool isGuest = false)
+	{
+		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>();
+
+		// Show MOTD (from database, fallback to motd.txt file)
+		var motdText = motdData?.ConnectMotd;
+		if (string.IsNullOrWhiteSpace(motdText))
+		{
+			motdText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.MessageOfTheDayFile);
+		}
+		if (!string.IsNullOrWhiteSpace(motdText))
+		{
+			await NotifyService!.Notify(handle, motdText);
+		}
+
+		// Show wizard MOTD for wizards/royalty
+		if (await player.IsWizard() || await player.IsRoyalty())
+		{
+			var wizmotdText = motdData?.WizardMotd;
+			if (string.IsNullOrWhiteSpace(wizmotdText))
+			{
+				wizmotdText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.WizMessageOfTheDayFile);
+			}
+			if (!string.IsNullOrWhiteSpace(wizmotdText))
+			{
+				await NotifyService!.Notify(handle, wizmotdText);
+			}
+		}
+
+		// Show guest file for guest players
+		if (isGuest)
+		{
+			var guestText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.GuestFile);
+			if (!string.IsNullOrWhiteSpace(guestText))
+			{
+				await NotifyService!.Notify(handle, guestText);
+			}
+		}
+
+		// Auto-look at the player's current location
+		await parser.CommandParse(handle, ConnectionService!, MModule.single("look"));
 	}
 
 	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]

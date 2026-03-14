@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
@@ -41,7 +39,7 @@ public partial class PennMUSHDatabaseParser
 	private async Task<PennMUSHDatabase> ParseAsync(StreamReader reader, CancellationToken cancellationToken)
 	{
 		_nextLine = null;
-		
+
 		var database = new PennMUSHDatabase
 		{
 			Version = "Unknown"
@@ -64,7 +62,7 @@ public partial class PennMUSHDatabaseParser
 			cancellationToken.ThrowIfCancellationRequested();
 
 			var line = await PeekLineAsync(reader, cancellationToken);
-			
+
 			if (line == null)
 			{
 				break;
@@ -77,7 +75,7 @@ public partial class PennMUSHDatabaseParser
 				if (obj != null)
 				{
 					database.Objects.Add(obj);
-					
+
 					if (database.Objects.Count % 100 == 0)
 					{
 						_logger.LogDebug("Parsed {Count} objects", database.Objects.Count);
@@ -122,13 +120,13 @@ public partial class PennMUSHDatabaseParser
 		// PennMUSH databases may have configuration flags at the start
 		// Format varies by version, but typically includes flags like:
 		// +FLAGS, +POWERS, etc.
-		
+
 		var line = await PeekLineAsync(reader, cancellationToken);
 
 		while (line != null && (line.StartsWith('+') || line.StartsWith('~')))
 		{
 			await ReadLineAsync(reader, cancellationToken);
-			
+
 			var parts = line.Split('|', 2);
 			if (parts.Length >= 1)
 			{
@@ -145,7 +143,7 @@ public partial class PennMUSHDatabaseParser
 	{
 		// PennMUSH object format starts with !<number>
 		var line = await ReadLineAsync(reader, cancellationToken);
-		
+
 		if (string.IsNullOrWhiteSpace(line))
 		{
 			return null;
@@ -172,7 +170,7 @@ public partial class PennMUSHDatabaseParser
 		var exits = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
 		var link = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
 		var next = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
-		
+
 		// Locks
 		var lockLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
 		var locks = ParseLocks(lockLine);
@@ -180,7 +178,7 @@ public partial class PennMUSHDatabaseParser
 		var owner = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
 		var parent = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
 		var pennies = ParseInt(await ReadLineAsync(reader, cancellationToken));
-		
+
 		// Flags and type
 		var flagsLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
 		var (type, flags) = ParseFlagsAndType(flagsLine);
@@ -243,7 +241,7 @@ public partial class PennMUSHDatabaseParser
 		while (true)
 		{
 			var line = await PeekLineAsync(reader, cancellationToken);
-			
+
 			if (line == null)
 			{
 				break;
@@ -370,7 +368,7 @@ public partial class PennMUSHDatabaseParser
 	private static Dictionary<string, string> ParseLocks(string line)
 	{
 		var locks = new Dictionary<string, string>();
-		
+
 		if (string.IsNullOrWhiteSpace(line))
 		{
 			return locks;

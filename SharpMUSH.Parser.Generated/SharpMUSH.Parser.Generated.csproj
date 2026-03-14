@@ -20,14 +20,14 @@
 	
   <ItemGroup>
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
-		<PackageReference Include="Antlr4BuildTasks" Version="12.14.0" PrivateAssets="all" IncludeAssets="build" >
+		<PackageReference Include="Antlr4BuildTasks" Version="12.14.0" PrivateAssets="all" IncludeAssets="build">
 			<ToolType>antlr-ng</ToolType>
 		</PackageReference>
 		<Antlr4 Include="SharpMUSHLexer.g4" />
 		<Antlr4 Include="SharpMUSHBoolExpLexer.g4" />
 		<Antlr4 Include="SharpMUSHParser.g4" />
 		<Antlr4 Include="SharpMUSHBoolExpParser.g4" />
-		<PackageReference Include="Microsoft.Build.Utilities.Core" Version="18.0.2" />
+		<PackageReference Include="Microsoft.Build.Utilities.Core" Version="18.3.3" />
   </ItemGroup>
 	
 	<ItemGroup>

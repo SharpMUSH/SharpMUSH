@@ -1,10 +1,8 @@
-﻿using System.Collections.Immutable;
-using Antlr4.Runtime;
+﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Atn;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
@@ -15,6 +13,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Immutable;
 using LspRange = SharpMUSH.Library.Models.Range;
 
 namespace SharpMUSH.Implementation;
@@ -48,22 +47,22 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private readonly ICommandDiscoveryService _commandDiscoveryService = ServiceProvider.GetRequiredService<ICommandDiscoveryService>();
 	private readonly IAttributeService _attributeService = ServiceProvider.GetRequiredService<IAttributeService>();
 	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
-	
+
 	// Command trie for efficient prefix-based command lookup
 	private readonly CommandTrie _commandTrie = BuildCommandTrie(CommandLibrary);
-	
+
 	/// <summary>
 	/// Gets the command trie for efficient prefix-based command lookups.
 	/// </summary>
 	public CommandTrie CommandTrie => _commandTrie;
-	
+
 	/// <summary>
 	/// Builds a trie from the command library for efficient prefix matching.
 	/// </summary>
 	private static CommandTrie BuildCommandTrie(LibraryService<string, CommandDefinition> commandLibrary)
 	{
 		var trie = new CommandTrie();
-		
+
 		foreach (var (commandName, commandInfo) in commandLibrary)
 		{
 			if (commandInfo.IsSystem) // Only add system commands to trie
@@ -71,10 +70,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				trie.Add(commandName, commandInfo.LibraryInformation);
 			}
 		}
-		
+
 		return trie;
 	}
-	
+
 	public ParserState CurrentState => State.Peek();
 
 	/// <summary>
@@ -88,7 +87,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IImmutableStack<ParserState> State { get; private init; } = ImmutableStack<ParserState>.Empty;
 
 	public IMUSHCodeParser FromState(ParserState state) => new MUSHCodeParser(Logger, FunctionLibrary, CommandLibrary, Configuration, ServiceProvider, state);
-	
+
 	public Option<ParserState> StateHistory(uint index)
 	{
 		try
@@ -106,7 +105,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	public IMUSHCodeParser Push(ParserState state) => this with { State = State.Push(state) };
 
-	public MUSHCodeParser(ILogger<MUSHCodeParser> logger, 
+	public MUSHCodeParser(ILogger<MUSHCodeParser> logger,
 		LibraryService<string, FunctionDefinition> functionLibrary,
 		LibraryService<string, CommandDefinition> commandLibrary,
 		IOptionsWrapper<SharpMUSHOptions> config,
@@ -123,7 +122,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			ParserPredictionMode.SLL => PredictionMode.SLL,
 			ParserPredictionMode.LL => PredictionMode.LL,
-			_ => PredictionMode.LL // Default to LL
+			_ => PredictionMode.SLL // Default to SLL
 		};
 	}
 
@@ -147,25 +146,27 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		// Use provided parser or default to this instance
 		parser ??= this;
-		
+
 		AntlrInputStreamSpan inputStream = new(MModule.plainText(text).AsMemory(), methodName);
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
-		
+		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
+		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter = { PredictionMode = GetPredictionMode() },
 			Trace = Configuration.CurrentValue.Debug.DebugSharpParser
 		};
-		
+
 		if (Configuration.CurrentValue.Debug.DebugSharpParser)
 		{
 			sharpParser.AddErrorListener(new DiagnosticErrorListener(false));
 		}
 
 		var context = entryPoint(sharpParser);
-		
+
 		SharpMUSHParserVisitor visitor = new(Logger, parser,
 			Configuration,
 			_mediator,
@@ -176,7 +177,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_attributeService,
 			_hookService,
 			text);
-		
+
 		return visitor.Visit(context);
 	}
 
@@ -185,12 +186,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Ensure we have invocation tracking for standalone function parsing
 		// Check if tracking is already initialized - if not, create a new parser with tracking
 		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
-		
+
 		var parser = needsTracking
 			? Push(new ParserState(
 				Registers: new([[]]),
 				IterationRegisters: [],
 				RegexRegisters: [],
+				SwitchStack: [],
 				EnvironmentRegisters: [],
 				CurrentEvaluation: null,
 				ExecutionStack: [],
@@ -211,7 +213,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				TotalInvocations: new InvocationCounter(),
 				LimitExceeded: new LimitExceededFlag()))
 			: this;
-		
+
 		return ParseInternal(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 	}
 
@@ -225,6 +227,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
+		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
+		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
@@ -239,8 +243,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		}
 
 		var chatContext = sharpParser.startCommandString();
-		
-		SharpMUSHParserVisitor visitor = new(Logger, this, 
+
+		SharpMUSHParserVisitor visitor = new(Logger, this,
 			Configuration,
 			_mediator,
 			_notifyService,
@@ -248,7 +252,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_locateService,
 			_commandDiscoveryService,
 			_attributeService,
-			_hookService,text);
+			_hookService, text);
 
 		return () => visitor.Visit(chatContext);
 	}
@@ -266,6 +270,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Registers: new([[]]),
 			IterationRegisters: [],
 			RegexRegisters: [],
+			SwitchStack: [],
 			EnvironmentRegisters: [],
 			CurrentEvaluation: null,
 			ExecutionStack: [],
@@ -323,10 +328,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var plaintext = MModule.plainText(text);
 		AntlrInputStreamSpan inputStream = new(plaintext.AsMemory(), nameof(Tokenize));
 		SharpMUSHLexer sharpLexer = new(inputStream);
-		
+
 		var tokens = new List<TokenInfo>();
 		IToken token;
-		
+
 		while ((token = sharpLexer.NextToken()).Type != TokenConstants.EOF)
 		{
 			var tokenInfo = new TokenInfo
@@ -339,10 +344,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				Column = token.Column,
 				Channel = token.Channel
 			};
-			
+
 			tokens.Add(tokenInfo);
 		}
-		
+
 		return tokens;
 	}
 
@@ -357,7 +362,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
-		
+		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
+		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
@@ -366,14 +373,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			},
 			Trace = false // Don't trace during validation
 		};
-		
+
 		// Create custom error listener to collect errors
 		var errorListener = new ParserErrorListener(plaintext.ToString());
-		
+
 		// Remove default error listeners and add our custom one
 		sharpParser.RemoveErrorListeners();
 		sharpParser.AddErrorListener(errorListener);
-		
+
 		try
 		{
 			// Parse based on the specified parse type
@@ -411,7 +418,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			// Errors are collected by the error listener
 			// RecognitionException is expected during error recovery
 		}
-		
+
 		return errorListener.Errors;
 	}
 
@@ -434,7 +441,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		SharpMUSHLexer sharpLexer = new(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
-		
+		RewriteOrphanedBracketClosers(bufferedTokenSpanStream);
+		RewriteOrphanedBraceClosers(bufferedTokenSpanStream);
+
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
 			Interpreter =
@@ -443,10 +452,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			},
 			Trace = false
 		};
-		
+
 		// Remove error listeners to avoid noise during analysis
 		sharpParser.RemoveErrorListeners();
-		
+
 		try
 		{
 			// Parse to get the parse tree
@@ -506,27 +515,28 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream tokenStream,
 		string sourceText)
 	{
+		// Single tree walk: classify every terminal by its immediate parse-tree parent context.
+		// This is the canonical correct approach — it handles all tokens that appear in multiple
+		// grammatical roles (CCARET, EQUALS, COMMAWS, SEMICOLON, FUNCHAR, …) without per-symbol
+		// special-case pre-walks.
+		var classifications = new Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)>();
+		CollectTerminalClassifications(context, classifications, sourceText);
+
 		var semanticTokens = new List<SemanticToken>();
-		
-		// Access the internal token list from BufferedTokenSpanStream
-		var tokenList = tokenStream.tokens;
-
-		foreach (var token in tokenList.Where(t => t.Type != TokenConstants.EOF))
+		foreach (var token in tokenStream.tokens.Where(t => t.Type != TokenConstants.EOF))
 		{
-			var semanticType = ClassifyToken(token, context, sourceText);
-			var modifiers = GetTokenModifiers(token, semanticType);
-
-			var range = new LspRange
-			{
-				Start = new Position(token.Line - 1, token.Column),
-				End = new Position(token.Line - 1, token.Column + token.Text.Length)
-			};
+			if (!classifications.TryGetValue(token.TokenIndex, out var info))
+				info = (SemanticTokenType.Text, SemanticTokenModifier.None);
 
 			semanticTokens.Add(new SemanticToken
 			{
-				Range = range,
-				TokenType = semanticType,
-				Modifiers = modifiers,
+				Range = new LspRange
+				{
+					Start = new Position(token.Line - 1, token.Column),
+					End = new Position(token.Line - 1, token.Column + token.Text.Length)
+				},
+				TokenType = info.Type,
+				Modifiers = info.Mod,
 				Text = token.Text
 			});
 		}
@@ -535,27 +545,127 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	/// <summary>
-	/// Classifies a token to determine its semantic type.
+	/// Walks the parse tree and records the semantic classification for every terminal node.
+	/// Each terminal is classified by its immediate parent rule context, not by token type alone.
+	/// This is the single authoritative classification pass — no pre-walks or per-symbol workarounds.
 	/// </summary>
-	private SemanticTokenType ClassifyToken(IToken token, ParserRuleContext context, string sourceText)
+	private void CollectTerminalClassifications(
+		Antlr4.Runtime.Tree.IParseTree tree,
+		Dictionary<int, (SemanticTokenType Type, SemanticTokenModifier Mod)> map,
+		string sourceText)
 	{
-		var tokenType = token.Type;
-		var vocabulary = new SharpMUSHLexer(new AntlrInputStreamSpan(ReadOnlyMemory<char>.Empty, "")).Vocabulary;
-		var symbolicName = vocabulary.GetSymbolicName(tokenType);
-
-		return symbolicName switch
+		if (tree is Antlr4.Runtime.Tree.ITerminalNode terminal)
 		{
-			"FUNCHAR" => ClassifyFunction(token.Text),
-			"PERCENT" => SemanticTokenType.Substitution,
+			var token = terminal.Symbol;
+			if (token.Type == TokenConstants.EOF) return;
+
+			var type = ClassifyTerminalInContext(token, terminal.Parent, sourceText);
+			var mod = GetTokenModifiers(token, type);
+			map[token.TokenIndex] = (type, mod);
+			return;
+		}
+
+		for (var i = 0; i < tree.ChildCount; i++)
+			CollectTerminalClassifications(tree.GetChild(i), map, sourceText);
+	}
+
+	/// <summary>
+	/// Derives the semantic type for a terminal token from its immediate parse-tree parent.
+	/// Covers every grammatical role a token may play — structural text, operator, substitution, etc.
+	/// Falls back to <see cref="ClassifyByTokenType"/> only for tokens whose meaning is
+	/// context-independent (e.g., <c>OBRACK</c>, <c>ESCAPE</c>, <c>OANSI</c>).
+	/// </summary>
+	private SemanticTokenType ClassifyTerminalInContext(IToken token, Antlr4.Runtime.Tree.IParseTree parentCtx, string sourceText)
+	{
+		return parentCtx switch
+		{
+			// ── Structural characters used as *literal text* (not as operators) ──────────────
+			// CCARET (>), EQUALS (=), COMMAWS (,), SEMICOLON (;), CPAREN ()) appear here when
+			// they are NOT serving as argument separators, delimiters or register-close markers.
+			// OTHER inside beginGenericText still needs content-based classification
+			// (e.g. #1234 is ObjectReference, "42" is Number).
+			SharpMUSHParser.BeginGenericTextContext when token.Type != SharpMUSHParser.OTHER
+				=> SemanticTokenType.Text,
+			SharpMUSHParser.BeginGenericTextContext
+				=> ClassifyOther(token.Text, sourceText),
+
+			// A FUNCHAR appearing in genericText (not inside a function call) is plain text.
+			SharpMUSHParser.GenericTextContext
+				=> SemanticTokenType.Text,
+
+			// ── Function ──────────────────────────────────────────────────────────────────────
+			// FUNCHAR is the open-paren+name; COMMAWS and CPAREN inside the function are operators.
+			SharpMUSHParser.FunctionContext when token.Type == SharpMUSHParser.FUNCHAR
+				=> ClassifyFunction(token.Text),
+			SharpMUSHParser.FunctionContext
+				=> SemanticTokenType.Operator,
+
+			// ── Bracket [ ] substitution ──────────────────────────────────────────────────────
+			SharpMUSHParser.BracketPatternContext
+				=> SemanticTokenType.BracketSubstitution,
+
+			// ── Brace { } group ───────────────────────────────────────────────────────────────
+			SharpMUSHParser.BracePatternContext
+				=> SemanticTokenType.BraceGroup,
+
+			// ── ANSI escape codes ─────────────────────────────────────────────────────────────
+			SharpMUSHParser.AnsiContext
+				=> SemanticTokenType.AnsiCode,
+
+			// ── Backslash escape sequences ────────────────────────────────────────────────────
+			SharpMUSHParser.EscapedTextContext
+				=> SemanticTokenType.EscapeSequence,
+
+			// ── %q<register> — opening token (q<) and closing > are both Register ────────────
+			SharpMUSHParser.ComplexSubstitutionSymbolContext
+				=> SemanticTokenType.Register,
+
+			// ── %x substitution codes — all single-char codes including %=, %# etc. ──────────
+			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.
+			SharpMUSHParser.SubstitutionSymbolContext
+				=> SemanticTokenType.Substitution,
+
+			// ── The leading % of any %x substitution ─────────────────────────────────────────
+			// PERCENT is the only direct terminal child of ExplicitEvaluationStringContext.
+			SharpMUSHParser.ExplicitEvaluationStringContext
+			or SharpMUSHParser.BraceExplicitEvaluationStringContext
+				=> SemanticTokenType.Substitution,
+
+			// ── Structural operators — separators that act at command/argument scope ─────────
+			SharpMUSHParser.StartEqSplitCommandContext
+			or SharpMUSHParser.StartEqSplitCommandArgsContext
+				=> SemanticTokenType.Operator,   // EQUALS acting as command split
+
+			SharpMUSHParser.CommaCommandArgsContext
+				=> SemanticTokenType.Operator,   // COMMAWS acting as argument separator
+
+			SharpMUSHParser.CommandListContext
+				=> SemanticTokenType.Operator,   // SEMICOLON acting as command separator
+
+			// ── Fallback for context-independent tokens ───────────────────────────────────────
+			_ => ClassifyByTokenType(token, sourceText)
+		};
+	}
+
+	/// <summary>
+	/// Classifies tokens whose semantic meaning does not depend on parse-tree context.
+	/// Called only as a fallback from <see cref="ClassifyTerminalInContext"/>.
+	/// </summary>
+	private SemanticTokenType ClassifyByTokenType(IToken token, string sourceText)
+	{
+		var vocabulary = new SharpMUSHLexer(new AntlrInputStreamSpan(ReadOnlyMemory<char>.Empty, "")).Vocabulary;
+		return vocabulary.GetSymbolicName(token.Type) switch
+		{
 			"ARG_NUM" or "VWX" or "REG_NUM" or "REG_STARTCARET" => SemanticTokenType.Register,
 			"ENACTOR_NAME" or "CAP_ENACTOR_NAME" or "ACCENT_NAME" or "MONIKER_NAME" => SemanticTokenType.Substitution,
 			"SUB_PRONOUN" or "OBJ_PRONOUN" or "POS_PRONOUN" or "ABS_POS_PRONOUN" => SemanticTokenType.Substitution,
-			"CALLED_DBREF" or "EXECUTOR_DBREF" or "LOCATION_DBREF" or "DBREF" => SemanticTokenType.ObjectReference,
+			"CALLED_DBREF" or "EXECUTOR_DBREF" or "LOCATION_DBREF" or "DBREF" => SemanticTokenType.Substitution,
 			"OBRACK" or "CBRACK" => SemanticTokenType.BracketSubstitution,
 			"OBRACE" or "CBRACE" => SemanticTokenType.BraceGroup,
 			"ESCAPE" => SemanticTokenType.EscapeSequence,
 			"OANSI" or "CANSI" or "ANSICHARACTER" => SemanticTokenType.AnsiCode,
-			"EQUALS" or "COMMAWS" or "SEMICOLON" or "CCARET" => SemanticTokenType.Operator,
+			"PERCENT" => SemanticTokenType.Substitution,
+			"FUNCHAR" => ClassifyFunction(token.Text),
 			"OTHER" => ClassifyOther(token.Text, sourceText),
 			_ => SemanticTokenType.Text
 		};
@@ -568,12 +678,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		// Remove the opening parenthesis to get the function name
 		var functionName = functionText.TrimEnd('(', ' ', '\t', '\r', '\n', '\f');
-		
+
 		// Check if it's a built-in function
 		if (FunctionLibrary.TryGetValue(functionName.ToLower(), out var functionInfo))
 		{
-			return functionInfo.IsSystem 
-				? SemanticTokenType.Function 
+			return functionInfo.IsSystem
+				? SemanticTokenType.Function
 				: SemanticTokenType.UserFunction;
 		}
 
@@ -608,9 +718,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var modifiers = SemanticTokenModifier.None;
 
 		// Mark built-in functions and substitutions as default library
-		if (semanticType == SemanticTokenType.Function || 
-		    semanticType == SemanticTokenType.Substitution ||
-		    semanticType == SemanticTokenType.Register)
+		if (semanticType == SemanticTokenType.Function ||
+				semanticType == SemanticTokenType.Substitution ||
+				semanticType == SemanticTokenType.Register)
 		{
 			modifiers |= SemanticTokenModifier.DefaultLibrary;
 		}
@@ -643,5 +753,105 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Modifiers = SemanticTokenModifier.None,
 			Text = t.Text
 		}).ToList();
+	}
+
+	/// <summary>
+	/// Scans the token stream for escaped bracket openers (\[) and converts
+	/// their matching orphaned CBRACK closers to OTHER tokens, preventing
+	/// parser errors on unmatched brackets.
+	/// 
+	/// When the lexer encounters \[, it produces ESCAPE + ANY (not OBRACK),
+	/// so inBracketDepth never increments. The matching ] still becomes CBRACK
+	/// with no open bracketPattern to close, causing a syntax error.
+	/// This method fixes that by converting orphaned CBRACKs to OTHER.
+	/// 
+	/// The algorithm tracks real bracket depth to avoid converting CBRACKs
+	/// that close real bracket patterns. An escaped bracket inside a real
+	/// bracket (e.g., [reglattr(%!/\[0-9\]+)]) is correctly ignored.
+	/// </summary>
+	internal static void RewriteOrphanedBracketClosers(BufferedTokenSpanStream tokenStream)
+	{
+		var tokens = tokenStream.tokens;
+		var depth = 0;
+		var pendingEscapedOpeners = 0;
+
+		for (var i = 0; i < tokens.Count; i++)
+		{
+			var token = tokens[i];
+
+			if (token.Type == SharpMUSHLexer.OBRACK)
+			{
+				depth++;
+			}
+			else if (token.Type == SharpMUSHLexer.CBRACK)
+			{
+				if (depth > 0)
+				{
+					// Closes a real bracket — decrement depth
+					depth--;
+				}
+				else if (pendingEscapedOpeners > 0)
+				{
+					// Orphaned CBRACK at depth 0 matching an escaped opener
+					if (token is IWritableToken writable)
+					{
+						writable.Type = SharpMUSHLexer.OTHER;
+					}
+					pendingEscapedOpeners--;
+				}
+			}
+			else if (depth == 0
+				&& token.Type == SharpMUSHLexer.ESCAPE
+				&& i + 1 < tokens.Count
+				&& tokens[i + 1].Type == SharpMUSHLexer.ANY
+				&& tokens[i + 1].Text == "[")
+			{
+				// Escaped bracket opener at depth 0
+				pendingEscapedOpeners++;
+			}
+		}
+	}
+
+	internal static void RewriteOrphanedBraceClosers(BufferedTokenSpanStream tokenStream)
+	{
+		var tokens = tokenStream.tokens;
+		var depth = 0;
+		var pendingEscapedOpeners = 0;
+
+		for (var i = 0; i < tokens.Count; i++)
+		{
+			var token = tokens[i];
+
+			if (token.Type == SharpMUSHLexer.OBRACE)
+			{
+				depth++;
+			}
+			else if (token.Type == SharpMUSHLexer.CBRACE)
+			{
+				if (depth > 0)
+				{
+					// Closes a real brace — decrement depth
+					depth--;
+				}
+				else if (pendingEscapedOpeners > 0)
+				{
+					// Orphaned CBRACE at depth 0 matching an escaped opener
+					if (token is IWritableToken writable)
+					{
+						writable.Type = SharpMUSHLexer.OTHER;
+					}
+					pendingEscapedOpeners--;
+				}
+			}
+			else if (depth == 0
+				&& token.Type == SharpMUSHLexer.ESCAPE
+				&& i + 1 < tokens.Count
+				&& tokens[i + 1].Type == SharpMUSHLexer.ANY
+				&& tokens[i + 1].Text == "{")
+			{
+				// Escaped brace opener at depth 0
+				pendingEscapedOpeners++;
+			}
+		}
 	}
 }

@@ -54,7 +54,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		_currentOptions = null;
 	}
 
-	private async Task<ConfigurationResponse> FetchConfigurationFromServer()
+	public async Task<ConfigurationResponse> FetchConfigurationFromServer()
 	{
 		try
 		{

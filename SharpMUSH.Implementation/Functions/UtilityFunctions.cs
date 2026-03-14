@@ -1,6 +1,4 @@
-﻿using System.Drawing;
-using System.Text.RegularExpressions;
-using DotNext;
+﻿using DotNext;
 using DotNext.Collections.Generic;
 using MarkupString;
 using Microsoft.Extensions.Logging;
@@ -16,6 +14,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Drawing;
+using System.Text.RegularExpressions;
 using XSoundex;
 using static ANSILibrary.ANSI;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -73,41 +73,86 @@ public partial class Functions
 
 		var ansiCodes = args["0"].Message!.ToString().Split(' ');
 		Func<bool, byte, byte[]> highlightFunc = (highlight, b) => highlight ? [1, b] : [b];
+		var colorsConfig = ColorConfiguration?.CurrentValue;
 
 		foreach (var cde in ansiCodes)
 		{
 			var code = cde.AsSpan();
 			var curHilight = false;
-			if (code.StartsWith("/#"))
+			var isBackground = false;
+
+			// Check if this is a background color (starts with /)
+			if (code.StartsWith("/"))
 			{
-				// Handle background RGB color
-				background = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[2..].ToString()));
+				isBackground = true;
+				code = code[1..];
+			}
+
+			if (code.StartsWith("#"))
+			{
+				// Handle RGB color (hex code)
+				var color = AnsiColor.NewRGB(ColorTranslator.FromHtml(code.ToString()));
+				if (isBackground)
+					background = color;
+				else
+					foreground = color;
 				continue;
 			}
-			if (code.StartsWith(['#']))
-			{
-				// Handle foreground RGB color
-				foreground = AnsiColor.NewRGB(ColorTranslator.FromHtml(code[1..].ToString()));
-				continue;
-			}
+
 			if (code.StartsWith(['+']) && !code.StartsWith("+xterm"))
 			{
-				// colorname
+				// Handle named color from colors.json
+				var colorName = code[1..].ToString();
+				if (colorsConfig != null && colorsConfig.ColorsByName.TryGetValue(colorName, out var colorIdentity))
+				{
+					var hexColor = colorIdentity.rgb;
+					var color = AnsiColor.NewRGB(ColorTranslator.FromHtml(hexColor));
+					if (isBackground)
+						background = color;
+					else
+						foreground = color;
+				}
 				continue;
 			}
+
 			var xterm = 0;
 			if (
-				(int.TryParse(code, out xterm) && xterm > -1 && xterm < 256) ||
-				(code.StartsWith("+xterm") && int.TryParse(code[5..], out xterm) && xterm > -1 && xterm < 256))
+				(int.TryParse(code, out xterm) && xterm >= 0 && xterm < 256) ||
+				(code.StartsWith("+xterm") && int.TryParse(code[6..], out xterm) && xterm >= 0 && xterm < 256))
 			{
-				// xterm color
+				// Handle xterm color (0-255)
+				if (colorsConfig != null && colorsConfig.ColorsByXterm.TryGetValue(xterm.ToString(), out var xtermColors) && xtermColors.Length > 0)
+				{
+					var hexColor = xtermColors[0].rgb;
+					var color = AnsiColor.NewRGB(ColorTranslator.FromHtml(hexColor));
+					if (isBackground)
+						background = color;
+					else
+						foreground = color;
+				}
 				continue;
 			}
+
 			if (code.StartsWith(['<']) && code.EndsWith(['>']))
 			{
-				// Check for triple RGB values
+				// Handle RGB color as <r g b> format
+				var rgbValues = code[1..^1].ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				if (rgbValues.Length == 3 &&
+					int.TryParse(rgbValues[0], out var r) && r >= 0 && r <= 255 &&
+					int.TryParse(rgbValues[1], out var g) && g >= 0 && g <= 255 &&
+					int.TryParse(rgbValues[2], out var b) && b >= 0 && b <= 255)
+				{
+					var color = AnsiColor.NewRGB(Color.FromArgb(r, g, b));
+					if (isBackground)
+						background = color;
+					else
+						foreground = color;
+				}
 				continue;
 			}
+
+			// Reset isBackground for character-by-character processing
+			isBackground = false;
 			// ansi code. each gets evaluated individually.
 			foreach (var chr in code)
 			{
@@ -238,13 +283,13 @@ public partial class Functions
 	public static async ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		
+
 		// If single argument, split it by spaces and check each element
 		if (args.Count == 1)
 		{
 			var singleArg = await parser.FunctionParse(args["0"].Message!);
 			var elements = singleArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-			
+
 			var allTrue = true;
 			foreach (var element in elements)
 			{
@@ -261,21 +306,16 @@ public partial class Functions
 		}
 
 		// Multi-argument case: parse each argument and check
-		var allTruthy = true;
-		foreach (var arg in args)
-		{
-			var result = await parser.FunctionParse(arg.Value.Message!);
-			var resultStr = MModule.plainText(result!.Message).Trim();
-
-			if (string.IsNullOrEmpty(resultStr) ||
-					resultStr == "0" ||
-					resultStr.StartsWith("#-1") ||
-					resultStr.Equals("false", StringComparison.OrdinalIgnoreCase))
+		var allTruthy = await args.ToAsyncEnumerable()
+			.AllAsync(async (arg, _) =>
 			{
-				allTruthy = false;
-				break;
-			}
-		}
+				var result = await parser.FunctionParse(arg.Value.Message!);
+				var resultStr = MModule.plainText(result!.Message).Trim();
+				return !string.IsNullOrEmpty(resultStr) &&
+					resultStr != "0" &&
+					!resultStr.StartsWith("#-1") &&
+					!resultStr.Equals("false", StringComparison.OrdinalIgnoreCase);
+			});
 
 		return new CallState(allTruthy ? "1" : "0");
 	}
@@ -680,7 +720,7 @@ public partial class Functions
 	{
 		var arg = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
 		// Object ID format is #dbref:timestamp (e.g., #123:456789)
-		var match = Regex.Match(arg, @"^#\d+:\d+$");
+		var match = ObjIdRegex().Match(arg);
 		return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
 	}
 
@@ -691,16 +731,36 @@ public partial class Functions
 
 		if (string.IsNullOrWhiteSpace(arg)) return ValueTask.FromResult<CallState>(new("0"));
 
-		try { Regex.Match("", arg); } catch (ArgumentException) { return ValueTask.FromResult<CallState>(new("0")); }
+		// Validate regex by attempting to construct it with timeout to prevent ReDoS
+		// Use a helper method to avoid exception-based control flow
+		var isValid = IsValidRegexPattern(arg);
+		return ValueTask.FromResult<CallState>(new(isValid ? "1" : "0"));
+	}
 
-		return ValueTask.FromResult<CallState>(new("1"));
+	private static bool IsValidRegexPattern(string pattern)
+	{
+		try
+		{
+			// Use a timeout to prevent catastrophic backtracking (ReDoS)
+			// This is a validation step, not control flow - we're checking validity
+			_ = new Regex(pattern, RegexOptions.None, TimeSpan.FromMilliseconds(100));
+			return true;
+		}
+		catch (ArgumentException)
+		{
+			return false;
+		}
+		catch (RegexMatchTimeoutException)
+		{
+			return false;
+		}
 	}
 
 	[SharpFunction(Name = "isword", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
-		return ValueTask.FromResult(new CallState(Regex.IsMatch(str, @"^[a-zA-Z]$")));
+		return ValueTask.FromResult(new CallState(IsWordRegex().IsMatch(str)));
 	}
 
 	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -951,7 +1011,7 @@ public partial class Functions
 		static async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string option)
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-			if (!(executor.IsGod() || await executor.IsWizard()))
+			if (!await executor.IsWizard())
 			{
 				return new CallState("#-1 PERMISSION DENIED");
 			}
@@ -1217,12 +1277,12 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		// Parse arguments based on PennMUSH signature: scan(<looker>, <command>[, <switches>]) or scan(<command>)
 		AnySharpObject looker;
 		MString command;
 		string switches;
-		
+
 		if (args.Count == 1)
 		{
 			// scan(<command>) - looker defaults to executor
@@ -1236,7 +1296,7 @@ public partial class Functions
 			var lookerName = args["0"].Message!.ToPlainText();
 			command = args["1"].Message!;
 			switches = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : "all";
-			
+
 			// Locate the looker object
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, lookerName, LocateFlags.All);
 			if (locateResult.IsError || locateResult.IsNone)
@@ -1255,7 +1315,7 @@ public partial class Functions
 		// Collect objects to scan based on switches
 		var objectsToScan = new List<AnySharpObject>();
 		var switchList = switches.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		
+
 		// Determine which locations to check
 		bool checkMe = switchList.Contains("me") || switchList.Contains("all") || switchList.Contains("self");
 		bool checkInventory = switchList.Contains("inventory") || switchList.Contains("all") || switchList.Contains("self");
@@ -1285,12 +1345,12 @@ public partial class Functions
 			var dbref = looker.Object().DBRef;
 			var locationQuery = new GetLocationQuery(dbref);
 			var locationOpt = await Mediator!.Send(locationQuery);
-			
+
 			if (!locationOpt.IsNone)
 			{
 				var location = locationOpt.WithoutNone();
 				objectsToScan.Add(location.WithExitOption());
-				
+
 				// Add contents of the location
 				var contents = await System.Linq.AsyncEnumerable.ToListAsync(
 					Mediator!.CreateStream(new GetContentsQuery(location)));
@@ -1310,7 +1370,7 @@ public partial class Functions
 			{
 				var masterRoom = masterRoomResult.Known;
 				objectsToScan.Add(masterRoom);
-				
+
 				if (masterRoom.IsContainer)
 				{
 					var masterContents = await System.Linq.AsyncEnumerable.ToListAsync(
@@ -1341,7 +1401,7 @@ public partial class Functions
 
 		// Format results as "dbref/attribute" pairs
 		var matches = matchResult.AsValue();
-		var results = matches.Select(match => 
+		var results = matches.Select(match =>
 			$"{match.SObject.Object().DBRef}/{match.Attribute.Name}");
 
 		return string.Join(" ", results);
@@ -1432,7 +1492,7 @@ public partial class Functions
 		var word = args["1"].Message!.ToPlainText();
 		var separator = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : " ";
 		var limit = 20;
-		
+
 		if (args.ContainsKey("3"))
 		{
 			if (!int.TryParse(args["3"].Message!.ToPlainText(), out limit) || limit < 1)
@@ -1519,17 +1579,58 @@ public partial class Functions
 	[SharpFunction(Name = "slev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
 	public static ValueTask<CallState> SLev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Return the current parser function depth (stack level)
-		return ValueTask.FromResult(new CallState(parser.CurrentState.ParserFunctionDepth ?? 0));
+		// Return the current switch nesting depth
+		return ValueTask.FromResult(new CallState(parser.CurrentState.SwitchStack.Count));
 	}
 
-	[SharpFunction(Name = "stext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "stext", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> SText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// TODO: stext() requires text file system integration which is planned for future release.
-		// Text files allow storing large amounts of text accessible via file://<filename> references.
-		// See CoPilot Files/TEXT_FILE_SYSTEM_PLAN.md for implementation details.
-		return ValueTask.FromResult(new CallState(Errors.NotSupported));
+		// stext([<n>]) returns the string being matched in the current or nth nested switch.
+		// stext(L) returns the outermost switch string.
+		// n=0 is current switch, n=1 is the switch the current is nested in, etc.
+
+		var args = parser.CurrentState.Arguments;
+		var stack = parser.CurrentState.SwitchStack;
+
+		int depth = 0;
+
+		// Validate arguments first, before checking stack count
+		if (args.TryGetValue("0", out var depthArg) && depthArg.Message != null)
+		{
+			var depthStr = depthArg.Message!.ToPlainText().Trim();
+
+			// Skip processing if the argument is empty (defaults to 0)
+			if (!string.IsNullOrEmpty(depthStr))
+			{
+				// Handle "L" or "l" for outermost (last) switch
+				if (depthStr.Equals("L", StringComparison.OrdinalIgnoreCase))
+				{
+					depth = stack.Count - 1;
+				}
+				else if (!int.TryParse(depthStr, out depth) || depth < 0)
+				{
+					return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER"));
+				}
+			}
+		}
+
+		// Now check if we're in a switch context
+		if (stack.Count == 0)
+		{
+			return ValueTask.FromResult(new CallState(string.Empty));
+		}
+
+		// Convert depth to index from top of stack
+		// depth 0 = current (top), depth 1 = parent, etc.
+		if (depth >= stack.Count)
+		{
+			return ValueTask.FromResult(new CallState(string.Empty));
+		}
+
+		// Get the nth item from the stack (0 is top)
+		var item = stack.ElementAtOrDefault(depth);
+		return ValueTask.FromResult(new CallState(item ?? MModule.empty()));
 	}
 
 	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1592,17 +1693,17 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		// Two forms:
 		// testlock(<lock key>, <victim>) - test a lock expression against a victim
 		// testlock(<object>, <victim>, <lock name>) - test a named lock on object against victim
-		
+
 		if (args.Count == 2)
 		{
 			// Form 1: testlock(<lock key>, <victim>)
 			var lockString = args["0"].Message!.ToPlainText();
 			var victimName = args["1"].Message!.ToPlainText();
-			
+
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, victimName, LocateFlags.All,
 				victim =>
@@ -1624,7 +1725,7 @@ public partial class Functions
 			var objectName = args["0"].Message!.ToPlainText();
 			var victimName = args["1"].Message!.ToPlainText();
 			var lockName = args["2"].Message!.ToPlainText();
-			
+
 			return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 				executor, executor, objectName, LocateFlags.All,
 				async lockedObject =>
@@ -1636,7 +1737,7 @@ public partial class Functions
 						return new CallState("#-1 INVALID VICTIM");
 					}
 					var victim = victimResult.AsAnyObject;
-					
+
 					// Get the named lock from the object
 					if (!lockedObject.Object().Locks.TryGetValue(lockName, out var lockData))
 					{
@@ -1656,8 +1757,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var fileReference = args["0"].Message!.ToPlainText();
-		var separator = args.TryGetValue("1", out var sep) 
-			? sep.Message!.ToPlainText() 
+		var separator = args.TryGetValue("1", out var sep)
+			? sep.Message!.ToPlainText()
 			: " ";
 
 		if (TextFileService == null)
@@ -1696,7 +1797,7 @@ public partial class Functions
 		try
 		{
 			var content = await TextFileService.GetEntryAsync(fileReference, entryName);
-			return content != null 
+			return content != null
 				? new CallState(content)
 				: new CallState("#-1 ENTRY NOT FOUND");
 		}
@@ -1767,4 +1868,10 @@ public partial class Functions
 				return $"Wiped {attributesToClear.Count}";
 			});
 	}
+
+	[GeneratedRegex(@"^#\d+:\d+$")]
+	private static partial Regex ObjIdRegex();
+
+	[GeneratedRegex(@"^[a-zA-Z]$")]
+	private static partial Regex IsWordRegex();
 }

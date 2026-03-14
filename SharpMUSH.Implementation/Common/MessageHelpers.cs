@@ -1,19 +1,18 @@
 using Mediator;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
-
 namespace SharpMUSH.Implementation.Common;
 
 public static class MessageHelpers
 {
 	private const string SpecialRecipientDbref = "#-2";
 	private const string RecipientReplacementToken = "##";
-	
+
 	/// <summary>
 	/// Determines the notification type based on the prefix character of the message.
 	/// Used for commands like @pemit, say, etc.
@@ -30,7 +29,7 @@ public static class MessageHelpers
 			_ => INotifyService.NotificationType.Say
 		};
 	}
-	
+
 	/// <summary>
 	/// Strips the message type prefix from the message if present.
 	/// </summary>
@@ -46,7 +45,35 @@ public static class MessageHelpers
 			_ => message
 		};
 	}
-	
+
+	/// <summary>
+	/// Formats a list of strings using Oxford comma style.
+	/// Examples: ["East"] → "East"; ["East", "West"] → "East and West";
+	/// ["East", "West", "North"] → "East, West, and North"
+	/// </summary>
+	/// <param name="items">The items to format</param>
+	/// <returns>The formatted string</returns>
+	public static string FormatWithOxfordComma(IReadOnlyList<string> items) => items.Count switch
+	{
+		0 => string.Empty,
+		1 => items[0],
+		2 => $"{items[0]} and {items[1]}",
+		_ => string.Join(", ", items.Take(items.Count - 1)) + ", and " + items[^1]
+	};
+
+	/// <summary>
+	/// Formats an object name with its dbref and flag symbols, matching PennMUSH display format.
+	/// Example: "Chest(#5Tn)"
+	/// </summary>
+	/// <param name="obj">The sharp object to format</param>
+	/// <returns>A task yielding the formatted string</returns>
+	public static async ValueTask<string> FormatObjectWithDbref(Library.Models.SharpObject obj)
+	{
+		var flags = await obj.Flags.Value.ToArrayAsync();
+		var flagSymbols = string.Join(string.Empty, flags.Select(x => x.Symbol));
+		return $"{obj.Name}(#{obj.DBRef.Number}{flagSymbols})";
+	}
+
 	public static async ValueTask<CallState> ProcessMessageAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
@@ -140,8 +167,8 @@ public static class MessageHelpers
 
 				var container = locateTarget.AsContainer;
 				var evaluatedMessage = await EvaluateMessageForRecipient(
-					parser, attributeService, executor, enactor, 
-					locateTarget, objToEvaluate, attrToEvaluate, 
+					parser, attributeService, executor, enactor,
+					locateTarget, objToEvaluate, attrToEvaluate,
 					pinnedAttribute, defmsg, functionArgs);
 
 				await communicationService.SendToRoomAsync(
@@ -156,7 +183,7 @@ public static class MessageHelpers
 				continue;
 			}
 
-			if (!await permissionService.CanInteract(locateTarget, executor, InteractType.Hear))
+			if (!await permissionService.CanInteract(executor, locateTarget, InteractType.Hear))
 			{
 				continue;
 			}

@@ -8,14 +8,14 @@ namespace SharpMUSH.Tests.Parser;
 
 public class SubstitutionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>(); 
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
 	[Test]
 	[Arguments("think %t", "\t")]
@@ -43,9 +43,9 @@ public class SubstitutionUnitTests
 
 		if (expected is not null)
 		{
-			await NotifyService.Notify(Arg.Any<AnySharpObject>(), 
-				expected, 
-				null, 
+			await NotifyService.Notify(Arg.Any<AnySharpObject>(),
+				expected,
+				null,
 				INotifyService.NotificationType.Announce);
 		}
 	}

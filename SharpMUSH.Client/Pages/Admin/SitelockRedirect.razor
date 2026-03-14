@@ -1,0 +1,10 @@
+@page "/admin/sitelock"
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Redirect to new config URL
+        NavigationManager.NavigateTo("/admin/config/sitelock", replace: true);
+    }
+}

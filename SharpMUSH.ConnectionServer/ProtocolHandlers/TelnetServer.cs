@@ -1,14 +1,10 @@
-using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Connections;
+using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Messaging.Abstractions;
 using System.Net;
 using System.Text;
-using SharpMUSH.Messaging.Abstractions;
-using Microsoft.AspNetCore.Connections;
-using Microsoft.Extensions.Logging;
-using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Library.Notifications;
-using SharpMUSH.Messages;
 using TelnetNegotiationCore.Builders;
-using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
 using TelnetNegotiationCore.Protocols;
@@ -45,7 +41,15 @@ public class TelnetServer : ConnectionHandler
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
 
-		var telnet = await new TelnetInterpreterBuilder().OnSubmit(async (byteArray, encoding, _) =>
+		var telnet = await new TelnetInterpreterBuilder()
+			.UseMode(TelnetInterpreter.TelnetMode.Server)
+			.UseLogger(_logger)
+		.OnNegotiation(async (data) =>
+		{
+			// Write telnet negotiation bytes to the network
+			await connection.Transport.Output.WriteAsync(data, ct);
+		})
+			.OnSubmit(async (byteArray, encoding, _) =>
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, encoding.GetString(byteArray)), ct))
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
 				await _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct))
@@ -69,15 +73,68 @@ public class TelnetServer : ConnectionHandler
 			remoteIp,
 			connection.RemoteEndPoint?.ToString() ?? remoteIp,
 			"telnet",
-			telnet.SendAsync,
-			telnet.SendPromptAsync,
-			() => telnet.CurrentEncoding,
-			connection.Abort,
-			async (module, message) =>
+		async (data) =>
+		{
+			// Write output to the network transport with proper telnet escaping
+			// TelnetSafeBytes escapes IAC (0xFF) characters and applies MCCP compression if negotiated
+			_logger.LogTrace("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
+			try
 			{
-				// Send GMCP message using TelnetNegotiationCore library method
-				await telnet.SendGMCPCommand(module, message);
-			});
+				await _semaphoreSlimForWriter.WaitAsync(ct);
+				try
+				{
+					var telnetSafeData = telnet.TelnetSafeBytes(data);
+					await connection.Transport.Output.WriteAsync(telnetSafeData.AsMemory(), ct);
+					_logger.LogTrace("Successfully wrote {ByteCount} telnet-safe bytes ({Original} original) to transport for handle {Handle}",
+						telnetSafeData.Length, data.Length, nextPort);
+				}
+				finally
+				{
+					_semaphoreSlimForWriter.Release();
+				}
+			}
+			catch (ObjectDisposedException ode)
+			{
+				_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+			}
+		},
+		async (data) =>
+		{
+			// Write prompt output to the network transport with proper telnet escaping
+			// TelnetSafeBytes escapes IAC (0xFF) characters and applies MCCP compression if negotiated
+			try
+			{
+				await _semaphoreSlimForWriter.WaitAsync(ct);
+				try
+				{
+					var telnetSafeData = telnet.TelnetSafeBytes(data);
+					await connection.Transport.Output.WriteAsync(telnetSafeData.AsMemory(), ct);
+				}
+				finally
+				{
+					_semaphoreSlimForWriter.Release();
+				}
+			}
+			catch (ObjectDisposedException ode)
+			{
+				_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+			}
+		},
+		() => telnet.CurrentEncoding,
+		connection.Abort,
+		async (module, message) =>
+		{
+			// Send GMCP message using TelnetNegotiationCore library method
+			await telnet.SendGMCPCommand(module, message);
+		});
 
 		try
 		{

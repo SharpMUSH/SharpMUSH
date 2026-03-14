@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -9,8 +8,8 @@ namespace SharpMUSH.Tests.Functions;
 
 public class ListFunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
@@ -72,17 +71,21 @@ public class ListFunctionUnitTests
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	// TODO: %iL does not evaluate to the correct value.
 	// [Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%iL)),|,-)", "2 3 4-3 4 5-4 5 6")]
+	[Arguments("iter(1 2 3,##)", "1 2 3")]
+	[Arguments("iter(1 2 3,add(##,1))", "2 3 4")]
+	[Arguments("iter(1|2|3,##,|,-)", "1-2-3")]
 	public async Task IterationValue(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	// TODO: Fix: %$0 is for switches.
-	// TODO: This should be #@, which is not yet implemented.
+	// Fixed: %$0 is for switches, not iterations.
+	// Using inum(0) for iteration number, which is the correct function.
+	// TODO: Implement #@ token as shorthand for inum(0).
 	[Test, NotInParallel]
-	[Arguments("iter(5 6 7,%$0)", "1 2 3")]
-	[Arguments("iter(1|2|3,iter(1 2 3,add(%$0,%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
+	[Arguments("iter(5 6 7,inum(0))", "1 2 3")]
+	[Arguments("iter(1|2|3,iter(1 2 3,add(inum(0),%i1)),|,-)", "2 2 2-4 4 4-6 6 6")]
 	public async Task IterationNumber(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -109,7 +112,7 @@ public class ListFunctionUnitTests
 	{
 		// Simple test to check if ansi works at all
 		var result = (await Parser.FunctionParse(MModule.single("ansi(hr,test)")))?.Message!;
-		
+
 		// Should contain ANSI escape codes
 		await Assert.That(result.ToString()).Contains("\u001b[");
 	}
@@ -120,19 +123,19 @@ public class ListFunctionUnitTests
 		// Test case from issue: iter should preserve ANSI markup
 		// The problem: iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)
 		// loses the ANSI markup
-		
+
 		// First, test the working equivalent as a baseline
 		var expected = (await Parser.FunctionParse(
 			MModule.single("1 --> [ansi(hr,1)]%r2 --> [ansi(hr,2)]%r3 --> [ansi(hr,3)]%r4 --> [ansi(hr,4)]%r5 --> [ansi(hr,5)]")))?.Message!;
-		
+
 		// Now test the iter version - it should produce the same result
 		var actual = (await Parser.FunctionParse(
 			MModule.single("iter(lnum(1,5),%i0 --> [ansi(hr,%i0)],,%r)")))?.Message!;
-		
+
 		// Compare using the same method as other Markup tests
 		var resultBytes = System.Text.Encoding.Unicode.GetBytes(actual.ToString());
 		var expectedBytes = System.Text.Encoding.Unicode.GetBytes(expected.ToString());
-		
+
 		foreach (var (first, second) in resultBytes.Zip(expectedBytes))
 		{
 			await Assert.That(first).IsEqualTo(second);
@@ -232,6 +235,47 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	[Test, NotInParallel]
+	[Arguments(@"filter(#lambda/mod\(\%0\,2\),1 2 3 4 5 6)", "1 3 5")]
+	[Arguments(@"filter(#apply/isnum,1 foo 3 bar 5 6)", "1 3 5 6")]
+	public async Task FilterWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments("map(test/is_odd,1 2 3 4 5 6)", "1 0 1 0 1 0")]
+	public async Task Map(string function, string expected)
+	{
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"map(#lambda/strlen\(\%0\),hello world foo)", "5 5 3")]
+	[Arguments(@"map(#lambda/strlen\(\%0\),hello;world;foo,;)", "5;5;3")]
+	[Arguments(@"map(#lambda/\%0,a b c)", "a b c")]
+	// Bracket-form lambda: verify [func()] syntax in lambda code passes attribute validation
+	[Arguments(@"map(#lambda/[strlen\(\%0\)],hello world foo)", "5 5 3")]
+	public async Task MapWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"map(#apply/strlen,hello world foo)", "5 5 3")]
+	[Arguments(@"map(#apply/strlen,hello;world;foo,;)", "5;5;3")]
+	public async Task MapWithApply(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
 	[Test]
 	[Arguments("fold(test/add_func,1 2 3)", "6")]
 	public async Task Fold(string function, string expected)
@@ -240,6 +284,16 @@ public class ListFunctionUnitTests
 		// Replace "test" with actual DBRef
 		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"fold(#lambda/add\(\%0\,\%1\),1 2 3)", "6")]
+	[Arguments(@"fold(#lambda/add\(\%0\,\%1\),1 2 3 4,0)", "10")]
+	[Arguments(@"fold(#apply2/add,1 2 3)", "6")]
+	public async Task FoldWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -420,8 +474,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsNotNull();
 	}
 
-	[Test]
-	[Skip("Lambda function syntax not fully supported - #lambda/\\%0 pattern needs implementation")]
+	[Test, NotInParallel]
 	[Arguments(@"filterbool(#lambda/\%0,1 0 1)", "1 1")]
 	public async Task FilterBool(string function, string expected)
 	{

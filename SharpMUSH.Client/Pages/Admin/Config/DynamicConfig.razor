@@ -1,0 +1,521 @@
+@page "/admin/config/{category}"
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Library.API
+@using System.Text.Json
+@inject AdminConfigService AdminConfigService
+@inject ConfigSchemaService SchemaService
+@inject ISnackbar Snackbar
+
+<PageTitle>@CategoryTitle - Configuration</PageTitle>
+
+<div class="config-section-page">
+    @* Header *@
+    <div class="config-section-header">
+        <MudText Typo="Typo.h4">@CategoryTitle</MudText>
+        <MudText Typo="Typo.body1" Class="mud-text-secondary mt-2">
+            @_categoryMetadata?.Description
+        </MudText>
+    </div>
+
+    @* Content *@
+    <div class="config-section-content">
+        @if (CustomPageCategories.Contains(Category))
+        {
+            <MudCard>
+                <MudCardContent>
+                    <MudAlert Severity="Severity.Error">
+                        <strong>Routing Error:</strong> The category "@Category" has a custom page that should be rendering instead of DynamicConfig.
+                        <br/>
+                        Expected route: <code>/admin/config/@Category</code>
+                        <br/>
+                        This message means the custom page is NOT being matched by the router.
+                    </MudAlert>
+                </MudCardContent>
+            </MudCard>
+        }
+        else if (_loading)
+        {
+            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+        }
+        else if (_categoryMetadata == null)
+        {
+            <MudCard>
+                <MudCardContent>
+                    <MudAlert Severity="Severity.Warning">
+                        Configuration category "@Category" not found in schema.
+                    </MudAlert>
+                </MudCardContent>
+            </MudCard>
+        }
+        else if (!_categoryProperties.Any())
+        {
+            <MudCard>
+                <MudCardContent>
+                    <MudAlert Severity="Severity.Info">
+                        No configuration properties found for category "@CategoryTitle".
+                        <br />
+                        <small>This category may not have been annotated with enhanced schema metadata yet.</small>
+                    </MudAlert>
+                </MudCardContent>
+            </MudCard>
+        }
+        else if (!_categoryMetadata.Groups.Any())
+        {
+            @* Fallback: Render all properties without grouping if Groups aren't defined yet *@
+            <MudCard Outlined="true" Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@CategoryTitle Settings</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudAlert Severity="Severity.Info" Class="mb-4">
+                        <strong>Note:</strong> This category has not been updated with enhanced schema metadata yet.
+                        Properties are displayed without grouping. Only the Network (Net) category currently has the full enhanced UI.
+                    </MudAlert>
+                    <MudGrid>
+                        @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
+                        {
+                            @RenderPropertyContent(prop)
+                        }
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        }
+        else
+        {
+            @* Render groups as cards *@
+            @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
+            {
+                var groupProperties = GetPropertiesInGroup(group.Name).OrderBy(p => p.Order).ToList();
+                
+                <MudCard Outlined="true" Class="mb-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">@group.DisplayName</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudGrid>
+                            @foreach (var prop in groupProperties)
+                            {
+                                @RenderPropertyContent(prop)
+                            }
+                        </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            }
+        }
+    </div>
+
+    @* Save/Reset Bar *@
+    @if (_hasChanges)
+    {
+        <MudPaper Elevation="4" Class="save-bar">
+            <div class="save-bar-content">
+                <div class="save-bar-info">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
+                    <MudText Typo="Typo.body1"><strong>Unsaved changes</strong> in this section</MudText>
+                </div>
+                <div class="save-bar-actions">
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetChanges">
+                        Reset Changes
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SaveChanges" StartIcon="@Icons.Material.Filled.Save">
+                        Save Configuration
+                    </MudButton>
+                </div>
+            </div>
+        </MudPaper>
+    }
+</div>
+
+<style>
+    .config-section-page {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .config-section-header {
+        padding: 24px 32px;
+        background: var(--mud-palette-surface);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .config-section-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 32px;
+    }
+
+    .save-bar {
+        position: sticky;
+        bottom: 0;
+        padding: 16px 32px;
+        background: var(--mud-palette-surface);
+        border-top: 2px solid var(--mud-palette-warning);
+        z-index: 10;
+    }
+
+    .save-bar-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .save-bar-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .save-bar-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    @@media (max-width: 600px) {
+        .save-bar-content {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .save-bar-actions {
+            width: 100%;
+            justify-content: stretch;
+        }
+
+        .save-bar-actions > * {
+            flex: 1;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string Category { get; set; } = string.Empty;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
+    private bool _loading = true;
+    private bool _hasChanges = false;
+    private ConfigurationSchema? _schema;
+    private CategoryMetadata? _categoryMetadata;
+    private Dictionary<string, PropertyMetadata> _categoryProperties = new();
+    private Dictionary<string, object?> _currentValues = new();
+    private Dictionary<string, object?> _originalValues = new();
+
+    // Categories that have custom pages - redirect to them
+    private static readonly HashSet<string> CustomPageCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bannednames",
+        "restrictions",
+        "sitelock",
+        "sitelockrules"
+    };
+
+    private string CategoryTitle => _categoryMetadata?.DisplayName ?? FormatCategoryName(Category);
+
+    protected override void OnInitialized()
+    {
+        // Check if this category has a custom page - if so, let that page handle it
+        if (CustomPageCategories.Contains(Category))
+        {
+            // The custom page should be handling this - something went wrong
+            // Just continue and let it 404 or show error
+            return;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Skip loading for custom page categories
+        if (CustomPageCategories.Contains(Category))
+        {
+            return;
+        }
+        
+        await LoadConfigurationAsync();
+    }
+
+    private async Task LoadConfigurationAsync()
+    {
+        _loading = true;
+        _hasChanges = false;
+        
+        try
+        {
+            // Fetch schema from the API
+            var schema = await SchemaService.GetSchemaAsync();
+            if (schema == null)
+            {
+                Snackbar.Add("Failed to load configuration schema", Severity.Error);
+                return;
+            }
+
+            _schema = schema;
+
+            // Map URL parameter to category name
+            var categoryName = MapCategoryName(Category);
+            
+            // Find matching category
+            _categoryMetadata = schema.Categories.FirstOrDefault(c => 
+                c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+
+            if (_categoryMetadata == null)
+            {
+                Snackbar.Add($"Category '{categoryName}' not found", Severity.Warning);
+                return;
+            }
+
+            // Get properties for this category
+            _categoryProperties = schema.Properties
+                .Where(kvp => kvp.Value.Category.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            // Fetch current config values
+            var result = await AdminConfigService.GetOptionsAsync();
+            if (result.IsT1)
+            {
+                Snackbar.Add("Failed to load configuration values", Severity.Error);
+                return;
+            }
+
+            var config = result.AsT0;
+            
+            // Extract current values
+            foreach (var prop in _categoryProperties.Values)
+            {
+                var value = GetPropertyValue(config, prop.Path);
+                _currentValues[prop.Path] = value;
+                _originalValues[prop.Path] = value;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading configuration: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private RenderFragment RenderPropertyContent(PropertyMetadata prop) => __builder =>
+    {
+        // If DisplayName looks like snake_case or hasn't been customized, format it
+        var displayName = string.IsNullOrEmpty(prop.DisplayName) || 
+                         prop.DisplayName.Contains('_') ||
+                         prop.DisplayName == prop.Name
+            ? FormatPropertyName(prop.DisplayName ?? prop.Name)
+            : prop.DisplayName;
+            
+        if (prop.Component == "switch")
+        {
+            <MudItem xs="12">
+                <MudSwitch T="bool"
+                           Value="@GetBoolValue(prop)"
+                           ValueChanged="@(v => UpdateValue(prop, v))"
+                           Label="@displayName"
+                           Color="Color.Secondary" />
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    @prop.Description
+                </MudText>
+            </MudItem>
+        }
+        else if (prop.Component == "numeric")
+        {
+            <MudItem xs="12" md="6">
+                @if (prop.Type == "integer")
+                {
+                    var minVal = GetIntMin(prop);
+                    var maxVal = GetIntMax(prop);
+                    
+                    <MudNumericField T="int"
+                                   Value="@GetIntValue(prop)"
+                                   ValueChanged="@(v => UpdateValue(prop, v))"
+                                   Label="@displayName"
+                                   Variant="Variant.Outlined"
+                                   HelperText="@prop.Description"
+                                   Min="@(minVal ?? int.MinValue)"
+                                   Max="@(maxVal ?? int.MaxValue)" />
+                }
+                else
+                {
+                    <MudNumericField T="double"
+                                   Value="@GetDoubleValue(prop)"
+                                   ValueChanged="@(v => UpdateValue(prop, v))"
+                                   Label="@displayName"
+                                   Variant="Variant.Outlined"
+                                   HelperText="@prop.Description" />
+                }
+            </MudItem>
+        }
+        else if (prop.Component == "text")
+        {
+            <MudItem xs="12" md="6">
+                <MudTextField T="string"
+                            Value="@GetStringValue(prop)"
+                            ValueChanged="@(v => UpdateValue(prop, v))"
+                            Label="@displayName"
+                            Variant="Variant.Outlined"
+                            HelperText="@prop.Description" />
+            </MudItem>
+        }
+    };
+
+    private IEnumerable<PropertyMetadata> GetPropertiesInGroup(string groupName)
+    {
+        return _categoryProperties.Values.Where(p => 
+            (p.Group ?? "General").Equals(groupName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private object? GetPropertyValue(object obj, string propertyPath)
+    {
+        var parts = propertyPath.Split('.');
+        object? current = obj;
+        
+        foreach (var part in parts)
+        {
+            if (current == null) return null;
+            
+            var prop = current.GetType().GetProperty(part);
+            if (prop == null) return null;
+            
+            current = prop.GetValue(current);
+        }
+        
+        return current;
+    }
+
+    private bool GetBoolValue(PropertyMetadata prop)
+    {
+        if (_currentValues.TryGetValue(prop.Path, out var value) && value is bool boolValue)
+            return boolValue;
+        return prop.DefaultValue is bool defaultBool ? defaultBool : false;
+    }
+
+    private int GetIntValue(PropertyMetadata prop)
+    {
+        if (_currentValues.TryGetValue(prop.Path, out var value))
+        {
+            if (value is int intValue) return intValue;
+            if (value is uint uintValue) return (int)uintValue;
+            if (value is long longValue) return (int)longValue;
+        }
+        
+        if (prop.DefaultValue is int defaultInt) return defaultInt;
+        if (prop.DefaultValue is uint defaultUint) return (int)defaultUint;
+        return 0;
+    }
+
+    private double GetDoubleValue(PropertyMetadata prop)
+    {
+        if (_currentValues.TryGetValue(prop.Path, out var value) && value is double doubleValue)
+            return doubleValue;
+        return prop.DefaultValue is double defaultDouble ? defaultDouble : 0.0;
+    }
+
+    private string GetStringValue(PropertyMetadata prop)
+    {
+        if (_currentValues.TryGetValue(prop.Path, out var value) && value != null)
+            return value.ToString() ?? "";
+        return prop.DefaultValue?.ToString() ?? "";
+    }
+
+    private int? GetIntMin(PropertyMetadata prop)
+    {
+        if (prop.Min is int intMin) return intMin;
+        if (prop.Min is uint uintMin) return (int)uintMin;
+        return null;
+    }
+
+    private int? GetIntMax(PropertyMetadata prop)
+    {
+        if (prop.Max is int intMax) return intMax;
+        if (prop.Max is uint uintMax) return (int)uintMax;
+        return null;
+    }
+
+    private void UpdateValue(PropertyMetadata prop, object? newValue)
+    {
+        _currentValues[prop.Path] = newValue;
+        _hasChanges = !_currentValues.All(kvp => 
+            Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)));
+    }
+
+    private async Task SaveChanges()
+    {
+        Snackbar.Add("Save functionality not yet implemented", Severity.Info);
+        // TODO: Implement save to API
+        _hasChanges = false;
+    }
+
+    private void ResetChanges()
+    {
+        foreach (var kvp in _originalValues)
+        {
+            _currentValues[kvp.Key] = kvp.Value;
+        }
+        _hasChanges = false;
+        StateHasChanged();
+    }
+
+    private string MapCategoryName(string urlCategory)
+    {
+        return urlCategory.ToLower() switch
+        {
+            "net" or "network" => "Net",
+            "database" => "Database",
+            "limit" or "limits" => "Limit",
+            "command" or "commands" => "Command",
+            "chat" => "Chat",
+            "log" or "logging" => "Log",
+            "message" or "messages" => "Message",
+            "cosmetic" => "Cosmetic",
+            "cost" or "costs" => "Cost",
+            "attribute" or "attributes" => "Attribute",
+            "flag" or "flags" => "Flag",
+            "compatibility" => "Compatibility",
+            "alias" or "aliases" => "Alias",
+            "debug" => "Debug",
+            "function" or "functions" => "Function",
+            "warning" or "warnings" => "Warning",
+            "restriction" or "restrictions" => "Restriction",
+            "bannednames" => "BannedNames",
+            "sitelock" or "sitelockrules" => "SitelockRules",
+            "dump" => "Dump",
+            "file" or "files" => "File",
+            "textfile" or "textfiles" => "TextFile",
+            _ => char.ToUpper(urlCategory[0]) + urlCategory.Substring(1)
+        };
+    }
+
+    private string FormatCategoryName(string category)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(category, "([A-Z])", " $1").Trim();
+    }
+
+    private string FormatPropertyName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        
+        // Handle snake_case: mud_name -> Mud Name, player_creation -> Player Creation
+        if (name.Contains('_'))
+        {
+            return string.Join(" ", name.Split('_')
+                .Select(word => char.ToUpper(word[0]) + word.Substring(1).ToLower()));
+        }
+        
+        // Handle all-lowercase words: logins -> Logins, guests -> Guests
+        if (name.All(char.IsLower))
+        {
+            return char.ToUpper(name[0]) + name.Substring(1);
+        }
+        
+        // Handle PascalCase/camelCase: MudName -> Mud Name, mudName -> Mud Name
+        return System.Text.RegularExpressions.Regex.Replace(name, "([A-Z])", " $1").Trim();
+    }
+}

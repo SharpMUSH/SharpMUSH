@@ -1,7 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text;
-using MarkupString;
-using SharpMUSH.Messaging.Abstractions;
+﻿using MarkupString;
 using Mediator;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -9,29 +6,34 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Messaging.Abstractions;
+using System.Text;
 
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Notifies objects and sends telnet data with automatic batching support.
-/// All notifications are automatically batched with an 8ms timeout to reduce Kafka overhead.
-/// Messages are accumulated and flushed after 8ms of inactivity.
-/// Combined with Kafka producer batching (8ms), provides ~16ms total latency (approaching 60fps).
+/// Notifies objects and sends telnet data.
+/// KafkaFlow handles batching automatically via producer LingerMs configuration.
 /// </summary>
 public class NotifyService(
-	IMessageBus publishEndpoint, 
+	IMessageBus publishEndpoint,
 	IConnectionService connections,
 	IListenerRoutingService? listenerRoutingService = null,
-	Mediator.IMediator? mediator = null) : INotifyService
+	IMediator? mediator = null) : INotifyService
 {
-	private readonly ConcurrentDictionary<long, BatchingState> _batchingStates = new();
-
-	private class BatchingState
+	/// <summary>
+	/// Normalizes line endings by replacing all \n with \r\n and ensuring trailing \r\n
+	/// </summary>
+	private static string NormalizeLineEnding(string text)
 	{
-		public List<byte[]> AccumulatedMessages { get; } = [];
-		public object Lock { get; } = new();
-		public Timer? FlushTimer { get; set; }
+		// Replace all standalone \n with \r\n (but don't double-up existing \r\n)
+		text = text.Replace("\r\n", "\n"); // First normalize everything to \n
+		text = text.Replace("\n", "\r\n");  // Then convert all to \r\n
+
+		// Ensure it ends with exactly one \r\n
+		text = text.TrimEnd('\r', '\n');
+		return text + "\r\n";
 	}
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -56,16 +58,16 @@ public class NotifyService(
 					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
 					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
 				);
-				
+
 				var notificationContext = new NotificationContext(
 					Target: who,
 					Location: location,
 					IsRoomBroadcast: false,
 					ExcludedObjects: []
 				);
-				
+
 				// Fire and forget - don't await to avoid blocking notification
-				_ = listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
+				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}
 			catch
 			{
@@ -78,12 +80,13 @@ public class NotifyService(
 			str => str
 		);
 
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 8ms timeout
+		// Publish directly to Kafka - batching is handled by KafkaFlow producer
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
-			AddToBatch(handle, bytes);
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 		}
 	}
 
@@ -105,10 +108,11 @@ public class NotifyService(
 			str => str
 		);
 
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 8ms timeout
-		AddToBatch(handle, bytes);
+		// Publish directly to Kafka - batching is handled by KafkaFlow producer
+		await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -126,19 +130,20 @@ public class NotifyService(
 			str => str
 		);
 
+		text = NormalizeLineEnding(text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Always use automatic batching with 8ms timeout
+		// Publish directly to Kafka - batching is handled by KafkaFlow producer
 		foreach (var handle in handles)
 		{
-			AddToBatch(handle, bytes);
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 		}
 	}
 
 	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MarkupStringModule.getLength(markupString) == 0,
+			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 		))
 		{
@@ -150,11 +155,13 @@ public class NotifyService(
 			str => str
 		);
 
+		// Prompts typically don't need newlines, but ensure consistency
+		// (Prompts are usually things like "> " without line breaks)
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
 		{
-			await publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
 		}
 	}
 
@@ -167,7 +174,7 @@ public class NotifyService(
 	public async ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MarkupStringModule.getLength(markupString) == 0,
+			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 		))
 		{
@@ -179,12 +186,13 @@ public class NotifyService(
 			str => str
 		);
 
+		// Prompts typically don't need newlines
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Publish prompt message to each handle
 		foreach (var handle in handles)
 		{
-			await publishEndpoint.Publish(new TelnetPromptMessage(handle, bytes));
+			await publishEndpoint.HandlePublish(new TelnetPromptMessage(handle, bytes));
 		}
 	}
 
@@ -200,20 +208,16 @@ public class NotifyService(
 
 		// Get all handles for the target location/object
 		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
-		
-		// Get all handles to exclude
-		var excludeHandles = new HashSet<long>();
-		foreach (var exceptDbRef in except)
-		{
-			await foreach (var conn in connections.Get(exceptDbRef))
-			{
-				excludeHandles.Add(conn.Handle);
-			}
-		}
-		
+
+		// Get all handles to exclude using async LINQ SelectMany over all except-DBRefs
+		var excludeHandles = await except.ToAsyncEnumerable()
+			.SelectMany(dbRef => connections.Get(dbRef))
+			.Select(conn => conn.Handle)
+			.ToHashSetAsync();
+
 		// Filter out excluded handles and notify the rest
 		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
-		
+
 		if (notifyHandles.Length > 0)
 		{
 			await Notify(notifyHandles, what, sender, type);
@@ -225,109 +229,6 @@ public class NotifyService(
 
 	public async ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
-
-	/// <summary>
-	/// Adds a message to the batch for the specified handle and starts/resets the 8ms flush timer.
-	/// </summary>
-	private void AddToBatch(long handle, byte[] bytes)
-	{
-		var state = _batchingStates.GetOrAdd(handle, _ => new BatchingState());
-		lock (state.Lock)
-		{
-			state.AccumulatedMessages.Add(bytes);
-
-			// Start or reset the timer to 8ms
-			if (state.FlushTimer == null)
-			{
-				state.FlushTimer = new Timer(
-					_ =>
-					{
-						try
-						{
-							// Fire-and-forget pattern - don't block the timer thread
-							_ = Task.Run(async () => await FlushHandle(handle));
-						}
-						catch (Exception)
-						{
-							// Suppress exceptions to prevent timer crashes
-							// In production, this should log the exception
-						}
-					},
-					null,
-					8,
-					Timeout.Infinite
-				);
-			}
-			else
-			{
-				state.FlushTimer.Change(8, Timeout.Infinite);
-			}
-		}
-	}
-
-	/// <summary>
-	/// Flushes accumulated messages for a specific handle.
-	/// Called automatically by the 8ms timer or manually by EndBatchingScope.
-	/// </summary>
-	private async Task FlushHandle(long handle)
-	{
-		if (!_batchingStates.TryGetValue(handle, out var state))
-		{
-			return;
-		}
-
-		List<byte[]>? messagesToFlush = null;
-		bool shouldRemoveState = false;
-		lock (state.Lock)
-		{
-			if (state.AccumulatedMessages.Count == 0)
-			{
-				// No messages to flush. Clean up the state if this was a manual flush (EndBatchingScope)
-				// indicated by a null timer. For timer-based flushes, keep the state for potential reuse.
-				shouldRemoveState = state.FlushTimer == null;
-			}
-			else
-			{
-				messagesToFlush = [.. state.AccumulatedMessages];
-				state.AccumulatedMessages.Clear();
-				state.FlushTimer?.Dispose();
-				state.FlushTimer = null;
-				
-				// Always remove state after flushing to prevent memory leak.
-				// A new state will be created automatically when the next message arrives.
-				shouldRemoveState = true;
-			}
-		}
-
-		if (shouldRemoveState)
-		{
-			_batchingStates.TryRemove(handle, out _);
-		}
-
-		// Combine all accumulated messages with newlines and publish as one message
-		if (messagesToFlush?.Count > 0)
-		{
-			var totalSize = messagesToFlush.Sum(m => m.Length) + (messagesToFlush.Count - 1) * 2; // +2 for \r\n
-			var combined = new byte[totalSize];
-			var offset = 0;
-
-			for (var i = 0; i < messagesToFlush.Count; i++)
-			{
-				var message = messagesToFlush[i];
-				Array.Copy(message, 0, combined, offset, message.Length);
-				offset += message.Length;
-
-				// Add \r\n between messages (not after the last one)
-				if (i < messagesToFlush.Count - 1)
-				{
-					combined[offset++] = (byte)'\r';
-					combined[offset++] = (byte)'\n';
-				}
-			}
-
-			await publishEndpoint.Publish(new TelnetOutputMessage(handle, combined));
-		}
-	}
 
 	/// <summary>
 	/// Unified error handling: optionally notify user, then return error.
@@ -349,7 +250,7 @@ public class NotifyService(
 		{
 			await Notify(target, notifyMessage, sender: null);
 		}
-		
+
 		return new CallState(errorReturn);
 	}
 }

@@ -4,8 +4,8 @@ namespace SharpMUSH.Tests.Parser;
 
 public class FunctionUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
@@ -24,6 +24,19 @@ public class FunctionUnitTests
 	[Arguments("add(1,2)[add(5,5)]", "310")]
 	[Arguments("add(1,2)[add(5,5)]word()", "310word()")]
 	[Arguments("add({1},{2})[add(5,6)]word()", "311word()")]
+	// Fix B: Function-arg braces suppress function evaluation (PennMUSH PE_FUNCTION_CHECK removal)
+	[Arguments("strcat(a,{add(1,2)},b)", "aadd(1,2)b")]
+	[Arguments("cat(a,b,{c,d},e)", "a b c,d e")]
+	// Fix B: Brackets inside function-arg braces re-enable function evaluation
+	[Arguments("strcat(a,{[add(1,2)]},b)", "a3b")]
+	// Token stream rewriting: escaped brackets become literal text
+	[Arguments("strcat(\\[,hello,\\])", "[hello]")]
+	// Token stream rewriting: escaped brackets inside real brackets are unaffected
+	[Arguments("[strcat(\\[,hello,\\])]", "[hello]")]
+	// Token stream rewriting: escaped braces become literal text
+	[Arguments("strcat(\\{,hello,\\})", "{hello}")]
+	// Token stream rewriting: escaped braces inside real braces are unaffected
+	[Arguments("strcat(a,{\\{json\\}},b)", "a{json}b")]
 	public async Task Test(string str, string? expected = null)
 	{
 		Console.WriteLine("Testing: {0}", str);

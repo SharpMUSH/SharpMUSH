@@ -62,9 +62,9 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error generating signature help: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		return Task.FromResult<SignatureHelp?>(null);
@@ -118,7 +118,7 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 	}
 
 	private static SignatureInformation BuildSignatureInformation(
-		string functionName, 
+		string functionName,
 		Library.Attributes.SharpFunctionAttribute attr,
 		int activeParam)
 	{
@@ -138,9 +138,9 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 			var paramStart = label.Length;
 			if (isOptional)
 				label += "[";
-			
+
 			label += paramName;
-			
+
 			if (isOptional)
 				label += "]";
 
@@ -182,7 +182,7 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 		{
 			return ExpandParameterName(attr.ParameterNames, index);
 		}
-		
+
 		// Fallback to generic parameter name
 		return $"arg{index + 1}";
 	}
@@ -197,7 +197,7 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 	{
 		// Find which parameter pattern applies to this index
 		int currentIndex = 0;
-		
+
 		foreach (var paramName in parameterNames)
 		{
 			if (paramName.Contains("..."))
@@ -208,11 +208,11 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 					// Paired repeating pattern like "case...|result..."
 					var parts = paramName.Split('|');
 					var cleanParts = parts.Select(p => p.Replace("...", "").Trim()).ToArray();
-					
+
 					// Calculate which part of the pair this index represents
 					var pairIndex = (index - currentIndex) / cleanParts.Length;
 					var partIndex = (index - currentIndex) % cleanParts.Length;
-					
+
 					return $"{cleanParts[partIndex]}{pairIndex + 1}";
 				}
 				else
@@ -232,13 +232,13 @@ public class SignatureHelpHandler : SignatureHelpHandlerBase
 				currentIndex++;
 			}
 		}
-		
+
 		// If we get here, we've gone past all defined parameters
 		return $"arg{index + 1}";
 	}
 
 	protected override SignatureHelpRegistrationOptions CreateRegistrationOptions(
-		SignatureHelpCapability capability, 
+		SignatureHelpCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new SignatureHelpRegistrationOptions

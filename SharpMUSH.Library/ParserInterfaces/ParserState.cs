@@ -1,12 +1,13 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Immutable;
-using System.Text;
-using Mediator;
+﻿using Mediator;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -44,12 +45,12 @@ public class InvocationCounter
 	/// Total number of function calls made during this evaluation.
 	/// </summary>
 	public int Count { get; private set; }
-	
+
 	/// <summary>
 	/// Increment the counter and return the new value.
 	/// </summary>
 	public int Increment() => ++Count;
-	
+
 	/// <summary>
 	/// Decrement the counter and return the new value.
 	/// </summary>
@@ -77,17 +78,17 @@ public class HttpResponseContext
 	/// HTTP status line (e.g., "200 OK", "404 Not Found")
 	/// </summary>
 	public string? StatusLine { get; set; }
-	
+
 	/// <summary>
 	/// Content-Type header value
 	/// </summary>
 	public string? ContentType { get; set; }
-	
+
 	/// <summary>
 	/// Additional HTTP headers
 	/// </summary>
 	public List<(string Name, string Value)> Headers { get; } = new();
-	
+
 	/// <summary>
 	/// Response body content
 	/// </summary>
@@ -100,17 +101,17 @@ public class IterationWrapper<T>
 	/// The iteration value.
 	/// </summary>
 	public required T Value { get; set; }
-	
+
 	/// <summary>
 	/// Iteration number.
 	/// </summary>
 	public required uint Iteration { get; set; }
-	
+
 	/// <summary>
 	/// This is for the break() function iterator.
 	/// </summary>
 	public required bool Break { get; set; }
-	
+
 	/// <summary>
 	/// NoBreak indicator is to ensure that a CommandListBreak does not also break the Iteration.
 	/// </summary>
@@ -123,6 +124,7 @@ public class IterationWrapper<T>
 /// <param name="Registers">The current standard registers (%0, %1, named arguments)</param>
 /// <param name="IterationRegisters">The current iteration registers: %i0, #@, etc</param>
 /// <param name="RegexRegisters">The current regex registers, %$0 and named ones.</param>
+/// <param name="SwitchStack">The switch context stack for stext() and slev() functions. Tracks the string being matched in nested switch statements.</param>
 /// <param name="CurrentEvaluation">The current evaluation context</param>
 /// <param name="ParserFunctionDepth">The function depth.</param>
 /// <param name="Function">Function name being evaluated</param>
@@ -140,17 +142,18 @@ public class IterationWrapper<T>
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
 /// <param name="LimitExceeded">Shared flag indicating a limit has been exceeded. Mutable and shared across all states in an evaluation.</param>
-public record ParserState(
+public partial record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
 	ConcurrentStack<Dictionary<string, MString>> RegexRegisters,
+	ConcurrentStack<MString> SwitchStack,
 	ConcurrentStack<Execution> ExecutionStack,
 	Dictionary<string, CallState> EnvironmentRegisters,
 	DBAttribute? CurrentEvaluation,
 	int? ParserFunctionDepth,
 	string? Function,
 	string? Command,
-	Func<IMUSHCodeParser,ValueTask<Option<CallState>>> CommandInvoker,
+	Func<IMUSHCodeParser, ValueTask<Option<CallState>>> CommandInvoker,
 	IEnumerable<string> Switches,
 	Dictionary<string, CallState> Arguments,
 	DBRef? Executor,
@@ -199,6 +202,7 @@ public record ParserState(
 		new ConcurrentStack<Dictionary<string, MString>>(),
 		new ConcurrentStack<IterationWrapper<MString>>(),
 		new ConcurrentStack<Dictionary<string, MString>>(),
+		new ConcurrentStack<MString>(),
 		new ConcurrentStack<Execution>(),
 		[],
 		null,
@@ -219,7 +223,7 @@ public record ParserState(
 		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		new InvocationCounter(),
 		new LimitExceededFlag());
-	
+
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!
 	/// </summary>
@@ -252,7 +256,7 @@ public record ParserState(
 		ValidateAndClearCacheIfNeeded(ref _callerObject, Caller);
 		return _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
 	}
-	
+
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!
 	/// </summary>
@@ -260,7 +264,7 @@ public record ParserState(
 	/// <returns>A ValueTask containing either a SharpObject, or it will throw.</returns>
 	public async ValueTask<AnySharpObject> KnownExecutorObject(IMediator mediator)
 		=> (await ExecutorObject(mediator)).Known();
-	
+
 	/// <summary>
 	/// The enactor is the object which causes something to happen: %# or %:
 	/// </summary>
@@ -268,7 +272,7 @@ public record ParserState(
 	/// <returns>A ValueTask containing either a SharpObject, or it will throw.</returns>
 	public async ValueTask<AnySharpObject> KnownEnactorObject(IMediator mediator)
 		=> (await EnactorObject(mediator)).Known();
-	
+
 	/// <summary>
 	/// The caller is the object which causes an attribute to be evaluated (for instance, by using ufun() or a similar function): %@
 	/// </summary>
@@ -291,20 +295,19 @@ public record ParserState(
 	/// <param name="register">Register string.</param>
 	/// <param name="value">Value.</param>
 	/// <returns>Success if it was a valid register.</returns>
-	/// <exception cref="Exception">If we somehow failed to peek. Fatal.</exception>
 	public bool AddRegister(string register, MString value)
 	{
 		// Validate register pattern: alphanumeric characters, underscores, and hyphens
 		// Register names should be uppercase and match pattern: [A-Z0-9_-]+
-		if (string.IsNullOrEmpty(register) || !System.Text.RegularExpressions.Regex.IsMatch(register, @"^[A-Z0-9_\-]+$"))
+		if (string.IsNullOrEmpty(register) || !RegisterNameRegex().IsMatch(register))
 		{
 			return false;
 		}
-		
+
 		var canPeek = Registers.TryPeek(out var top);
 		if (!canPeek)
 		{
-			throw new Exception("Could not peek!");
+			return false;
 		}
 
 		if (!top!.TryAdd(register, value))
@@ -314,4 +317,7 @@ public record ParserState(
 
 		return true;
 	}
+
+	[GeneratedRegex(@"^[A-Z0-9_\-]+$")]
+	private static partial Regex RegisterNameRegex();
 }

@@ -1,6 +1,5 @@
-﻿using SharpMUSH.Configuration;
+﻿using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Configuration.Generated;
 
 namespace SharpMUSH.Library.API;
 
@@ -10,6 +9,7 @@ public static class OptionHelper
 		=> new()
 		{
 			Configuration = options,
-			Metadata = ConfigMetadata.PropertyMetadata.ToDictionary()
+			Metadata = ConfigMetadata.PropertyMetadata.ToDictionary(),
+			Schema = SchemaBuilder.BuildSchema(options)
 		};
 }

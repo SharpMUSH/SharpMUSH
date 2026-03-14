@@ -1,8 +1,8 @@
-﻿using System.Drawing;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using System.Drawing;
 using A = MarkupString.MarkupStringModule;
 using M = MarkupString.MarkupImplementation.AnsiMarkup;
 using StringExtensions = ANSILibrary.StringExtensions;
@@ -11,11 +11,11 @@ namespace SharpMUSH.Tests.Database;
 
 public class ArangoDBTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-	
+
 	[Test]
 	public async Task TestRoomZero()
 	{
@@ -48,18 +48,19 @@ public class ArangoDBTests
 
 	[Test]
 	[Repeat(10)]
+	[NotInParallel]
 	public async Task SetAndOverrideAnAttribute()
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = new DBRef(playerOne.Object.Key);
 
 		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer"), playerOne);
-		var existingLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEqualTo("Layer");
 
 		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer2"), playerOne);
-		var overwrittenLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		var overwrittenLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
 
 		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
 	}
@@ -71,8 +72,8 @@ public class ArangoDBTests
 		var playerOneDBRef = playerOne.Object()!.DBRef;
 
 		var ansiString = A.markupSingle(M.Create(foreground: StringExtensions.rgb(Color.Red)), "red");
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], ansiString, playerOne.AsPlayer);
-		var existingLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		await Database.SetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"], ansiString, playerOne.AsPlayer);
+		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"]))!.ToListAsync();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEquatableOrEqualTo(ansiString.ToString());
 	}
@@ -90,16 +91,16 @@ public class ArangoDBTests
 		var flags = await Database.GetAttributeFlagsAsync().ToArrayAsync();
 		await Assert.That(flags.Count).IsGreaterThan(0);
 	}
-	
+
 	[Test]
 	public async Task SettingAKnownAttributeSetsFlags()
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDbRef = playerOne.Object.DBRef;
 		await Database.SetAttributeAsync(playerOneDbRef, ["TZ"], MModule.single("America/Chicago"), playerOne);
-		var result = await Database.GetAttributeAsync(playerOneDbRef, ["TZ"]);
+		var result = Database.GetAttributeAsync(playerOneDbRef, ["TZ"]);
 		var realResult = await result!.FirstOrDefaultAsync();
-		
+
 		await Assert.That(realResult).IsNotNull();
 		await Assert.That(realResult!.Flags).IsNotNull();
 		await Assert.That(realResult.Flags).Count().IsEqualTo(2);
@@ -128,12 +129,12 @@ public class ArangoDBTests
 		await Database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"], MModule.single("Deep1"), playerOne);
 		await Database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"], MModule.single("Deeper"), playerOne);
 
-		var existingSingle = await (await Database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))!.ToListAsync();
-		var existingLayer = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
-		var existingLeaf = await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves"]))!.ToListAsync();
-		var existingLeaf2 =await (await Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]))!.ToListAsync();
-		var existingDeep1 =await (await Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))!.ToListAsync();
-		var existingDeep2 =await (await Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))!.ToListAsync();
+		var existingSingle = await (Database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))!.ToListAsync();
+		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
+		var existingLeaf = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves"]))!.ToListAsync();
+		var existingLeaf2 = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"]))!.ToListAsync();
+		var existingDeep1 = await (Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"]))!.ToListAsync();
+		var existingDeep2 = await (Database.GetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"]))!.ToListAsync();
 
 		var obj = await Database.GetObjectNodeAsync(playerOneDBRef);
 
@@ -174,24 +175,24 @@ public class ArangoDBTests
 	{
 		// Create a parent chain: Parent1 -> Parent2 -> ChildRoom
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		
+
 		// Create Parent1
 		var parent1Dbref = await Database.CreateRoomAsync("Parent1", playerOne);
 		var parent1 = (await Database.GetObjectNodeAsync(parent1Dbref)).AsRoom;
-		
+
 		// Create Parent2 with Parent1 as its parent
 		var parent2Dbref = await Database.CreateRoomAsync("Parent2", playerOne);
 		var parent2 = (await Database.GetObjectNodeAsync(parent2Dbref)).AsRoom;
 		await Database.SetObjectParent(parent2, parent1);
-		
+
 		// Create ChildRoom with Parent2 as its parent
 		var childDbref = await Database.CreateRoomAsync("ChildRoom", playerOne);
 		var child = (await Database.GetObjectNodeAsync(childDbref)).AsRoom;
 		await Database.SetObjectParent(child, parent2);
-		
+
 		// Get the full parent chain using Object ID (not Room ID)
-		var parents = await (await Database.GetParentsAsync(child.Object.Id!, CancellationToken.None)).ToListAsync();
-		
+		var parents = await (Database.GetParentsAsync(child.Object.Id!, CancellationToken.None)).ToListAsync();
+
 		// Should get Parent2 and Parent1 in order
 		await Assert.That(parents).Count().IsEqualTo(2);
 		await Assert.That(parents[0].Key).IsEqualTo(parent2.Object.Key);

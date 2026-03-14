@@ -69,7 +69,7 @@ public partial class Functions
 			? (await switchArg.ParsedMessage())?.ToPlainText() ?? ""
 			: "";
 		var switchesList = switchesText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		
+
 		var isRemit = switchesList.Contains("remit", StringComparer.OrdinalIgnoreCase);
 		var isOemit = switchesList.Contains("oemit", StringComparer.OrdinalIgnoreCase);
 		var isNospoof = switchesList.Contains("nospoof", StringComparer.OrdinalIgnoreCase);
@@ -96,8 +96,8 @@ public partial class Functions
 		var contents = executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
-			               .Where(async (x, _)
-				               => await PermissionService.CanInteract(x, executor, InteractType.Hear)))
+										 .Where(async (x, _)
+											 => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
@@ -121,8 +121,8 @@ public partial class Functions
 		var contents = executorLocation.Content(Mediator!);
 
 		await foreach (var obj in contents
-			               .Where(async (x, _)
-				               => await PermissionService.CanInteract(x.WithRoomOption(), executor, InteractType.Hear)))
+										 .Where(async (x, _)
+											 => await PermissionService.CanInteract(executor, x, InteractType.Hear)))
 		{
 			await NotifyService!.Notify(
 				obj.WithRoomOption(),
@@ -276,7 +276,7 @@ public partial class Functions
 				LocateFlags.All,
 				async target =>
 				{
-					if (await PermissionService.CanInteract(target, executor, InteractType.Hear))
+					if (await PermissionService.CanInteract(executor, target, InteractType.Hear))
 					{
 						await NotifyService!.Notify(target, message, executor, notificationType);
 					}
@@ -320,7 +320,7 @@ public partial class Functions
 				LocateFlags.All,
 				async target =>
 				{
-					if (await PermissionService.CanInteract(target, executor, InteractType.Hear))
+					if (await PermissionService.CanInteract(executor, target, InteractType.Hear))
 					{
 						await NotifyService!.Prompt(target, message, executor, notificationType);
 					}
@@ -402,10 +402,10 @@ public partial class Functions
 			{
 				// Find all objects in the zone
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
-				
+
 				// Get all rooms in the zone
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
-				
+
 				// Send message to each room
 				await foreach (var room in rooms)
 				{
@@ -551,7 +551,7 @@ public partial class Functions
 				LocateFlags.All,
 				async target =>
 				{
-					if (await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+					if (await PermissionService!.CanInteract(executor, target, InteractType.Hear))
 					{
 						await NotifyService!.Notify(target, message, executor);
 					}
@@ -596,9 +596,9 @@ public partial class Functions
 				LocateFlags.All,
 				async target =>
 				{
-					if (await PermissionService!.CanInteract(target, executor, InteractType.Hear))
+					if (await PermissionService!.CanInteract(executor, target, InteractType.Hear))
 					{
-						await NotifyService!.Prompt(target, message, executor, INotifyService.NotificationType.Announce);
+						await NotifyService!.Prompt(target, message, executor);
 					}
 
 					return CallState.Empty;
@@ -674,10 +674,10 @@ public partial class Functions
 			{
 				// Find all objects in the zone
 				var zoneObjects = Mediator!.CreateStream(new GetObjectsByZoneQuery(zone));
-				
+
 				// Get all rooms in the zone
 				var rooms = zoneObjects.Where(obj => obj.Type == DatabaseConstants.TypeRoom);
-				
+
 				// Send message to each room
 				await foreach (var room in rooms)
 				{

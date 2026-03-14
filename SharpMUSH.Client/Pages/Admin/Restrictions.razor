@@ -1,0 +1,304 @@
+@page "/admin/config/restrictions"
+@layout SharpMUSH.Client.Layout.ConfigLayout
+@using SharpMUSH.Client.Services
+@inject RestrictionsService RestrictionsService
+@inject ISnackbar Snackbar
+
+<PageTitle>Restrictions - Configuration</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
+    <MudText Typo="Typo.h4" GutterBottom="true">Command & Function Restrictions</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        Restrict which players can use specific commands or functions based on flags, powers, or attributes.
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+            <MudTabPanel Text="Command Restrictions" Icon="@Icons.Material.Filled.Terminal">
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Add Command Restriction</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" md="5">
+                            <MudTextField @bind-Value="_newCommandName" 
+                                          Label="Command Name" 
+                                          Variant="Variant.Outlined"
+                                          HelperText="e.g., pemit, force" />
+                        </MudItem>
+                        <MudItem xs="12" md="5">
+                            <MudTextField @bind-Value="_newCommandRestrictionsText" 
+                                          Label="Restrictions (comma-separated)" 
+                                          Variant="Variant.Outlined"
+                                          HelperText="e.g., wizard, royalty, admin" />
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       OnClick="AddCommandRestriction"
+                                       Disabled="string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText)"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Add">
+                                Add
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Configured Command Restrictions</MudText>
+                    
+                    @if (_commandRestrictions == null || !_commandRestrictions.Any())
+                    {
+                        <MudAlert Severity="Severity.Info">No command restrictions configured.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudList T="string">
+                            @foreach (var restriction in _commandRestrictions.OrderBy(r => r.Key))
+                            {
+                                <MudListItem T="string">
+                                    <div class="d-flex justify-space-between align-center" style="width: 100%">
+                                        <div>
+                                            <MudText Typo="Typo.body1"><strong>@restriction.Key</strong></MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                @string.Join(", ", restriction.Value)
+                                            </MudText>
+                                        </div>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                       Color="Color.Error" 
+                                                       Size="Size.Small"
+                                                       OnClick="@(() => DeleteCommandRestriction(restriction.Key))" />
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Function Restrictions" Icon="@Icons.Material.Filled.Functions">
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Add Function Restriction</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" md="5">
+                            <MudTextField @bind-Value="_newFunctionName" 
+                                          Label="Function Name" 
+                                          Variant="Variant.Outlined"
+                                          HelperText="e.g., pemit(), sql()" />
+                        </MudItem>
+                        <MudItem xs="12" md="5">
+                            <MudTextField @bind-Value="_newFunctionRestrictionsText" 
+                                          Label="Restrictions (comma-separated)" 
+                                          Variant="Variant.Outlined"
+                                          HelperText="e.g., wizard, builder" />
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       OnClick="AddFunctionRestriction"
+                                       Disabled="string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText)"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Add">
+                                Add
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Configured Function Restrictions</MudText>
+                    
+                    @if (_functionRestrictions == null || !_functionRestrictions.Any())
+                    {
+                        <MudAlert Severity="Severity.Info">No function restrictions configured.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudList T="string">
+                            @foreach (var restriction in _functionRestrictions.OrderBy(r => r.Key))
+                            {
+                                <MudListItem T="string">
+                                    <div class="d-flex justify-space-between align-center" style="width: 100%">
+                                        <div>
+                                            <MudText Typo="Typo.body1"><strong>@restriction.Key</strong></MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                @string.Join(", ", restriction.Value)
+                                            </MudText>
+                                        </div>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                       Color="Color.Error" 
+                                                       Size="Size.Small"
+                                                       OnClick="@(() => DeleteFunctionRestriction(restriction.Key))" />
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+        </MudTabs>
+    }
+</MudContainer>
+
+@code {
+    private bool _loading = true;
+    private Dictionary<string, string[]> _commandRestrictions = new();
+    private Dictionary<string, string[]> _functionRestrictions = new();
+    
+    private string _newCommandName = string.Empty;
+    private string _newCommandRestrictionsText = string.Empty;
+    private string _newFunctionName = string.Empty;
+    private string _newFunctionRestrictionsText = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRestrictions();
+    }
+
+    private async Task LoadRestrictions()
+    {
+        _loading = true;
+        try
+        {
+            var commandTask = RestrictionsService.GetCommandRestrictionsAsync();
+            var functionTask = RestrictionsService.GetFunctionRestrictionsAsync();
+
+            await Task.WhenAll(commandTask, functionTask);
+
+            _commandRestrictions = commandTask.Result ?? new Dictionary<string, string[]>();
+            _functionRestrictions = functionTask.Result ?? new Dictionary<string, string[]>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading restrictions: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task AddCommandRestriction()
+    {
+        if (string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText))
+            return;
+
+        try
+        {
+            var restrictions = _newCommandRestrictionsText
+                .Split(',')
+                .Select(r => r.Trim())
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .ToArray();
+
+            if (restrictions.Length == 0)
+            {
+                Snackbar.Add("At least one restriction is required", Severity.Warning);
+                return;
+            }
+
+            var success = await RestrictionsService.AddCommandRestrictionAsync(_newCommandName.Trim(), restrictions);
+            if (success)
+            {
+                Snackbar.Add($"Command restriction for '{_newCommandName}' added successfully", Severity.Success);
+                _newCommandName = string.Empty;
+                _newCommandRestrictionsText = string.Empty;
+                await LoadRestrictions();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add command restriction", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding command restriction: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteCommandRestriction(string commandName)
+    {
+        try
+        {
+            var success = await RestrictionsService.DeleteCommandRestrictionAsync(commandName);
+            if (success)
+            {
+                Snackbar.Add($"Command restriction for '{commandName}' removed successfully", Severity.Success);
+                await LoadRestrictions();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to remove command restriction", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error removing command restriction: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AddFunctionRestriction()
+    {
+        if (string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText))
+            return;
+
+        try
+        {
+            var restrictions = _newFunctionRestrictionsText
+                .Split(',')
+                .Select(r => r.Trim())
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .ToArray();
+
+            if (restrictions.Length == 0)
+            {
+                Snackbar.Add("At least one restriction is required", Severity.Warning);
+                return;
+            }
+
+            var success = await RestrictionsService.AddFunctionRestrictionAsync(_newFunctionName.Trim(), restrictions);
+            if (success)
+            {
+                Snackbar.Add($"Function restriction for '{_newFunctionName}' added successfully", Severity.Success);
+                _newFunctionName = string.Empty;
+                _newFunctionRestrictionsText = string.Empty;
+                await LoadRestrictions();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to add function restriction", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding function restriction: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteFunctionRestriction(string functionName)
+    {
+        try
+        {
+            var success = await RestrictionsService.DeleteFunctionRestrictionAsync(functionName);
+            if (success)
+            {
+                Snackbar.Add($"Function restriction for '{functionName}' removed successfully", Severity.Success);
+                await LoadRestrictions();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to remove function restriction", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error removing function restriction: {ex.Message}", Severity.Error);
+        }
+    }
+}

@@ -1,15 +1,13 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Mediator;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
-using Mediator;
-using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library;
 
@@ -25,8 +23,11 @@ public static partial class HelperFunctions
 	public static async ValueTask<AnySharpObject> GetGod(IMediator mediator)
 		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
 
+	/// <summary>
+	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
+	/// </summary>
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> await (obj.Object().Flags.Value)
+		=> obj.IsGod() || await (obj.Object().Flags.Value)
 			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase));
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
@@ -84,22 +85,22 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
 		=> obj.IsPlayer
-		   || await IsPuppet(obj)
-		   || (await IsAudible(obj) && await (obj.Object().LazyAllAttributes.Value)
-			   .AnyAsync(x => x.Name == "FORWARDLIST"));
+			 || await IsPuppet(obj)
+			 || (await IsAudible(obj) && await (obj.Object().LazyAllAttributes.Value)
+				 .AnyAsync(x => x.Name == "FORWARDLIST"));
 
 	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
 		=> await obj.HasPower("Puppet");
 
 	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
 		=> await obj.Object().Powers.Value
-			.AnyAsync(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase)
-			               || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
 		=> await obj.Powers.Value
-			.AnyAsync(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase)
-			               || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
@@ -110,14 +111,14 @@ public static partial class HelperFunctions
 		}
 
 		if (await obj.IsAudible() &&
-		    (await attributes.GetAttributeAsync(obj, obj, "FORWARDLIST", IAttributeService.AttributeMode.Read, true))
-		    .IsAttribute)
+				(await attributes.GetAttributeAsync(obj, obj, "FORWARDLIST", IAttributeService.AttributeMode.Read, true))
+				.IsAttribute)
 		{
 			return true;
 		}
 
 		if ((await attributes.GetAttributeAsync(obj, obj, "LISTEN", IAttributeService.AttributeMode.Read, true))
-		    .IsAttribute)
+				.IsAttribute)
 		{
 			return true;
 		}
@@ -196,15 +197,15 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
-		   || await obj.HasFlag("Trust")
-		   || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
-			   .Object.Flags.Value.AnyAsync(x => x.Name == "Trust")
-		   || await IsWizard(obj);
+			 || await obj.HasFlag("Trust")
+			 || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
+				 .Object.Flags.Value.AnyAsync(x => x.Name == "Trust")
+			 || await IsWizard(obj);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who,
 		AnySharpObject what)
 		=> (await who.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id ==
-		   (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
+			 (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
 
 	/// <summary>
 	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
@@ -283,7 +284,7 @@ public static partial class HelperFunctions
 		// If start is reachable FROM newRelated via parent/zone edges, then adding the relationship
 		// would complete a cycle: start -> newRelated -> ... -> start
 		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: cancellationToken);
-		
+
 		return !isReachable;
 	}
 
@@ -324,7 +325,7 @@ public static partial class HelperFunctions
 			? new None()
 			: new DBRef(int.Parse(dbref), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime));
 	}
-	
+
 	/// <summary>
 	/// A regular expression that takes the form of '#123:43143124' or '#543'.
 	/// </summary>
@@ -359,7 +360,7 @@ public static partial class HelperFunctions
 	/// </summary>
 	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex ObjectWithRegexAttribute();
-	
+
 	/// <summary>
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// Legacy method - use ObjectWithLiteralAttribute, ObjectWithWildcardAttribute, or ObjectWithRegexAttribute instead.
@@ -381,13 +382,13 @@ public static partial class HelperFunctions
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"^(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+))?$")]
 	private static partial Regex DatabaseReferenceWithOptionalAttribute();
-	
+
 	/// <summary>
 	/// Validates basic attribute name format (alphanumeric, underscores, hyphens, backticks)
 	/// </summary>
 	[GeneratedRegex(@"^[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+$")]
 	private static partial Regex AttributeNameValidation();
-	
+
 	/// <summary>
 	/// Validates that an attribute name is well-formed
 	/// </summary>
@@ -397,7 +398,17 @@ public static partial class HelperFunctions
 	{
 		if (string.IsNullOrEmpty(attributeName))
 			return false;
-		
+
 		return AttributeNameValidationRegex.IsMatch(attributeName);
 	}
+
+	/// <summary>
+	/// Returns <see langword="true"/> when the attribute specifier is an anonymous
+	/// <c>#lambda/…</c> or <c>#apply[N]/…</c> expression rather than an
+	/// <c>object/attribute</c> database reference.
+	/// </summary>
+	/// <param name="attributeSpecifier">The plain-text attribute specifier string.</param>
+	public static bool IsLambdaOrApply(string attributeSpecifier)
+		=> attributeSpecifier.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase)
+		|| attributeSpecifier.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 }

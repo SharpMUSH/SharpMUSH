@@ -1,6 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Mediator;
-using Microsoft.Extensions.Options;
+﻿using Mediator;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
@@ -10,11 +8,13 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services;
 
-public partial class LocateService(IMediator mediator, 
-	INotifyService notifyService, 
+public partial class LocateService(
+	IMediator mediator,
+	INotifyService notifyService,
 	IPermissionService permissionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration) : ILocateService
 {
@@ -58,7 +58,6 @@ public partial class LocateService(IMediator mediator,
 		var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
 
 		return new Error<CallState>(new CallState(callStateMessage));
-
 	}
 
 	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
@@ -71,7 +70,7 @@ public partial class LocateService(IMediator mediator,
 			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
 		};
 
-	
+
 	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, CallState> foundFunc)
@@ -90,20 +89,20 @@ public partial class LocateService(IMediator mediator,
 		LocateFlags flags)
 	{
 		if (!flags.HasFlag(LocateFlags.PreferLockPass)
-		    && !flags.HasFlag(LocateFlags.FailIfNotPreferred)
-		    && !flags.HasFlag(LocateFlags.NoPartialMatches)
-		    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation))
+				&& !flags.HasFlag(LocateFlags.FailIfNotPreferred)
+				&& !flags.HasFlag(LocateFlags.NoPartialMatches)
+				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation))
 		{
 			flags |= LocateFlags.All | LocateFlags.MatchAgainstLookerLocationName | LocateFlags.ExitsInsideOfLooker;
 		}
 
 		if ((flags.HasFlag(LocateFlags.MatchObjectsInLookerLocation)
-		     || flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
-		     || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
-		     || flags.HasFlag(LocateFlags.ExitsPreference)
-		     || flags.HasFlag(LocateFlags.ExitsInsideOfLooker)) &&
-		    !await Nearby(executor, looker) && !await executor.IsSee_All() &&
-		    !await permissionService.Controls(executor, looker))
+				 || flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory)
+				 || flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
+				 || flags.HasFlag(LocateFlags.ExitsPreference)
+				 || flags.HasFlag(LocateFlags.ExitsInsideOfLooker)) &&
+				!await Nearby(executor, looker) && !await executor.IsSee_All() &&
+				!await permissionService.Controls(executor, looker))
 		{
 			return new Error<string>("#-1 NOT PERMITTED TO EVALUATE ON LOOKER");
 		}
@@ -116,8 +115,8 @@ public partial class LocateService(IMediator mediator,
 		var location = await FriendlyWhereIs(result);
 
 		if (await permissionService.CanExamine(executor, location.WithExitOption()) ||
-		    ((!await result.IsDarkLegal() || await location.WithExitOption().IsLight() || await result.IsLight()) &&
-		     await permissionService.CanInteract(result, executor, IPermissionService.InteractType.See)))
+				((!await result.IsDarkLegal() || await location.WithExitOption().IsLight() || await result.IsLight()) &&
+				 await permissionService.CanInteract(executor, result, IPermissionService.InteractType.See)))
 		{
 			return result.WithNoneOption().WithErrorOption();
 		}
@@ -187,12 +186,12 @@ public partial class LocateService(IMediator mediator,
 		}
 
 		if (!flags.HasFlag(LocateFlags.NoTypePreference)
-		    && flags.HasFlag(LocateFlags.MatchMeForLooker)
-		    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
-		    && name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
+				&& flags.HasFlag(LocateFlags.MatchMeForLooker)
+				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
+				&& name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-			    || await permissionService.Controls(looker, where))
+					|| await permissionService.Controls(looker, where))
 			{
 				return where.WithNoneOption().WithErrorOption();
 			}
@@ -201,11 +200,11 @@ public partial class LocateService(IMediator mediator,
 		}
 
 		if (flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
-		    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
-		    && name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
+				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
+				&& name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-			    || await permissionService.Controls(looker, where))
+					|| await permissionService.Controls(looker, where))
 			{
 				return (await FriendlyWhereIs(where)).WithExitOption().WithNoneOption().WithErrorOption();
 			}
@@ -214,27 +213,27 @@ public partial class LocateService(IMediator mediator,
 		}
 
 		if ((flags.HasFlag(LocateFlags.MatchOptionalWildCardForPlayerName) || flags.HasFlag(LocateFlags.PlayersPreference)
-			    && name.StartsWith('*'))
-		    && (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
+					&& name.StartsWith('*'))
+				&& (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
 			// Async streaming pattern is correct - mediator creates IAsyncEnumerable
 			var maybeMatch = await mediator
 				.CreateStream(new GetPlayerQuery(name))
 				.FirstOrDefaultAsync();
-			
+
 			match = maybeMatch is null
 				? new None()
 				: maybeMatch;
 			if (maybeMatch is not null && flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
 			{
 				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
-				    || await looker.HasLongFingers()
-				    || await Nearby(looker, match.WithoutError().WithoutNone())
-				    || await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
+						|| await looker.HasLongFingers()
+						|| await Nearby(looker, match.WithoutError().WithoutNone())
+						|| await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
 				{
 					// Check if the looker controls the found player when OnlyMatchLookerControlledObjects flag is set
 					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					    || await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
+							|| await permissionService.Controls(looker, match.WithoutError().WithoutNone()))
 					{
 						return match;
 					}
@@ -254,12 +253,12 @@ public partial class LocateService(IMediator mediator,
 			if (!match.IsT4 && (flags & LocateFlags.AbsoluteMatch) != 0)
 			{
 				if (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
-				    || await looker.HasLongFingers()
-				    || (await Nearby(looker, match.WithoutError().WithoutNone())
-				        || await permissionService.Controls(looker, match.WithoutError().WithoutNone())))
+						|| await looker.HasLongFingers()
+						|| (await Nearby(looker, match.WithoutError().WithoutNone())
+								|| await permissionService.Controls(looker, match.WithoutError().WithoutNone())))
 				{
 					if (!(flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					      && !await permissionService.Controls(looker, where)))
+								&& !await permissionService.Controls(looker, where)))
 					{
 						return match;
 					}
@@ -277,30 +276,30 @@ public partial class LocateService(IMediator mediator,
 		while (true)
 		{
 			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents) &&
-			    where.IsContainer)
+					where.IsContainer)
 			{
 				var contents = mediator
 					.CreateStream(new GetContentsQuery(where.AsContainer))
 					.Select(x => x.WithRoomOption());
-				
+
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
-				
+
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
 
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
-			    && !flags.HasFlag(LocateFlags.MatchRemoteContents)
-			    && location.Object().DBRef != where.Object().DBRef)
+					&& !flags.HasFlag(LocateFlags.MatchRemoteContents)
+					&& location.Object().DBRef != where.Object().DBRef)
 			{
 				var maybeContents = mediator.CreateStream(new GetContentsQuery(location));
 				var contents = maybeContents?
 					.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
-				
+
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
-				
+
 				if (c == ControlFlow.Break) break;
 				if (c == ControlFlow.Return) break;
 			}
@@ -316,18 +315,18 @@ public partial class LocateService(IMediator mediator,
 							.CreateStream(new GetContentsQuery(location))
 							.Where(x => x.IsExit)
 							.Select(x => new AnySharpObject(x.AsExit));
-						
+
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);
-						
+
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
 					}
 
 					// Step 2: Match exits in Zone Master Room if location has a zone that is a room (PennMUSH order)
 					if (flags.HasFlag(LocateFlags.MatchRemoteContents)
-					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
-					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
+							&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
+																LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						// Check if the location has a zone and if that zone is a room (ZMR)
 						var locationZone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
@@ -340,9 +339,10 @@ public partial class LocateService(IMediator mediator,
 								.Where(x => x.IsExit)
 								.Select(x => new AnySharpObject(x.AsExit));
 
-							(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, zmrExits, looker, where, bestMatch,
+							(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, zmrExits, looker, where,
+								bestMatch,
 								exact, final, curr, right_type, flags, name);
-							
+
 							if (c == ControlFlow.Break) break;
 							if (c == ControlFlow.Return) break;
 						}
@@ -350,8 +350,8 @@ public partial class LocateService(IMediator mediator,
 
 					// Step 3: Match exits in Master Room (global exits) last (PennMUSH order)
 					if (flags.HasFlag(LocateFlags.All)
-					    && !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
-					                      LocateFlags.OnlyMatchObjectsInLookerInventory))
+							&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation |
+																LocateFlags.OnlyMatchObjectsInLookerInventory))
 					{
 						var masterRoom = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
 						var exits = mediator
@@ -361,7 +361,7 @@ public partial class LocateService(IMediator mediator,
 
 						(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, exits, looker, where, bestMatch,
 							exact, final, curr, right_type, flags, name);
-						
+
 						if (c == ControlFlow.Break) break;
 						if (c == ControlFlow.Return) break;
 					}
@@ -381,8 +381,8 @@ public partial class LocateService(IMediator mediator,
 			if (flags.HasFlag(LocateFlags.ExitsPreference) || flags.HasFlag(LocateFlags.NoTypePreference))
 			{
 				if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
-				    && where.IsRoom
-				    && ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
+						&& where.IsRoom
+						&& ((location.Object().DBRef != where.Object().DBRef) || !flags.HasFlag(LocateFlags.ExitsPreference)))
 				{
 					var exits = (mediator.CreateStream(new GetContentsQuery(where.AsContainer)))
 						.Where(x => x.IsExit)
@@ -433,15 +433,15 @@ public partial class LocateService(IMediator mediator,
 		{
 			var cur = item;
 			if (flags.HasFlag(LocateFlags.PlayersPreference) && !cur.IsPlayer
-			    || flags.HasFlag(LocateFlags.RoomsPreference) && !cur.IsRoom
-			    || flags.HasFlag(LocateFlags.ExitsPreference) && !cur.IsExit
-			    || flags.HasFlag(LocateFlags.ThingsPreference) && !cur.IsThing)
+					|| flags.HasFlag(LocateFlags.RoomsPreference) && !cur.IsRoom
+					|| flags.HasFlag(LocateFlags.ExitsPreference) && !cur.IsExit
+					|| flags.HasFlag(LocateFlags.ThingsPreference) && !cur.IsThing)
 			{
 				continue;
 			}
 
 			var abs = HelperFunctions.ParseDbRef(name);
-			if (abs.IsSome() && cur.Object().DBRef == abs.AsValue())
+			if (abs.IsSome() && cur.Object().DBRef.Matches(abs.AsValue()))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, true, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -450,7 +450,7 @@ public partial class LocateService(IMediator mediator,
 				if (flow == ControlFlow.Continue) continue;
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
-			else if (!await permissionService.CanInteract(cur, looker, IPermissionService.InteractType.Match))
+			else if (!await permissionService.CanInteract(looker, cur, IPermissionService.InteractType.Match))
 			{
 				// continue;
 			}
@@ -458,7 +458,7 @@ public partial class LocateService(IMediator mediator,
 			else if (
 				(cur.IsPlayer && cur.Aliases.Contains(name))
 				|| (cur.IsExit && (cur.Aliases.Contains(name) ||
-				                   cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+													 cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
 				|| (!cur.IsExit && string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
@@ -469,8 +469,8 @@ public partial class LocateService(IMediator mediator,
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
-			         && !cur.IsExit
-			         && cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+							 && !cur.IsExit
+							 && cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -497,9 +497,9 @@ public partial class LocateService(IMediator mediator,
 		}
 
 		if (TypePreferences(flags).Contains(thing1.Object()!.Type) &&
-		    !TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
+				!TypePreferences(flags).Contains(thing2.Object()!.Type)) return thing1;
 		if (TypePreferences(flags).Contains(thing2.Object()!.Type)
-		    || !flags.HasFlag(LocateFlags.PreferLockPass)) return thing2;
+				|| !flags.HasFlag(LocateFlags.PreferLockPass)) return thing2;
 
 		var key = await permissionService.CouldDoIt(who, thing1);
 
@@ -527,7 +527,7 @@ public partial class LocateService(IMediator mediator,
 			LocateFlags flags)
 	{
 		if (flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-		    && !await permissionService.Controls(looker, where))
+				&& !await permissionService.Controls(looker, where))
 		{
 			return (new Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
 		}
@@ -563,8 +563,8 @@ public partial class LocateService(IMediator mediator,
 			}
 
 			if (!flags.HasFlag(LocateFlags.NoTypePreference)
-			    && bestMatch.IsValid()
-			    && bestMatch.WithoutError().WithoutNone().Object().Type == cur.Object().Type)
+					&& bestMatch.IsValid()
+					&& bestMatch.WithoutError().WithoutNone().Object().Type == cur.Object().Type)
 			{
 				right_type++;
 			}
@@ -655,29 +655,29 @@ public partial class LocateService(IMediator mediator,
 				flags &= ~(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.ExitsInTheRoomOfLooker);
 			}
 			else if (name.StartsWith("here ", StringComparison.OrdinalIgnoreCase) ||
-			         name.StartsWith("this ", StringComparison.OrdinalIgnoreCase))
+							 name.StartsWith("this ", StringComparison.OrdinalIgnoreCase))
 			{
 				name = name[5..];
 				flags &= ~(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.ExitsInTheRoomOfLooker |
-				           LocateFlags.MatchAgainstLookerLocationName);
+									 LocateFlags.MatchAgainstLookerLocationName);
 			}
 		}
 
 		if (((flags & LocateFlags.MatchObjectsInLookerInventory) != 0) &&
-		    (name.StartsWith("my ", StringComparison.OrdinalIgnoreCase) ||
-		     name.StartsWith("me ", StringComparison.OrdinalIgnoreCase)))
+				(name.StartsWith("my ", StringComparison.OrdinalIgnoreCase) ||
+				 name.StartsWith("me ", StringComparison.OrdinalIgnoreCase)))
 		{
 			name = name[3..];
 			flags &= ~(LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsInTheRoomOfLooker |
-			           LocateFlags.MatchAgainstLookerLocationName);
+								 LocateFlags.MatchAgainstLookerLocationName);
 		}
 
 		if (((flags & (LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsInsideOfLooker)) != 0) &&
-		    (name.StartsWith("toward ", StringComparison.OrdinalIgnoreCase)))
+				(name.StartsWith("toward ", StringComparison.OrdinalIgnoreCase)))
 		{
 			name = name[7..];
 			flags &= ~(LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.MatchObjectsInLookerInventory |
-			           LocateFlags.MatchAgainstLookerLocationName);
+								 LocateFlags.MatchAgainstLookerLocationName);
 		}
 
 		name = name.TrimStart();
@@ -707,12 +707,12 @@ public partial class LocateService(IMediator mediator,
 
 			// This is really only valid in English.
 			if (count < 1
-			    || Enumerable.Range(10, 14).Contains(count) &&
-			    !ordinal.Equals("th", StringComparison.CurrentCultureIgnoreCase)
-			    || count % 10 == 1 && !ordinal.Equals("st", StringComparison.CurrentCultureIgnoreCase)
-			    || count % 10 == 2 && !ordinal.Equals("nd", StringComparison.CurrentCultureIgnoreCase)
-			    || count % 10 == 3 && !ordinal.Equals("rd", StringComparison.CurrentCultureIgnoreCase)
-			    || ordinal != "th")
+					|| Enumerable.Range(10, 14).Contains(count) &&
+					!ordinal.Equals("th", StringComparison.CurrentCultureIgnoreCase)
+					|| count % 10 == 1 && !ordinal.Equals("st", StringComparison.CurrentCultureIgnoreCase)
+					|| count % 10 == 2 && !ordinal.Equals("nd", StringComparison.CurrentCultureIgnoreCase)
+					|| count % 10 == 3 && !ordinal.Equals("rd", StringComparison.CurrentCultureIgnoreCase)
+					|| ordinal != "th")
 			{
 				return (name, flags, 0);
 			}

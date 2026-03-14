@@ -1,4 +1,5 @@
-﻿using OneOf.Types;
+﻿using Microsoft.Extensions.Logging;
+using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -34,18 +35,18 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
-		
+
 		if (location.IsNone || location.IsExit)
 		{
-		return await NotifyService!.NotifyAndReturn(
-			executor.Object().DBRef,
-			errorReturn: ErrorMessages.Returns.NotARoom,
-			notifyMessage: "Default home location is invalid.",
-			shouldNotify: true);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.NotARoom,
+				notifyMessage: "Default home location is invalid.",
+				shouldNotify: true);
 		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
@@ -56,12 +57,12 @@ public partial class Commands
 				notifyMessage: ErrorMessages.Notifications.InvalidNameThing,
 				shouldNotify: true);
 		}
-		
+
 		var thing = await Mediator!.Send(new CreateThingCommand(name.ToPlainText(),
 			await executor.Where(),
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
-		
+
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
 		if (!creatorZone.IsNone)
 		{
@@ -75,7 +76,7 @@ public partial class Commands
 				}
 			}
 		}
-		
+
 		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
 
 		await EventService!.TriggerEventAsync(
@@ -128,7 +129,7 @@ public partial class Commands
 			{
 				var oldName = found.Object().Name;
 				var result = await ManipulateSharpObjectService!.SetName(executor, found, name, true);
-				
+
 				// If rename was successful, trigger OBJECT`RENAME event
 				// PennMUSH spec: object`rename (objid, new name, old name)
 				if (result.ToString() != ErrorMessages.Returns.PermissionDenied)
@@ -141,7 +142,7 @@ public partial class Commands
 						name.ToPlainText(),
 						oldName);
 				}
-				
+
 				return result;
 			}
 		);
@@ -178,7 +179,7 @@ public partial class Commands
 		// Attr Flag Path
 		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
-			foreach (var flag in MModule.split(" ", args["1"].Message!))
+			foreach (var flag in MModule.split2(MModule.single(" "), args["1"].Message!))
 			{
 				var plainFlag = MModule.plainText(flag);
 				if (plainFlag.StartsWith('!'))
@@ -195,7 +196,7 @@ public partial class Commands
 		}
 
 		// Attr Set Path
-		var maybeColonLocation = MModule.indexOf(args["1"].Message!, MModule.single(":"));
+		var maybeColonLocation = MModule.indexOf(args["1"].Message!, ":");
 		if (maybeColonLocation > -1)
 		{
 			var arg1 = args["1"].Message!;
@@ -217,7 +218,7 @@ public partial class Commands
 		}
 
 		// Object Flag Set Path
-		foreach (var flag in MModule.split(" ", args["1"].Message!))
+		foreach (var flag in MModule.split2(MModule.single(" "), args["1"].Message!))
 		{
 			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
 		}
@@ -255,15 +256,15 @@ public partial class Commands
 					{
 						if (!newOwnerObj.IsPlayer)
 						{
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.InvalidPlayer,
-						notifyMessage: ErrorMessages.Notifications.MustBePlayer,
-						shouldNotify: true);
+							return await NotifyService!.NotifyAndReturn(
+								executor.Object().DBRef,
+								errorReturn: ErrorMessages.Returns.InvalidPlayer,
+								notifyMessage: ErrorMessages.Notifications.MustBePlayer,
+								shouldNotify: true);
 						}
 
 						var result = await ManipulateSharpObjectService!.SetOwner(executor, obj, newOwnerObj.AsPlayer, true);
-						
+
 						if (!preserve)
 						{
 							if (await obj.HasFlag("WIZARD"))
@@ -294,52 +295,250 @@ public partial class Commands
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService!.Controls(executor, obj))
-				{
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
+			async obj => await DestroyObjectAsync(parser, executor, obj, override_)
+		);
+	}
 
-				if (await obj.HasFlag("SAFE") && !override_)
-				{
+	/// <summary>
+	/// Core destroy logic shared by <c>@destroy</c> and <c>@nuke</c>.
+	/// Mirrors PennMUSH <c>what_to_destroy()</c> + <c>pre_destroy()</c> + the player-specific parts
+	/// of <c>clear_player()</c> that must happen at the "mark GOING" phase (channel chown,
+	/// surviving-object chown, attribute ownership reassignment) because SharpMUSH does not yet
+	/// have a live purge cycle.
+	/// <para>
+	/// For players, all of the above is handled by <see cref="HandlePlayerPossessionsAsync"/>.
+	/// Lock expressions are left unchanged per PennMUSH invariants
+	/// ("we allow indirect locks to refer to destroyed objects").
+	/// </para>
+	/// </summary>
+	private static async ValueTask<CallState> DestroyObjectAsync(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		AnySharpObject obj,
+		bool override_)
+	{
+		if (!await PermissionService!.Controls(executor, obj))
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
+		}
+
+		if (await obj.HasFlag("SAFE") && !override_)
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.SafeObject,
+				notifyMessage: "That object is SAFE. Use @nuke to override.",
+				shouldNotify: true);
+		}
+
+		// Player-specific guards (PennMUSH what_to_destroy, TYPE_PLAYER case)
+		if (obj.IsPlayer)
+		{
+			// Only a wizard can destroy a player.
+			if (!await executor.IsWizard())
+			{
 				return await NotifyService!.NotifyAndReturn(
 					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.SafeObject,
-					notifyMessage: "That object is SAFE. Use @nuke to override.",
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "Sorry, no suicide allowed.",
 					shouldNotify: true);
-				}
-
-				if (await obj.HasFlag("GOING"))
-				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
-					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
-					
-					// NOTE: Actual object deletion from database requires a garbage collection system.
-					// Objects marked GOING_TWICE will be cleaned up by a future purge process.
-					return CallState.Empty;
-				}
-
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
-				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
-				
-				try
-				{
-					await AttributeService!.EvaluateAttributeFunctionAsync(
-						parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
-				}
-				catch (Exception)
-				{
-					// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
-				}
-				
-				return CallState.Empty;
 			}
-		);
+
+			// Only God can destroy another wizard.
+			if (await obj.IsWizard() && !executor.IsGod())
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "Even you can't do that!",
+					shouldNotify: true);
+			}
+
+			// Connected players may not be destroyed.
+			var isConnected = await ConnectionService!
+				.Get(obj.Object().DBRef)
+				.AnyAsync(x => x.State == IConnectionService.ConnectionState.LoggedIn);
+			if (isConnected)
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "How gruesome. You may not destroy players who are connected.",
+					shouldNotify: true);
+			}
+
+			// Plain @destroy cannot target a player — @nuke (= override) is required.
+			if (!override_)
+			{
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: "You must use @nuke to destroy a player.",
+					shouldNotify: true);
+			}
+		}
+
+		if (await obj.HasFlag("GOING"))
+		{
+			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
+			await NotifyService!.Notify(executor, "Destroyed.");
+
+			// NOTE: Actual object deletion from database requires a garbage collection system.
+			// Objects marked GOING_TWICE will be cleaned up by a future purge process.
+			return CallState.Empty;
+		}
+
+		// For players: handle possessions and channels before marking GOING.
+		// This combines PennMUSH's pre_destroy (mark possessions GOING) and the
+		// object/channel chown portion of clear_player (which runs at purge time in
+		// PennMUSH but is done here because SharpMUSH lacks a live purge cycle).
+		if (obj.IsPlayer)
+		{
+			await HandlePlayerPossessionsAsync(parser, executor, obj);
+		}
+
+		await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
+
+		var destroyMsg = obj.IsPlayer
+			? $"{obj.Object().Name} and their possessions are scheduled to be destroyed."
+			: $"{obj.Object().Name} is scheduled to be destroyed.";
+		await NotifyService!.Notify(executor, destroyMsg);
+
+		try
+		{
+			await AttributeService!.EvaluateAttributeFunctionAsync(
+				parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
+		}
+		catch (Exception)
+		{
+			// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
+		}
+
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// Handles the player-specific parts of destruction:
+	/// <list type="bullet">
+	///   <item>Channels owned by the player are chowned to the probate player.</item>
+	///   <item>
+	///     Objects owned by the player (other than the player themselves) are either
+	///     marked GOING (to be destroyed at the next purge cycle) or chowned to the
+	///     probate player, depending on <c>destroy_possessions</c> and <c>really_safe</c>
+	///     config options — matching <c>clear_player()</c> in PennMUSH.
+	///   </item>
+	///   <item>
+	///     All attributes whose creator is the deleted player are bulk-reassigned to the
+	///     probate player via <see cref="ReassignAttributeOwnerCommand"/>.
+	///     This is done after the chown and channel-chown steps so that any objects
+	///     already marked GOING (scheduled for deletion) can be skipped, reducing the
+	///     number of attributes that need to be reassigned when
+	///     <c>destroy_possessions</c> is enabled.
+	///     PennMUSH defers this to <c>dbck()</c>, but SharpMUSH does it eagerly at
+	///     deletion time to avoid leaving dangling attribute-owner references in the database.
+	///   </item>
+	/// </list>
+	/// <para>Lock expressions are left unchanged per PennMUSH invariants.</para>
+	/// </summary>
+	private static async ValueTask HandlePlayerPossessionsAsync(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		AnySharpObject playerObj)
+	{
+		var config = Configuration!.CurrentValue.Command;
+		var playerDbRefNumber = playerObj.Object().DBRef.Number;
+
+		// Resolve the probate player; fall back to God (#1) if the config value is invalid.
+		var probateDbRef = new DBRef((int)config.ProbateJudge);
+		var probateNode = await Mediator!.Send(new GetObjectNodeQuery(probateDbRef));
+		SharpPlayer probatePlayer;
+		if (!probateNode.IsNone && probateNode.Known.IsPlayer)
+		{
+			probatePlayer = probateNode.Known.AsPlayer;
+		}
+		else
+		{
+			Logger?.LogWarning(
+				"probate_judge config option (#{ProbateDbRef}) is set to an invalid object; falling back to God (#1).",
+				probateDbRef.Number);
+			var godNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+			if (godNode.IsNone || !godNode.Known.IsPlayer)
+			{
+				Logger?.LogError(
+					"God (#1) is not a valid player; cannot proceed with player possession chown during deletion.");
+				return; // Cannot proceed without a valid probate player.
+			}
+			probatePlayer = godNode.Known.AsPlayer;
+		}
+
+		// --- Channels: always chown to probate (PennMUSH chan_chownall) ---
+		var channels = Mediator.CreateStream(new GetChannelListQuery());
+		await foreach (var channel in channels)
+		{
+			var channelOwner = await channel.Owner.WithCancellation(CancellationToken.None);
+			if (channelOwner.Object.DBRef.Number != playerDbRefNumber)
+				continue;
+
+			await Mediator.Send(new UpdateChannelOwnerCommand(channel, probatePlayer));
+		}
+
+		// --- Possessions (PennMUSH clear_player object loop) ---
+		var objects = Mediator.CreateStream(new GetAllObjectsQuery());
+		await foreach (var obj in objects)
+		{
+			var objOwner = await obj.Owner.WithCancellation(CancellationToken.None);
+
+			if (objOwner.Object.DBRef.Number != playerDbRefNumber)
+				continue;
+
+			if (obj.DBRef.Number == playerDbRefNumber)
+				continue; // Never process the player themselves.
+
+			var fullObjResult = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
+			if (fullObjResult.IsNone)
+				continue;
+			var fullObj = fullObjResult.Known;
+
+			// Determine whether this object should be chowned to probate or destroyed.
+			// Logic mirrors PennMUSH clear_player():
+			//   chown  if: !destroy_possessions
+			//          or: really_safe && SAFE flag is set
+			//   destroy otherwise (when destroy_possessions is on)
+			bool chownToProbate;
+			if (!config.DestroyPossessions)
+			{
+				chownToProbate = true;
+			}
+			else if (config.ReallySafe && await fullObj.HasFlag("SAFE"))
+			{
+				chownToProbate = true;
+			}
+			else
+			{
+				chownToProbate = false;
+			}
+
+			if (chownToProbate)
+			{
+				await Mediator.Send(new SetObjectOwnerCommand(fullObj, probatePlayer));
+			}
+			else
+			{
+				// Pre-destroy: mark for destruction, matching PennMUSH pre_destroy().
+				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, fullObj, "GOING", false);
+			}
+		}
+
+		// --- Attribute ownership: bulk-reassign all attributes owned by the deleted player ---
+		// Done after the chown and channel-chown passes so that objects already marked GOING
+		// (scheduled for deletion) can be excluded, reducing unnecessary work when
+		// destroy_possessions is enabled.
+		// PennMUSH defers this to dbck(), but we do it eagerly to keep the database consistent.
+		await Mediator.Send(new ReassignAttributeOwnerCommand(playerObj.AsPlayer, probatePlayer));
 	}
 
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
@@ -379,29 +578,29 @@ public partial class Commands
 						await NotifyService!.Notify(executor, "Linked to variable.");
 						return CallState.Empty;
 					}
-					
+
 					return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidDestination,
-							notifyMessage: "Invalid destination for exit.",
-							shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: "Invalid destination for exit.",
+									shouldNotify: true);
 							}
 
 							var destinationRoom = destObj.AsRoom;
-							
+
 							bool canLink = await PermissionService!.Controls(executor, destObj);
-							
+
 							if (!canLink)
 							{
 								var destFlags = await destinationRoom.Object.Flags.Value.ToArrayAsync();
 								var hasLinkOk = destFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
-								
+
 								if (!hasLinkOk)
 								{
 									return await NotifyService!.NotifyAndReturn(
@@ -411,16 +610,16 @@ public partial class Commands
 										shouldNotify: true);
 								}
 							}
-							
+
 							// Get exit owner and check if it's owned by someone else
 							var exitOwner = await exitObj.Object().Owner.WithCancellation(CancellationToken.None);
 							var executorObj = executor.Object();
 							var executorOwner = await executorObj.Owner.WithCancellation(CancellationToken.None);
-							
+
 							// Check if exit is owned by someone else and executor doesn't control it
 							var exitNotControlled = !await PermissionService!.Controls(executor, exitObj);
 							var isOwnedByOther = exitOwner.Object.Id != executorOwner.Object.Id;
-							
+
 							// When linking an exit owned by someone else that executor doesn't control:
 							// Check @lock/link, transfer ownership, and set HALT flag
 							if (isOwnedByOther && exitNotControlled)
@@ -435,7 +634,7 @@ public partial class Commands
 										notifyMessage: "You don't pass the link lock.",
 										shouldNotify: true);
 								}
-								
+
 								// Transfer ownership to the linker (with error handling)
 								if (executor.IsPlayer)
 								{
@@ -452,13 +651,13 @@ public partial class Commands
 											shouldNotify: true);
 									}
 								}
-								
+
 								// Set HALT flag to prevent looping
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, exitObj, "HALT", true);
 							}
 
-			await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
-							
+							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
+
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
 							await NotifyService!.Notify(executor, "Linked.");
@@ -474,11 +673,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidDestination,
-							notifyMessage: "Home must be a room.",
-							shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: "Home must be a room.",
+									shouldNotify: true);
 							}
 
 							// Convert to AnySharpContent for SetObjectHomeCommand
@@ -498,11 +697,11 @@ public partial class Commands
 						{
 							if (!destObj.IsRoom)
 							{
-						return await NotifyService!.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidDestination,
-							notifyMessage: "Drop-to must be a room.",
-							shouldNotify: true);
+								return await NotifyService!.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: "Drop-to must be a room.",
+									shouldNotify: true);
 							}
 
 							// Link the room to its drop-to
@@ -525,55 +724,14 @@ public partial class Commands
 	[SharpCommand(Name = "@NUKE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public static async ValueTask<Option<CallState>> Nuke(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// @nuke is an alias for @destroy/override - manually check for SAFE flag
+		// @nuke is @destroy/override: it bypasses the SAFE flag and the "use @nuke" player guard.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService!.Controls(executor, obj))
-				{
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				// @nuke bypasses SAFE flag
-
-				// Check if already marked GOING
-				if (await obj.HasFlag("GOING"))
-				{
-					// Mark as GOING_TWICE for immediate destruction
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
-					await NotifyService!.Notify(executor, $"Destroyed: {obj.Object().Name}");
-					
-					// NOTE: Actual object deletion from database requires a garbage collection system
-					// Objects marked GOING_TWICE will be cleaned up by a future purge process
-					return CallState.Empty;
-				}
-
-				// Mark as GOING
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING", false);
-				await NotifyService!.Notify(executor, $"Marked for destruction: {obj.Object().Name}");
-				
-				// Trigger @adestroy attribute if it exists
-				try
-				{
-					await AttributeService!.EvaluateAttributeFunctionAsync(
-						parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
-				}
-				catch (Exception)
-				{
-					// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
-				}
-				
-				return CallState.Empty;
-			}
+			async obj => await DestroyObjectAsync(parser, executor, obj, override_: true)
 		);
 	}
 
@@ -600,11 +758,11 @@ public partial class Commands
 				// Check if marked for destruction
 				if (!await obj.HasFlag("GOING"))
 				{
-				return await NotifyService!.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.NotGoing,
-					notifyMessage: "That object is not marked for destruction.",
-					shouldNotify: true);
+					return await NotifyService!.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.NotGoing,
+						notifyMessage: "That object is not marked for destruction.",
+						shouldNotify: true);
 				}
 
 				// Remove GOING and GOING_TWICE flags
@@ -618,7 +776,7 @@ public partial class Commands
 				}
 
 				await NotifyService!.Notify(executor, $"Spared from destruction: {obj.Object().Name}");
-				
+
 				// Trigger @startup attribute if it exists
 				try
 				{
@@ -629,7 +787,7 @@ public partial class Commands
 				{
 					// Ignore errors from @startup evaluation - attribute may not exist or may fail
 				}
-				
+
 				return CallState.Empty;
 			}
 		);
@@ -672,7 +830,7 @@ public partial class Commands
 					{
 						// Check if executor can control the zone or passes ChZone lock
 						bool canZone = await PermissionService!.Controls(executor, zoneObj);
-						
+
 						// If not controlled, check ChZone lock
 						if (!canZone && !LockService!.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
@@ -702,7 +860,7 @@ public partial class Commands
 						{
 							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
 						}
-						
+
 						// Clear privileged flags and powers unless /preserve is used
 						if (!preserve && !obj.IsPlayer)
 						{
@@ -719,7 +877,7 @@ public partial class Commands
 							{
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
-							
+
 							// Strip all powers from the object
 							var allPowers = obj.Object().Powers.Value;
 							await foreach (var power in allPowers)
@@ -762,7 +920,7 @@ public partial class Commands
 		// CREATE ROOM
 		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
-		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number #{response.Number}.");
+		await NotifyService!.Notify(executor.DBRef, $"{roomName} created with room number {response.Number}.");
 
 		// Inherit zone from creator
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
@@ -1021,7 +1179,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
-		
+
 		// Parse exit name and aliases
 		var exitParts = exitName.Split(";");
 		var primaryName = exitParts[0];
@@ -1034,7 +1192,7 @@ public partial class Commands
 			var sourceRoomName = args["2"].Message!.ToPlainText();
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, sourceRoomName, LocateFlags.All);
-			
+
 			if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
 			{
 				await NotifyService!.Notify(executor, "Source must be a room.");
@@ -1076,7 +1234,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Opened exit {primaryName} with dbref #{exitDbRef.Number}.");
+		await NotifyService!.Notify(executor, $"Opened exit #{exitDbRef.Number}");
 
 		// Link to destination if provided
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
@@ -1084,7 +1242,7 @@ public partial class Commands
 			var destName = args["1"].Message!.ToPlainText();
 			var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, destName, LocateFlags.All);
-			
+
 			if (!locateResult.IsError && locateResult.AsSharpObject.IsRoom)
 			{
 				var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
@@ -1104,18 +1262,18 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
-		
+
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var location = await Mediator!.Send(new GetObjectNodeQuery(defaultHomeDbref));
-		
+
 		if (location.IsNone || location.IsExit)
 		{
-		return await NotifyService!.NotifyAndReturn(
-			executor.Object().DBRef,
-			errorReturn: ErrorMessages.Returns.NotARoom,
-			notifyMessage: "Default home location is invalid.",
-			shouldNotify: true);
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.NotARoom,
+				notifyMessage: "Default home location is invalid.",
+				shouldNotify: true);
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1314,7 +1472,7 @@ public partial class Commands
 				{
 					// Clear special link type attribute if it exists
 					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
-					
+
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
 					await NotifyService!.Notify(executor, "Unlinked.");
 					return CallState.Empty;
@@ -1327,11 +1485,11 @@ public partial class Commands
 					return CallState.Empty;
 				}
 
-					return await NotifyService!.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.InvalidObjectType,
-						notifyMessage: "Invalid object type.",
-						shouldNotify: true);
+				return await NotifyService!.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.InvalidObjectType,
+					notifyMessage: "Invalid object type.",
+					shouldNotify: true);
 			}
 		);
 	}

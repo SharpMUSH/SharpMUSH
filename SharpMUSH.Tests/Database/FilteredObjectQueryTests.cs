@@ -1,20 +1,19 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.Extensions;
 
 namespace SharpMUSH.Tests.Database;
 
 [NotInParallel]
 public class FilteredObjectQueryTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
@@ -60,7 +59,7 @@ public class FilteredObjectQueryTests
 		// Skip this test for now - owner filtering via graph traversal needs debugging
 		// The query structure looks correct but may need adjustment for the specific database schema
 		await Task.CompletedTask;
-		
+
 		// TODO: Debug owner filter - the AQL query may need adjustment for graph traversal
 		// Current issue: Empty results when filtering by owner DBRef
 	}
@@ -74,10 +73,10 @@ public class FilteredObjectQueryTests
 		var dbRefNum = objDbRef.Number;
 
 		// Query for objects in a range that includes our test object
-		var filter = new ObjectSearchFilter 
-		{ 
-			MinDbRef = dbRefNum - 1, 
-			MaxDbRef = dbRefNum + 1 
+		var filter = new ObjectSearchFilter
+		{
+			MinDbRef = dbRefNum - 1,
+			MaxDbRef = dbRefNum + 1
 		};
 		var results = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter))
 			.Where(o => o.DBRef.Number == dbRefNum)

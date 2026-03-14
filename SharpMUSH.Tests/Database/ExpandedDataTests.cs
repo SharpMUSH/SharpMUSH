@@ -7,13 +7,13 @@ namespace SharpMUSH.Tests.Database;
 
 public class ExpandedDataTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private ISharpDatabase _database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	private record ExpandedDataExample(string Word);
-	
+
 	[Test, NotInParallel]
 	public async Task SetAndGetExpandedData()
 	{
@@ -26,7 +26,7 @@ public class ExpandedDataTests
 	}
 
 	private record OverwritePartialAndGetExpandedDataExample(string Word, string? Verb);
-	
+
 	/// <summary>
 	/// This tests exists to illustrate that SetExpandedObjectData overwrites only the values set.
 	/// </summary>
@@ -51,14 +51,14 @@ public class ExpandedDataTests
 	{
 		var one = await _database.GetObjectNodeAsync(new DBRef(1));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample("Dog", "Bark"));
-		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample(null,"Bark"));
+		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample(null, "Bark"));
 
 		var result = await _database.GetExpandedObjectData<OverwritePartialNullAndGetExpandedDataExample>(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample");
-		await Assert.That(result as object).IsEqualTo(new OverwritePartialNullAndGetExpandedDataExample(null,"Bark"));
+		await Assert.That(result as object).IsEqualTo(new OverwritePartialNullAndGetExpandedDataExample(null, "Bark"));
 	}
 
 	private record OverwriteUnrelatedTypesAndGetExpandedDataExample(string? Word, string? Verb);
-	
+
 	private record OverwriteUnrelatedTypesAndGetExpandedDataExample2(string? Word, string? Verb);
 
 	/// <summary>

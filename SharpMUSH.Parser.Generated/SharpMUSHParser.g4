@@ -7,6 +7,10 @@ options {
 @parser::members {
     public int inFunction = 0;
     public int inBraceDepth = 0;
+    public int inBracketDepth = 0;
+    public int inFunctionInsideBrace = 0;
+    public System.Collections.Generic.Stack<int> savedFunctionInsideBrace = new();
+    public System.Collections.Generic.Stack<int> savedFunction = new();
     public bool inCommandList = false;
     public bool lookingForCommandArgCommas = false;
     public bool lookingForCommandArgEquals = false;
@@ -30,20 +34,20 @@ startPlainCommaCommandArgs: commaCommandArgs EOF;
 
 // Start looking for a pattern with an '=' split, followed by comma separated arguments.
 startEqSplitCommandArgs:
-    {lookingForCommandArgEquals = true;} singleCommandArg (
+    {lookingForCommandArgEquals = true;} evaluationString? (
       EQUALS {lookingForCommandArgEquals = false;} commaCommandArgs
     )? EOF
 ;
 
 // Start looking for a pattern, with a '=' split, but without comma separated arguments.
 startEqSplitCommand:
-    {lookingForCommandArgEquals = true;} singleCommandArg (
-        EQUALS {lookingForCommandArgEquals = false;} singleCommandArg
+    {lookingForCommandArgEquals = true;} evaluationString? (
+        EQUALS {lookingForCommandArgEquals = false;} evaluationString?
     )? EOF
 ; 
 
 // Start looking for a single-argument command value, by parsing the argument.
-startPlainSingleCommandArg: singleCommandArg EOF;
+startPlainSingleCommandArg: evaluationString? EOF;
 
 // Start looking for a plain string. These may start with a function call.
 startPlainString: evaluationString EOF;
@@ -53,13 +57,10 @@ commandList: command ({inBraceDepth == 0}? SEMICOLON command)*;
 command: evaluationString;
 
 commaCommandArgs:
-    {lookingForCommandArgCommas = true;} singleCommandArg (
-        {inBraceDepth == 0}? COMMAWS singleCommandArg
+    {lookingForCommandArgCommas = true;} evaluationString? (
+        {inBraceDepth == 0}? COMMAWS evaluationString?
     )* {lookingForCommandArgCommas = false;}
 ;
-
-
-singleCommandArg: evaluationString;
 
 evaluationString:
       function explicitEvaluationString?
@@ -76,18 +77,33 @@ explicitEvaluationString:
     )*
 ;
 
+// Like explicitEvaluationString but accepts FUNCHAR as a first element.
+// Used inside bracePattern where function names should be treated as generic text
+// (not recognized as function calls) per PennMUSH semantics.
+// Cannot use evaluationString here as it introduces recursive prediction
+// paths through the function rule that cause AdaptivePredict to hang on complex inputs.
+braceExplicitEvaluationString:
+    (bracePattern|bracketPattern|genericText|PERCENT validSubstitution) 
+    (
+        bracePattern
+      | bracketPattern
+      | PERCENT validSubstitution
+      | genericText
+    )*
+;
+
 bracePattern:
-    OBRACE { ++inBraceDepth; } explicitEvaluationString? CBRACE { --inBraceDepth; }
+    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; savedFunction.Push(inFunction); inFunction = 0; } braceExplicitEvaluationString? CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); inFunction = savedFunction.Pop(); }
 ;
 
 bracketPattern:
-    OBRACK evaluationString CBRACK
+    OBRACK { ++inBracketDepth; } evaluationString CBRACK { --inBracketDepth; }
 ;
 
 function: 
-    FUNCHAR {++inFunction;} 
-    (evaluationString ({inBraceDepth == 0}? COMMAWS evaluationString)*)?
-    CPAREN {--inFunction;} 
+    FUNCHAR {++inFunction; ++inFunctionInsideBrace;} 
+    (evaluationString? (COMMAWS evaluationString?)*)?
+    CPAREN {--inFunction; --inFunctionInsideBrace;} 
 ;
 
 validSubstitution:
@@ -101,6 +117,7 @@ complexSubstitutionSymbol: (
         | ITEXT_NUM
         | ITEXT_LAST
         | STEXT_NUM
+        | STEXT_LAST
         | VWX
     )
 ;
@@ -138,7 +155,7 @@ genericText: beginGenericText | FUNCHAR;
 beginGenericText:
       { inFunction == 0 }? CPAREN
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
-    | { (!lookingForCommandArgCommas && inFunction == 0) || inBraceDepth > 0 }? COMMAWS
+    | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
     | { !lookingForCommandArgEquals }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
     | (escapedText|OPAREN|OTHER|ansi) 

@@ -1,8 +1,9 @@
+using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Messaging.Abstractions;
 using System.Collections.Concurrent;
 using System.Text;
-using SharpMUSH.Messaging.Abstractions;
-using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
 
 namespace SharpMUSH.ConnectionServer.Services;
 
@@ -10,7 +11,7 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// Manages active connections in the ConnectionServer
 /// </summary>
 public class ConnectionServerService(
-	ILogger<ConnectionServerService> logger, 
+	ILogger<ConnectionServerService> logger,
 	IMessageBus publishEndpoint,
 	IConnectionStateStore? stateStore = null) : IConnectionServerService
 {
@@ -25,7 +26,8 @@ public class ConnectionServerService(
 		Func<byte[], ValueTask> promptOutputFunction,
 		Func<Encoding> encodingFunction,
 		Action disconnectFunction,
-		Func<string, string, ValueTask>? gmcpFunction = null)
+		Func<string, string, ValueTask>? gmcpFunction = null,
+		ProtocolCapabilities? capabilities = null)
 	{
 		try
 		{
@@ -37,36 +39,48 @@ public class ConnectionServerService(
 				promptOutputFunction,
 				encodingFunction,
 				disconnectFunction,
-				gmcpFunction);
+				gmcpFunction,
+				capabilities ?? new ProtocolCapabilities(),
+				null);
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
-
+			logger.LogInformation("Registered connection handle {Handle} from {IpAddress} ({Type})", handle, ipAddress, connectionType);
 			// Store in Redis if available
 			if (stateStore != null)
 			{
-				await stateStore.SetConnectionAsync(handle, new ConnectionStateData
+				try
 				{
-					Handle = handle,
-					PlayerRef = null,
-					State = "Connected",
-					IpAddress = ipAddress,
-					Hostname = hostname,
-					ConnectionType = connectionType,
-					ConnectedAt = DateTimeOffset.UtcNow,
-					LastSeen = DateTimeOffset.UtcNow,
-					Metadata = new Dictionary<string, string>
+					await stateStore.SetConnectionAsync(handle, new ConnectionStateData
 					{
-						{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-						{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-						{ "InternetProtocolAddress", ipAddress },
-						{ "HostName", hostname },
-						{ "ConnectionType", connectionType }
-					}
-				});
+						Handle = handle,
+						PlayerRef = null,
+						State = "Connected",
+						IpAddress = ipAddress,
+						Hostname = hostname,
+						ConnectionType = connectionType,
+						ConnectedAt = DateTimeOffset.UtcNow,
+						LastSeen = DateTimeOffset.UtcNow,
+						Metadata = new Dictionary<string, string>
+						{
+							{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+							{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+							{ "InternetProtocolAddress", ipAddress },
+							{ "HostName", hostname },
+							{ "ConnectionType", connectionType }
+						}
+					});
+				}
+				catch (Exception ex)
+				{
+					logger.LogWarning(ex, "Failed to persist connection state to Redis for handle {Handle}; continuing with publish", handle);
+				}
 			}
 
 			// Publish connection established message to MainProcess
+			logger.LogDebug("[NATS-PUBLISH] Publishing ConnectionEstablishedMessage - Handle: {Handle}, IP: {IpAddress}, Hostname: {Hostname}, Type: {ConnectionType}, Timestamp: {Timestamp}",
+				handle, ipAddress, hostname, connectionType, DateTimeOffset.UtcNow);
+
 			await publishEndpoint.Publish(new ConnectionEstablishedMessage(
 				handle,
 				ipAddress,
@@ -74,8 +88,10 @@ public class ConnectionServerService(
 				connectionType,
 				DateTimeOffset.UtcNow
 			));
+
+			logger.LogDebug("[NATS-PUBLISH] Successfully published ConnectionEstablishedMessage - Handle: {Handle}", handle);
 		}
-		catch(Exception ex)
+		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error registering connection handle: {Handle}", handle);
 			await outputFunction(Encoding.UTF8.GetBytes(ex.ToString()));
@@ -84,19 +100,33 @@ public class ConnectionServerService(
 
 	public async Task DisconnectAsync(long handle)
 	{
+		logger.LogInformation("Disconnecting handle {Handle}", handle);
 		if (_sessionState.TryRemove(handle, out var data))
 		{
+			logger.LogInformation("Removed connection handle {Handle} from session state", handle);
 			// Remove from Redis if available
 			if (stateStore != null)
 			{
-				await stateStore.RemoveConnectionAsync(handle);
+				try
+				{
+					await stateStore.RemoveConnectionAsync(handle);
+				}
+				catch (Exception ex)
+				{
+					logger.LogWarning(ex, "Failed to remove connection state from Redis for handle {Handle}; continuing with publish", handle);
+				}
 			}
 
 			// Publish connection closed message to MainProcess
+			logger.LogDebug("[NATS-PUBLISH] Publishing ConnectionClosedMessage - Handle: {Handle}, Timestamp: {Timestamp}",
+				handle, DateTimeOffset.UtcNow);
+
 			await publishEndpoint.Publish(new ConnectionClosedMessage(
 				handle,
 				DateTimeOffset.UtcNow
 			));
+
+			logger.LogDebug("[NATS-PUBLISH] Successfully published ConnectionClosedMessage - Handle: {Handle}", handle);
 		}
 
 		data?.DisconnectFunction();
@@ -108,6 +138,28 @@ public class ConnectionServerService(
 	public IEnumerable<ConnectionData> GetAll() =>
 		_sessionState.Values;
 
+	public bool UpdatePreferences(long handle, PlayerOutputPreferences preferences)
+	{
+		if (_sessionState.TryGetValue(handle, out var connection))
+		{
+			var updated = connection with { Preferences = preferences };
+			// TryUpdate returns false if the value changed between TryGetValue and TryUpdate
+			// In that case, retry the update
+			while (!_sessionState.TryUpdate(handle, updated, connection))
+			{
+				// Connection was updated by another thread, get the latest value and retry
+				if (!_sessionState.TryGetValue(handle, out connection))
+				{
+					// Connection was removed
+					return false;
+				}
+				updated = connection with { Preferences = preferences };
+			}
+			return true;
+		}
+		return false;
+	}
+
 	public record ConnectionData(
 		long Handle,
 		string? PlayerDbRef,
@@ -116,7 +168,9 @@ public class ConnectionServerService(
 		Func<byte[], ValueTask> PromptOutputFunction,
 		Func<Encoding> EncodingFunction,
 		Action DisconnectFunction,
-		Func<string, string, ValueTask>? GMCPFunction = null);
+		Func<string, string, ValueTask>? GMCPFunction,
+		ProtocolCapabilities Capabilities,
+		PlayerOutputPreferences? Preferences);
 
 	public enum ConnectionState
 	{
@@ -132,11 +186,14 @@ public interface IConnectionServerService
 		Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction,
 		Func<Encoding> encodingFunction,
 		Action disconnectFunction,
-		Func<string, string, ValueTask>? gmcpFunction = null);
-	
+		Func<string, string, ValueTask>? gmcpFunction = null,
+		SharpMUSH.ConnectionServer.Models.ProtocolCapabilities? capabilities = null);
+
 	Task DisconnectAsync(long handle);
 
 	ConnectionServerService.ConnectionData? Get(long handle);
 
 	IEnumerable<ConnectionServerService.ConnectionData> GetAll();
+
+	bool UpdatePreferences(long handle, SharpMUSH.ConnectionServer.Models.PlayerOutputPreferences preferences);
 }

@@ -9,8 +9,8 @@ namespace SharpMUSH.Tests.Commands;
 
 public class CommandUnitTests
 {
-	[ClassDataSource<WebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required WebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
@@ -63,12 +63,12 @@ public class CommandUnitTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x 
-				=> x.Value.ToString()!.Contains(expected1)) );
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
+				=> x.Value.ToString()!.Contains(expected1)));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString,string>>(x 
-				=> x.Value.ToString()!.Contains(expected2)) );
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
+				=> x.Value.ToString()!.Contains(expected2)));
 	}
 }

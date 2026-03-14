@@ -1,8 +1,8 @@
-﻿using System.Numerics;
-using SharpMUSH.Implementation.Common;
+﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Numerics;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -15,7 +15,7 @@ public partial class Functions
 	/// Base 64 characters for conversion.
 	/// </summary>
 	private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-	
+
 	/// <summary>
 	/// Base 36 characters for conversion, for PennMUSH compatibility.
 	/// </summary>
@@ -23,46 +23,55 @@ public partial class Functions
 
 	[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "from-base", "to-base"])]
 	public static ValueTask<CallState> BaseConv(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.ValidateIntegerAndEvaluate(parser.CurrentState.ArgumentsOrdered,
-			x =>
-			{
-				var input = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!);
-				var fromBase = x.ElementAtOrDefault(1);
-				var toBase = x.ElementAtOrDefault(2);
+	{
+		var input = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!);
+		var fromBaseStr = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(1).Value.Message!);
+		var toBaseStr = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(2).Value.Message!);
 
-				if (fromBase is < 2 or > 64)
-					return MModule.single("#-1 Argument 1 must be between 2 and 64.");
+		// Parse the base arguments as integers
+		if (!int.TryParse(ArgHelpers.EmptyStringToZero(fromBaseStr), out var fromBase))
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+		}
 
-				if (toBase is < 2 or > 64)
-					return MModule.single("#-1 Argument 2 must be between 2 and 64.");
+		if (!int.TryParse(ArgHelpers.EmptyStringToZero(toBaseStr), out var toBase))
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+		}
 
-				var fromBaseChars = fromBase <= 36 ? Chars36 : Chars;
-				var toBaseChars = toBase <= 36 ? Chars36 : Chars;
-				
-				// Validate input according to fromBase
-				if (input.Any(c => fromBaseChars.IndexOf(c) >= fromBase))
-				{
-					return MModule.single("#-1 MALFORMED NUMBER");
-				}
+		if (fromBase is < 2 or > 64)
+			return ValueTask.FromResult<CallState>(new("#-1 Argument 1 must be between 2 and 64."));
 
-				// Convert input to base 10
-				var number = input.Aggregate(BigInteger.Zero,
-					(current, c) => current * fromBase + fromBaseChars.IndexOf(c));
+		if (toBase is < 2 or > 64)
+			return ValueTask.FromResult<CallState>(new("#-1 Argument 2 must be between 2 and 64."));
 
-				// Directly return the number if toBase is 10
-				if (toBase == 10)
-					return MModule.single(number.ToString());
+		var fromBaseChars = fromBase <= 36 ? Chars36 : Chars;
+		var toBaseChars = toBase <= 36 ? Chars36 : Chars;
 
-				// Convert from base 10 to the desired base
-				var result = string.Empty;
-				while (number > 0)
-				{
-					result = toBaseChars[(int)(number % toBase)] + result;
-					number /= toBase;
-				}
+		// Validate input according to fromBase
+		if (input.Any(c => fromBaseChars.IndexOf(c) >= fromBase))
+		{
+			return ValueTask.FromResult<CallState>(new("#-1 MALFORMED NUMBER"));
+		}
 
-				return MModule.single(result == string.Empty ? "0" : result);
-			});
+		// Convert input to base 10
+		var number = input.Aggregate(BigInteger.Zero,
+			(current, c) => current * fromBase + fromBaseChars.IndexOf(c));
+
+		// Directly return the number if toBase is 10
+		if (toBase == 10)
+			return ValueTask.FromResult<CallState>(new(number.ToString()));
+
+		// Convert from base 10 to the desired base
+		var result = string.Empty;
+		while (number > 0)
+		{
+			result = toBaseChars[(int)(number % toBase)] + result;
+			number /= toBase;
+		}
+
+		return ValueTask.FromResult<CallState>(new(result == string.Empty ? "0" : result));
+	}
 
 	[SharpFunction(Name = "band",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer..."])]

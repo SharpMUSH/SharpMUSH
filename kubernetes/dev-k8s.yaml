@@ -1,61 +1,82 @@
-# Persistent Volumes
+# Persistent Volume for the infrastructure pod
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: arangodb-pvc
+  name: sharpmush-infra-pvc
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 30Gi
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: redpanda-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
----
-# ArangoDB
+# ArangoDB and NATS (JetStream)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: arangodb
+  name: sharpmush-infra
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: arangodb
+      app: sharpmush-infra
   template:
     metadata:
       labels:
-        app: arangodb
+        app: sharpmush-infra
     spec:
+      securityContext:
+        fsGroup: 101
       containers:
         - name: arangodb
-          image: arangodb
+          image: arangodb:latest
           ports:
             - containerPort: 8529
           volumeMounts:
-            - name: arangodb-storage
+            - name: infra-storage
               mountPath: /var/lib/arangodb3
+              subPath: arangodb
           resources:
             requests:
-              cpu: "500m"
+              cpu: "200m"
+              memory: "1Gi"
             limits:
               cpu: "500m"
+              memory: "1Gi"
           env:
             - name: ARANGO_ROOT_PASSWORD
               value: "password"
+        - name: nats
+          image: nats:2-alpine
+          args: ["-js", "-m", "8222"]
+          ports:
+            - name: client
+              containerPort: 4222
+            - name: monitoring
+              containerPort: 8222
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8222
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8222
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
       volumes:
-        - name: arangodb-storage
+        - name: infra-storage
           persistentVolumeClaim:
-            claimName: arangodb-pvc
+            claimName: sharpmush-infra-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -63,76 +84,26 @@ metadata:
   name: arangodb
 spec:
   selector:
-    app: arangodb
+    app: sharpmush-infra
   ports:
     - port: 8529
       targetPort: 8529
   type: ClusterIP
 ---
-# RedPanda (Kafka-compatible)
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: redpanda
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: redpanda
-  template:
-    metadata:
-      labels:
-        app: redpanda
-    spec:
-      containers:
-        - name: redpanda
-          image: docker.redpanda.com/redpandadata/redpanda:latest
-          command:
-            - /bin/bash
-            - -c
-            - |
-              rpk redpanda start --smp 1 --memory 1G --reserve-memory 0M \
-                --overprovisioned --node-id 0 \
-                --kafka-addr PLAINTEXT://0.0.0.0:9092 \
-                --advertise-kafka-addr PLAINTEXT://redpanda:9092 \
-                --set redpanda.max_compacted_log_segment_size=6291456
-          ports:
-            - name: kafka
-              containerPort: 9092
-            - name: admin
-              containerPort: 9644
-            - name: pandaproxy
-              containerPort: 8082
-          volumeMounts:
-            - name: redpanda-storage
-              mountPath: /var/lib/redpanda/data
-          resources:
-            requests:
-              cpu: "500m"
-            limits:
-              cpu: "500m"
-      volumes:
-        - name: redpanda-storage
-          persistentVolumeClaim:
-            claimName: redpanda-pvc
----
 apiVersion: v1
 kind: Service
 metadata:
-  name: redpanda
+  name: nats
 spec:
   selector:
-    app: redpanda
+    app: sharpmush-infra
   ports:
-    - name: kafka
-      port: 9092
-      targetPort: 9092
-    - name: admin
-      port: 9644
-      targetPort: 9644
-    - name: pandaproxy
-      port: 8082
-      targetPort: 8082
+    - name: client
+      port: 4222
+      targetPort: 4222
+    - name: monitoring
+      port: 8222
+      targetPort: 8222
   type: ClusterIP
 ---
 # SharpMUSH
@@ -149,22 +120,86 @@ spec:
     metadata:
       labels:
         app: sharpmush
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
+      initContainers:
+        - name: cert-generator
+          image: alpine/openssl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout /certs/sharpmush.key \
+                -out /certs/sharpmush.crt \
+                -subj "/CN=sharpmush/O=SharpMUSH/C=US" \
+                -addext "subjectAltName=DNS:sharpmush,DNS:localhost,IP:127.0.0.1"
+              openssl pkcs12 -export -out /certs/sharpmush-dev.pfx \
+                -inkey /certs/sharpmush.key \
+                -in /certs/sharpmush.crt \
+                -password pass:DevPassword123!
+              chmod 644 /certs/sharpmush-dev.pfx
+          volumeMounts:
+            - name: cert-volume
+              mountPath: /certs
       containers:
         - name: sharpmush-server
-          image: sharpmush/sharpmush-server:dev
+          image: docker.io/sharpmush/sharpmush-server:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8081
+              name: https
+            - containerPort: 9092
+              name: metrics
+          volumeMounts:
+            - name: cert-volume
+              mountPath: /app/certs
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080;https://+:8081"
+            - name: ASPNETCORE_Kestrel__Certificates__Default__Path
+              value: "/app/certs/sharpmush-dev.pfx"
+            - name: ASPNETCORE_Kestrel__Certificates__Default__Password
+              value: "DevPassword123!"
+            - name: ARANGO_CONNECTION_STRING
+              value: "Server=http://arangodb:8529;User=root;Password=password;UseUnixSocket=false"
+            - name: NATS_URL
+              value: "nats://nats:4222"
           resources:
             requests:
-              cpu: "500m"
+              cpu: "200m"
+              memory: "256Mi"
             limits:
               cpu: "500m"
-          env:
-            - name: ARANGO_CONNECTION_STRING
-              value: "Server=http://arangodb:8529;User=root;Password=password;"
-            - name: KAFKA_HOST
-              value: redpanda
-            - name: KAFKA_PORT
-              value: "9092"
+              memory: "512Mi"
+      volumes:
+        - name: cert-volume
+          emptyDir: {}
+---
+# SharpMUSH Service (for Prometheus scraping and HTTP API)
+apiVersion: v1
+kind: Service
+metadata:
+  name: sharpmush
+spec:
+  selector:
+    app: sharpmush
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: https
+      port: 8081
+      targetPort: 8081
+    - name: metrics
+      port: 9092
+      targetPort: 9092
+  type: ClusterIP
 ---
 # ConnectionServer
 apiVersion: apps/v1
@@ -180,25 +215,34 @@ spec:
     metadata:
       labels:
         app: connectionserver
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4202"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: connectionserver
-          image: sharpmush/sharpmush-connectionserver:dev
-          command: ["dotnet", "SharpMUSH.ConnectionServer.dll"]
+          image: docker.io/sharpmush/sharpmush-connectionserver:dev
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4201
+              name: telnet
+            - containerPort: 4202
+              name: http
+            - containerPort: 9091
+              name: metrics
           env:
-            - name: KAFKA_HOST
-              value: redpanda
-            - name: KAFKA_PORT
-              value: "9092"
+            - name: NATS_URL
+              value: "nats://nats:4222"
             - name: SHARPMUSH_HOST
               value: sharpmush
           resources:
             requests:
-              cpu: "500m"
+              cpu: "200m"
+              memory: "256Mi"
             limits:
               cpu: "500m"
+              memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service
@@ -208,6 +252,91 @@ spec:
   selector:
     app: connectionserver
   ports:
-    - port: 4201
+    - name: telnet
+      port: 4201
       targetPort: 4201
+    - name: http
+      port: 4202
+      targetPort: 4202
   type: LoadBalancer
+---
+# PodMonitoring for GKE Managed Prometheus
+# This enables Google Cloud Monitoring to scrape metrics from SharpMUSH pods
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: sharpmush-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: sharpmush
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: connectionserver-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: connectionserver
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+# GKE Ingress for external HTTP(S) access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sharpmush-ingress
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "true"
+spec:
+  defaultBackend:
+    service:
+      name: connectionserver
+      port:
+        number: 4202
+  rules:
+    - http:
+        paths:
+          - path: /api/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: sharpmush
+                port:
+                  number: 8080
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: sharpmush
+                port:
+                  number: 8080
+          - path: /ready
+            pathType: Exact
+            backend:
+              service:
+                name: sharpmush
+                port:
+                  number: 8080
+          - path: /metrics
+            pathType: Exact
+            backend:
+              service:
+                name: sharpmush
+                port:
+                  number: 8080
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: connectionserver
+                port:
+                  number: 4202

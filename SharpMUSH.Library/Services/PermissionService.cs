@@ -27,12 +27,12 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		};
 
 		return !(!executor.IsGod()
-		         // && (It's Internal // SAFE when we care about SAFE)
-		         || !(await executor.IsWizard()
-		              || (!compressedAttribute.IsWizard()
-		                  && (!compressedAttribute.IsLocked()
-		                      || await compressedAttribute.Owner.WithCancellation(CancellationToken.None) ==
-		                      await target.Object().Owner.WithCancellation(CancellationToken.None)))));
+						 // && (It's Internal // SAFE when we care about SAFE)
+						 || !(await executor.IsWizard()
+									|| (!compressedAttribute.IsWizard()
+											&& (!compressedAttribute.IsLocked()
+													|| await compressedAttribute.Owner.WithCancellation(CancellationToken.None) ==
+													await target.Object().Owner.WithCancellation(CancellationToken.None)))));
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
@@ -44,7 +44,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			return true;
 
 		var finalAttr = attribute[^1];
-		
+
 		if (executor.IsGod())
 			return true;
 
@@ -56,7 +56,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			var attrOwner = await finalAttr.Owner.WithCancellation(CancellationToken.None);
 			var targetOwner = await target.Object().Owner.WithCancellation(CancellationToken.None);
 			return (attrOwner?.Id == executor.Id())
-			       || (attrOwner?.Id == targetOwner?.Id && await executor.Owns(target));
+						 || (attrOwner?.Id == targetOwner?.Id && await executor.Owns(target));
 		}
 
 		return true;
@@ -131,13 +131,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 		// Check all attributes in the path for execution permissions
 		// All must allow evaluation for the final attribute to be executable
-		foreach (var attr in attribute)
-		{
-			if (!await CanEvalAttr(viewer, target, attr))
-				return false;
-		}
-		
-		return true;
+		return await attribute.ToAsyncEnumerable()
+			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
 	}
 
 	/// <summary>
@@ -152,13 +147,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 		// Check all attributes in the path for execution permissions
 		// All must allow evaluation for the final attribute to be executable
-		foreach (var attr in attribute)
-		{
-			if (!await CanEvalAttr(viewer, target, attr))
-				return false;
-		}
-		
-		return true;
+		return await attribute.ToAsyncEnumerable()
+			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
@@ -221,50 +211,54 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
 		=> examiner.Object().DBRef == examinee.Object().DBRef
-		   || await Controls(examiner, examinee)
-		   || await examiner.IsSee_All()
-		   || (await examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
+			 || await Controls(examiner, examinee)
+			 || await examiner.IsSee_All()
+			 || (await examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
 
 	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 	{
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
 
-		var fromStep = from.MinusRoom();
-		var toStep = to.MinusRoom();
-
 		if (type.HasFlag(IPermissionService.InteractType.Hear) && !lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
+		/*
+		 // This check exists for being able to insert a Modification to the code.
 		// Check if objects are in the same location or if 'from' controls 'to'
-		return fromStep.Object().Id == (await toStep.Location()).Object().Id
+		var fromStep = from.MinusRoom();
+		var toStep = to.MinusRoom();
+		
+		 return fromStep.Object().Id == (await toStep.Location()).Object().Id
 		    || toStep.Object().Id == (await fromStep.Location()).Object().Id
 		    || await Controls(to, from);
+		    */
+		return await ValueTask.FromResult(true);
 	}
 
-	public async ValueTask<bool> CanInteract(AnySharpContent result, AnySharpObject executor,
+	public async ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interactee,
 		IPermissionService.InteractType type)
-		=> await CanInteract(result.WithRoomOption(), executor, type);
+		=> await CanInteract(interactor, interactee.WithRoomOption(), type);
 
 	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
 		=> !await evaluationTarget.IsPriv()
-		   || evaluator.IsGod()
-		   || ((await evaluator.IsWizard()
-		        || (await evaluator.IsRoyalty() && !await evaluationTarget.IsWizard()))
-		       && !evaluationTarget.IsGod());
+			 || evaluator.IsGod()
+			 || ((await evaluator.IsWizard()
+						|| (await evaluator.IsRoyalty() && !await evaluationTarget.IsWizard()))
+					 && !evaluationTarget.IsGod());
 
 	public static async ValueTask<bool> CanEvalAttr(
 		AnySharpObject evaluator,
 		AnySharpObject evaluationTarget,
 		SharpAttribute attribute)
 		=> await CanEval(evaluator, evaluationTarget)
-		   || attribute.IsPublic();
+			 || attribute.IsPublic();
 
 	public static async ValueTask<bool> CanEvalAttr(
 		AnySharpObject evaluator,
 		AnySharpObject evaluationTarget,
 		LazySharpAttribute attribute)
 		=> await CanEval(evaluator, evaluationTarget)
-		   || attribute.IsPublic();
+			 || attribute.IsPublic();
 
 
 	/// <summary>
@@ -305,19 +299,19 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public bool ChannelOkType(AnySharpObject target, SharpChannel channel)
 		=> channel.Privs.Contains("Player") && target.IsPlayer
-		   || channel.Privs.Contains("Object") && target.IsThing;
+			 || channel.Privs.Contains("Object") && target.IsThing;
 
 	public async ValueTask<bool> ChannelStandardCan(AnySharpObject target, string[] channelType)
 		=> !channelType.Contains("Disabled")
-		   && (!channelType.Contains("Wizard")
-		       || await target.IsWizard())
-		   && (!channelType.Contains("Admin")
-		       || await target.HasPower("CHAT_PRIVS")
-		       || await target.IsPriv());
+			 && (!channelType.Contains("Wizard")
+					 || await target.IsWizard())
+			 && (!channelType.Contains("Admin")
+					 || await target.HasPower("CHAT_PRIVS")
+					 || await target.IsPriv());
 
 	public async ValueTask<bool> ChannelCanPrivate(AnySharpObject target, SharpChannel channel)
 		=> !await target.IsWizard()
-		   || await ChannelStandardCan(target, channel.Privs);
+			 || await ChannelStandardCan(target, channel.Privs);
 
 	public async ValueTask<bool> ChannelCanAccess(AnySharpObject target, SharpChannel channel)
 		=> await ChannelStandardCan(target, channel.Privs);
@@ -342,34 +336,34 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel)
 		=> await target.IsPriv()
-		   || await target.IsSee_All()
-		   || (
-			   await ChannelCanAccess(target, channel)
-			   && lockService.Evaluate(channel.SeeLock, channel, target)
-		   )
-		   || (
-			   await channel.Members.Value.AnyAsync(x => x.Member.Id() == target.Id())
-			   && await ChannelCanSpeak(target, channel)
-		   );
+			 || await target.IsSee_All()
+			 || (
+				 await ChannelCanAccess(target, channel)
+				 && lockService.Evaluate(channel.SeeLock, channel, target)
+			 )
+			 || (
+				 await channel.Members.Value.AnyAsync(x => x.Member.Id() == target.Id())
+				 && await ChannelCanSpeak(target, channel)
+			 );
 
 	public async ValueTask<bool> ChannelCanHide(AnySharpObject target, SharpChannel channel)
 		=> await target.CanHide()
-		   || (
-			   channel.Privs.Contains("CanHide")
-			   && await ChannelCanAccess(target, channel)
-			   && lockService.Evaluate(channel.HideLock, channel, target)
-		   );
+			 || (
+				 channel.Privs.Contains("CanHide")
+				 && await ChannelCanAccess(target, channel)
+				 && lockService.Evaluate(channel.HideLock, channel, target)
+			 );
 
 	public async ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel)
 		=> await target.IsWizard()
-		   || (await channel.Owner.WithCancellation(CancellationToken.None)).Id ==
-		   (await target.Object().Owner.WithCancellation(CancellationToken.None)).Id;
+			 || (await channel.Owner.WithCancellation(CancellationToken.None)).Id ==
+			 (await target.Object().Owner.WithCancellation(CancellationToken.None)).Id;
 
 	public async ValueTask<bool> ChannelCanDecomposeAsync(AnySharpObject target, SharpChannel channel)
 		=> await target.IsSee_All()
-		   || (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
-		   || await ChannelCanModifyAsync(target, channel);
+			 || (await channel.Owner.WithCancellation(CancellationToken.None)).Id == target.Id()
+			 || await ChannelCanModifyAsync(target, channel);
 
 	public async ValueTask<bool> CanNoSpoof(AnySharpObject executor)
-		=> await executor.HasPower("NOSPOOF") || await executor.IsWizard() || executor.IsGod();
+		=> await executor.HasPower("NOSPOOF") || await executor.IsWizard();
 }
