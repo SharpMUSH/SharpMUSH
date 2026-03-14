@@ -163,6 +163,7 @@ public class GuestLoginTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires guest configuration testing infrastructure")]
 	[DependsOn(nameof(ConnectGuest_MultipleGuests_SelectsAppropriateOne))]
 	public async ValueTask ConnectGuest_GuestsDisabled_FailsWithError()
@@ -173,6 +174,7 @@ public class GuestLoginTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires advanced connection management")]
 	[DependsOn(nameof(ConnectGuest_GuestsDisabled_FailsWithError))]
 	public async ValueTask ConnectGuest_MaxGuestsReached_FailsWithError()

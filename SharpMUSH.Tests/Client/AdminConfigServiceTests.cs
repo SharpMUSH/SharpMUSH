@@ -20,6 +20,7 @@ public class MockHttpMessageHandler(HttpStatusCode statusCode, string content) :
 
 public class AdminConfigServiceTests(IHttpClientFactory httpClient)
 {
+	[Category("KnownBug")]
 	[Test, Skip("Skip")]
 	public async Task ImportFromConfigFileAsync_ValidConfig_ShouldNotThrow()
 	{
@@ -48,6 +49,7 @@ public class AdminConfigServiceTests(IHttpClientFactory httpClient)
 		await service.ImportFromConfigFileAsync(configContent);
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("Skip")]
 	public async Task ImportFromConfigFileAsync_HttpError_ShouldHandleGracefully()
 	{
@@ -77,6 +79,7 @@ public class AdminConfigServiceTests(IHttpClientFactory httpClient)
 		}
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("Skip")]
 	public async Task GetOptions_ShouldReturnConfiguration()
 	{

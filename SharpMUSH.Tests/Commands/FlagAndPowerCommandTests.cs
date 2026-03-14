@@ -160,6 +160,7 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Delete_HandlesNonExistentFlag()
 	{
@@ -289,6 +290,7 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Power_Delete_HandlesNonExistentPower()
 	{
@@ -397,6 +399,7 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Flag_Disable_PreventsSystemFlagDisable()
 	{
@@ -443,6 +446,7 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Power_Enable_EnablesDisabledPower()
 	{
@@ -475,6 +479,7 @@ public class FlagAndPowerCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
 	{

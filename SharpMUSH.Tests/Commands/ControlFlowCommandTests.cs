@@ -19,6 +19,7 @@ public class ControlFlowCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SelectCommand()
 	{
@@ -30,6 +31,7 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SwitchCommand()
 	{
@@ -41,6 +43,7 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask BreakCommand()
 	{
@@ -52,6 +55,7 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AssertCommand()
 	{
@@ -63,6 +67,7 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RetryCommand()
 	{
@@ -88,6 +93,7 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask IncludeCommand()
 	{
@@ -183,6 +189,7 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("TODO: @include argument substitution for %0-%9 not yet fully implemented in the hook system")]
 	public async ValueTask Include_DollarPrefix_WithArguments()
 	{

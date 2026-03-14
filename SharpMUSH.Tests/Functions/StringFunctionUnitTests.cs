@@ -270,6 +270,7 @@ public class StringFunctionUnitTests
 	[Arguments("decomposeweb(ansi(hr,red))", @"<span style=""color:Red;background-color:inherit;text-decoration:inherit"">red</span>")]
 	// [Arguments("decomposeweb(ansi(bu,blue))", @"<span style=""color:Blue;background-color:inherit;text-decoration:underline"">blue</span>")]
 	// TODO: decompsoe is not matching 'b' correctly it seems.
+	[Category("KnownBug")]
 	// [Skip("Decompose function not functioning as expected. Needs investigation.")]
 	public async Task DecomposeWeb(string str, string expectedText)
 	{

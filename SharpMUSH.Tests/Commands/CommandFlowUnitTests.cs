@@ -39,6 +39,7 @@ public class CommandFlowUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit] // Currently failing. Needs investigation.
 	public async ValueTask Retry()
 	{

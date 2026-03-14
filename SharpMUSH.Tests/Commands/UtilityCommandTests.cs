@@ -56,6 +56,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookBasic()
 	{
@@ -67,6 +68,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookAtObject()
 	{
@@ -278,6 +280,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FindCommand()
 	{
@@ -289,6 +292,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SearchCommand()
 	{
@@ -300,6 +304,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EntrancesCommand()
 	{
@@ -311,6 +316,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask StatsCommand()
 	{
@@ -322,6 +328,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask VersionCommand()
 	{
@@ -333,6 +340,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask ScanCommand()
 	{
@@ -358,6 +366,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhereisCommand()
 	{

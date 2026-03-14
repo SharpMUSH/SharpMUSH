@@ -101,6 +101,7 @@ public class MessageFunctionTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires attribute setup")]
 	public async Task MessageHashHashReplacement()
 	{
@@ -108,6 +109,7 @@ public class MessageFunctionTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires configuration setup")]
 	public async Task MessageNoSideFxDisabled()
 	{
@@ -115,6 +117,7 @@ public class MessageFunctionTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires room setup")]
 	public async Task MessageRemitSwitch()
 	{
@@ -122,6 +125,7 @@ public class MessageFunctionTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires multiple objects setup")]
 	public async Task MessageOemitSwitch()
 	{

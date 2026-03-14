@@ -13,6 +13,7 @@ public class EventServiceTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup with event_handler configured")]
 	public async ValueTask TriggerEventWithNoHandlerConfigured()
 	{
@@ -28,6 +29,7 @@ public class EventServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup with event_handler and attributes configured")]
 	public async ValueTask TriggerEventWithHandler()
 	{
@@ -40,6 +42,7 @@ public class EventServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask TriggerEventWithSystemEnactor()
 	{

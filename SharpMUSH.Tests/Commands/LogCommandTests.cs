@@ -83,6 +83,7 @@ public class LogCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask LogwipeCommand()
 	{

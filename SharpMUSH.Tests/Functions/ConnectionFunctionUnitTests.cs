@@ -10,6 +10,7 @@ public class ConnectionFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Is empty. Needs investigation.")]
 	public async Task Idle()
 	{

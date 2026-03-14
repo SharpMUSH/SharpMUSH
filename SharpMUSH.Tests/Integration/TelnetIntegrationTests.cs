@@ -250,6 +250,7 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 /// with multi-second timeouts that are not suitable for the standard CI test pass.
 /// Run with: --treenode-filter "/*/*/TelnetIntegrationTests/*"
 /// </summary>
+[Category("NeedsSetup")]
 [Explicit]
 [NotInParallel]
 public class TelnetIntegrationTests

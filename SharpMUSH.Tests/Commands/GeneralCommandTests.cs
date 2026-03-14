@@ -38,6 +38,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Arguments("l"), Skip("Not yet implemented properly")]
 	public async ValueTask CommandAliasRuns(string str)
 	{
@@ -320,6 +321,7 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("TODO")]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
@@ -390,6 +392,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("TODO: Failing")]
 	public async ValueTask Command_ShowsCommandInfo()
 	{
@@ -404,6 +407,7 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("TODO")]
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
@@ -418,6 +422,7 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("TODO")]
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
@@ -446,6 +451,7 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("TODO")]
 	public async ValueTask Trigger_QueuesAttribute()
 	{
@@ -473,6 +479,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask Halt_ClearsQueue()
 	{
@@ -487,6 +494,7 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("TODO")]
 	public async ValueTask PS_ShowsQueueStatus()
 	{
@@ -515,6 +523,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("TODO: Failing")]
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{

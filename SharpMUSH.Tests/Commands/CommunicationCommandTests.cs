@@ -76,6 +76,7 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("@emit Test broadcast", "Test broadcast")]
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask EmitBasic(string command, string expected)
 	{
@@ -90,6 +91,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@lemit Test local emit", "Test local emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask LemitBasic(string command, string expected)
 	{
@@ -103,6 +105,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask RemitBasic(string command, string expected)
 	{
@@ -116,6 +119,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@oemit #1=Test omit emit", "Test omit emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask OemitBasic(string command, string expected)
 	{
@@ -129,6 +133,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@zemit Test zone emit", "Test zone emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask ZemitBasic(string command, string expected)
 	{
@@ -142,6 +147,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsemit Test nospoof emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NsemitBasic(string command)
 	{
@@ -156,6 +162,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nslemit Test nospoof local")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NslemitBasic(string command)
 	{
@@ -169,6 +176,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsremit #0=Test nospoof remote")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NsremitBasic(string command)
 	{
@@ -182,6 +190,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsoemit #1=Test nospoof omit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NsoemitBasic(string command)
 	{
@@ -195,6 +204,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nspemit #1=Test nospoof pemit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NspemitBasic(string command)
 	{
@@ -208,6 +218,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nszemit Test nospoof zone")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NszemitBasic(string command)
 	{
@@ -238,6 +249,7 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Arguments("addcom=Public", "Alias name cannot be empty."), Skip("TODO")]
 	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
@@ -311,6 +323,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
+	[Category("KnownBug")]
 	[Skip("TOOD")]
 	public async ValueTask ComTitleBasic(string command)
 	{
@@ -379,6 +392,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("comlist")]
+	[Category("KnownBug")]
 	[Skip("TODO: Failing Test. Requires investigation.")]
 	public async ValueTask ComListEmpty(string command)
 	{

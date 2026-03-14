@@ -97,6 +97,7 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UseCommand()
 	{
@@ -168,6 +169,7 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DestroyCommand()
 	{
@@ -179,6 +181,7 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask NukeCommand()
 	{
@@ -190,6 +193,7 @@ public class ObjectManipulationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UndestroyCommand()
 	{

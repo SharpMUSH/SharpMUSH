@@ -53,6 +53,7 @@ public class FilteredObjectQueryTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Owner filtering via graph traversal needs debugging")]
 	public async ValueTask FilterByOwner_ReturnsOnlyOwnedObjects()
 	{

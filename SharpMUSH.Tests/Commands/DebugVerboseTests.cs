@@ -202,6 +202,7 @@ public class DebugVerboseTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("@trigger command syntax needs investigation - implementation is complete")]
 	public async Task AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug()
 	{
@@ -229,6 +230,7 @@ public class DebugVerboseTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("@trigger command syntax needs investigation - implementation is complete")]
 	public async Task AttributeNoDebugFlag_SuppressesOutput_EvenWithObjectDebug()
 	{

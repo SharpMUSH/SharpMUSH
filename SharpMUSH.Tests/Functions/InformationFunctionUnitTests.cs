@@ -26,6 +26,7 @@ public class InformationFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
+	[Category("NotImplemented")]
 	[Test, Skip("Not Yet Implemented")]
 	public async Task Name()
 	{
@@ -111,6 +112,7 @@ public class InformationFunctionUnitTests
 
 	[Test]
 	[Arguments("hidden(%#)", "0")]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - intermittent failure, returns '1' instead of '0'")]
 	public async Task Hidden(string str, string expected)
 	{

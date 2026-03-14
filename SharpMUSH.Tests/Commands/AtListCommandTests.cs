@@ -49,6 +49,7 @@ public class AtListCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Switch parsing issue with multiple switches - needs investigation")]
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{

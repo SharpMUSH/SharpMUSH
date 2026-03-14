@@ -68,6 +68,7 @@ public class MotdDataTests
 		await Assert.That(result.WizardMotd).IsEqualTo("New wizard message");
 	}
 
+	[Category("KnownBug")]
 	[Test, NotInParallel, Skip("TODO: Failing test - needs investigation")]
 	public async Task ClearMotdData()
 	{

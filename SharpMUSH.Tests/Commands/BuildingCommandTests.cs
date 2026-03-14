@@ -133,6 +133,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(DigAndMoveTest))]
+	[Category("KnownBug")]
 	[Skip("Failing Test - Needs Investigation")]
 	// 	"#-2 I DON'T KNOW WHICH ONE YOU MEAN"
 	public async ValueTask NameObject()
@@ -176,6 +177,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(DigRoomWithExits))]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LinkExit()
 	{
@@ -200,6 +202,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(LinkExit))]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask CloneObject()
 	{
@@ -419,6 +422,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(CloneObject))]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
 	public async ValueTask SetParent()
 	{
@@ -489,6 +493,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(RecycleObject))]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{
@@ -518,6 +523,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LockObject()
 	{
@@ -533,6 +539,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask UnlockObject()
 	{

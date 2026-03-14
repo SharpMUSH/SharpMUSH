@@ -215,6 +215,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Implementation incomplete - sort function needs full implementation")]
 	[Arguments("sort(3 1 2)", "1 2 3")]
 	[Arguments("sort(foo bar baz)", "bar baz foo")]
@@ -361,6 +362,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Implementation doesn't match expected behavior - returns wrong indices")]
 	[Arguments("matchall(foo bar baz,ba*)", "2 3")]
 	public async Task Matchall(string function, string expected)
@@ -370,6 +372,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("User-defined function execution issue - attribute not being called correctly")]
 	[Arguments("mix(test/concat,a b c,1 2 3)", "a 1 b 2 c 3")]
 	public async Task Mix(string function, string expected)
@@ -438,6 +441,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Formatting logic incorrect - conjunction and punctuation not formatted properly")]
 	[Arguments("itemize(a b c)", "a, b, and c")]
 	public async Task Itemize(string function, string expected)
@@ -491,6 +495,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Implementation issue - splice logic doesn't handle output separator correctly")]
 	[Arguments("splice(a b c,d e f, )", "a d  b e  c f")]
 	public async Task Splice(string str, string expected)
@@ -510,6 +515,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Indexing issue - 1-based position handling for insert incorrect")]
 	[Arguments("linsert(a b c,2,x)", "a x b c")]
 	public async Task ListInsert(string str, string expected)
@@ -541,6 +547,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Formatting logic incorrect - same issue as itemize")]
 	[Arguments("elist(a b c)", "a, b, and c")]
 	public async Task Elist(string str, string expected)
@@ -566,6 +573,7 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Error handling outside iteration - should return error but doesn't")]
 	[Arguments("itext(0)", "#-1 REGISTER OUT OF RANGE")]
 	public async Task Itext(string str, string expected)

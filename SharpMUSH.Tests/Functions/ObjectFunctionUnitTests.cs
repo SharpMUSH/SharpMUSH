@@ -74,6 +74,7 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing")]
 	[Arguments("nlsearch(all,type,PLAYER)", "1")]
 	public async Task Nlsearch(string str, string expected)
@@ -83,6 +84,7 @@ public class ObjectFunctionUnitTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing")]
 	[Arguments("nsearch(all,type,PLAYER)", "1")]
 	public async Task Nsearch(string str, string expected)

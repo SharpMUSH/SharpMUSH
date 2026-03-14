@@ -14,6 +14,7 @@ public class ListenPatternMatcherTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with objects and ^-listen attributes configured")]
 	public async ValueTask MatchListenPatternsAsync_WithNoMonitorFlag_ReturnsEmpty()
 	{
@@ -25,6 +26,7 @@ public class ListenPatternMatcherTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with ^-listen patterns")]
 	public async ValueTask MatchListenPatternsAsync_WithMatchingPattern_ReturnsMatch()
 	{
@@ -37,6 +39,7 @@ public class ListenPatternMatcherTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with AAHEAR flag")]
 	public async ValueTask MatchListenPatternsAsync_WithAAHEARFlag_MatchesForAnySpeaker()
 	{
@@ -48,6 +51,7 @@ public class ListenPatternMatcherTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with AMHEAR flag")]
 	public async ValueTask MatchListenPatternsAsync_WithAMHEARFlag_MatchesOnlyForSelf()
 	{
@@ -59,6 +63,7 @@ public class ListenPatternMatcherTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with default ^-listen behavior")]
 	public async ValueTask MatchListenPatternsAsync_WithDefaultBehavior_MatchesOnlyForOthers()
 	{

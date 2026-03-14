@@ -17,6 +17,7 @@ public class WizardCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HaltCommand()
 	{
@@ -38,6 +39,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask DrainCommand()
 	{
@@ -49,6 +51,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PsCommand()
 	{
@@ -60,6 +63,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PsWithTarget()
 	{
@@ -71,6 +75,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask TriggerCommand()
 	{
@@ -86,6 +91,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask ForceCommand()
 	{
@@ -97,6 +103,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask NotifyCommand()
 	{
@@ -108,6 +115,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask WaitCommand()
 	{
@@ -120,6 +128,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask UptimeCommand()
 	{
@@ -131,6 +140,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DbckCommand()
 	{
@@ -142,6 +152,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DumpCommand()
 	{
@@ -153,6 +164,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask QuotaCommand()
 	{
@@ -164,6 +176,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AllquotaCommand()
 	{
@@ -175,6 +188,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask BootCommand()
 	{
@@ -186,6 +200,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask WallCommand()
 	{
@@ -197,6 +212,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask WizwallCommand()
 	{
@@ -219,6 +235,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_NoSwitch_TogglesHidden()
 	{
@@ -306,6 +323,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_OffSwitch_UnsetsHidden()
 	{
@@ -345,6 +363,7 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing. Needs Investigation")]
 	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
 	{

@@ -17,6 +17,7 @@ public class SocialCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SayCommand()
 	{
@@ -29,6 +30,7 @@ public class SocialCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PoseCommand()
 	{
@@ -40,6 +42,7 @@ public class SocialCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SemiposeCommand()
 	{
@@ -51,6 +54,7 @@ public class SocialCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhisperCommand()
 	{
@@ -62,6 +66,7 @@ public class SocialCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PageCommand()
 	{

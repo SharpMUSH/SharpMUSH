@@ -218,6 +218,7 @@ public class ZoneCommandTests
 		await Assert.That(zmrVerify.IsNone).IsFalse();
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("Failing and needs to be fixed.")]
 	public async ValueTask ZMRUserDefinedCommandTest()
 	{
@@ -279,6 +280,7 @@ public class ZoneCommandTests
 				TestHelpers.MessageContains(msg, "ZMR command executed")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
+	[Category("KnownBug")]
 	[Test, Skip("Failing and needs to be fixed.")]
 	public async ValueTask PersonalZoneUserDefinedCommandTest()
 	{

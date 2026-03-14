@@ -17,6 +17,7 @@ public class GameCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask BuyCommand()
 	{
@@ -28,6 +29,7 @@ public class GameCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ScoreCommand()
 	{
@@ -39,6 +41,7 @@ public class GameCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask TeachCommand()
 	{
@@ -50,6 +53,7 @@ public class GameCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FollowCommand()
 	{
@@ -61,6 +65,7 @@ public class GameCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnfollowCommand()
 	{
@@ -72,6 +77,7 @@ public class GameCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DesertCommand()
 	{
@@ -83,6 +89,7 @@ public class GameCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DismissCommand()
 	{
@@ -142,6 +149,7 @@ public class GameCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WithCommand()
 	{

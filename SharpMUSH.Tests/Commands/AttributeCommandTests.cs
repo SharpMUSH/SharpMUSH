@@ -26,6 +26,7 @@ public class AttributeCommandTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeBasic()
 	{
@@ -44,6 +45,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeEmpty()
 	{
@@ -55,6 +57,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeComplexValue()
 	{
@@ -66,6 +69,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{
@@ -101,6 +105,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
@@ -133,6 +138,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
@@ -165,6 +171,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
@@ -197,6 +204,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
@@ -232,6 +240,7 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	[Category("KnownBug")]
 	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_AtrLock_LockAndUnlock()
 	{
