@@ -190,7 +190,6 @@ public class ControlFlowCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("TODO: @include argument substitution for %0-%9 not yet fully implemented in the hook system")]
 	public async ValueTask Include_DollarPrefix_WithArguments()
 	{
 		// Set an attribute with a $...: prefix that uses %0

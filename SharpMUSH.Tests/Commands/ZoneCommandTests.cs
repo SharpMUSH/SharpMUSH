@@ -219,7 +219,7 @@ public class ZoneCommandTests
 	}
 
 	[Category("KnownBug")]
-	[Test, Skip("Failing and needs to be fixed.")]
+	[Test]
 	public async ValueTask ZMRUserDefinedCommandTest()
 	{
 		// Clear player zone to avoid inheritance issues
@@ -281,7 +281,7 @@ public class ZoneCommandTests
 	}
 
 	[Category("KnownBug")]
-	[Test, Skip("Failing and needs to be fixed.")]
+	[Test]
 	public async ValueTask PersonalZoneUserDefinedCommandTest()
 	{
 		// Create a unique personal Zone Master Room (ZMR)
@@ -294,21 +294,14 @@ public class ZoneCommandTests
 		var personalZMRObject = await Mediator.Send(new GetObjectNodeQuery(personalZMRDbRef));
 		await Assert.That(personalZMRObject.IsNone).IsFalse();
 
-		// Create a regular object to represent "personal zone" concept
-		var personalObjName = GenerateUniqueName("PersonalObj");
-		var personalObjResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {personalObjName}"));
-		var personalObjDbRef = DBRef.Parse(personalObjResult.Message!.ToPlainText()!);
-		var personalObject = await Mediator.Send(new GetObjectNodeQuery(personalObjDbRef));
-		await Assert.That(personalObject.IsNone).IsFalse();
+		// Set the PLAYER'S zone to the ZMR (this is the "personal zone" concept)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone me={personalZMRDbRef}"));
 
-		// Set the object's zone to the ZMR (testing "personal zone" functionality)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {personalObjDbRef}={personalZMRDbRef}"));
-
-		// Verify zone was set - get fresh copy from database
-		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(personalObjDbRef));
-		var objZone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(objZone.IsNone).IsFalse();
-		await Assert.That(objZone.Known.Object().DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
+		// Verify zone was set on the player
+		var playerObj = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var playerZone = await playerObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(playerZone.IsNone).IsFalse();
+		await Assert.That(playerZone.Known.Object().DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
 
 		// Create a unique object in the personal ZMR with a $-command
 		var personalCmdObjName = GenerateUniqueName("PersonalCmdObj");
@@ -324,7 +317,7 @@ public class ZoneCommandTests
 		var cmdName = GenerateUniqueName("personaltest");
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&cmd`{cmdName} {personalCmdObjDbRef}=${cmdName}:@pemit #1=Personal zone command executed"));
 
-		// Create a unique room to test from
+		// Create a unique room to test from (separate from the ZMR)
 		var testRoomName = GenerateUniqueName("PersonalZoneTestRoom");
 		var testRoomResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {testRoomName}"));
 		var testRoomDbRefText = testRoomResult.Message!.ToPlainText()!;
@@ -334,17 +327,20 @@ public class ZoneCommandTests
 		var testRoomObject = await Mediator.Send(new GetObjectNodeQuery(testRoomDbRef));
 		await Assert.That(testRoomObject.IsNone).IsFalse();
 
-		// Teleport player to the test room
+		// Teleport player to the test room (away from the ZMR)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {testRoomDbRef}"));
 
-		// Execute the $-command - it should be available through personal zone
+		// Execute the $-command - it should be available through the player's personal zone (step 13)
 		await Parser.CommandParse(1, ConnectionService, MModule.single(cmdName));
 
-		// Verify the command was executed - check for the unique command output
+		// Verify the command was executed
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Personal zone command executed")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
+
+		// Cleanup: restore player's zone
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
 	}
 
 	[Test]

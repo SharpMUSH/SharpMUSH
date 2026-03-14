@@ -5601,8 +5601,16 @@ public partial class Commands
 		// Q-register management is now handled by the hook system
 		// CLEARREGS and LOCALIZE switches are implemented there
 
-		// Environment argument substitution is handled by the hook system
-		// Arguments %0-%9 are properly managed during command execution
+		// Build EnvironmentRegisters from provided arguments so %0, %1, ... are substituted.
+		// args["0"] is the attribute path; args["1"], args["2"], ... map to %0, %1, ...
+		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters);
+		for (var i = 1; i < args.Count; i++)
+		{
+			if (args.TryGetValue(i.ToString(), out var argVal) && argVal.Message != null)
+			{
+				envArgs[(i - 1).ToString()] = argVal;
+			}
+		}
 
 		// Execute the attribute content in-place with recursion tracking and DEBUG/VERBOSE support
 		// This evaluates the command list without creating a queue entry
@@ -5612,8 +5620,9 @@ public partial class Commands
 
 			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 			{
-				var execResult = await parser.WithAttributeDebug(attribute,
-					p => p.CommandListParse(MModule.single(attributeText)));
+				var execResult = await parser.With(
+					state => state with { EnvironmentRegisters = envArgs },
+					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(attributeText))));
 
 				// Handle NOBREAK switch to prevent @break/@assert propagation.
 				// When set, @break/@assert from included code shouldn't propagate to calling list.
