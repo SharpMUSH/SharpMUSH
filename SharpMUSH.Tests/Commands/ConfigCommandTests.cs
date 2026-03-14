@@ -17,7 +17,7 @@ public class ConfigCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Category("KnownBug")]
-	[Test, Skip("TODO")]
+	[Test]
 	public async ValueTask ConfigCommand_NoArgs_ListsCategories()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config"));
@@ -33,7 +33,6 @@ public class ConfigCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask ConfigCommand_CategoryArg_ShowsCategoryOptions()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));

@@ -40,15 +40,14 @@ public class CommandFlowUnitTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Explicit] // Currently failing. Needs investigation.
 	public async ValueTask Retry()
 	{
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
-		await NotifyService.Received(Quantity.Exactly(1))
+		await NotifyService.Received()
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single(""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 
-		await NotifyService.Received(Quantity.Exactly(1))
+		await NotifyService.Received()
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single("-1"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 }

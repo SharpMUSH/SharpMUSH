@@ -69,7 +69,7 @@ public class MotdDataTests
 	}
 
 	[Category("KnownBug")]
-	[Test, NotInParallel, Skip("TODO: Failing test - needs investigation")]
+	[Test, NotInParallel]
 	public async Task ClearMotdData()
 	{
 		// Set initial data

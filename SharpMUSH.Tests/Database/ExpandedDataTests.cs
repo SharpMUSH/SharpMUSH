@@ -47,7 +47,7 @@ public class ExpandedDataTests
 	/// This tests exists to illustrate that SetExpandedObjectData overwrites values when null is explicitly given.
 	/// </summary>
 	[Category("KnownBug")]
-	[Test, NotInParallel, Skip("TODO: Failing Behavior. Needs Investigation.")]
+	[Test, NotInParallel]
 	public async Task OverwritePartialNullAndGetExpandedData()
 	{
 		var one = await _database.GetObjectNodeAsync(new DBRef(1));

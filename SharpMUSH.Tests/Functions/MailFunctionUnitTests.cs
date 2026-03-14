@@ -134,7 +134,6 @@ public class MailFunctionUnitTests
 	[Test]
 	[Arguments("mail(999)", "#-1 NO SUCH MAIL")]
 	[Category("KnownBug")]
-	[Skip("TODO: Failing test - needs investigation")]
 	public async Task Mail_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		// Non-existent message should return error
@@ -321,7 +320,6 @@ public class MailFunctionUnitTests
 	[Test]
 	[Arguments("mailsubject(999)", "#-1 NO SUCH MAIL")]
 	[Category("KnownBug")]
-	[Skip("Marked for later investigation")]
 	public async Task Mailsubject_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		// Non-existent message should return error
