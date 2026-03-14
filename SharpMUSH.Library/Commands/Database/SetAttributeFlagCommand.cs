@@ -8,7 +8,7 @@ public record SetAttributeFlagCommand(DBRef DBRef, SharpAttribute Target, SharpA
 {
 	public string[] CacheKeys =>
 	[
-		$"attribute:{DBRef}:{string.Join("`", Target.LongName)})",
+		$"attribute:{DBRef}:{Target.LongName})",
 		$"commands:{DBRef}"
 	];
 	public string[] CacheTags => [];
