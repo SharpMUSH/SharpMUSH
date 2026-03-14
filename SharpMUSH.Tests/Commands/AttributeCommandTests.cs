@@ -27,7 +27,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeBasic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TEST #1=Test Value"));
@@ -46,7 +45,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeEmpty()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTCLEAR #1="));
@@ -58,7 +56,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeComplexValue()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&COMPLEX #1=This is a [add(1,2)] test"));
@@ -70,7 +67,6 @@ public class AttributeCommandTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{
 		// Set attribute directly via database with unique name

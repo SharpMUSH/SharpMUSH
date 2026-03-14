@@ -11,7 +11,6 @@ public class ConnectionFunctionUnitTests
 
 	[Test]
 	[Category("KnownBug")]
-	[Skip("Is empty. Needs investigation.")]
 	public async Task Idle()
 	{
 		// Test idle function - should return idle time in seconds

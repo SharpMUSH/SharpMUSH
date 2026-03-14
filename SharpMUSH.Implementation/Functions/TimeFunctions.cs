@@ -283,14 +283,14 @@ public partial class Functions
 			? arg0Value.Message!.ToPlainText()
 			: null;
 
-		if (arg0 is null)
+		if (string.IsNullOrEmpty(arg0))
 		{
-			return DateTimeOffset.Now.ToLocalTime().ToString();
+			return DateTimeOffset.Now.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy");
 		}
 
 		if (TimeZoneInfo.TryFindSystemTimeZoneById(arg0, out var timeZone))
 		{
-			return DateTimeOffset.Now.ToOffset(timeZone.BaseUtcOffset).ToString();
+			return DateTimeOffset.Now.ToOffset(timeZone.BaseUtcOffset).ToString("ddd MMM dd HH:mm:ss yyyy");
 		}
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -301,14 +301,14 @@ public partial class Functions
 					IAttributeService.AttributeMode.Read, false);
 				if (!attr.IsAttribute)
 				{
-					return DateTimeOffset.Now.ToLocalTime().ToString();
+					return DateTimeOffset.Now.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy");
 				}
 
 				var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
 
 				return TimeZoneInfo.TryFindSystemTimeZoneById(attrValue, out var dbTimeZone)
-					? DateTimeOffset.Now.ToOffset(dbTimeZone.BaseUtcOffset).ToString()
-					: DateTimeOffset.Now.ToLocalTime().ToString();
+					? DateTimeOffset.Now.ToOffset(dbTimeZone.BaseUtcOffset).ToString("ddd MMM dd HH:mm:ss yyyy")
+					: DateTimeOffset.Now.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy");
 			});
 	}
 
