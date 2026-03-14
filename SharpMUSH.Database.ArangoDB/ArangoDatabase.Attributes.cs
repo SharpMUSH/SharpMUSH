@@ -28,7 +28,8 @@ public partial class ArangoDatabase
 	private IAsyncEnumerable<SharpAttributeFlag> GetAttributeFlagsAsync(string id,
 		CancellationToken ct = default) =>
 		arangoDb.Query.ExecuteStreamAsync<SharpAttributeFlagQueryResult>(handle,
-				$"FOR v in 1..1 OUTBOUND @startVertex GRAPH {DatabaseConstants.GraphAttributeFlags} RETURN v",
+				$"FOR e IN {DatabaseConstants.HasAttributeFlag} FILTER e._from == @startVertex " +
+				$"FOR v IN {DatabaseConstants.AttributeFlags} FILTER v._id == e._to RETURN v",
 				new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: ct)
 			.Select(x =>
 				new SharpAttributeFlag()

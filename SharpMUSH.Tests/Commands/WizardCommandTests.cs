@@ -79,10 +79,10 @@ public class WizardCommandTests
 	public async ValueTask TriggerCommand()
 	{
 		// Set an attribute first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&TRIGGER_TEST #1=think Triggered!"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TRIGGER_TEST_WIZ_UNIQUE #1=think Triggered!"));
 
 		// Trigger it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger #1/TRIGGER_TEST"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger #1/TRIGGER_TEST_WIZ_UNIQUE"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))

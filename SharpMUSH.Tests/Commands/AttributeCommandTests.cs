@@ -30,7 +30,7 @@ public class AttributeCommandTests
 	[Category("KnownBug")]
 	public async ValueTask SetAttributeBasic()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&TEST #1=Test Value"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TEST_ATTRSET_UNIQUE #1=Test Value"));
 
 		await NotifyService
 			.Received()
@@ -38,7 +38,7 @@ public class AttributeCommandTests
 
 		// Verify attribute was set
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
-		var attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "TEST",
+		var attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "TEST_ATTRSET_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(attr.IsAttribute).IsTrue();
@@ -48,7 +48,7 @@ public class AttributeCommandTests
 	[Category("KnownBug")]
 	public async ValueTask SetAttributeEmpty()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTCLEAR #1="));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTCLEAR_ATTRSET_UNIQUE #1="));
 
 		await NotifyService
 			.Received()

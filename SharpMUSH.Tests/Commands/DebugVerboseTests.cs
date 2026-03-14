@@ -207,11 +207,11 @@ public class DebugVerboseTests
 	{
 		// Arrange - Create test object WITHOUT DEBUG, set attribute with DEBUG flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create AttrDebugForceTest"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc AttrDebugForceTest=[add(88,77)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrDebugForceTest/testfunc=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFUNC_ATTRDBG_UNIQUE AttrDebugForceTest=[add(88,77)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE=DEBUG"));
 
 		// Act - Trigger the attribute (which uses WithAttributeDebug internally)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrDebugForceTest/testfunc"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE"));
 
 		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
@@ -235,11 +235,11 @@ public class DebugVerboseTests
 		// Arrange - Create test object WITH DEBUG but set attribute WITH NODEBUG
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create AttrNoDebugSuppressTest"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest=DEBUG"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc2 AttrNoDebugSuppressTest=[add(55,44)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest/testfunc2=NODEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFUNC2_NODEBG_UNIQUE AttrNoDebugSuppressTest=[add(55,44)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE=NODEBUG"));
 
 		// Act - Trigger the attribute (which uses WithAttributeDebug internally)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrNoDebugSuppressTest/testfunc2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE"));
 
 		// Assert - Should NOT see debug output (NODEBUG takes precedence)
 		await NotifyService
