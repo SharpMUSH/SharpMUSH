@@ -26,8 +26,9 @@ public class InformationFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
+	[Test]
 	[Category("NotImplemented")]
-	[Test, Skip("Not Yet Implemented")]
+	[Skip("Not Yet Implemented")]
 	public async Task Name()
 	{
 		var result = (await Parser.FunctionParse(MModule.single("name(%#)")))?.Message!;

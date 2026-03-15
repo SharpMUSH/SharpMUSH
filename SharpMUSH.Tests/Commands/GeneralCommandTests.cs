@@ -38,8 +38,7 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Arguments("l"), Skip("Not yet implemented properly")]
+	[Arguments("l")]
 	public async ValueTask CommandAliasRuns(string str)
 	{
 		Console.WriteLine("Testing: {0}", str);

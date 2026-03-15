@@ -420,7 +420,7 @@ public class BuildingCommandTests
 	[Test]
 	[DependsOn(nameof(CloneObject))]
 	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask SetParent()
 	{
 		// Create two objects

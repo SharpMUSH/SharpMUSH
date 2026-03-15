@@ -38,8 +38,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	[Arguments("json_map(obj/attr,{\"a\":1})", "")]
 	public async Task JsonMap(string str, string expected)
 	{

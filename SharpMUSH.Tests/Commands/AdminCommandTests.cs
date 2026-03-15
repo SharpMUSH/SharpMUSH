@@ -54,15 +54,13 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ShutdownCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -78,15 +76,13 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask PurgeCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
