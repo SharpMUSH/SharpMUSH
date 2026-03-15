@@ -208,8 +208,6 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	[Arguments("regrep(%#,test,*)", "")]
 	public async Task Regrep(string str, string expected)
 	{
@@ -218,8 +216,6 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	[Arguments("regrepi(%#,test,*)", "")]
 	public async Task Regrepi(string str, string expected)
 	{
@@ -228,8 +224,6 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	[Arguments("regedit(obj/attr,pattern,replacement)", "")]
 	public async Task Regedit(string str, string expected)
 	{

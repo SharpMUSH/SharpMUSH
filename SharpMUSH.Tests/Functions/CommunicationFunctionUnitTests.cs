@@ -73,8 +73,6 @@ public class CommunicationFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Zone system not yet implemented")]
 	[Arguments("zemit(#0,test message)", "")]
 	public async Task Zemit(string str, string expected)
 	{

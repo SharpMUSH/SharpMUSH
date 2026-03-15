@@ -95,7 +95,7 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("@lemit Test local emit", "Test local emit")]
 	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask LemitBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -109,7 +109,7 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
 	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask RemitBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -123,7 +123,7 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("@oemit #1=Test omit emit", "Test omit emit")]
 	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask OemitBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -137,7 +137,7 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("@zemit Test zone emit", "Test zone emit")]
 	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask ZemitBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -150,8 +150,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsemit Test nospoof emit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NsemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -165,8 +163,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nslemit Test nospoof local")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NslemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -179,8 +175,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsremit #0=Test nospoof remote")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NsremitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -193,8 +187,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsoemit #1=Test nospoof omit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NsoemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -207,8 +199,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nspemit #1=Test nospoof pemit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NspemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -221,8 +211,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nszemit Test nospoof zone")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NszemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
