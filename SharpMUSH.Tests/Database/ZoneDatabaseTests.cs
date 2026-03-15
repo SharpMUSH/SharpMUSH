@@ -25,7 +25,8 @@ public class ZoneDatabaseTests
 	public async ValueTask SetObjectZone()
 	{
 		// Clear player zone first to ensure clean state
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create zone master and object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBZoneMaster"));
@@ -52,7 +53,8 @@ public class ZoneDatabaseTests
 	public async ValueTask UnsetObjectZone()
 	{
 		// Clear player zone first to ensure clean state
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create zone master and object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUnsetZoneMaster"));
@@ -86,7 +88,8 @@ public class ZoneDatabaseTests
 	public async ValueTask UpdateObjectZone()
 	{
 		// Clear player zone first to ensure clean state
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create two zone masters and an object
 		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUpdateZone1"));
@@ -123,7 +126,8 @@ public class ZoneDatabaseTests
 	public async ValueTask SetObjectZoneToNull()
 	{
 		// Clear player zone first to ensure clean state
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create object
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBNullZoneObject"));
@@ -146,7 +150,8 @@ public class ZoneDatabaseTests
 	public async ValueTask MultipleObjectsSameZone()
 	{
 		// Clear player zone first to ensure clean state
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create one zone master and multiple objects
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBSharedZone"));
@@ -181,7 +186,8 @@ public class ZoneDatabaseTests
 	public async ValueTask ObjectCanBeZone()
 	{
 		// Clear player zone first to ensure clean state
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// An object can be both a zone master and be zoned to another zone
 		var topZoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBTopZone"));

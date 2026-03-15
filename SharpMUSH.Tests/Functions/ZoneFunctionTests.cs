@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -25,7 +26,8 @@ public class ZoneFunctionTests
 	public async Task ZoneGetNoZone()
 	{
 		// First, ensure the player has no zone (so objects don't inherit one)
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create an object without a zone
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneFuncTest1"));
@@ -63,7 +65,8 @@ public class ZoneFunctionTests
 	public async Task ZoneSetWithFunction()
 	{
 		// Ensure player has no zone
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create a zone master object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneFuncSetMaster"));
@@ -126,7 +129,8 @@ public class ZoneFunctionTests
 	public async Task ZoneNoPermissionToExamine()
 	{
 		// Ensure player has no zone
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create an object that player can examine (they created it)
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZonePermTest"));
@@ -166,7 +170,8 @@ public class ZoneFunctionTests
 	public async Task ZoneChainTest()
 	{
 		// Ensure player has no zone
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create a hierarchy: Zone -> Object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChainZoneMaster"));
@@ -193,7 +198,8 @@ public class ZoneFunctionTests
 	public async Task ZfindListsObjectsInZone()
 	{
 		// Clear player zone
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
 
 		// Create a zone master
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindTestZone"));

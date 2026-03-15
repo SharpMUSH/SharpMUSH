@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -248,14 +249,15 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_BasicExecution()
 	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlBasic");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&Test_Mapsql_BasicExecution #1=Test_Mapsql_BasicExecution: Row %0 has value %2"));
+			MModule.single($"&Test_Mapsql_BasicExecution {objDbRef}=Test_Mapsql_BasicExecution: Row %0 has value %2"));
 
 		await Task.Delay(100);
 
 		var result =
 			(await Parser.FunctionParse(MModule.single(
-				"mapsql(#1/Test_Mapsql_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = 1))")))?.Message!;
+				$"mapsql({objDbRef}/Test_Mapsql_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = 1))")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution: Row 1 has value 100");
 	}
@@ -263,14 +265,15 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_BasicExecution2()
 	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlBasic2");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&Test_Mapsql_BasicExecution2 #1=Test_Mapsql_BasicExecution2: Row %0 has value %2"));
+			MModule.single($"&Test_Mapsql_BasicExecution2 {objDbRef}=Test_Mapsql_BasicExecution2: Row %0 has value %2"));
 
 		await Task.Delay(100);
 
 		var result =
 			(await Parser.FunctionParse(
-				MModule.single("mapsql(#1/Test_Mapsql_BasicExecution2,lit(SELECT `name`,`value` FROM `test_sql_data_func` LIMIT 3),%r)")))
+				MModule.single($"mapsql({objDbRef}/Test_Mapsql_BasicExecution2,lit(SELECT `name`,`value` FROM `test_sql_data_func` LIMIT 3),%r)")))
 			?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_BasicExecution2: Row 1 has value 100" +
@@ -288,13 +291,13 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_TableDoesNotExist()
 	{
-		// Set up an attribute first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&Test_Mapsql_TableDoesNotExist #1=think %0"));
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlNoTable");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&Test_Mapsql_TableDoesNotExist {objDbRef}=think %0"));
 		await Task.Delay(100);
 
 		var result =
 			(await Parser.FunctionParse(
-				MModule.single("mapsql(#1/Test_Mapsql_TableDoesNotExist,lit(SELECT * FROM nonexistent_table))")))?.Message!;
+				MModule.single($"mapsql({objDbRef}/Test_Mapsql_TableDoesNotExist,lit(SELECT * FROM nonexistent_table))")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
 
@@ -365,15 +368,16 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_PreparedStatement_BasicExecution()
 	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlPrepBasic");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&Test_Mapsql_PreparedStatement_BasicExecution #1=Test_Mapsql_PreparedStatement_BasicExecution: Row %0 has value %2"));
+			MModule.single($"&Test_Mapsql_PreparedStatement_BasicExecution {objDbRef}=Test_Mapsql_PreparedStatement_BasicExecution: Row %0 has value %2"));
 
 		await Task.Delay(100);
 
 		// Args: obj/attr, query, osep, fieldnames, param1
 		var result =
 			(await Parser.FunctionParse(MModule.single(
-				"mapsql(#1/Test_Mapsql_PreparedStatement_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = ?),%b,0,1)")))?.Message!;
+				$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_BasicExecution,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id = ?),%b,0,1)")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_PreparedStatement_BasicExecution: Row 1 has value 100");
 	}
@@ -381,14 +385,15 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_PreparedStatement_MultipleRows()
 	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlPrepMulti");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&Test_Mapsql_PreparedStatement_MultipleRows #1=Test_Mapsql_PreparedStatement_MultipleRows: Row %0 has value %2"));
+			MModule.single($"&Test_Mapsql_PreparedStatement_MultipleRows {objDbRef}=Test_Mapsql_PreparedStatement_MultipleRows: Row %0 has value %2"));
 
 		await Task.Delay(100);
 
 		var result =
 			(await Parser.FunctionParse(
-				MModule.single("mapsql(#1/Test_Mapsql_PreparedStatement_MultipleRows,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id <= ? ORDER BY id),%b,0,2)")))
+				MModule.single($"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_MultipleRows,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE id <= ? ORDER BY id),%b,0,2)")))
 			?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_PreparedStatement_MultipleRows: Row 1 has value 100 Test_Mapsql_PreparedStatement_MultipleRows: Row 2 has value 200");
@@ -397,14 +402,15 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_PreparedStatement_WithStringParameter()
 	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlPrepString");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&Test_Mapsql_PreparedStatement_StringParam #1=Test_Mapsql_PreparedStatement_StringParam: %1=%2"));
+			MModule.single($"&Test_Mapsql_PreparedStatement_StringParam {objDbRef}=Test_Mapsql_PreparedStatement_StringParam: %1=%2"));
 
 		await Task.Delay(500); // Increased delay to ensure attribute is fully set
 
 		var result =
 			(await Parser.FunctionParse(
-				MModule.single("mapsql(#1/Test_Mapsql_PreparedStatement_StringParam,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE name = ?),%b,0,test_sql_row3)")))
+				MModule.single($"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_StringParam,lit(SELECT `name`,`value` FROM `test_sql_data_func` WHERE name = ?),%b,0,test_sql_row3)")))
 			?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Test_Mapsql_PreparedStatement_StringParam: test_sql_row3=300");
@@ -420,13 +426,13 @@ public class DatabaseFunctionUnitTests
 	[Test]
 	public async Task Test_Mapsql_PreparedStatement_TableDoesNotExist()
 	{
-		// Set up an attribute first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&Test_Mapsql_PreparedStatement_TableDoesNotExist #1=think %0"));
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlPrepNoTable");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&Test_Mapsql_PreparedStatement_TableDoesNotExist {objDbRef}=think %0"));
 		await Task.Delay(100);
 
 		var result =
 			(await Parser.FunctionParse(
-				MModule.single("mapsql(#1/Test_Mapsql_PreparedStatement_TableDoesNotExist,lit(SELECT * FROM nonexistent_table),%b,0,param)")))?.Message!;
+				MModule.single($"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_TableDoesNotExist,lit(SELECT * FROM nonexistent_table),%b,0,param)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
 }
