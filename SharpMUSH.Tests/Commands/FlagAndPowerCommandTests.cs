@@ -166,12 +166,11 @@ public class FlagAndPowerCommandTests
 		var flagName = "NONEXISTENT_FLAG_XYZ123";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
 
-		// Verify error notification was sent — check the specific flag name to avoid mock pollution
-		// from other tests that may also produce "not found" messages on the shared notify mock.
+		// Verify error notification was sent with the exact error message produced by the implementation.
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, flagName)),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Flag '{flagName}' not found.")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -295,12 +294,11 @@ public class FlagAndPowerCommandTests
 		var powerName = "NONEXISTENT_POWER_XYZ123";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
 
-		// Verify error notification was sent — check the specific power name to avoid mock pollution
-		// from other tests that may also produce "not found" messages on the shared notify mock.
+		// Verify error notification was sent with the exact error message produced by the implementation.
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, powerName)),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Power '{powerName}' not found.")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}

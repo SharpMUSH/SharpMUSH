@@ -331,7 +331,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH")),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH version 0")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -339,14 +339,11 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ScanCommand()
 	{
-		// Clear accumulated mock calls from previous tests so DidNotReceive is scoped to this command.
-		NotifyService.ClearReceivedCalls();
-
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@scan"));
-
-		await NotifyService
-			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")));
+		// @scan on a database with no user-defined $-commands produces an empty result (no match output).
+		// Validate the return value directly instead of using negative mock assertions.
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@scan"));
+		var plainText = result?.Message?.ToPlainText() ?? string.Empty;
+		await Assert.That(plainText).IsEmpty();
 	}
 
 	[Test]

@@ -19,7 +19,7 @@ public class GetPowerQueryHandler(ISharpDatabase database) : IQueryHandler<GetPo
 		return await database.GetObjectPowersAsync(cancellationToken)
 			.FirstOrDefaultAsync(
 				p => p.Name.Equals(query.PowerName, StringComparison.InvariantCultureIgnoreCase)
-					|| p.Alias.Equals(query.PowerName, StringComparison.InvariantCultureIgnoreCase),
+					|| (p.Alias != null && p.Alias.Equals(query.PowerName, StringComparison.InvariantCultureIgnoreCase)),
 				cancellationToken);
 	}
 }

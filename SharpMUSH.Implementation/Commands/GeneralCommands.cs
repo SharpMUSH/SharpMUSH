@@ -6132,8 +6132,8 @@ public partial class Commands
 		var lines = new List<MString>
 		{
 			MModule.concat(MModule.single("You are connected to "),
-				MModule.single(Configuration!.CurrentValue.Net.MudName)),
-			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
+				MModule.single(Configuration!.CurrentValue.Net.MudName ?? "Unknown")),
+			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl ?? "Unknown")),
 			MModule.single("SharpMUSH version 0")
 		};
 
