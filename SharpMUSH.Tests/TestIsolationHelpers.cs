@@ -71,6 +71,10 @@ public static class TestIsolationHelpers
 	{
 		var uniqueName = GenerateUniqueName(namePrefix);
 		var result = await parser.CommandParse(1, connectionService, MModule.single($"@create {uniqueName}"));
-		return DBRef.Parse(result.Message!.ToPlainText()!);
+		var message = result.Message
+			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message. The command may have failed.");
+		var plainText = message.ToPlainText()
+			?? throw new InvalidOperationException($"@create {uniqueName} message could not be converted to plain text.");
+		return DBRef.Parse(plainText);
 	}
 }
