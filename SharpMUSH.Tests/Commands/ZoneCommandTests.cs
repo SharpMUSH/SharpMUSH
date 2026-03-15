@@ -4,7 +4,6 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -27,27 +26,15 @@ public class ZoneCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
-	private string GenerateUniqueName(string prefix) =>
-		$"{prefix}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{Random.Shared.Next(1000, 9999)}";
+	private static string GenerateUniqueName(string prefix) =>
+		TestIsolationHelpers.GenerateUniqueName(prefix);
 
 	/// <summary>
 	/// Creates a fresh, isolated player through the database layer so zone tests never
 	/// mutate the shared player #1 object.
 	/// </summary>
-	private async Task<DBRef> CreateTestPlayerAsync(string uniqueSuffix)
-	{
-		var options = WebAppFactoryArg.Services
-			.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
-		var defaultHome = new DBRef((int)options.CurrentValue.Database.DefaultHome);
-		var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
-
-		return await Mediator.Send(new CreatePlayerCommand(
-			$"ZT_Player_{uniqueSuffix}",
-			"TestPassword123",
-			defaultHome,
-			defaultHome,
-			startingQuota));
-	}
+	private Task<DBRef> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, namePrefix);
 
 	[Test]
 	public async ValueTask ChzoneSetZone()
@@ -199,7 +186,7 @@ public class ZoneCommandTests
 	public async ValueTask ZMRExitMatchingTest()
 	{
 		// Use a fresh player so this test does not mutate the shared player #1
-		var testPlayer = await CreateTestPlayerAsync(GenerateUniqueName("ZMRExitTest"));
+		var testPlayer = await CreateTestPlayerAsync("ZT_ZMRExitTest");
 
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMR");
@@ -242,7 +229,7 @@ public class ZoneCommandTests
 	public async ValueTask ZMRUserDefinedCommandTest()
 	{
 		// Use a fresh player so this test does not mutate the shared player #1
-		var testPlayer = await CreateTestPlayerAsync(GenerateUniqueName("ZMRCmd"));
+		var testPlayer = await CreateTestPlayerAsync("ZT_ZMRCmd");
 
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMRCmd");
@@ -303,7 +290,7 @@ public class ZoneCommandTests
 	public async ValueTask PersonalZoneUserDefinedCommandTest()
 	{
 		// Use a fresh player so this test never mutates the shared player #1
-		var testPlayer = await CreateTestPlayerAsync(GenerateUniqueName("PersonalZone"));
+		var testPlayer = await CreateTestPlayerAsync("ZT_PersonalZone");
 
 		// Create a unique personal Zone Master Room (ZMR)
 		var personalZMRName = GenerateUniqueName("PersonalZMR");
@@ -365,7 +352,7 @@ public class ZoneCommandTests
 	public async ValueTask ZMRDoesNotMatchCommandsOnZMRItself()
 	{
 		// Use a fresh player so this test does not mutate the shared player #1
-		var testPlayer = await CreateTestPlayerAsync(GenerateUniqueName("ZMRSelfTest"));
+		var testPlayer = await CreateTestPlayerAsync("ZT_ZMRSelfTest");
 
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMRSelfTest");
