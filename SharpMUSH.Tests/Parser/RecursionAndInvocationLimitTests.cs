@@ -370,6 +370,10 @@ public class RecursionAndInvocationLimitTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
+	/// <summary>
+	/// Test that @TRIGGER properly tracks recursion when evaluating attributes.
+	/// Verifies ExecuteAttributeWithTracking is used and basic execution works.
+	/// </summary>
 	[Test]
 	public async Task RecursionLimit_TriggerCommand_TracksRecursion()
 	{
@@ -391,12 +395,16 @@ public class RecursionAndInvocationLimitTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
+	/// <summary>
+	/// Test that command-based attribute evaluation works: @INCLUDE evaluates an attribute
+	/// that itself composes results from two sub-attributes (A contains [u(objDbRef/B)]).
+	/// </summary>
 	[Test]
 	public async Task RecursionLimit_CommandsTrackAttributeRecursion()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "CmdTrackRecurse");
 
-		// Set up attribute A = "think CMDTRACK_A[u(obj/CMDTRACK_B_LIM_UNIQUE)]" and B = "_B_OK"
+		// Set up attribute A = "think CMDTRACK_A[u(objDbRef/CMDTRACK_B_LIM_UNIQUE)]" and B = "_B_OK"
 		// @include A → executes "think CMDTRACK_A_LIM_UNIQUE_B_OK" → notification with that text.
 		await CommandParser.CommandParse(1, ConnectionService,
 			MModule.single($"&CMDTRACK_B_LIM_UNIQUE {objDbRef}=_B_OK"));
