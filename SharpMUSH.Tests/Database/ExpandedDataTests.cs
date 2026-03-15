@@ -44,7 +44,9 @@ public class ExpandedDataTests
 	private record OverwritePartialNullAndGetExpandedDataExample(string? Word, string? Verb);
 
 	/// <summary>
-	/// This tests exists to illustrate that SetExpandedObjectData overwrites values when null is explicitly given.
+	/// This tests exists to illustrate that SetExpandedObjectData treats null as "not set" —
+	/// null fields in the update are not applied to the stored value, so existing values are preserved.
+	/// To explicitly clear a field to null, use SetExpandedServerData instead.
 	/// </summary>
 	[Test, NotInParallel]
 	public async Task OverwritePartialNullAndGetExpandedData()
@@ -54,7 +56,7 @@ public class ExpandedDataTests
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample(null, "Bark"));
 
 		var result = await _database.GetExpandedObjectData<OverwritePartialNullAndGetExpandedDataExample>(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample");
-		await Assert.That(result as object).IsEqualTo(new OverwritePartialNullAndGetExpandedDataExample(null, "Bark"));
+		await Assert.That(result as object).IsEqualTo(new OverwritePartialNullAndGetExpandedDataExample("Dog", "Bark"));
 	}
 
 	private record OverwriteUnrelatedTypesAndGetExpandedDataExample(string? Word, string? Verb);

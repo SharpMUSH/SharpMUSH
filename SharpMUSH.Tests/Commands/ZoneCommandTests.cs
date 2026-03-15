@@ -282,6 +282,9 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask PersonalZoneUserDefinedCommandTest()
 	{
+		// Clear any zone that may have been left by a previous test to avoid state pollution
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+
 		// Create a unique personal Zone Master Room (ZMR)
 		var personalZMRName = GenerateUniqueName("PersonalZMR");
 		var personalZMRResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {personalZMRName}"));
