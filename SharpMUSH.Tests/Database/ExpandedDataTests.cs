@@ -44,7 +44,7 @@ public class ExpandedDataTests
 	private record OverwritePartialNullAndGetExpandedDataExample(string? Word, string? Verb);
 
 	/// <summary>
-	/// This tests exists to illustrate that SetExpandedObjectData treats null as "not set" —
+	/// This test exists to illustrate that SetExpandedObjectData treats null as "not set" —
 	/// null fields in the update are not applied to the stored value, so existing values are preserved.
 	/// To explicitly clear a field to null, use SetExpandedServerData instead.
 	/// </summary>

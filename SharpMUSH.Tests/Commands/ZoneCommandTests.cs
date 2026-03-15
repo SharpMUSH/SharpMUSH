@@ -4,6 +4,7 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -28,6 +29,25 @@ public class ZoneCommandTests
 
 	private string GenerateUniqueName(string prefix) =>
 		$"{prefix}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{Random.Shared.Next(1000, 9999)}";
+
+	/// <summary>
+	/// Creates a fresh, isolated player through the database layer so zone tests never
+	/// mutate the shared player #1 object.
+	/// </summary>
+	private async Task<DBRef> CreateTestPlayerAsync(string uniqueSuffix)
+	{
+		var options = WebAppFactoryArg.Services
+			.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		var defaultHome = new DBRef((int)options.CurrentValue.Database.DefaultHome);
+		var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
+
+		return await Mediator.Send(new CreatePlayerCommand(
+			$"ZT_Player_{uniqueSuffix}",
+			"TestPassword123",
+			defaultHome,
+			defaultHome,
+			startingQuota));
+	}
 
 	[Test]
 	public async ValueTask ChzoneSetZone()
@@ -178,12 +198,12 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ZMRExitMatchingTest()
 	{
-		// Clear player zone to avoid inheritance issues
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		// Use a fresh player so this test does not mutate the shared player #1
+		var testPlayer = await CreateTestPlayerAsync(GenerateUniqueName("ZMRExitTest"));
 
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMR");
-		var zmrResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {zmrName}"));
+		var zmrResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {zmrName}"));
 		var zmrDbRefText = zmrResult.Message!.ToPlainText()!;
 		var zmrMatch = System.Text.RegularExpressions.Regex.Match(zmrDbRefText, @"#(\d+)");
 		if (!zmrMatch.Success) return;
@@ -193,7 +213,7 @@ public class ZoneCommandTests
 
 		// Create a unique room that will be zoned to the ZMR
 		var roomName = GenerateUniqueName("ZonedRoom");
-		var room1Result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var room1Result = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {roomName}"));
 		var room1DbRefText = room1Result.Message!.ToPlainText()!;
 		var room1Match = System.Text.RegularExpressions.Regex.Match(room1DbRefText, @"#(\d+)");
 		if (!room1Match.Success) return;
@@ -202,7 +222,7 @@ public class ZoneCommandTests
 		await Assert.That(room1Object.IsNone).IsFalse();
 
 		// Zone the room to the ZMR
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {room1DbRef}={zmrDbRef}"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@chzone {room1DbRef}={zmrDbRef}"));
 
 		// Verify zone was set
 		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(room1DbRef));
@@ -211,7 +231,7 @@ public class ZoneCommandTests
 		await Assert.That(roomZone.Known.Object().DBRef.Number).IsEqualTo(zmrDbRef.Number);
 
 		// Create an exit in the ZMR
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@open zmr_exit_{Random.Shared.Next(1000, 9999)}={room1DbRef},{zmrDbRef}"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@open zmr_exit_{Random.Shared.Next(1000, 9999)}={room1DbRef},{zmrDbRef}"));
 
 		// Verify ZMR room zone is still properly set (validates test setup)
 		var zmrVerify = await Mediator.Send(new GetObjectNodeQuery(zmrDbRef));
@@ -221,12 +241,12 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ZMRUserDefinedCommandTest()
 	{
-		// Clear player zone to avoid inheritance issues
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		// Use a fresh player so this test does not mutate the shared player #1
+		var testPlayer = await CreateTestPlayerAsync(GenerateUniqueName("ZMRCmd"));
 
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMRCmd");
-		var zmrResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {zmrName}"));
+		var zmrResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {zmrName}"));
 		var zmrDbRefText = zmrResult.Message!.ToPlainText()!;
 		var zmrMatch = System.Text.RegularExpressions.Regex.Match(zmrDbRefText, @"#(\d+)");
 		if (!zmrMatch.Success) return;
@@ -236,7 +256,7 @@ public class ZoneCommandTests
 
 		// Create a unique room that will be zoned to the ZMR
 		var roomName = GenerateUniqueName("ZonedCmdRoom");
-		var zonedRoomResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var zonedRoomResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {roomName}"));
 		var zonedRoomDbRefText = zonedRoomResult.Message!.ToPlainText()!;
 		var zonedRoomMatch = System.Text.RegularExpressions.Regex.Match(zonedRoomDbRefText, @"#(\d+)");
 		if (!zonedRoomMatch.Success) return;
@@ -245,7 +265,7 @@ public class ZoneCommandTests
 		await Assert.That(zonedRoomObject.IsNone).IsFalse();
 
 		// Zone the room to the ZMR
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {zonedRoomDbRef}={zmrDbRef}"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@chzone {zonedRoomDbRef}={zmrDbRef}"));
 
 		// Verify zone was set
 		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(zonedRoomDbRef));
@@ -254,23 +274,23 @@ public class ZoneCommandTests
 
 		// Create a unique object in the ZMR with a $-command
 		var cmdObjName = GenerateUniqueName("ZMRCmdObj");
-		var cmdObjResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {cmdObjName}"));
+		var cmdObjResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@create {cmdObjName}"));
 		var cmdObjDbRef = DBRef.Parse(cmdObjResult.Message!.ToPlainText()!);
 		var cmdObject = await Mediator.Send(new GetObjectNodeQuery(cmdObjDbRef));
 		await Assert.That(cmdObject.IsNone).IsFalse();
 
 		// Move the object to the ZMR
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {cmdObjDbRef}={zmrDbRef}"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {cmdObjDbRef}={zmrDbRef}"));
 
 		// Set a $-command on the object with unique command name
 		var cmdName = GenerateUniqueName("zmrtest");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&cmd`{cmdName} {cmdObjDbRef}=${cmdName}:@pemit #1=ZMR command executed"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {cmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}=ZMR command executed"));
 
-		// Teleport player to the zoned room
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {zonedRoomDbRef}"));
+		// Teleport the test player to the zoned room
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {zonedRoomDbRef}"));
 
 		// Execute the $-command - it should be available through ZMR
-		await Parser.CommandParse(1, ConnectionService, MModule.single(cmdName));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single(cmdName));
 
 		// Verify the command was executed - check for the unique command output
 		await NotifyService
@@ -282,12 +302,12 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask PersonalZoneUserDefinedCommandTest()
 	{
-		// Clear any zone that may have been left by a previous test to avoid state pollution
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		// Use a fresh player so this test never mutates the shared player #1
+		var testPlayer = await CreateTestPlayerAsync(GenerateUniqueName("PersonalZone"));
 
 		// Create a unique personal Zone Master Room (ZMR)
 		var personalZMRName = GenerateUniqueName("PersonalZMR");
-		var personalZMRResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {personalZMRName}"));
+		var personalZMRResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {personalZMRName}"));
 		var personalZMRDbRefText = personalZMRResult.Message!.ToPlainText()!;
 		var personalZMRMatch = System.Text.RegularExpressions.Regex.Match(personalZMRDbRefText, @"#(\d+)");
 		if (!personalZMRMatch.Success) return;
@@ -295,32 +315,32 @@ public class ZoneCommandTests
 		var personalZMRObject = await Mediator.Send(new GetObjectNodeQuery(personalZMRDbRef));
 		await Assert.That(personalZMRObject.IsNone).IsFalse();
 
-		// Set the PLAYER'S zone to the ZMR (this is the "personal zone" concept)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone me={personalZMRDbRef}"));
+		// Set the TEST PLAYER'S zone to the ZMR (this is the "personal zone" concept)
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@chzone me={personalZMRDbRef}"));
 
-		// Verify zone was set on the player
-		var playerObj = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		// Verify zone was set on the test player
+		var playerObj = await Mediator.Send(new GetObjectNodeQuery(testPlayer));
 		var playerZone = await playerObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(playerZone.IsNone).IsFalse();
 		await Assert.That(playerZone.Known.Object().DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
 
 		// Create a unique object in the personal ZMR with a $-command
 		var personalCmdObjName = GenerateUniqueName("PersonalCmdObj");
-		var personalCmdObjResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {personalCmdObjName}"));
+		var personalCmdObjResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@create {personalCmdObjName}"));
 		var personalCmdObjDbRef = DBRef.Parse(personalCmdObjResult.Message!.ToPlainText()!);
 		var personalCmdObject = await Mediator.Send(new GetObjectNodeQuery(personalCmdObjDbRef));
 		await Assert.That(personalCmdObject.IsNone).IsFalse();
 
 		// Move the object to the personal ZMR
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {personalCmdObjDbRef}={personalZMRDbRef}"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {personalCmdObjDbRef}={personalZMRDbRef}"));
 
 		// Set a $-command on the object with unique command name
 		var cmdName = GenerateUniqueName("personaltest");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&cmd`{cmdName} {personalCmdObjDbRef}=${cmdName}:@pemit #1=Personal zone command executed"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {personalCmdObjDbRef}=${cmdName}:@pemit #{testPlayer.Number}=Personal zone command executed"));
 
 		// Create a unique room to test from (separate from the ZMR)
 		var testRoomName = GenerateUniqueName("PersonalZoneTestRoom");
-		var testRoomResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {testRoomName}"));
+		var testRoomResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {testRoomName}"));
 		var testRoomDbRefText = testRoomResult.Message!.ToPlainText()!;
 		var testRoomMatch = System.Text.RegularExpressions.Regex.Match(testRoomDbRefText, @"#(\d+)");
 		if (!testRoomMatch.Success) return;
@@ -328,31 +348,28 @@ public class ZoneCommandTests
 		var testRoomObject = await Mediator.Send(new GetObjectNodeQuery(testRoomDbRef));
 		await Assert.That(testRoomObject.IsNone).IsFalse();
 
-		// Teleport player to the test room (away from the ZMR)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {testRoomDbRef}"));
+		// Teleport test player to the test room (away from the ZMR)
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {testRoomDbRef}"));
 
-		// Execute the $-command - it should be available through the player's personal zone (step 13)
-		await Parser.CommandParse(1, ConnectionService, MModule.single(cmdName));
+		// Execute the $-command - it should be available through the player's personal zone
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single(cmdName));
 
 		// Verify the command was executed
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Personal zone command executed")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
-
-		// Cleanup: restore player's zone
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
 	}
 
 	[Test]
 	public async ValueTask ZMRDoesNotMatchCommandsOnZMRItself()
 	{
-		// Clear player zone to avoid inheritance issues
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
+		// Use a fresh player so this test does not mutate the shared player #1
+		var testPlayer = await CreateTestPlayerAsync(GenerateUniqueName("ZMRSelfTest"));
 
 		// Create a unique Zone Master Room (ZMR)
 		var zmrName = GenerateUniqueName("ZMRSelfTest");
-		var zmrResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {zmrName}"));
+		var zmrResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {zmrName}"));
 		var zmrDbRefText = zmrResult.Message!.ToPlainText()!;
 		var zmrMatch = System.Text.RegularExpressions.Regex.Match(zmrDbRefText, @"#(\d+)");
 		if (!zmrMatch.Success) return;
@@ -362,7 +379,7 @@ public class ZoneCommandTests
 
 		// Create a unique room that will be zoned to the ZMR
 		var roomName = GenerateUniqueName("SelfTestRoom");
-		var zonedRoomResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var zonedRoomResult = await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@dig {roomName}"));
 		var zonedRoomDbRefText = zonedRoomResult.Message!.ToPlainText()!;
 		var zonedRoomMatch = System.Text.RegularExpressions.Regex.Match(zonedRoomDbRefText, @"#(\d+)");
 		if (!zonedRoomMatch.Success) return;
@@ -371,7 +388,7 @@ public class ZoneCommandTests
 		await Assert.That(zonedRoomObject.IsNone).IsFalse();
 
 		// Zone the room to the ZMR
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {zonedRoomDbRef}={zmrDbRef}"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@chzone {zonedRoomDbRef}={zmrDbRef}"));
 
 		// Verify zone was set
 		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(zonedRoomDbRef));
@@ -380,13 +397,13 @@ public class ZoneCommandTests
 
 		// Set a $-command directly on the ZMR itself with unique command name (should be ignored per spec)
 		var cmdName = GenerateUniqueName("zmrselftest");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&cmd`{cmdName} {zmrDbRef}=${cmdName}:@pemit #1=This should not execute"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"&cmd`{cmdName} {zmrDbRef}=${cmdName}:@pemit #{testPlayer.Number}=This should not execute"));
 
-		// Teleport player to the zoned room
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {zonedRoomDbRef}"));
+		// Teleport the test player to the zoned room
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single($"@tel {zonedRoomDbRef}"));
 
 		// Try to execute the $-command - it should NOT be available
-		await Parser.CommandParse(1, ConnectionService, MModule.single(cmdName));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MModule.single(cmdName));
 
 		// Verify the command was NOT executed (per PennMUSH spec, commands on ZMR itself are ignored)
 		// Check that the specific unique error message was not sent
