@@ -17,7 +17,6 @@ public class TimeFunctionUnitTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async Task Time()
 	{
 		var result = (await Parser.FunctionParse(MModule.single("time()")))?.Message!;

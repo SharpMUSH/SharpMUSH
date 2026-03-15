@@ -39,7 +39,6 @@ public class CommandFlowUnitTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Retry()
 	{
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));

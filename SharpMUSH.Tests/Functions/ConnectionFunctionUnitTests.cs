@@ -10,7 +10,6 @@ public class ConnectionFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Category("KnownBug")]
 	public async Task Idle()
 	{
 		// Test idle function - should return idle time in seconds

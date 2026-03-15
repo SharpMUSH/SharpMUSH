@@ -16,7 +16,6 @@ public class ConfigCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	[Category("KnownBug")]
 	[Test]
 	public async ValueTask ConfigCommand_NoArgs_ListsCategories()
 	{
@@ -32,7 +31,6 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask ConfigCommand_CategoryArg_ShowsCategoryOptions()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));

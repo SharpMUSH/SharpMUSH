@@ -54,7 +54,6 @@ public class JsonFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Category("KnownBug")]
 	[Test]
 	[Arguments(@"json_map(#lambda/ucstr\(%%2\):%%1,json(object,a,1,b,2))", "A:1 B:2")]
 	public async Task JsonMap(string str, string expected)

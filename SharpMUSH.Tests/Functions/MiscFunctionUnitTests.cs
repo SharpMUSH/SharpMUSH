@@ -30,7 +30,6 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	[Arguments("match(a b c,b)", "2")]
 	public async Task Match(string str, string expected)
 	{

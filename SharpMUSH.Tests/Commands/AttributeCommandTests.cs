@@ -27,7 +27,6 @@ public class AttributeCommandTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask SetAttributeBasic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TEST_ATTRSET_UNIQUE #1=Test Value"));
@@ -45,7 +44,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask SetAttributeEmpty()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTCLEAR_ATTRSET_UNIQUE #1="));
@@ -56,7 +54,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask SetAttributeComplexValue()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&COMPLEX #1=This is a [add(1,2)] test"));
@@ -67,7 +64,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{
 		// Set attribute directly via database with unique name
@@ -102,7 +98,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
 		// First set an attribute with unique test string
@@ -139,7 +134,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
 		// Set source attribute with unique name
@@ -171,7 +165,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
 		// First set an attribute with unique test string
@@ -203,7 +196,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
 		// Set some attributes with unique test strings
@@ -238,7 +230,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Test_AtrLock_LockAndUnlock()
 	{
 		// Set an attribute with unique name

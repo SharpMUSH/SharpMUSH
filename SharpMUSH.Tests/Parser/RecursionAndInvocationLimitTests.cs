@@ -336,7 +336,6 @@ public class RecursionAndInvocationLimitTests
 	/// Verifies ExecuteAttributeWithTracking is used and basic execution works.
 	/// </summary>
 	[Test]
-	[Category("KnownBug")]
 	public async Task RecursionLimit_IncludeCommand_TracksRecursion()
 	{
 		// @INCLUDE uses ExecuteAttributeWithTracking helper to track recursion.
@@ -365,7 +364,6 @@ public class RecursionAndInvocationLimitTests
 	/// Verifies ExecuteAttributeWithTracking is used and basic execution works.
 	/// </summary>
 	[Test]
-	[Category("KnownBug")]
 	public async Task RecursionLimit_TriggerCommand_TracksRecursion()
 	{
 		// When u() exceeds the recursion limit inside a @trigger attribute, the resulting
@@ -389,7 +387,6 @@ public class RecursionAndInvocationLimitTests
 	/// that itself composes results from two sub-attributes (A contains [u(#1/B)]).
 	/// </summary>
 	[Test]
-	[Category("KnownBug")]
 	public async Task RecursionLimit_CommandsTrackAttributeRecursion()
 	{
 		// Set up attribute A = "think CMDTRACK_A[u(#1/CMDTRACK_B_LIM_UNIQUE)]" and B = "_B_OK"

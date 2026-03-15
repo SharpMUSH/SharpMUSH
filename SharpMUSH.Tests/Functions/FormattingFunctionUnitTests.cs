@@ -18,7 +18,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	[Arguments("tag(b,text)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Tag(string str, string expected)
 	{
@@ -35,7 +34,6 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	[Arguments("endtag(b)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Endtag(string str, string expected)
 	{

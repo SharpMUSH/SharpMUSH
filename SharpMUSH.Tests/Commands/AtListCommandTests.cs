@@ -49,7 +49,6 @@ public class AtListCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{
 		// Execute @list/lowercase/flags (note: switch order matters)

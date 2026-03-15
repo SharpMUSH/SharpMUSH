@@ -20,7 +20,6 @@ public class MockHttpMessageHandler(HttpStatusCode statusCode, string content) :
 
 public class AdminConfigServiceTests
 {
-	[Category("KnownBug")]
 	[Test]
 	public async Task ImportFromConfigFileAsync_PropagatesExceptionForInvalidResponse()
 	{
@@ -53,7 +52,6 @@ public class AdminConfigServiceTests
 		await Assert.ThrowsAsync(async () => await service.ImportFromConfigFileAsync(configContent));
 	}
 
-	[Category("KnownBug")]
 	[Test]
 	public async Task ImportFromConfigFileAsync_HttpError_ShouldHandleGracefully()
 	{
@@ -83,7 +81,6 @@ public class AdminConfigServiceTests
 		}
 	}
 
-	[Category("KnownBug")]
 	[Test]
 	public async Task GetOptions_ShouldReturnConfiguration()
 	{

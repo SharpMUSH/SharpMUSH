@@ -321,7 +321,6 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
-	[Category("KnownBug")]
 	[Test]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
@@ -392,7 +391,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Command_ShowsCommandInfo()
 	{
 		// Test @command with a command name
@@ -406,7 +404,6 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
-	[Category("KnownBug")]
 	[Test]
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
@@ -421,7 +418,6 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
-	[Category("KnownBug")]
 	[Test]
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
@@ -450,7 +446,6 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
-	[Category("KnownBug")]
 	[Test]
 	public async ValueTask Trigger_QueuesAttribute()
 	{
@@ -493,7 +488,6 @@ public class GeneralCommandTests
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
-	[Category("KnownBug")]
 	[Test]
 	public async ValueTask PS_ShowsQueueStatus()
 	{
@@ -522,7 +516,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
 		// Create the attribute entry first so it exists in the standard table

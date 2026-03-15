@@ -40,7 +40,6 @@ public class CommandUnitTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	[Arguments("think add(1,2)4;think add(2,3)5",
 		"34",
 		"55")]

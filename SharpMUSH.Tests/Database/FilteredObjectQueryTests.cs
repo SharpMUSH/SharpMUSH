@@ -53,7 +53,6 @@ public class FilteredObjectQueryTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask FilterByOwner_ReturnsOnlyOwnedObjects()
 	{
 		// TODO: Owner filtering via graph traversal needs proper AQL query debugging

@@ -189,7 +189,6 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Include_DollarPrefix_WithArguments()
 	{
 		// Set an attribute with a $...: prefix that uses %0

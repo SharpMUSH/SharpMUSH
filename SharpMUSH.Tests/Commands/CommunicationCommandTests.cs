@@ -252,7 +252,6 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	[Arguments("addcom=Public", "Alias name cannot be empty.")]
 	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
@@ -326,7 +325,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
-	[Category("KnownBug")]
 	public async ValueTask ComTitleBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -394,7 +392,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("comlist")]
-	[Category("KnownBug")]
 	public async ValueTask ComListEmpty(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);

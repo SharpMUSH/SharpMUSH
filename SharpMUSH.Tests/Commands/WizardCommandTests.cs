@@ -39,7 +39,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask DrainCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@drain #1"));
@@ -90,7 +89,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask ForceCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force #1=think Forced!"));
@@ -101,7 +99,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask NotifyCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@notify #1"));
@@ -112,7 +109,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask WaitCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wait 1=think Waited"));
@@ -124,7 +120,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask UptimeCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@uptime"));
@@ -195,7 +190,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask WallCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wall Test wall message"));
@@ -206,7 +200,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask WizwallCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wizwall Test wizwall message"));
@@ -228,7 +221,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Hide_NoSwitch_TogglesHidden()
 	{
 		// Test that @hide without switches toggles the DARK flag
@@ -315,7 +307,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Hide_OffSwitch_UnsetsHidden()
 	{
 		// Test that @hide/off unsets the DARK flag
@@ -354,7 +345,6 @@ public class WizardCommandTests
 	}
 
 	[Test]
-	[Category("KnownBug")]
 	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
 	{
 		// Test that @hide/off when already visible shows appropriate message

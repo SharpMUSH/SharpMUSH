@@ -133,7 +133,6 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(DigAndMoveTest))]
-	[Category("KnownBug")]
 	public async ValueTask NameObject()
 	{
 		// Create an object first, capturing the dbref to avoid ambiguous name lookup
