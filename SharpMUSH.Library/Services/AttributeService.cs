@@ -601,12 +601,17 @@ public class AttributeService(
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		// Send one ClearAttributeCommand per attribute so the database function
-		// receives a single attribute path, not multiple names treated as one nested path.
+		// For wildcard patterns (used by @wipe), use WipeAttributeCommand to fully delete the
+		// attribute and all its descendants. For exact patterns (used by @set obj/attr=), use
+		// ClearAttributeCommand which preserves parent nodes that have children.
+		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
 		foreach (var attrItem in attrArr)
 		{
 			var pathParts = attrItem.LongName!.Split('`');
-			await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
+			if (isWipe)
+				await mediator.Send(new WipeAttributeCommand(obj.Object().DBRef, pathParts));
+			else
+				await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
 		}
 
 		foreach (var attrDone in attrArr)

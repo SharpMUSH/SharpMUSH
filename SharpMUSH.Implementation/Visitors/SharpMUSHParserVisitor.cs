@@ -1686,6 +1686,22 @@ public class SharpMUSHParserVisitor(
 				argsStr = realSubtextStr[rootCommand.Length..];
 			}
 
+			// Strip any switch prefixes (e.g., "/type" in "@respond/type") that appear before
+			// the actual argument. Switches start with '/' and precede the first space or end of string.
+			while (argsStr.StartsWith('/'))
+			{
+				var nextSlash = argsStr.IndexOf('/', 1);
+				var nextSpace = argsStr.IndexOf(' ', 1);
+				int endPos;
+				if (nextSlash >= 0 && (nextSpace < 0 || nextSlash < nextSpace))
+					endPos = nextSlash;
+				else if (nextSpace >= 0)
+					endPos = nextSpace;
+				else
+					endPos = argsStr.Length;
+				argsStr = argsStr[endPos..].TrimStart();
+			}
+
 			if (argsStr.Length > 0)
 			{
 				var argsSubtext = MModule.single(argsStr);

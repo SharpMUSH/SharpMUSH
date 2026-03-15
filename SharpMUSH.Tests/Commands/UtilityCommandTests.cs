@@ -329,13 +329,19 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@version"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH")),
+				Arg.Any<AnySharpObject?>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	public async ValueTask ScanCommand()
 	{
+		// Clear accumulated mock calls from previous tests so DidNotReceive is scoped to this command.
+		NotifyService.ClearReceivedCalls();
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@scan"));
 
 		await NotifyService

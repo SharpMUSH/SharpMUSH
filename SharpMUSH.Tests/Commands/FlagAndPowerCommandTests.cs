@@ -32,7 +32,7 @@ public class FlagAndPowerCommandTests
 
 		// Verify that a notification was sent with the flag list
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
 				Arg.Any<AnySharpObject>(),
@@ -166,11 +166,12 @@ public class FlagAndPowerCommandTests
 		var flagName = "NONEXISTENT_FLAG_XYZ123";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
 
-		// Verify error notification was sent
+		// Verify error notification was sent — check the specific flag name to avoid mock pollution
+		// from other tests that may also produce "not found" messages on the shared notify mock.
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "not found")),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, flagName)),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -294,11 +295,12 @@ public class FlagAndPowerCommandTests
 		var powerName = "NONEXISTENT_POWER_XYZ123";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
 
-		// Verify error notification was sent
+		// Verify error notification was sent — check the specific power name to avoid mock pollution
+		// from other tests that may also produce "not found" messages on the shared notify mock.
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "not found")),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, powerName)),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}

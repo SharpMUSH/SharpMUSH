@@ -44,8 +44,7 @@ RETURN d.data AS data
 				merged[prop.Name] = prop.Value;
 			foreach (var prop in newDoc.EnumerateObject())
 			{
-				if (prop.Value.ValueKind != JsonValueKind.Null)
-					merged[prop.Name] = prop.Value;
+				merged[prop.Name] = prop.Value;
 			}
 			jsonData = JsonSerializer.Serialize(merged, JsonOptions);
 
