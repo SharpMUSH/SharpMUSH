@@ -339,11 +339,30 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ScanCommand()
 	{
-		// @scan on a database with no user-defined $-commands produces an empty result (no match output).
-		// Validate the return value directly instead of using negative mock assertions.
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@scan"));
-		var plainText = result?.Message?.ToPlainText() ?? string.Empty;
-		await Assert.That(plainText).IsEmpty();
+		// Create a unique object in the executor's room and give it a $-command attribute so
+		// @scan has a real match to discover and return.
+		var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var objectName = $"ScanTestObj_{uniqueSuffix}";
+		var attrName = $"CMD_SCAN_{uniqueSuffix}";
+		var commandWord = $"scantestword{uniqueSuffix.ToLowerInvariant()}";
+
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objectName}"));
+		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
+		await Assert.That(createdDbref).StartsWith("#").Because($"@create should return a dbref; got: '{createdDbref}'");
+
+		// Set a $-command attribute on the object: value starts with $pattern:code
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:think scan test triggered"));
+
+		// @scan <commandword> test — searches the executor's location for matching $-commands
+		var scanResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@scan {commandWord} test"));
+		var scanPlainText = scanResult.Message?.ToPlainText() ?? string.Empty;
+
+		// The return value is a space-joined list of "#{dbref.Number}/{attrName}" entries.
+		// DBRef.Number is always the plain integer, even on backends that use "#{n}:{timestamp}" notation.
+		var dbrefNum = DBRef.Parse(createdDbref).Number;
+		await Assert.That(scanPlainText).Contains($"#{dbrefNum}/{attrName}");
 	}
 
 	[Test]
