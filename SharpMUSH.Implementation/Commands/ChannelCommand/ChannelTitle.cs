@@ -25,7 +25,7 @@ public static class ChannelTitle
 
 		var channel = maybeChannel.AsChannel;
 
-		if (await PermissionService.ChannelCanModifyAsync(executor, channel))
+		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			return new CallState("You are not the owner of the channel.");
 		}

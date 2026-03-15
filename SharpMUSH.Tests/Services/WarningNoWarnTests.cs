@@ -52,6 +52,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async Task WarningService_SkipsObjectsWithNoWarn()
 	{
@@ -62,6 +63,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async Task WarningService_SkipsObjectsWithOwnerNoWarn()
 	{
@@ -72,6 +74,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async Task WarningService_SkipsGoingObjects()
 	{
@@ -82,6 +85,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires service setup")]
 	public async Task BackgroundService_RunsAtConfiguredInterval()
 	{
@@ -92,6 +96,7 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires service setup")]
 	public async Task BackgroundService_DisabledWhenIntervalZero()
 	{

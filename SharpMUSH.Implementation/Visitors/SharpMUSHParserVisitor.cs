@@ -851,6 +851,22 @@ public class SharpMUSHParserVisitor(
 				? null
 				: (parser as MUSHCodeParser)?.CommandTrie.FindShortestMatch(rootCommand);
 
+			// If no match found and rootCommand contains '=', try matching just the part before '='
+			// This handles cases like "addcom=Public" where the command name and args have no space separator.
+			if (matchResult == null)
+			{
+				var equalsIndex = rootCommand.IndexOf('=');
+				if (equalsIndex > 0)
+				{
+					var commandPart = rootCommand[..equalsIndex];
+					matchResult = (parser as MUSHCodeParser)?.CommandTrie.FindShortestMatch(commandPart);
+					if (matchResult != null)
+					{
+						rootCommand = commandPart;
+					}
+				}
+			}
+
 			if (matchResult != null)
 			{
 				return await HandleInternalCommandPattern(parser, src, context, rootCommand, switches,
@@ -1246,7 +1262,7 @@ public class SharpMUSHParserVisitor(
 		CommandContext context, string rootCommand, IEnumerable<string> switches,
 		CommandDefinition libraryCommandDefinition)
 	{
-		var arguments = await ArgumentSplit(prs, src, context, libraryCommandDefinition);
+		var arguments = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand);
 
 		// Hook execution integration
 		// Get executor for permission checks in hooks
@@ -1411,6 +1427,8 @@ public class SharpMUSHParserVisitor(
 
 				try
 				{
+					// Track command history for @retry support (shared mutable reference, persists across With() copies).
+					newParser.CurrentState.CommandHistory?.Push((libraryCommandDefinition.Command, newParser.CurrentState.Arguments));
 					commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
 				}
 				catch (Exception)
@@ -1613,7 +1631,8 @@ public class SharpMUSHParserVisitor(
 	private static async ValueTask<List<CallState>> ArgumentSplit(IMUSHCodeParser prs, MString src,
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
-			libraryCommandDefinition)
+			libraryCommandDefinition,
+		string? rootCommand = null)
 	{
 		var argCallState = CallState.EmptyArgument;
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
@@ -1652,6 +1671,58 @@ public class SharpMUSHParserVisitor(
 				argCallState = await newNoParseParser.CommandSingleArgParse(remainder);
 			}
 		}
+		else if (MModule.getLength(realSubtext) > 0)
+		{
+			// No space found but the realSubtext is non-empty.
+			// This can happen when the command name is directly followed by its arguments without a space
+			// (e.g., "addcom=Public" where "addcom" is the command and "=Public" is the arg,
+			//  or "@retry gt(%0,-1)=dec(%0)" where the args portion has no space).
+			// Strip the command name prefix (if present) to get just the arguments portion.
+			var realSubtextStr = MModule.plainText(realSubtext);
+			var argsStr = realSubtextStr;
+			if (!string.IsNullOrEmpty(rootCommand)
+				&& realSubtextStr.StartsWith(rootCommand, StringComparison.OrdinalIgnoreCase))
+			{
+				argsStr = realSubtextStr[rootCommand.Length..];
+			}
+
+			// Strip any switch prefixes (e.g., "/type" in "@respond/type") that appear before
+			// the actual argument. Switches start with '/' and precede the first space or end of string.
+			while (argsStr.StartsWith('/'))
+			{
+				var nextSlash = argsStr.IndexOf('/', 1);
+				var nextSpace = argsStr.IndexOf(' ', 1);
+				int endPos;
+				if (nextSlash >= 0 && (nextSpace < 0 || nextSlash < nextSpace))
+					endPos = nextSlash;
+				else if (nextSpace >= 0)
+					endPos = nextSpace;
+				else
+					endPos = argsStr.Length;
+				argsStr = argsStr[endPos..].TrimStart();
+			}
+
+			if (argsStr.Length > 0)
+			{
+				var argsSubtext = MModule.single(argsStr);
+				if (behavior.HasFlag(CommandBehavior.EqSplit) && behavior.HasFlag(CommandBehavior.RSArgs))
+				{
+					argCallState = await newNoParseParser.CommandEqSplitArgsParse(argsSubtext);
+				}
+				else if (behavior.HasFlag(CommandBehavior.EqSplit))
+				{
+					argCallState = await newNoParseParser.CommandEqSplitParse(argsSubtext);
+				}
+				else if (behavior.HasFlag(CommandBehavior.RSArgs))
+				{
+					argCallState = await newNoParseParser.CommandCommaArgsParse(argsSubtext);
+				}
+				else
+				{
+					argCallState = await newNoParseParser.CommandSingleArgParse(argsSubtext);
+				}
+			}
+		}
 
 		List<CallState> arguments = [];
 
@@ -1662,7 +1733,8 @@ public class SharpMUSHParserVisitor(
 
 		// TODO: Implement lsargs (list-style arguments) support.
 		// No immediate commands require this feature yet, so implementation is deferred.
-		if (argCallState is null or { Arguments: null })
+		// Also return early when Arguments is empty (EmptyArgument sentinel), meaning no args were provided.
+		if (argCallState is null or { Arguments: null } or { Arguments: [] })
 		{
 			return arguments;
 		}

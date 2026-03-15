@@ -3052,7 +3052,7 @@ public partial class Commands
 		switch (nargs)
 		{
 			case 0:
-				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+				// No condition provided — treat as falsy (@break 0 = don't break).
 				break;
 			case 1:
 				if (args["0"].Message.Truthy())
@@ -4214,8 +4214,8 @@ public partial class Commands
 
 		if (attributeResult.IsNone)
 		{
-			// Empty attribute - nothing to trigger
-			return CallState.Empty;
+			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
 		var attribute = attributeResult.AsAttribute.Last();
@@ -5601,8 +5601,16 @@ public partial class Commands
 		// Q-register management is now handled by the hook system
 		// CLEARREGS and LOCALIZE switches are implemented there
 
-		// Environment argument substitution is handled by the hook system
-		// Arguments %0-%9 are properly managed during command execution
+		// Build EnvironmentRegisters from provided arguments so %0, %1, ... are substituted.
+		// args["0"] is the attribute path; args["1"], args["2"], ... map to %0, %1, ...
+		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters);
+		for (var i = 1; i < args.Count; i++)
+		{
+			if (args.TryGetValue(i.ToString(), out var argVal) && argVal.Message != null)
+			{
+				envArgs[(i - 1).ToString()] = argVal;
+			}
+		}
 
 		// Execute the attribute content in-place with recursion tracking and DEBUG/VERBOSE support
 		// This evaluates the command list without creating a queue entry
@@ -5612,8 +5620,9 @@ public partial class Commands
 
 			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 			{
-				var execResult = await parser.WithAttributeDebug(attribute,
-					p => p.CommandListParse(MModule.single(attributeText)));
+				var execResult = await parser.With(
+					state => state with { EnvironmentRegisters = envArgs },
+					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(attributeText))));
 
 				// Handle NOBREAK switch to prevent @break/@assert propagation.
 				// When set, @break/@assert from included code shouldn't propagate to calling list.
@@ -6123,8 +6132,8 @@ public partial class Commands
 		var lines = new List<MString>
 		{
 			MModule.concat(MModule.single("You are connected to "),
-				MModule.single(Configuration!.CurrentValue.Net.MudName)),
-			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
+				MModule.single(Configuration!.CurrentValue.Net.MudName ?? "Unknown")),
+			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl ?? "Unknown")),
 			MModule.single("SharpMUSH version 0")
 		};
 
@@ -6141,32 +6150,73 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@RETRY", Switches = [],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+		Behavior = CB.Default | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Retry(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var predicate = args["0"];
 
-		var peek = parser.State.TakeLast(2);
-		if (peek.Count() != 2)
+		if (!args.TryGetValue("0", out var predicate))
+		{
+			await NotifyService!.Notify(executor, "Usage: @retry <condition>[=<arg0>,<arg1>,...]");
+			return new CallState("#-1 RETRY: NO CONDITION PROVIDED.");
+		}
+
+		var commandHistory = parser.CurrentState.CommandHistory;
+		if (commandHistory == null || commandHistory.Count < 2)
 		{
 			await NotifyService!.Notify(executor, "Nothing to retry.");
 			return new CallState("#-1 RETRY: NO COMMAND TO RETRY.");
 		}
 
-		var previousCommand = parser.State.First();
-		// var retryState = parser.State.Peek();
+		// History top = @retry itself; entry below it = the command to re-run.
+		var historyArray = commandHistory.ToArray();
+		var (previousCommandInvoker, _) = historyArray[1];
+
+		// Use the parent state's arguments as the initial evaluation context (%0, %1, …).
+		var parentArgs = parser.State.Skip(1).FirstOrDefault()?.Arguments
+			?? new Dictionary<string, CallState>();
+
+		// Retry arg texts (everything after the condition, i.e. args["1"], args["2"], …).
+		var retryArgTexts = args
+			.Where(kvp => kvp.Key != "0")
+			.OrderBy(kvp => int.Parse(kvp.Key))
+			.Select(kvp => kvp.Value.Message!)
+			.ToList();
+
+		var conditionText = predicate.Message!;
+		var currentArgs = parentArgs;
 		var limit = 1000;
 
-		while ((await parser.FunctionParse(predicate.Message!))!.Message.Truthy() && limit > 0)
+		while (limit > 0)
 		{
-			// TODO: Implement parser stack rewinding for better state management.
-			// This would allow resetting parser state between loop iterations cleanly.
-			// Current workaround uses state replacement via With().
+			// Evaluate condition in the current argument context.
+			var condResult = await parser.With(
+				state => state with { Arguments = currentArgs },
+				innerParser => innerParser.FunctionParse(conditionText));
+
+			if (!(condResult?.Message.Truthy() ?? false))
+				break;
+
+			// Evaluate each retry arg in the current context to produce the new %0, %1, …
+			var newArgValues = new Dictionary<string, CallState>();
+			for (var i = 0; i < retryArgTexts.Count; i++)
+			{
+				var capturedIndex = i;
+				var capturedText = retryArgTexts[i];
+				var evaluated = await parser.With(
+					state => state with { Arguments = currentArgs },
+					innerParser => innerParser.FunctionParse(capturedText));
+				newArgValues[capturedIndex.ToString()] = evaluated!;
+			}
+
+			// Execute the previous command with the freshly evaluated arguments.
 			await parser.With(
-				state => state with { Arguments = args.Skip(1).ToDictionary() },
-				async newParser => await previousCommand.CommandInvoker(newParser));
+				state => state with { Arguments = newArgValues },
+				async innerParser => await previousCommandInvoker(innerParser));
+
+			// The new arg values become the context for the next condition check.
+			currentArgs = newArgValues;
 			limit--;
 		}
 
@@ -6188,7 +6238,8 @@ public partial class Commands
 		switch (nargs)
 		{
 			case 0:
-				// Do nothing.
+				// No condition provided — treat as falsy (@assert 0 = assertion fails = break).
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				break;
 			case 1:
 				if (args["0"].Message.Falsy())

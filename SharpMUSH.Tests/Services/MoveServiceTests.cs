@@ -30,6 +30,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask NoLoopWithSimpleMove()
 	{
@@ -38,6 +39,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask DetectsDirectLoop()
 	{
@@ -46,6 +48,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask DetectsIndirectLoop()
 	{
@@ -54,6 +57,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask NoLoopIntoRoom()
 	{
@@ -62,6 +66,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncWithValidMove()
 	{
@@ -71,6 +76,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncFailsOnLoop()
 	{
@@ -80,6 +86,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncFailsOnPermission()
 	{
@@ -89,6 +96,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersEnterHooks()
 	{
@@ -98,6 +106,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersLeaveHooks()
 	{
@@ -107,6 +116,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersTeleportHooks()
 	{

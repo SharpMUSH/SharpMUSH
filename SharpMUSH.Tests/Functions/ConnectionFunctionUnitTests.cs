@@ -10,7 +10,6 @@ public class ConnectionFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Skip("Is empty. Needs investigation.")]
 	public async Task Idle()
 	{
 		// Test idle function - should return idle time in seconds

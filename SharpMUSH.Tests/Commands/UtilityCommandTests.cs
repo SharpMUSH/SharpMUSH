@@ -56,25 +56,23 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookBasic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookAtObject()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -278,6 +276,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FindCommand()
 	{
@@ -289,6 +288,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SearchCommand()
 	{
@@ -300,6 +300,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EntrancesCommand()
 	{
@@ -311,6 +312,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask StatsCommand()
 	{
@@ -322,25 +324,45 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask VersionCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@version"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH version 0")),
+				Arg.Any<AnySharpObject?>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask ScanCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@scan"));
+		// Create a unique object in the executor's room and give it a $-command attribute so
+		// @scan has a real match to discover and return.
+		var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var objectName = $"ScanTestObj_{uniqueSuffix}";
+		var attrName = $"CMD_SCAN_{uniqueSuffix}";
+		var commandWord = $"scantestword{uniqueSuffix.ToLowerInvariant()}";
 
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objectName}"));
+		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
+		await Assert.That(createdDbref).StartsWith("#").Because($"@create should return a dbref; got: '{createdDbref}'");
+
+		// Set a $-command attribute on the object: value starts with $pattern:code
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:think scan test triggered"));
+
+		// @scan <commandword> test — searches the executor's location for matching $-commands
+		var scanResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@scan {commandWord} test"));
+		var scanPlainText = scanResult.Message?.ToPlainText() ?? string.Empty;
+
+		// The return value is a space-joined list of "#{dbref.Number}/{attrName}" entries.
+		// DBRef.Number is always the plain integer, even on backends that use "#{n}:{timestamp}" notation.
+		var dbrefNum = DBRef.Parse(createdDbref).Number;
+		await Assert.That(scanPlainText).Contains($"#{dbrefNum}/{attrName}");
 	}
 
 	[Test]
@@ -358,6 +380,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhereisCommand()
 	{

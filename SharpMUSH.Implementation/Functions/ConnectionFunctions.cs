@@ -466,10 +466,8 @@ public partial class Functions
 			return new CallState("-1");
 		}
 
-		var data = ConnectionService!.Get(locate.Object.DBRef);
-		return new CallState(await data
-			.Select(x => x.Idle?.TotalSeconds ?? -1)
-			.MinAsync());
+		var connectionData = await ConnectionService!.Get(locate.Object.DBRef).FirstOrDefaultAsync();
+		return new CallState(connectionData?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
 	[SharpFunction(Name = "ipaddr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

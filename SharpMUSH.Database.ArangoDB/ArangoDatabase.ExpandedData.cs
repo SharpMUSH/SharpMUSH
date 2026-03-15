@@ -37,7 +37,7 @@ public partial class ArangoDatabase
 		if (key is not null)
 		{
 			await arangoDb.Graph.Vertex.UpdateAsync(handle, DatabaseConstants.GraphObjectData, DatabaseConstants.ObjectData,
-				key, new Dictionary<string, object> { { dataType, data } }, waitForSync: true, cancellationToken: ct, keepNull: false);
+				key, new Dictionary<string, object> { { dataType, data } }, waitForSync: true, cancellationToken: ct, keepNull: true);
 			return;
 		}
 
@@ -91,8 +91,8 @@ public partial class ArangoDatabase
 			_ = await arangoDb.Document.CreateAsync(transaction,
 				DatabaseConstants.ServerData,
 				newJson,
-				overwriteMode: ArangoOverwriteMode.Update,
-				mergeObjects: true,
+				overwriteMode: ArangoOverwriteMode.Replace,
+				mergeObjects: false,
 				keepNull: true,
 				waitForSync: true,
 				cancellationToken: ct);

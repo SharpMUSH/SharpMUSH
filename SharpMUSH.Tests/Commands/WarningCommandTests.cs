@@ -143,6 +143,7 @@ public class WarningCommandTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires proper object setup")]
 	public async Task WCheckCommand_WithMe_ChecksOwnedObjects()
 	{
@@ -159,6 +160,7 @@ public class WarningCommandTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires wizard permissions")]
 	public async Task WCheckCommand_WithAll_RequiresWizard()
 	{

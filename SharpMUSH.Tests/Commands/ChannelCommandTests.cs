@@ -60,6 +60,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChatCommand()
 	{
@@ -72,6 +73,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChannelCommand()
 	{
@@ -109,6 +111,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AddcomCommand()
 	{
@@ -120,6 +123,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DelcomCommand()
 	{
@@ -131,6 +135,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ClistCommand()
 	{
@@ -142,6 +147,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ComlistCommand()
 	{
@@ -153,6 +159,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ComtitleCommand()
 	{

@@ -16,6 +16,7 @@ public class VerbCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithDefaultMessages()
 	{
@@ -35,6 +36,7 @@ public class VerbCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithAttributes()
 	{
@@ -56,6 +58,7 @@ public class VerbCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithStackArguments()
 	{
@@ -76,6 +79,7 @@ public class VerbCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test environment issue with notification capture")]
 	public async ValueTask VerbInsufficientArgs()
 	{
@@ -95,6 +99,7 @@ public class VerbCommandTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires proper permission setup")]
 	public async ValueTask VerbPermissionDenied()
 	{
@@ -102,6 +107,7 @@ public class VerbCommandTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires AWHAT command list execution verification")]
 	public async ValueTask VerbExecutesAwhat()
 	{

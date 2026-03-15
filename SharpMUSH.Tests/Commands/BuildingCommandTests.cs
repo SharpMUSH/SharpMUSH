@@ -133,19 +133,17 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(DigAndMoveTest))]
-	[Skip("Failing Test - Needs Investigation")]
-	// 	"#-2 I DON'T KNOW WHICH ONE YOU MEAN"
 	public async ValueTask NameObject()
 	{
-		// Create an object first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DigAndMoveTest - Rename Test"));
+		// Create an object first, capturing the dbref to avoid ambiguous name lookup
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DigAndMoveTest - Rename Test"));
+		var newDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// Rename it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@name DigAndMoveTest - Rename Test=DigAndMoveTest - New Name"));
+		// Rename it using dbref to avoid "#-2 I DON'T KNOW WHICH ONE YOU MEAN" ambiguity
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@name {newDbRef}=DigAndMoveTest - New Name"));
 
-		var newObject = (await Parser.FunctionParse(MModule.single("name(DigAndMoveTest - New Name)")))!.Message!.ToPlainText();
-
-		await Assert.That(newObject).IsEqualTo("DigAndMoveTest - New Name");
+		var renamedObject = await Mediator.Send(new GetObjectNodeQuery(newDbRef));
+		await Assert.That(renamedObject.Object()!.Name).IsEqualTo("DigAndMoveTest - New Name");
 	}
 
 	[Test]
@@ -176,6 +174,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(DigRoomWithExits))]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LinkExit()
 	{
@@ -200,6 +199,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(LinkExit))]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask CloneObject()
 	{
@@ -419,6 +419,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(CloneObject))]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
 	public async ValueTask SetParent()
 	{
@@ -489,6 +490,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(RecycleObject))]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{
@@ -518,6 +520,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LockObject()
 	{
@@ -533,6 +536,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask UnlockObject()
 	{

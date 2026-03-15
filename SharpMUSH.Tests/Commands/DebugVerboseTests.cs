@@ -1,9 +1,14 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -16,6 +21,8 @@ public class DebugVerboseTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
@@ -202,16 +209,64 @@ public class DebugVerboseTests
 	}
 
 	[Test]
-	[Skip("@trigger command syntax needs investigation - implementation is complete")]
+	public async Task AttributeDebugFlag_Diagnostic_FlagsLoadedAfterSet()
+	{
+		// Diagnostic: Create a thing, add attribute, set DEBUG flag, verify flag is readable via inheritance query
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DiagDebugThing"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&DIAGFUNC_UNIQ2 DiagDebugThing=[add(1,2)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DiagDebugThing/DIAGFUNC_UNIQ2=DEBUG"));
+
+		// Get the DBRef of DiagDebugThing from the notification (created as "#N:...")
+		var createCall = NotifyService.ReceivedCalls()
+			.FirstOrDefault(c =>
+			{
+				var args = c.GetArguments();
+				if (args.Length < 2) return false;
+				return args[1] is OneOf<MString, string> msg &&
+					msg.Match(m => m.ToString().Contains("DiagDebugThing"), s => s.Contains("DiagDebugThing"));
+			});
+
+		await Assert.That(createCall).IsNotNull().Because("@create should produce a notification");
+		var createMsg = ((OneOf<MString, string>)createCall!.GetArguments()[1]!)
+			.Match(m => m.ToString(), s => s);
+
+		// Extract DBRef number from "Created DiagDebugThing (#N:...)."
+		var match = Regex.Match(createMsg, @"#(\d+):");
+		await Assert.That(match.Success).IsTrue().Because("Create notification should contain DBRef");
+		var dbrefNum = int.Parse(match.Groups[1].Value);
+		var dbref = new DBRef(dbrefNum);
+
+		// Read via GetAttributeQuery (old path) - should pass
+		var attrsOld = await Mediator.CreateStream(new GetAttributeQuery(
+			dbref, ["DIAGFUNC_UNIQ2"])).ToArrayAsync();
+		var flagsOld = attrsOld.LastOrDefault()?.Flags.ToList() ?? [];
+		var hasDebugOld = flagsOld.Any(f => f.Name.Equals("debug", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(hasDebugOld).IsTrue().Because("GetAttributeQuery should return DEBUG flag");
+
+		// Read via GetAttributeWithInheritanceQuery (new path used by @trigger) - must also pass
+		var attrInheritance = await Mediator.CreateStream(new GetAttributeWithInheritanceQuery(
+			dbref, ["DIAGFUNC_UNIQ2"], false)).ToArrayAsync();
+		var flagsNew = attrInheritance.FirstOrDefault()?.Attributes.Last().Flags.ToList() ?? [];
+		var hasDebugNew = flagsNew.Any(f => f.Name.Equals("debug", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(hasDebugNew).IsTrue()
+			.Because($"GetAttributeWithInheritanceQuery must also return DEBUG flag (old flags: {string.Join(",", flagsOld.Select(f => f.Name))}, new flags: {string.Join(",", flagsNew.Select(f => f.Name))})");
+
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DiagDebugThing"));
+	}
+
+	[Test]
 	public async Task AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug()
 	{
 		// Arrange - Create test object WITHOUT DEBUG, set attribute with DEBUG flag
+		// The attribute must contain a command with a function argument so that VisitFunction is called.
+		// Using @emit [add(88,77)] ensures the bracket pattern is evaluated as a command argument.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create AttrDebugForceTest"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc AttrDebugForceTest=[add(88,77)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrDebugForceTest/testfunc=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFUNC_ATTRDBG_UNIQUE AttrDebugForceTest=@emit [add(88,77)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE=DEBUG"));
 
 		// Act - Trigger the attribute (which uses WithAttributeDebug internally)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrDebugForceTest/testfunc"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE"));
 
 		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
@@ -229,19 +284,19 @@ public class DebugVerboseTests
 	}
 
 	[Test]
-	[Skip("@trigger command syntax needs investigation - implementation is complete")]
 	public async Task AttributeNoDebugFlag_SuppressesOutput_EvenWithObjectDebug()
 	{
 		// Arrange - Create test object WITH DEBUG but set attribute WITH NODEBUG
+		// The attribute must contain a command with a function argument so that VisitFunction is called.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create AttrNoDebugSuppressTest"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest=DEBUG"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&testfunc2 AttrNoDebugSuppressTest=[add(55,44)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest/testfunc2=NODEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTFUNC2_NODEBG_UNIQUE AttrNoDebugSuppressTest=@emit [add(55,44)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE=no_debug"));
 
 		// Act - Trigger the attribute (which uses WithAttributeDebug internally)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrNoDebugSuppressTest/testfunc2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE"));
 
-		// Assert - Should NOT see debug output (NODEBUG takes precedence)
+		// Assert - Should NOT see debug output (NODEBUG takes precedence over object DEBUG)
 		await NotifyService
 			.DidNotReceive()
 			.Notify(Arg.Any<AnySharpObject>(),

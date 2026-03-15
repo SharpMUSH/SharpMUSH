@@ -160,6 +160,7 @@ public class MessageCommandTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires room setup")]
 	public async ValueTask MessageRemitSwitch()
 	{
@@ -167,6 +168,7 @@ public class MessageCommandTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires multiple objects")]
 	public async ValueTask MessageOemitSwitch()
 	{

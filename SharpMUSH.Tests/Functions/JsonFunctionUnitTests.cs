@@ -54,8 +54,8 @@ public class JsonFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, Skip("json_map currently explicitly does not use #lambda. It should evaluate functions later in its loop instead and use the existing method of calling attributes.")]
-	[Arguments(@"json_map(#lambda/toupper\(%%1\,%%2\),json(object,a,1,b,2))", "A:1 B:2")]
+	[Test]
+	[Arguments(@"json_map(#lambda/ucstr\(%%2\):%%1,json(object,a,1,b,2))", "A:1 B:2")]
 	public async Task JsonMap(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -79,6 +79,7 @@ public class JsonFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires connection setup")]
 	[Arguments("oob(me,Package.Name,{\"key\":\"test_oob_case1\"})", "1")]
 	[Arguments("oob(me,Package.Name)", "1")]

@@ -45,13 +45,17 @@ public partial class Functions
 		var punctuation = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, ",");
 		var splitList = MModule.split2(delim, list) ?? [];
 
+		if (splitList.Length == 2)
+		{
+			return ValueTask.FromResult<CallState>(
+				MModule.multipleWithDelimiter(
+					outSeparator,
+					[splitList[0], MModule.concat(conjunction, MModule.concat(outSeparator, splitList[1]))]));
+		}
+
 		if (splitList.Length > 2)
 		{
-			splitList[^1] = MModule.concat(
-				MModule.concat(
-					conjunction,
-					MModule.concat(outSeparator, splitList[^1])),
-				outSeparator);
+			splitList[^1] = MModule.concat(conjunction, MModule.concat(outSeparator, splitList[^1]));
 		}
 
 		return ValueTask.FromResult<CallState>(
@@ -577,13 +581,17 @@ public partial class Functions
 		var punctuation = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, ",");
 		var splitList = MModule.split2(delim, list) ?? [];
 
+		if (splitList.Length == 2)
+		{
+			return ValueTask.FromResult<CallState>(
+				MModule.multipleWithDelimiter(
+					space,
+					[splitList[0], MModule.concat(conjunction, MModule.concat(space, splitList[1]))]));
+		}
+
 		if (splitList.Length > 2)
 		{
-			splitList[^1] = MModule.concat(
-				MModule.concat(
-					conjunction,
-					MModule.concat(space, splitList[^1])),
-				space);
+			splitList[^1] = MModule.concat(conjunction, MModule.concat(space, splitList[^1]));
 		}
 
 		return ValueTask.FromResult<CallState>(
@@ -788,11 +796,14 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var splitList = MModule.split2(delimiter, list) ?? [];
 
-		return ValueTask.FromResult<CallState>(splitList
-			.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MModule.empty());
+		var index = splitList
+			.Select((item, i) => (item, pos: i + 1))
+			.FirstOrDefault(pair => regex.IsMatch(pair.item.ToPlainText()));
+
+		return ValueTask.FromResult<CallState>(index.pos.ToString());
 	}
 
-	[SharpFunction(Name = "matchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
+	[SharpFunction(Name = "matchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter", "outsep"])]
 	public static ValueTask<CallState> MatchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
@@ -801,10 +812,15 @@ public partial class Functions
 		var regex = new System.Text.RegularExpressions.Regex(regPattern,
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
+		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
 		var splitList = MModule.split2(delimiter, list) ?? [];
 
-		return ValueTask.FromResult<CallState>(
-			MModule.multipleWithDelimiter(delimiter, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
+		var positions = splitList
+			.Select((item, i) => (item, pos: i + 1))
+			.Where(pair => regex.IsMatch(pair.item.ToPlainText()))
+			.Select(pair => MModule.single(pair.pos.ToString()));
+
+		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, positions));
 	}
 
 	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.StripAnsi, ParameterNames = ["list", "element", "delimiter"])]
@@ -1283,9 +1299,9 @@ public partial class Functions
 	[SharpFunction(Name = "sort", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "sort-type", "delimiter", "outsep"])]
 	public static async ValueTask<CallState> Sort(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var list = parser.CurrentState.Arguments["0"].Message!;
-		var sortType = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
+		var list = orderedArgs["0"].Message!;
+		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 1, MModule.single("")).ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 2, MModule.single(" "));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
 		var listItems = MModule.split2(delimiter, list);
@@ -1542,15 +1558,13 @@ public partial class Functions
 		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
-	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "position", "delimiter"])]
-	public static async ValueTask<CallState> Splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "word", "delimiter"])]
+	public static ValueTask<CallState> Splice(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		await Task.CompletedTask;
-
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
 		var list2Arg = args["1"].Message;
-		var wordArg = args["2"].Message!.ToPlainText();
+		// The 4th argument is the delimiter used to split both lists and join the result
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
 
 		var list = MModule.split2(delimiter, listArg);
@@ -1558,14 +1572,18 @@ public partial class Functions
 
 		if (list.Length != list2.Length)
 		{
-			return new CallState("#-1 NUMBER OF WORDS MUST BE EQUAL");
+			return ValueTask.FromResult(new CallState("#-1 NUMBER OF WORDS MUST BE EQUAL"));
 		}
 
-		var zippedList = list.Zip(list2);
-		var spliced = zippedList.Select(pair => pair.First.ToPlainText() == wordArg ? pair.Second : pair.First);
-		var result = MModule.multipleWithDelimiter(delimiter, spliced);
+		// Each pair uses delimiter as the within-pair separator.
+		// Pairs themselves are separated by delimiter + delimiter (double separator)
+		// to clearly distinguish pair boundaries in the output.
+		var pairs = list.Zip(list2)
+			.Select(pair => MModule.concat(pair.First, MModule.concat(delimiter, pair.Second)));
+		var betweenPairSep = MModule.concat(delimiter, delimiter);
+		var result = MModule.multipleWithDelimiter(betweenPairSep, pairs);
 
-		return new CallState(result);
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	[SharpFunction(Name = "step", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["start", "end", "increment", "expression"])]

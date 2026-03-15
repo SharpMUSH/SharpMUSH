@@ -89,6 +89,7 @@ public class WarningLockChecksTests
 	// Integration tests (skipped - require full DB and lock service setup)
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_ValidLock_NoWarnings()
 	{
@@ -101,6 +102,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_InvalidLock_TriggersWarning()
 	{
@@ -113,6 +115,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_MultipleLocks_ChecksAll()
 	{
@@ -125,6 +128,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_EmptyLock_Skipped()
 	{
@@ -137,6 +141,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_GoingObjectReference_TriggersWarning()
 	{

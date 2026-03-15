@@ -142,6 +142,7 @@ public class IterationWrapper<T>
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
 /// <param name="LimitExceeded">Shared flag indicating a limit has been exceeded. Mutable and shared across all states in an evaluation.</param>
+/// <param name="CommandHistory">Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside CommandListParse context.</param>
 public partial record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -166,7 +167,8 @@ public partial record ParserState(
 	InvocationCounter? CallDepth = null,
 	Dictionary<string, int>? FunctionRecursionDepths = null,
 	InvocationCounter? TotalInvocations = null,
-	LimitExceededFlag? LimitExceeded = null)
+	LimitExceededFlag? LimitExceeded = null,
+	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -26,47 +27,43 @@ public class AttributeCommandTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeBasic()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&TEST #1=Test Value"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TEST_ATTRSET_UNIQUE #1=Test Value"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 
 		// Verify attribute was set
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
-		var attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "TEST",
+		var attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "TEST_ATTRSET_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(attr.IsAttribute).IsTrue();
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeEmpty()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTCLEAR #1="));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&TESTCLEAR_ATTRSET_UNIQUE #1="));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask SetAttributeComplexValue()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&COMPLEX #1=This is a [add(1,2)] test"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{
 		// Set attribute directly via database with unique name
@@ -83,10 +80,10 @@ public class AttributeCommandTests
 
 		// Verify command sent a success notification with unique attribute name
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				"Attribute copied to 1 destination."
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute copied to 1 destination."))
 			);
 
 		// Verify destination attribute was created
@@ -101,7 +98,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
 		// First set an attribute with unique test string
@@ -110,9 +106,14 @@ public class AttributeCommandTests
 		// Copy it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@cpattr #1/SOURCE_CPATTR_BASIC=#1/DEST_CPATTR_BASIC"));
 
-		// Verify command executed with success notification mentioning destination
+		// Verify command executed with success notification mentioning destination.
+		// Use Received() (at least once) rather than Exactly(1) because this test class uses
+		// SharedType.PerTestSession, meaning the INotifyService mock is shared across all tests
+		// and accumulates calls. Test_CopyAttribute_Direct (which runs before this test) already
+		// sent "Attribute copied to 1 destination." once, so Exactly(1) would fail with count=2.
+		// TODO: Consider using per-test mock isolation (SharedType.PerTest) to enable Exactly(1) assertions.
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				"Attribute copied to 1 destination."
@@ -133,7 +134,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
 		// Set source attribute with unique name
@@ -144,10 +144,10 @@ public class AttributeCommandTests
 
 		// Verify command executed successfully with notification mentioning 2 destinations
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				"Attribute copied to 2 destinations."
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute copied to 2 destinations."))
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
@@ -165,7 +165,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
 		// First set an attribute with unique test string
@@ -176,10 +175,10 @@ public class AttributeCommandTests
 
 		// Verify command executed successfully with notification about move
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				"Attribute moved to 1 destination."
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute moved to 1 destination."))
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new(1)));
@@ -197,7 +196,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
 		// Set some attributes with unique test strings
@@ -215,10 +213,10 @@ public class AttributeCommandTests
 
 		// Verify command sent notification about wiping with the pattern
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				"Wiped attributes matching WIPE*_UNIQUE."
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Wiped attributes matching WIPE*_UNIQUE."))
 			);
 
 		// Verify they're gone
@@ -232,7 +230,6 @@ public class AttributeCommandTests
 	}
 
 	[Test]
-	[Skip("Failing Test - Needs Investigation")]
 	public async ValueTask Test_AtrLock_LockAndUnlock()
 	{
 		// Set an attribute with unique name
@@ -243,10 +240,10 @@ public class AttributeCommandTests
 
 		// Verify lock notification sent
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				"Attribute LOCKTEST_UNIQUE_ATTR locked."
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute LOCKTEST_UNIQUE_ATTR locked."))
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
@@ -264,10 +261,10 @@ public class AttributeCommandTests
 
 		// Verify unlock notification sent
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				"Attribute LOCKTEST_UNIQUE_ATTR unlocked."
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute LOCKTEST_UNIQUE_ATTR unlocked."))
 			);
 
 		attr = await AttributeService.GetAttributeAsync(obj.AsPlayer, obj.AsPlayer, "LOCKTEST_UNIQUE_ATTR",
@@ -287,10 +284,10 @@ public class AttributeCommandTests
 
 		// Should receive a notification about lock status with the attribute name
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				"Attribute QUERYLOCK_UNIQUE_ATTR is unlocked."
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute QUERYLOCK_UNIQUE_ATTR is unlocked."))
 			);
 	}
 
@@ -302,8 +299,8 @@ public class AttributeCommandTests
 
 		// Should receive error notification
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Invalid arguments to @atrchown.");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Invalid arguments to @atrchown.")));
 	}
 
 	[Test]
@@ -314,8 +311,8 @@ public class AttributeCommandTests
 
 		// Should receive error notification
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Attribute NONEXISTENT_ATTR_TEST not found on source object.");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_ATTR_TEST not found on source object.")));
 	}
 
 	[Test]
@@ -326,8 +323,8 @@ public class AttributeCommandTests
 
 		// Should receive error notification
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Attribute NONEXISTENT_MOVE_TEST not found on source object.");
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_MOVE_TEST not found on source object.")));
 	}
 
 	[Test]
@@ -452,6 +449,6 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), "No matching attributes found.");
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("No matching attributes found.")));
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using Mediator;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
@@ -11,5 +12,5 @@ public record UnsetAttributeFlagCommand(DBRef DbRef, SharpAttribute Target, Shar
 		$"attribute:{DbRef}:{Target.LongName})",
 		$"commands:{DbRef}"
 	];
-	public string[] CacheTags => [];
+	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }

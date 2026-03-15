@@ -18,6 +18,7 @@ public class MiscCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask VerbCommand()
 	{
@@ -29,6 +30,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SweepCommand()
 	{
@@ -40,6 +42,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EditCommand()
 	{
@@ -117,6 +120,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask BriefCommand()
 	{
@@ -128,6 +132,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhoCommand()
 	{
@@ -139,6 +144,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SessionCommand()
 	{
@@ -150,6 +156,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask QuitCommand()
 	{
@@ -161,6 +168,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ConnectCommand()
 	{
@@ -172,6 +180,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PromptCommand()
 	{
@@ -183,6 +192,7 @@ public class MiscCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask NspromptCommand()
 	{

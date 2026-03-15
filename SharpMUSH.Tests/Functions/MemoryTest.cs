@@ -67,6 +67,7 @@ public class MemoryTest
 	}
 
 	[Test, Timeout(30 * 1000), NotInParallel]
+	[Category("Performance")]
 	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]
@@ -103,6 +104,7 @@ public class MemoryTest
 	}
 
 	[Test, Timeout(30 * 1000), NotInParallel]
+	[Category("Performance")]
 	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]

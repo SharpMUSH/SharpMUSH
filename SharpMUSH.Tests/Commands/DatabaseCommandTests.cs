@@ -89,6 +89,7 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ListCommand()
 	{
@@ -100,6 +101,7 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnrecycleCommand()
 	{
@@ -111,6 +113,7 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DisableCommand()
 	{
@@ -122,6 +125,7 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EnableCommand()
 	{

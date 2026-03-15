@@ -469,7 +469,8 @@ public class AttributeService(
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
 		var returnedFlag = await allFlags
-			.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
+			.FirstOrDefaultAsync(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
 
 		if (returnedFlag is null)
 		{
@@ -478,7 +479,7 @@ public class AttributeService(
 
 		// Check if the flag is already set to avoid redundant operations
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
-		if (currentFlags.Contains(returnedFlag))
+		if (currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
 		{
 			await notifyService.Notify(executor,
 				$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
@@ -509,7 +510,9 @@ public class AttributeService(
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var returnedFlag = await allFlags.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
+		var returnedFlag = await allFlags.FirstOrDefaultAsync(x =>
+			x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+			|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
 
 		if (returnedFlag is null)
 		{
@@ -518,7 +521,7 @@ public class AttributeService(
 
 		// Check if the flag is actually set before unsetting
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
-		if (!currentFlags.Contains(returnedFlag))
+		if (!currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
 		{
 			await notifyService.Notify(executor,
 				$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
@@ -598,7 +601,18 @@ public class AttributeService(
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr.Select(x => x.LongName!).ToArray()));
+		// For wildcard patterns (used by @wipe), use WipeAttributeCommand to fully delete the
+		// attribute and all its descendants. For exact patterns (used by @set obj/attr=), use
+		// ClearAttributeCommand which preserves parent nodes that have children.
+		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
+		foreach (var attrItem in attrArr)
+		{
+			var pathParts = attrItem.LongName!.Split('`');
+			if (isWipe)
+				await mediator.Send(new WipeAttributeCommand(obj.Object().DBRef, pathParts));
+			else
+				await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
+		}
 
 		foreach (var attrDone in attrArr)
 		{

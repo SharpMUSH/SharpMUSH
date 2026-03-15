@@ -166,9 +166,9 @@ public partial class Commands
 			var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
 			await foreach (var flag in flags)
 			{
-				var flagName = useLowercase ? flag.Name.ToLower() : flag.Name;
-				var symbol = useLowercase ? flag.Symbol.ToLower() : flag.Symbol;
-				var types = string.Join(",", flag.TypeRestrictions.Select(t => useLowercase ? t.ToLower() : t));
+				var flagName = useLowercase ? flag.Name?.ToLower() ?? "" : flag.Name ?? "";
+				var symbol = useLowercase ? flag.Symbol?.ToLower() ?? "" : flag.Symbol ?? "";
+				var types = string.Join(",", (flag.TypeRestrictions ?? []).Select(t => useLowercase ? t?.ToLower() ?? "" : t ?? ""));
 				output.AppendLine($"{flagName,-20} {symbol,-6} {types}");
 			}
 
