@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
@@ -16,6 +17,8 @@ public class DebugVerboseTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
@@ -199,6 +202,30 @@ public class DebugVerboseTests
 
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseNoDupSwitchObj"));
+	}
+
+	[Test]
+	public async Task AttributeDebugFlag_Diagnostic_FlagsLoadedAfterSet()
+	{
+		// Diagnostic: Verify that setting a DEBUG flag on an attribute makes it readable via GetAttributeAsync
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create AttrDebugDiagObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&DIAGFUNC_UNIQUE AttrDebugDiagObj=[add(1,2)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set AttrDebugDiagObj/DIAGFUNC_UNIQUE=DEBUG"));
+
+		// Trigger the attribute - if DEBUG flag was loaded, debug output should appear
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger AttrDebugDiagObj/DIAGFUNC_UNIQUE"));
+
+		// Check for debug output: if AttributeDebugOverride=true then debug output includes "add(1,2) =>"
+		var debugReceived = NotifyService.ReceivedCalls()
+			.Any(c => c.GetArguments() is [_, OneOf<MString, string> msg, ..] &&
+				msg.Match(
+					mstr => mstr.ToString().Contains("add(1,2) =>"),
+					str => str.Contains("add(1,2) =>")));
+
+		await Assert.That(debugReceived).IsTrue().Because("Attribute DEBUG flag should force debug output during @trigger");
+
+		// Cleanup
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy AttrDebugDiagObj"));
 	}
 
 	[Test]
