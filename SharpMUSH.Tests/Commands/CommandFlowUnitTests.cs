@@ -45,9 +45,11 @@ public class CommandFlowUnitTests
 		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
 		await NotifyService.Received()
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single(""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 
 		await NotifyService.Received()
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single("-1"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "-1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 }

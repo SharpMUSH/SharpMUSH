@@ -1427,6 +1427,8 @@ public class SharpMUSHParserVisitor(
 
 				try
 				{
+					// Track command history for @retry support (shared mutable reference, persists across With() copies).
+					newParser.CurrentState.CommandHistory?.Push((libraryCommandDefinition.Command, newParser.CurrentState.Arguments));
 					commandResult = await libraryCommandDefinition.Command.Invoke(newParser);
 				}
 				catch (Exception)

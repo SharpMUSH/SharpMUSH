@@ -13,6 +13,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using LspRange = SharpMUSH.Library.Models.Range;
 
@@ -218,7 +219,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)
-		=> ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse));
+	{
+		// Push a fresh CommandHistory so @retry can track previous commands in this parse session.
+		var freshParser = State.IsEmpty ? this : Push(CurrentState with
+		{
+			CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>()
+		});
+		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse), freshParser);
+	}
 
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{

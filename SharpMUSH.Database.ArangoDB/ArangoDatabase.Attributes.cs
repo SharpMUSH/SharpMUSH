@@ -29,7 +29,7 @@ public partial class ArangoDatabase
 		CancellationToken ct = default) =>
 		arangoDb.Query.ExecuteStreamAsync<SharpAttributeFlagQueryResult>(handle,
 				$"FOR e IN {DatabaseConstants.HasAttributeFlag} FILTER e._from == @startVertex " +
-				$"FOR v IN {DatabaseConstants.AttributeFlags} FILTER v._id == e._to RETURN v",
+				$"LET v = DOCUMENT(e._to) FILTER v != null RETURN v",
 				new Dictionary<string, object> { { StartVertex, id } }, cancellationToken: ct)
 			.Select(x =>
 				new SharpAttributeFlag()
