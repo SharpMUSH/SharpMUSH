@@ -25,13 +25,13 @@ public class ZoneFunctionTests
 	[Test]
 	public async Task ZoneGetNoZone()
 	{
-		// First, ensure the player has no zone (so objects don't inherit one)
-		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
-
 		// Create an object without a zone
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneFuncTest1"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Clear any zone the object may have inherited from the creator, ensuring isolation
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(obj.Known));
 
 		// Get zone should return #-1 for objects with no zone
 		var result = (await FunctionParser.FunctionParse(MModule.single($"zone({objDbRef})")))?.Message!;
@@ -64,17 +64,15 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneGetWithZone))]
 	public async Task ZoneSetWithFunction()
 	{
-		// Ensure player has no zone
-		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
-
 		// Create a zone master object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneFuncSetMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		// Create an object
+		// Create an object, clearing any inherited zone for clean isolation
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZoneFuncSetTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(obj.Known));
 
 		// Set the zone via function (requires side effects enabled)
 		var setResult = (await FunctionParser.FunctionParse(MModule.single($"zone({objDbRef},{zoneDbRef})")))?.Message!;
@@ -128,13 +126,13 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneInvalidObject))]
 	public async Task ZoneNoPermissionToExamine()
 	{
-		// Ensure player has no zone
-		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
-
 		// Create an object that player can examine (they created it)
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZonePermTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Clear any inherited zone for clean isolation
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(obj.Known));
 
 		// Player can examine their own objects, so this should work
 		var result = (await FunctionParser.FunctionParse(MModule.single($"zone({objDbRef})")))?.Message!;
@@ -169,16 +167,18 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneOnRoom))]
 	public async Task ZoneChainTest()
 	{
-		// Ensure player has no zone
-		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
-
 		// Create a hierarchy: Zone -> Object
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChainZoneMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChainZonedObj"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Clear any inherited zones on both objects for clean isolation
+		var zoneObj = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(zoneObj.Known));
+		var theObj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(theObj.Known));
 
 		// Set zone
 		await FunctionParser.FunctionParse(MModule.single($"zone({objDbRef},{zoneDbRef})"));
@@ -197,21 +197,23 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneChainTest))]
 	public async Task ZfindListsObjectsInZone()
 	{
-		// Clear player zone
-		var _player1 = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		await Mediator.Send(new UnsetObjectZoneCommand(_player1.Known));
-
-		// Create a zone master
+		// Create a zone master and clear any inherited zone
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindTestZone"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+		var zoneObj = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(zoneObj.Known));
 
-		// Create multiple objects in the zone
+		// Create multiple objects in the zone, clearing inherited zones first
 		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindObj1"));
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
+		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(obj1.Known));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj1DbRef}={zoneDbRef}"));
 
 		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ZfindObj2"));
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
+		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(obj2.Known));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj2DbRef}={zoneDbRef}"));
 
 		// Call zfind to get all objects in the zone
