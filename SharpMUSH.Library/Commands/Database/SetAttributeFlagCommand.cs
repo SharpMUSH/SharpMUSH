@@ -1,5 +1,6 @@
 ﻿using Mediator;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
@@ -11,5 +12,5 @@ public record SetAttributeFlagCommand(DBRef DBRef, SharpAttribute Target, SharpA
 		$"attribute:{DBRef}:{Target.LongName})",
 		$"commands:{DBRef}"
 	];
-	public string[] CacheTags => [];
+	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }
