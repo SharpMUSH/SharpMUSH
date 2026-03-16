@@ -9,8 +9,8 @@ public class ExpandedDataCommandHandler(ISharpDatabase database) : ICommandHandl
 {
 	public async ValueTask<Unit> Handle(SetExpandedDataCommand command, CancellationToken cancellationToken)
 	{
-		var dynamicObject = JsonSerializer.Deserialize<dynamic>(command.Json);
-		await database.SetExpandedObjectData(command.SharpObject.Id!, command.TypeName, dynamicObject, cancellationToken);
+		var parsedObject = JsonSerializer.Deserialize<object>(command.Json) ?? new object();
+		await database.SetExpandedObjectData(command.SharpObject.Id!, command.TypeName, parsedObject, cancellationToken);
 		return Unit.Value;
 	}
 

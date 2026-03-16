@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<EnablePreviewFeatures>true</EnablePreviewFeatures>
+		<Features>$(Features);runtime-async=on</Features>
 	</PropertyGroup>
 
   <ItemGroup>
