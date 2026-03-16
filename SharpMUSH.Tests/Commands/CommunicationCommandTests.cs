@@ -36,8 +36,6 @@ public class CommunicationCommandTests
 	[Before(Test)]
 	public async Task SetupTestChannel()
 	{
-		NotifyService.ClearReceivedCalls();
-
 		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
 		_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
 
@@ -152,101 +150,96 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("@nsemit Test nospoof emit", "Test nospoof emit")]
-	public async ValueTask NsemitBasic(string command, string expected)
+	public async ValueTask NsemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		var uniqueMsg = $"nsemit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nsemit {uniqueMsg}"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, uniqueMsg)),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
-	[Arguments("@nslemit Test nospoof local", "Test nospoof local")]
-	public async ValueTask NslemitBasic(string command, string expected)
+	public async ValueTask NslemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		var uniqueMsg = $"nslemit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nslemit {uniqueMsg}"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, uniqueMsg)),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
-	[Arguments("@nsremit #0=Test nospoof remote", "Test nospoof remote")]
-	public async ValueTask NsremitBasic(string command, string expected)
+	public async ValueTask NsremitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		var uniqueMsg = $"nsremit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nsremit #0={uniqueMsg}"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, uniqueMsg)),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
-	[Arguments("@nsoemit #1=Test nospoof omit", "Test nospoof omit")]
-	public async ValueTask NsoemitBasic(string command, string expected)
+	public async ValueTask NsoemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		var uniqueMsg = $"nsoemit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nsoemit #1={uniqueMsg}"));
 
 		// @nsoemit uses NotificationType.Emit (not NSEmit) per implementation
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, uniqueMsg)),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
-	[Arguments("@nspemit #1=Test nospoof pemit", "Test nospoof pemit")]
-	public async ValueTask NspemitBasic(string command, string expected)
+	public async ValueTask NspemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		var uniqueMsg = $"nspemit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nspemit #1={uniqueMsg}"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, uniqueMsg)),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.NSAnnounce);
 	}
 
 	[Test]
-	[Arguments("@nszemit Test nospoof zone")]
-	public async ValueTask NszemitBasic(string command)
+	public async ValueTask NszemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		// @nszemit requires "zone=message" format. Using a nonexistent zone triggers
+		// the locate-failure path ("I can't see that here") back to the executor.
+		var uniqueZone = $"zone-{Guid.NewGuid():N}";
+		var uniqueMsg = $"nszemit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nszemit {uniqueZone}={uniqueMsg}"));
 
-		// @nszemit requires "zone=message" format; without "=", the command sends
-		// an error back to the executor
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Don't you have anything to say?")),
-				null,
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "I can't see that here")),
+				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Announce);
 	}
 
