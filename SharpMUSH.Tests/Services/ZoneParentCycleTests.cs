@@ -221,15 +221,18 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ChzoneCommand_WithCycle_ShouldFail()
 	{
-		// Clear player zone to avoid inheritance issues
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
-
 		// Create two objects
 		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChzoneCycle1"));
 		var zone1DbRefParsed = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
 
 		var zone2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create ChzoneCycle2"));
 		var zone2DbRefParsed = DBRef.Parse(zone2Result.Message!.ToPlainText()!);
+
+		// Clear any inherited zones for clean isolation
+		var z1 = await Mediator.Send(new GetObjectNodeQuery(zone1DbRefParsed));
+		await Mediator.Send(new UnsetObjectZoneCommand(z1.Known));
+		var z2 = await Mediator.Send(new GetObjectNodeQuery(zone2DbRefParsed));
+		await Mediator.Send(new UnsetObjectZoneCommand(z2.Known));
 
 		Console.WriteLine($"Created objects: #{zone1DbRefParsed.Number} and #{zone2DbRefParsed.Number}");
 
@@ -303,15 +306,18 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask DebugChzoneBasic()
 	{
-		// Clear player zone
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@chzone me=none"));
-
 		// Create two objects
 		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DebugObj1"));
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 
 		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DebugObj2"));
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
+
+		// Clear any inherited zones for clean isolation
+		var dbObj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(dbObj1.Known));
+		var dbObj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
+		await Mediator.Send(new UnsetObjectZoneCommand(dbObj2.Known));
 
 		// Set obj1's zone to obj2
 		var chzoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@chzone {obj1DbRef}={obj2DbRef}"));

@@ -6,6 +6,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -355,9 +356,11 @@ public class TelDiagnosticTests
 		Console.WriteLine($"iter(,name(##)) = '{r1}'");
 
 		// Test iter with empty attribute - should produce NO output
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&empty_attr me="));
-		var r2 = await Eval("iter(v(empty_attr),name(##))");
-		Console.WriteLine($"iter(v(empty_attr),name(##)) = '{r2}'");
+		// Create a unique object and set an empty attribute on it to avoid mutating shared state
+		var emptyAttrObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "IterEmpty");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&empty_attr {emptyAttrObj}="));
+		var r2 = await Eval($"iter(get({emptyAttrObj}/empty_attr),name(##))");
+		Console.WriteLine($"iter(get({emptyAttrObj}/empty_attr),name(##)) = '{r2}'");
 
 		// Test iter with single space - may produce one phantom iteration
 		var r3 = await Eval("iter( ,name(##))");
@@ -451,10 +454,11 @@ public class TelDiagnosticTests
 			.Because("words() on '#-1 BAD ARGUMENT FORMAT TO GET' should count 6 words");
 
 		// Confirm: words("") should be 0 (not 1)
-		// Use v(nonexistent) to produce an empty string argument
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&wordstest_empty me="));
-		var r4 = await Eval("words(v(wordstest_empty))");
-		Console.WriteLine($"words(v(empty)) = {r4}");
+		// Create a unique object and set empty attribute to avoid mutating shared state
+		var emptyObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WordsEmpty");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&wordstest_empty {emptyObj}="));
+		var r4 = await Eval($"words(get({emptyObj}/wordstest_empty))");
+		Console.WriteLine($"words(get({emptyObj}/wordstest_empty)) = {r4}");
 		await Assert.That(r4).IsEqualTo("0")
 			.Because("words() on empty string should return 0 (PennMUSH behavior)");
 	}

@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -434,8 +435,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Map_ExecutesAttributeOverList()
 	{
-		// Test @map command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@map me/test=foo bar baz"));
+		// Test @map command — attribute does not exist on the unique object
+		var mapObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapTest");
+		var uniqueAttr = $"MAPATTR_{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@map {mapObj}/{uniqueAttr}=foo bar baz"));
 
 		// Should notify about mapping
 		await NotifyService
@@ -448,8 +451,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Trigger_QueuesAttribute()
 	{
-		// Test @trigger command - attribute "test" does not exist on "me"
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger me/test=arg1,arg2"));
+		// Test @trigger command — attribute does not exist on the unique object
+		var trigObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TrigTest");
+		var uniqueAttr = $"TRIGATTR_{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@trigger {trigObj}/{uniqueAttr}=arg1,arg2"));
 
 		// Should notify with error since the attribute doesn't exist
 		await NotifyService
@@ -461,11 +466,13 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Include_InsertsAttributeInPlace()
 	{
-		// Test @include command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@include me/test=arg1,arg2"));
+		// Test @include command — attribute does not exist on the unique object
+		var inclObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclTest");
+		var uniqueAttr = $"INCLATTR_{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@include {inclObj}/{uniqueAttr}=arg1,arg2"));
 
 		// Should attempt to locate the object and get the attribute
-		// Since mocks aren't fully set up, it will fail with an error message
+		// Since the attribute doesn't exist, it will fail with an error message
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());

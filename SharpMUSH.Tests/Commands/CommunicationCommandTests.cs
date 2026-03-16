@@ -14,6 +14,7 @@ using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class CommunicationCommandTests
 {
 	private const string TestChannelName = "Public";

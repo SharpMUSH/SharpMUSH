@@ -5,6 +5,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -24,21 +25,22 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
-		// Arrange - create a unique semaphore and test message with underscore separator
+		// Arrange - create a unique object and semaphore attribute with underscore separator
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemNotify");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 		var testMessage = $"TaskExecuted_{uniqueId}";
 
 		// Queue a task that waits on the semaphore - use think to ensure output
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait #1/{uniqueAttr}=think {testMessage}"));
+			MModule.single($"@wait {semObj}/{uniqueAttr}=think {testMessage}"));
 
 		// Give time for the task to be registered with the scheduler
 		await Task.Delay(200);
 
 		// Act - notify the semaphore to wake the waiting task
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@notify #1/{uniqueAttr}"));
+			MModule.single($"@notify {semObj}/{uniqueAttr}"));
 
 		// Give the scheduler time to execute the queued task
 		await Task.Delay(2000);
@@ -109,12 +111,13 @@ public class SemaphoreCommandTests
 	{
 		// This test verifies that @notify/setq accepts qreg parameters
 		// Fixed bug where CB.RSArgs was interfering with comma parsing
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQParam");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 
 		// Try calling @notify/setq without waiting task first to test parameter parsing
 		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@notify/setq #1/{uniqueAttr}=0,TestValue"));
+			MModule.single($"@notify/setq {semObj}/{uniqueAttr}=0,TestValue"));
 
 		// The command should not generate a parsing error about pairs
 		// It might say "no queue entry" but shouldn't say "must be in pairs"
@@ -129,21 +132,22 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
-		// Arrange - create a unique semaphore with a unique test value
+		// Arrange - create a unique object and semaphore attribute with a unique test value
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQWait");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 		var testValue = $"TestValue_{uniqueId.Substring(0, 8)}"; // Use unique value with GUID prefix
 
 		// Queue a task that waits on the semaphore and will output the Q-register value
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait #1/{uniqueAttr}=think QRegValue:%q0"));
+			MModule.single($"@wait {semObj}/{uniqueAttr}=think QRegValue:%q0"));
 
 		// Give time for the task to be registered with the scheduler
 		await Task.Delay(200);
 
 		// Act - notify the semaphore with /setq to set Q-register 0
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@notify/setq #1/{uniqueAttr}=0,{testValue}"));
+			MModule.single($"@notify/setq {semObj}/{uniqueAttr}=0,{testValue}"));
 
 		// Give the scheduler time to execute the queued task
 		await Task.Delay(2000);
@@ -160,13 +164,14 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask DrainCommand_Basic()
 	{
-		// Arrange - just verify @drain command can execute
+		// Arrange - create a unique object and verify @drain command can execute
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemDrain");
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var uniqueAttr = $"SEM_{uniqueId}";
 
 		// Act - drain (with nothing queued) - should not throw exception
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@drain #1/{uniqueAttr}"));
+			MModule.single($"@drain {semObj}/{uniqueAttr}"));
 
 		// No assertion - just verify no exceptions
 	}

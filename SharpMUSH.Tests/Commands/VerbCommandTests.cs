@@ -3,6 +3,7 @@ using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -16,12 +17,14 @@ public class VerbCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithDefaultMessages()
 	{
+		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbDefault");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,,,VerbActorDefault_Value_52830,,,VerbOthersDefault_Value_52830"));
+		// Syntax: @verb victim=actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
+		// Empty what-attr means use the default string directly
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@verb {verbObj}={verbObj},,VerbActorDefault_Value_52830,,VerbOthersDefault_Value_52830,,"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -36,14 +39,16 @@ public class VerbCommandTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithAttributes()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_74102 #1=VerbAction_Value_74102"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&OWHAT_74102 #1=VerbOther_Value_74102"));
+		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbAttr");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WHAT_74102 {verbObj}=VerbAction_Value_74102"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&OWHAT_74102 {verbObj}=VerbOther_Value_74102"));
+
+		// 7 RHS args: actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@verb {verbObj}={verbObj},WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat,,"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -58,13 +63,15 @@ public class VerbCommandTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test environment issue with @verb notification capture")]
 	public async ValueTask VerbWithStackArguments()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&WHAT_ARGS_91605 #1=VerbArgs_Value_91605"));
+		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbArgs");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#1,WHAT_ARGS_91605,Default"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WHAT_ARGS_91605 {verbObj}=VerbArgs_Value_91605"));
+
+		// 7 RHS args: actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@verb {verbObj}={verbObj},WHAT_ARGS_91605,Default,,,,"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -79,12 +86,12 @@ public class VerbCommandTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test environment issue with notification capture")]
 	public async ValueTask VerbInsufficientArgs()
 	{
+		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbInsuf");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=#2"));
+		// Provide only the victim with no actor/message args — args.Count < 2 triggers the Usage error
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@verb {verbObj}"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>

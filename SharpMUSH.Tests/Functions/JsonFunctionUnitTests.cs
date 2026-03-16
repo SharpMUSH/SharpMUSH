@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -63,19 +64,27 @@ public class JsonFunctionUnitTests
 	}
 
 	// Note: json_map and oob tests require more complex setup with attributes and connections
-	// These are placeholder tests that should be expanded once the test infrastructure supports them
 
 	[Test]
-	[Arguments("&Test_JsonMap_MapsOverJsonElements_1 me=%0:%1", @"json_map(me/Test_JsonMap_MapsOverJsonElements_1,lit(""test_json_map_string""))", "string:\"test_json_map_string\"")]
-	[Arguments("&Test_JsonMap_MapsOverJsonElements_2 me=%0:%1:%2", @"json_map(me/Test_JsonMap_MapsOverJsonElements_2,\[1\,2\,3\])", "number:1:0 number:2:1 number:3:2")]
-	public async Task Test_JsonMap_MapsOverJsonElements(string setup, string function, string expected)
+	public async Task Test_JsonMap_MapsOverJsonElements_String()
 	{
-		// Setup: set attribute
-		// TODO: Implement attribute setting in test infrastructure
-		await Parser.CommandParse(1, ConnectionService, MModule.single(setup));
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "JsonMapStr");
+		var attrName = $"JSONMAP_{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{attrName} {objDbRef}=%0:%1"));
 
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		var result = (await Parser.FunctionParse(MModule.single($"json_map({objDbRef}/{attrName},lit(\"test_json_map_string\"))")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("string:\"test_json_map_string\"");
+	}
+
+	[Test]
+	public async Task Test_JsonMap_MapsOverJsonElements_Array()
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "JsonMapArr");
+		var attrName = $"JSONMAP_{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{attrName} {objDbRef}=%0:%1:%2"));
+
+		var result = (await Parser.FunctionParse(MModule.single($@"json_map({objDbRef}/{attrName},\[1\,2\,3\])")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("number:1:0 number:2:1 number:3:2");
 	}
 
 	[Test]
