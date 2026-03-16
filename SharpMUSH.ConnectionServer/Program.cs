@@ -112,6 +112,11 @@ public class Program
 		// Add WebSocketServer
 		builder.Services.AddSingleton<WebSocketServer>();
 
+		// Register the telnet interpreter factory (server mode) with the DI system.
+		// This resolves the logger from DI automatically. Protocol plugins and per-connection
+		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
+		builder.Services.AddTelnetServer();
+
 		// Add health monitoring service
 		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
 

@@ -120,6 +120,7 @@ public class WebSocketServer
 		{
 			// Disconnect and notify MainProcess
 			await _connectionService.DisconnectAsync(nextPort);
+			_descriptorGenerator.ReleaseWebSocketDescriptor(nextPort);
 		}
 	}
 }
