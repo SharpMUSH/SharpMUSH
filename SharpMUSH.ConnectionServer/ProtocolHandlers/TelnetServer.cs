@@ -128,7 +128,7 @@ public class TelnetServer : ConnectionHandler
 		}
 		catch (OperationCanceledException)
 		{
-			/* Connection was cancelled/closed normally. */
+			/* Connection closed via cancellation token - normal shutdown path. */
 		}
 		catch (Exception ex)
 		{
