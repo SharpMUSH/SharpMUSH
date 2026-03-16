@@ -3321,7 +3321,7 @@ public partial class Commands
 
 			if (!isQuiet && !isCheck)
 			{
-				await NotifyService!.Notify(executor, $"{attrName} - Set: {newText}");
+				await NotifyService!.Notify(executor, $"{attrName} - Set.");
 			}
 			else if (!isQuiet && isCheck)
 			{
