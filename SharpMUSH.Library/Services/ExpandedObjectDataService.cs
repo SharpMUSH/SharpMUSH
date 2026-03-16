@@ -1,10 +1,10 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Services;
 
@@ -33,7 +33,7 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 		var json = JsonSerializer.Serialize(data, ignoreNull ? _jsonSerializerOptionForNull : _jsonSerializerOptionForOthers);
 		await mediator.Send(new SetExpandedDataCommand(obj, typeof(T).Name, json));
 	}
-	
+
 	public async ValueTask<T?> GetExpandedServerDataAsync<T>() where T : class
 	{
 		var result = await mediator.Send(new ExpandedServerDataQuery(typeof(T).Name));

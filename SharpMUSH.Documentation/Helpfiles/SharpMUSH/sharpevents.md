@@ -1,11 +1,10 @@
 # EVENTS
-
 # EVENT
 SharpMUSH Events are hardcoded events that may or may not be caused by players. The Event system lets administrators designate an object as an event handler (using the "event_handler" config option). The event_handler object will then have attributes triggered, with arguments, on specified events.
 
 To use the SharpMUSH Event System:
 
-```
+```sharp
 > @create Event Handler
 > @config/set event_handler=[num(Event Handler)]
 > &<event name> Event Handler=<action list>
@@ -24,7 +23,7 @@ The enactor of an event is either:
 
 # EVENT EXAMPLES
 Suppose you want random dbsave messages:
-```
+```sharp
 > &DUMP\`COMPLETE Event Handler=@config/set dump_complete=SAVE: [v(randword(lattr(me/dumpmsg\`*)))]
 > &DUMPMSG\`NOTHING Event=The Database has been saved, nothing to see here.
 > &DUMPMSG\`GRETZKY Event=The Database saves, but Gretzky scores!
@@ -36,7 +35,7 @@ SAVE: The Database saved 15% by switching to Geico!
 ```
 
 Or admin want to be notified when a player connect attempt fails:
-```
+```sharp
 > @set Event=wizard
 > &SOCKET\`LOGINFAIL Event=@wizwall/emit On descriptor '%0' from IP '%1' a failed connect attempt to '%4': '%3'
 (Later, a player attempts to log in as #1)
@@ -49,7 +48,7 @@ Broadcast: [Event Handler]: On descriptor 3, from IP '127.0.0.1', a failed conne
 
 # EVENT EXAMPLES2
 Suppose you want `@pcreated` players to be powered builder, set shared and zonelocked to roys, but players created at the connect screen to not be:
-```
+```sharp
 > @set Event=wizard
 > &PLAYER\`CREATE Event=@assert %# ; @pemit %#=Auto-Setting [name(%0)] Builder and shared ; @power %0=builder ; @lock/zone %0=FLAG^ROYALTY ; @set %0=shared
 > @pcreate Grid-BC
@@ -61,7 +60,7 @@ The Event Handler object, since it's handling so many events, may become clutter
 # EVENT LIST
 Event names are of the format *<type>\`<event>*. The 'type' is used simply to group similar events together for help.
 
-Event syntax in the help is of the form:
+Event syntax in the help is of the form:<br>
 *<eventgroup>\`<eventname>* (What is passed as %0, %1, ... %9)
 
 The following event types and events have been added to SharpMUSH. To see the help for them, type [event <type>].
@@ -126,8 +125,8 @@ Events in the log tree get triggered whenever the game logs any information to a
 - **object\`flag** (*objid of object with flag*, *flag name*, *type*, *setbool*, *setstr*)
 - Triggered when a flag or power which has the "event" restriction is set or cleared. *<type>* is one of FLAG or POWER. *<setbool>* is 1 if the flag/power is being set, and 0 if it's being cleared. *<setstr>* is either "SET" or "CLEARED".
 
-Example:
-```
+### Example
+```sharp
 &OBJECT\`FLAG event handler=@cemit Admin=capstr(lcstr(%2)) %1 [lcstr(%4)] on [name(%0)] by %n.
 ```
 
@@ -150,7 +149,7 @@ No arguments are passed to these events.
 If these attributes exist, then penn will **NOT** perform what it usually does when it receives a signal. In effect, these override Penn's default actions.
 
 To mimic old behaviour:
-```
+```sharp
 &SIGNAL\`USR1 Event Handler=@nspemit/list lwho()=GAME: Reboot w/o disconnect from game account, please wait. ; @shutdown/reboot
 &SIGNAL\`USR2 Event Handler=@dump
 ```

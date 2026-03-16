@@ -13,7 +13,7 @@ internal static class LinqExtensions
 		while (it.MoveNext())
 			yield return (previous, previous = it.Current);
 	}
-	
+
 	public static async IAsyncEnumerable<(T?, T)> Pairwise<T>(this IAsyncEnumerable<T> source)
 	{
 		var previous = default(T);

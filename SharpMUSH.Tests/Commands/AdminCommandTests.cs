@@ -18,6 +18,7 @@ public class AdminCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PcreateCommand()
 	{
@@ -29,6 +30,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask NewpasswordCommand()
 	{
@@ -40,6 +42,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PasswordCommand()
 	{
@@ -51,6 +54,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ShutdownCommand()
 	{
@@ -62,6 +66,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RestartCommand()
 	{
@@ -73,6 +78,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PurgeCommand()
 	{
@@ -84,6 +90,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PoorCommand()
 	{
@@ -95,6 +102,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ReadcacheCommand()
 	{
@@ -106,6 +114,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask ChownallCommand()
 	{
@@ -117,6 +126,7 @@ public class AdminCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask ChzoneallCommand()
 	{

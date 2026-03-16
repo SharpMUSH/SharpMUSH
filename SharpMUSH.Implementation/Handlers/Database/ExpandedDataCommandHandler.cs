@@ -1,7 +1,7 @@
-﻿using System.Text.Json;
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using System.Text.Json;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 

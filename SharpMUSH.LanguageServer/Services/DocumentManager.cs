@@ -16,7 +16,7 @@ public class DocumentManager
 
 	public void UpdateDocument(string uri, string text, int version)
 	{
-		_documents.AddOrUpdate(uri, 
+		_documents.AddOrUpdate(uri,
 			new DocumentState(text, version),
 			(_, _) => new DocumentState(text, version));
 	}

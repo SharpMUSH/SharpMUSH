@@ -1,4 +1,3 @@
-using MarkupString;
 using Microsoft.FSharp.Collections;
 using Serilog;
 using SharpMUSH.MarkupString;
@@ -24,7 +23,7 @@ public class AlignUnitTests
 		var result = CallAlign(widths, columns, filler, columnSeparator, rowSeparator);
 
 		Log.Logger.Information("Widths: {Widths}", widths);
-		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", 
+		Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}",
 			result.ToPlainText(), "\n", expected.ToPlainText());
 
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected.ToPlainText());

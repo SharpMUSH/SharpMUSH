@@ -17,7 +17,6 @@ public class TimeFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Weird error. Needs investigation: #-2 I DON'T KNOW WHICH ONE YOU MEAN")]
 	public async Task Time()
 	{
 		var result = (await Parser.FunctionParse(MModule.single("time()")))?.Message!;
@@ -70,7 +69,7 @@ public class TimeFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
-	
+
 	[Test]
 	[Arguments("ctime(#0)", "")]
 	public async Task Ctime(string str, string expected)

@@ -34,12 +34,12 @@ public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, S
 	public SharpThing AsThing => AsT3;
 
 	public bool IsAnyObject => !IsNone && !IsError;
-	
+
 	public AnySharpObject AsAnyObject => Match(
-		player => new AnySharpObject(player), 
+		player => new AnySharpObject(player),
 		room => new AnySharpObject(room),
-		exit => new AnySharpObject(exit), 
-		thing => new AnySharpObject(thing), 
+		exit => new AnySharpObject(exit),
+		thing => new AnySharpObject(thing),
 		_ => throw new ArgumentOutOfRangeException(),
 		_ => throw new ArgumentOutOfRangeException());
 

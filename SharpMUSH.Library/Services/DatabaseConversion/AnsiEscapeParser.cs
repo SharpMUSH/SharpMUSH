@@ -1,8 +1,6 @@
+using MarkupString;
 using System.Drawing;
 using System.Text;
-using System.Text.RegularExpressions;
-using ANSILibrary;
-using MarkupString;
 using static MarkupString.MarkupImplementation;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
@@ -21,14 +19,14 @@ public static class AnsiEscapeParser
 	/// </summary>
 	/// <param name="text">Text potentially containing ANSI escape sequences</param>
 	/// <returns>MarkupString with ANSI formatting applied</returns>
-	public static MarkupStringModule.MarkupString ConvertAnsiToMarkupString(string? text)
+	public static MString ConvertAnsiToMarkupString(string? text)
 	{
 		if (string.IsNullOrEmpty(text))
 		{
-			return MarkupStringModule.single(string.Empty);
+			return MModule.single(string.Empty);
 		}
 
-		var segments = new List<MarkupStringModule.MarkupString>();
+		var segments = new List<MString>();
 		var currentState = new AnsiState();
 		var position = 0;
 		var textBuilder = new StringBuilder();
@@ -67,7 +65,7 @@ public static class AnsiEscapeParser
 		// Combine all segments
 		if (segments.Count == 0)
 		{
-			return MarkupStringModule.single(string.Empty);
+			return MModule.single(string.Empty);
 		}
 		else if (segments.Count == 1)
 		{
@@ -75,7 +73,7 @@ public static class AnsiEscapeParser
 		}
 		else
 		{
-			return MarkupStringModule.multiple(segments);
+			return MModule.multiple(segments);
 		}
 	}
 
@@ -150,7 +148,7 @@ public static class AnsiEscapeParser
 	{
 		// OSC sequences end with ESC\ or BEL (0x07)
 		var endPos = position + 2; // Start after ESC]
-		
+
 		while (endPos < text.Length)
 		{
 			if (text[endPos] == '\x07') // BEL
@@ -185,29 +183,29 @@ public static class AnsiEscapeParser
 		{
 			return currentState;
 		}
-		
+
 		var secondSemicolon = content.Slice(firstSemicolon + 1).IndexOf(';');
 		if (secondSemicolon < 0)
 		{
 			return currentState;
 		}
-		
+
 		// Extract URL part (after second semicolon)
 		var urlStart = firstSemicolon + 1 + secondSemicolon + 1;
 		if (urlStart >= content.Length)
 		{
 			return currentState;
 		}
-		
+
 		var urlSpan = content.Slice(urlStart);
-		
+
 		// Trim any remaining BEL or backslash characters that might not have been stripped by ParseOscSequence
 		// Note: ESC\ sequence should already be handled by ParseOscSequence, but we trim backslash for safety
 		while (urlSpan.Length > 0 && (urlSpan[^1] == '\x07' || urlSpan[^1] == '\\'))
 		{
 			urlSpan = urlSpan.Slice(0, urlSpan.Length - 1);
 		}
-		
+
 		if (urlSpan.IsEmpty)
 		{
 			// Clear hyperlink
@@ -232,7 +230,7 @@ public static class AnsiEscapeParser
 
 		var codes = new List<int>();
 		var start = 0;
-		
+
 		for (var i = 0; i <= parameters.Length; i++)
 		{
 			if (i == parameters.Length || parameters[i] == ';')
@@ -372,22 +370,22 @@ public static class AnsiEscapeParser
 	/// <summary>
 	/// Creates a MarkupString from text and ANSI state
 	/// </summary>
-	private static MarkupStringModule.MarkupString CreateMarkupStringFromState(string text, AnsiState state)
+	private static MString CreateMarkupStringFromState(string text, AnsiState state)
 	{
 		if (state.IsEmpty())
 		{
-			return MarkupStringModule.single(text);
+			return MModule.single(text);
 		}
 
 		// Build the markup based on state, including hyperlink support if present
 		AnsiMarkup markup;
-		
+
 		if (state.LinkUrl != null)
 		{
 			// Create markup with hyperlink
 			var linkText = Microsoft.FSharp.Core.FSharpOption<string>.Some(text);
 			var linkUrl = Microsoft.FSharp.Core.FSharpOption<string>.Some(state.LinkUrl);
-			
+
 			markup = AnsiMarkup.Create(
 				foreground: state.Foreground,
 				background: state.Background,
@@ -422,7 +420,7 @@ public static class AnsiEscapeParser
 			);
 		}
 
-		return MarkupStringModule.markupSingle(markup, text);
+		return MModule.markupSingle(markup, text);
 	}
 
 	/// <summary>

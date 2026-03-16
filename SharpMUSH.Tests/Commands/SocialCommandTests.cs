@@ -17,40 +17,44 @@ public class SocialCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
-
-public async ValueTask SayCommand()
+	public async ValueTask SayCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("say Hello world"));
 
+		// Sender sees "You say, ..." while others see "Name says, ..."
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One says, \"Hello world\""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single("You say, \"Hello world\""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PoseCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One waves hello"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Pose);
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SemiposeCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received(Quantity.AtLeastOne())
 			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One's greeting"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.SemiPose);
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhisperCommand()
 	{
@@ -62,6 +66,7 @@ public async ValueTask SayCommand()
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PageCommand()
 	{

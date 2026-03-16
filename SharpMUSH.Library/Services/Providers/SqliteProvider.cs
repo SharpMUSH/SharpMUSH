@@ -1,6 +1,6 @@
-using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Data.Common;
 
 namespace SharpMUSH.Library.Services.Providers;
 
@@ -19,7 +19,7 @@ public class SqliteProvider : ISqlProvider
 	public bool IsAvailable => !string.IsNullOrEmpty(_connectionString);
 
 	public string ProviderName => "SQLite";
-	
+
 	public string ParameterPlaceholderFormat => "?";
 
 	public async ValueTask<DbConnection> CreateConnectionAsync()

@@ -86,7 +86,7 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 	}
 
 	protected override TextDocumentSyncRegistrationOptions CreateRegistrationOptions(
-		TextSynchronizationCapability capability, 
+		TextSynchronizationCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new TextDocumentSyncRegistrationOptions
@@ -115,7 +115,7 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 				Code = d.Code != null ? new DiagnosticCode(d.Code) : (DiagnosticCode?)null,
 				Source = d.Source ?? "SharpMUSH",
 				Message = d.Message,
-				Tags = d.Tags != null && d.Tags.Length > 0 
+				Tags = d.Tags != null && d.Tags.Length > 0
 					? new Container<DiagnosticTag>(d.Tags.Select(t => (DiagnosticTag)(int)t).ToArray())
 					: null
 			}).ToList();
@@ -129,9 +129,9 @@ public class TextDocumentSyncHandler : TextDocumentSyncHandlerBase
 		catch (Exception ex)
 		{
 			// Log error but don't crash the server
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error publishing diagnostics: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 	}
 }

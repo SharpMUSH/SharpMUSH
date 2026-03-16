@@ -9,7 +9,7 @@ public record ChatOptions(
 		Group = "General",
 		Order = 1)]
 	char ChatTokenAlias,
-	
+
 	[property: SharpConfig(
 		Name = "use_muxcomm",
 		Category = "Chat",
@@ -17,7 +17,7 @@ public record ChatOptions(
 		Group = "General",
 		Order = 2)]
 	bool UseMuxComm,
-	
+
 	[property: SharpConfig(
 		Name = "max_channels",
 		Category = "Chat",
@@ -28,7 +28,7 @@ public record ChatOptions(
 		Min = 1,
 		Max = 10000)]
 	uint MaxChannels,
-	
+
 	[property: SharpConfig(
 		Name = "max_player_chans",
 		Category = "Chat",
@@ -39,7 +39,7 @@ public record ChatOptions(
 		Min = 1,
 		Max = 100)]
 	uint MaxPlayerChannels,
-	
+
 	[property: SharpConfig(
 		Name = "chan_cost",
 		Category = "Chat",
@@ -50,7 +50,7 @@ public record ChatOptions(
 		Min = 0,
 		Max = 100000)]
 	uint ChannelCost,
-	
+
 	[property: SharpConfig(
 		Name = "noisy_cemit",
 		Category = "Chat",
@@ -58,7 +58,7 @@ public record ChatOptions(
 		Group = "Behavior",
 		Order = 1)]
 	bool NoisyCEmit,
-	
+
 	[property: SharpConfig(
 		Name = "chan_title_len",
 		Category = "Chat",

@@ -260,7 +260,7 @@ public class AttributeWithInheritanceTests
 	{
 		// Test complex hierarchy: Child <- Parent <- Grandparent
 		// with zones at multiple levels
-		
+
 		// Create grandparent with attribute
 		var grandparentResult = await WebAppFactoryArg.CommandParser.CommandParse(
 			1,

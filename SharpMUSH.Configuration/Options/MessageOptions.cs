@@ -8,7 +8,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 1)]
 	string ConnectFile,
-	
+
 	[property: SharpConfig(
 		Name = "motd_file",
 		Category = "Message",
@@ -16,7 +16,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 2)]
 	string MessageOfTheDayFile,
-	
+
 	[property: SharpConfig(
 		Name = "wizmotd_file",
 		Category = "Message",
@@ -24,7 +24,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 3)]
 	string WizMessageOfTheDayFile,
-	
+
 	[property: SharpConfig(
 		Name = "newuser_file",
 		Category = "Message",
@@ -32,7 +32,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 4)]
 	string NewUserFile,
-	
+
 	[property: SharpConfig(
 		Name = "register_create_file",
 		Category = "Message",
@@ -40,7 +40,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 5)]
 	string RegisterCreateFile,
-	
+
 	[property: SharpConfig(
 		Name = "quit_file",
 		Category = "Message",
@@ -48,7 +48,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 6)]
 	string QuitFile,
-	
+
 	[property: SharpConfig(
 		Name = "down_file",
 		Category = "Message",
@@ -56,7 +56,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 7)]
 	string DownFile,
-	
+
 	[property: SharpConfig(
 		Name = "full_file",
 		Category = "Message",
@@ -64,7 +64,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 8)]
 	string FullFile,
-	
+
 	[property: SharpConfig(
 		Name = "guest_file",
 		Category = "Message",
@@ -72,7 +72,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 9)]
 	string GuestFile,
-	
+
 	[property: SharpConfig(
 		Name = "who_file",
 		Category = "Message",
@@ -80,7 +80,7 @@ public record MessageOptions(
 		Group = "Text Files",
 		Order = 10)]
 	string WhoFile,
-	
+
 	[property: SharpConfig(
 		Name = "connect_html_file",
 		Category = "Message",
@@ -88,7 +88,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 1)]
 	string ConnectHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "motd_html_file",
 		Category = "Message",
@@ -96,7 +96,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 2)]
 	string MessageOfTheDayHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "wizmotd_html_file",
 		Category = "Message",
@@ -104,7 +104,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 3)]
 	string WizMessageOfTheDayHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "newuser_html_file",
 		Category = "Message",
@@ -112,7 +112,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 4)]
 	string NewUserHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "register_create_html_file",
 		Category = "Message",
@@ -120,7 +120,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 5)]
 	string RegisterCreateHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "quit_html_file",
 		Category = "Message",
@@ -128,7 +128,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 6)]
 	string QuitHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "down_html_file",
 		Category = "Message",
@@ -136,7 +136,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 7)]
 	string DownHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "full_html_file",
 		Category = "Message",
@@ -144,7 +144,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 8)]
 	string FullHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "guest_html_file",
 		Category = "Message",
@@ -152,7 +152,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 9)]
 	string GuestHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "who_html_file",
 		Category = "Message",
@@ -160,7 +160,7 @@ public record MessageOptions(
 		Group = "HTML Files",
 		Order = 10)]
 	string WhoHtmlFile,
-	
+
 	[property: SharpConfig(
 		Name = "index_html_file",
 		Category = "Message",

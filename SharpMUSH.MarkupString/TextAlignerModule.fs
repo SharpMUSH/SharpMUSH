@@ -194,7 +194,7 @@ ALIGN()
         | 0, _ -> (empty (), empty ())
         | _, true -> (text, empty ())
         | _ ->
-            let rowSepIndex = indexOf text (single "\n")
+            let rowSepIndex = indexOf text "\n"
             // Always prefer explicit newline if present, regardless of width
             if rowSepIndex >= 0 && rowSepIndex < spec.Width then
                 extractLineWithNewline spec text rowSepIndex
@@ -323,7 +323,7 @@ ALIGN()
 
                     if prevSpec.Options.HasFlag(ColumnOptions.MergeToRight) then
                         let extraPadding = single (String.replicate prevSpec.Width " ")
-                        concat extraPadding columnSeparator None
+                        concat extraPadding columnSeparator
                     else
                         columnSeparator
                 else

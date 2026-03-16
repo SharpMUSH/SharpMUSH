@@ -7,7 +7,7 @@ namespace SharpMUSH.Messaging.Abstractions;
 public interface IMessageConsumer<in T> where T : class
 {
 	/// <summary>
-	/// Handles a consumed message from Kafka
+	/// Handles a consumed message from NATS JetStream
 	/// </summary>
 	/// <param name="message">The message to handle</param>
 	/// <param name="cancellationToken">Cancellation token</param>

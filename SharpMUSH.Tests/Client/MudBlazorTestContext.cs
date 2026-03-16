@@ -1,5 +1,4 @@
 using Bunit;
-using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
 namespace SharpMUSH.Tests.Client;

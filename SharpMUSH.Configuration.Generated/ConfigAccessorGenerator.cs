@@ -1,8 +1,8 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace SharpMUSH.Configuration.Generated;
 
@@ -35,7 +35,7 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		var optionsClass = optionsClasses[0];
 		var semanticModel = compilation.GetSemanticModel(optionsClass.SyntaxTree);
 		var optionsSymbol = semanticModel.GetDeclaredSymbol(optionsClass) as INamedTypeSymbol;
-		
+
 		if (optionsSymbol == null) return;
 
 		var categories = SelectCategoryProperties(optionsSymbol).ToImmutableArray();
@@ -44,7 +44,7 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 			.ToImmutableArray();
 
 		var categoriesList = string.Join(",\n            ", categories.Select(c => $"\"{c.Name}\""));
-		
+
 		var propertyAccessors = string.Join("\n\n        ", allProperties.Select(p => GeneratePropertyAccessor(p.Category, p.Property)));
 		var propertySetters = string.Join("\n\n        ", allProperties.Select(p => GeneratePropertySetter(p.Category, p.Property)));
 

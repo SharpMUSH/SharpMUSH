@@ -30,12 +30,12 @@ public class LongGenerator
 		{
 			await Assert.That(pair.First).IsEqualTo(pair.Second);
 		}
-		
+
 		foreach (var pair in sequence3.Zip([9]))
 		{
 			await Assert.That(pair.First).IsEqualTo(pair.Second);
 		}
-		
+
 		foreach (var pair in sequence4.Zip([11]))
 		{
 			await Assert.That(pair.First).IsEqualTo(pair.Second);

@@ -3,6 +3,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
 using SharpMUSH.LanguageServer.Services;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.LanguageServer.Handlers;
 
@@ -10,7 +11,7 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// Handles workspace symbol requests for MUSH code.
 /// Searches for symbols across all open documents.
 /// </summary>
-public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
+public partial class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 {
 	private readonly DocumentManager _documentManager;
 
@@ -20,7 +21,7 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 	}
 
 	public override Task<Container<WorkspaceSymbol>?> Handle(
-		WorkspaceSymbolParams request, 
+		WorkspaceSymbolParams request,
 		CancellationToken cancellationToken)
 	{
 		var symbols = new List<WorkspaceSymbol>();
@@ -28,7 +29,7 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 		try
 		{
 			var query = request.Query?.ToLower() ?? string.Empty;
-			
+
 			// Search through all documents
 			foreach (var (uri, document) in _documentManager.GetAllDocuments())
 			{
@@ -39,8 +40,7 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 					var line = lines[i];
 
 					// Look for attribute definitions: &ATTRIBUTE_NAME
-					var attributeMatch = System.Text.RegularExpressions.Regex.Match(
-						line, @"&([a-zA-Z_][a-zA-Z0-9_\-]*)");
+					var attributeMatch = AttributeDefinitionRegex().Match(line);
 					if (attributeMatch.Success)
 					{
 						var attributeName = attributeMatch.Groups[1].Value;
@@ -63,8 +63,7 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 					}
 
 					// Look for function calls
-					var functionMatch = System.Text.RegularExpressions.Regex.Match(
-						line, @"([a-zA-Z_][a-zA-Z0-9_]*)\s*\(");
+					var functionMatch = FunctionCallRegex().Match(line);
 					if (functionMatch.Success)
 					{
 						var functionName = functionMatch.Groups[1].Value;
@@ -87,8 +86,7 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 					}
 
 					// Look for commands
-					var commandMatch = System.Text.RegularExpressions.Regex.Match(
-						line, @"^\s*(@[a-zA-Z][a-zA-Z0-9_\-]*)");
+					var commandMatch = CommandRegex().Match(line);
 					if (commandMatch.Success)
 					{
 						var commandName = commandMatch.Groups[1].Value;
@@ -114,9 +112,9 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error searching workspace symbols: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		if (symbols.Count > 0)
@@ -128,9 +126,18 @@ public class WorkspaceSymbolsHandler : WorkspaceSymbolsHandlerBase
 	}
 
 	protected override WorkspaceSymbolRegistrationOptions CreateRegistrationOptions(
-		WorkspaceSymbolCapability capability, 
+		WorkspaceSymbolCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new WorkspaceSymbolRegistrationOptions();
 	}
+
+	[GeneratedRegex(@"&([a-zA-Z_][a-zA-Z0-9_\-]*)")]
+	private static partial Regex AttributeDefinitionRegex();
+
+	[GeneratedRegex(@"([a-zA-Z_][a-zA-Z0-9_]*)\s*\(")]
+	private static partial Regex FunctionCallRegex();
+
+	[GeneratedRegex(@"^\s*(@[a-zA-Z][a-zA-Z0-9_\-]*)")]
+	private static partial Regex CommandRegex();
 }

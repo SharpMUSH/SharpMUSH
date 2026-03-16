@@ -25,18 +25,18 @@ public record UpdateChannelCommand(
 	string? SpeakLock,
 	string? SeeLock,
 	string? HideLock,
-	string? ModLock, 
+	string? ModLock,
 	string? Mogrifier,
 	int? Buffer) : ICommand;
 
 public record DeleteChannelCommand(SharpChannel Channel) : ICommand;
 
 public record AddUserToChannelCommand(
-	SharpChannel Channel, 
+	SharpChannel Channel,
 	AnySharpObject Object) : ICommand;
 
 public record RemoveUserFromChannelCommand(
-	SharpChannel Channel, 
+	SharpChannel Channel,
 	AnySharpObject Object) : ICommand;
 
 public record UpdateChannelUserStatusCommand(

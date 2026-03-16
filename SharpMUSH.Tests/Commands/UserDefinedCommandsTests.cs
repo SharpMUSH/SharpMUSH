@@ -13,11 +13,12 @@ public class UserDefinedCommandsTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>(); 
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test needs investigation - unrelated to communication commands")]
 	public async Task SetAndResetCacheTest()
 	{

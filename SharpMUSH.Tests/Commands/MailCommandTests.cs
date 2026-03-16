@@ -17,6 +17,7 @@ public class MailCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MailCommand()
 	{
@@ -28,6 +29,7 @@ public class MailCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MaliasCommand()
 	{

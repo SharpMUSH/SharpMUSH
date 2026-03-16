@@ -2,30 +2,34 @@ using MarkupString;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Globalization;
 
 namespace SharpMUSH.Server.Consumers;
 
 /// <summary>
-/// Consumes telnet input messages from Kafka and processes them
+/// Consumes telnet input messages from NATS JetStream and processes them
 /// </summary>
 public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskScheduler scheduler)
 	: IMessageConsumer<TelnetInputMessage>
 {
 	public async Task HandleAsync(TelnetInputMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogDebug("[NATS-RECV] TelnetInputMessage received - Handle: {Handle}, InputLength: {InputLength}",
+			message.Handle, message.Input?.Length ?? 0);
+
 		try
 		{
 			if (string.IsNullOrWhiteSpace(message.Input))
 			{
+				logger.LogDebug("[NATS-RECV] TelnetInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
 				return;
 			}
 
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
-				command: MarkupStringModule.single(message.Input),
+				command: MModule.single(message.Input),
 				state: ParserState.Empty with { Handle = message.Handle });
 		}
 		catch (Exception ex)
@@ -36,23 +40,23 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 }
 
 /// <summary>
-/// Consumes GMCP signal messages from Kafka
+/// Consumes GMCP signal messages from NATS JetStream
 /// </summary>
 public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<GMCPSignalMessage>
 {
 	public Task HandleAsync(GMCPSignalMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogDebug("Received GMCP signal from handle {Handle}: {Package} - {Info}",
+		logger.LogDebug("[NATS-RECV] GMCPSignalMessage received - Handle: {Handle}, Package: {Package}, Info: {Info}",
 			message.Handle, message.Package, message.Info);
 
-// Set GMCP capability flag on first GMCP message
+		// Set GMCP capability flag on first GMCP message
 		connectionService.Update(message.Handle, "GMCP", "1");
 
-// Store GMCP package and info in connection metadata
+		// Store GMCP package and info in connection metadata
 		connectionService.Update(message.Handle, $"GMCP_{message.Package}", message.Info);
 
-// Handle specific GMCP packages
+		// Handle specific GMCP packages
 		HandleGMCPPackage(message.Handle, message.Package, message.Info);
 
 		return Task.CompletedTask;
@@ -60,7 +64,7 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 
 	private void HandleGMCPPackage(long handle, string package, string info)
 	{
-// Process specific GMCP packages
+		// Process specific GMCP packages
 		switch (package)
 		{
 			case "Core.Hello":
@@ -89,23 +93,23 @@ public class GMCPSignalConsumer(ILogger<GMCPSignalConsumer> logger, IConnectionS
 }
 
 /// <summary>
-/// Consumes MSDP update messages from Kafka
+/// Consumes MSDP update messages from NATS JetStream
 /// </summary>
 public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<MSDPUpdateMessage>
 {
 	public Task HandleAsync(MSDPUpdateMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogDebug("Received MSDP update from handle {Handle} with {Count} variables",
-			message.Handle, message.Variables.Count);
+		logger.LogDebug("[NATS-RECV] MSDPUpdateMessage received - Handle: {Handle}, Variables: {Variables}",
+			message.Handle, string.Join(", ", message.Variables.Select(kv => $"{kv.Key}={kv.Value}")));
 
-// Store each MSDP variable in connection metadata
+		// Store each MSDP variable in connection metadata
 		foreach (var variable in message.Variables)
 		{
 			connectionService.Update(message.Handle, $"MSDP_{variable.Key}", variable.Value);
 		}
 
-// Handle specific MSDP variables
+		// Handle specific MSDP variables
 		HandleMSDPVariables(message.Handle, message.Variables);
 
 		return Task.CompletedTask;
@@ -113,7 +117,7 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 
 	private void HandleMSDPVariables(long handle, Dictionary<string, string> variables)
 	{
-// Process specific MSDP variables
+		// Process specific MSDP variables
 		foreach (var variable in variables)
 		{
 			switch (variable.Key)
@@ -146,17 +150,17 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 }
 
 /// <summary>
-/// Consumes NAWS update messages from Kafka
+/// Consumes NAWS update messages from NATS JetStream
 /// </summary>
 public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<NAWSUpdateMessage>
 {
 	public Task HandleAsync(NAWSUpdateMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogDebug("Received NAWS update from handle {Handle}: {Width}x{Height}",
+		logger.LogDebug("[NATS-RECV] NAWSUpdateMessage received - Handle: {Handle}, Width: {Width}, Height: {Height}",
 			message.Handle, message.Width, message.Height);
 
-// Update connection metadata with new window size
+		// Update connection metadata with new window size
 		connectionService.Update(message.Handle, "HEIGHT", message.Height.ToString(CultureInfo.InvariantCulture));
 		connectionService.Update(message.Handle, "WIDTH", message.Width.ToString(CultureInfo.InvariantCulture));
 
@@ -165,7 +169,7 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionS
 }
 
 /// <summary>
-/// Consumes connection established messages from Kafka
+/// Consumes connection established messages from NATS JetStream
 /// </summary>
 public class ConnectionEstablishedConsumer(
 	ILogger<ConnectionEstablishedConsumer> logger,
@@ -173,12 +177,15 @@ public class ConnectionEstablishedConsumer(
 	IMessageBus bus)
 	: IMessageConsumer<ConnectionEstablishedMessage>
 {
-	public Task HandleAsync(ConnectionEstablishedMessage message, CancellationToken cancellationToken = default)
+	public async Task HandleAsync(ConnectionEstablishedMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogDebug("[NATS-RECV] ConnectionEstablishedMessage received - Handle: {Handle}, IP: {IpAddress}, Hostname: {Hostname}, Type: {ConnectionType}, Timestamp: {Timestamp}",
+			message.Handle, message.IpAddress, message.Hostname, message.ConnectionType, message.Timestamp);
+
 		logger.LogInformation("Connection established: Handle {Handle}, IP {IpAddress}, Type {ConnectionType}",
 			message.Handle, message.IpAddress, message.ConnectionType);
 
-		connectionService.Register(message.Handle,
+		await connectionService.Register(message.Handle,
 			message.IpAddress,
 			message.Hostname,
 			message.ConnectionType,
@@ -193,19 +200,20 @@ public class ConnectionEstablishedConsumer(
 				{ "HostName", message.Hostname },
 				{ "ConnectionType", message.ConnectionType }
 			}));
-
-		return Task.CompletedTask;
 	}
 }
 
 /// <summary>
-/// Consumes connection closed messages from Kafka
+/// Consumes connection closed messages from NATS JetStream
 /// </summary>
 public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<ConnectionClosedMessage>
 {
 	public Task HandleAsync(ConnectionClosedMessage message, CancellationToken cancellationToken = default)
 	{
+		logger.LogDebug("[NATS-RECV] ConnectionClosedMessage received - Handle: {Handle}, Timestamp: {Timestamp}",
+			message.Handle, message.Timestamp);
+
 		logger.LogInformation("Connection closed: Handle {Handle}", message.Handle);
 
 		connectionService.Disconnect(message.Handle);

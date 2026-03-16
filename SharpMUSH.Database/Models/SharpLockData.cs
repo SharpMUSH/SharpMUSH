@@ -9,7 +9,7 @@ public record SharpLockDataQueryResult
 	/// The lock expression/string (e.g., "=#123:456" or "flag^wizard")
 	/// </summary>
 	public string LockString { get; init; } = "#TRUE";
-	
+
 	/// <summary>
 	/// Lock flags as a string (e.g., "Visual|Private|NoClone")
 	/// </summary>

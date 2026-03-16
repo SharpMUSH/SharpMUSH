@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -20,22 +21,35 @@ namespace SharpMUSH.Implementation.Handlers;
 public class ConnectionStateEventHandler(
 	IConnectionService connectionService,
 	IEventService eventService,
-	IMUSHCodeParser parser)
+	IMUSHCodeParser parser,
+	INotifyService notifyService,
+	IOptionsWrapper<SharpMUSHOptions> configuration)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
 		// Trigger SOCKET`CONNECT when a new socket connects
 		// PennMUSH spec: socket`connect (descriptor, ip)
-		if (notification.OldState == IConnectionService.ConnectionState.None && 
-		    notification.NewState == IConnectionService.ConnectionState.Connected)
+		if (notification.OldState == IConnectionService.ConnectionState.None &&
+				notification.NewState == IConnectionService.ConnectionState.Connected)
 		{
 			var connectionData = connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
-				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip) 
+				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
-				
+
+				// Show connect screen (connect.txt) to new connections
+				var connectFile = configuration.CurrentValue.Message.ConnectFile;
+				if (!string.IsNullOrEmpty(connectFile) && File.Exists(connectFile))
+				{
+					var connectText = await File.ReadAllTextAsync(connectFile, cancellationToken);
+					if (!string.IsNullOrWhiteSpace(connectText))
+					{
+						await notifyService.Notify(notification.Handle, connectText);
+					}
+				}
+
 				// EventService handles all exception logging, so no try-catch needed here
 				await eventService.TriggerEventAsync(
 					parser,
@@ -45,29 +59,29 @@ public class ConnectionStateEventHandler(
 					ipAddress);
 			}
 		}
-		
+
 		// Trigger PLAYER`DISCONNECT when a logged-in player disconnects
 		// PennMUSH spec: player`disconnect (objid, number of remaining connections, hidden?, cause of disconnection, ip, descriptor, conn() secs, idle() secs, recv bytes/sent bytes/command count)
-		if (notification.OldState == IConnectionService.ConnectionState.LoggedIn && 
-		    notification.NewState == IConnectionService.ConnectionState.Disconnected &&
-		    notification.PlayerRef.HasValue)
+		if (notification.OldState == IConnectionService.ConnectionState.LoggedIn &&
+				notification.NewState == IConnectionService.ConnectionState.Disconnected &&
+				notification.PlayerRef.HasValue)
 		{
 			var connectionData = connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
-				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip) 
+				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
-				
+
 				// Calculate remaining connections for this player
 				var remainingConnections = await connectionService.Get(notification.PlayerRef.Value).CountAsync();
-				
+
 				// Calculate connection statistics
 				var connectedSecs = connectionData.Connected?.TotalSeconds.ToString("F0") ?? "0";
 				var idleSecs = connectionData.Idle?.TotalSeconds.ToString("F0") ?? "0";
 				var bytesRecv = connectionData.Metadata.TryGetValue("BytesReceived", out var recv) ? recv : "0";
 				var bytesSent = connectionData.Metadata.TryGetValue("BytesSent", out var sent) ? sent : "0";
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";
-				
+
 				// Trigger PLAYER`DISCONNECT event
 				await eventService.TriggerEventAsync(
 					parser,
@@ -84,7 +98,7 @@ public class ConnectionStateEventHandler(
 					$"{bytesRecv}/{bytesSent}/{commandCount}");
 			}
 		}
-		
+
 		// Trigger SOCKET`DISCONNECT when a socket disconnects
 		// PennMUSH spec: socket`disconnect (former descriptor, former ip, cause of disconnection, recv bytes/sent bytes/command count)
 		if (notification.NewState == IConnectionService.ConnectionState.Disconnected)
@@ -92,14 +106,14 @@ public class ConnectionStateEventHandler(
 			var connectionData = connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
-				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip) 
+				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
-				
+
 				// Calculate statistics following PennMUSH format
 				var bytesRecv = connectionData.Metadata.TryGetValue("BytesReceived", out var recv) ? recv : "0";
 				var bytesSent = connectionData.Metadata.TryGetValue("BytesSent", out var sent) ? sent : "0";
 				var commandCount = connectionData.Metadata.TryGetValue("CommandCount", out var count) ? count : "0";
-				
+
 				// EventService handles all exception logging
 				await eventService.TriggerEventAsync(
 					parser,

@@ -28,12 +28,12 @@ public class MailUpdate : OneOfBase<bool?, bool?, bool?, bool?>
 	public bool IsClearEdit => IsT1;
 	public bool IsTaggedEdit => IsT2;
 	public bool IsUrgentEdit => IsT3;
-	
+
 	public bool AsReadEdit => AsT0!.Value;
-	
+
 	public bool AsClearEdit => AsT1!.Value;
-	
+
 	public bool AsTaggedEdit => AsT2!.Value;
-	
+
 	public bool AsUrgentEdit => AsT3!.Value;
 }

@@ -1,8 +1,3 @@
-using System.Collections.Generic;
-using System.Data.Common;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
@@ -21,7 +16,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 	private ISqlProvider? _currentProvider;
 	private string? _currentConnectionString;
 	private bool _disposed;
-	
+
 	/// <summary>
 	/// Constructor that accepts configuration monitor for runtime configuration changes.
 	/// </summary>
@@ -31,7 +26,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 	}
 
 	public bool IsAvailable => GetCurrentProviderAsync().GetAwaiter().GetResult()?.IsAvailable ?? false;
-	
+
 	/// <summary>
 	/// Gets the current provider, creating it from current configuration if needed.
 	/// This allows the service to respond to runtime configuration changes.
@@ -46,7 +41,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 		}
 
 		var cvn = _config.CurrentValue.Net;
-		
+
 		// Return null if no SQL configuration
 		if (string.IsNullOrWhiteSpace(cvn.SqlHost) && string.IsNullOrWhiteSpace(cvn.SqlDatabase))
 		{
@@ -54,19 +49,19 @@ public class SqlService : ISqlService, IAsyncDisposable
 		}
 
 		var platform = cvn.SqlPlatform?.ToLowerInvariant() ?? "mysql";
-		
+
 		// Build connection string to check if it has changed
 		var connectionString = platform switch
 		{
-			"mysql" or "mariadb" => 
+			"mysql" or "mariadb" =>
 				BuildMySqlConnectionString(cvn.SqlHost, cvn.SqlUsername, cvn.SqlPassword, cvn.SqlDatabase),
-			"postgresql" or "postgres" => 
+			"postgresql" or "postgres" =>
 				BuildPostgreSqlConnectionString(cvn.SqlHost, cvn.SqlUsername, cvn.SqlPassword, cvn.SqlDatabase),
-			"sqlite" => 
+			"sqlite" =>
 				$"Data Source={cvn.SqlDatabase}",
 			_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
 		};
-		
+
 		// If connection string changed, dispose old provider and create new one
 		if (_currentProvider == null || _currentConnectionString != connectionString)
 		{
@@ -77,7 +72,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 				if (_currentProvider == null || _currentConnectionString != connectionString)
 				{
 					var oldProvider = _currentProvider;
-					
+
 					_currentProvider = platform switch
 					{
 						"mysql" or "mariadb" => new MySqlProvider(connectionString),
@@ -85,9 +80,9 @@ public class SqlService : ISqlService, IAsyncDisposable
 						"sqlite" => new SqliteProvider(connectionString),
 						_ => throw new NotSupportedException($"SQL platform '{platform}' is not supported. Supported platforms: mysql, postgresql, sqlite")
 					};
-					
+
 					_currentConnectionString = connectionString;
-					
+
 					// Dispose old provider after setting new one
 					if (oldProvider != null)
 					{
@@ -100,14 +95,14 @@ public class SqlService : ISqlService, IAsyncDisposable
 				_providerLock.Release();
 			}
 		}
-		
+
 		return _currentProvider;
 	}
-	
+
 	private static string BuildMySqlConnectionString(string? host, string? username, string? password, string? database)
 	{
 		var parts = new List<string>();
-		
+
 		// Handle host:port format - MySQL needs separate Server and Port parameters
 		if (!string.IsNullOrWhiteSpace(host))
 		{
@@ -124,27 +119,27 @@ public class SqlService : ISqlService, IAsyncDisposable
 				parts.Add($"Server={host}");
 			}
 		}
-		
+
 		if (!string.IsNullOrWhiteSpace(username))
 			parts.Add($"User Id={username}");
 		if (!string.IsNullOrWhiteSpace(password))
 			parts.Add($"Password={password}");
 		if (!string.IsNullOrWhiteSpace(database))
 			parts.Add($"Database={database}");
-			
+
 		// Ensure we have at least a server to connect to
 		if (parts.Count == 0 || string.IsNullOrWhiteSpace(host))
 		{
 			throw new InvalidOperationException("MySQL connection string must include at minimum a server/host");
 		}
-			
+
 		return string.Join(";", parts);
 	}
-	
+
 	private static string BuildPostgreSqlConnectionString(string? host, string? username, string? password, string? database)
 	{
 		var parts = new List<string>();
-		
+
 		// Handle host:port format - PostgreSQL needs separate Host and Port parameters
 		if (!string.IsNullOrWhiteSpace(host))
 		{
@@ -161,7 +156,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 				parts.Add($"Host={host}");
 			}
 		}
-		
+
 		if (!string.IsNullOrWhiteSpace(username))
 			parts.Add($"Username={username}");
 		if (!string.IsNullOrWhiteSpace(password))
@@ -170,7 +165,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 			parts.Add($"Database={database}");
 		return string.Join(";", parts);
 	}
-	
+
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 	{
 		var provider = await GetCurrentProviderAsync();
@@ -198,7 +193,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		return results;
 	}
-	
+
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecutePreparedQueryAsync(string query, params object?[] parameters)
 	{
 		var provider = await GetCurrentProviderAsync();
@@ -212,12 +207,12 @@ public class SqlService : ISqlService, IAsyncDisposable
 		await using var connection = await provider.CreateConnectionAsync();
 		await using var command = connection.CreateCommand();
 		command.CommandText = query;
-		
+
 		// Add parameters to the command
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			var param = command.CreateParameter();
-			
+
 			// Set parameter name based on provider type
 			if (provider.ParameterPlaceholderFormat == "$")
 			{
@@ -234,11 +229,11 @@ public class SqlService : ISqlService, IAsyncDisposable
 				// Default to named parameters
 				param.ParameterName = $"@p{i}";
 			}
-			
+
 			param.Value = parameters[i] ?? DBNull.Value;
 			command.Parameters.Add(param);
 		}
-		
+
 		await using var reader = await command.ExecuteReaderAsync();
 
 		while (await reader.ReadAsync())
@@ -266,7 +261,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 		await using var command = connection.CreateCommand();
 		command.CommandText = query;
 		await using var reader = await command.ExecuteReaderAsync();
-		
+
 		while (await reader.ReadAsync(CancellationToken.None))
 		{
 			var row = new Dictionary<string, object?>();
@@ -277,7 +272,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 			yield return row;
 		}
 	}
-	
+
 	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamPreparedQueryAsync(string query, params object?[] parameters)
 	{
 		var provider = await GetCurrentProviderAsync();
@@ -289,12 +284,12 @@ public class SqlService : ISqlService, IAsyncDisposable
 		await using var connection = await provider.CreateConnectionAsync();
 		await using var command = connection.CreateCommand();
 		command.CommandText = query;
-		
+
 		// Add parameters to the command
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			var param = command.CreateParameter();
-			
+
 			// Set parameter name based on provider type
 			if (provider.ParameterPlaceholderFormat == "$")
 			{
@@ -311,13 +306,13 @@ public class SqlService : ISqlService, IAsyncDisposable
 				// Default to named parameters
 				param.ParameterName = $"@p{i}";
 			}
-			
+
 			param.Value = parameters[i] ?? DBNull.Value;
 			command.Parameters.Add(param);
 		}
-		
+
 		await using var reader = await command.ExecuteReaderAsync();
-		
+
 		while (await reader.ReadAsync(CancellationToken.None))
 		{
 			var row = new Dictionary<string, object?>();
@@ -340,7 +335,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		return string.Join("\n", output);
 	}
-	
+
 	public async ValueTask<string> ExecutePreparedQueryAsStringAsync(string query, string delimiter = " ", params object?[] parameters)
 	{
 		var results = await ExecutePreparedQueryAsync(query, parameters);
@@ -360,7 +355,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 		{
 			throw new InvalidOperationException("SQL provider is not configured");
 		}
-		
+
 		return provider.Escape(value);
 	}
 
@@ -372,13 +367,13 @@ public class SqlService : ISqlService, IAsyncDisposable
 		}
 
 		_disposed = true;
-		
+
 		if (_currentProvider != null)
 		{
 			await _currentProvider.DisposeAsync();
 			_currentProvider = null;
 		}
-		
+
 		_providerLock.Dispose();
 		GC.SuppressFinalize(this);
 	}

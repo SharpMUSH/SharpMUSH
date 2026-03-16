@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -35,7 +33,7 @@ public class HookCommandTests
 		// since we can't easily create attributes in a unit test context
 		var uniqueCmd = $"hooktest_set_{Guid.NewGuid():N}";
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/before {uniqueCmd}=#1,test_attr"));
-		
+
 		// If we got here without exception, the command executed
 		// In practice, this would fail because test_attr doesn't exist on #1
 	}

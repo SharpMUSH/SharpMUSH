@@ -2,11 +2,8 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -30,8 +27,8 @@ public class AtListCommandTests
 		// Verify that a notification was sent with help message
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "You must specify what to list")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "You must specify what to list")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -45,14 +42,13 @@ public class AtListCommandTests
 		// Verify that a notification was sent with the flag list
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "OBJECT FLAGS:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "OBJECT FLAGS:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Skip("Switch parsing issue with multiple switches - needs investigation")]
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{
 		// Execute @list/lowercase/flags (note: switch order matters)
@@ -61,8 +57,8 @@ public class AtListCommandTests
 		// Verify that a notification was sent with lowercase flag list
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -76,8 +72,8 @@ public class AtListCommandTests
 		// Verify that a notification was sent with the power list
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "OBJECT POWERS:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "OBJECT POWERS:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -91,8 +87,8 @@ public class AtListCommandTests
 		// Verify that a notification was sent with lock types
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "LOCK TYPES:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "LOCK TYPES:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -106,8 +102,8 @@ public class AtListCommandTests
 		// Verify that a notification was sent with standard attributes
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "STANDARD ATTRIBUTES:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "STANDARD ATTRIBUTES:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -121,8 +117,8 @@ public class AtListCommandTests
 		// Verify that a notification was sent with commands
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "COMMANDS:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "COMMANDS:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -136,8 +132,8 @@ public class AtListCommandTests
 		// Verify that a notification was sent with functions
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "FUNCTIONS:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "FUNCTIONS:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
@@ -151,8 +147,8 @@ public class AtListCommandTests
 		// Verify that a notification was sent with MOTD settings
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), 
-				Arg.Is<OneOf.OneOf<MString,string>>(s => TestHelpers.MessageContains(s, "Current Message of the Day settings:")),
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Current Message of the Day settings:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}

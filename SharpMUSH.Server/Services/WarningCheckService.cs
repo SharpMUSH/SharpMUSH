@@ -1,10 +1,9 @@
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Server.Services;
 

@@ -109,9 +109,9 @@ public class RenameHandler : RenameHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error renaming symbol: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		return Task.FromResult<WorkspaceEdit?>(null);
@@ -123,7 +123,7 @@ public class RenameHandler : RenameHandlerBase
 	}
 
 	protected override RenameRegistrationOptions CreateRegistrationOptions(
-		RenameCapability capability, 
+		RenameCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new RenameRegistrationOptions

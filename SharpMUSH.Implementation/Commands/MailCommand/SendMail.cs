@@ -15,7 +15,7 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 public static class SendMail
 {
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IPermissionService permissionService,
-		IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, 
+		IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService,
 		IAttributeService attributeService, IOptionsWrapper<SharpMUSHOptions> configuration,
 		MString nameList, MString subjectAndMessage, string[] switches)
 	{
@@ -27,7 +27,7 @@ public static class SendMail
 
 		var playerList = ArgHelpers.PopulatedNameList(mediator, nameList.ToPlainText()!);
 		var knownPlayerList = await playerList.Where(x => x != null).Select(x => x!).ToListAsync();
-		var subjectBodySplit = MModule.indexOf(subjectAndMessage, MModule.single("/"));
+		var subjectBodySplit = MModule.indexOf(subjectAndMessage, "/");
 
 		var subject = subjectBodySplit > -1
 			? MModule.substring(0, subjectBodySplit, subjectAndMessage)
@@ -47,7 +47,7 @@ public static class SendMail
 				var attributeValue = attributeOpportunity.Value;
 				if (attributeValue.Length > 0)
 				{
-					MModule.concat(message, MModule.single("\n"), attributeValue);
+					message = MModule.concatMany(new[] { message, MModule.single("\n"), attributeValue });
 				}
 			}
 		}
@@ -96,10 +96,10 @@ public static class SendMail
 				var amailAttr = await attributeService.GetAttributeAsync(
 					playerAsAny,  // executor is the player themselves
 					playerAsAny,  // object is also the player
-					"AMAIL", 
+					"AMAIL",
 					IAttributeService.AttributeMode.Read,
 					false);
-					
+
 				if (amailAttr.IsAttribute)
 				{
 					var attribute = amailAttr.AsAttribute.Last();

@@ -9,6 +9,6 @@ public class RoomsAndMovementTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
-	
+
 	// TODO: Add Tests
 }

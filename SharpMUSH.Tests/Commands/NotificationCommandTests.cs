@@ -17,6 +17,7 @@ public class NotificationCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MessageCommand()
 	{
@@ -28,6 +29,7 @@ public class NotificationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RespondCommand()
 	{
@@ -39,6 +41,7 @@ public class NotificationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RwallCommand()
 	{
@@ -50,6 +53,7 @@ public class NotificationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WarningsCommand()
 	{
@@ -61,6 +65,7 @@ public class NotificationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WcheckCommand()
 	{
@@ -72,6 +77,7 @@ public class NotificationCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SuggestCommand()
 	{

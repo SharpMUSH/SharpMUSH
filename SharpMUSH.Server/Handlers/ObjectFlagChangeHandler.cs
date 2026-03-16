@@ -1,10 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.Server.Handlers;

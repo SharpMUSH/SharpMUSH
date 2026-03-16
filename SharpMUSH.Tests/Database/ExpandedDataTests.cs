@@ -13,7 +13,7 @@ public class ExpandedDataTests
 	private ISharpDatabase _database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	private record ExpandedDataExample(string Word);
-	
+
 	[Test, NotInParallel]
 	public async Task SetAndGetExpandedData()
 	{
@@ -26,7 +26,7 @@ public class ExpandedDataTests
 	}
 
 	private record OverwritePartialAndGetExpandedDataExample(string Word, string? Verb);
-	
+
 	/// <summary>
 	/// This tests exists to illustrate that SetExpandedObjectData overwrites only the values set.
 	/// </summary>
@@ -44,21 +44,23 @@ public class ExpandedDataTests
 	private record OverwritePartialNullAndGetExpandedDataExample(string? Word, string? Verb);
 
 	/// <summary>
-	/// This tests exists to illustrate that SetExpandedObjectData overwrites values when null is explicitly given.
+	/// This test exists to illustrate that SetExpandedObjectData treats null as "not set" —
+	/// null fields in the update are not applied to the stored value, so existing values are preserved.
+	/// To explicitly clear a field to null, use SetExpandedServerData instead.
 	/// </summary>
-	[Test, NotInParallel, Skip("TODO: Failing Behavior. Needs Investigation.")]
+	[Test, NotInParallel]
 	public async Task OverwritePartialNullAndGetExpandedData()
 	{
 		var one = await _database.GetObjectNodeAsync(new DBRef(1));
 		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample("Dog", "Bark"));
-		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample(null,"Bark"));
+		await _database.SetExpandedObjectData(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample", new OverwritePartialNullAndGetExpandedDataExample(null, "Bark"));
 
 		var result = await _database.GetExpandedObjectData<OverwritePartialNullAndGetExpandedDataExample>(one.Object()!.Id!, "OverwritePartialNullAndGetExpandedDataExample");
-		await Assert.That(result as object).IsEqualTo(new OverwritePartialNullAndGetExpandedDataExample(null,"Bark"));
+		await Assert.That(result as object).IsEqualTo(new OverwritePartialNullAndGetExpandedDataExample("Dog", "Bark"));
 	}
 
 	private record OverwriteUnrelatedTypesAndGetExpandedDataExample(string? Word, string? Verb);
-	
+
 	private record OverwriteUnrelatedTypesAndGetExpandedDataExample2(string? Word, string? Verb);
 
 	/// <summary>

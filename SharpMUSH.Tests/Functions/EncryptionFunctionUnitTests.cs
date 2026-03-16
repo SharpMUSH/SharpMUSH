@@ -37,7 +37,7 @@ public class EncryptionFunctionUnitTests
 		// Use base64 encoding to ensure the encrypted text can be passed through the parser
 		var encrypted = (await Parser.FunctionParse(MModule.single("encrypt(test_string_encrypt_case1,mypassword,1)")))?.Message!;
 		await Assert.That(encrypted.ToPlainText()).IsNotNull();
-		
+
 		// Verify we can decrypt it back
 		var decrypted = (await Parser.FunctionParse(MModule.single($"decrypt({encrypted.ToPlainText()},mypassword,1)")))?.Message!;
 		await Assert.That(decrypted.ToPlainText()).IsEqualTo("test_string_encrypt_case1");
@@ -48,11 +48,11 @@ public class EncryptionFunctionUnitTests
 	{
 		var encrypted = (await Parser.FunctionParse(MModule.single("encrypt(test_string_encrypt_encoded,mykey,1)")))?.Message!;
 		await Assert.That(encrypted.ToPlainText()).IsNotNull();
-		
+
 		// Verify it's base64 encoded (should only contain alphanumeric and =)
 		var text = encrypted.ToPlainText();
-		await Assert.That(text.All(c => char.IsLetterOrDigit(c) || c == '=' || c == '+'|| c == '/')).IsTrue();
-		
+		await Assert.That(text.All(c => char.IsLetterOrDigit(c) || c == '=' || c == '+' || c == '/')).IsTrue();
+
 		// Verify we can decrypt it back
 		var decrypted = (await Parser.FunctionParse(MModule.single($"decrypt({text},mykey,1)")))?.Message!;
 		await Assert.That(decrypted.ToPlainText()).IsEqualTo("test_string_encrypt_encoded");
@@ -66,7 +66,7 @@ public class EncryptionFunctionUnitTests
 		var encrypted = (await Parser.FunctionParse(MModule.single(encryptFunc)))?.Message!;
 		var decryptCall = decryptFunc.Replace("@0", encrypted.ToPlainText());
 		var decrypted = (await Parser.FunctionParse(MModule.single(decryptCall)))?.Message!;
-		
+
 		// Extract original plaintext from encrypt function call
 		var originalText = encryptFunc.Substring(encryptFunc.IndexOf('(') + 1, encryptFunc.IndexOf(',') - encryptFunc.IndexOf('(') - 1);
 		await Assert.That(decrypted.ToPlainText()).IsEqualTo(originalText);

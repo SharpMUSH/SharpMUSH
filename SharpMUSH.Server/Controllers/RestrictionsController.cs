@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
@@ -74,7 +73,7 @@ public class RestrictionsController(
 		{
 			var currentOptions = options.CurrentValue;
 			var newRestrictions = new Dictionary<string, string[]>(currentOptions.Restriction.CommandRestrictions);
-			
+
 			if (!newRestrictions.Remove(commandName))
 			{
 				return NotFound($"Command restriction '{commandName}' not found");
@@ -159,7 +158,7 @@ public class RestrictionsController(
 		{
 			var currentOptions = options.CurrentValue;
 			var newRestrictions = new Dictionary<string, string[]>(currentOptions.Restriction.FunctionRestrictions);
-			
+
 			if (!newRestrictions.Remove(functionName))
 			{
 				return NotFound($"Function restriction '{functionName}' not found");

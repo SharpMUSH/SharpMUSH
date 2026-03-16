@@ -2,9 +2,9 @@ using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
 using SharpMUSH.LanguageServer.Services;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.LanguageServer.Handlers;
 
@@ -12,14 +12,14 @@ namespace SharpMUSH.LanguageServer.Handlers;
 /// Handles code action requests for MUSH code.
 /// Provides quick fixes for common errors.
 /// </summary>
-public class CodeActionHandler : CodeActionHandlerBase
+public partial class CodeActionHandler : CodeActionHandlerBase
 {
 	private readonly DocumentManager _documentManager;
 	private readonly LSPMUSHCodeParser _parser;
 	private readonly IMUSHCodeParser _underlyingParser;
 
 	public CodeActionHandler(
-		DocumentManager documentManager, 
+		DocumentManager documentManager,
 		LSPMUSHCodeParser parser,
 		IMUSHCodeParser underlyingParser)
 	{
@@ -29,7 +29,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 	}
 
 	public override Task<CommandOrCodeActionContainer?> Handle(
-		CodeActionParams request, 
+		CodeActionParams request,
 		CancellationToken cancellationToken)
 	{
 		var uri = request.TextDocument.Uri.ToString();
@@ -45,7 +45,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 		try
 		{
 			var diagnostics = _parser.GetDiagnostics(document.Text, ParseType.Function);
-			
+
 			// Process diagnostics to suggest fixes
 			foreach (var diagnostic in diagnostics)
 			{
@@ -96,8 +96,8 @@ public class CodeActionHandler : CodeActionHandlerBase
 			var functionNames = _underlyingParser.FunctionLibrary.Keys.ToList();
 			foreach (var line in lines.Select((text, index) => new { text, index }))
 			{
-				var words = System.Text.RegularExpressions.Regex.Matches(line.text, @"\b[a-zA-Z_][a-zA-Z0-9_]*\b");
-				foreach (System.Text.RegularExpressions.Match match in words)
+				var words = IdentifierRegex().Matches(line.text);
+				foreach (Match match in words)
 				{
 					var word = match.Value;
 					// Check if word looks like a function call (followed by parenthesis)
@@ -143,9 +143,9 @@ public class CodeActionHandler : CodeActionHandlerBase
 		}
 		catch (Exception ex)
 		{
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error generating code actions: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		if (codeActions.Count > 0)
@@ -164,7 +164,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 	}
 
 	private static List<CodeAction> GetCodeActionsForDiagnostic(
-		Library.Models.Diagnostic diagnostic, 
+		Library.Models.Diagnostic diagnostic,
 		DocumentUri uri,
 		string documentText)
 	{
@@ -206,7 +206,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 	}
 
 	protected override CodeActionRegistrationOptions CreateRegistrationOptions(
-		CodeActionCapability capability, 
+		CodeActionCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		return new CodeActionRegistrationOptions
@@ -217,4 +217,7 @@ public class CodeActionHandler : CodeActionHandlerBase
 				CodeActionKind.Refactor)
 		};
 	}
+
+	[GeneratedRegex(@"\b[a-zA-Z_][a-zA-Z0-9_]*\b")]
+	private static partial Regex IdentifierRegex();
 }

@@ -8,7 +8,7 @@ public record RestrictionOptions(
 		Group = "Command Restrictions",
 		Order = 1)]
 	Dictionary<string, string[]> CommandRestrictions,
-	
+
 	[property: SharpConfig(
 		Name = "function_restrictions",
 		Category = "Restriction",

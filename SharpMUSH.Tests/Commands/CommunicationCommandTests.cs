@@ -10,6 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -76,20 +77,24 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("@emit Test broadcast", "Test broadcast")]
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask EmitBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// @emit broadcasts to room, so we expect at least one notification
+		// @emit broadcasts to room via CommunicationService.SendToRoomAsync which calls
+		// Notify(AnySharpObject, ..., NotificationType.Emit)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
 	[Arguments("@lemit Test local emit", "Test local emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask LemitBasic(string command, string expected)
 	{
@@ -103,6 +108,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask RemitBasic(string command, string expected)
 	{
@@ -116,6 +122,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@oemit #1=Test omit emit", "Test omit emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask OemitBasic(string command, string expected)
 	{
@@ -129,6 +136,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@zemit Test zone emit", "Test zone emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask ZemitBasic(string command, string expected)
 	{
@@ -142,6 +150,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsemit Test nospoof emit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NsemitBasic(string command)
 	{
@@ -156,6 +165,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nslemit Test nospoof local")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NslemitBasic(string command)
 	{
@@ -169,6 +179,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsremit #0=Test nospoof remote")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NsremitBasic(string command)
 	{
@@ -182,6 +193,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nsoemit #1=Test nospoof omit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NsoemitBasic(string command)
 	{
@@ -195,6 +207,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nspemit #1=Test nospoof pemit")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NspemitBasic(string command)
 	{
@@ -208,6 +221,7 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@nszemit Test nospoof zone")]
+	[Category("NotImplemented")]
 	[Skip("Not yet implemented")]
 	public async ValueTask NszemitBasic(string command)
 	{
@@ -233,12 +247,12 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' added for channel Public")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))),
 				null);
 	}
 
 	[Test]
-	[Arguments("addcom=Public", "Alias name cannot be empty."), Skip("TODO")]
+	[Arguments("addcom=Public", "Alias name cannot be empty.")]
 	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
@@ -250,7 +264,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(expected)) ||
-				(msg.IsT1 && msg.AsT1.Contains(expected))), 
+				(msg.IsT1 && msg.AsT1.Contains(expected))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -262,7 +276,7 @@ public class CommunicationCommandTests
 		var alias = command.Split(' ')[1];
 		// First add an alias
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
-		
+
 		// Now delete it
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -272,7 +286,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' deleted")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' deleted"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' deleted"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -289,7 +303,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -305,23 +319,22 @@ public class CommunicationCommandTests
 		// The exact format depends on ChannelList.Handle, but it should send something
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), 
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
 				null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
-	[Skip("TOOD")]
 	public async ValueTask ComTitleBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		var parts = command.Split('=');
 		var alias = parts[0].Split(' ')[1];
 		var title = parts[1];
-		
+
 		// First add an alias
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
-		
+
 		// Now set title
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -332,7 +345,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"for alias '{alias}'")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -349,7 +362,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))), 
+				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -361,7 +374,7 @@ public class CommunicationCommandTests
 		// First add some aliases
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST2=Public"));
-		
+
 		// Now list them
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -371,19 +384,20 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				msg.IsT0 && 
-				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist1") && 
-				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist2")), 
+				msg.IsT0 &&
+				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist1") &&
+				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist2")),
 				null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	[Arguments("comlist")]
-	[Skip("TODO: Failing Test. Requires investigation.")]
 	public async ValueTask ComListEmpty(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
-		// Make sure we have no aliases, just list
+		// Wipe all channel aliases for the executor to ensure an empty state
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe me/CHANALIAS*"));
+
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		// Verify the empty list message was sent
@@ -391,7 +405,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains("no channel aliases")) ||
-				(msg.IsT1 && msg.AsT1.Contains("no channel aliases"))), 
+				(msg.IsT1 && msg.AsT1.Contains("no channel aliases"))),
 				null, INotifyService.NotificationType.Announce);
 	}
 }

@@ -83,6 +83,7 @@ public class LogCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask LogwipeCommand()
 	{
@@ -98,10 +99,10 @@ public class LogCommandTests
 	{
 		// First set a lock on object #1
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@lock #1=#TRUE"));
-		
+
 		// Now test @lset to set a flag on the Basic lock
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@lset #1/Basic=visual"));
-		
+
 		// Verify the command executed successfully (didn't throw or return error)
 		await Assert.That(result).IsNotNull();
 	}

@@ -9,12 +9,12 @@ public enum AttributeSource
 	/// Attribute is defined directly on the object.
 	/// </summary>
 	Self,
-	
+
 	/// <summary>
 	/// Attribute is inherited from a parent in the parent chain.
 	/// </summary>
 	Parent,
-	
+
 	/// <summary>
 	/// Attribute is inherited from a zone.
 	/// </summary>
@@ -33,17 +33,17 @@ public record AttributeWithInheritance(
 	/// For nested attributes (e.g., FOO`BAR`BAZ), this contains the full path.
 	/// </summary>
 	SharpAttribute[] Attributes,
-	
+
 	/// <summary>
 	/// The DBRef of the object where this attribute was actually found.
 	/// </summary>
 	DBRef SourceObject,
-	
+
 	/// <summary>
 	/// Indicates whether the attribute comes from the object itself, a parent, or a zone.
 	/// </summary>
 	AttributeSource Source,
-	
+
 	/// <summary>
 	/// Flags adjusted for inheritance.
 	/// Non-inheritable flags are filtered out when the attribute is inherited from a parent or zone.
@@ -58,17 +58,17 @@ public record LazyAttributeWithInheritance(
 	/// The attribute path as an array of LazySharpAttribute objects.
 	/// </summary>
 	LazySharpAttribute[] Attributes,
-	
+
 	/// <summary>
 	/// The DBRef of the object where this attribute was actually found.
 	/// </summary>
 	DBRef SourceObject,
-	
+
 	/// <summary>
 	/// Indicates whether the attribute comes from the object itself, a parent, or a zone.
 	/// </summary>
 	AttributeSource Source,
-	
+
 	/// <summary>
 	/// Flags adjusted for inheritance.
 	/// Non-inheritable flags are filtered out when the attribute is inherited from a parent or zone.

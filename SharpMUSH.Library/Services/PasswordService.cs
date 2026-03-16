@@ -1,10 +1,10 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using Mediator;
+﻿using Mediator;
 using Microsoft.AspNetCore.Identity;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SharpMUSH.Library.Services;
 
@@ -26,7 +26,7 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 {
 	private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-	public string GenerateRandomPassword() 
+	public string GenerateRandomPassword()
 		=> RandomNumberGenerator.GetString(Chars, 32);
 
 	public string HashPassword(string user, string pw) =>

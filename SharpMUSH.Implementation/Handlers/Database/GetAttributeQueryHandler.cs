@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;

@@ -17,6 +17,7 @@ public class SystemCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FlagCommand()
 	{
@@ -28,6 +29,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PowerCommand()
 	{
@@ -39,6 +41,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HookCommand()
 	{
@@ -50,6 +53,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FunctionCommand()
 	{
@@ -61,6 +65,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask CommandCommand()
 	{
@@ -72,6 +77,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HideCommand()
 	{
@@ -83,6 +89,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask KickCommand()
 	{
@@ -94,6 +101,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AttributeCommand()
 	{
@@ -105,6 +113,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrlockCommand()
 	{
@@ -116,6 +125,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrchownCommand()
 	{
@@ -127,6 +137,7 @@ public class SystemCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FirstexitCommand()
 	{

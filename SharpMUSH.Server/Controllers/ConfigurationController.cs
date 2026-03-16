@@ -25,7 +25,7 @@ public class ConfigurationController(
 		{
 			var configuration = options.CurrentValue;
 			var converted = OptionHelper.OptionsToConfigurationResponse(configuration);
-			
+
 			return Ok(converted);
 		}
 		catch (Exception ex)
