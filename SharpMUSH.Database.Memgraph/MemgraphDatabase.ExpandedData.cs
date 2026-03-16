@@ -21,7 +21,7 @@ public partial class MemgraphDatabase
 {
 	#region Expanded Data
 
-	public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data, CancellationToken cancellationToken = default)
+	public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, object data, CancellationToken cancellationToken = default)
 	{
 		var objKey = ExtractKey(sharpObjectId);
 
@@ -79,7 +79,7 @@ RETURN d.data AS data
 		return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
 	}
 
-	public async ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken cancellationToken = default)
+	public async ValueTask SetExpandedServerData(string dataType, object data, CancellationToken cancellationToken = default)
 	{
 		var jsonData = JsonSerializer.Serialize((object)data, JsonOptions);
 		await ExecuteWithRetryAsync("""

@@ -25,7 +25,7 @@ public partial class ArangoDatabase
 {
 	#region Expanded Data
 
-	public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data,
+	public async ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, object data,
 		CancellationToken ct = default)
 	{
 		// Get the edge that leads to it, otherwise we will have to create one.
@@ -43,7 +43,7 @@ public partial class ArangoDatabase
 
 		var newJson = new Dictionary<string, object> { { dataType, data } };
 
-		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<dynamic, dynamic>(handle,
+		var newVertex = await arangoDb.Graph.Vertex.CreateAsync<object, System.Text.Json.JsonElement>(handle,
 			DatabaseConstants.GraphObjectData,
 			DatabaseConstants.ObjectData,
 			newJson, waitForSync: true, cancellationToken: ct);
@@ -66,7 +66,7 @@ public partial class ArangoDatabase
 		return resultingValue;
 	}
 
-	public async ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken ct = default)
+	public async ValueTask SetExpandedServerData(string dataType, object data, CancellationToken ct = default)
 	{
 		// Use a transaction with exclusive lock to prevent write-write conflicts
 		var transaction = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction

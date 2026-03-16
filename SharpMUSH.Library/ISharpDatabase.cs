@@ -668,7 +668,7 @@ public interface ISharpDatabase
 	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
 	/// <param name="data">Json body to set.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, dynamic data, CancellationToken cancellationToken = default);
+	ValueTask SetExpandedObjectData(string sharpObjectId, string dataType, object data, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Gets the Expanded Object Data for a SharpObject. 
@@ -686,7 +686,7 @@ public interface ISharpDatabase
 	/// <param name="dataType">Type being stored. Each Type gets its own storage.</param>
 	/// <param name="data">Json body to set.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken cancellationToken = default);
+	ValueTask SetExpandedServerData(string dataType, object data, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Gets the Expanded Object Data for the server as a whole. 
