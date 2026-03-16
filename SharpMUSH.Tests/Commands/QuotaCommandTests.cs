@@ -4,6 +4,7 @@ using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -17,14 +18,12 @@ public class QuotaCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SquotaCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@squota #1=100"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 }

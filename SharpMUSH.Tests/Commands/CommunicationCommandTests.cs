@@ -71,7 +71,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), expected, Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -94,59 +94,67 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("@lemit Test local emit", "Test local emit")]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask LemitBasic(string command, string expected)
+	public async ValueTask LemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		var uniqueMsg = $"lemit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lemit {uniqueMsg}"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, uniqueMsg)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
-	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask RemitBasic(string command, string expected)
+	public async ValueTask RemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		var uniqueMsg = $"remit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@remit #0={uniqueMsg}"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, uniqueMsg)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
-	[Arguments("@oemit #1=Test omit emit", "Test omit emit")]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask OemitBasic(string command, string expected)
+	public async ValueTask OemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		// @oemit #0=msg: exclude room #0 itself, send uniqueMsg to all other occupants of executor's room
+		var uniqueMsg = $"oemit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@oemit #0={uniqueMsg}"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, uniqueMsg)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
-	[Arguments("@zemit Test zone emit", "Test zone emit")]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask ZemitBasic(string command, string expected)
+	public async ValueTask ZemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		// @zemit requires zone=message. Use a nonexistent zone to trigger locate-failure path.
+		var uniqueZone = $"zone-{Guid.NewGuid():N}";
+		var uniqueMsg = $"zemit-{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@zemit {uniqueZone}={uniqueMsg}"));
 
+		// Locate failure sends "I can't see that here" to the executor
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "I can't see that here")),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

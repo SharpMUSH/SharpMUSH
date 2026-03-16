@@ -419,20 +419,21 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(CloneObject))]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SetParent()
 	{
-		// Create two objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Parent Object"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Child Object"));
+		// Create two objects and capture their dbrefs
+		var parentResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Parent Object"));
+		var childResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Child Object"));
 
-		// Set parent
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@parent #9=#8"));
+		var parentDbRef = parentResult.Message!.ToPlainText()!;
+		var childDbRef = childResult.Message!.ToPlainText()!;
+
+		// Set parent using captured dbrefs
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childDbRef}={parentDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -490,19 +491,18 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(RecycleObject))]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{
 		// Create and link an exit
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Unlink Room"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@open Unlink Exit=#14"));
+		var roomResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Unlink Room"));
+		var roomDbRef = roomResult.Message!.ToPlainText()!;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@open Unlink Exit={roomDbRef}"));
 
 		// Unlink it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@unlink Unlink Exit"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Unlinked")));
 	}

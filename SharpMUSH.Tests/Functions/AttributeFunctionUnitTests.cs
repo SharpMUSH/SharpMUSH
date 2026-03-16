@@ -198,9 +198,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Zones Not Yet Implemented")]
-	[Arguments("zfun(TEST_ATTR)", "#-1 ZONES NOT YET IMPLEMENTED")]
+	[Arguments("zfun(TEST_ATTR)", "#-1 NO ZONE SET")]
 	public async Task Test_Zfun_NotImplemented(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

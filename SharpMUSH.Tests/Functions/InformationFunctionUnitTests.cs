@@ -27,12 +27,10 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async Task Name()
 	{
 		var result = (await Parser.FunctionParse(MModule.single("name(%#)")))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo("One");
+		await Assert.That(result.ToPlainText()).IsEqualTo("God");
 	}
 
 	[Test]

@@ -5,6 +5,7 @@ using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -20,15 +21,15 @@ public class MovementCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask GotoCommand()
 	{
+		// goto #0 tries to find an exit - fails to locate and sends "I can't see that here" with caller
 		await Parser.CommandParse(1, ConnectionService, MModule.single("goto #0"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -164,15 +165,13 @@ public class MovementCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask EnterCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("enter #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]

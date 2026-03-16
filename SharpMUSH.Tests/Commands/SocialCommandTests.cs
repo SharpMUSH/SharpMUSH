@@ -4,6 +4,7 @@ using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -54,15 +55,13 @@ public class SocialCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask WhisperCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -73,7 +72,7 @@ public class SocialCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<MString>(), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 }

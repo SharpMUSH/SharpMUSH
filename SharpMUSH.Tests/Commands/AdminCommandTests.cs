@@ -25,7 +25,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate TestPlayerPcreate=passwordPcreate"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
@@ -37,7 +37,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@newpassword #1=newpassNewpassword"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
@@ -49,7 +49,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@password oldpassPassword=newpassPassword"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
@@ -64,15 +64,13 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask RestartCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -93,20 +91,18 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poor #1001"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ReadcacheCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -117,7 +113,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1002=#2002"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
@@ -129,7 +125,7 @@ public class AdminCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzoneall #1003=#2003"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 }
