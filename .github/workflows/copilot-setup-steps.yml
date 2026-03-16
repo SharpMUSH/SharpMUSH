@@ -28,12 +28,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET (Latest Stable)
+      - name: Setup .NET 11 Preview 2
         uses: actions/setup-dotnet@v4
         with:
-          # Use 'x' to always get the latest stable version
-          dotnet-version: 11.x
-          dotnet-quality: 'preview'
+          dotnet-version: 11.0.100-preview.2.26159.112
 
       - name: Restore dependencies
         run: dotnet restore
