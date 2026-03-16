@@ -241,6 +241,14 @@ public class AttributeFunctionUnitTests
 	[Test]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_CHILD")]
+	public async Task Test_Pgrep_ChildOnly(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
 	[Category("NotImplemented")]
 	[Arguments("[attrib_set([parent(me,create(PGREP_PARENT))]/PGREP_PARENT,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_PARENT")
 	 , Skip("Parent Mode not implemented yet.")]
@@ -281,13 +289,19 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Category("NotImplemented")]
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_100,value3)]" +
-						 "[regxattrp(%!/Test_Regxattrp_RangeWithParents_[0-9]+,1,2)]",
-		"TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")
-	 , Skip("Parent Mode not implemented yet.")]
+						 "[regxattrp(%!/Test_Regxattrp_RangeWithParents_\\[0-9\\]+,1,2)]",
+		"TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")]
+	public async Task Test_Regxattrp_RangeWithParents_SelfOnly(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
 	[Category("NotImplemented")]
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents2_001,value1)]" +
 						 "[attrib_set([parent(me,create(Test_Regxattrp_RangeWithParents2))]/Test_Regxattrp_RangeWithParents2_002,value2)]" +

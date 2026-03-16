@@ -984,41 +984,45 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(MModule.multiple(split.Reverse())));
 	}
 
-	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["varname", "list", "expression", "delim", "outdelim"])]
+	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse, ParameterNames = ["list", "pattern", "delimiter", "output-separator"])]
 	public static async ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		//  foreach([<object>/]<attribute>, <string>[, <start>[, <end>]])
+		var listArg = (await parser.CurrentState.Arguments["0"].ParsedMessage())!;
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var objAttr = args["0"].Message;
-		var str = args["1"].Message!;
-		var start = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "0").ToPlainText();
-		var end = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, str.Length.ToString()).ToPlainText();
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var list = MModule.split2(delim, listArg);
+		var wrappedIteration = new IterationWrapper<MString>
+		{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
+		var result = new List<MString>();
 
-		if (!int.TryParse(start, out var startInt) || !int.TryParse(end, out var endInt))
+		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
+		var patternArg = parser.CurrentState.Arguments["1"];
+		var patternParts = MModule.split("##", patternArg.Message!);
+		MString? modifiedPattern = patternParts.Length > 1
+			? MModule.multipleWithDelimiter(MModule.single("%iL"), patternParts)
+			: null;
+
+		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
+
+		foreach (var item in list)
 		{
-			return Errors.ErrorInteger;
+			wrappedIteration.Value = item!;
+			wrappedIteration.Iteration++;
+			var parsed = modifiedPattern != null
+				? (await parser.FunctionParse(modifiedPattern))?.Message
+				: await patternArg.ParsedMessage();
+			result.Add(parsed!);
+
+			if (wrappedIteration.Break)
+			{
+				break;
+			}
 		}
 
-		if (startInt < 0 || endInt < 0)
-		{
-			return Errors.ErrorPositiveInteger;
-		}
+		parser.CurrentState.IterationRegisters.TryPop(out _);
 
-		// DO Object and Attribute split here.
-
-		endInt = Math.Min(endInt, str.Length);
-
-		var left = MModule.substring(startInt, endInt - startInt, str);
-		var right = MModule.substring(endInt, str.Length - endInt, str);
-		var remainder = MModule.substring(endInt - startInt, str.Length - endInt + startInt, str);
-
-		// TODO: Apply attribute function to each character in remainder using MModule.apply2.
-		// This would allow per-character transformation via user-defined attributes.
-		// Currently returns raw remainder string without transformation.
-
-		return MModule.multiple([left, remainder, right]);
+		return new CallState(MModule.multipleWithDelimiter(sep, result));
 	}
 
 	// Escape angle brackets for HTML safety
