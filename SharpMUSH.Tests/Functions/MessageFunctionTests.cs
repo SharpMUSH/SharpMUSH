@@ -3,6 +3,7 @@ using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -19,9 +20,10 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageBasicReturnsEmpty()
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC_19283 #1=MessageFunc_Value_19283"));
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MsgFuncBasic");
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGFUNC_19283 {objDbRef}=MessageFunc_Value_19283"));
 
-		var result = (await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC_19283)")))?.Message!;
+		var result = (await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGFUNC_19283)")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("");
 	}
@@ -29,9 +31,10 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageBasicSendsNotification()
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGFUNC2_37291 #1=MessageFuncSends_Value_37291"));
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MsgFuncSends");
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGFUNC2_37291 {objDbRef}=MessageFuncSends_Value_37291"));
 
-		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGFUNC2_37291)"));
+		await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGFUNC2_37291)"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -48,9 +51,10 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageWithAttributeEvaluation()
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGEVAL_82044 #1=MessageEval_Result_82044:[mul(3,7)]"));
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MsgFuncEval");
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGEVAL_82044 {objDbRef}=MessageEval_Result_82044:[mul(3,7)]"));
 
-		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGEVAL_82044)"));
+		await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGEVAL_82044)"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -67,7 +71,9 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageUsesDefaultWhenAttributeMissing()
 	{
-		await Parser.FunctionParse(MModule.single("message(#1,MessageDefault_Value_91847,MISSING_ATTR_91847)"));
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MsgFuncMissingAttr");
+
+		await Parser.FunctionParse(MModule.single($"message({objDbRef},MessageDefault_Value_91847,MISSING_ATTR_91847)"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -84,9 +90,10 @@ public class MessageFunctionTests
 	[Test]
 	public async Task MessageWithMultipleArguments()
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("&TESTFORMAT_MSGARGS_63018 #1=MessageArgs_Value_63018"));
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MsgFuncArgs");
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGARGS_63018 {objDbRef}=MessageArgs_Value_63018"));
 
-		await Parser.FunctionParse(MModule.single("message(#1,Default,TESTFORMAT_MSGARGS_63018)"));
+		await Parser.FunctionParse(MModule.single($"message({objDbRef},Default,TESTFORMAT_MSGARGS_63018)"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>

@@ -43,20 +43,8 @@ public class PlayerDestructionTests
 	// Helper: create a fresh player via the database layer (avoids @pcreate
 	// argument-parsing edge-cases) and return its DBRef.
 	// -----------------------------------------------------------------------
-	private async Task<DBRef> CreateTestPlayerAsync(string uniqueSuffix)
-	{
-		var options = WebAppFactoryArg.Services
-			.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
-		var defaultHome = new DBRef((int)options.CurrentValue.Database.DefaultHome);
-		var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
-
-		return await Mediator.Send(new CreatePlayerCommand(
-			$"PDT_Player_{uniqueSuffix}",
-			"TestPassword123",
-			defaultHome,
-			defaultHome,
-			startingQuota));
-	}
+	private Task<DBRef> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, namePrefix);
 
 	// -----------------------------------------------------------------------
 	// Test 1a – Players are always owned by themselves
