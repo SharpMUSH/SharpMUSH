@@ -21,7 +21,6 @@ public class TelnetServer : ConnectionHandler
 	private readonly IMessageBus _publishEndpoint;
 	private readonly IDescriptorGeneratorService _descriptorGenerator;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
-	private readonly SemaphoreSlim _semaphoreSlimForWriter = new(1, 1);
 
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
@@ -44,11 +43,7 @@ public class TelnetServer : ConnectionHandler
 		var telnet = await new TelnetInterpreterBuilder()
 			.UseMode(TelnetInterpreter.TelnetMode.Server)
 			.UseLogger(_logger)
-		.OnNegotiation(async (data) =>
-		{
-			// Write telnet negotiation bytes to the network
-			await connection.Transport.Output.WriteAsync(data, ct);
-		})
+			.UsePipe(connection.Transport)
 			.OnSubmit(async (byteArray, encoding, _) =>
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, encoding.GetString(byteArray)), ct))
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
@@ -58,7 +53,7 @@ public class TelnetServer : ConnectionHandler
 				await _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct))
 			.AddPlugin<NAWSProtocol>().OnNAWS(async (newHeight, newWidth) =>
 				await _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct))
-			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection, ct))
+			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection))
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
 			.AddPlugin<MCCPProtocol>()
 			.BuildAsync();
@@ -75,23 +70,15 @@ public class TelnetServer : ConnectionHandler
 			"telnet",
 		async (data) =>
 		{
-			// Write output to the network transport with proper telnet escaping
-			// TelnetSafeBytes escapes IAC (0xFF) characters and applies MCCP compression if negotiated
+			// Write output to the network transport using SendAsync which handles
+			// IAC (0xFF) escaping and CRLF line termination internally.
+			// Write serialization is handled by the library's internal write lock.
 			_logger.LogTrace("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
 			try
 			{
-				await _semaphoreSlimForWriter.WaitAsync(ct);
-				try
-				{
-					var telnetSafeData = telnet.TelnetSafeBytes(data);
-					await connection.Transport.Output.WriteAsync(telnetSafeData.AsMemory(), ct);
-					_logger.LogTrace("Successfully wrote {ByteCount} telnet-safe bytes ({Original} original) to transport for handle {Handle}",
-						telnetSafeData.Length, data.Length, nextPort);
-				}
-				finally
-				{
-					_semaphoreSlimForWriter.Release();
-				}
+				await telnet.SendAsync(data);
+				_logger.LogTrace("Successfully sent {ByteCount} bytes to transport for handle {Handle}",
+					data.Length, nextPort);
 			}
 			catch (ObjectDisposedException ode)
 			{
@@ -104,20 +91,13 @@ public class TelnetServer : ConnectionHandler
 		},
 		async (data) =>
 		{
-			// Write prompt output to the network transport with proper telnet escaping
-			// TelnetSafeBytes escapes IAC (0xFF) characters and applies MCCP compression if negotiated
+			// Write prompt output using SendPromptAsync which handles IAC (0xFF) escaping
+			// and adds the appropriate prompt terminator (EOR, GA, or CRLF) based on
+			// what the client has negotiated.
+			// Write serialization is handled by the library's internal write lock.
 			try
 			{
-				await _semaphoreSlimForWriter.WaitAsync(ct);
-				try
-				{
-					var telnetSafeData = telnet.TelnetSafeBytes(data);
-					await connection.Transport.Output.WriteAsync(telnetSafeData.AsMemory(), ct);
-				}
-				finally
-				{
-					_semaphoreSlimForWriter.Release();
-				}
+				await telnet.SendPromptAsync(data);
 			}
 			catch (ObjectDisposedException ode)
 			{
@@ -138,22 +118,17 @@ public class TelnetServer : ConnectionHandler
 
 		try
 		{
-			while (!ct.IsCancellationRequested)
-			{
-				var result = await connection.Transport.Input.ReadAsync(ct);
-
-				foreach (var segment in result.Buffer)
-				{
-					await telnet.InterpretByteArrayAsync(segment);
-				}
-
-				if (result.IsCompleted) break;
-				connection.Transport.Input.AdvanceTo(result.Buffer.End, result.Buffer.End);
-			}
+			// Use the library's static read loop helper which handles reading from
+			// the pipe input and feeding bytes to the interpreter
+			await TelnetInterpreterBuilder.ReadFromPipeAsync(telnet, connection.Transport.Input, ct);
 		}
 		catch (ConnectionResetException)
 		{
 			/* Disconnected while evaluating. That's fine. It just means someone closed their client. */
+		}
+		catch (OperationCanceledException)
+		{
+			/* Connection was cancelled/closed normally. */
 		}
 		catch (Exception ex)
 		{
@@ -164,32 +139,14 @@ public class TelnetServer : ConnectionHandler
 		await _connectionService.DisconnectAsync(nextPort);
 	}
 
-	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection, CancellationToken ct)
+	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection)
 	{
-		/*
-		var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar =>
-		{
-			// Publish MSDP update to MainProcess
-			// resetVar is a string representing the variable name that was reset
-			// Create a dictionary with the reset variable
-			var msdpData = new Dictionary<string, string> { { "RESET", resetVar } };
-			await _publishEndpoint.Publish(new MSDPUpdateMessage(nextPort, msdpData), ct);
-		}));
-		*/
-
 		return async (ti, str) =>
 		{
 			try
 			{
-				await _semaphoreSlimForWriter.WaitAsync(ct);
-				try
-				{
-					await connection.Transport.Output.WriteAsync(ti.TelnetSafeString(str), ct);
-				}
-				finally
-				{
-					_semaphoreSlimForWriter.Release();
-				}
+				// Write MSDP response using the library's thread-safe WriteToNetworkAsync
+				await ti.WriteToNetworkAsync(ti.CurrentEncoding.GetBytes(str));
 			}
 			catch (ObjectDisposedException ode)
 			{
