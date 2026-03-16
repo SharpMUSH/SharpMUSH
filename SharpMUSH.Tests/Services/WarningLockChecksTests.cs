@@ -1,5 +1,4 @@
 using SharpMUSH.Library.Definitions;
-using TUnit.Core;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -24,28 +23,28 @@ public class WarningLockChecksTests
 	public async Task LockChecks_InSeriousGroup()
 	{
 		var serious = WarningType.Serious;
-		await Assert.That(serious.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
+		await Assert.That(serious.HasFlag(WarningType.LockProbs)).IsTrue();
 	}
 
 	[Test]
 	public async Task LockChecks_InNormalGroup()
 	{
 		var normal = WarningType.Normal;
-		await Assert.That(normal.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
+		await Assert.That(normal.HasFlag(WarningType.LockProbs)).IsTrue();
 	}
 
 	[Test]
 	public async Task LockChecks_InExtraGroup()
 	{
 		var extra = WarningType.Extra;
-		await Assert.That(extra.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
+		await Assert.That(extra.HasFlag(WarningType.LockProbs)).IsTrue();
 	}
 
 	[Test]
 	public async Task LockChecks_InAllGroup()
 	{
 		var all = WarningType.All;
-		await Assert.That(all.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
+		await Assert.That(all.HasFlag(WarningType.LockProbs)).IsTrue();
 	}
 
 	[Test]
@@ -61,10 +60,10 @@ public class WarningLockChecksTests
 	{
 		// Test that "all !lock-checks" removes LockProbs from All
 		var parsed = WarningTypeHelper.ParseWarnings("all !lock-checks");
-		await Assert.That(parsed.HasFlag(WarningType.LockProbs)).IsEqualTo(false);
-		
+		await Assert.That(parsed.HasFlag(WarningType.LockProbs)).IsFalse();
+
 		// But should still have other flags from All
-		await Assert.That(parsed.HasFlag(WarningType.ExitUnlinked)).IsEqualTo(true);
+		await Assert.That(parsed.HasFlag(WarningType.ExitUnlinked)).IsTrue();
 	}
 
 	[Test]
@@ -72,8 +71,8 @@ public class WarningLockChecksTests
 	{
 		// Test combining lock-checks with other warnings
 		var parsed = WarningTypeHelper.ParseWarnings("lock-checks room-desc");
-		await Assert.That(parsed.HasFlag(WarningType.LockProbs)).IsEqualTo(true);
-		await Assert.That(parsed.HasFlag(WarningType.RoomDesc)).IsEqualTo(true);
+		await Assert.That(parsed.HasFlag(WarningType.LockProbs)).IsTrue();
+		await Assert.That(parsed.HasFlag(WarningType.RoomDesc)).IsTrue();
 	}
 
 	[Test]
@@ -83,13 +82,14 @@ public class WarningLockChecksTests
 		var original = WarningType.LockProbs;
 		var unparsed = WarningTypeHelper.UnparseWarnings(original);
 		var reparsed = WarningTypeHelper.ParseWarnings(unparsed);
-		
+
 		await Assert.That(reparsed).IsEqualTo(original);
 	}
 
 	// Integration tests (skipped - require full DB and lock service setup)
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_ValidLock_NoWarnings()
 	{
@@ -102,6 +102,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_InvalidLock_TriggersWarning()
 	{
@@ -114,6 +115,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_MultipleLocks_ChecksAll()
 	{
@@ -126,6 +128,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_EmptyLock_Skipped()
 	{
@@ -138,6 +141,7 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires database and lock service setup")]
 	public async Task LockChecks_Integration_GoingObjectReference_TriggersWarning()
 	{

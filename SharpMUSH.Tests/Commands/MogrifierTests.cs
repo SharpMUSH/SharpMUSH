@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -42,7 +40,7 @@ public class MogrifierTests
 		// 2. Join it
 		// 3. Send a message
 		// 4. Verify the format
-		
+
 		// For now, just verify the command parses
 		// await Parser.CommandParse(1, ConnectionService, MModule.single("pub Hello"));
 	}
@@ -55,7 +53,7 @@ public class MogrifierTests
 		// 2. Set MOGRIFY`BLOCK to return non-empty string
 		// 3. Send message on channel
 		// 4. Verify only speaker received the block message
-		
+
 		// This would require full channel setup which is beyond unit test scope
 	}
 
@@ -68,7 +66,7 @@ public class MogrifierTests
 		// 3. Set individual @chatformat on player
 		// 4. Send message
 		// 5. Verify individual @chatformat was skipped
-		
+
 		// This would require full channel and player setup
 	}
 
@@ -80,7 +78,7 @@ public class MogrifierTests
 		// 2. Set MOGRIFY`FORMAT to custom format
 		// 3. Send message
 		// 4. Verify message uses custom format
-		
+
 		// This would require full channel setup
 	}
 
@@ -92,7 +90,7 @@ public class MogrifierTests
 		// 2. Set MOGRIFY`CHANNAME, MOGRIFY`PLAYERNAME, etc.
 		// 3. Send message
 		// 4. Verify each component was modified
-		
+
 		// This would require full channel setup
 	}
 
@@ -104,7 +102,7 @@ public class MogrifierTests
 		// 2. Set Use lock on mogrifier to fail for speaker
 		// 3. Send message
 		// 4. Verify mogrification was skipped
-		
+
 		// This would require full channel and lock setup
 	}
 }

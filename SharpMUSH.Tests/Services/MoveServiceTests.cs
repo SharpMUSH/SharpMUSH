@@ -1,9 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Models;
-using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
@@ -23,7 +19,7 @@ public class MoveServiceTests
 		var service = WebAppFactoryArg.Services.GetRequiredService<IMoveService>();
 		await Assert.That(service).IsNotNull();
 	}
-	
+
 	[Test]
 	public async ValueTask CalculateMoveCostReturnsZero()
 	{
@@ -34,6 +30,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask NoLoopWithSimpleMove()
 	{
@@ -42,6 +39,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask DetectsDirectLoop()
 	{
@@ -50,6 +48,7 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask DetectsIndirectLoop()
 	{
@@ -58,14 +57,16 @@ public class MoveServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask NoLoopIntoRoom()
 	{
 		// This test would require proper database setup with objects created
 		await ValueTask.CompletedTask;
 	}
-	
+
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncWithValidMove()
 	{
@@ -73,8 +74,9 @@ public class MoveServiceTests
 		// Would need proper database setup with test objects
 		await ValueTask.CompletedTask;
 	}
-	
+
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncFailsOnLoop()
 	{
@@ -82,8 +84,9 @@ public class MoveServiceTests
 		// Would need proper database setup with test objects
 		await ValueTask.CompletedTask;
 	}
-	
+
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncFailsOnPermission()
 	{
@@ -91,8 +94,9 @@ public class MoveServiceTests
 		// Would need proper database setup with test objects
 		await ValueTask.CompletedTask;
 	}
-	
+
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersEnterHooks()
 	{
@@ -100,8 +104,9 @@ public class MoveServiceTests
 		// Would need proper database setup with test objects and attributes
 		await ValueTask.CompletedTask;
 	}
-	
+
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersLeaveHooks()
 	{
@@ -109,8 +114,9 @@ public class MoveServiceTests
 		// Would need proper database setup with test objects and attributes
 		await ValueTask.CompletedTask;
 	}
-	
+
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database setup")]
 	public async ValueTask ExecuteMoveAsyncTriggersTeleportHooks()
 	{

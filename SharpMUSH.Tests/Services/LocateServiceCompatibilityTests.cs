@@ -1,20 +1,16 @@
+using Mediator;
+using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using Mediator;
-using Microsoft.Extensions.Options;
-using SharpMUSH.Library.Queries.Database;
-using NSubstitute;
-using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Extensions;
-using TUnit.Core;
 using System.Collections.Immutable;
-using DotNext.Threading;
-using OneOf.Types;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -44,6 +40,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits()
 	{
@@ -288,6 +285,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_TypePreference_ShouldRespectPlayerPreference()
 	{
@@ -332,6 +330,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_PartialMatching_ShouldFindObjectByPartialName()
 	{
@@ -410,6 +409,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom()
 	{
@@ -450,6 +450,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_MultipleObjects_ShouldHandleAmbiguousMatches()
 	{

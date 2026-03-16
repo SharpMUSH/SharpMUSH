@@ -44,7 +44,7 @@ public class CommunicationService(
 
 			var player = playerResult.WithoutNone();
 
-			if (await permissionService.CanInteract( executor, player, InteractType.Hear))
+			if (await permissionService.CanInteract(executor, player, InteractType.Hear))
 			{
 				validPorts.Add(port);
 			}
@@ -73,7 +73,7 @@ public class CommunicationService(
 			.Where(async (obj, _) =>
 			{
 				var objWithRoom = obj.WithRoomOption();
-				
+
 				if (excludeSet.Contains(objWithRoom))
 				{
 					return false;

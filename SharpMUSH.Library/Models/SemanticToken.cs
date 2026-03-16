@@ -40,8 +40,8 @@ public record SemanticToken
 
 	public override string ToString()
 	{
-		var modifiers = Modifiers != SemanticTokenModifier.None 
-			? $" [{Modifiers}]" 
+		var modifiers = Modifiers != SemanticTokenModifier.None
+			? $" [{Modifiers}]"
 			: "";
 		return $"{TokenType}{modifiers}: '{Text}' at {Range}";
 	}
@@ -95,8 +95,8 @@ public record SemanticTokensData
 		foreach (var token in tokens.OrderBy(t => t.Range.Start.Line).ThenBy(t => t.Range.Start.Character))
 		{
 			var deltaLine = token.Range.Start.Line - prevLine;
-			var deltaChar = deltaLine == 0 
-				? token.Range.Start.Character - prevChar 
+			var deltaChar = deltaLine == 0
+				? token.Range.Start.Character - prevChar
 				: token.Range.Start.Character;
 
 			var tokenTypeIndex = (int)token.TokenType;

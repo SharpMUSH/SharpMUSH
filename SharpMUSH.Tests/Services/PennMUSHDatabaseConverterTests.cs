@@ -38,6 +38,7 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConversionResultIncludesStatistics()
 	{
@@ -89,12 +90,13 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConverterUpdatesGodPlayerNameAndPassword()
 	{
 		var converter = GetConverter();
 		var database = WebAppFactoryArg.Services.GetRequiredService<Library.ISharpDatabase>();
-		
+
 		var database1 = new PennMUSHDatabase
 		{
 			Version = "Test Version",
@@ -119,7 +121,7 @@ public class PennMUSHDatabaseConverterTests
 		var result = await converter.ConvertDatabaseAsync(database1);
 
 		await Assert.That(result.IsSuccessful).IsTrue();
-		
+
 		// Verify God player was updated with custom name
 		var godPlayer = await database.GetObjectNodeAsync(new Library.Models.DBRef(1));
 		await Assert.That(godPlayer.IsT0).IsTrue();
@@ -127,12 +129,13 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConverterUpdatesRoom0Name()
 	{
 		var converter = GetConverter();
 		var database = WebAppFactoryArg.Services.GetRequiredService<Library.ISharpDatabase>();
-		
+
 		var database1 = new PennMUSHDatabase
 		{
 			Version = "Test Version",
@@ -157,7 +160,7 @@ public class PennMUSHDatabaseConverterTests
 		var result = await converter.ConvertDatabaseAsync(database1);
 
 		await Assert.That(result.IsSuccessful).IsTrue();
-		
+
 		// Verify Room #0 was updated with custom name
 		var room0 = await database.GetObjectNodeAsync(new Library.Models.DBRef(0));
 		await Assert.That(room0.IsT1).IsTrue();
@@ -165,12 +168,13 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConverterSetsParentRelationships()
 	{
 		var converter = GetConverter();
 		var database = WebAppFactoryArg.Services.GetRequiredService<Library.ISharpDatabase>();
-		
+
 		var database1 = new PennMUSHDatabase
 		{
 			Version = "Test Version",
@@ -208,7 +212,7 @@ public class PennMUSHDatabaseConverterTests
 		var result = await converter.ConvertDatabaseAsync(database1);
 
 		await Assert.That(result.IsSuccessful).IsTrue();
-		
+
 		// Verify child room has parent set (would need to check the parent relationship)
 		// This is a basic test that conversion succeeded without errors
 		await Assert.That(result.Errors).IsEmpty();
@@ -216,12 +220,13 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConverterSetsZoneRelationships()
 	{
 		var converter = GetConverter();
 		var database = WebAppFactoryArg.Services.GetRequiredService<Library.ISharpDatabase>();
-		
+
 		var database1 = new PennMUSHDatabase
 		{
 			Version = "Test Version",
@@ -259,7 +264,7 @@ public class PennMUSHDatabaseConverterTests
 		var result = await converter.ConvertDatabaseAsync(database1);
 
 		await Assert.That(result.IsSuccessful).IsTrue();
-		
+
 		// Verify zoned room has zone set (would need to check the zone relationship)
 		// This is a basic test that conversion succeeded without errors
 		await Assert.That(result.Errors).IsEmpty();

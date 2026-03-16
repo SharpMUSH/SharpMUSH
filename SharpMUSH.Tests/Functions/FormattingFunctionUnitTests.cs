@@ -18,8 +18,7 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("tag(b,text)", "<b>text</b>")]
+	[Arguments("tag(b,text)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Tag(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -35,8 +34,7 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Not Yet Implemented")]
-	[Arguments("endtag(b)", "</b>")]
+	[Arguments("endtag(b)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Endtag(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

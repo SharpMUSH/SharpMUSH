@@ -1,5 +1,5 @@
-using System.Text;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using System.Text;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -9,13 +9,13 @@ namespace SharpMUSH.Tests.Services;
 public static class PennMUSHDatabaseGenerator
 {
 	private static readonly string[] CommonFlags = ["SAFE", "DARK", "VISUAL", "TRANSPARENT", "WIZARD", "ROYALTY", "INHERIT", "DEBUG", "GOING", "MONITOR", "MYOPIC", "PUPPET", "CHOWN_OK", "ENTER_OK", "LINK_OK", "OPAQUE", "QUIET", "STICKY", "UNFINDABLE", "LIGHT", "HAVEN", "ABODE", "FLOATING", "TRACK_MONEY", "AUDITORIUM", "ANSI"];
-	
+
 	private static readonly string[] CommonPowers = ["Login", "Guest", "See_All", "Cemit", "Can_Boot", "Announce", "Halt", "Pemit_All", "Hide", "See_Queue", "Search", "No_Pay", "No_Quota", "Long_Fingers", "Unkillable", "Give"];
-	
+
 	private static readonly string[] CommonLockTypes = ["Basic", "Enter", "Use", "Leave", "Drop", "Give", "Page", "Mail", "Teleport", "Speech", "Listen", "Command", "Parent", "Zone"];
-	
+
 	private static readonly string[] AttributeNames = ["DESCRIBE", "DESCRIPTION", "SEX", "RACE", "CLASS", "LEVEL", "HP", "MANA", "STR", "DEX", "CON", "INT", "WIS", "CHA", "INVENTORY", "EQUIPMENT", "SKILLS", "SPELLS", "COMBAT", "STATS", "NOTES", "HISTORY", "TITLE", "FULLNAME", "ALIAS", "COLOR", "PROFILE", "STATUS", "MOOD", "QUOTE"];
-	
+
 	private static readonly Random Random = new();
 
 	/// <summary>
@@ -170,7 +170,7 @@ public static class PennMUSHDatabaseGenerator
 	private static async Task WriteAttributeAsync(StreamWriter writer, int defaultOwner)
 	{
 		var attrName = AttributeNames[Random.Next(AttributeNames.Length)];
-		
+
 		// Sometimes add a branch name
 		if (Random.Next(0, 10) < 2)
 		{
@@ -193,13 +193,13 @@ public static class PennMUSHDatabaseGenerator
 		// Attribute value - random text between 50 and 500 characters
 		var valueLength = Random.Next(50, 501);
 		var value = GenerateRandomText(valueLength);
-		
+
 		// Sometimes add ANSI escape sequences
 		if (Random.Next(0, 10) < 3)
 		{
 			value = $"\x1b[{Random.Next(30, 38)}m{value}\x1b[0m";
 		}
-		
+
 		await writer.WriteLineAsync(value);
 	}
 
@@ -207,13 +207,13 @@ public static class PennMUSHDatabaseGenerator
 	{
 		var lockType = CommonLockTypes[Random.Next(CommonLockTypes.Length)];
 		var lockValue = $"#{Random.Next(0, 100)}";
-		
+
 		// Sometimes add complex lock expressions
 		if (Random.Next(0, 10) < 4)
 		{
 			lockValue += $"|#{Random.Next(0, 100)}";
 		}
-		
+
 		await writer.WriteLineAsync($"_{lockType}^{lockValue}");
 	}
 
@@ -233,12 +233,12 @@ public static class PennMUSHDatabaseGenerator
 	{
 		const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:!?-'\"()[]{}";
 		var sb = new StringBuilder(length);
-		
+
 		for (var i = 0; i < length; i++)
 		{
 			sb.Append(chars[Random.Next(chars.Length)]);
 		}
-		
+
 		return sb.ToString();
 	}
 }

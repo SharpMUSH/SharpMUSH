@@ -1,4 +1,3 @@
-using System.Linq;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -118,7 +117,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-	MinArgs = 2, MaxArgs = 2, ParameterNames = ["source/attribute", "destination/attribute"])]
+	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
 	public static async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -126,7 +125,7 @@ public partial class Commands
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
-		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out var destArg))
+		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
 			await NotifyService!.Notify(executor, "Invalid arguments to @cpattr.");
 			return new CallState("#-1 INVALID ARGUMENTS");
@@ -168,9 +167,13 @@ public partial class Commands
 		var attrValue = sourceAttribute.AsAttribute.Last().Value;
 		var attrFlags = sourceAttribute.AsAttribute.Last().Flags.ToList();
 
-		// Parse destination(s) - can be comma-separated
-		var destText = MModule.plainText(destArg.Message!);
-		var destinations = destText.Split(',').Select(d => d.Trim());
+		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
+		// starting at index 1. Collect all destination args in order.
+		var destinations = args
+			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
+			.OrderBy(kvp => int.Parse(kvp.Key))
+			.Select(kvp => MModule.plainText(kvp.Value.Message!).Trim())
+			.Where(d => !string.IsNullOrEmpty(d));
 
 		int copiedCount = 0;
 
@@ -244,7 +247,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@MVATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
-	MinArgs = 2, MaxArgs = 2, ParameterNames = ["source/attribute", "destination/attribute"])]
+	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
 	public static async ValueTask<Option<CallState>> MoveAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -252,7 +255,7 @@ public partial class Commands
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
 		var copyFlags = !parser.CurrentState.Switches.Contains("NOFLAGCOPY");
 
-		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out var destArg))
+		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
 			await NotifyService!.Notify(executor, "Invalid arguments to @mvattr.");
 			return new CallState("#-1 INVALID ARGUMENTS");
@@ -294,9 +297,13 @@ public partial class Commands
 		var attrValue = sourceAttribute.AsAttribute.Last().Value;
 		var attrFlags = sourceAttribute.AsAttribute.Last().Flags.ToList();
 
-		// Parse destination(s) - can be comma-separated
-		var destText = MModule.plainText(destArg.Message!);
-		var destinations = destText.Split(',').Select(d => d.Trim());
+		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
+		// starting at index 1. Collect all destination args in order.
+		var destinations = args
+			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
+			.OrderBy(kvp => int.Parse(kvp.Key))
+			.Select(kvp => MModule.plainText(kvp.Value.Message!).Trim())
+			.Where(d => !string.IsNullOrEmpty(d));
 
 		int copiedCount = 0;
 

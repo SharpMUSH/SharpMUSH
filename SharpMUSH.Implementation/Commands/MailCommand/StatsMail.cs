@@ -24,7 +24,7 @@ public static class StatsMail
 
 		if (!string.IsNullOrEmpty(arg0?.ToPlainText()))
 		{
-			if (!(executor.IsGod() || await executor.IsWizard()))
+			if (!await executor.IsWizard())
 			{
 				var errorResult = await notifyService.NotifyAndReturn(
 					executor.Object().DBRef,

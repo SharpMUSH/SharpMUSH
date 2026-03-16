@@ -1,11 +1,9 @@
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
-using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using static MarkupString.MarkupImplementation;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -24,7 +22,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		AnySharpObject executor,
 		AnySharpObject templateObject,
 		IAttributeService attributeService,
-		int maxWidth = 78) : base(maxWidth)
+		int maxWidth = 78) : base(maxWidth, parser)
 	{
 		_parser = parser;
 		_executor = executor;
@@ -97,7 +95,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var custom = TryEvaluateTemplate(templateName, args).GetAwaiter().GetResult();
 		return custom ?? base.RenderHeading(heading);
 	}
-	
+
 	/// <summary>
 	/// Helper method to render inline content (similar to private RenderInlines in base class)
 	/// </summary>

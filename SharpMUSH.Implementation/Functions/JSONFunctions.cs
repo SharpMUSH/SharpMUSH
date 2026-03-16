@@ -1,13 +1,9 @@
-﻿using System.Collections.Immutable;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Json.Patch;
+﻿using Json.Patch;
 using Json.Path;
 using Json.Pointer;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
-using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -15,6 +11,10 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
+using System.Collections.Immutable;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -57,51 +57,9 @@ public partial class Functions
 	public static async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
-		var objAttr =
-			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
-		if (objAttr is { IsT1: true, AsT1: false })
-		{
-			return new CallState(Errors.ErrorObjectAttributeString);
-		}
+		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
+		var rawAttrStr = MModule.plainText(rawAttrArg)!;
 
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.Object().DBRef.ToString();
-
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
-			parser,
-			enactor,
-			executor,
-			dbref,
-			LocateFlags.All);
-
-		if (!locate.IsValid())
-		{
-			return CallState.Empty;
-		}
-
-		var located = locate.WithoutError().WithoutNone();
-
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
-			executor,
-			located,
-			attrName,
-			mode: IAttributeService.AttributeMode.Execute,
-			parent: true);
-
-		if (maybeAttr.IsNone)
-		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
-		}
-
-		if (maybeAttr.IsError)
-		{
-			return new CallState(maybeAttr.AsError.Value);
-		}
-
-		var attr = maybeAttr.AsAttribute;
-		var attrValue = attr.Last().Value;
-		
 		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToString();
 		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 
@@ -109,6 +67,62 @@ public partial class Functions
 		for (int i = 3; i < parser.CurrentState.Arguments.Count; i++)
 		{
 			userArgs[i.ToString()] = parser.CurrentState.Arguments[i.ToString()];
+		}
+
+		// Resolved attribute text for the standard (non-lambda) path; only set in the if-block below.
+		MString attrValue = MModule.empty();
+
+		// Helper to evaluate a function call (attribute or lambda) with a given args dict.
+		// For #lambda / #apply, EvaluateAttributeFunctionAsync handles the special prefix.
+		// For regular attribute references, we use the pre-resolved attrValue via FunctionParse.
+		async ValueTask<MString> EvalWithArgs(Dictionary<string, CallState> callArgs)
+		{
+			if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
+			{
+				return await AttributeService!.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, callArgs);
+			}
+
+			var callParser = parser.Push(parser.CurrentState with
+			{
+				Arguments = callArgs,
+				EnvironmentRegisters = callArgs
+			});
+			return (await callParser.FunctionParse(attrValue))!.Message!;
+		}
+
+		if (!HelperFunctions.IsLambdaOrApply(rawAttrStr))
+		{
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
+			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
+			if (objAttr is { IsT1: true, AsT1: false })
+			{
+				return new CallState(Errors.ErrorObjectAttributeString);
+			}
+
+			var (dbref, attrName) = objAttr.AsT0;
+			dbref ??= executor.Object().DBRef.ToString();
+
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, enactor, executor, dbref, LocateFlags.All);
+			if (!locate.IsValid())
+			{
+				return CallState.Empty;
+			}
+
+			var located = locate.WithoutError().WithoutNone();
+			var maybeAttr = await AttributeService!.GetAttributeAsync(executor, located, attrName,
+				mode: IAttributeService.AttributeMode.Execute, parent: true);
+
+			if (maybeAttr.IsNone)
+			{
+				return new CallState(Errors.ErrorNoSuchAttribute);
+			}
+
+			if (maybeAttr.IsError)
+			{
+				return new CallState(maybeAttr.AsError.Value);
+			}
+
+			attrValue = maybeAttr.AsAttribute.Last().Value;
 		}
 
 		try
@@ -130,16 +144,8 @@ public partial class Functions
 						{ "0", new CallState(JsonHelpers.GetJsonType(rootElement)) },
 						{ "1", new CallState(rootElement.GetRawText()) }
 					};
-					foreach (var ua in userArgs)
-					{
-						args[ua.Key] = ua.Value;
-					}
-					var newParser = parser.Push(parser.CurrentState with
-					{
-						Arguments = args,
-						EnvironmentRegisters = args
-					});
-					result.Add((await newParser.FunctionParse(attrValue))!.Message!);
+					foreach (var ua in userArgs) args[ua.Key] = ua.Value;
+					result.Add(await EvalWithArgs(args));
 					break;
 
 				case JsonValueKind.Array:
@@ -152,40 +158,23 @@ public partial class Functions
 							{ "1", new CallState(element.GetRawText()) },
 							{ "2", new CallState(arrayIndex.ToString()) }
 						};
-						foreach (var ua in userArgs)
-						{
-							arrayArgs[ua.Key] = ua.Value;
-						}
-						var arrayParser = parser.Push(parser.CurrentState with
-						{
-							Arguments = arrayArgs,
-							EnvironmentRegisters = arrayArgs
-						});
-						result.Add((await arrayParser.FunctionParse(attrValue))!.Message!);
+						foreach (var ua in userArgs) arrayArgs[ua.Key] = ua.Value;
+						result.Add(await EvalWithArgs(arrayArgs));
 						arrayIndex++;
 					}
 					break;
 
 				case JsonValueKind.Object:
-					foreach (var objArgs in rootElement
-						         .EnumerateObject()
-						         .Select(property => new Dictionary<string, CallState>
-					         {
-						         { "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
-						         { "1", new CallState(property.Value.GetRawText()) },
-						         { "2", new CallState(property.Name) }
-					         }))
+					foreach (var property in rootElement.EnumerateObject())
 					{
-						foreach (var ua in userArgs)
+						var objArgs = new Dictionary<string, CallState>
 						{
-							objArgs[ua.Key] = ua.Value;
-						}
-						var objParser = parser.Push(parser.CurrentState with
-						{
-							Arguments = objArgs,
-							EnvironmentRegisters = objArgs
-						});
-						result.Add((await objParser.FunctionParse(attrValue))!.Message!);
+							{ "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
+							{ "1", new CallState(property.Value.GetRawText()) },
+							{ "2", new CallState(property.Name) }
+						};
+						foreach (var ua in userArgs) objArgs[ua.Key] = ua.Value;
+						result.Add(await EvalWithArgs(objArgs));
 					}
 					break;
 				case JsonValueKind.Undefined:
@@ -216,7 +205,7 @@ public partial class Functions
 		{
 			var jsonDoc = JsonNode.Parse(json);
 			var jsonPath = JsonPath.Parse(path);
-			
+
 			// Evaluate the JSON Path against the document to find matching locations.
 			// This is the proper way to use JsonPath.Net library instead of directly
 			// converting a path string to a pointer, which can be ambiguous.
@@ -226,15 +215,15 @@ public partial class Functions
 			{
 				return new CallState("#-1 PATH NOT FOUND");
 			}
-			
+
 			// For modification operations, we need a singular path (single result)
 			if (pathResult.Matches.Count > 1)
 			{
 				return new CallState("#-1 PATH MUST BE SINGULAR");
 			}
-			
+
 			var match = pathResult.Matches[0];
-			
+
 			// Extract the JsonPointer from the evaluated match's location.
 			// The Location property is a JsonPath representing the canonical location in bracket notation,
 			// which we convert to a JsonPointer string for use with JsonPatch operations.
@@ -260,13 +249,13 @@ public partial class Functions
 				var mergedNode = ApplyMergePatch(target, jsonDoc2!);
 				var patchOp = new JsonPatch(PatchOperation.Replace(jsonPointer, mergedNode));
 				var patched = patchOp.Apply(jsonDoc);
-				
-				return patched.IsSuccess 
-					? new CallState(patched.Result!.ToString()) 
+
+				return patched.IsSuccess
+					? new CallState(patched.Result!.ToString())
 					: new CallState($"#-1 PATCH FAILED: {patched.Error}");
 			}
 
-			OneOf<JsonPatch,Error<string>> operation = action switch
+			OneOf<JsonPatch, Error<string>> operation = action switch
 			{
 				"insert" => new JsonPatch(PatchOperation.Add(jsonPointer, jsonDoc2)),
 				"replace" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc2!)),
@@ -276,15 +265,15 @@ public partial class Functions
 				_ => new Error<string>("Invalid Operation"),
 			};
 
-			if(operation.IsT1)
+			if (operation.IsT1)
 			{
 				return new CallState("#-1 INVALID OPERATION");
 			}
 
 			var patchResult = operation.AsT0.Apply(jsonDoc);
-			
-			return patchResult.IsSuccess 
-				? new CallState(patchResult.Result!.ToString()) 
+
+			return patchResult.IsSuccess
+				? new CallState(patchResult.Result!.ToString())
 				: new CallState($"#-1 PATCH FAILED: {patchResult.Error}");
 		}
 		catch (JsonException)
@@ -373,10 +362,10 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
-		
+
 		var playersArg = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
 		var package = MModule.plainText(parser.CurrentState.Arguments["1"].Message!);
-		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState) 
+		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState)
 			? msgState.Message?.ToString() ?? ""
 			: "";
 
@@ -394,7 +383,7 @@ public partial class Functions
 			}
 		}
 
-		var isWizard = executor.IsGod() || await executor.IsWizard();
+		var isWizard = await executor.IsWizard();
 		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
 
 		int sentCount = 0;
@@ -434,11 +423,11 @@ public partial class Functions
 					continue;
 				}
 
-				await MessageBus!.Publish(new Messages.GMCPOutputMessage(
+				await MessageBus!.Publish(new GMCPOutputMessage(
 					connection.Handle,
 					package,
 					message));
-				
+
 				sentCount++;
 			}
 		}
@@ -446,14 +435,14 @@ public partial class Functions
 		return new CallState(sentCount.ToString());
 	}
 
-	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, 
+	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["json", "player"])]
 	public static async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Send JSON data via websocket - similar to wsjson()
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		
+
 		AnySharpObject target;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
 		{

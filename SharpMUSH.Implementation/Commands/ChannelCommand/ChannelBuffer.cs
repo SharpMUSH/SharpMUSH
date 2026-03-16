@@ -1,5 +1,4 @@
 using Mediator;
-using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -18,14 +17,14 @@ public static class ChannelBuffer
 			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
 			return new CallState("#-1 Guests may not modify channels.");
 		}
-		
+
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 
 		if (maybeChannel.IsError)
 		{
 			return maybeChannel.AsError.Value;
 		}
-		
+
 		var channel = maybeChannel.AsChannel;
 
 		if (await PermissionService.ChannelCanModifyAsync(executor, channel))
@@ -48,7 +47,7 @@ public static class ChannelBuffer
 			null,
 			null,
 			null,
-			null, 
+			null,
 			Buffer: linesInt));
 
 		return new CallState("Channel buffer has been updated.");

@@ -1,5 +1,5 @@
-﻿using System.Text;
-using SharpMUSH.Library.ParserInterfaces;
+﻿using SharpMUSH.Library.ParserInterfaces;
+using System.Text;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -43,7 +43,7 @@ public class MemoryTest
 			.That(result)
 			.IsEqualTo("1");
 	}
-	
+
 	[Test]
 	public async Task SmallDepth()
 	{
@@ -67,6 +67,7 @@ public class MemoryTest
 	}
 
 	[Test, Timeout(30 * 1000), NotInParallel]
+	[Category("Performance")]
 	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]
@@ -96,12 +97,14 @@ public class MemoryTest
 		}
 		var str = sb.ToString();
 
-		await Assert.That(async () => {
+		await Assert.That(async () =>
+		{
 			var result = await Parser.FunctionParse(MModule.single(str));
 		}).ThrowsNothing();
 	}
 
 	[Test, Timeout(30 * 1000), NotInParallel]
+	[Category("Performance")]
 	[Explicit]
 	[Arguments(4)]
 	[Arguments(8)]
@@ -131,7 +134,8 @@ public class MemoryTest
 		}
 		var str = sb.ToString();
 
-		await Assert.That(async () => {
+		await Assert.That(async () =>
+		{
 			var result = await Parser.FunctionParse(MModule.single(str));
 		}).ThrowsNothing();
 	}

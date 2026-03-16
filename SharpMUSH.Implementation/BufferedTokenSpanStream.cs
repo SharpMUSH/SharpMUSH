@@ -1,6 +1,6 @@
-﻿using System.Text;
-using Antlr4.Runtime;
+﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using System.Text;
 
 namespace SharpMUSH.Implementation
 {
@@ -21,12 +21,12 @@ namespace SharpMUSH.Implementation
 		//     a complete view of the input once Antlr4.Runtime.BufferedTokenStream.fetchedEOF
 		//     is set to true .
 		// Initial capacity increased from 100 to 256 to reduce list resizing for typical MUSH commands/functions
-	protected internal List<IToken> tokens = new(256);
+		protected internal List<IToken> tokens = new(256);
 
 		protected internal IToken[]? TokenArray;
-		
-		protected internal Span<IToken> Tokens => fetchedEOF 
-			? TokenArray.AsSpan() 
+
+		protected internal Span<IToken> Tokens => fetchedEOF
+			? TokenArray.AsSpan()
 			: tokens.ToArray().AsSpan();
 
 		//
@@ -83,8 +83,8 @@ namespace SharpMUSH.Implementation
 
 		public virtual void Consume()
 		{
-			var flag = p >= 0 && (!fetchedEOF 
-				? p < tokens.Count 
+			var flag = p >= 0 && (!fetchedEOF
+				? p < tokens.Count
 				: p < Tokens.Length - 1);
 
 			if (!flag && LA(1) == -1)
@@ -104,7 +104,7 @@ namespace SharpMUSH.Implementation
 		//
 		// Returns:
 		//     true if a token is located at index i , otherwise false .
-		protected internal virtual bool Sync(int i) 
+		protected internal virtual bool Sync(int i)
 			=> (i - tokens.Count + 1) switch
 			{
 				var x and > 0 => Fetch(x) >= x,
@@ -165,8 +165,8 @@ namespace SharpMUSH.Implementation
 
 		protected internal virtual IToken? Lb(int k)
 		{
-			return p - k < 0 
-				? null 
+			return p - k < 0
+				? null
 				: Tokens[p - k];
 		}
 
@@ -184,8 +184,8 @@ namespace SharpMUSH.Implementation
 
 			var num = p + k - 1;
 			Sync(num);
-			return num >= Tokens.Length 
-				? Tokens[^1] 
+			return num >= Tokens.Length
+				? Tokens[^1]
 				: Tokens[num];
 		}
 
@@ -276,8 +276,8 @@ namespace SharpMUSH.Implementation
 			}
 
 			var num = PreviousTokenOnChannel(tokenIndex - 1, 0);
-			return num == tokenIndex - 1 
-				? null 
+			return num == tokenIndex - 1
+				? null
 				: FilterForChannel(num + 1, tokenIndex - 1, channel);
 		}
 
@@ -316,8 +316,8 @@ namespace SharpMUSH.Implementation
 				}
 			}
 
-			return list.Count == 0 
-				? null 
+			return list.Count == 0
+				? null
 				: list;
 		}
 
@@ -352,7 +352,7 @@ namespace SharpMUSH.Implementation
 
 			var span = Tokens[a..num];
 			var stringBuilder = new StringBuilder();
-			
+
 			foreach (var token in span)
 			{
 				if (token.Type == -1)
@@ -375,8 +375,8 @@ namespace SharpMUSH.Implementation
 		[return: NotNull]
 		public virtual string GetText(IToken? start, IToken? stop)
 		{
-			return start != null && stop != null 
-				? GetText(Interval.Of(start.TokenIndex, stop.TokenIndex)) 
+			return start != null && stop != null
+				? GetText(Interval.Of(start.TokenIndex, stop.TokenIndex))
 				: string.Empty;
 		}
 

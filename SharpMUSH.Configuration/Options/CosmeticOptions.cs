@@ -8,7 +8,7 @@ public record CosmeticOptions(
 		Group = "Currency",
 		Order = 1)]
 	string MoneySingular,
-	
+
 	[property: SharpConfig(
 		Name = "money_plural",
 		Category = "Cosmetic",
@@ -16,7 +16,7 @@ public record CosmeticOptions(
 		Group = "Currency",
 		Order = 2)]
 	string MoneyPlural,
-	
+
 	[property: SharpConfig(
 		Name = "player_name_spaces",
 		Category = "Cosmetic",
@@ -24,7 +24,7 @@ public record CosmeticOptions(
 		Group = "Names",
 		Order = 1)]
 	bool PlayerNameSpaces,
-	
+
 	[property: SharpConfig(
 		Name = "ansi_names",
 		Category = "Cosmetic",
@@ -32,7 +32,7 @@ public record CosmeticOptions(
 		Group = "Names",
 		Order = 2)]
 	bool AnsiNames,
-	
+
 	[property: SharpConfig(
 		Name = "only_ascii_in_names",
 		Category = "Cosmetic",
@@ -40,7 +40,7 @@ public record CosmeticOptions(
 		Group = "Names",
 		Order = 3)]
 	bool OnlyAsciiInNames,
-	
+
 	[property: SharpConfig(
 		Name = "monikers",
 		Category = "Cosmetic",
@@ -48,7 +48,7 @@ public record CosmeticOptions(
 		Group = "Names",
 		Order = 4)]
 	bool Monikers,
-	
+
 	[property: SharpConfig(
 		Name = "float_precision",
 		Category = "Cosmetic",
@@ -59,7 +59,7 @@ public record CosmeticOptions(
 		Min = 0,
 		Max = 15)]
 	uint FloatPrecision,
-	
+
 	[property: SharpConfig(
 		Name = "comma_exit_list",
 		Category = "Cosmetic",
@@ -67,7 +67,7 @@ public record CosmeticOptions(
 		Group = "Display",
 		Order = 2)]
 	bool CommaExitList,
-	
+
 	[property: SharpConfig(
 		Name = "count_all",
 		Category = "Cosmetic",
@@ -75,7 +75,7 @@ public record CosmeticOptions(
 		Group = "Display",
 		Order = 3)]
 	bool CountAll,
-	
+
 	[property: SharpConfig(
 		Name = "page_aliases",
 		Category = "Cosmetic",
@@ -83,7 +83,7 @@ public record CosmeticOptions(
 		Group = "Names",
 		Order = 5)]
 	bool PageAliases,
-	
+
 	[property: SharpConfig(
 		Name = "flags_on_examine",
 		Category = "Cosmetic",
@@ -91,7 +91,7 @@ public record CosmeticOptions(
 		Group = "Display",
 		Order = 4)]
 	bool FlagsOnExamine,
-	
+
 	[property: SharpConfig(
 		Name = "ex_public_attribs",
 		Category = "Cosmetic",
@@ -99,7 +99,7 @@ public record CosmeticOptions(
 		Group = "Display",
 		Order = 5)]
 	bool ExaminePublicAttributes,
-	
+
 	[property: SharpConfig(
 		Name = "wizwall_prefix",
 		Category = "Cosmetic",
@@ -107,7 +107,7 @@ public record CosmeticOptions(
 		Group = "Announcements",
 		Order = 1)]
 	string WizardWallPrefix,
-	
+
 	[property: SharpConfig(
 		Name = "rwall_prefix",
 		Category = "Cosmetic",
@@ -115,7 +115,7 @@ public record CosmeticOptions(
 		Group = "Announcements",
 		Order = 2)]
 	string RoyaltyWallPrefix,
-	
+
 	[property: SharpConfig(
 		Name = "wall_prefix",
 		Category = "Cosmetic",
@@ -123,7 +123,7 @@ public record CosmeticOptions(
 		Group = "Announcements",
 		Order = 3)]
 	string WallPrefix,
-	
+
 	[property: SharpConfig(
 		Name = "announce_connects",
 		Category = "Cosmetic",
@@ -131,7 +131,7 @@ public record CosmeticOptions(
 		Group = "Announcements",
 		Order = 4)]
 	bool AnnounceConnects,
-	
+
 	[property: SharpConfig(
 		Name = "chat_strip_quote",
 		Category = "Cosmetic",

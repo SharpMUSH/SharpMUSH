@@ -1,4 +1,3 @@
-using MediatR;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
@@ -22,15 +21,15 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 	}
 
 	protected override Task<SemanticTokensDocument> GetSemanticTokensDocument(
-		ITextDocumentIdentifierParams @params, 
+		ITextDocumentIdentifierParams @params,
 		CancellationToken cancellationToken)
 	{
 		return Task.FromResult(new SemanticTokensDocument(RegistrationOptions.Legend));
 	}
 
 	protected override Task Tokenize(
-		SemanticTokensBuilder builder, 
-		ITextDocumentIdentifierParams identifier, 
+		SemanticTokensBuilder builder,
+		ITextDocumentIdentifierParams identifier,
 		CancellationToken cancellationToken)
 	{
 		var uri = identifier.TextDocument.Uri.ToString();
@@ -60,16 +59,16 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 		catch (Exception ex)
 		{
 			// Log error but don't crash
-			#pragma warning disable VSTHRD103
+#pragma warning disable VSTHRD103
 			Console.Error.WriteLine($"Error generating semantic tokens: {ex.Message}");
-			#pragma warning restore VSTHRD103
+#pragma warning restore VSTHRD103
 		}
 
 		return Task.CompletedTask;
 	}
 
 	protected override SemanticTokensRegistrationOptions CreateRegistrationOptions(
-		SemanticTokensCapability capability, 
+		SemanticTokensCapability capability,
 		ClientCapabilities clientCapabilities)
 	{
 		// Get token types and modifiers from parser with a sample
@@ -80,9 +79,9 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 			DocumentSelector = TextDocumentSelector.ForPattern("**/*.mush", "**/*.mu"),
 			Legend = new SemanticTokensLegend
 			{
-				TokenTypes = new Container<SemanticTokenType>(sampleData.TokenTypes.Select(t => 
+				TokenTypes = new Container<SemanticTokenType>(sampleData.TokenTypes.Select(t =>
 					new SemanticTokenType(t.ToLowerInvariant()))),
-				TokenModifiers = new Container<SemanticTokenModifier>(sampleData.TokenModifiers.Select(m => 
+				TokenModifiers = new Container<SemanticTokenModifier>(sampleData.TokenModifiers.Select(m =>
 					new SemanticTokenModifier(m.ToLowerInvariant())))
 			},
 			Full = new SemanticTokensCapabilityRequestFull

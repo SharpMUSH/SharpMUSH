@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SendMailCommandHandler(ISharpDatabase database)  : ICommandHandler<SendMailCommand>
+public class SendMailCommandHandler(ISharpDatabase database) : ICommandHandler<SendMailCommand>
 {
 	public async ValueTask<Unit> Handle(SendMailCommand command, CancellationToken cancellationToken)
 	{

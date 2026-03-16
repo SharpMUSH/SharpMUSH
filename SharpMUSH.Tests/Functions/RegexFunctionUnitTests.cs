@@ -125,8 +125,8 @@ public class RegexFunctionUnitTests
 
 	[Test]
 	[Arguments("regeditall(test,t,T)", "TesT")] // All matches
-	// Note: The capstr function would need to be implemented for this test to work fully
-	// [Arguments("regeditall(this test is the best string,(.)est,capstr($1)rash)", "this Trash is the Brash string")]
+																							// Note: The capstr function would need to be implemented for this test to work fully
+																							// [Arguments("regeditall(this test is the best string,(.)est,capstr($1)rash)", "this Trash is the Brash string")]
 	public async Task Regeditall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -178,6 +178,7 @@ public class RegexFunctionUnitTests
 
 	// regrep tests - skipped as they require attribute service
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires attribute service integration")]
 	[Arguments("regrep(#0,*,pattern)", "")]
 	public async Task Regrep(string str, string expected)
@@ -187,6 +188,7 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires attribute service integration")]
 	[Arguments("regrepi(#0,*,pattern)", "")]
 	public async Task Regrepi(string str, string expected)

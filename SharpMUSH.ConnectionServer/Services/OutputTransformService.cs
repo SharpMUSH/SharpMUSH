@@ -1,6 +1,6 @@
+using SharpMUSH.ConnectionServer.Models;
 using System.Text;
 using System.Text.RegularExpressions;
-using SharpMUSH.ConnectionServer.Models;
 
 namespace SharpMUSH.ConnectionServer.Services;
 
@@ -14,6 +14,11 @@ public partial class OutputTransformService : IOutputTransformService
 	// Regex for ANSI escape sequences (ESC[ followed by parameters and a command letter)
 	[GeneratedRegex(@"\x1b\[[0-9;]*[a-zA-Z]")]
 	private static partial Regex AnsiEscapeSequenceRegex();
+
+	// Regex for OSC 8 hyperlink sequences: ESC]8;;url BEL text ESC]8;; BEL
+	// Captures the display text (group 1) so we can preserve it when stripping
+	[GeneratedRegex(@"\x1b\]8;;[^\x07]*\x07(.*?)\x1b\]8;;\x07", RegexOptions.Singleline)]
+	private static partial Regex Osc8HyperlinkRegex();
 
 	// Regex for 256-color ANSI codes (38;5;N for foreground, 48;5;N for background)
 	[GeneratedRegex(@"\x1b\[([34])8;5;(\d+)m")]
@@ -64,6 +69,9 @@ public partial class OutputTransformService : IOutputTransformService
 		ProtocolCapabilities capabilities,
 		PlayerOutputPreferences? preferences)
 	{
+		// Always strip OSC 8 hyperlinks - telnet clients don't support them
+		text = StripOsc8Hyperlinks(text);
+
 		// If player preferences exist and either ANSI or COLOR is disabled, strip all ANSI
 		if (preferences is { AnsiEnabled: false } or { ColorEnabled: false })
 		{
@@ -95,8 +103,14 @@ public partial class OutputTransformService : IOutputTransformService
 
 	private string StripAnsiCodes(string text)
 	{
-		// Remove all ANSI escape sequences
+		// Remove all CSI ANSI escape sequences
 		return AnsiEscapeSequenceRegex().Replace(text, string.Empty);
+	}
+
+	private string StripOsc8Hyperlinks(string text)
+	{
+		// Replace OSC 8 hyperlink sequences with just their display text
+		return Osc8HyperlinkRegex().Replace(text, "$1");
 	}
 
 	private string DowngradeXterm256To16Color(string text)

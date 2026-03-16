@@ -1,6 +1,6 @@
-﻿using System.Text.Json.Serialization;
-using DotNext.Threading;
+﻿using DotNext.Threading;
 using SharpMUSH.Library.DiscriminatedUnions;
+using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
 
@@ -8,7 +8,7 @@ public class SharpRoom
 {
 	[JsonIgnore]
 	public string? Id { get; set; }
-	
+
 	public string[]? Aliases { get; set; }
 
 	[JsonIgnore]

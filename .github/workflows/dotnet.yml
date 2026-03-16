@@ -5,7 +5,7 @@ name: .NET
 
 permissions:
   contents: read
-  
+
 on:
   push:
     branches: [ "main" ]
@@ -13,34 +13,5 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 11.0.100-preview.2.26159.112
-        dotnet-quality: preview
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      env:
-        SHARPMUSH_ENABLE_TEST_TELEMETRY: true
-      run: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
-    - name: Display Telemetry Summary
-      if: always()
-      run: |
-        echo "## 📊 Test Telemetry Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Telemetry metrics are displayed in the test output above when running with \`--output Detailed\`." >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Look for the **TEST SESSION TELEMETRY SUMMARY** section in the test output to see:" >> $GITHUB_STEP_SUMMARY
-        echo "- 📡 Health status of services" >> $GITHUB_STEP_SUMMARY
-        echo "- 🔌 Connection metrics" >> $GITHUB_STEP_SUMMARY
-        echo "- ⚡ Most called functions and commands" >> $GITHUB_STEP_SUMMARY
-        echo "- 🐌 Slowest functions and commands" >> $GITHUB_STEP_SUMMARY
+  build-and-test:
+    uses: ./.github/workflows/_dotnet-build-test.yml

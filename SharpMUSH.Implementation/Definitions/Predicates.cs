@@ -5,9 +5,9 @@ public static class Predicates
 	public static bool Truthy(MString text)
 	{
 		var plainText = MModule.plainText(text);
-		return !string.IsNullOrEmpty(plainText) 
-		       && !plainText.StartsWith("#-") 
-		       && plainText is not "0";
+		return !string.IsNullOrEmpty(plainText)
+					 && !plainText.StartsWith("#-")
+					 && plainText is not "0";
 	}
 
 	public static bool Falsy(MString text) => !Truthy(text);

@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Immutable;
 using System.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace SharpMUSH.Implementation.Generated;
 
@@ -12,12 +11,12 @@ using CommandInformation = (string Name, string ClassName, string MethodName, st
 public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 {
 	private const string ATTRIBUTENAME = "SharpMUSH.Library.Attributes.SharpCommandAttribute";
-	
+
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
 		var provider = context.SyntaxProvider.ForAttributeWithMetadataName(ATTRIBUTENAME,
 				static (node, _) => node is MethodDeclarationSyntax,
-				static (ctx, _) => 
+				static (ctx, _) =>
 					(Method: (MethodDeclarationSyntax)ctx.TargetNode,
 					Attribute: ctx.Attributes.First(a => a.AttributeClass?.ToDisplayString() == ATTRIBUTENAME)))
 			.Where(static x => x.Method is not null && x.Attribute is not null);

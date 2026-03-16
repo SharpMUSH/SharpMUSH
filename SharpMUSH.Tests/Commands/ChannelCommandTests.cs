@@ -17,7 +17,7 @@ public class ChannelCommandTests
 	private const string TestChannelName = "TestCommandChannel";
 	private const string TestChannelPrivilege = "Open";
 	private const int TestPlayerDbRef = 1;
-	
+
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
@@ -26,10 +26,10 @@ public class ChannelCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	
+
 	private SharpChannel? _testChannel;
 	private SharpPlayer? _testPlayer;
-	
+
 	[Before(Test)]
 	public async Task SetupTestChannel()
 	{
@@ -58,8 +58,9 @@ public class ChannelCommandTests
 			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
 		}
 	}
-	
+
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChatCommand()
 	{
@@ -72,6 +73,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChannelCommand()
 	{
@@ -91,7 +93,7 @@ public class ChannelCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> CemitCommand: Test message") ||
-				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")), 
+				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")),
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Emit);
 	}
 
@@ -104,11 +106,12 @@ public class ChannelCommandTests
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("NscemitCommand: Test message")) ||
-				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))), 
+				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))),
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AddcomCommand()
 	{
@@ -120,6 +123,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DelcomCommand()
 	{
@@ -131,6 +135,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ClistCommand()
 	{
@@ -142,6 +147,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ComlistCommand()
 	{
@@ -153,6 +159,7 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ComtitleCommand()
 	{

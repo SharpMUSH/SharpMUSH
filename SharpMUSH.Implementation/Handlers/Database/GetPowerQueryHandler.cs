@@ -9,6 +9,17 @@ public class GetPowerQueryHandler(ISharpDatabase database) : IQueryHandler<GetPo
 {
 	public async ValueTask<SharpPower?> Handle(GetPowerQuery query, CancellationToken cancellationToken)
 	{
-		return await database.GetPowerAsync(query.PowerName, cancellationToken);
+		var exactMatch = await database.GetPowerAsync(query.PowerName, cancellationToken);
+		if (exactMatch is not null)
+		{
+			return exactMatch;
+		}
+
+		// Fall back to case-insensitive match on name or alias
+		return await database.GetObjectPowersAsync(cancellationToken)
+			.FirstOrDefaultAsync(
+				p => p.Name.Equals(query.PowerName, StringComparison.InvariantCultureIgnoreCase)
+					|| (p.Alias != null && p.Alias.Equals(query.PowerName, StringComparison.InvariantCultureIgnoreCase)),
+				cancellationToken);
 	}
 }

@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using TUnit.AspNetCore;
@@ -12,8 +10,7 @@ namespace SharpMUSH.Tests;
 /// Test factory for SharpMUSH.ConnectionServer that configures the test environment.
 /// </summary>
 public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
-	string redisConnection,
-	string kafkaHost) :
+	string natsUrl) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
 	/// <summary>
@@ -26,24 +23,23 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 	{
 		var logConfig = new LoggerConfiguration()
 			.Enrich.FromLogContext()
-			.MinimumLevel.Debug();
-		
+			.MinimumLevel.Verbose();
+
 		// Only write to console if explicitly enabled via environment variable
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
-		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) && 
-		                       (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
-		
+		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
+													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
+
 		if (isConsoleEnabled)
 		{
 			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
 		}
-		
+
 		var log = logConfig.CreateLogger();
 		Log.Logger = log;
 
 		// Set environment variables for ConnectionServer to use test infrastructure
-		Environment.SetEnvironmentVariable("REDIS_CONNECTION", redisConnection);
-		Environment.SetEnvironmentVariable("KAFKA_HOST", kafkaHost);
+		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
 		builder.ConfigureTestServices(sc =>
 		{

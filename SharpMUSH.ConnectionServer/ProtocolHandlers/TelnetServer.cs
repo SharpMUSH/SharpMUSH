@@ -1,14 +1,10 @@
-using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Connections;
+using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Messaging.Abstractions;
 using System.Net;
 using System.Text;
-using SharpMUSH.Messaging.Abstractions;
-using Microsoft.AspNetCore.Connections;
-using Microsoft.Extensions.Logging;
-using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Library.Notifications;
-using SharpMUSH.Messages;
 using TelnetNegotiationCore.Builders;
-using TelnetNegotiationCore.Handlers;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Models;
 using TelnetNegotiationCore.Protocols;
@@ -81,7 +77,7 @@ public class TelnetServer : ConnectionHandler
 		{
 			// Write output to the network transport with proper telnet escaping
 			// TelnetSafeBytes escapes IAC (0xFF) characters and applies MCCP compression if negotiated
-			_logger.LogDebug("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
+			_logger.LogTrace("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
 			try
 			{
 				await _semaphoreSlimForWriter.WaitAsync(ct);
@@ -89,7 +85,7 @@ public class TelnetServer : ConnectionHandler
 				{
 					var telnetSafeData = telnet.TelnetSafeBytes(data);
 					await connection.Transport.Output.WriteAsync(telnetSafeData.AsMemory(), ct);
-					_logger.LogDebug("Successfully wrote {ByteCount} telnet-safe bytes ({Original} original) to transport for handle {Handle}", 
+					_logger.LogTrace("Successfully wrote {ByteCount} telnet-safe bytes ({Original} original) to transport for handle {Handle}",
 						telnetSafeData.Length, data.Length, nextPort);
 				}
 				finally
@@ -140,71 +136,71 @@ public class TelnetServer : ConnectionHandler
 			await telnet.SendGMCPCommand(module, message);
 		});
 
-	try
-	{
-		while (!ct.IsCancellationRequested)
-		{
-			var result = await connection.Transport.Input.ReadAsync(ct);
-
-			foreach (var segment in result.Buffer)
-			{
-				await telnet.InterpretByteArrayAsync(segment);
-			}
-
-			if (result.IsCompleted) break;
-			connection.Transport.Input.AdvanceTo(result.Buffer.End, result.Buffer.End);
-		}
-	}
-	catch (ConnectionResetException)
-	{
-		/* Disconnected while evaluating. That's fine. It just means someone closed their client. */
-	}
-	catch (Exception ex)
-	{
-		_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
-	}
-
-	// Disconnect and notify MainProcess
-	await _connectionService.DisconnectAsync(nextPort);
-}
-
-private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection, CancellationToken ct)
-{
-	/*
-	var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar =>
-	{
-		// Publish MSDP update to MainProcess
-		// resetVar is a string representing the variable name that was reset
-		// Create a dictionary with the reset variable
-		var msdpData = new Dictionary<string, string> { { "RESET", resetVar } };
-		await _publishEndpoint.Publish(new MSDPUpdateMessage(nextPort, msdpData), ct);
-	}));
-	*/
-
-	return async (ti, str) =>
-	{
 		try
 		{
-			await _semaphoreSlimForWriter.WaitAsync(ct);
-			try
+			while (!ct.IsCancellationRequested)
 			{
-				await connection.Transport.Output.WriteAsync(ti.TelnetSafeString(str), ct);
-			}
-			finally
-			{
-				_semaphoreSlimForWriter.Release();
+				var result = await connection.Transport.Input.ReadAsync(ct);
+
+				foreach (var segment in result.Buffer)
+				{
+					await telnet.InterpretByteArrayAsync(segment);
+				}
+
+				if (result.IsCompleted) break;
+				connection.Transport.Input.AdvanceTo(result.Buffer.End, result.Buffer.End);
 			}
 		}
-		catch (ObjectDisposedException ode)
+		catch (ConnectionResetException)
 		{
-			_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+			/* Disconnected while evaluating. That's fine. It just means someone closed their client. */
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+			_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
 		}
-	};
-}
+
+		// Disconnect and notify MainProcess
+		await _connectionService.DisconnectAsync(nextPort);
+	}
+
+	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection, CancellationToken ct)
+	{
+		/*
+		var MSDPHandler = new MSDPServerHandler(new MSDPServerModel(async resetVar =>
+		{
+			// Publish MSDP update to MainProcess
+			// resetVar is a string representing the variable name that was reset
+			// Create a dictionary with the reset variable
+			var msdpData = new Dictionary<string, string> { { "RESET", resetVar } };
+			await _publishEndpoint.Publish(new MSDPUpdateMessage(nextPort, msdpData), ct);
+		}));
+		*/
+
+		return async (ti, str) =>
+		{
+			try
+			{
+				await _semaphoreSlimForWriter.WaitAsync(ct);
+				try
+				{
+					await connection.Transport.Output.WriteAsync(ti.TelnetSafeString(str), ct);
+				}
+				finally
+				{
+					_semaphoreSlimForWriter.Release();
+				}
+			}
+			catch (ObjectDisposedException ode)
+			{
+				_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+			}
+		};
+	}
 }
 
 /// <summary>

@@ -27,5 +27,5 @@ public record QueueCommandListWithTimeoutRequest(
 	MString Command,
 	ParserState State,
 	DbRefAttribute DbRefAttribute,
-	int OldValue, 
+	int OldValue,
 	TimeSpan Timeout) : IRequest;

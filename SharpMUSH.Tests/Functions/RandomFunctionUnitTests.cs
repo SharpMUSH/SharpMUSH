@@ -21,7 +21,7 @@ public class RandomFunctionUnitTests
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsGreaterThan(0);
 	}
-	
+
 	[Test]
 	[Arguments("rand(10)", "")]
 	[Arguments("rand(100)", "")]

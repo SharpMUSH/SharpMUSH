@@ -2,7 +2,7 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
-public class LambdaUnitTests 
+public class LambdaUnitTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -11,11 +11,14 @@ public class LambdaUnitTests
 
 	[Test]
 	[Arguments(@"ulambda(#lambda/add\(1\,2\))", "3")]
-	// vv CONSIDER: 3) is not the correct return value. This should just be: 3 vv
-	// vv However, this is how our parser should handle this vv
-	[Arguments("ulambda(lit(#lambda/add(1,2)))", "3)")] 
+	// Without paren depth tracking (PennMUSH-compatible): bare ( in #lambda/add( is just text,
+	// and the first ) closes lit() instead of matching the bare (. Use escaped parens or brackets instead.
+	[Arguments("ulambda(lit(#lambda/add(1,2)))", "3)")]
 	[Arguments("ulambda(#lambda/[add(1,2)])", "3")]
 	[Arguments("ulambda(#lambda/3)", "3")]
+	// Extra trailing parens: after the function closes, remaining ) become generic text
+	[Arguments("ulambda(lit(#lambda/add(1,2))))", "3))")]
+	[Arguments("ulambda(lit(#lambda/add(1,2)))))", "3)))")]
 	public async Task BasicLambdaTest(string call, string expected)
 	{
 		var res = (await Parser.FunctionParse(MModule.single(call)))!.Message!;

@@ -1,5 +1,3 @@
-using SharpMUSH.Configuration;
-
 namespace SharpMUSH.Configuration.Options;
 
 public record TextFileOptions(

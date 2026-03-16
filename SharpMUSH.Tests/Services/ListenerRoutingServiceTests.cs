@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -11,7 +10,7 @@ public class ListenerRoutingServiceTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private IListenerRoutingService ListenerRoutingService => 
+	private IListenerRoutingService ListenerRoutingService =>
 		WebAppFactoryArg.Services.GetRequiredService<IListenerRoutingService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
@@ -25,14 +24,14 @@ public class ListenerRoutingServiceTests
 			IsRoomBroadcast: false,
 			ExcludedObjects: []
 		);
-		
+
 		// Act - should not throw and should return early
 		await ListenerRoutingService.ProcessNotificationAsync(
 			context,
 			"Test message",
 			null,
 			INotifyService.NotificationType.Say);
-		
+
 		// Assert - no exception means success
 		await ValueTask.CompletedTask;
 	}
@@ -47,19 +46,20 @@ public class ListenerRoutingServiceTests
 			IsRoomBroadcast: false,
 			ExcludedObjects: []
 		);
-		
+
 		// Act - Announce type should not trigger listeners
 		await ListenerRoutingService.ProcessNotificationAsync(
 			context,
 			"Private message",
 			null,
 			INotifyService.NotificationType.Announce);
-		
+
 		// Assert - no exception means success
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with room and objects configured")]
 	public async ValueTask ProcessNotificationAsync_WithMonitorFlag_MatchesListenPatterns()
 	{
@@ -72,6 +72,7 @@ public class ListenerRoutingServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with puppet configured")]
 	public async ValueTask ProcessNotificationAsync_WithPuppetFlag_RelaysToOwner()
 	{
@@ -84,6 +85,7 @@ public class ListenerRoutingServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with @listen attribute")]
 	public async ValueTask ProcessNotificationAsync_WithListenAttribute_MatchesPattern()
 	{

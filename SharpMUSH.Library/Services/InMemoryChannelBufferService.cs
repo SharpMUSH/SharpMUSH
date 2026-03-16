@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
 
 namespace SharpMUSH.Library.Services;
 
@@ -33,7 +33,7 @@ public class InMemoryChannelBufferService : IChannelBufferService
 		{
 			yield return message;
 		}
-		
+
 		await ValueTask.CompletedTask;
 	}
 
@@ -78,18 +78,18 @@ public class InMemoryChannelBufferService : IChannelBufferService
 			lock (_lock)
 			{
 				var result = new List<T>(Math.Min(count, _count));
-				
+
 				// Start from the most recent and work backwards
 				var index = (_nextIndex - 1 + _buffer.Length) % _buffer.Length;
 				var retrieved = 0;
-				
+
 				while (retrieved < count && retrieved < _count)
 				{
 					result.Add(_buffer[index]);
 					index = (index - 1 + _buffer.Length) % _buffer.Length;
 					retrieved++;
 				}
-				
+
 				return result;
 			}
 		}

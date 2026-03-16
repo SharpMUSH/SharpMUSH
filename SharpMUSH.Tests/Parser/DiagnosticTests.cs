@@ -14,7 +14,7 @@ public class DiagnosticTests
 	public async Task GetDiagnostics_ValidInput_ReturnsEmpty()
 	{
 		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2)"), ParseType.Function);
-		
+
 		await Assert.That(diagnostics).IsEmpty();
 	}
 
@@ -22,7 +22,7 @@ public class DiagnosticTests
 	public async Task GetDiagnostics_InvalidInput_ReturnsDiagnostics()
 	{
 		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2"), ParseType.Function);
-		
+
 		await Assert.That(diagnostics).IsNotEmpty();
 		await Assert.That(diagnostics[0].Severity).IsEqualTo(DiagnosticSeverity.Error);
 	}
@@ -31,9 +31,9 @@ public class DiagnosticTests
 	public async Task GetDiagnostics_HasRange()
 	{
 		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2"), ParseType.Function);
-		
+
 		await Assert.That(diagnostics).IsNotEmpty();
-		
+
 		var diagnostic = diagnostics[0];
 		await Assert.That(diagnostic.Range).IsNotNull();
 		await Assert.That(diagnostic.Range.Start).IsNotNull();
@@ -44,9 +44,9 @@ public class DiagnosticTests
 	public async Task GetDiagnostics_RangeSpansToken()
 	{
 		var diagnostics = Parser.GetDiagnostics(MModule.single("test[unclosed"), ParseType.Function);
-		
+
 		await Assert.That(diagnostics).IsNotEmpty();
-		
+
 		var diagnostic = diagnostics[0];
 		// Range should have valid positions
 		await Assert.That(diagnostic.Range.Start.Line).IsGreaterThanOrEqualTo(0);
@@ -58,7 +58,7 @@ public class DiagnosticTests
 	public async Task GetDiagnostics_IncludesMessage()
 	{
 		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2"), ParseType.Function);
-		
+
 		await Assert.That(diagnostics).IsNotEmpty();
 		await Assert.That(diagnostics[0].Message).IsNotEmpty();
 	}
@@ -67,7 +67,7 @@ public class DiagnosticTests
 	public async Task GetDiagnostics_IncludesSource()
 	{
 		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2"), ParseType.Function);
-		
+
 		await Assert.That(diagnostics).IsNotEmpty();
 		await Assert.That(diagnostics[0].Source).IsEqualTo("SharpMUSH Parser");
 	}
@@ -76,9 +76,9 @@ public class DiagnosticTests
 	public async Task ParseError_ToDiagnostic_ConvertsCorrectly()
 	{
 		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
-		
+
 		await Assert.That(errors).IsNotEmpty();
-		
+
 		var diagnostic = errors[0].ToDiagnostic();
 		await Assert.That(diagnostic).IsNotNull();
 		await Assert.That(diagnostic.Range).IsNotNull();
@@ -93,10 +93,10 @@ public class DiagnosticTests
 			Start = new Position(0, 5),
 			End = new Position(0, 10)
 		};
-		
+
 		var posInside = new Position(0, 7);
 		var posOutside = new Position(0, 11);
-		
+
 		await Assert.That(range.Contains(posInside)).IsTrue();
 		await Assert.That(range.Contains(posOutside)).IsFalse();
 	}
@@ -109,13 +109,13 @@ public class DiagnosticTests
 			Start = new Position(0, 5),
 			End = new Position(0, 5)
 		};
-		
+
 		var nonEmptyRange = new SharpMUSH.Library.Models.Range
 		{
 			Start = new Position(0, 5),
 			End = new Position(0, 10)
 		};
-		
+
 		await Assert.That(emptyRange.IsEmpty).IsTrue();
 		await Assert.That(nonEmptyRange.IsEmpty).IsFalse();
 	}
@@ -128,13 +128,13 @@ public class DiagnosticTests
 			Start = new Position(0, 5),
 			End = new Position(0, 10)
 		};
-		
+
 		var multiLine = new SharpMUSH.Library.Models.Range
 		{
 			Start = new Position(0, 5),
 			End = new Position(1, 3)
 		};
-		
+
 		await Assert.That(singleLine.IsSingleLine).IsTrue();
 		await Assert.That(multiLine.IsSingleLine).IsFalse();
 	}
@@ -145,7 +145,7 @@ public class DiagnosticTests
 		var pos1 = new Position(0, 5);
 		var pos2 = new Position(0, 10);
 		var pos3 = new Position(1, 0);
-		
+
 		await Assert.That(pos1.IsBefore(pos2)).IsTrue();
 		await Assert.That(pos2.IsAfter(pos1)).IsTrue();
 		await Assert.That(pos1.IsBefore(pos3)).IsTrue();

@@ -7,4 +7,4 @@ public record UptimeData(
 	int Reboots,
 	DateTimeOffset NextWarningTime,
 	DateTimeOffset NextPurgeTime
-	): AbstractExpandedData;
+	) : AbstractExpandedData;

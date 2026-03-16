@@ -11,7 +11,7 @@ public class SetObjectWarningsCommandHandler(ISharpDatabase database) : ICommand
 	{
 		// Update the in-memory object
 		request.Target.Object().Warnings = request.Warnings;
-		
+
 		// Persist the warnings to the database (best-effort)
 		try
 		{
@@ -22,7 +22,7 @@ public class SetObjectWarningsCommandHandler(ISharpDatabase database) : ICommand
 			// Silently ignore database update errors - the in-memory update already succeeded
 			// This maintains backwards compatibility while adding database persistence
 		}
-		
+
 		return Unit.Value;
 	}
 }

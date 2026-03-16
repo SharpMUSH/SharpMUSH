@@ -1,10 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
-using Mediator;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 

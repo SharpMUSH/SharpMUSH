@@ -3,6 +3,7 @@
 public static class DatabaseConstants
 {
 	public const string Objects = "node_objects";
+	public const string GodObjectId = $"{Objects}/1";
 	public const string ObjectData = "node_object_data";
 	public const string ServerData = "node_server_data";
 	public const string Players = "node_players";
@@ -19,7 +20,7 @@ public static class DatabaseConstants
 	public const string Channels = "node_channels";
 	public const string Mails = "node_mails";
 	public const string Logs = "logs";
-	
+
 	public static readonly string[] verticesContainer = [Rooms, Players, Things];
 	public static readonly string[] verticesContent = [Players, Exits, Things];
 	public static readonly string[] verticesAll = [Rooms, Players, Exits, Things];

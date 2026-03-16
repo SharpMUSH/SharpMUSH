@@ -1,8 +1,8 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace SharpMUSH.Configuration.Generated;
 
@@ -37,9 +37,9 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 		var optionsClass = optionsClasses[0];
 		var semanticModel = compilation.GetSemanticModel(optionsClass.SyntaxTree);
 		var optionsSymbol = semanticModel.GetDeclaredSymbol(optionsClass) as INamedTypeSymbol;
-		
+
 		if (optionsSymbol == null) return;
-		
+
 		var metadata = GetPropertyMetadata(optionsSymbol).ToImmutableArray();
 		var metadataWithAttributes = GetPropertyMetadataWithAttributes(optionsSymbol)
 			.Select(GeneratePropertyMetadataEntry)
@@ -108,7 +108,7 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 	{
 		var prop = metadata.Property;
 		var attr = metadata.Attribute;
-		
+
 		// Get the category from the containing property symbol
 		var category = "";
 		if (prop.ContainingType is INamedTypeSymbol containingType)
@@ -116,14 +116,14 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 			// The property's containing type is the category record (e.g., AttributeOptions)
 			category = containingType.Name;
 		}
-		
+
 		var name = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Name").Value.Value as string ?? "";
 		var description = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Description").Value.Value as string ?? "";
 		var validationPattern = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
-		
+
 		var validationPatternStr = validationPattern != null ? $"\"{EscapeString(validationPattern)}\"" : "null";
 		var descriptionStr = !string.IsNullOrEmpty(description) ? $"\"{EscapeString(description)}\"" : "\"\"";
-		
+
 		return $"{{ \"{prop.Name}\", new SharpConfigAttribute {{ Name = \"{name}\", Description = {descriptionStr}, Category = \"{category}\", ValidationPattern = {validationPatternStr} }} }}";
 	}
 

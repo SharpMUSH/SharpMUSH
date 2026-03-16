@@ -2,10 +2,7 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -27,31 +24,31 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private static IExpandedObjectDataService? ObjectDataService { get; set; }
 	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
 	private static IHttpClientFactory? HttpClientFactory { get; set; }
-	
+
 	private static ICommunicationService? CommunicationService { get; set; }
-	
+
 	private static IValidateService? ValidateService { get; set; }
-	
+
 	private static ISqlService? SqlService { get; set; }
-	
+
 	private static ILockService? LockService { get; set; }
-	
+
 	private static IMoveService? MoveService { get; set; }
-	
+
 	private static ILogger<Commands>? Logger { get; set; }
-	
+
 	private static IHookService? HookService { get; set; }
-	
+
 	private static IEventService? EventService { get; set; }
-	
+
 	private static ITelemetryService? TelemetryService { get; set; }
-	
+
 	private static IWarningService? WarningService { get; set; }
-	
+
 	private static ITextFileService? TextFileService { get; set; }
-	
+
 	private static IMessageBus? MessageBus { get; set; }
-	
+
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -122,7 +119,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 				_commandLibrary.Add(alias, (command.Value, true));
 			}
 		}
-		
+
 		// Store reference to this command library for @command introspection
 		CommandLibrary = _commandLibrary;
 	}

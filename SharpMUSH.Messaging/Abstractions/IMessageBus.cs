@@ -1,4 +1,4 @@
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Messaging.Abstractions;
 
