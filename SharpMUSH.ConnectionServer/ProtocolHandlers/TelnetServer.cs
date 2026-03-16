@@ -137,6 +137,7 @@ public class TelnetServer : ConnectionHandler
 
 		// Disconnect and notify MainProcess
 		await _connectionService.DisconnectAsync(nextPort);
+		_descriptorGenerator.ReleaseTelnetDescriptor(nextPort);
 	}
 
 	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection)
