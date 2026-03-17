@@ -1569,7 +1569,7 @@ LOCATE()
 			arg0,
 			LocateFlags.All,
 			found =>
-				ValueTask.FromResult<CallState>(found.Object().DBRef));
+				ValueTask.FromResult<CallState>($"#{found.Object().DBRef.Number}"));
 	}
 
 	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]

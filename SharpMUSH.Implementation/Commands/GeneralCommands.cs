@@ -2104,7 +2104,7 @@ public partial class Commands
 		if (double.TryParse(arg0, out var time))
 		{
 			TimeSpan convertedTime;
-			if (!switches.Contains("UNTIL"))
+			if (switches.Contains("UNTIL"))
 			{
 				convertedTime = DateTimeOffset.FromUnixTimeSeconds((long)time) - DateTimeOffset.UtcNow;
 			}
