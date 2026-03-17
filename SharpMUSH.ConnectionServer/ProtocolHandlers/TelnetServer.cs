@@ -6,8 +6,8 @@ using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Interpreters;
-using TelnetNegotiationCore.Models;
 using TelnetNegotiationCore.Protocols;
+using TelnetNegotiationCore.Models;
 
 namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 
@@ -20,19 +20,22 @@ public class TelnetServer : ConnectionHandler
 	private readonly IConnectionServerService _connectionService;
 	private readonly IMessageBus _publishEndpoint;
 	private readonly IDescriptorGeneratorService _descriptorGenerator;
+	private readonly ITelnetInterpreterFactory _telnetFactory;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
 		IConnectionServerService connectionService,
 		IMessageBus publishEndpoint,
-		IDescriptorGeneratorService descriptorGenerator)
+		IDescriptorGeneratorService descriptorGenerator,
+		ITelnetInterpreterFactory telnetFactory)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
 		_connectionService = connectionService;
 		_publishEndpoint = publishEndpoint;
 		_descriptorGenerator = descriptorGenerator;
+		_telnetFactory = telnetFactory;
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -40,10 +43,7 @@ public class TelnetServer : ConnectionHandler
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
 
-		var telnet = await new TelnetInterpreterBuilder()
-			.UseMode(TelnetInterpreter.TelnetMode.Server)
-			.UseLogger(_logger)
-			.UsePipe(connection.Transport)
+		var (telnet, readTask) = await _telnetFactory.CreateBuilder()
 			.OnSubmit(async (byteArray, encoding, _) =>
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, encoding.GetString(byteArray)), ct))
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
@@ -56,7 +56,7 @@ public class TelnetServer : ConnectionHandler
 			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection))
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
 			.AddPlugin<MCCPProtocol>()
-			.BuildAsync();
+			.BuildAndStartAsync(connection.Transport, ct);
 
 		var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 			? "unknown"
@@ -118,9 +118,9 @@ public class TelnetServer : ConnectionHandler
 
 		try
 		{
-			// Use the library's static read loop helper which handles reading from
-			// the pipe input and feeding bytes to the interpreter
-			await TelnetInterpreterBuilder.ReadFromPipeAsync(telnet, connection.Transport.Input, ct);
+			// Await the read task returned by BuildAndStartAsync, which completes
+			// when the connection closes or the cancellation token is triggered.
+			await readTask;
 		}
 		catch (ConnectionResetException)
 		{
@@ -137,6 +137,7 @@ public class TelnetServer : ConnectionHandler
 
 		// Disconnect and notify MainProcess
 		await _connectionService.DisconnectAsync(nextPort);
+		_descriptorGenerator.ReleaseTelnetDescriptor(nextPort);
 	}
 
 	private Func<TelnetInterpreter, string, ValueTask> MSDPCallback(ConnectionContext connection)
@@ -157,21 +158,5 @@ public class TelnetServer : ConnectionHandler
 				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
 			}
 		};
-	}
-}
-
-/// <summary>
-/// Helper class to generate unique connection descriptors
-/// </summary>
-public class NextUnoccupiedNumberGenerator(long start)
-{
-	private long _current = start;
-
-	public IEnumerable<long> Get()
-	{
-		while (true)
-		{
-			yield return Interlocked.Increment(ref _current);
-		}
 	}
 }
