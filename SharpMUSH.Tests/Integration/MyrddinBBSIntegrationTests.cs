@@ -440,6 +440,24 @@ public class MyrddinBBSIntegrationTests
 		await Task.Delay(5000);
 		Log("[BBS TEST] Waited 5s for @wait completion.");
 
+		// Diagnostic: dump all notifications since +bbnewgroup to see @wait callback output
+		var diagBaseline = preTestNotifications;
+		var allNotifs = NotifyService.ReceivedCalls().ToList();
+		var diagIdx = 0;
+		Log("[BBS TEST] All notifications since +bbnewgroup:");
+		foreach (var call in allNotifs)
+		{
+			var msg = ExtractMessageText(call);
+			if (msg == null) continue;
+			diagIdx++;
+			if (diagIdx > diagBaseline)
+				Log($"  [{diagIdx}] {Truncate(msg, 200)}");
+		}
+
+		// Reset baseline for +bbread
+		preTestNotifications = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
 		// ====================================================================
 		// Step 3: Check for parser errors when running +bbread
 		// ====================================================================
