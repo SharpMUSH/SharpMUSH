@@ -1419,8 +1419,8 @@ public class SharpMUSHParserVisitor(
 						new SharpMUSH.Library.Queries.EvaluateLockQuery(commandLockStr, executorObj, executorObj));
 					if (!passesLock)
 					{
-						await NotifyService.Notify(executorObj, "Permission denied.");
-						return new CallState("#-1 PERMISSION DENIED");
+						await NotifyService.Notify(executorObj, ErrorMessages.Notifications.PermissionDenied);
+						return new CallState(ErrorMessages.Returns.PermissionDenied);
 					}
 				}
 

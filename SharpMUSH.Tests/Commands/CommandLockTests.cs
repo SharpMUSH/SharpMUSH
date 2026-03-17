@@ -65,4 +65,23 @@ public class CommandLockTests
 		// Should NOT return permission denied
 		await Assert.That(resultText).DoesNotContain("PERMISSION DENIED");
 	}
+
+	[Test]
+	public async ValueTask PcreateCommandLockBlocksNonWizard()
+	{
+		// Create a non-wizard player
+		var nonWizardDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "NonWizPcreate");
+
+		// Create a parser context that runs as this non-wizard player
+		var nonWizParser = Parser.Push(Parser.CurrentState with { Executor = nonWizardDbRef });
+
+		// Try to use @pcreate (which has CommandLock = "FLAG^WIZARD")
+		var uniqueName = TestIsolationHelpers.GenerateUniqueName("ShouldNotCreate");
+		var result = await nonWizParser.CommandParse(MModule.single($"@pcreate {uniqueName}=TestPassword123"));
+		var resultText = result.Message?.ToPlainText() ?? "";
+
+		// Should be denied
+		await Assert.That(resultText).Contains("PERMISSION DENIED");
+	}
 }
