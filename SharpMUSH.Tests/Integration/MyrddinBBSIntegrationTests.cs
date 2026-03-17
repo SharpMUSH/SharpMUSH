@@ -453,10 +453,10 @@ public class MyrddinBBSIntegrationTests
 		var allNotifs = NotifyService.ReceivedCalls().ToList();
 		var diagIdx = 0;
 		Log("[BBS TEST] All notifications since +bbnewgroup:");
-		foreach (var call in allNotifs)
+		foreach (var msg in allNotifs
+			.Select(call => ExtractMessageText(call))
+			.Where(msg => msg != null))
 		{
-			var msg = ExtractMessageText(call);
-			if (msg == null) continue;
 			diagIdx++;
 			if (diagIdx > diagBaseline)
 				Log($"  [{diagIdx}] {Truncate(msg, 200)}");
@@ -487,11 +487,12 @@ public class MyrddinBBSIntegrationTests
 		var testErrorMessages = new List<string>();
 		var notifyIndex = 0;
 
-		foreach (var call in allCalls)
-		{
-			var messageText = ExtractMessageText(call);
-			if (messageText == null) continue;
+		var messageTexts = allCalls
+			.Select(call => ExtractMessageText(call))
+			.Where(messageText => messageText != null);
 
+		foreach (var messageText in messageTexts)
+		{
 			notifyIndex++;
 			if (notifyIndex <= preTestNotifications) continue;
 
