@@ -165,19 +165,58 @@ public class MessageCommandTests
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires room setup")]
 	public async ValueTask MessageRemitSwitch()
 	{
-		await ValueTask.CompletedTask;
+		// @message/remit targets a room and sends to its occupants
+		// Use room #0 (default room where God is located) as the target
+		// The attribute is evaluated on the target room (#0); use #1/attr to evaluate on God
+		var uniqueRemit = $"RemitTestMsg_{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&REMIT_TEST_ATTR_MSG #1={uniqueRemit}"));
+
+		// Use "obj/attr" format so message is evaluated from God (#1) not room (#0)
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message/remit #0=DefaultRemitMsg,#1/REMIT_TEST_ATTR_MSG"));
+
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c =>
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains(uniqueRemit),
+				s => s.Contains(uniqueRemit));
+		});
+
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Requires multiple objects")]
 	public async ValueTask MessageOemitSwitch()
 	{
-		await ValueTask.CompletedTask;
+		// @message/oemit sends to everyone in executor's room, excluding the listed objects
+		// The attribute is evaluated on the executor (#1); use "obj/attr" format
+		var testThing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "OemitTarget");
+		var uniqueOemit = $"OemitTestMsg_{Guid.NewGuid():N}";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&OEMIT_TEST_ATTR_MSG #1={uniqueOemit}"));
+
+		// Use "obj/attr" format so message is evaluated from God (#1) not the excluded object
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message/oemit {testThing}=DefaultOemitMsg,#1/OEMIT_TEST_ATTR_MSG"));
+
+		// oemit sends to executor's room excluding the target, executor (God) in same room gets it
+		var calls = NotifyService.ReceivedCalls().ToList();
+		var messageCall = calls.FirstOrDefault(c =>
+		{
+			var args = c.GetArguments();
+			if (args.Length < 2) return false;
+			var msg = args[1] as OneOf<MString, string>?;
+			if (msg == null) return false;
+			return msg.Value.Match(
+				ms => ms.ToPlainText().Contains(uniqueOemit),
+				s => s.Contains(uniqueOemit));
+		});
+
+		await Assert.That(messageCall).IsNotNull();
 	}
 
 	[Test]

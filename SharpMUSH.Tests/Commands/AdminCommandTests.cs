@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -18,8 +19,6 @@ public class AdminCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PcreateCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate TestPlayerPcreate=passwordPcreate"));
@@ -30,11 +29,11 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask NewpasswordCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@newpassword #1=newpassNewpassword"));
+		// Create a fresh player to avoid changing God's password
+		var freshPlayer = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), "NewpassTest");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@newpassword {freshPlayer}=newpassNewpassword"));
 
 		await NotifyService
 			.Received()
@@ -42,8 +41,6 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PasswordCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@password oldpassPassword=newpassPassword"));
@@ -84,8 +81,6 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask PoorCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@poor #1001"));
@@ -106,8 +101,6 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask ChownallCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1002=#2002"));
@@ -118,8 +111,6 @@ public class AdminCommandTests
 	}
 
 	[Test]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask ChzoneallCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzoneall #1003=#2003"));

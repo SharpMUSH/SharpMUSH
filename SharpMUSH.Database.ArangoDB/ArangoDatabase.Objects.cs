@@ -236,8 +236,8 @@ public partial class ArangoDatabase
 			new SharpEdgeCreateRequest(exit.Id, obj.Id), cancellationToken: ct);
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphLocations, DatabaseConstants.AtLocation,
 			new SharpEdgeCreateRequest(exit.Id, location.Id), cancellationToken: ct);
-		/* await arangoDB.Graph.Edge.CreateAsync(handle, DatabaseConstants.graphHomes, DatabaseConstants.hasHome,
-			new SharpEdgeCreateRequest(exit.Id, location.Id)); */
+		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphHomes, DatabaseConstants.HasHome,
+			new SharpEdgeCreateRequest(exit.Id, location.Id), cancellationToken: ct);
 		await arangoDb.Graph.Edge.CreateAsync(handle, DatabaseConstants.GraphObjectOwners, DatabaseConstants.HasObjectOwner,
 			new SharpEdgeCreateRequest(obj.Id, creator.Id!), cancellationToken: ct);
 
