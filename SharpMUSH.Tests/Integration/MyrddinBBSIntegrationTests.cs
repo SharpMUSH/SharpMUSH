@@ -425,10 +425,41 @@ public class MyrddinBBSIntegrationTests
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
 		// ====================================================================
-		// Step 1: Check for parser errors when running +bbnewgroup
+		// Step 1: Run +bbread BEFORE +bbnewgroup to show baseline state
+		// ====================================================================
+		Log("[BBS TEST] === +BBREAD BEFORE +BBNEWGROUP ===");
+		await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
+		Log("[BBS TEST] +bbread (before) executed.");
+
+		var beforeBaseline = preTestNotifications;
+		var beforeNotifs = NotifyService.ReceivedCalls().ToList();
+		var beforeMessages = new List<string>();
+		var beforeIdx = 0;
+		foreach (var msg in beforeNotifs
+			.Select(call => ExtractMessageText(call))
+			.OfType<string>())
+		{
+			beforeIdx++;
+			if (beforeIdx > beforeBaseline)
+				beforeMessages.Add(msg);
+		}
+
+		Log($"[BBS TEST] +bbread (before) produced {beforeMessages.Count} messages:");
+		foreach (var msg in beforeMessages)
+		{
+			Log($"  {msg}");
+		}
+
+		// Reset baseline
+		preTestNotifications = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
+		// ====================================================================
+		// Step 2: Check for parser errors when running +bbnewgroup
 		// ====================================================================
 		var newGroupCmd = $"+bbnewgroup {groupName}";
 		var parseErrors = Parser.ValidateAndGetErrors(MModule.single(newGroupCmd), ParseType.CommandList);
+		Log($"\n[BBS TEST] === +BBNEWGROUP {groupName} ===");
 		Log($"[BBS TEST] +bbnewgroup ANTLR parse errors: {parseErrors.Count}");
 		foreach (var err in parseErrors)
 		{
@@ -439,7 +470,7 @@ public class MyrddinBBSIntegrationTests
 			.Because("+bbnewgroup command should not produce any ANTLR parser errors");
 
 		// ====================================================================
-		// Step 2: Execute +bbnewgroup
+		// Step 3: Execute +bbnewgroup
 		// ====================================================================
 		await Parser.CommandParse(1, ConnectionService, MModule.single(newGroupCmd));
 		Log("[BBS TEST] +bbnewgroup executed.");
@@ -467,19 +498,17 @@ public class MyrddinBBSIntegrationTests
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
 		// ====================================================================
-		// Step 3: Check for parser errors when running +bbread
+		// Step 4: Run +bbread AFTER +bbnewgroup
 		// ====================================================================
+		Log("\n[BBS TEST] === +BBREAD AFTER +BBNEWGROUP ===");
 		var bbreadParseErrors = Parser.ValidateAndGetErrors(MModule.single("+bbread"), ParseType.CommandList);
 		Log($"[BBS TEST] +bbread ANTLR parse errors: {bbreadParseErrors.Count}");
 
 		await Assert.That(bbreadParseErrors.Count).IsEqualTo(0)
 			.Because("+bbread command should not produce any ANTLR parser errors");
 
-		// ====================================================================
-		// Step 4: Execute +bbread and capture output
-		// ====================================================================
 		await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
-		Log("[BBS TEST] +bbread executed.");
+		Log("[BBS TEST] +bbread (after) executed.");
 
 		// Collect notifications after the test
 		var allCalls = NotifyService.ReceivedCalls().ToList();
@@ -508,7 +537,8 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS +BBNEWGROUP / +BBREAD TEST RESULTS");
 		Log(new string('=', 78));
 		Log($"Group name: {groupName}");
-		Log($"Total notifications: {testMessages.Count}");
+		Log($"+bbread (before) messages: {beforeMessages.Count}");
+		Log($"+bbread (after) messages: {testMessages.Count}");
 		Log($"#-1 errors: {testErrorMessages.Count}");
 
 		if (testErrorMessages.Count > 0)
@@ -522,9 +552,9 @@ public class MyrddinBBSIntegrationTests
 			}
 		}
 
-		// Display all +bbread output
+		// Display all +bbread (after) output
 		Log($"\n{new string('-', 78)}");
-		Log("+BBREAD OUTPUT:");
+		Log("+BBREAD OUTPUT (AFTER +BBNEWGROUP):");
 		Log(new string('-', 78));
 		foreach (var msg in testMessages)
 		{
