@@ -1410,7 +1410,21 @@ public class SharpMUSHParserVisitor(
 					return new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}");
 				}
 
-				// 4. Execute the built-in command
+				// 4. Check CommandLock before executing
+				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
+				if (!string.IsNullOrEmpty(commandLockStr) && !executor.IsNone)
+				{
+					var executorObj = executor.Known();
+					var passesLock = await Mediator.Send(
+						new SharpMUSH.Library.Queries.EvaluateLockQuery(commandLockStr, executorObj, executorObj));
+					if (!passesLock)
+					{
+						await NotifyService.Notify(executorObj, "Permission denied.");
+						return new CallState("#-1 PERMISSION DENIED");
+					}
+				}
+
+				// 5. Execute the built-in command
 				var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 				var commandSuccess = true;
 				Option<CallState> commandResult;

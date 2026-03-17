@@ -2027,7 +2027,8 @@ public partial class Commands
 	/// <remarks>
 	/// Creating on the DBRef is not implemented.
 	/// </remarks>
-	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default, MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
+	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
+		MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
 	public static async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
