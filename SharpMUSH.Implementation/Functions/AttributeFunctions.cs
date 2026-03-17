@@ -538,8 +538,8 @@ public partial class Functions
 	public static async ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToString();
-		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToString();
+		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr);
 
 		if (!split.TryPickT0(out var details, out _))

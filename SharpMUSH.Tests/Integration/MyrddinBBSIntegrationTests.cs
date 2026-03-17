@@ -387,9 +387,6 @@ public class MyrddinBBSIntegrationTests
 	/// <summary>
 	/// Installs the BBS, runs +bbnewgroup, and verifies +bbread lists the new group.
 	/// Validates no ANTLR parser errors and no #-1 errors during the workflow.
-	///
-	/// Diagnostics: runs think commands to verify wizard status, @create, and num()
-	/// before testing the full +bbnewgroup→+bbread chain.
 	/// </summary>
 	[Test]
 	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
@@ -414,71 +411,6 @@ public class MyrddinBBSIntegrationTests
 		// Disable DEBUG/VERBOSE to reduce notification noise for this test.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
-
-		// Ensure player #1 (God) has WIZARD flag — required by +bbnewgroup's
-		// hasflag(%#,wizard) check. Use 'me' instead of '#1'.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=WIZARD"));
-
-		// Capture notification baseline after setup flags
-		var setupNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
-
-		// Diagnostic: verify hasflag, find BBS objects, and check BBS attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think WIZARD_CHECK=[hasflag(me,wizard)]"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think ALL_THINGS=[lsearch(all,type,THING)]"));
-
-		// Collect diagnostic results
-		var diagCalls = NotifyService.ReceivedCalls().ToList();
-		var diagIdx = 0;
-		var diagMessages = new List<string>();
-		foreach (var call in diagCalls)
-		{
-			var msg = ExtractMessageText(call);
-			if (msg == null) continue;
-			diagIdx++;
-			if (diagIdx > setupNotifications)
-			{
-				diagMessages.Add(msg);
-				Log($"[DIAG] {msg}");
-			}
-		}
-
-		// Find BBS object dbref from lsearch output and teleport to Master Room
-		var thingsOutput = diagMessages.LastOrDefault() ?? "";
-		var dbrefs = thingsOutput.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-			.Where(s => s.StartsWith('#'))
-			.ToArray();
-
-		// Update setup baseline
-		setupNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
-
-		foreach (var dbref in dbrefs)
-		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"think NAME_CHECK_{dbref}=[name({dbref})]"));
-		}
-
-		// Get name results
-		var nameCalls = NotifyService.ReceivedCalls().ToList();
-		var nameIdx = 0;
-		foreach (var call in nameCalls)
-		{
-			var msg = ExtractMessageText(call);
-			if (msg == null) continue;
-			nameIdx++;
-			if (nameIdx > setupNotifications)
-				Log($"[DIAG] {msg}");
-		}
-
-		// Teleport all BBS objects to Master Room (#2) by dbref
-		setupNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
-		foreach (var dbref in dbrefs)
-		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {dbref}=#2"));
-		}
-
-		Log("[BBS TEST] Prerequisites configured.");
 
 		// Track pre-test notification count
 		var preTestNotifications = NotifyService.ReceivedCalls()

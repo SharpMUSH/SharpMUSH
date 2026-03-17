@@ -312,7 +312,7 @@ public static partial class HelperFunctions
 
 		return string.IsNullOrEmpty(obj)
 			? false
-			: (obj, attr);
+			: (obj, string.IsNullOrEmpty(attr) ? null : attr);
 	}
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)
