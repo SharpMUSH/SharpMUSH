@@ -248,7 +248,7 @@ public static class MessageHelpers
 
 		var processedArgs = functionArgs.Select(kvp =>
 		{
-			var value = kvp.Value.Message?.ToString() ?? string.Empty;
+			var value = kvp.Value.Message?.ToPlainText() ?? string.Empty;
 			if (value == RecipientReplacementToken)
 			{
 				return new KeyValuePair<string, CallState>(

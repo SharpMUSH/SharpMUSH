@@ -1,4 +1,7 @@
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -8,6 +11,9 @@ public class InformationFunctionUnitTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Arguments("type(%#)", "PLAYER")]
@@ -110,13 +116,12 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("hidden(%#)", "0")]
-	[Category("TestInfrastructure")]
-	[Skip("Test infrastructure issue - intermittent failure, returns '1' instead of '0'")]
-	public async Task Hidden(string str, string expected)
+	public async Task Hidden()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		// Create a fresh isolated player so we don't rely on God's flag state
+		var playerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "HiddenTest");
+		var result = (await Parser.FunctionParse(MModule.single($"hidden({playerDbRef})")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo("0");
 	}
 
 	[Test]
