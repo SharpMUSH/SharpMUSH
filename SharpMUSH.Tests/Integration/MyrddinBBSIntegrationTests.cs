@@ -455,7 +455,7 @@ public class MyrddinBBSIntegrationTests
 		Log("[BBS TEST] All notifications since +bbnewgroup:");
 		foreach (var msg in allNotifs
 			.Select(call => ExtractMessageText(call))
-			.Where(msg => msg != null))
+			.OfType<string>())
 		{
 			diagIdx++;
 			if (diagIdx > diagBaseline)
@@ -489,7 +489,7 @@ public class MyrddinBBSIntegrationTests
 
 		var messageTexts = allCalls
 			.Select(call => ExtractMessageText(call))
-			.Where(messageText => messageText != null);
+			.OfType<string>();
 
 		foreach (var messageText in messageTexts)
 		{
