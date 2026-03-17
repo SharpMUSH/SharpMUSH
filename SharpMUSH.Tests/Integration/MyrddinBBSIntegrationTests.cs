@@ -46,13 +46,13 @@ namespace SharpMUSH.Tests.Integration;
 ///   Fix: split() now returns empty array for empty input (PennMUSH behavior).
 ///   +bbread #-1 errors: 0 (was 1).
 ///
-/// REMAINING NON-PARSER ERRORS:
-///
-/// Lock evaluator errors (3 lines — not parser errors):
+/// FIXED: Lock evaluator bare name support:
 ///   Lines 134, 136, 138: &amp;bb_read/bb_omit/bb_silent me — attribute clear commands
-///   These are parsed by the lock evaluator which expects flag/attribute names,
-///   not the bare identifier 'me'.
-///   Errors: "mismatched input 'me' expecting {NAME, BIT_FLAG, ...}"
+///   These previously caused "mismatched input 'me'" errors in the lock evaluator.
+///   Fixed by adding defaultExpr rule to BoolExpParser grammar to handle bare names.
+///   Lock evaluator errors: 0 (was 3).
+///
+/// REMAINING NON-PARSER ERRORS:
 ///
 /// Install #-1 false positives (3 — not actual errors):
 ///   These are attribute values that contain "#-1" as part of conditional checks
@@ -380,5 +380,137 @@ public class MyrddinBBSIntegrationTests
 		if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
 			return value;
 		return value[..(maxLength - 3)] + "...";
+	}
+
+	/// <summary>
+	/// Installs the BBS, runs +bbnewgroup, and verifies +bbread lists the new group.
+	/// Validates no ANTLR parser errors and no #-1 errors during the workflow.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
+	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
+	{
+		var output = new StringBuilder();
+
+		void Log(string message)
+		{
+			output.AppendLine(message);
+			Console.WriteLine(message);
+		}
+
+		var groupName = $"TestGroup_{Guid.NewGuid():N}"[..30]; // BBS truncates names, keep it reasonable
+
+		Log($"[BBS TEST] Creating new group with name: {groupName}");
+
+		// Track pre-test notification count
+		var preTestNotifications = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
+		// ====================================================================
+		// Step 1: Check for parser errors when running +bbnewgroup
+		// ====================================================================
+		var newGroupCmd = $"+bbnewgroup {groupName}";
+		var parseErrors = Parser.ValidateAndGetErrors(MModule.single(newGroupCmd), ParseType.CommandList);
+		Log($"[BBS TEST] +bbnewgroup ANTLR parse errors: {parseErrors.Count}");
+		foreach (var err in parseErrors)
+		{
+			Log($"[BBS TEST]   Parse error: col {err.Column}: {err.Message}");
+		}
+
+		await Assert.That(parseErrors.Count).IsEqualTo(0)
+			.Because("+bbnewgroup command should not produce any ANTLR parser errors");
+
+		// ====================================================================
+		// Step 2: Execute +bbnewgroup
+		// ====================================================================
+		await Parser.CommandParse(1, ConnectionService, MModule.single(newGroupCmd));
+		Log("[BBS TEST] +bbnewgroup executed.");
+
+		// Wait for the @wait 1={...} inside +bbnewgroup to complete
+		await Task.Delay(3000);
+		Log("[BBS TEST] Waited 3s for @wait completion.");
+
+		// ====================================================================
+		// Step 3: Check for parser errors when running +bbread
+		// ====================================================================
+		var bbreadParseErrors = Parser.ValidateAndGetErrors(MModule.single("+bbread"), ParseType.CommandList);
+		Log($"[BBS TEST] +bbread ANTLR parse errors: {bbreadParseErrors.Count}");
+
+		await Assert.That(bbreadParseErrors.Count).IsEqualTo(0)
+			.Because("+bbread command should not produce any ANTLR parser errors");
+
+		// ====================================================================
+		// Step 4: Execute +bbread and capture output
+		// ====================================================================
+		await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
+		Log("[BBS TEST] +bbread executed.");
+
+		// Collect notifications after the test
+		var allCalls = NotifyService.ReceivedCalls().ToList();
+		var testMessages = new List<string>();
+		var testErrorMessages = new List<string>();
+		var notifyIndex = 0;
+
+		foreach (var call in allCalls)
+		{
+			var messageText = ExtractMessageText(call);
+			if (messageText == null) continue;
+
+			notifyIndex++;
+			if (notifyIndex <= preTestNotifications) continue;
+
+			testMessages.Add(messageText);
+			if (messageText.Contains("#-1"))
+				testErrorMessages.Add(messageText);
+		}
+
+		// ====================================================================
+		// Step 5: Report results
+		// ====================================================================
+		Log($"\n{new string('=', 78)}");
+		Log("BBS +BBNEWGROUP / +BBREAD TEST RESULTS");
+		Log(new string('=', 78));
+		Log($"Group name: {groupName}");
+		Log($"Total notifications: {testMessages.Count}");
+		Log($"#-1 errors: {testErrorMessages.Count}");
+
+		if (testErrorMessages.Count > 0)
+		{
+			Log($"\n{new string('-', 78)}");
+			Log("#-1 ERRORS:");
+			Log(new string('-', 78));
+			foreach (var msg in testErrorMessages)
+			{
+				Log($"  {Truncate(msg, 120)}");
+			}
+		}
+
+		// Display all +bbread output
+		Log($"\n{new string('-', 78)}");
+		Log("+BBREAD OUTPUT:");
+		Log(new string('-', 78));
+		foreach (var msg in testMessages)
+		{
+			Log($"  {msg}");
+		}
+		Log(new string('=', 78));
+
+		// Write output to a separate file
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_NewGroup_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS TEST] Full output written to: {outputPath}");
+
+		// ====================================================================
+		// Step 6: Assertions
+		// ====================================================================
+
+		// The group name should appear in the +bbread output
+		var bbreadOutput = string.Join("\n", testMessages);
+		await Assert.That(bbreadOutput).Contains(groupName)
+			.Because($"+bbread should list the newly created group '{groupName}'");
+
+		// No #-1 errors in the +bbread output
+		await Assert.That(testErrorMessages.Count).IsEqualTo(0)
+			.Because("there should be no #-1 errors in the +bbnewgroup/+bbread workflow");
 	}
 }
