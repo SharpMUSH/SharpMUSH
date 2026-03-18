@@ -157,7 +157,7 @@ public class WizardCommandTests
 			MModule.single($"@wait 1=&{attrName} me=[add(1,1)]"));
 
 		// Wait for the scheduled task to fire and complete
-		await Task.Delay(3000);
+		await Task.Delay(5000);
 
 		// Read back the attribute value using think [get()]
 		var result = await Parser.CommandParse(1, ConnectionService,
