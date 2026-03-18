@@ -272,4 +272,47 @@ public class SemaphoreCommandTests
 		await Assert.That(attr.IsAttribute).IsTrue();
 		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("2");
 	}
+
+	/// <summary>
+	/// Tests the BBS-style pattern: user-defined command creates an object, then @wait
+	/// callback uses num() + setr() to get its dbref and store it in an attribute.
+	/// Simulates the +bbnewgroup flow: $cmd *:@create %0; @wait 1={&amp;groups store=[num(%0)]}
+	/// </summary>
+	[Test]
+	public async ValueTask WaitCommand_PatternMatchPreservesPercentZero()
+	{
+		// Arrange - create objects for the test
+		var storeObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitStore");
+		var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var uniqueAttr = $"WAITSTOR_{uniqueId}";
+		var cmdAttr = $"CMD_WAITST_{uniqueId}";
+
+		// Install a pattern-matched command that creates an object and uses @wait to store its dbref
+		// Pattern: $+waitstore_xxx *:@create %0; @wait 1={&WAITSTOR_xxx <storeObj>=[num(%0)]}
+		var cmdPattern = $"$+waitstore_{uniqueId.ToLower()} *:@create %0; @wait 1={{&{uniqueAttr} {storeObj}=[num(%0)]}}";
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{cmdAttr} {storeObj}={cmdPattern}"));
+
+		// Act - trigger the pattern-matched command with a unique object name
+		var targetName = $"WaitTgt_{uniqueId}";
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"+waitstore_{uniqueId.ToLower()} {targetName}"));
+
+		// Wait for @create to complete and @wait callback to fire
+		await Task.Delay(3000);
+
+		// Assert - the attribute should contain the dbref of the created object (not empty, not literal)
+		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
+		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, uniqueAttr,
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(attr.IsAttribute).IsTrue()
+			.Because($"&{uniqueAttr} should have been set by the @wait callback");
+
+		var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
+		await Assert.That(attrValue).StartsWith("#")
+			.Because($"num(%0) in the @wait callback should resolve to a dbref like #N, but got: {attrValue}");
+		await Assert.That(attrValue).DoesNotContain("-1")
+			.Because($"num(%0) should find the created object, not return #-1. Got: {attrValue}");
+	}
 }

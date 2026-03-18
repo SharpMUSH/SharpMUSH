@@ -209,6 +209,10 @@ public class MyrddinBBSIntegrationTests
 
 		Log($"[BBS INSTALL] Executed {executedLines} commands from {scriptLines.Length} total lines.");
 
+		// Wait for delayed @wait callbacks in the BBS install to complete
+		// The install script uses @wait 1={...} and @wait 3={...} at the end
+		await Task.Delay(5000);
+
 		// Track notification count after installation but before +bbread
 		var postInstallNotificationCount = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
@@ -388,15 +392,12 @@ public class MyrddinBBSIntegrationTests
 	/// Installs the BBS, runs +bbnewgroup, and verifies +bbread lists the new group.
 	/// Validates no ANTLR parser errors and no #-1 errors during the workflow.
 	/// 
-	/// The `&amp;` command's NoParse behavior prevents register/function evaluation in
-	/// @wait callbacks. The correct fix requires evaluating arguments before they reach
-	/// HandleSingleTokenCommandPattern's NoParse re-parsing, but blanket evaluation in
-	/// the &amp; handler itself causes install-time evaluation of $pattern:code values.
-	/// This test is skipped pending a context-aware evaluation approach.
+	/// The DirectInput flag (ParserStateFlags) ensures the &amp; command evaluates its RHS
+	/// when running from queue/callback contexts (@wait, @force, etc.) but stores it literally
+	/// when typed directly at the prompt. This matches PennMUSH's QUEUE_NOLIST behavior.
 	/// </summary>
 	[Test]
 	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
-	[Category("NotImplemented"), Skip("& NoParse prevents register/function evaluation in @wait callbacks — needs context-aware fix")]
 	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
 	{
 		var output = new StringBuilder();
@@ -477,6 +478,23 @@ public class MyrddinBBSIntegrationTests
 		// Wait for the @wait 1={...} inside +bbnewgroup to complete
 		await Task.Delay(5000);
 		Log("[BBS TEST] Waited 5s for @wait completion.");
+
+		// Diagnostic: check BBS state after +bbnewgroup callback
+		var diagResult1 = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("think [get(#222/groups)]"));
+		Log($"[BBS TEST] groups attr on #222: {diagResult1.Message?.ToPlainText()}");
+
+		var diagResult2 = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"think [num({groupName})]"));
+		Log($"[BBS TEST] num({groupName}): {diagResult2.Message?.ToPlainText()}");
+
+		var diagResult3 = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("think bbpocket=[num(bbpocket)]"));
+		Log($"[BBS TEST] bbpocket dbref: {diagResult3.Message?.ToPlainText()}");
+
+		var diagResult4 = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("think [get(bbpocket/groups)]"));
+		Log($"[BBS TEST] groups attr on bbpocket: {diagResult4.Message?.ToPlainText()}");
 
 		// Diagnostic: dump all notifications since +bbnewgroup to see @wait callback output
 		var diagBaseline = preTestNotifications;
