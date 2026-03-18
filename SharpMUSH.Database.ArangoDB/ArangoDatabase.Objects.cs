@@ -525,6 +525,11 @@ public partial class ArangoDatabase
 	{
 		var id = obj.GetProperty("_id").GetString()!;
 		var type = obj.GetProperty("Type").GetString()!;
+		WarningType warnings = WarningType.None;
+		if (obj.TryGetProperty("Warnings", out var warningsProp))
+		{
+			warnings = (WarningType)warningsProp.GetUInt32();
+		}
 		return new SharpObject
 		{
 			Id = id,
@@ -533,6 +538,7 @@ public partial class ArangoDatabase
 			Type = type,
 			CreationTime = obj.GetProperty("CreationTime").GetInt64(),
 			ModifiedTime = obj.GetProperty("ModifiedTime").GetInt64(),
+			Warnings = warnings,
 			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty, // Empty locks for JSON element conversion
 			Flags = new(() => GetObjectFlagsAsync(id, type.ToUpper(), CancellationToken.None)),
 			Powers = new(() => GetPowersAsync(id, CancellationToken.None)),
@@ -591,6 +597,7 @@ public partial class ArangoDatabase
 					}),
 			CreationTime = obj.CreationTime,
 			ModifiedTime = obj.ModifiedTime,
+			Warnings = obj.Warnings,
 			Flags =
 				new Lazy<IAsyncEnumerable<SharpObjectFlag>>(() => GetObjectFlagsAsync(obj.Id, obj.Type.ToUpper(), CancellationToken.None)),
 			Powers = new Lazy<IAsyncEnumerable<SharpPower>>(() => GetPowersAsync(obj.Id, CancellationToken.None)),
