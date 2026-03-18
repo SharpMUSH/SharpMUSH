@@ -142,6 +142,32 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")));
 	}
 
+	/// <summary>
+	/// Verifies that @wait evaluates functions inside &amp;attr obj=value commands.
+	/// <c>@wait 1=&amp;testattr me=[add(1,1)]</c> should, after the delay fires, set the
+	/// attribute to "2" (evaluated), not the literal string "[add(1,1)]".
+	/// </summary>
+	[Test]
+	public async ValueTask WaitCommand_EvaluatesAmpersandAttrValue()
+	{
+		var attrName = $"WAITEVAL_{Guid.NewGuid():N}"[..20];
+
+		// Use @wait to set an attribute with a function call as the value after 1s
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@wait 1=&{attrName} me=[add(1,1)]"));
+
+		// Wait for the scheduled task to fire and complete
+		await Task.Delay(3000);
+
+		// Read back the attribute value using think [get()]
+		var result = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"think [get(me/{attrName})]"));
+
+		var attrValue = result.Message?.ToPlainText()?.Trim() ?? "";
+		await Assert.That(attrValue).IsEqualTo("2")
+			.Because("@wait should evaluate [add(1,1)] to 2 when the callback fires");
+	}
+
 	[Test]
 	public async ValueTask UptimeCommand()
 	{
