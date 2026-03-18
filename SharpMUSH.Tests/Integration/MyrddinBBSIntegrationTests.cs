@@ -388,16 +388,15 @@ public class MyrddinBBSIntegrationTests
 	/// Installs the BBS, runs +bbnewgroup, and verifies +bbread lists the new group.
 	/// Validates no ANTLR parser errors and no #-1 errors during the workflow.
 	/// 
-	/// KNOWN LIMITATION: The &amp; (ampersand) single-token command has NoParse behavior
-	/// which prevents %q0 register substitution inside @wait callbacks. The BBS
-	/// +bbnewgroup command uses @wait 1={&amp;groups #222=%q0; ...} which requires %q0
-	/// to be resolved, but NoParse prevents this. Removing NoParse from &amp; was tried
-	/// but causes install-time evaluation of $pattern:code attribute values.
-	/// This test is skipped until the &amp; NoParse issue is resolved.
+	/// The `&amp;` command's NoParse behavior prevents register/function evaluation in
+	/// @wait callbacks. The correct fix requires evaluating arguments before they reach
+	/// HandleSingleTokenCommandPattern's NoParse re-parsing, but blanket evaluation in
+	/// the &amp; handler itself causes install-time evaluation of $pattern:code values.
+	/// This test is skipped pending a context-aware evaluation approach.
 	/// </summary>
 	[Test]
 	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
-	[Category("NotImplemented"), Skip("& command NoParse prevents %q0 substitution in @wait callbacks — see PR #516")]
+	[Category("NotImplemented"), Skip("& NoParse prevents register/function evaluation in @wait callbacks — needs context-aware fix")]
 	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
 	{
 		var output = new StringBuilder();

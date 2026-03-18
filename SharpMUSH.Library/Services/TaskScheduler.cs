@@ -43,19 +43,6 @@ public class TaskScheduler(
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
 
 	/// <summary>
-	/// Pre-evaluates a command string (resolving function calls and substitutions) in the given state,
-	/// then executes it as a command list. This matches PennMUSH behavior where the entire command
-	/// string is evaluated before command dispatch, ensuring NoParse commands like &amp; still receive
-	/// evaluated arguments from their calling context.
-	/// </summary>
-	private async ValueTask<CallState?> EvaluateAndExecuteCommandList(ParserState state, MString command)
-	{
-		var p = parser.FromState(state);
-		var evaluated = await p.FunctionParse(command);
-		return await p.CommandListParse(evaluated?.Message ?? command);
-	}
-
-	/// <summary>
 	/// Represents a queued command entry for the FIFO immediate-execution queue.
 	/// </summary>
 	private sealed record QueueEntry(
@@ -190,7 +177,7 @@ public class TaskScheduler(
 			pid,
 			$"dbref:{state.Executor}-{pid}",
 			EnqueueGroup,
-			() => EvaluateAndExecuteCommandList(state, command),
+			() => parser.FromState(state).CommandListParse(command),
 			new CancellationTokenSource()
 		);
 		_pendingEntries[pid] = entry;
@@ -337,7 +324,7 @@ int oldValue)
 				if (command != null && state != null)
 				{
 					await EnqueueWork(
-						() => EvaluateAndExecuteCommandList(state, command),
+						() => parser.FromState(state).CommandListParse(command),
 						triggerKey.Name,
 						triggerKey.Group);
 				}
@@ -373,7 +360,7 @@ int oldValue)
 				if (command != null && state != null)
 				{
 					await EnqueueWork(
-						() => EvaluateAndExecuteCommandList(state, command),
+						() => parser.FromState(state).CommandListParse(command),
 						triggerKey.Name,
 						triggerKey.Group);
 				}
@@ -526,7 +513,7 @@ int oldValue)
 		var pid = NextPid();
 		await _scheduler.ScheduleJob(
 			async () => await EnqueueWork(
-				() => EvaluateAndExecuteCommandList(state, command),
+				() => parser.FromState(state).CommandListParse(command),
 				$"dbref:{state.Executor}-{pid}",
 				EnqueueGroup),
 			builder => builder
