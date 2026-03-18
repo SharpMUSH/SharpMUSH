@@ -322,17 +322,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Derive DirectInput from the presence of a Handle: a live Handle means this is direct
 		// player input (equivalent to PennMUSH's QUEUE_NOLIST). No Handle means it is running
 		// in a programmatic or queue context where the RHS of & should be evaluated.
-		if (!State.IsEmpty)
-		{
-			var derivedFlags = CurrentState.Handle.HasValue
-				? CurrentState.Flags | ParserStateFlags.DirectInput
-				: CurrentState.Flags & ~ParserStateFlags.DirectInput;
-			var newParser = Push(CurrentState with { Flags = derivedFlags });
-			var r = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
-			return r ?? CallState.Empty;
-		}
+		var baseFlags = State.IsEmpty ? ParserStateFlags.None : CurrentState.Flags;
+		var handle = State.IsEmpty ? null : CurrentState.Handle;
+		var derivedFlags = handle.HasValue
+			? baseFlags | ParserStateFlags.DirectInput
+			: baseFlags & ~ParserStateFlags.DirectInput;
 
-		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse));
+		var parserToUse = State.IsEmpty ? this : Push(CurrentState with { Flags = derivedFlags });
+		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), parserToUse);
 		return result ?? CallState.Empty;
 	}
 
