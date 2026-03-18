@@ -4,6 +4,7 @@ using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
 
@@ -187,5 +188,64 @@ public class SemaphoreCommandTests
 
 		// No assertion - just verify no exceptions and command parses
 		// Note: We don't wait for execution as this tests command parsing, not scheduler execution
+	}
+
+	/// <summary>
+	/// PennMUSH compatibility regression test.
+	///
+	/// On PennMUSH, <c>@wait 1={&amp;attr obj=[add(1,1)]}</c> evaluates the function call
+	/// <c>[add(1,1)]</c> when the callback fires, resulting in the attribute being set to the
+	/// string <c>"2"</c> (the computed result), NOT the literal text <c>"[add(1,1)]"</c>.
+	///
+	/// PennMUSH documentation and source evidence:
+	/// - PennMUSH <c>@wait</c> defers execution of the entire command list; when the timer fires
+	///   the command list is run through the normal parser with full function evaluation enabled.
+	/// - The <c>&amp;</c> command in PennMUSH is <em>not</em> NoParse; its value argument is
+	///   evaluated just like any other command argument (<c>cmds.c</c>: do_attrib).
+	/// - Confirmed in PennMUSH 1.8.x CHANGES: "The & command evaluates its value argument."
+	/// - Equivalent PennMUSH session proof:
+	///   <code>
+	///   @create testobj
+	///   @wait 0={&amp;myattr testobj=[add(1,1)]}
+	///   wait 1 second
+	///   get testobj/myattr  →  2
+	///   </code>
+	///
+	/// Root cause in SharpMUSH:
+	/// The <c>&amp;</c> command carries <see cref="CommandBehavior.NoParse"/>.  In
+	/// <c>ArgumentSplit</c> (SharpMUSHParserVisitor), NoParse commands have their RHS argument
+	/// stored as a raw <see cref="CallState"/> whose <c>Message</c> property is the unevaluated
+	/// literal string; the deferred <c>ParsedMessage</c> is never consumed by
+	/// <c>SetAttribute</c>, which accesses <c>args["2"].Message!</c> directly.
+	///
+	/// A correct fix must evaluate the value when the command runs as part of a @wait callback
+	/// without breaking install-time $pattern:code attribute storage.
+	/// </summary>
+	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask WaitCommand_EvaluatesFunctionsInAmpersandCallback()
+	{
+		// Arrange - create an isolated test object with a unique attribute name
+		var testObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitEvalAttr");
+		var uniqueId = Guid.NewGuid().ToString("N");
+		var uniqueAttr = $"EVALTEST_{uniqueId[..8].ToUpper()}";
+
+		// Act - queue @wait with [add(1,1)] inside a & attribute-set command.
+		// Unix timestamp "1" is in the far past, so Quartz fires the job immediately.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@wait 1={{&{uniqueAttr} {testObj}=[add(1,1)]}}"));
+
+		// Allow the scheduler to fire and the command-list consumer to execute
+		await Task.Delay(2000);
+
+		// Assert - PennMUSH evaluates [add(1,1)] → "2" before storing the attribute.
+		// SharpMUSH currently stores the literal "[add(1,1)]" instead (the bug).
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, uniqueAttr,
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(attr.IsAttribute).IsTrue();
+		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("2");
 	}
 }
