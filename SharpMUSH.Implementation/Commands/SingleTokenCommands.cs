@@ -45,12 +45,12 @@ public partial class Commands
 				MString contents;
 				if (args.TryGetValue("2", out var tmpContents))
 				{
-					// PennMUSH QUEUE_NOLIST behaviour:
-					// - DirectInput = true  → command came directly from a player's network connection;
+					// PennMUSH QUEUE_NOLIST behaviour via ParserStateFlags.DirectInput:
+					// - DirectInput set   → command came directly from a player's network connection;
 					//   treat the value as literal code (NoParse — no function evaluation).
-					// - DirectInput = false → command is running from a queue/callback (@wait, @trigger,
+					// - DirectInput clear → command is running from a queue/callback (@wait, @trigger,
 					//   @force, etc.); evaluate the value before storage, matching PennMUSH behaviour.
-					contents = parser.CurrentState.DirectInput
+					contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
 						? tmpContents.Message!
 						: await tmpContents.ParsedMessage() ?? MModule.empty();
 				}

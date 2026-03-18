@@ -12,6 +12,27 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Library.ParserInterfaces;
 
 /// <summary>
+/// Bitfield flags for the parser state, replacing individual boolean properties.
+/// Adding a new flag here (instead of a new <see langword="bool"/> property) keeps
+/// <see cref="ParserState"/> compact and avoids record-copy overhead for each new flag.
+/// </summary>
+[Flags]
+public enum ParserStateFlags
+{
+	/// <summary>No flags set.</summary>
+	None = 0,
+
+	/// <summary>
+	/// Equivalent to PennMUSH's <c>QUEUE_NOLIST</c> flag.
+	/// Set when a command originates directly from a player's network connection (typed at the prompt).
+	/// When set, commands like <c>&amp;</c> store their value argument as literal code without evaluation.
+	/// Cleared by <c>CommandListParse</c> / <c>CommandListParseVisitor</c> so that all queue and
+	/// callback contexts (e.g., <c>@wait</c>, <c>@force</c>, triggered attributes) evaluate the RHS.
+	/// </summary>
+	DirectInput = 1 << 0,
+}
+
+/// <summary>
 /// What parsing mode the parser should consider.
 /// </summary>
 public enum ParseMode
@@ -143,11 +164,10 @@ public class IterationWrapper<T>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
 /// <param name="LimitExceeded">Shared flag indicating a limit has been exceeded. Mutable and shared across all states in an evaluation.</param>
 /// <param name="CommandHistory">Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside CommandListParse context.</param>
-/// <param name="DirectInput">
-/// Indicates that this command originated directly from a player's network connection (equivalent to PennMUSH's QUEUE_NOLIST flag).
-/// When <see langword="true"/>, commands like <c>&amp;</c> treat their value argument as literal code (NoParse — no function evaluation).
-/// When <see langword="false"/> (the default, set on all queue/callback paths), function calls in the value are evaluated before storage,
-/// matching PennMUSH behavior for <c>@wait</c> callbacks and similar queue-driven contexts.
+/// <param name="Flags">
+/// Bitfield of <see cref="ParserStateFlags"/> values.
+/// Use <see cref="ParserStateFlags.DirectInput"/> to indicate that this command originated directly
+/// from a player's network connection (equivalent to PennMUSH's <c>QUEUE_NOLIST</c> flag).
 /// </param>
 public partial record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
@@ -175,7 +195,7 @@ public partial record ParserState(
 	InvocationCounter? TotalInvocations = null,
 	LimitExceededFlag? LimitExceeded = null,
 	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null,
-	bool DirectInput = false)
+	ParserStateFlags Flags = ParserStateFlags.None)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;

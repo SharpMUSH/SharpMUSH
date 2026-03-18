@@ -621,6 +621,7 @@ public class SharpMUSHParserVisitor(
 				Handle: currentState.Handle,
 				ParseMode: currentState.ParseMode,
 				HttpResponse: currentState.HttpResponse,
+				Flags: currentState.Flags,
 				CallDepth: callDepth,
 				FunctionRecursionDepths: recursionDepths,
 				TotalInvocations: invocationCounter,
