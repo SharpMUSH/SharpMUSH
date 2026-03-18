@@ -248,8 +248,6 @@ public class SemaphoreCommandTests
 	/// player input or when storing <c>$pattern:code</c> attribute values.
 	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask WaitCommand_EvaluatesFunctionsInAmpersandCallback()
 	{
 		// Arrange - create an isolated test object with a unique attribute name

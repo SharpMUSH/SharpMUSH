@@ -221,9 +221,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public ValueTask<CallState?> CommandListParse(MString text)
 	{
 		// Push a fresh CommandHistory so @retry can track previous commands in this parse session.
+		// Also clear DirectInput: a CommandListParse is always a queue/callback context, never
+		// direct player input (equivalent to PennMUSH dropping the QUEUE_NOLIST flag here).
 		var freshParser = State.IsEmpty ? this : Push(CurrentState with
 		{
-			CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>()
+			CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>(),
+			DirectInput = false
 		});
 		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse), freshParser);
 	}
@@ -252,7 +255,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startCommandString();
 
-		SharpMUSHParserVisitor visitor = new(Logger, this,
+		// Clear DirectInput for the same reason as CommandListParse: this visitor is always
+		// used in a queue/callback context (e.g., @force, @trigger), never for direct player input.
+		var parserForList = State.IsEmpty ? this : Push(CurrentState with { DirectInput = false });
+
+		SharpMUSHParserVisitor visitor = new(Logger, parserForList,
 			Configuration,
 			_mediator,
 			_notifyService,
@@ -297,7 +304,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CallDepth: new InvocationCounter(),
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag()));
+			LimitExceeded: new LimitExceededFlag(),
+			DirectInput: true));
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 
