@@ -98,6 +98,29 @@ public class WizardCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
+	/// <summary>
+	/// Verifies that @force evaluates functions inside &amp;attr obj=value commands.
+	/// <c>@force me=&amp;testattr me=[add(1,1)]</c> should set the attribute to "2" (evaluated),
+	/// not the literal string "[add(1,1)]".
+	/// </summary>
+	[Test]
+	public async ValueTask ForceCommand_EvaluatesAmpersandAttrValue()
+	{
+		var attrName = $"FORCEEVAL_{Guid.NewGuid():N}"[..20];
+
+		// Use @force to set an attribute with a function call as the value
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@force me=&{attrName} me=[add(1,1)]"));
+
+		// Read back the attribute value using think [get()]
+		var result = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"think [get(me/{attrName})]"));
+
+		var attrValue = result.Message?.ToPlainText()?.Trim() ?? "";
+		await Assert.That(attrValue).IsEqualTo("2")
+			.Because("@force should evaluate [add(1,1)] to 2 before the & command stores it");
+	}
+
 	[Test]
 	public async ValueTask NotifyCommand()
 	{
