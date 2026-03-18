@@ -181,11 +181,19 @@ public class MyrddinBBSIntegrationTests
 		var preInstallNotificationCount = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
+		string? bbpocketDbref = null; // Will be set after @create bbpocket=10
+
 		for (var i = 0; i < scriptLines.Length; i++)
 		{
 			var line = scriptLines[i];
 			if (!IsExecutableLine(line))
 				continue;
+
+			// Substitute hardcoded #222 with the actual bbpocket dbref once known
+			if (bbpocketDbref != null)
+			{
+				line = line.Replace("#222", bbpocketDbref);
+			}
 
 			try
 			{
@@ -198,6 +206,15 @@ public class MyrddinBBSIntegrationTests
 
 				await Parser.CommandParse(1, ConnectionService, MModule.single(line));
 				executedLines++;
+
+				// After creating bbpocket, capture its actual dbref
+				if (bbpocketDbref == null && line.TrimStart().StartsWith("@create bbpocket", StringComparison.OrdinalIgnoreCase))
+				{
+					var numResult = await Parser.CommandParse(1, ConnectionService,
+						MModule.single("think [num(bbpocket)]"));
+					bbpocketDbref = numResult.Message?.ToPlainText()?.Trim();
+					Log($"[BBS INSTALL] bbpocket created with dbref: {bbpocketDbref} (replacing #222 in remaining lines)");
+				}
 			}
 			catch (Exception ex)
 			{
@@ -480,21 +497,23 @@ public class MyrddinBBSIntegrationTests
 		Log("[BBS TEST] Waited 5s for @wait completion.");
 
 		// Diagnostic: check BBS state after +bbnewgroup callback
-		var diagResult1 = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("think [get(#222/groups)]"));
-		Log($"[BBS TEST] groups attr on #222: {diagResult1.Message?.ToPlainText()}");
+		// First discover the actual bbpocket dbref (install substituted #222 → actual dbref)
+		var diagBbpocket = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("think [num(BBS - Myrddin's Global BBS v4.0.6)]"));
+		var bbsObjDbref = diagBbpocket.Message?.ToPlainText()?.Trim() ?? "#-1";
+		Log($"[BBS TEST] BBS object (mbboard) dbref: {bbsObjDbref}");
+
+		// Check #2, #3, #4 to understand the object layout
+		for (var probe = 2; probe <= 5; probe++)
+		{
+			var probeResult = await Parser.CommandParse(1, ConnectionService,
+				MModule.single($"think #{probe}=[name(#{probe})] groups=[get(#{probe}/groups)]"));
+			Log($"[BBS TEST] {probeResult.Message?.ToPlainText()?.Trim()}");
+		}
 
 		var diagResult2 = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"think [num({groupName})]"));
 		Log($"[BBS TEST] num({groupName}): {diagResult2.Message?.ToPlainText()}");
-
-		var diagResult3 = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("think bbpocket=[num(bbpocket)]"));
-		Log($"[BBS TEST] bbpocket dbref: {diagResult3.Message?.ToPlainText()}");
-
-		var diagResult4 = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("think [get(bbpocket/groups)]"));
-		Log($"[BBS TEST] groups attr on bbpocket: {diagResult4.Message?.ToPlainText()}");
 
 		// Diagnostic: dump all notifications since +bbnewgroup to see @wait callback output
 		var diagBaseline = preTestNotifications;
