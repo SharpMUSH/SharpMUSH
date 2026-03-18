@@ -10,6 +10,9 @@ public static class MUSHCodeParserExtensions
 
 	/// <summary>
 	/// Parses attribute content with appropriate DEBUG/NODEBUG flag handling.
+	/// Sets <see cref="ParserStateFlags.Debug"/> (≙ PennMUSH <c>QUEUE_DEBUG</c>) or
+	/// <see cref="ParserStateFlags.NoDebug"/> (≙ PennMUSH <c>QUEUE_NODEBUG</c>) on the parser state
+	/// based on the attribute's flags.
 	/// </summary>
 	/// <param name="parser">The parser instance</param>
 	/// <param name="attribute">The attribute being evaluated</param>
@@ -20,34 +23,35 @@ public static class MUSHCodeParserExtensions
 		SharpAttribute attribute,
 		Func<IMUSHCodeParser, TResult> evaluate)
 	{
-		var debugOverride = GetAttributeDebugOverride(attribute);
+		var flagDelta = GetAttributeDebugFlags(attribute);
 
 		return parser.With(
-			state => state with { AttributeDebugOverride = debugOverride },
+			state => state with { Flags = (state.Flags & ~(ParserStateFlags.Debug | ParserStateFlags.NoDebug)) | flagDelta },
 			evaluate);
 	}
 
 	/// <summary>
-	/// Determines attribute-level debug override from attribute flags.
+	/// Determines the <see cref="ParserStateFlags"/> Debug/NoDebug bits to apply for a given attribute.
+	/// NODEBUG takes precedence over DEBUG, matching PennMUSH's <c>QUEUE_NODEBUG</c> / <c>QUEUE_DEBUG</c> priority.
 	/// </summary>
 	/// <param name="attribute">The attribute to check</param>
-	/// <returns>null (no override), true (DEBUG), or false (NODEBUG takes precedence)</returns>
-	private static bool? GetAttributeDebugOverride(SharpAttribute attribute)
+	/// <returns>
+	/// <see cref="ParserStateFlags.NoDebug"/> if the attribute has NO_DEBUG,
+	/// <see cref="ParserStateFlags.Debug"/> if it has DEBUG,
+	/// <see cref="ParserStateFlags.None"/> if neither.
+	/// </returns>
+	private static ParserStateFlags GetAttributeDebugFlags(SharpAttribute attribute)
 	{
 		var flags = attribute.Flags.ToList();
 		var hasNoDebug = flags.Any(f => f.Name.Equals("no_debug", StringComparison.OrdinalIgnoreCase));
 		var hasDebug = flags.Any(f => f.Name.Equals("debug", StringComparison.OrdinalIgnoreCase));
 
-		// NODEBUG takes precedence over DEBUG
+		// NODEBUG takes precedence over DEBUG (matching PennMUSH QUEUE_NODEBUG priority)
 		if (hasNoDebug)
-		{
-			return false;
-		}
-		else if (hasDebug)
-		{
-			return true;
-		}
+			return ParserStateFlags.NoDebug;
+		if (hasDebug)
+			return ParserStateFlags.Debug;
 
-		return null;
+		return ParserStateFlags.None;
 	}
 }

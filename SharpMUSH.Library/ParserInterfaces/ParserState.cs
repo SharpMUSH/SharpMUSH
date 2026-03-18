@@ -12,6 +12,58 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Library.ParserInterfaces;
 
 /// <summary>
+/// Bitfield flags for the parser state, consolidating individual boolean properties into a single
+/// compact field.  Adding a new flag here (instead of a new <see langword="bool"/> property) keeps
+/// <see cref="ParserState"/> compact and avoids record-copy overhead for each new flag.
+///
+/// <para>
+/// Mapping to PennMUSH <c>QUEUE_*</c> constants (<c>mque.queue_type</c>):
+/// <list type="table">
+///   <listheader><term>SharpMUSH flag</term><description>PennMUSH equivalent</description></listheader>
+///   <item><term><see cref="DirectInput"/></term><description><c>QUEUE_NOLIST</c> (0x0200) — don't split on semicolons; don't evaluate the RHS of the <c>&amp;</c> command</description></item>
+///   <item><term><see cref="Debug"/></term><description><c>QUEUE_DEBUG</c> (0x1000) — attribute carries the DEBUG flag; force debug output on</description></item>
+///   <item><term><see cref="NoDebug"/></term><description><c>QUEUE_NODEBUG</c> (0x2000) — attribute carries the NO_DEBUG flag; suppress debug output</description></item>
+/// </list>
+/// Other notable PennMUSH flags not (yet) represented here:
+/// <c>QUEUE_SOCKET</c> (0x0004, socket input) is covered by <see cref="ParserState.Handle"/> being non-null;
+/// <c>QUEUE_BREAK</c> (0x0400) maps to <see cref="Execution.CommandListBreak"/>;
+/// <c>QUEUE_INPLACE</c>, <c>QUEUE_PRESERVE_QREG</c>, etc. are not yet implemented.
+/// </para>
+/// </summary>
+[Flags]
+public enum ParserStateFlags
+{
+	/// <summary>No flags set.</summary>
+	None = 0,
+
+	/// <summary>
+	/// Equivalent to PennMUSH's <c>QUEUE_NOLIST</c> flag (0x0200).
+	/// Set when a command originates directly from a player's network connection (typed at the prompt).
+	/// When set, commands like <c>&amp;</c> store their value argument as literal code without evaluation,
+	/// and the command string is not split on semicolons.
+	/// Cleared by <c>CommandListParse</c> / <c>CommandListParseVisitor</c> so that all queue and
+	/// callback contexts (e.g., <c>@wait</c>, <c>@force</c>, triggered attributes) evaluate the RHS.
+	/// </summary>
+	DirectInput = 1 << 0,
+
+	/// <summary>
+	/// Equivalent to PennMUSH's <c>QUEUE_DEBUG</c> flag (0x1000).
+	/// Set when the attribute being evaluated carries the DEBUG flag.
+	/// Forces debug output on for this evaluation, regardless of the executor's DEBUG object flag.
+	/// Takes lower precedence than <see cref="NoDebug"/>: if both are set, <c>NoDebug</c> wins.
+	/// </summary>
+	Debug = 1 << 1,
+
+	/// <summary>
+	/// Equivalent to PennMUSH's <c>QUEUE_NODEBUG</c> flag (0x2000).
+	/// Set when the attribute being evaluated carries the NO_DEBUG flag.
+	/// Suppresses debug output for this evaluation, regardless of the executor's DEBUG object flag.
+	/// Takes precedence over <see cref="Debug"/>: if both are set, this wins.
+	/// </summary>
+	NoDebug = 1 << 2,
+}
+
+/// <summary>
 /// What parsing mode the parser should consider.
 /// </summary>
 public enum ParseMode
@@ -137,12 +189,17 @@ public class IterationWrapper<T>
 /// <param name="Handle">The telnet handle running the command.</param>
 /// <param name="ParseMode">Parse mode, in case we need to NoParse.</param>
 /// <param name="HttpResponse">HTTP response context for building HTTP responses</param>
-/// <param name="AttributeDebugOverride">Attribute-level DEBUG/NODEBUG override: null=use object flag, true=force debug, false=suppress debug</param>
 /// <param name="CallDepth">Shared counter tracking overall function call nesting depth. Mutable and shared across all states in an evaluation.</param>
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
 /// <param name="LimitExceeded">Shared flag indicating a limit has been exceeded. Mutable and shared across all states in an evaluation.</param>
 /// <param name="CommandHistory">Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside CommandListParse context.</param>
+/// <param name="Flags">
+/// Bitfield of <see cref="ParserStateFlags"/> values controlling parser behavior.
+/// Use <see cref="ParserStateFlags.DirectInput"/> (≙ <c>QUEUE_NOLIST</c>),
+/// <see cref="ParserStateFlags.Debug"/> (≙ <c>QUEUE_DEBUG</c>), and
+/// <see cref="ParserStateFlags.NoDebug"/> (≙ <c>QUEUE_NODEBUG</c>).
+/// </param>
 public partial record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -163,12 +220,12 @@ public partial record ParserState(
 	long? Handle,
 	ParseMode ParseMode = ParseMode.Default,
 	HttpResponseContext? HttpResponse = null,
-	bool? AttributeDebugOverride = null,
 	InvocationCounter? CallDepth = null,
 	Dictionary<string, int>? FunctionRecursionDepths = null,
 	InvocationCounter? TotalInvocations = null,
 	LimitExceededFlag? LimitExceeded = null,
-	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null)
+	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null,
+	ParserStateFlags Flags = ParserStateFlags.None)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
@@ -219,7 +276,6 @@ public partial record ParserState(
 		null,
 		null,
 		ParseMode.Default,
-		null,
 		null,
 		new InvocationCounter(),
 		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),

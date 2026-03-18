@@ -42,7 +42,22 @@ public partial class Commands
 			executor,
 			args["1"].Message!.ToString(), LocateFlags.All, async realLocated =>
 			{
-				var contents = args.TryGetValue("2", out var tmpContents) ? tmpContents.Message! : MModule.empty();
+				MString contents;
+				if (args.TryGetValue("2", out var tmpContents))
+				{
+					// PennMUSH QUEUE_NOLIST behavior via ParserStateFlags.DirectInput:
+					// - DirectInput set   → command came directly from a player's network connection;
+					//   treat the value as literal code (NoParse — no function evaluation).
+					// - DirectInput clear → command is running from a queue/callback (@wait, @trigger,
+					//   @force, etc.); evaluate the value before storage, matching PennMUSH behavior.
+					contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
+						? tmpContents.Message!
+						: await tmpContents.ParsedMessage() ?? MModule.empty();
+				}
+				else
+				{
+					contents = MModule.empty();
+				}
 
 				var setResult =
 					await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!),
