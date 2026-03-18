@@ -363,12 +363,20 @@ public class SharpMUSHParserVisitor(
 		{
 			executorObj = executor.Known();
 
-			if (parser.CurrentState.AttributeDebugOverride.HasValue)
+			var stateFlags = parser.CurrentState.Flags;
+			if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
 			{
-				shouldDebug = parser.CurrentState.AttributeDebugOverride.Value;
+				// QUEUE_NODEBUG: attribute-level NO_DEBUG suppresses debug output
+				shouldDebug = false;
+			}
+			else if (stateFlags.HasFlag(ParserStateFlags.Debug))
+			{
+				// QUEUE_DEBUG: attribute-level DEBUG forces debug output on
+				shouldDebug = true;
 			}
 			else
 			{
+				// No attribute override — fall back to the executor's DEBUG object flag
 				shouldDebug = await executorObj.HasFlag("DEBUG");
 			}
 
