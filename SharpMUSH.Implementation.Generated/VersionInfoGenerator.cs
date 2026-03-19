@@ -20,7 +20,8 @@ public class VersionInfoGenerator : IIncrementalGenerator
 		             
 		             public static class VersionInfo
 		             {
-		                 public const string Version = "{{version}}";
+		                 public const string SharpMUSHVersion = "{{version}}";
+		                 public const string Version = "PennMUSH emulated in SharpMUSH " + SharpMUSHVersion;
 		             }
 		             """;
 
