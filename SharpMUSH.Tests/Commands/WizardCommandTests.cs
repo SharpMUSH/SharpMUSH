@@ -183,6 +183,44 @@ public class WizardCommandTests
 			.Because("@wait should evaluate [add(1,1)] to 2 when the callback fires");
 	}
 
+	/// <summary>
+	/// Verifies that @wait preserves pattern-match %0-%9 from the enclosing $command scope.
+	/// When a $command pattern sets %0 to a matched value, @wait callbacks should still see
+	/// that %0, not @wait's own args. This matches PennMUSH wenv preservation behavior.
+	/// </summary>
+	[Test]
+	public async ValueTask WaitCommand_PreservesPatternMatchArgs()
+	{
+		// Create a test object with a $command that uses @wait to store %0
+		var testObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitArgObj");
+		var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var resultAttr = $"RESULT_{uniqueId}";
+
+		// Set up a $command pattern: when triggered, stores %0 via @wait callback
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&CMD_TEST_{uniqueId} {testObj}=$testcmd_{uniqueId} *:@wait 1={{&{resultAttr} {testObj}=%0}}"));
+
+		// Trigger the $command — %0 should be "hello_world"
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"testcmd_{uniqueId} hello_world"));
+
+		// Wait for the @wait callback to fire and set the attribute
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		OptionalSharpAttributeOrError? attr = null;
+		for (var attempt = 0; attempt < 15; attempt++)
+		{
+			await Task.Delay(1000);
+			attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, resultAttr,
+				IAttributeService.AttributeMode.Read, false);
+			if (attr.IsAttribute) break;
+		}
+
+		await Assert.That(attr).IsNotNull();
+		await Assert.That(attr!.IsAttribute).IsTrue();
+		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("hello_world")
+			.Because("@wait callback should see %0 from the enclosing $command pattern, not @wait's delay arg");
+	}
+
 	[Test]
 	public async ValueTask UptimeCommand()
 	{

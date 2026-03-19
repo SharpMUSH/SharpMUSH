@@ -200,6 +200,11 @@ public class IterationWrapper<T>
 /// <see cref="ParserStateFlags.Debug"/> (≙ <c>QUEUE_DEBUG</c>), and
 /// <see cref="ParserStateFlags.NoDebug"/> (≙ <c>QUEUE_NODEBUG</c>).
 /// </param>
+/// <param name="CallerArguments">
+/// Saves the caller's numbered arguments (%0-%9) from the enclosing scope before a command
+/// overwrites Arguments with its own parsed args. Used by @wait/@force to preserve pattern-match
+/// variables in queued callbacks. Equivalent to PennMUSH's wenv (wild environment).
+/// </param>
 public partial record ParserState(
 	ConcurrentStack<Dictionary<string, MString>> Registers,
 	ConcurrentStack<IterationWrapper<MString>> IterationRegisters,
@@ -225,7 +230,8 @@ public partial record ParserState(
 	InvocationCounter? TotalInvocations = null,
 	LimitExceededFlag? LimitExceeded = null,
 	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null,
-	ParserStateFlags Flags = ParserStateFlags.None)
+	ParserStateFlags Flags = ParserStateFlags.None,
+	Dictionary<string, CallState>? CallerArguments = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;

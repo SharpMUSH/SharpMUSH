@@ -2084,6 +2084,13 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
+		// Restore caller's pattern-match args (%0-%9) for the queued callback state.
+		// Without this, %0 inside @wait callbacks would resolve to @wait's own arg (the delay time)
+		// instead of the enclosing $command pattern match. Equivalent to PennMUSH wenv preservation.
+		var callbackState = parser.CurrentState.CallerArguments is not null
+			? parser.CurrentState with { Arguments = new Dictionary<string, CallState>(parser.CurrentState.CallerArguments) }
+			: parser.CurrentState;
+
 		/*
 		 *  @wait/pid <pid>=<seconds>
 		 *	@wait/pid <pid>=[+-]<adjustment>
@@ -2113,7 +2120,7 @@ public partial class Commands
 				convertedTime = TimeSpan.FromSeconds(time);
 			}
 
-			await Mediator!.Send(new QueueDelayedCommandListRequest(arg1, parser.CurrentState, convertedTime));
+			await Mediator!.Send(new QueueDelayedCommandListRequest(arg1, callbackState, convertedTime));
 			return CallState.Empty;
 		}
 
@@ -2137,7 +2144,7 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 
-			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1);
+			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1, callbackState);
 			return CallState.Empty;
 		}
 
@@ -2166,12 +2173,12 @@ public partial class Commands
 
 					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
 
-					await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1);
+					await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1, callbackState);
 					return CallState.Empty;
 				}
 
 			case 2 when double.TryParse(splitBySlashes[1], out untilTime):
-				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1, callbackState);
 				return CallState.Empty;
 
 			// @wait <object>/<attribute>=<command list>
@@ -2187,7 +2194,7 @@ public partial class Commands
 						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
 					}
 
-					await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1);
+					await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2210,7 +2217,7 @@ public partial class Commands
 					}
 
 					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
-					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1);
+					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2226,7 +2233,7 @@ public partial class Commands
 					}
 
 					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr,
-						TimeSpan.FromSeconds(untilTime), arg1);
+						TimeSpan.FromSeconds(untilTime), arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2237,9 +2244,9 @@ public partial class Commands
 	}
 
 	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
-		MString arg1)
+		MString arg1, ParserState? callbackState = null)
 	{
-
+		var stateForCallback = callbackState ?? parser.CurrentState;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
@@ -2253,7 +2260,7 @@ public partial class Commands
 
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
 
-			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 				dbRefAttr, 0));
 
 			return;
@@ -2270,14 +2277,15 @@ public partial class Commands
 
 		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
 
-		await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 			dbRefAttr2, last));
 
 	}
 
 	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
-		string[] attribute, TimeSpan delay, MString arg1)
+		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
 	{
+		var stateForCallback = callbackState ?? parser.CurrentState;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
@@ -2287,7 +2295,7 @@ public partial class Commands
 		{
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
 			return;
 		}
@@ -2300,7 +2308,7 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
 	}
 

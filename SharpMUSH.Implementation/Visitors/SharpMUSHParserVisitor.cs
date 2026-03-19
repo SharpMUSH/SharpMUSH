@@ -1325,6 +1325,12 @@ public class SharpMUSHParserVisitor(
 		// Execute hooks with the new parser state that includes named registers
 		return await prs.With(state =>
 			{
+				// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
+				// This allows @wait/@force to preserve pattern-match variables in queued callbacks.
+				var callerArgs = state.Arguments
+					.Where(x => int.TryParse(x.Key, out _))
+					.ToDictionary(x => x.Key, x => x.Value);
+
 				// Add named registers to the register stack
 				var newState = state with
 				{
@@ -1334,7 +1340,8 @@ public class SharpMUSHParserVisitor(
 						.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
 						.ToDictionary(),
 					CommandInvoker = libraryCommandDefinition.Command,
-					Function = null
+					Function = null,
+					CallerArguments = callerArgs.Count > 0 ? callerArgs : null
 				};
 
 				// Push named registers onto the stack
