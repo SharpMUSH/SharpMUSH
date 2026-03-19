@@ -1668,11 +1668,16 @@ public class SharpMUSHParserVisitor(
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
 
 		// Do not parse the argument splitting.
-		// When the command has RSBrace, also set PreserveBraces so VisitBracePattern
-		// preserves outer braces (PennMUSH CS_BRACES equivalent). The command handler
-		// is then responsible for stripping them at execution time via StripOuterBraces.
-		var rsBrace = behavior.HasFlag(CommandBehavior.RSBrace);
-		var newFlags = rsBrace
+		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
+		// - RSBrace (PennMUSH CS_BRACES): commands like @wait, @force, @halt preserve braces
+		//   during parsing, then strip them at execution time via StripOuterBraces.
+		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like & store the raw value text.
+		//   In PennMUSH, noeval arguments never go through process_expression, so braces
+		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
+		//   preserve braces via the flag to match PennMUSH behavior.
+		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
+			|| behavior.HasFlag(CommandBehavior.NoParse);
+		var newFlags = preserveBraces
 			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
 		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse, Flags = newFlags });
@@ -1876,16 +1881,19 @@ public class SharpMUSHParserVisitor(
 		if (_braceDepthCounter <= 1
 			&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces))
 		{
-			// Normal evaluation (no RSBrace): strip the outermost braces.
+			// Normal evaluation: strip the outermost braces.
 			// PennMUSH equivalent: PE_STRIP_BRACES strips all brace levels during evaluation.
 			result = vc ?? new CallState(GetContextText(context), context.Depth());
 		}
 		else
 		{
-			// Either nested braces (depth > 1) or RSBrace command (PreserveBraces flag set):
-			// preserve braces in the output. For RSBrace commands, the handler strips them
-			// at execution time via StripOuterBraces (PennMUSH PE_COMMAND_BRACES equivalent).
-			// For &, braces are preserved literally in the stored attribute value.
+			// Either nested braces (depth > 1) or PreserveBraces flag set:
+			// preserve braces in the output.
+			// PreserveBraces is set for:
+			// - RSBrace commands (@wait, @force, @halt): handler strips them at execution
+			//   time via StripOuterBraces (PennMUSH PE_COMMAND_BRACES equivalent).
+			// - NoParse commands (&): braces are preserved literally in the stored value
+			//   (PennMUSH QUEUE_NOLIST/noeval — value never enters process_expression).
 			result = vc is not null
 				? vc with
 				{
