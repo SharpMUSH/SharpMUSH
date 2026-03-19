@@ -1876,14 +1876,16 @@ public class SharpMUSHParserVisitor(
 		if (_braceDepthCounter <= 1
 			&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces))
 		{
-			// Normal evaluation: strip the outermost braces (PennMUSH PE_STRIP_BRACES / PE_COMMAND_BRACES).
+			// Normal evaluation (no RSBrace): strip the outermost braces.
+			// PennMUSH equivalent: PE_STRIP_BRACES strips all brace levels during evaluation.
 			result = vc ?? new CallState(GetContextText(context), context.Depth());
 		}
 		else
 		{
-			// Either nested braces (depth > 1) or NoParse/NoEval mode:
-			// preserve braces in the output so they survive attribute storage
-			// (e.g. &attr obj=$cmd *:@switch expr=1,{body1},{body2}).
+			// Either nested braces (depth > 1) or RSBrace command (PreserveBraces flag set):
+			// preserve braces in the output. For RSBrace commands, the handler strips them
+			// at execution time via StripOuterBraces (PennMUSH PE_COMMAND_BRACES equivalent).
+			// For &, braces are preserved literally in the stored attribute value.
 			result = vc is not null
 				? vc with
 				{
