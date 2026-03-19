@@ -1,8 +1,10 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -15,6 +17,8 @@ public class WizardCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
 	[Category("NotImplemented")]
@@ -144,7 +148,7 @@ public class WizardCommandTests
 
 	/// <summary>
 	/// Verifies that @wait evaluates functions inside &amp;attr obj=value commands.
-	/// <c>@wait 1=&amp;testattr me=[add(1,1)]</c> should, after the delay fires, set the
+	/// <c>@wait 1=&amp;testattr obj=[add(1,1)]</c> should, after the delay fires, set the
 	/// attribute to "2" (evaluated), not the literal string "[add(1,1)]".
 	/// 
 	/// This works because the DirectInput flag (ParserStateFlags) is cleared for queue/callback
@@ -153,21 +157,29 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask WaitCommand_EvaluatesAmpersandAttrValue()
 	{
-		var attrName = $"WAITEVAL_{Guid.NewGuid():N}"[..20];
+		// Arrange - create an isolated test object with a unique attribute name
+		var testObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitEvalWiz");
+		var uniqueId = Guid.NewGuid().ToString("N");
+		var attrName = $"WIZWAIT_{uniqueId[..8].ToUpper()}";
 
 		// Use @wait to set an attribute with a function call as the value after 1s
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait 1=&{attrName} me=[add(1,1)]"));
+			MModule.single($"@wait 1={{&{attrName} {testObj}=[add(1,1)]}}"));
 
-		// Wait for the scheduled task to fire and complete
-		await Task.Delay(5000);
+		// Poll for the attribute to appear (the Quartz scheduler may be slow under full suite load)
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		OptionalSharpAttributeOrError? attr = null;
+		for (var attempt = 0; attempt < 15; attempt++)
+		{
+			await Task.Delay(1000);
+			attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
+				IAttributeService.AttributeMode.Read, false);
+			if (attr.IsAttribute) break;
+		}
 
-		// Read back the attribute value using think [get()]
-		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"think [get(me/{attrName})]"));
-
-		var attrValue = result.Message?.ToPlainText()?.Trim() ?? "";
-		await Assert.That(attrValue).IsEqualTo("2")
+		await Assert.That(attr).IsNotNull();
+		await Assert.That(attr!.IsAttribute).IsTrue();
+		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("2")
 			.Because("@wait should evaluate [add(1,1)] to 2 when the callback fires");
 	}
 
