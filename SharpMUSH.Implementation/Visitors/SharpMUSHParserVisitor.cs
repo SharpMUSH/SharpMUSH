@@ -1668,7 +1668,14 @@ public class SharpMUSHParserVisitor(
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
 
 		// Do not parse the argument splitting.
-		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse });
+		// When the command has RSBrace, also set PreserveBraces so VisitBracePattern
+		// preserves outer braces (PennMUSH CS_BRACES equivalent). The command handler
+		// is then responsible for stripping them at execution time via StripOuterBraces.
+		var rsBrace = behavior.HasFlag(CommandBehavior.RSBrace);
+		var newFlags = rsBrace
+			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
+			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
+		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse, Flags = newFlags });
 		var realSubtext = MModule.substring(
 			context.evaluationString().Start.StartIndex,
 			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
@@ -1867,7 +1874,7 @@ public class SharpMUSHParserVisitor(
 		var vc = await VisitChildren(context);
 
 		if (_braceDepthCounter <= 1
-			&& parser.CurrentState.ParseMode is not ParseMode.NoParse and not ParseMode.NoEval)
+			&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces))
 		{
 			// Normal evaluation: strip the outermost braces (PennMUSH PE_STRIP_BRACES / PE_COMMAND_BRACES).
 			result = vc ?? new CallState(GetContextText(context), context.Depth());

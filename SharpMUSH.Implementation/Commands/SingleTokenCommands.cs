@@ -27,7 +27,7 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse | CommandBehavior.EqSplit,
+	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse | CommandBehavior.EqSplit | CommandBehavior.RSBrace,
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["object/attribute", "value"])]
 	public static async ValueTask<Option<CallState>> SetAttribute(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)

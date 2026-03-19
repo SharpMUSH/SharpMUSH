@@ -411,4 +411,19 @@ public static partial class HelperFunctions
 	public static bool IsLambdaOrApply(string attributeSpecifier)
 		=> attributeSpecifier.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase)
 		|| attributeSpecifier.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// Strips a single pair of outer braces from an <see cref="MString"/>, if present.
+	/// This is the SharpMUSH equivalent of PennMUSH's <c>PE_COMMAND_BRACES</c> flag,
+	/// which strips only the first (outermost) brace level at execution time.
+	/// Used by command handlers whose arguments were preserved via
+	/// <see cref="ParserInterfaces.ParserStateFlags.PreserveBraces"/> during argument parsing.
+	/// </summary>
+	public static MString StripOuterBraces(MString input)
+	{
+		var text = MModule.plainText(input);
+		if (text.Length >= 2 && text[0] == '{' && text[^1] == '}')
+			return MModule.substring(1, MModule.getLength(input) - 2, input);
+		return input;
+	}
 }

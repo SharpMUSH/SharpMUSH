@@ -1645,6 +1645,11 @@ public partial class Commands
 		var hasReplacementActions = args.Count >= 2;
 		var replacementActions = hasReplacementActions ? args["1"].Message : null;
 
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		if (replacementActions is not null)
+			replacementActions = HelperFunctions.StripOuterBraces(replacementActions);
+
 		if (target.IsPlayer)
 		{
 			await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
@@ -2083,6 +2088,11 @@ public partial class Commands
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		if (arg1 is not null)
+			arg1 = HelperFunctions.StripOuterBraces(arg1);
 
 		// Restore caller's pattern-match args (%0-%9) for the queued callback state.
 		// Without this, %0 inside @wait callbacks would resolve to @wait's own arg (the delay time)
@@ -2708,6 +2718,10 @@ public partial class Commands
 		var objArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
 		var cmdListArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		cmdListArg = HelperFunctions.StripOuterBraces(cmdListArg);
 
 		var maybeFound =
 			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(),

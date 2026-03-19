@@ -61,6 +61,15 @@ public enum ParserStateFlags
 	/// Takes precedence over <see cref="Debug"/>: if both are set, this wins.
 	/// </summary>
 	NoDebug = 1 << 2,
+
+	/// <summary>
+	/// Set during argument parsing when the command has <see cref="CommandBehavior.RSBrace"/>.
+	/// Causes <c>VisitBracePattern</c> to preserve outer braces in the argument text instead of
+	/// stripping them. This implements PennMUSH's <c>CS_BRACES</c> flag behavior, where brace
+	/// stripping is deferred to the command handler (via <see cref="HelperFunctions.StripOuterBraces"/>)
+	/// rather than happening during argument tokenization.
+	/// </summary>
+	PreserveBraces = 1 << 3,
 }
 
 /// <summary>
