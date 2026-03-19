@@ -1866,12 +1866,17 @@ public class SharpMUSHParserVisitor(
 		CallState? result;
 		var vc = await VisitChildren(context);
 
-		if (_braceDepthCounter <= 1)
+		if (_braceDepthCounter <= 1
+			&& parser.CurrentState.ParseMode is not ParseMode.NoParse and not ParseMode.NoEval)
 		{
+			// Normal evaluation: strip the outermost braces (PennMUSH PE_STRIP_BRACES / PE_COMMAND_BRACES).
 			result = vc ?? new CallState(GetContextText(context), context.Depth());
 		}
 		else
 		{
+			// Either nested braces (depth > 1) or NoParse/NoEval mode:
+			// preserve braces in the output so they survive attribute storage
+			// (e.g. &attr obj=$cmd *:@switch expr=1,{body1},{body2}).
 			result = vc is not null
 				? vc with
 				{
