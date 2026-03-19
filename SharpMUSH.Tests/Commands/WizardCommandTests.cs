@@ -155,8 +155,7 @@ public class WizardCommandTests
 	/// contexts, so the &amp; command evaluates the RHS via ParsedMessage().
 	/// </summary>
 	[Test]
-	[Category("KnownBug")]
-	[Skip("@wait callback timing unreliable under full parallel test suite — Quartz scheduler doesn't fire consistently")]
+	[NotInParallel]
 	public async ValueTask WaitCommand_EvaluatesAmpersandAttrValue()
 	{
 		// Arrange - create an isolated test object with a unique attribute name
@@ -164,23 +163,21 @@ public class WizardCommandTests
 		var uniqueId = Guid.NewGuid().ToString("N");
 		var attrName = $"WIZWAIT_{uniqueId[..8].ToUpper()}";
 
-		// Use @wait to set an attribute with a function call as the value after 1s
+		// Act - queue @wait with [add(1,1)] inside a & attribute-set command after 1s
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@wait 1={{&{attrName} {testObj}=[add(1,1)]}}"));
 
-		// Poll for the attribute to appear (the Quartz scheduler may be slow under full suite load)
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
-		OptionalSharpAttributeOrError? attr = null;
-		for (var attempt = 0; attempt < 30; attempt++)
-		{
-			await Task.Delay(1000);
-			attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
-				IAttributeService.AttributeMode.Read, false);
-			if (attr.IsAttribute) break;
-		}
+		// Allow the scheduler to fire and the command-list consumer to execute.
+		// [NotInParallel] ensures the queue consumer isn't saturated by other tests.
+		await Task.Delay(3000);
 
-		await Assert.That(attr).IsNotNull();
-		await Assert.That(attr!.IsAttribute).IsTrue();
+		// Assert - the & command should evaluate [add(1,1)] → "2" before storing
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(attr.IsAttribute).IsTrue()
+			.Because("@wait callback should have set the attribute");
 		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("2")
 			.Because("@wait should evaluate [add(1,1)] to 2 when the callback fires");
 	}
@@ -191,8 +188,7 @@ public class WizardCommandTests
 	/// that %0, not @wait's own args. This matches PennMUSH wenv preservation behavior.
 	/// </summary>
 	[Test]
-	[Category("KnownBug")]
-	[Skip("@wait callback timing unreliable under full parallel test suite — Quartz scheduler doesn't fire consistently")]
+	[NotInParallel]
 	public async ValueTask WaitCommand_PreservesPatternMatchArgs()
 	{
 		// Create a test object with a $command that uses @wait to store %0
@@ -208,19 +204,17 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"testcmd_{uniqueId} hello_world"));
 
-		// Wait for the @wait callback to fire and set the attribute
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
-		OptionalSharpAttributeOrError? attr = null;
-		for (var attempt = 0; attempt < 30; attempt++)
-		{
-			await Task.Delay(1000);
-			attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, resultAttr,
-				IAttributeService.AttributeMode.Read, false);
-			if (attr.IsAttribute) break;
-		}
+		// Allow the scheduler to fire and the command-list consumer to execute.
+		// [NotInParallel] ensures the queue consumer isn't saturated by other tests.
+		await Task.Delay(3000);
 
-		await Assert.That(attr).IsNotNull();
-		await Assert.That(attr!.IsAttribute).IsTrue();
+		// Assert - the attribute should contain the pattern-matched value, not @wait's arg
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, resultAttr,
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(attr.IsAttribute).IsTrue()
+			.Because("@wait callback should have set the attribute");
 		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("hello_world")
 			.Because("@wait callback should see %0 from the enclosing $command pattern, not @wait's delay arg");
 	}
