@@ -607,6 +607,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctQ=!no_command"));
 
 		// Command: set %qa to "Hello", then evaluate strlen(%qa)
+		// No wildcard needed — this is a simple $-command with no arguments
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&pctq_cmd DebugPctQ=$pctqcmd:@pemit me=[setq(a,Hello)][strlen(%qa)]"));
 
@@ -679,7 +680,7 @@ public class DebugVerboseTests
 	public async Task Debug_ShowsIterTokens_InExpressionText()
 	{
 		// When debug shows a function inside iter(), the expression text should
-		// preserve the ## or %iL token, and the result should show the resolved value.
+		// preserve the ## (double-hash iteration token) in the parse tree.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugPctIter"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctIter=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctIter=!no_command"));
@@ -690,7 +691,7 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugPctIter=pctitercmd"));
 
-		// Assert: debug should show iter() and strlen() calls
+		// Assert: debug should show iter() call in expression text
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(),
@@ -699,12 +700,14 @@ public class DebugVerboseTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
-		// Assert: strlen result should appear (5 = length of "Hello")
+		// Assert: strlen result (5 = length of "Hello") should appear in debug output
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "strlen(") && TestHelpers.MessageContains(msg, "=> 5")),
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"strlen\(.+\) => 5"),
+						str => Regex.IsMatch(str, @"strlen\(.+\) => 5"))),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
