@@ -2749,7 +2749,12 @@ public partial class Commands
 
 		// Note: Queue infrastructure available via QueueCommandListRequest if needed
 		// Currently executes inline for immediate response (default PennMUSH behavior)
-		await parser.With(state => state with { Executor = found.Object().DBRef, Caller = state.Executor },
+		await parser.With(
+			state => state with
+			{
+				Executor = found.Object().DBRef,
+				Caller = state.Executor
+			},
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
 		return CallState.Empty;
