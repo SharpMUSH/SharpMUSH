@@ -424,7 +424,7 @@ public class MyrddinBBSIntegrationTests
 	/// </summary>
 	[Test]
 	[Category("NotImplemented")]
-	[Skip("@wait callback fires but get() returns '#-1 NO SUCH ATTRIBUTE' for non-existent attrs (PennMUSH returns empty string), corrupting the groups list")]
+	[Skip("+bbread does not list groups despite bbpocket/groups being correctly set — likely additional function behavior differences in BBS softcode")]
 	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
 	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
 	{

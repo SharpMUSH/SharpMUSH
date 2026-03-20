@@ -137,7 +137,7 @@ public class AttributeService(
 
 		if (attr.IsNone)
 		{
-			return MModule.single(Errors.ErrorNoSuchAttribute);
+			return MModule.empty();
 		}
 
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
