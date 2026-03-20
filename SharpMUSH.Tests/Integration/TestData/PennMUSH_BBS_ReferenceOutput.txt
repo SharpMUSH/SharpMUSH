@@ -3,7 +3,7 @@ PENNMUSH BBS TEST - DEBUG/VERBOSE/PUPPET OUTPUT CAPTURE
 ==============================================================================
 
 --- WELCOME ---
-��"<This is where you announce that they've connected to your MUSH>
+"<This is where you announce that they've connected to your MUSH>
 <It's a good idea to include the version/patchlevel of MUSH you're running>
 <It's a good idea to include an email address for questions about the MUSH>
 -----------------------------------------------------------------------------
