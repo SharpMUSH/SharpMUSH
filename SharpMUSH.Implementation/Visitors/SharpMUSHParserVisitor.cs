@@ -58,6 +58,7 @@ public class SharpMUSHParserVisitor(
 	MString source)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
+	private int _debugNestDepth;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
 
@@ -287,8 +288,7 @@ public class SharpMUSHParserVisitor(
 
 			if (shouldDebug)
 			{
-				var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
-				indent = new string(' ', depth);
+				indent = new string(' ', _debugNestDepth);
 				dbrefNumber = executorObj.Object().DBRef.Number;
 			}
 		}
@@ -299,7 +299,13 @@ public class SharpMUSHParserVisitor(
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
 		}
 
+		// PennMUSH increments nest_depth after creating the debug string (src/parse.c:2176-2177)
+		// so that inner function calls during argument evaluation see a higher depth.
+		if (shouldDebug) _debugNestDepth++;
+
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
+
+		if (shouldDebug) _debugNestDepth--;
 
 		if (shouldDebug && executorObj != null && indent != null)
 		{

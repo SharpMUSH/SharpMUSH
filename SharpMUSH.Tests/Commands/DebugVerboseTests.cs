@@ -89,14 +89,14 @@ public class DebugVerboseTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
-		// Assert - Inner function (has ONE space for indentation at depth 1)
+		// Assert - Inner function (has extra space for nesting indentation, matching PennMUSH)
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("! add(11,22) :"),
-						str => str.Contains("! add(11,22) :"))),
+						mstr => mstr.ToString().Contains("!  add(11,22) :"),
+						str => str.Contains("!  add(11,22) :"))),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
@@ -361,5 +361,230 @@ public class DebugVerboseTests
 
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugNoRegObj"));
+	}
+
+	// ========================================================================
+	// PennMUSH-format exact matching tests
+	// PennMUSH DEBUG: "#<dbref>! <spaces><expression> :" before eval,
+	//                 "#<dbref>! <spaces><expression> => <result>" after eval
+	// PennMUSH VERBOSE: "#<dbref>] <command>"
+	// PennMUSH PUPPET: "<objectname>> <message>" relay to owner
+	// Reference: PennMUSH src/parse.c (debug), src/game.c (verbose),
+	//            src/notify.c (puppet), hdrs/flag_tab.h (flag restrictions)
+	// ========================================================================
+
+	[Test]
+	public async Task Debug_ExactPennMUSHFormat_PreEvalColon()
+	{
+		// PennMUSH debug pre-evaluation format: "#N! expression :"
+		// (one space after '!' at depth 0, expression text, then " :")
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugFmtPre"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugFmtPre=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugFmtPre=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&dbg_fmt_pre DebugFmtPre=$dbgfmtprecmd:@pemit me=[add(7,8)]"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugFmtPre=dbgfmtprecmd"));
+
+		// Assert exact format: #<N>! add(7,8) :
+		// The regex matches: hash, digits, exclamation, space(s), expression, space, colon
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(7,8\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +add\(7,8\) :$"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugFmtPre"));
+	}
+
+	[Test]
+	public async Task Debug_ExactPennMUSHFormat_PostEvalArrow()
+	{
+		// PennMUSH debug post-evaluation format: "#N! expression => result"
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugFmtPost"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugFmtPost=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugFmtPost=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&dbg_fmt_post DebugFmtPost=$dbgfmtpostcmd:@pemit me=[add(7,8)]"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugFmtPost=dbgfmtpostcmd"));
+
+		// Assert exact format: #<N>! add(7,8) => 15
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(7,8\) => 15$"),
+						str => Regex.IsMatch(str, @"^#\d+! +add\(7,8\) => 15$"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugFmtPost"));
+	}
+
+	[Test]
+	public async Task Debug_NestingUsesSpaceIndentation_MatchesPennMUSH()
+	{
+		// PennMUSH: nested functions get 1 extra space per depth level
+		// Depth 0: "#N! expression :"  (1 space after !)
+		// Depth 1: "#N!  inner :"      (2 spaces after !)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugNestFmt"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestFmt=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestFmt=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&dbg_nest_fmt DebugNestFmt=$dbgnestfmtcmd:@pemit me=[strlen(add(2,3))]"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugNestFmt=dbgnestfmtcmd"));
+
+		// Inner add(2,3) should have MORE leading spaces than outer strlen(...)
+		// Outer: "#N! strlen(add(2,3)) :" — depth 0
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(add\(2,3\)\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! +strlen\(add\(2,3\)\) :$"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Inner: "#N!  add(2,3) :" — depth 1 (extra space)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}add\(2,3\) :$"),
+						str => Regex.IsMatch(str, @"^#\d+! {2,}add\(2,3\) :$"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Inner result: "#N!  add(2,3) => 5"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}add\(2,3\) => 5$"),
+						str => Regex.IsMatch(str, @"^#\d+! {2,}add\(2,3\) => 5$"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Outer result: "#N! strlen(add(2,3)) => 1" (length of "5" is 1)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(add\(2,3\)\) => 1$"),
+						str => Regex.IsMatch(str, @"^#\d+! +strlen\(add\(2,3\)\) => 1$"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugNestFmt"));
+	}
+
+	[Test]
+	public async Task Verbose_ExactPennMUSHFormat()
+	{
+		// PennMUSH verbose format: "#<executor_dbref>] <command>"
+		// Reference: PennMUSH src/game.c: snprintf(tmp, sizeof tmp, "#%d] %s", executor, msg);
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseFmtObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseFmtObj=VERBOSE"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force VerboseFmtObj=@pemit me=VerbFmtTest444"));
+
+		// Assert exact format: #<N>] @pemit me=VerbFmtTest444
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] @pemit me=VerbFmtTest444$"),
+						str => Regex.IsMatch(str, @"^#\d+\] @pemit me=VerbFmtTest444$"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseFmtObj"));
+	}
+
+	[Test]
+	public async Task PuppetFlag_CannotBeSetOnPlayer()
+	{
+		// PennMUSH: PUPPET flag is TYPE_THING only (hdrs/flag_tab.h)
+		// Setting on a Player should fail.
+		// PennMUSH output: "PUPPET - I don't recognize that flag."
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=PUPPET"));
+
+		// Assert that PUPPET was NOT set — a failure notification should appear
+		// SharpMUSH format: "Flag: PUPPET cannot be set on object type: PLAYER."
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("cannot be set"),
+						str => str.Contains("PUPPET") && str.Contains("cannot be set"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
+
+	[Test]
+	public async Task PuppetFlag_CanBeSetOnThing()
+	{
+		// PennMUSH: PUPPET flag is TYPE_THING — it should succeed on Things
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create PuppetThingObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set PuppetThingObj=PUPPET"));
+
+		// Assert that PUPPET was set — success notification
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("set"),
+						str => str.Contains("PUPPET") && str.Contains("set"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy PuppetThingObj"));
+	}
+
+	[Test]
+	public async Task Debug_SendsToOwner_NotToExecutor()
+	{
+		// PennMUSH: Debug output is sent to Owner(executor) via raw_notify
+		// Reference: PennMUSH src/parse.c: raw_notify(Owner(executor), dbuf);
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugOwnerObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugOwnerObj=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugOwnerObj=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&dbg_owner DebugOwnerObj=$dbgownercmd:@pemit me=[add(1,1)]"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugOwnerObj=dbgownercmd"));
+
+		// The debug output should be sent to the object's owner (#1, the player)
+		// We verify this by checking the first argument of the Notify call — it should be the owner
+		var debugCalls = NotifyService.ReceivedCalls()
+			.Where(c =>
+			{
+				var args = c.GetArguments();
+				if (args.Length < 2) return false;
+				return args[1] is OneOf<MString, string> msg &&
+					msg.Match(m => m.ToString().Contains("! add(1,1)"), s => s.Contains("! add(1,1)"));
+			})
+			.ToList();
+
+		await Assert.That(debugCalls.Count).IsGreaterThan(0)
+			.Because("Debug output for add(1,1) should be sent");
+
+		// Verify the first argument is the owner (player #1)
+		var firstArg = debugCalls.First().GetArguments()[0] as AnySharpObject;
+		await Assert.That(firstArg).IsNotNull().Because("Debug should be sent to an object");
+		await Assert.That(firstArg!.Object().DBRef.Number).IsEqualTo(1)
+			.Because("Debug output should go to owner (#1), not executor object");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugOwnerObj"));
 	}
 }
