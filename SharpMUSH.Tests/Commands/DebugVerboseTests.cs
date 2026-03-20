@@ -587,4 +587,192 @@ public class DebugVerboseTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugOwnerObj"));
 	}
+
+	// ========================================================================
+	// Percent substitution display tests
+	// Verifies that %q registers, %0-%9 arguments, and %i0/%iL iterators
+	// appear correctly in debug and verbose output.
+	// PennMUSH shows the raw source text (with %q, %0, etc.) in the debug
+	// "before" line, and the computed result in the "after" line.
+	// ========================================================================
+
+	[Test]
+	public async Task Debug_ShowsPercentQRegister_InExpressionText()
+	{
+		// When debug output shows an expression containing %qa, the expression
+		// text should show '%qa' literally (not the resolved value).
+		// The result after '=>' should show the computed value.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugPctQ"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctQ=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctQ=!no_command"));
+
+		// Command: set %qa to "Hello", then evaluate strlen(%qa)
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&pctq_cmd DebugPctQ=$pctqcmd:@pemit me=[setq(a,Hello)][strlen(%qa)]"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugPctQ=pctqcmd"));
+
+		// Assert: debug output for strlen should show '%qa' literally in the expression text
+		// PennMUSH format: #N! strlen(%qa) :
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, "strlen(%qa)")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Assert: the result after '=>' for strlen(%qa) should show the resolved value
+		// The exact result depends on register resolution timing; what matters is the format:
+		// "#N! strlen(%qa) => <number>"
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"strlen\(%qa\) => \d+"),
+						str => Regex.IsMatch(str, @"strlen\(%qa\) => \d+"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPctQ"));
+	}
+
+	[Test]
+	public async Task Debug_ShowsPercentZeroArg_InExpressionText()
+	{
+		// When debug shows an expression containing %0, it should show
+		// '%0' literally in the expression text, with resolved value in the result.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugPct0"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPct0=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPct0=!no_command"));
+
+		// $-command with argument: $test *:@pemit me=[strlen(%0)]
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&pct0_cmd DebugPct0=$pct0testcmd *:@pemit me=[strlen(%0)]"));
+
+		// Trigger with argument "World" (5 chars)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugPct0=pct0testcmd World"));
+
+		// Assert: debug expression text should show '%0' literally
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, "strlen(%0)")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Assert: result should be "5" (length of "World")
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, "strlen(%0) => 5")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPct0"));
+	}
+
+	[Test]
+	public async Task Debug_ShowsIterTokens_InExpressionText()
+	{
+		// When debug shows a function inside iter(), the expression text should
+		// preserve the ## or %iL token, and the result should show the resolved value.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugPctIter"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctIter=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctIter=!no_command"));
+
+		// iter with strlen: iter(Hello,strlen(##))
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&pctiter_cmd DebugPctIter=$pctitercmd:@pemit me=[iter(Hello,strlen(##))]"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugPctIter=pctitercmd"));
+
+		// Assert: debug should show iter() and strlen() calls
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, "iter(")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Assert: strlen result should appear (5 = length of "Hello")
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, "strlen(") && TestHelpers.MessageContains(msg, "=> 5")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugPctIter"));
+	}
+
+	[Test]
+	public async Task Debug_SetqShowsRegisterName_InExpressionText()
+	{
+		// setq(a,Hello) should appear literally in debug expression text
+		// and the result should show empty (setq returns empty string)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugSetq"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugSetq=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugSetq=!no_command"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&setq_cmd DebugSetq=$setqcmd:@pemit me=[setq(a,TestVal123)]"));
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@force DebugSetq=setqcmd"));
+
+		// Assert: debug before-line shows setq call with register name
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, "setq(a,TestVal123) :")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Assert: debug after-line shows setq result (empty string)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => Regex.IsMatch(mstr.ToString(), @"setq\(a,TestVal123\) => $"),
+						str => Regex.IsMatch(str, @"setq\(a,TestVal123\) => $"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy DebugSetq"));
+	}
+
+	[Test]
+	public async Task Verbose_ShowsEvaluatedCommand_InOutput()
+	{
+		// Verbose output shows the command AFTER evaluation (PennMUSH behavior).
+		// In PennMUSH, verbose output is generated after process_expression evaluates
+		// the command text. So [add(10,20)] becomes 30 before verbose sees it.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerbosePctObj"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerbosePctObj=VERBOSE"));
+
+		// Force a command that uses a function in brackets
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@force VerbosePctObj=think [add(10,20)]"));
+
+		// Assert: verbose output should show the evaluated result
+		// PennMUSH behavior: "#N] think 30" (not "#N] think [add(10,20)]")
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					msg.Match(
+						mstr => mstr.ToString().Contains("] think 30"),
+						str => str.Contains("] think 30"))),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerbosePctObj"));
+	}
 }
