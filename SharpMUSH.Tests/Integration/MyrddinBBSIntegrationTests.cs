@@ -416,14 +416,15 @@ public class MyrddinBBSIntegrationTests
 	/// CallerArguments preserves the enclosing $command's %0-%9 through @wait into callbacks,
 	/// matching PennMUSH's wenv (wild environment) preservation in queue entries.
 	/// 
-	/// REMAINING ISSUE: The @wait callback inside +bbnewgroup does not appear to fire.
-	/// The %0 preservation is confirmed by WaitCommand_PreservesPatternMatchArgs, but the
-	/// full BBS workflow has an additional issue with the @wait callback not executing
-	/// within the $command chain. Needs further investigation.
+	/// CURRENT STATUS: Brace handling works (braces preserved in stored $command patterns).
+	/// The @wait callback fires and the @switch body executes correctly. The remaining blocker
+	/// is that get(obj/nonexistent) returns "#-1 NO SUCH ATTRIBUTE" instead of empty string
+	/// (PennMUSH returns empty), which corrupts the BBS groups list when appending:
+	///   &amp;groups bbpocket=%q0 [get(bbpocket/groups)]  → stores "#5 #-1 NO SUCH ATTRIBUTE"
 	/// </summary>
 	[Test]
 	[Category("NotImplemented")]
-	[Skip("@wait callback does not fire within BBS $command chain — needs further investigation")]
+	[Skip("@wait callback fires but get() returns '#-1 NO SUCH ATTRIBUTE' for non-existent attrs (PennMUSH returns empty string), corrupting the groups list")]
 	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
 	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
 	{
