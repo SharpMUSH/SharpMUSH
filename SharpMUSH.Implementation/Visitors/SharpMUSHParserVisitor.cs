@@ -124,101 +124,6 @@ public class SharpMUSHParserVisitor(
 		}
 	}
 
-	/// <summary>
-	/// Formats register output for DEBUG mode, showing q-registers, stack registers,
-	/// and iteration registers separately.
-	/// </summary>
-	/// <param name="state">Parser state containing registers</param>
-	/// <param name="dbrefNumber">DBRef number for output prefix</param>
-	/// <param name="indent">Indentation string</param>
-	/// <returns>Formatted register output string, or empty if no registers</returns>
-	private string FormatRegisterOutput(ParserState state, int dbrefNumber, string indent)
-	{
-		var output = new System.Text.StringBuilder();
-		var qRegisters = new List<string>();
-		var stackRegisters = new List<string>();
-		var iterRegisters = new List<string>();
-
-		// Get q-registers from Registers stack (set via setq())
-		if (state.Registers.TryPeek(out var registers) && registers.Count > 0)
-		{
-			foreach (var reg in registers.OrderBy(r => r.Key))
-			{
-				var key = reg.Key;
-				var value = reg.Value.ToString();
-
-				// Check if it's a q-register (single letter A-Z)
-				if (key.Length == 1 && char.IsLetter(key[0]))
-				{
-					qRegisters.Add($"%q{key.ToLower()}:{value}");
-				}
-			}
-		}
-
-		// Get stack registers from EnvironmentRegisters (set via command arguments like $-commands)
-		if (state.EnvironmentRegisters.Count > 0)
-		{
-			foreach (var reg in state.EnvironmentRegisters.OrderBy(r => r.Key))
-			{
-				var key = reg.Key;
-				var value = reg.Value.Message?.ToString() ?? string.Empty;
-
-				// Check if it's a stack register (0-9)
-				if (key.Length == 1 && char.IsDigit(key[0]))
-				{
-					stackRegisters.Add($"%{key}:{value}");
-				}
-			}
-		}
-
-		// Get iteration registers from IterationRegisters stack (set via iter())
-		if (!state.IterationRegisters.IsEmpty)
-		{
-			var iterIndex = 0;
-			foreach (var iter in state.IterationRegisters)
-			{
-				var iterValue = iter.Value?.ToString() ?? string.Empty;
-				if (iterIndex == 0)
-				{
-					// %iL is an alias for the top (most recent) iteration value
-					iterRegisters.Add($"%iL:{iterValue}");
-				}
-				else
-				{
-					iterRegisters.Add($"%i{iterIndex}:{iterValue}");
-				}
-				iterIndex++;
-			}
-		}
-
-		// Output q-registers if any exist
-		if (qRegisters.Count > 0)
-		{
-			output.Append($"#{dbrefNumber}! {indent}[Q-Registers: {string.Join(", ", qRegisters)}]");
-		}
-
-		// Output stack registers if any exist
-		if (stackRegisters.Count > 0)
-		{
-			if (output.Length > 0)
-			{
-				output.AppendLine();
-			}
-			output.Append($"#{dbrefNumber}! {indent}[Registers: {string.Join(", ", stackRegisters)}]");
-		}
-
-		// Output iteration registers if any exist
-		if (iterRegisters.Count > 0)
-		{
-			if (output.Length > 0)
-			{
-				output.AppendLine();
-			}
-			output.Append($"#{dbrefNumber}! {indent}[Iter-Registers: {string.Join(", ", iterRegisters)}]");
-		}
-
-		return output.ToString();
-	}
 
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
@@ -392,13 +297,6 @@ public class SharpMUSHParserVisitor(
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} :";
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
-
-			// Output register contents before evaluation
-			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
-			if (!string.IsNullOrEmpty(registerOutput))
-			{
-				await SendDebugOrVerboseOutput(executorObj, registerOutput);
-			}
 		}
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
@@ -407,13 +305,6 @@ public class SharpMUSHParserVisitor(
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
-
-			// Output register contents after evaluation
-			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
-			if (!string.IsNullOrEmpty(registerOutput))
-			{
-				await SendDebugOrVerboseOutput(executorObj, registerOutput);
-			}
 		}
 
 		return result;
