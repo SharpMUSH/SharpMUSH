@@ -424,7 +424,7 @@ public class MyrddinBBSIntegrationTests
 	/// </summary>
 	[Test]
 	[Category("NotImplemented")]
-	[Skip("+bbread does not list groups despite bbpocket/groups being correctly set — likely additional function behavior differences in BBS softcode")]
+	[Skip("v() inside u(obj/attr) does not use obj as executor context — v(groups) returns empty instead of #3's groups attribute")]
 	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
 	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
 	{
@@ -441,12 +441,35 @@ public class MyrddinBBSIntegrationTests
 		Log($"[BBS TEST] Creating new group with name: {groupName}");
 
 		// ====================================================================
-		// Step 0: Ensure prerequisites for BBS commands
+		// Step 0: Set DEBUG, VERBOSE, PUPPET on bbpocket and mbboard
 		// ====================================================================
 
-		// Disable DEBUG/VERBOSE to reduce notification noise for this test.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!DEBUG"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=!VERBOSE"));
+		// Find bbpocket and mbboard dbrefs
+		var bbpocketResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("think [num(bbpocket)]"));
+		var bbpocketDbref = bbpocketResult.Message?.ToPlainText()?.Trim() ?? "#-1";
+		Log($"[BBS TEST] bbpocket dbref: {bbpocketDbref}");
+
+		var mbboardResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("think [num(BBS - Myrddin's Global BBS v4.0.6)]"));
+		var mbboardDbref = mbboardResult.Message?.ToPlainText()?.Trim() ?? "#-1";
+		Log($"[BBS TEST] mbboard dbref: {mbboardDbref}");
+
+		// Set DEBUG, VERBOSE, PUPPET on bbpocket
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=VERBOSE"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=PUPPET"));
+		Log($"[BBS TEST] Set DEBUG, VERBOSE, PUPPET on bbpocket ({bbpocketDbref})");
+
+		// Set DEBUG, VERBOSE, PUPPET on mbboard
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=VERBOSE"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=PUPPET"));
+		Log($"[BBS TEST] Set DEBUG, VERBOSE, PUPPET on mbboard ({mbboardDbref})");
+
+		// Also set DEBUG/VERBOSE on the player (#1)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set me=VERBOSE"));
 
 		// Track pre-test notification count
 		var preTestNotifications = NotifyService.ReceivedCalls()
@@ -535,7 +558,7 @@ public class MyrddinBBSIntegrationTests
 		{
 			diagIdx++;
 			if (diagIdx > diagBaseline)
-				Log($"  [{diagIdx}] {Truncate(msg, 200)}");
+				Log($"  [{diagIdx}] {Truncate(msg, 500)}");
 		}
 
 		// Reset baseline for +bbread
