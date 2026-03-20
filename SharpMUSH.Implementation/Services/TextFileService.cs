@@ -192,6 +192,42 @@ public class TextFileService : ITextFileService
 		}
 	}
 
+	public async Task<IEnumerable<string>> SearchContentAsync(string fileReference, string searchTerm)
+	{
+		await _initializationTask.WithCancellation(CancellationToken.None);
+
+		var (category, _) = ParseFileReference(fileReference);
+
+		IEnumerable<KeyValuePair<string, IndexEntry>> entries;
+		lock (_indexLock)
+		{
+			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
+			{
+				entries = categoryEntries.ToList();
+			}
+			else
+			{
+				entries = _categoryIndexes.Values
+					.SelectMany(dict => dict)
+					.GroupBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+					.Select(g => g.First())
+					.ToList();
+			}
+		}
+
+		var results = new List<string>();
+		foreach (var (entryName, indexEntry) in entries)
+		{
+			var content = await ReadEntryFromFileAsync(indexEntry);
+			if (content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+			{
+				results.Add(entryName);
+			}
+		}
+
+		return results;
+	}
+
 	public async Task ReindexAsync()
 	{
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
@@ -246,44 +282,31 @@ public class TextFileService : ITextFileService
 		_logger.LogDebug("Indexed category {Category}: {Count} entries", category, categoryIndex.Count);
 	}
 
-	private async Task IndexMarkdownFileAsync(string filePath, Dictionary<string, IndexEntry> index)
+	private Task IndexMarkdownFileAsync(string filePath, Dictionary<string, IndexEntry> index)
 	{
 		var fileInfo = new FileInfo(filePath);
-		var result = Helpfiles.IndexMarkdown(fileInfo);
+		var result = Helpfiles.IndexMarkdownPositions(fileInfo);
 
 		if (result.IsT1)
 		{
 			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsT1.Value);
-			return;
+			return Task.CompletedTask;
 		}
 
 		var entries = result.AsT0;
-		var content = await File.ReadAllTextAsync(filePath);
 
-		foreach (var (entryName, entryContent) in entries)
+		foreach (var (entryName, positions) in entries)
 		{
-			// For markdown files, find the position of the header
-			var headerPattern = $"# {Regex.Escape(entryName)}";
-			var match = Regex.Match(content, headerPattern, RegexOptions.Multiline | RegexOptions.IgnoreCase);
-
-			if (match.Success)
-			{
-				var startPos = match.Index;
-				// Find next header or end of file
-				var nextHeaderMatch = Regex.Match(content.Substring(startPos + match.Length), @"^# ", RegexOptions.Multiline);
-				var endPos = nextHeaderMatch.Success
-					? startPos + match.Length + nextHeaderMatch.Index
-					: content.Length;
-
-				var entry = new IndexEntry(
-					filePath,
-					startPos,
-					endPos,
-					entryName
-				);
-				index[entryName] = entry;
-			}
+			var entry = new IndexEntry(
+				filePath,
+				positions.Start,
+				positions.End,
+				entryName
+			);
+			index[entryName] = entry;
 		}
+
+		return Task.CompletedTask;
 	}
 
 	private async Task<string> ReadEntryFromFileAsync(IndexEntry entry)
@@ -304,12 +327,52 @@ public class TextFileService : ITextFileService
 			fileStream.Seek(entry.StartPosition, SeekOrigin.Begin);
 			var bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, length));
 
-			return Encoding.UTF8.GetString(buffer.AsSpan(0, bytesRead));
+			var content = Encoding.UTF8.GetString(buffer.AsSpan(0, bytesRead));
+
+			// Strip consecutive alias headers - keep only the first # header.
+			// Aliased topics share the same byte range which includes all alias headers.
+			return StripConsecutiveHeaders(content);
 		}
 		finally
 		{
 			ArrayPool<byte>.Shared.Return(buffer);
 		}
+	}
+
+	/// <summary>
+	/// When multiple consecutive markdown headers appear at the start of content
+	/// (from aliased help topics), keep only the first header line.
+	/// </summary>
+	public static string StripConsecutiveHeaders(string content)
+	{
+		var lines = content.Split('\n');
+		var firstHeaderIndex = -1;
+		var lastConsecutiveHeaderIndex = -1;
+
+		for (var i = 0; i < lines.Length; i++)
+		{
+			if (lines[i].StartsWith("# "))
+			{
+				if (firstHeaderIndex < 0)
+				{
+					firstHeaderIndex = i;
+				}
+				lastConsecutiveHeaderIndex = i;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		// If there are multiple consecutive headers, keep only the first
+		if (firstHeaderIndex >= 0 && lastConsecutiveHeaderIndex > firstHeaderIndex)
+		{
+			var remaining = string.Join('\n', lines.Skip(lastConsecutiveHeaderIndex + 1));
+			return lines[firstHeaderIndex] + "\n" + remaining;
+		}
+
+		return content;
 	}
 
 	private (string? Category, string? FileName) ParseFileReference(string fileReference)

@@ -17,6 +17,7 @@ namespace SharpMUSH.Tests.Performance;
 /// </summary>
 public class ActualPerformanceValidation
 {
+	[Category("NeedsSetup")]
 	[Test, Skip("Manual performance validation - requires actual servers running on 127.0.0.1:4201")]
 	public async Task MeasureActualDoListPerformance()
 	{

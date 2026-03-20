@@ -1,18 +1,18 @@
 using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
 namespace SharpMUSH.ConnectionServer.Consumers;
 
 /// <summary>
-/// Consumes GMCP output messages from Kafka and sends to connections
+/// Consumes GMCP output messages from NATS JetStream and sends to connections
 /// </summary>
 public class GMCPOutputConsumer(IConnectionServerService connectionService, ILogger<GMCPOutputConsumer> logger)
 : IMessageConsumer<GMCPOutputMessage>
 {
 	public async Task HandleAsync(GMCPOutputMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogTrace("[KAFKA-RECV] GMCPOutputMessage received - Handle: {Handle}, Module: {Module}, MessageLength: {MessageLength}",
+		logger.LogDebug("[NATS-RECV] GMCPOutputMessage received - Handle: {Handle}, Module: {Module}, MessageLength: {MessageLength}",
 			message.Handle, message.Module, message.Message?.Length ?? 0);
 
 		var connection = connectionService.Get(message.Handle);

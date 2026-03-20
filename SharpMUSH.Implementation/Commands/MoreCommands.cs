@@ -166,9 +166,9 @@ public partial class Commands
 			var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
 			await foreach (var flag in flags)
 			{
-				var flagName = useLowercase ? flag.Name.ToLower() : flag.Name;
-				var symbol = useLowercase ? flag.Symbol.ToLower() : flag.Symbol;
-				var types = string.Join(",", flag.TypeRestrictions.Select(t => useLowercase ? t.ToLower() : t));
+				var flagName = useLowercase ? flag.Name?.ToLower() ?? "" : flag.Name ?? "";
+				var symbol = useLowercase ? flag.Symbol?.ToLower() ?? "" : flag.Symbol ?? "";
+				var types = string.Join(",", (flag.TypeRestrictions ?? []).Select(t => useLowercase ? t?.ToLower() ?? "" : t ?? ""));
 				output.AppendLine($"{flagName,-20} {symbol,-6} {types}");
 			}
 
@@ -636,7 +636,7 @@ public partial class Commands
 			var targetOwner = await targetObj.Owner.WithCancellation(CancellationToken.None);
 
 			// Check permissions - must own or have see_all
-			if (!(await executor.HasPower("SEE_ALL") || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
+			if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
 			{
 				await NotifyService!.Notify(executor, "Permission denied.");
 				return new CallState("#-1 PERMISSION DENIED");
@@ -2126,10 +2126,11 @@ public partial class Commands
 		var container = executor.AsContainer;
 		var contents = container.Content(Mediator!);
 
+		// PennMUSH: own inventory always shows Name(#dbrefFlags)
 		var items = new System.Collections.Generic.List<string>();
 		await foreach (var item in contents)
 		{
-			items.Add(item.Object().Name);
+			items.Add(await MessageHelpers.FormatObjectWithDbref(item.Object()));
 		}
 
 		if (items.Count == 0)
@@ -2141,7 +2142,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor, "You are carrying:");
 			foreach (var itemName in items)
 			{
-				await NotifyService!.Notify(executor, $"  {itemName}");
+				await NotifyService!.Notify(executor, itemName);
 			}
 		}
 
@@ -2471,27 +2472,20 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = executorLocation.Content(Mediator!);
 		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
+		var executorName = MModule.single(executor.Object().Name);
+		var poseMessage = isNoSpace
+			? MModule.concat(executorName, MModule.trim(message, " ", MModule.TrimType.TrimStart))
+			: MModule.concat(MModule.concat(executorName, MModule.single(" ")), message);
 
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService!.Notify(
-				obj.WithRoomOption(),
-				isNoSpace
-					? MModule.trim(message, MModule.single(" "), MModule.TrimType.TrimStart)
-					: message,
-				executor,
-				INotifyService.NotificationType.Pose);
-		}
+		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+			_ => poseMessage,
+			INotifyService.NotificationType.Pose);
 
 		return new CallState(message);
 	}
@@ -2514,25 +2508,23 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(executor, obj,
-					IPermissionService.InteractType.Hear));
+		var executorName = MModule.single(executor.Object().Name);
+		var youSayMessage = MModule.multiple([MModule.single("You say, \""), message, MModule.single("\"")]);
+		var namesSaysMessage = MModule.multiple([executorName, MModule.single(" says, \""), message, MModule.single("\"")]);
 
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService!.Notify(
-				obj.WithRoomOption(),
-				message,
-				executor,
-				INotifyService.NotificationType.Say);
-		}
+		// Tell the executor what they said
+		await NotifyService!.Notify(executor, youSayMessage, executor, INotifyService.NotificationType.Say);
+
+		// Tell everyone else in the room
+		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+			_ => namesSaysMessage,
+			INotifyService.NotificationType.Say,
+			excludeObjects: [executor]);
 
 		return new CallState(message);
 	}
@@ -2544,24 +2536,17 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var executorLocation = await executor.Where();
-		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService!.CanInteract(executor, obj, IPermissionService.InteractType.Hear));
+		var executorName = MModule.single(executor.Object().Name);
+		var semiposeMessage = MModule.concat(executorName, message);
 
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService!.Notify(
-				obj.WithRoomOption(),
-				message,
-				executor,
-				INotifyService.NotificationType.SemiPose);
-		}
+		await CommunicationService!.SendToRoomAsync(executor, executorLocation,
+			_ => semiposeMessage,
+			INotifyService.NotificationType.SemiPose);
 
 		return new CallState(message);
 	}
@@ -2979,7 +2964,7 @@ public partial class Commands
 		// Check if executor is admin (can see hidden players)
 		var isAdmin = await executor.IsWizard() ||
 									await executor.IsRoyalty() ||
-									await executor.HasPower("SEE_ALL");
+									await executor.IsSee_All();
 
 		// Get optional pattern argument
 		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;

@@ -17,6 +17,7 @@
 		<PackageReference Include="Core.Arango" Version="3.12.2" />
 		<PackageReference Include="Core.Arango.Serilog" Version="3.12.3" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.1" />
+    <PackageReference Include="Scriban" Version="6.6.0" />
     <PackageReference Include="Mediator.SourceGenerator" Version="3.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -26,18 +27,19 @@
     <PackageReference Include="OpenTelemetry.Api" Version="1.15.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.11.0-beta.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
-    <PackageReference Include="Quartz.AspNetCore" Version="3.15.1" />
+    <PackageReference Include="OpenTelemetry.ResourceDetectors.Container" Version="1.0.0-beta.7" />
+    <PackageReference Include="Quartz.AspNetCore" Version="3.16.1" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<PackageReference Include="TelnetNegotiationCore" Version="2.3.0" />
+		<PackageReference Include="TelnetNegotiationCore" Version="2.4.2" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.3" />
 		<PackageReference Include="Testcontainers" Version="4.10.0" />
 		<PackageReference Include="Testcontainers.ArangoDb" Version="4.10.0" />
-		<PackageReference Include="Testcontainers.Redpanda" Version="4.10.0" />
 
 	</ItemGroup>
 	
@@ -47,12 +49,15 @@
     <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
     <ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
     <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
-    <ProjectReference Include="..\SharpMUSH.Messages\SharpMUSH.Messages.csproj" />
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
   </ItemGroup>
 	
   <ItemGroup>
     <Content Include="appsettings*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="*.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

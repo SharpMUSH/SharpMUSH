@@ -1,5 +1,5 @@
 using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Net.WebSockets;
 using System.Text;
@@ -120,6 +120,7 @@ public class WebSocketServer
 		{
 			// Disconnect and notify MainProcess
 			await _connectionService.DisconnectAsync(nextPort);
+			_descriptorGenerator.ReleaseWebSocketDescriptor(nextPort);
 		}
 	}
 }

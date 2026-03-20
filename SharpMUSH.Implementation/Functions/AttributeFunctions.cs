@@ -305,10 +305,11 @@ public partial class Functions
 
 		var (dbref, attribute) = dbrefAndAttr.AsT0;
 
-		return await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			dbref,
+			LocateFlags.All,
 			async x =>
 			{
 				var maybeAttr = await AttributeService!.GetAttributeAsync(
@@ -320,7 +321,8 @@ public partial class Functions
 
 				return maybeAttr switch
 				{
-					{ IsError: true } or { IsNone: true } => maybeAttr.AsCallStateError,
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
 					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
 				};
 			});
@@ -537,8 +539,8 @@ public partial class Functions
 	public static async ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToString();
-		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToString();
+		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr);
 
 		if (!split.TryPickT0(out var details, out _))
@@ -1332,7 +1334,7 @@ public partial class Functions
 				await SetAttributeFlag(split),
 
 			// set(<object>, <attribute>:<value>)
-			(_, _) when MModule.indexOf2(arg1, ":") > 1
+			(_, _) when MModule.indexOf(arg1, ":") > 1
 				=> await SetAttributeValue(),
 
 			// set(<object>, <flag>)
@@ -1363,7 +1365,7 @@ public partial class Functions
 				arg0, LocateFlags.All,
 				async found =>
 				{
-					var splitIndex = MModule.indexOf(arg1, MModule.single(":"));
+					var splitIndex = MModule.indexOf(arg1, ":");
 					var attribute = MModule.substring(0, splitIndex, arg1);
 					var value = MModule.substring(splitIndex + 1, arg1.Length - (splitIndex + 1), arg1);
 
@@ -1462,6 +1464,8 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
+					Executor = actualObject.Object().DBRef,
+					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
@@ -1515,7 +1519,9 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
-					Registers = []
+					Registers = [],
+					Executor = actualObject.Object().DBRef,
+					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
@@ -1600,21 +1606,46 @@ public partial class Functions
 	public static async ValueTask<CallState> Variable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var plainText = arg0.ToPlainText();
 
-		return arg0.ToPlainText() switch
+		switch (plainText)
 		{
-			"#" => (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().DBRef,
-			"@" => (await parser.CurrentState.KnownCallerObject(Mediator!)).Object().DBRef,
-			"!" => (await parser.CurrentState.KnownExecutorObject(Mediator!)).Object().DBRef,
-			"n" or "N" => (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().Name,
-			"l" or "L" => (await (await parser.CurrentState.KnownEnactorObject(Mediator!)).Where()).Object().DBRef,
-			"c" or "C" => Substitutions.Substitutions.LastCommandBeforeEvaluation(parser),
-			var number when int.TryParse(number, out _)
-				=> parser.CurrentState.EnvironmentRegisters.TryGetValue(number, out var value)
-					? value
-					: CallState.Empty,
-			_ => Errors.ErrorArgRange
-		};
+			case "#":
+				return (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().DBRef;
+			case "@":
+				return (await parser.CurrentState.KnownCallerObject(Mediator!)).Object().DBRef;
+			case "!":
+				return (await parser.CurrentState.KnownExecutorObject(Mediator!)).Object().DBRef;
+			case "n" or "N":
+				return (await parser.CurrentState.KnownEnactorObject(Mediator!)).Object().Name;
+			case "l" or "L":
+				return (await (await parser.CurrentState.KnownEnactorObject(Mediator!)).Where()).Object().DBRef;
+			case "c" or "C":
+				return Substitutions.Substitutions.LastCommandBeforeEvaluation(parser);
+			default:
+				if (int.TryParse(plainText, out _))
+				{
+					return parser.CurrentState.EnvironmentRegisters.TryGetValue(plainText, out var value)
+						? value
+						: CallState.Empty;
+				}
+
+				// v(attributename) is equivalent to get(me/attributename)
+				var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+				var maybeAttr = await AttributeService!.GetAttributeAsync(
+					executor,
+					executor,
+					plainText,
+					mode: IAttributeService.AttributeMode.Read,
+					parent: false);
+
+				return maybeAttr switch
+				{
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
+					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+				};
+		}
 	}
 
 	[SharpFunction(Name = "valid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["type", "name"])]
@@ -1920,7 +1951,12 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: false);
 
-				return maybeAttr.AsCallState;
+				return maybeAttr switch
+				{
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
+					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+				};
 			});
 	}
 

@@ -16,7 +16,7 @@ public class AttributeFunctionUnitTests
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/attribute,ZAP!)][get(%!/attribute)]", "ZAP!")]
 	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZAP!\e[0m")]
-	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZIP!))][get(%!/attribute)][attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZIP!\e[0m\e[1;31mZAP!\e[0m")]
+	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZIP!))][get(%!/attribute)][attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZIP!ZAP!\e[0m")]
 	public async Task SetAndGet(string input, string expected)
 	{
 		var result = await Parser.FunctionParse(MModule.single(input));
@@ -198,6 +198,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Zones Not Yet Implemented")]
 	[Arguments("zfun(TEST_ATTR)", "#-1 ZONES NOT YET IMPLEMENTED")]
 	public async Task Test_Zfun_NotImplemented(string str, string expected)
@@ -207,6 +208,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	[Arguments("regrep(%#,test,*)", "")]
 	public async Task Regrep(string str, string expected)
@@ -216,6 +218,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	[Arguments("regrepi(%#,test,*)", "")]
 	public async Task Regrepi(string str, string expected)
@@ -225,6 +228,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	[Arguments("regedit(obj/attr,pattern,replacement)", "")]
 	public async Task Regedit(string str, string expected)
@@ -245,6 +249,7 @@ public class AttributeFunctionUnitTests
 	[Test]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_CHILD")]
+	[Category("NotImplemented")]
 	[Arguments("[attrib_set([parent(me,create(PGREP_PARENT))]/PGREP_PARENT,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_PARENT")
 	 , Skip("Parent Mode not implemented yet.")]
 	public async Task Test_Pgrep_IncludesParents(string str, string expected)
@@ -255,6 +260,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
+	[Category("NotImplemented")]
 	[Arguments("[attrib_set(%!/Test_Reglattrp_IncludesParents_001,value1)]" +
 						 "[attrib_set([parent(me,create(Test_Reglattrp_IncludesParents))]/Test_Reglattrp_IncludesParents_002,value2)]" +
 						 "[attrib_set(%!/Test_Reglattrp_IncludesParents_100,value3)]" +
@@ -269,6 +275,7 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
+	[Category("NotImplemented")]
 	[Arguments("[attrib_set(%!/Test_Regnattrp_CountWithParents_001,value1)]" +
 						 "[attrib_set([parent(me,create(Test_Regnattrp_CountWithParents))]/Test_Regnattrp_CountWithParents_002,value2)]" +
 						 "[attrib_set(%!/Test_Regnattrp_CountWithParents_100,value3)]" +
@@ -282,12 +289,14 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
+	[Category("NotImplemented")]
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_100,value3)]" +
 						 "[regxattrp(%!/Test_Regxattrp_RangeWithParents_[0-9]+,1,2)]",
 		"TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")
 	 , Skip("Parent Mode not implemented yet.")]
+	[Category("NotImplemented")]
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents2_001,value1)]" +
 						 "[attrib_set([parent(me,create(Test_Regxattrp_RangeWithParents2))]/Test_Regxattrp_RangeWithParents2_002,value2)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents2_100,value3)][regxattrp(%!/Test_Regxattrp_RangeWithParents2_[0-9]+,1,2)]",
@@ -546,6 +555,7 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Attribute value validation without target attribute requires ValidateService enhancement")]
 	[Arguments("valid(attrvalue,test_value)", "1")]
 	[Arguments("valid(attrvalue,test_value,NONEXISTENT_ATTR)", "1")]
@@ -556,5 +566,15 @@ public class AttributeFunctionUnitTests
 		// Optional third argument is the target attribute name
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/Test_V_AttrName,groupsvalue)][v(Test_V_AttrName)]", "groupsvalue")]
+	[Arguments("[attrib_set(%!/Test_V_AttrName2,hello world)][v(Test_V_AttrName2)]", "hello world")]
+	public async Task Test_V_AttributeName(string str, string expected)
+	{
+		var result = await Parser.FunctionParse(MModule.single(str));
+		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 }

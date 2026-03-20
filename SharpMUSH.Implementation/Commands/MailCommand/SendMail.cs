@@ -27,7 +27,7 @@ public static class SendMail
 
 		var playerList = ArgHelpers.PopulatedNameList(mediator, nameList.ToPlainText()!);
 		var knownPlayerList = await playerList.Where(x => x != null).Select(x => x!).ToListAsync();
-		var subjectBodySplit = MModule.indexOf(subjectAndMessage, MModule.single("/"));
+		var subjectBodySplit = MModule.indexOf(subjectAndMessage, "/");
 
 		var subject = subjectBodySplit > -1
 			? MModule.substring(0, subjectBodySplit, subjectAndMessage)
@@ -47,7 +47,7 @@ public static class SendMail
 				var attributeValue = attributeOpportunity.Value;
 				if (attributeValue.Length > 0)
 				{
-					MModule.concat(message, MModule.single("\n"), attributeValue);
+					message = MModule.concatMany(new[] { message, MModule.single("\n"), attributeValue });
 				}
 			}
 		}
@@ -107,7 +107,8 @@ public static class SendMail
 					await parser.With(state => state with
 					{
 						Executor = player.Object.DBRef,
-						Enactor = sender.Object().DBRef
+						Enactor = sender.Object().DBRef,
+						Caller = state.Executor
 					}, async newParser =>
 					{
 						await newParser.CommandListParse(attribute.Value);

@@ -259,7 +259,7 @@ public partial class Commands
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
-		var channelName = maybeAttribute.AsAttribute.First().Value;
+		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
 		// Delete the alias attribute
 		var clearResult = await AttributeService!.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
@@ -350,7 +350,7 @@ public partial class Commands
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
-		var channelName = maybeAttribute.AsAttribute.First().Value;
+		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
 		// Get the channel to validate it exists
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService!, PermissionService!, Mediator!, NotifyService!, channelName, true);

@@ -306,21 +306,16 @@ public partial class Functions
 		}
 
 		// Multi-argument case: parse each argument and check
-		var allTruthy = true;
-		foreach (var arg in args)
-		{
-			var result = await parser.FunctionParse(arg.Value.Message!);
-			var resultStr = MModule.plainText(result!.Message).Trim();
-
-			if (string.IsNullOrEmpty(resultStr) ||
-					resultStr == "0" ||
-					resultStr.StartsWith("#-1") ||
-					resultStr.Equals("false", StringComparison.OrdinalIgnoreCase))
+		var allTruthy = await args.ToAsyncEnumerable()
+			.AllAsync(async (arg, _) =>
 			{
-				allTruthy = false;
-				break;
-			}
-		}
+				var result = await parser.FunctionParse(arg.Value.Message!);
+				var resultStr = MModule.plainText(result!.Message).Trim();
+				return !string.IsNullOrEmpty(resultStr) &&
+					resultStr != "0" &&
+					!resultStr.StartsWith("#-1") &&
+					!resultStr.Equals("false", StringComparison.OrdinalIgnoreCase);
+			});
 
 		return new CallState(allTruthy ? "1" : "0");
 	}
@@ -725,7 +720,7 @@ public partial class Functions
 	{
 		var arg = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
 		// Object ID format is #dbref:timestamp (e.g., #123:456789)
-		var match = Regex.Match(arg, @"^#\d+:\d+$");
+		var match = ObjIdRegex().Match(arg);
 		return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
 	}
 
@@ -765,16 +760,39 @@ public partial class Functions
 	public static ValueTask<CallState> IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
-		return ValueTask.FromResult(new CallState(Regex.IsMatch(str, @"^[a-zA-Z]$")));
+		return ValueTask.FromResult(new CallState(IsWordRegex().IsMatch(str)));
 	}
 
 	[SharpFunction(Name = "itext", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public static ValueTask<CallState> IText(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = MModule.plainText(parser.CurrentState.Arguments["0"].Message);
-		// itext() returns 1 if the argument is text (not a number), 0 otherwise
-		// A string is "text" if it cannot be parsed as a number
-		return ValueTask.FromResult(new CallState(!decimal.TryParse(str, out _) ? "1" : "0"));
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var levelArg = args["0"].Message!.ToPlainText();
+		var maxCount = parser.CurrentState.IterationRegisters.Count;
+
+		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))
+		{
+			if (maxCount == 0)
+			{
+				return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+			}
+			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Value));
+		}
+
+		if (!int.TryParse(levelArg, out var level))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
+		}
+
+		if (level < 0 || level >= maxCount)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorRegisterRange));
+		}
+
+		// Iteration registers are stored innermost-first (stack top = current iteration),
+		// so level 0 = current (top), level 1 = parent, etc. requires reverse indexing.
+		var value = parser.CurrentState.IterationRegisters.ElementAt(maxCount - level - 1).Value;
+		return ValueTask.FromResult(new CallState(value));
 	}
 
 	[SharpFunction(Name = "letq", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.UnEvenArgsOnly)]
@@ -1016,7 +1034,7 @@ public partial class Functions
 		static async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string option)
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-			if (!(executor.IsGod() || await executor.IsWizard()))
+			if (!await executor.IsWizard())
 			{
 				return new CallState("#-1 PERMISSION DENIED");
 			}
@@ -1873,4 +1891,10 @@ public partial class Functions
 				return $"Wiped {attributesToClear.Count}";
 			});
 	}
+
+	[GeneratedRegex(@"^#\d+:\d+$")]
+	private static partial Regex ObjIdRegex();
+
+	[GeneratedRegex(@"^[a-zA-Z]$")]
+	private static partial Regex IsWordRegex();
 }

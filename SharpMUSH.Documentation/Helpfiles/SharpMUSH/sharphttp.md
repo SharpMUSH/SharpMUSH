@@ -1,11 +1,7 @@
 # HTTP
-
 # http_handler
-
 # http_per_second
-
 # @config http_per_second
-
 # @config http_handler
 If http_handler `@config` is a dbref of a valid player, SharpMUSH will support HTTP requests reaching its mush port. It is very low level, and a little tricky to understand.
 
@@ -31,7 +27,7 @@ To modify the response headers, use the command `@respond`
 # HTTP2
 To use SharpMUSH HTTP Handler:
 
-```
+```sharp
 > @pcreate HTTPHandler
 > @config/set http_handler=[num(*HTTPHandler)]
 > &GET *HTTPHandler=say Somebody tried to HTTP GET %0!
@@ -69,13 +65,11 @@ HTTP Responses are limited to BUFFER_LEN in response size. Anything sent to the 
 - [urldecode()]
 
 # @RESPOND
-
 # @RESPOND/TYPE
-
 # @RESPOND/HEADER
 
-`@respond <code> <text>`
-`@respond/type <content-type>`
+`@respond <code> <text>`<br>
+`@respond/type <content-type>`<br>
 `@respond/header <name>=<value>`
 
 Within the context of an HTTP Player connection, `@respond` is used to modify the headers sent back to the HTTP client.
@@ -100,14 +94,14 @@ If `@respond` is run outside of an HTTP Context, the enactor will see "(HTTP): .
 
 To modify the response code:
 
-```
+```sharp
 > @respond 200 OK
 > @respond 404 Not Found
 ```
 
 To change the Content Type:
 
-```
+```sharp
 > @respond/type application/json
 > @respond/type text/html
 ```
@@ -115,7 +109,7 @@ To change the Content Type:
 **Note**: `@respond/type` is not syntactic sugar for \`@respond/header Content-Type\`. An HTTP `@respond` typically should only have one content-type, and `@respond/type` overrides it. Using `@respond/header` to add Content-Type will create a second header named Content-Type.
 
 Add Headers:
-```
+```sharp
 > @respond/header X-Powered-By=MUSHCode
 > @respond/header {Set-Cookie: name=Bob; Max-Age=3600; Version=1}
 ```
@@ -150,9 +144,9 @@ If there are multiple values, they will be separated by *<osep>* (default %b)
 
 formdecode() requires libcurl (`@http`) to be enabled.
 
-Examples:
+### Examples
 
-```
+```sharp
 > &FORMDATA me=name=Joe&hobby=o%2F%60%20singing%20o%2F%60&like=potato&like=cheese
 > say formdecode(v(formdata),name)
 You say, "Joe"
@@ -172,7 +166,7 @@ There are a number of HTTP Examples.
 
 Examples all assume the following:
 
-```
+```sharp
 > @pcreate HTTPHandler=digest(md5,rand())
 > @config/set http_handler=pmatch(HTTPHandler)
 ```
@@ -188,13 +182,13 @@ The examples on this page are all simple, single-result handlers.
 
 Return the output of WHO to any GET request:
 
-```
+```sharp
 > &GET *HTTPHandler=WHO
 ```
 
 Whenever a POST is performed, say the path and body:
 
-```
+```sharp
 > &POST *HTTPHandler=say POST attempted at %0: %1
 ```
 
@@ -203,7 +197,7 @@ GET requests are the simplest: There's no form data, and the path can be split i
 
 Return a JSON array of users to any GET request:
 
-```
+```sharp
 > &LIST_TO_JSON\`FOLD *HTTPHandler=json_mod(%0,insert,$\\[[json_query(%0,size)]\\],json(string,%1))
 > &LIST_TO_JSON *HTTPHandler=fold(list_to_json\`fold,%0,\\[\\],%1)
 > &NAMES *HTTPHandler=u(list_to_json,map(#apply/name,mwho(),%b,^),^)
@@ -214,7 +208,7 @@ Check: http://yourmush:port/dbrefs
 
 As above, but if path is "who". If it's "dbrefs", no names:
 
-```
+```sharp
 > &GET\`WHO *HTTPHandler=@respond/type application/json ; think u(names)
 > &GET\`DBREFS *HTTPHandler=@respond/type application/json ; think u(list_to_json,mwho(),%b)
 > &GET *HTTPHandler=@break strmatch(%0,/who)=@include me/get\`who ; @break strmatch(%0,/dbrefs)=@include me/get\`dbrefs
@@ -226,17 +220,17 @@ Check:
 
 Look at something, whose name is passed by ?name=... value:
 
-```
+```sharp
 > &GET *HTTPHandler=look [formdecode(after(%0,?),name)]
 ```
 
 Check: http://yourmush:port/look?name=here
 
 # HTTP POST
-Suppose you want a web hook for notifications from an external system.
+Suppose you want a web hook for notifications from an external system.<br>
 HTTP via POST is ideal for that:
 
-```
+```sharp
 > &POST *HTTPHandler=@chat [formdecode(%1,channel)]=[formdecode(%1,msg)]
 ```
 
@@ -244,7 +238,7 @@ Check: Use a language or form to POST to http://yourmush:port/ with values "chan
 
 POST is often a good way to get a JSON blob as well:
 
-```
+```sharp
 > &POST *HTTPHandler=@chat [json_query(%1,extract,$.channel)]=[json_query(%1,extract,$.msg)]
 ```
 
@@ -252,7 +246,7 @@ Check: Same thing, but passing JSON as data.
 
 Maybe you want to do either, depending on if the client is using JSON or not?
 
-```
+```sharp
 > &POST\`JSON *HTTPHandler=@chat [json_query(%1,extract,$.channel)]=[json_query(%1,extract,$.msg)]
 > &POST\`FORM *HTTPHandler=@chat [formdecode(%1,channel)]=[formdecode(%1,msg)]
 > &POST *HTTPHandler=@break strmatch(%q<hdr.content-type>,*json*)=@include me/post\`json ; @include me/post\`form
@@ -269,21 +263,21 @@ For path restrictions, `@sitelock` checks the pattern "*<IP>\`<METHOD>\`<PATH>*"
 
 Both IP and the "IP\`Method\`Path" approach check for "connect" option.
 
-Examples:
+### Examples
 
 Ban everybody using IP Address pattern matching 12.34.*.* from using HTTP:
-```
+```sharp
 > @sitelock 12.34.*.*=!connect,[config(http_handler)]
 ```
 
 Permit 12.34.56.78 to access ALL of HTTP, but block everybody else from accessing /admin/ and its subpages:
-```
+```sharp
 > @sitelock 12.34.56.78=connect,[config(http_handler)]
 > @sitelock *\`*\`/admin/*=!connect,[config(http_handler)]
 ```
 
 Allow 12.34.56.78 to POST to /admin/*, allow POSTs to /do/* from anywhere, but prevent all other POSTs:
-```
+```sharp
 > @sitelock 12.34.56.78\`POST\`/admin/*=connect,[config(http_handler)]
 > @sitelock *\`POST\`/do/*=connect,[config(http_handler)]
 > @sitelock *\`POST\`*=!connect,[config(http_handler)]

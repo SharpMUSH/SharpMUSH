@@ -133,7 +133,6 @@ public class MailFunctionUnitTests
 
 	[Test]
 	[Arguments("mail(999)", "#-1 NO SUCH MAIL")]
-	[Skip("TODO: Failing test - needs investigation")]
 	public async Task Mail_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		// Non-existent message should return error
@@ -258,6 +257,7 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test has race condition with parallel test execution - needs investigation")]
 	public async Task Mailstatus_ValidMessage_ReturnsStatusFormat()
 	{
@@ -318,7 +318,6 @@ public class MailFunctionUnitTests
 
 	[Test]
 	[Arguments("mailsubject(999)", "#-1 NO SUCH MAIL")]
-	[Skip("Marked for later investigation")]
 	public async Task Mailsubject_InvalidMessage_ReturnsError(string str, string expected)
 	{
 		// Non-existent message should return error

@@ -25,6 +25,7 @@ using System.Collections.Concurrent;
 using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Linq;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
@@ -334,7 +335,8 @@ public partial class Commands
 				var stateForElement = parser.CurrentState with
 				{
 					Registers = registerStack,
-					Executor = target.Object().DBRef
+					Executor = target.Object().DBRef,
+					Caller = parser.CurrentState.Executor
 				};
 
 				// Execute the attribute with the element as %0
@@ -446,6 +448,13 @@ public partial class Commands
 
 		var list = MModule.split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message!;
+
+		// Replace ## with %iL in the command for PennMUSH backward compatibility
+		var commandParts = MModule.split("##", command);
+		if (commandParts.Length > 1)
+		{
+			command = MModule.multipleWithDelimiter(MModule.single("%iL"), commandParts);
+		}
 
 		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
 
@@ -620,8 +629,9 @@ public partial class Commands
 		}
 
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
-		var defaultFormattedName = MModule.single($"{MModule.markupSingle2(Ansi.Create(foreground: StringExtensions.rgb(Color.White)), MModule.single(baseName))}" +
-			$"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})");
+		var defaultFormattedName = MModule.concat(
+			baseName.Hilight(),
+			MModule.single($"(#{viewingObject.DBRef.Number}{string.Join(string.Empty, flags.Select(x => x.Symbol))})"));
 
 		var formattedName = defaultFormattedName;
 		if (realViewing.IsRoom && viewingFromInside)
@@ -709,7 +719,17 @@ public partial class Commands
 				var contentDbrefs = string.Join(" ", visibleContents.Select(x => x.Object().DBRef.ToString()));
 				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
 				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
-				var defaultContents = MModule.single($"{contentsLabel}\n{string.Join("\n", visibleContents.Select(x => x.Object().Name))}");
+
+				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
+				var contentLines = await Task.WhenAll(visibleContents.Select(async item =>
+				{
+					if (canSeeAll)
+					{
+						return await MessageHelpers.FormatObjectWithDbref(item.Object());
+					}
+					return item.Object().Name;
+				}));
+				var defaultContents = MModule.single($"{contentsLabel}\n{string.Join("\n", contentLines)}");
 
 				var conFormatArgs = new Dictionary<string, CallState>
 				{
@@ -757,8 +777,8 @@ public partial class Commands
 				}
 				else
 				{
-					var exitNames = string.Join(", ", visibleExits.Select(x => x.Object().Name));
-					defaultExits = MModule.single($"Obvious exits:\n{exitNames}");
+					var names = visibleExits.Select(x => x.Object().Name).ToList();
+					defaultExits = MModule.single($"Obvious exits:\n{MessageHelpers.FormatWithOxfordComma(names)}");
 				}
 
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
@@ -808,7 +828,7 @@ public partial class Commands
 
 		if (args.Count == 1)
 		{
-			var argText = args["0"].Message!.ToString();
+			var argText = args["0"].Message!.ToPlainText();
 			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
 
 			if (split.TryPickT0(out var details, out _))
@@ -874,7 +894,12 @@ public partial class Commands
 		{
 			var limitedObj = viewingKnown.Object();
 			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
-			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.");
+			await NotifyService!.Notify(enactor, MModule.multiple([
+				limitedObj.Name.Hilight(),
+				MModule.single(" is owned by "),
+				limitedOwnerObj.Name.Hilight(),
+				MModule.single(".")
+			]));
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
@@ -887,11 +912,6 @@ public partial class Commands
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
-		var location = obj.Key;
-		var contentKeys = contents!.Select(x => x.Object().Name);
-		// var exitKeys = await Mediator!.Send(new GetExitsQuery(obj.DBRef));
-		// THIS FAILS ^ -- Mediator.InvalidMessageException:
-		// Tried to send/publish invalid message type to Mediator: SharpMUSH.Library.Queries.Database.GetExitsQuery
 		var description = (await AttributeService!.GetAttributeAsync(enactor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
@@ -905,78 +925,93 @@ public partial class Commands
 		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = obj.Powers.Value;
+		var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
 
 		var outputSections = new List<MString>();
 
 		var showFlags = Configuration!.CurrentValue.Cosmetic.FlagsOnExamine;
-		var nameRow = showFlags
-			? MModule.multiple([
-				name.Hilight(),
-				MModule.single(" "),
-				MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
-			])
-			: MModule.concat(name.Hilight(), MModule.single($" (#{obj.DBRef.Number})"));
 
+		// Name row: Name(#flagSymbols) — no space before (
+		var nameRow = MModule.concat(
+			name.Hilight(),
+			MModule.single(showFlags
+				? $"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})"
+				: $"(#{obj.DBRef.Number})"));
 		outputSections.Add(nameRow);
 
-		if (showFlags)
-		{
-			outputSections.Add(MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
-		}
-		else
-		{
-			outputSections.Add(MModule.single($"Type: {obj.Type}"));
-		}
+		// Type / Flags row
+		outputSections.Add(showFlags
+			? MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}")
+			: MModule.single($"Type: {obj.Type}"));
 
+		// Description — only in full examine, not brief
 		if (!switches.Contains("BRIEF"))
 		{
 			outputSections.Add(description);
 		}
 
-		var ownerRow = showFlags
-			? MModule.single($"Owner: {ownerName.Hilight()}" +
-											 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
-			: MModule.single($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
+		// Zone section (for owner row)
+		MString zoneSection;
+		if (objZone.IsNone)
+		{
+			zoneSection = MModule.single("  Zone: *NOTHING*");
+		}
+		else
+		{
+			var zoneObject = objZone.Known.Object();
+			var zoneFlags = await zoneObject.Flags.Value.ToArrayAsync();
+			zoneSection = MModule.multiple([
+				MModule.single("  Zone: "),
+				zoneObject.Name.Hilight(),
+				MModule.single($"(#{zoneObject.DBRef.Number}{string.Join(string.Empty, zoneFlags.Select(x => x.Symbol))})")
+			]);
+		}
+
+		// Owner row: "Owner: Name(#flags)  Zone: ..." — owner name hilighted as MString
+		var ownerRow = MModule.multiple([
+			MModule.single("Owner: "),
+			ownerName.Hilight(),
+			MModule.single(showFlags
+				? $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})"
+				: $"(#{ownerObj.DBRef.Number})"),
+			zoneSection
+		]);
 		outputSections.Add(ownerRow);
 
-		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
-
-		// Display locks with flags
-		if (obj.Locks.Count > 0)
+		// Parent row: "Parent: Name(#flags)" or "Parent: *NOTHING*"
+		var parentObject = objParent.Object();
+		if (parentObject == null)
 		{
-			var lockLines = obj.Locks
-				.Select(kvp =>
-				{
-					var lockName = kvp.Key;
-					var lockData = kvp.Value;
-					var flagsStr = LockService!.FormatLockFlags(lockData.Flags);
-					var flagsDisplay = string.IsNullOrEmpty(flagsStr) ? "" : $"[{flagsStr}]";
-					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
-				})
-				.ToList();
-
-			outputSections.Add(MModule.single($"Locks:"));
-			foreach (var lockLine in lockLines)
-			{
-				outputSections.Add(MModule.single($"  {lockLine}"));
-			}
+			outputSections.Add(MModule.single("Parent: *NOTHING*"));
+		}
+		else
+		{
+			var parentFlags = await parentObject.Flags.Value.ToArrayAsync();
+			outputSections.Add(MModule.multiple([
+				MModule.single("Parent: "),
+				parentObject.Name.Hilight(),
+				MModule.single($"(#{parentObject.DBRef.Number}{string.Join(string.Empty, parentFlags.Select(x => x.Symbol))})")
+			]));
 		}
 
+		// Locks: one line per lock — no "Locks:" header
+		// Output format: "{LockName} Lock [#<dbrefNumber><flagChars>]: <lockExpression>"
+		foreach (var lockKvp in obj.Locks)
+		{
+			var flagsStr = LockService!.FormatLockFlags(lockKvp.Value.Flags);
+			outputSections.Add(MModule.single(
+				$"{lockKvp.Key} Lock [#{obj.DBRef.Number}{flagsStr}]: {lockKvp.Value.LockString}"));
+		}
+
+		// Powers — always show even when empty
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
-		if (powersList.Length > 0)
-		{
-			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
-		}
+		outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
 
-		// Display warnings if any are set
-		if (obj.Warnings != WarningType.None)
-		{
-			var warningsList = WarningTypeHelper.UnparseWarnings(obj.Warnings);
-			outputSections.Add(MModule.single($"Warnings: {warningsList}"));
-		}
-
-		// Display channels if player is on any (would require channel membership query)
-		// For now, this would need channel service integration
+		// Warnings checked — always show even when empty
+		var warningsStr = obj.Warnings != WarningType.None
+			? WarningTypeHelper.UnparseWarnings(obj.Warnings)
+			: string.Empty;
+		outputSections.Add(MModule.single($"Warnings checked: {warningsStr}"));
 
 		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
@@ -984,8 +1019,16 @@ public partial class Commands
 		}
 		else
 		{
-			// Match PennMUSH date format: "ddd MMM dd HH:mm:ss yyyy"
 			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
+		}
+
+		// Last modified — always shown in both examine and brief
+		outputSections.Add(MModule.single($"Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(obj.ModifiedTime):ddd MMM dd HH:mm:ss yyyy}"));
+
+		// Quota — player objects only, shown in both examine and brief
+		if (viewingKnown.IsPlayer)
+		{
+			outputSections.Add(MModule.single($"Quota: {viewingKnown.AsPlayer.Quota}"));
 		}
 
 		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
@@ -1039,48 +1082,99 @@ public partial class Commands
 							attr.Value));
 				}
 			}
-		}
 
-		if (!switches.Contains("OPAQUE") && !switches.Contains("BRIEF") && contents.Length > 0)
-		{
-			// Use CONFORMAT attribute if present, following PennMUSH conventions
-			var conFormatResult = await AttributeService!.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
-				IAttributeService.AttributeMode.Read, false);
-
-			if (conFormatResult.IsAttribute)
+			// Contents — only if not OPAQUE
+			if (!switches.Contains("OPAQUE") && contents.Length > 0)
 			{
-				// Format with CONFORMAT: %0 = space-separated dbrefs, %1 = pipe-separated names
-				var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
-				var contentNames = string.Join("|", contentKeys);
+				var conFormatResult = await AttributeService!.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
+					IAttributeService.AttributeMode.Read, false);
 
-				var formatArgs = new Dictionary<string, CallState>
+				if (conFormatResult.IsAttribute)
 				{
-					["0"] = new CallState(contentDbrefs),
-					["1"] = new CallState(contentNames)
-				};
+					var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
+					var contentNames = string.Join("|", contents.Select(x => x.Object().Name));
 
-				var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
-					parser, executor, viewingKnown, "CONFORMAT", formatArgs);
+					var formatArgs = new Dictionary<string, CallState>
+					{
+						["0"] = new CallState(contentDbrefs),
+						["1"] = new CallState(contentNames)
+					};
 
-				await NotifyService!.Notify(enactor, formattedContents);
+					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+						parser, executor, viewingKnown, "CONFORMAT", formatArgs);
+
+					await NotifyService!.Notify(enactor, formattedContents);
+				}
+				else
+				{
+					// Default: "Carrying:" for non-rooms, "Contents:" for rooms; each item as Name(#flags)
+					var contentsLabel = viewingKnown.IsRoom ? "Contents:" : "Carrying:";
+					async ValueTask<MString> BuildContentLine(AnySharpContent content, CancellationToken _)
+					{
+						var cObj = content.Object();
+						var cFlags = await cObj.Flags.Value.ToArrayAsync();
+						return MModule.concat(
+							cObj.Name.Hilight(),
+							MModule.single($"(#{cObj.DBRef.Number}{string.Join(string.Empty, cFlags.Select(x => x.Symbol))})"));
+					}
+					var contentItems = await contents
+						.ToAsyncEnumerable()
+						.Select(BuildContentLine)
+						.Prepend(MModule.single(contentsLabel))
+						.ToListAsync();
+					await NotifyService!.Notify(enactor,
+						MModule.multipleWithDelimiter(MModule.single("\n"), contentItems));
+				}
 			}
-			else
+
+			// Exits — only if not OPAQUE and object can contain exits (not itself an exit)
+			if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
 			{
-				// Default format when CONFORMAT is not set
-				await NotifyService!.Notify(enactor, $"Contents:\n" +
-																						$"{string.Join("\n", contentKeys)}");
+				var exits = await Mediator!.CreateStream(new GetExitsQuery(viewingKnown.AsContainer))
+					.ToArrayAsync();
+
+				if (exits.Length > 0)
+				{
+					async ValueTask<MString> BuildExitLine(SharpExit exit, CancellationToken _)
+					{
+						var eObj = exit.Object;
+						var eFlags = await eObj.Flags.Value.ToArrayAsync();
+						return MModule.concat(
+							eObj.Name.Hilight(),
+							MModule.single($"(#{eObj.DBRef.Number}{string.Join(string.Empty, eFlags.Select(x => x.Symbol))})"));
+					}
+					var exitLines = await exits
+						.ToAsyncEnumerable()
+						.Select(BuildExitLine)
+						.Prepend(MModule.single("Exits:"))
+						.ToListAsync();
+					await NotifyService!.Notify(enactor,
+						MModule.multipleWithDelimiter(MModule.single("\n"), exitLines));
+				}
 			}
-		}
 
-		if (!switches.Contains("BRIEF") && !viewingKnown.IsRoom)
-		{
-			// Format Home and Location display
-			var homeObj = await viewingKnown.MinusRoom().Home();
-			var locationObj = await viewingKnown.AsContent.Location();
+			// Home and Location — non-room objects only
+			if (!viewingKnown.IsRoom)
+			{
+				var homeContainer = await viewingKnown.MinusRoom().Home();
+				var locationContainer = await viewingKnown.AsContent.Location();
 
-			await NotifyService.Notify(enactor, $"Home: {homeObj.Object().Name}");
-			await NotifyService.Notify(enactor,
-				$"Location: {locationObj.Object().Name}");
+				var homeObject = homeContainer.Object();
+				var locationObject = locationContainer.Object();
+				var homeFlags = await homeObject.Flags.Value.ToArrayAsync();
+				var locationFlags = await locationObject.Flags.Value.ToArrayAsync();
+
+				await NotifyService.Notify(enactor, MModule.multiple([
+					MModule.single("Home: "),
+					homeObject.Name.Hilight(),
+					MModule.single($"(#{homeObject.DBRef.Number}{string.Join(string.Empty, homeFlags.Select(x => x.Symbol))})")
+				]));
+				await NotifyService.Notify(enactor, MModule.multiple([
+					MModule.single("Location: "),
+					locationObject.Name.Hilight(),
+					MModule.single($"(#{locationObject.DBRef.Number}{string.Join(string.Empty, locationFlags.Select(x => x.Symbol))})")
+				]));
+			}
 		}
 
 		return new CallState(obj.DBRef.ToString());
@@ -1212,7 +1306,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
-		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.ToString()) : args["0"].Message);
+		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.Object().DBRef.ToString()) : args["0"].Message);
 
 		var isList = parser.CurrentState.Switches.Contains("LIST");
 
@@ -1227,7 +1321,9 @@ public partial class Commands
 			toTeleportList = [isDbRef ? objToTeleport!.Value : toTeleport];
 		}
 
-		var toTeleportStringList = toTeleportList.Select(x => x.ToString());
+		var toTeleportStringList = toTeleportList.Select(x => x.Match(
+			dbref => dbref.ToString(),
+			str => str));
 
 		var destination = await LocateService!.LocateAndNotifyIfInvalid(parser,
 			executor,
@@ -1415,15 +1511,13 @@ public partial class Commands
 		var results = await Mediator!.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
 
 		// Filter to only objects the executor controls
-		var controlledResults = new List<SharpObject>();
-		foreach (var obj in results)
-		{
-			var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef));
-			if (!objNode.IsNone() && await PermissionService!.Controls(executor, objNode.WithoutNone()))
+		var controlledResults = await results.ToAsyncEnumerable()
+			.Where(async (obj, ct) =>
 			{
-				controlledResults.Add(obj);
-			}
-		}
+				var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef), ct);
+				return !objNode.IsNone() && await PermissionService!.Controls(executor, objNode.WithoutNone());
+			})
+			.ToListAsync();
 
 		matchCount = controlledResults.Count;
 
@@ -1551,6 +1645,11 @@ public partial class Commands
 		var targetObject = target.Object();
 		var hasReplacementActions = args.Count >= 2;
 		var replacementActions = hasReplacementActions ? args["1"].Message : null;
+
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		if (replacementActions is not null)
+			replacementActions = HelperFunctions.StripOuterBraces(replacementActions);
 
 		if (target.IsPlayer)
 		{
@@ -1991,6 +2090,18 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		if (arg1 is not null)
+			arg1 = HelperFunctions.StripOuterBraces(arg1);
+
+		// Restore caller's pattern-match args (%0-%9) for the queued callback state.
+		// Without this, %0 inside @wait callbacks would resolve to @wait's own arg (the delay time)
+		// instead of the enclosing $command pattern match. Equivalent to PennMUSH wenv preservation.
+		var callbackState = parser.CurrentState.CallerArguments is not null
+			? parser.CurrentState with { Arguments = new Dictionary<string, CallState>(parser.CurrentState.CallerArguments) }
+			: parser.CurrentState;
+
 		/*
 		 *  @wait/pid <pid>=<seconds>
 		 *	@wait/pid <pid>=[+-]<adjustment>
@@ -2011,7 +2122,7 @@ public partial class Commands
 		if (double.TryParse(arg0, out var time))
 		{
 			TimeSpan convertedTime;
-			if (!switches.Contains("UNTIL"))
+			if (switches.Contains("UNTIL"))
 			{
 				convertedTime = DateTimeOffset.FromUnixTimeSeconds((long)time) - DateTimeOffset.UtcNow;
 			}
@@ -2020,7 +2131,7 @@ public partial class Commands
 				convertedTime = TimeSpan.FromSeconds(time);
 			}
 
-			await Mediator!.Publish(new QueueDelayedCommandListRequest(arg1, parser.CurrentState, convertedTime));
+			await Mediator!.Send(new QueueDelayedCommandListRequest(arg1, callbackState, convertedTime));
 			return CallState.Empty;
 		}
 
@@ -2044,7 +2155,7 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 
-			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1);
+			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1, callbackState);
 			return CallState.Empty;
 		}
 
@@ -2073,12 +2184,12 @@ public partial class Commands
 
 					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
 
-					await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1);
+					await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1, callbackState);
 					return CallState.Empty;
 				}
 
 			case 2 when double.TryParse(splitBySlashes[1], out untilTime):
-				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1, callbackState);
 				return CallState.Empty;
 
 			// @wait <object>/<attribute>=<command list>
@@ -2094,7 +2205,7 @@ public partial class Commands
 						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
 					}
 
-					await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1);
+					await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2117,7 +2228,7 @@ public partial class Commands
 					}
 
 					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
-					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1);
+					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2133,7 +2244,7 @@ public partial class Commands
 					}
 
 					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr,
-						TimeSpan.FromSeconds(untilTime), arg1);
+						TimeSpan.FromSeconds(untilTime), arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2144,9 +2255,9 @@ public partial class Commands
 	}
 
 	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
-		MString arg1)
+		MString arg1, ParserState? callbackState = null)
 	{
-
+		var stateForCallback = callbackState ?? parser.CurrentState;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
@@ -2160,7 +2271,7 @@ public partial class Commands
 
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
 
-			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 				dbRefAttr, 0));
 
 			return;
@@ -2177,14 +2288,15 @@ public partial class Commands
 
 		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
 
-		await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 			dbRefAttr2, last));
 
 	}
 
 	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
-		string[] attribute, TimeSpan delay, MString arg1)
+		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
 	{
+		var stateForCallback = callbackState ?? parser.CurrentState;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
@@ -2194,7 +2306,7 @@ public partial class Commands
 		{
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
 			return;
 		}
@@ -2207,7 +2319,7 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
 	}
 
@@ -2533,7 +2645,7 @@ public partial class Commands
 				if (hasAll || !drainCount.HasValue)
 				{
 					// Drain all entries and clear attribute
-					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
+					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
 					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
 						MModule.single("0"),
 						one.AsPlayer));
@@ -2541,7 +2653,7 @@ public partial class Commands
 				else
 				{
 					// Drain specified number
-					await Mediator.Publish(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
+					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
 					// Adjust semaphore count
 					var currentAttr = await Mediator.CreateStream(
 						new GetAttributeQuery(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute)).LastOrDefaultAsync();
@@ -2563,7 +2675,7 @@ public partial class Commands
 			if (hasAll || !drainCount.HasValue)
 			{
 				// Drain all entries (default if no number specified)
-				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, null));
+				await Mediator!.Send(new DrainSemaphoreRequest(dbRefAttribute, null));
 				if (hasAll)
 				{
 					// /all also clears the semaphore attribute
@@ -2582,7 +2694,7 @@ public partial class Commands
 			else
 			{
 				// Drain specified number
-				await Mediator!.Publish(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
+				await Mediator!.Send(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
 				// Adjust semaphore count
 				var currentAttr = await Mediator.CreateStream(
 					new GetAttributeQuery(objectToDrain.Object().DBRef, attribute)).LastOrDefaultAsync();
@@ -2607,6 +2719,10 @@ public partial class Commands
 		var objArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
 		var cmdListArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		cmdListArg = HelperFunctions.StripOuterBraces(cmdListArg);
 
 		var maybeFound =
 			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(),
@@ -2633,7 +2749,12 @@ public partial class Commands
 
 		// Note: Queue infrastructure available via QueueCommandListRequest if needed
 		// Currently executes inline for immediate response (default PennMUSH behavior)
-		await parser.With(state => state with { Executor = found.Object().DBRef },
+		await parser.With(
+			state => state with
+			{
+				Executor = found.Object().DBRef,
+				Caller = state.Executor
+			},
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
 		return CallState.Empty;
@@ -2949,11 +3070,17 @@ public partial class Commands
 	{
 		// Inline does nothing.
 		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
 		var nargs = args.Count;
+
+		// Note: INLINE is default behavior (immediate execution)
+		// QUEUED switch queues the command for later execution via task scheduler
+		var useQueue = switches.Contains("QUEUED");
+
 		switch (nargs)
 		{
 			case 0:
-				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+				// No condition provided — treat as falsy (@break 0 = don't break).
 				break;
 			case 1:
 				if (args["0"].Message.Truthy())
@@ -2962,15 +3089,30 @@ public partial class Commands
 				}
 
 				return args["0"];
-			case 2:
-				if (args["0"].Message.Truthy())
+			case 2 when args["0"].Message.Truthy():
+				var command = await args["1"].ParsedMessage();
+
+				if (useQueue)
 				{
-					var command = await args["1"].ParsedMessage();
+					// Queue the command for later execution
+					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
+					await Mediator!.Send(new QueueCommandListRequest(
+						command!,
+						parser.CurrentState,
+						new DbRefAttribute(executor, ["BREAK"]),
+						-1));
+				}
+				else
+				{
+					// Execute inline (default)
 					var commandList = parser.CommandListParseVisitor(command!);
 					await commandList();
-					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
 
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+
+				return args["0"];
+			case 2:
 				return args["0"];
 		}
 
@@ -4100,8 +4242,8 @@ public partial class Commands
 
 		if (attributeResult.IsNone)
 		{
-			// Empty attribute - nothing to trigger
-			return CallState.Empty;
+			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
+			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
 		var attribute = attributeResult.AsAttribute.Last();
@@ -4189,6 +4331,7 @@ public partial class Commands
 			{
 				Executor = targetObject.Object().DBRef,
 				Enactor = executionEnactor,
+				Caller = parser.CurrentState.Executor,
 				Registers = registerStack
 			};
 
@@ -4311,7 +4454,7 @@ public partial class Commands
 			["DELETE"] => await ChannelDelete.Handle(parser, LocateService!, PermissionService!, Mediator!, NotifyService!,
 				args["0"].Message!, args["1"].Message!),
 			["MOGRIFIER"] => await ChannelMogrifier.Handle(parser, LocateService!, PermissionService!, Mediator!,
-				NotifyService!, args["0"].Message!, args["1"].Message!),
+				NotifyService!, args["0"].Message!, args.GetValueOrDefault("1")?.Message),
 			_ => new CallState("What do you want to do with the channel?")
 		};
 	}
@@ -4559,7 +4702,7 @@ public partial class Commands
 		var hasAnsi = false;
 		MModule.evaluateWith((markupType, innerText) =>
 		{
-			if (markupType is MModule.MarkupTypes.MarkedupText { Item: Ansi })
+			if (markupType is { Value: Ansi })
 			{
 				hasAnsi = true;
 			}
@@ -4578,7 +4721,7 @@ public partial class Commands
 		{
 			return markupType switch
 			{
-				MModule.MarkupTypes.MarkedupText { Item: Ansi ansiMarkup }
+				{ Value: Ansi ansiMarkup }
 					=> Functions.Functions.ReconstructAnsiCall(ansiMarkup.Details, innerText),
 				_ => innerText
 			};
@@ -4598,7 +4741,7 @@ public partial class Commands
 			.Replace("^", "\\^")
 			.Replace("$", "\\$");
 
-		result = Regex.Replace(result, @"\s{2,}", m => string.Join("", Enumerable.Repeat("%b", m.Length)));
+		result = MultipleWhitespaceRegex().Replace(result, m => string.Join("", Enumerable.Repeat("%b", m.Length)));
 
 		result = result.Replace("\r", "%r").Replace("\n", "%r").Replace("\t", "%t");
 
@@ -5054,6 +5197,7 @@ public partial class Commands
 					{
 						Executor = victim.Object().DBRef,
 						Enactor = actor.Object().DBRef,
+						Caller = state.Executor,
 						Arguments = stackArgs
 					},
 					newParser => newParser.WithAttributeDebug(attribute,
@@ -5092,6 +5236,7 @@ public partial class Commands
 			{
 				Executor = victim.Object().DBRef,
 				Enactor = actor.Object().DBRef,
+				Caller = state.Executor,
 				Arguments = stackArgs
 			},
 			newParser => attributeService.EvaluateAttributeFunctionAsync(
@@ -5487,8 +5632,16 @@ public partial class Commands
 		// Q-register management is now handled by the hook system
 		// CLEARREGS and LOCALIZE switches are implemented there
 
-		// Environment argument substitution is handled by the hook system
-		// Arguments %0-%9 are properly managed during command execution
+		// Build EnvironmentRegisters from provided arguments so %0, %1, ... are substituted.
+		// args["0"] is the attribute path; args["1"], args["2"], ... map to %0, %1, ...
+		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters);
+		for (var i = 1; i < args.Count; i++)
+		{
+			if (args.TryGetValue(i.ToString(), out var argVal) && argVal.Message != null)
+			{
+				envArgs[(i - 1).ToString()] = argVal;
+			}
+		}
 
 		// Execute the attribute content in-place with recursion tracking and DEBUG/VERBOSE support
 		// This evaluates the command list without creating a queue entry
@@ -5498,8 +5651,9 @@ public partial class Commands
 
 			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 			{
-				var execResult = await parser.WithAttributeDebug(attribute,
-					p => p.CommandListParse(MModule.single(attributeText)));
+				var execResult = await parser.With(
+					state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
+					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(attributeText))));
 
 				// Handle NOBREAK switch to prevent @break/@assert propagation.
 				// When set, @break/@assert from included code shouldn't propagate to calling list.
@@ -6009,8 +6163,8 @@ public partial class Commands
 		var lines = new List<MString>
 		{
 			MModule.concat(MModule.single("You are connected to "),
-				MModule.single(Configuration!.CurrentValue.Net.MudName)),
-			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl)),
+				MModule.single(Configuration!.CurrentValue.Net.MudName ?? "Unknown")),
+			MModule.concat(MModule.single("Address: "), MModule.single(Configuration.CurrentValue.Net.MudUrl ?? "Unknown")),
 			MModule.single("SharpMUSH version 0")
 		};
 
@@ -6027,32 +6181,73 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@RETRY", Switches = [],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+		Behavior = CB.Default | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public static async ValueTask<Option<CallState>> Retry(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var predicate = args["0"];
 
-		var peek = parser.State.TakeLast(2);
-		if (peek.Count() != 2)
+		if (!args.TryGetValue("0", out var predicate))
+		{
+			await NotifyService!.Notify(executor, "Usage: @retry <condition>[=<arg0>,<arg1>,...]");
+			return new CallState("#-1 RETRY: NO CONDITION PROVIDED.");
+		}
+
+		var commandHistory = parser.CurrentState.CommandHistory;
+		if (commandHistory == null || commandHistory.Count < 2)
 		{
 			await NotifyService!.Notify(executor, "Nothing to retry.");
 			return new CallState("#-1 RETRY: NO COMMAND TO RETRY.");
 		}
 
-		var previousCommand = parser.State.First();
-		// var retryState = parser.State.Peek();
+		// History top = @retry itself; entry below it = the command to re-run.
+		var historyArray = commandHistory.ToArray();
+		var (previousCommandInvoker, _) = historyArray[1];
+
+		// Use the parent state's arguments as the initial evaluation context (%0, %1, …).
+		var parentArgs = parser.State.Skip(1).FirstOrDefault()?.Arguments
+			?? new Dictionary<string, CallState>();
+
+		// Retry arg texts (everything after the condition, i.e. args["1"], args["2"], …).
+		var retryArgTexts = args
+			.Where(kvp => kvp.Key != "0")
+			.OrderBy(kvp => int.Parse(kvp.Key))
+			.Select(kvp => kvp.Value.Message!)
+			.ToList();
+
+		var conditionText = predicate.Message!;
+		var currentArgs = parentArgs;
 		var limit = 1000;
 
-		while ((await parser.FunctionParse(predicate.Message!))!.Message.Truthy() && limit > 0)
+		while (limit > 0)
 		{
-			// TODO: Implement parser stack rewinding for better state management.
-			// This would allow resetting parser state between loop iterations cleanly.
-			// Current workaround uses state replacement via With().
+			// Evaluate condition in the current argument context.
+			var condResult = await parser.With(
+				state => state with { Arguments = currentArgs },
+				innerParser => innerParser.FunctionParse(conditionText));
+
+			if (!(condResult?.Message.Truthy() ?? false))
+				break;
+
+			// Evaluate each retry arg in the current context to produce the new %0, %1, …
+			var newArgValues = new Dictionary<string, CallState>();
+			for (var i = 0; i < retryArgTexts.Count; i++)
+			{
+				var capturedIndex = i;
+				var capturedText = retryArgTexts[i];
+				var evaluated = await parser.With(
+					state => state with { Arguments = currentArgs },
+					innerParser => innerParser.FunctionParse(capturedText));
+				newArgValues[capturedIndex.ToString()] = evaluated!;
+			}
+
+			// Execute the previous command with the freshly evaluated arguments.
 			await parser.With(
-				state => state with { Arguments = args.Skip(1).ToDictionary() },
-				async newParser => await previousCommand.CommandInvoker(newParser));
+				state => state with { Arguments = newArgValues },
+				async innerParser => await previousCommandInvoker(innerParser));
+
+			// The new arg values become the context for the next condition check.
+			currentArgs = newArgValues;
 			limit--;
 		}
 
@@ -6074,7 +6269,8 @@ public partial class Commands
 		switch (nargs)
 		{
 			case 0:
-				// Do nothing.
+				// No condition provided — treat as falsy (@assert 0 = assertion fails = break).
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				break;
 			case 1:
 				if (args["0"].Message.Falsy())
@@ -6498,4 +6694,7 @@ public partial class Commands
 		return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern,
 		System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 	}
+
+	[GeneratedRegex(@"\s{2,}")]
+	private static partial Regex MultipleWhitespaceRegex();
 }

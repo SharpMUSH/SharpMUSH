@@ -137,7 +137,7 @@ public class AttributeService(
 
 		if (attr.IsNone)
 		{
-			return MModule.single(Errors.ErrorNoSuchAttribute);
+			return MModule.empty();
 		}
 
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
@@ -173,7 +173,9 @@ public class AttributeService(
 						Arguments = args,
 						EnvironmentRegisters = args,
 						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
-						Function = attributeName
+						Function = attributeName,
+						Executor = obj.Object().DBRef,
+						Caller = s.Executor
 					},
 				async newParser =>
 					await newParser.FunctionParse(attr.AsAttribute.Last().Value));
@@ -226,10 +228,15 @@ public class AttributeService(
 		var split = MModule.split("/", objAndAttribute);
 		var obj = split.First();
 		var attribute = MModule.multiple(split.Skip(1))!;
-		var applyPredicate = obj.ToPlainText().StartsWith("#APPLY", StringComparison.InvariantCultureIgnoreCase);
-		var lambdaPredicate = obj.ToPlainText().StartsWith("#LAMBDA", StringComparison.InvariantCultureIgnoreCase);
+		var objPlainText = obj.ToPlainText();
+		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
+		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
 
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
+		// Skip attribute name validation for lambda/apply: the "attribute" part is
+		// executable code, not a database attribute name, and can contain characters
+		// (e.g. '[', ']', '\') that are not valid in attribute names.
+		if (!applyPredicate && !lambdaPredicate &&
+		    !await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
 		{
 			return MModule.single(Errors.ErrorObjectAttributeString);
 		}
@@ -246,17 +253,21 @@ public class AttributeService(
 		if (applyPredicate && !ignoreLambda)
 		{
 			var argN = 1;
-			if (!string.IsNullOrWhiteSpace(attribute.ToPlainText()) && !int.TryParse(attribute.ToPlainText(), out argN))
+			// The optional argument count is embedded in the obj portion after "#apply" (e.g. "#apply2" -> argN=2).
+			// The function name is in the attribute portion (e.g. "#apply/strlen" -> funcname="strlen").
+			var applyArgCountStr = objPlainText.Remove(0, 6); // part after "#apply"
+			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
 			{
-				// Invalid argument to #apply 
+				// Invalid argument count in #apply 
 				return MModule.single(string.Format(Errors.ErrorBadArgumentFormat, "#APPLY"));
 			}
 
 			var slimArgs = Enumerable
 				.Range(0, argN)
-				.ToDictionary(argK => argK.ToString(), argK => args[argK.ToString()]);
+				.Select(i => i.ToString())
+				.ToDictionary(k => k, k => args.TryGetValue(k, out var v) ? v : CallState.Empty);
 
-			if (parser.FunctionLibrary.TryGetValue(obj.ToPlainText().Remove(0, 6).ToLower(), out var applyFunction))
+			if (parser.FunctionLibrary.TryGetValue(attribute.ToPlainText().ToLower(), out var applyFunction))
 			{
 				// Check function permission flags
 				var functionFlags = applyFunction.LibraryInformation.Attribute.Flags;
@@ -282,15 +293,8 @@ public class AttributeService(
 				// Check custom restrictions
 				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
 				{
-					var hasRestriction = false;
-					foreach (var restriction in applyFunction.LibraryInformation.Attribute.Restrict)
-					{
-						if (await realExecutor.HasPower(restriction))
-						{
-							hasRestriction = true;
-							break;
-						}
-					}
+					var hasRestriction = await applyFunction.LibraryInformation.Attribute.Restrict.ToAsyncEnumerable()
+						.AnyAsync(async (restriction, _) => await realExecutor.HasPower(restriction));
 					if (!hasRestriction)
 					{
 						return MModule.single(Errors.ErrorAttrEvalPermissions);
@@ -327,6 +331,7 @@ public class AttributeService(
 			var result = await parser.With(s => s with
 			{
 				Arguments = args,
+				EnvironmentRegisters = args,
 				CallDepth = s.CallDepth,
 				FunctionRecursionDepths = s.FunctionRecursionDepths,
 				TotalInvocations = s.TotalInvocations,
@@ -338,7 +343,7 @@ public class AttributeService(
 
 		// Standard Object/Attribute evaluation
 		var maybeObject =
-			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, obj.ToPlainText(),
+			await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objPlainText,
 				LocateFlags.All);
 
 		return maybeObject switch
@@ -466,7 +471,8 @@ public class AttributeService(
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
 		var returnedFlag = await allFlags
-			.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
+			.FirstOrDefaultAsync(x => x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+				|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
 
 		if (returnedFlag is null)
 		{
@@ -475,7 +481,7 @@ public class AttributeService(
 
 		// Check if the flag is already set to avoid redundant operations
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
-		if (currentFlags.Contains(returnedFlag))
+		if (currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
 		{
 			await notifyService.Notify(executor,
 				$"Flag {returnedFlag.Name} is already set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
@@ -506,7 +512,9 @@ public class AttributeService(
 		}
 
 		var allFlags = mediator.CreateStream(new GetAttributeFlagsQuery());
-		var returnedFlag = await allFlags.FirstOrDefaultAsync(x => x.Name == flag || x.Symbol == flag);
+		var returnedFlag = await allFlags.FirstOrDefaultAsync(x =>
+			x.Name.Equals(flag, StringComparison.OrdinalIgnoreCase)
+			|| (x.Symbol != null && x.Symbol.Equals(flag, StringComparison.OrdinalIgnoreCase)));
 
 		if (returnedFlag is null)
 		{
@@ -515,7 +523,7 @@ public class AttributeService(
 
 		// Check if the flag is actually set before unsetting
 		var currentFlags = returnedAttribute.AsAttribute.Last().Flags;
-		if (!currentFlags.Contains(returnedFlag))
+		if (!currentFlags.Any(f => f.Name.Equals(returnedFlag.Name, StringComparison.OrdinalIgnoreCase)))
 		{
 			await notifyService.Notify(executor,
 				$"Flag {returnedFlag.Name} is not set on attribute {returnedAttribute.AsAttribute.Last().LongName}", obj);
@@ -595,7 +603,18 @@ public class AttributeService(
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
 		}
 
-		await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, attrArr.Select(x => x.LongName!).ToArray()));
+		// For wildcard patterns (used by @wipe), use WipeAttributeCommand to fully delete the
+		// attribute and all its descendants. For exact patterns (used by @set obj/attr=), use
+		// ClearAttributeCommand which preserves parent nodes that have children.
+		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
+		foreach (var attrItem in attrArr)
+		{
+			var pathParts = attrItem.LongName!.Split('`');
+			if (isWipe)
+				await mediator.Send(new WipeAttributeCommand(obj.Object().DBRef, pathParts));
+			else
+				await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
+		}
 
 		foreach (var attrDone in attrArr)
 		{

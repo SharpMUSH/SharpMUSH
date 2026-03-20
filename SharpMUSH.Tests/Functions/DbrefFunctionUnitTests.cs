@@ -262,6 +262,7 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
+	[NotInParallel]
 	public async Task Lsearchr_BehavesLikeLsearch_WhenNoRegexNeeded()
 	{
 		// lsearchr() should work the same as lsearch() for simple patterns
@@ -270,5 +271,79 @@ public class DbrefFunctionUnitTests
 
 		// Both should return the same results for non-regex patterns
 		await Assert.That(lsearchrResult.ToPlainText()).IsEqualTo(lsearchResult.ToPlainText());
+	}
+
+	/// <summary>
+	/// Tests that functions accepting dbrefs also accept objids (#N:timestamp format).
+	/// </summary>
+	[Test]
+	public async Task ObjId_AcceptedByLocFunction()
+	{
+		// objid(%#) returns the full objid of the executor (e.g. #1:1234567890)
+		// loc() should accept this objid and return the same location as with a bare dbref
+		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
+		var objId = objIdResult.ToPlainText();
+
+		var resultWithObjId = (await Parser.FunctionParse(MModule.single($"loc({objId})")))?.Message!;
+		var resultWithDbRef = (await Parser.FunctionParse(MModule.single("loc(%#)")))?.Message!;
+
+		// Both should return the same location
+		await Assert.That(resultWithObjId.ToPlainText()).IsEqualTo(resultWithDbRef.ToPlainText());
+	}
+
+	[Test]
+	public async Task ObjId_AcceptedByNameFunction()
+	{
+		// objid(%#) returns the full objid of the executor (e.g. #1:1234567890)
+		// name() should accept this objid and return the object's name
+		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
+		var objId = objIdResult.ToPlainText();
+
+		var resultWithObjId = (await Parser.FunctionParse(MModule.single($"name({objId})")))?.Message!;
+		var resultWithDbRef = (await Parser.FunctionParse(MModule.single("name(%#)")))?.Message!;
+
+		// Both should return the same name
+		await Assert.That(resultWithObjId.ToPlainText()).IsEqualTo(resultWithDbRef.ToPlainText());
+	}
+
+	[Test]
+	public async Task ObjId_AcceptedByLocateFunction()
+	{
+		// locate() with an objid as the name argument should find the object
+		// First get the objid of the executor
+		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
+		var objId = objIdResult.ToPlainText();
+
+		// Now locate using the full objid
+		var locateResult = (await Parser.FunctionParse(MModule.single($"first(locate(%#,{objId},*),;)")))?.Message!;
+
+		// Should find the object - result should match the bare dbref number
+		await Assert.That(locateResult.ToPlainText()).StartsWith("#1");
+	}
+
+	[Test]
+	public async Task ObjId_WithWrongTimestamp_FailsToLocate()
+	{
+		// An objid with a wrong timestamp should not locate the object
+		// Use a clearly invalid timestamp (0)
+		var locateResult = (await Parser.FunctionParse(MModule.single("locate(%#,#1:0,*)")))?.Message!;
+
+		// Should not find the object since timestamp 0 is wrong
+		await Assert.That(locateResult.ToPlainText()).IsEqualTo("#-1");
+	}
+
+	[Test]
+	public async Task PercentColon_ReturnsFullObjId()
+	{
+		// %: should return the full objid of the enactor (e.g. #1:1234567890)
+		var result = (await Parser.FunctionParse(MModule.single("%:")))?.Message!;
+		var objId = result.ToPlainText();
+
+		// Should match objid format: #N:M
+		await Assert.That(objId).Matches(@"^#\d+:\d+$");
+
+		// Should be consistent with objid(%#)
+		var objIdFromFunc = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
+		await Assert.That(objId).IsEqualTo(objIdFromFunc.ToPlainText());
 	}
 }

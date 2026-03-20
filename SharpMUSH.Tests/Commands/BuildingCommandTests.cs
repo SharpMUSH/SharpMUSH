@@ -64,7 +64,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number #{newDb.Number}")));
+				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number {newDb.Number}")));
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
@@ -100,7 +100,7 @@ public class BuildingCommandTests
 		// The important thing is that these specific messages were sent, not the exact count
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Foo Room created with room number #{newDb.Number}.");
+			.Notify(Arg.Any<DBRef>(), $"Foo Room created with room number {newDb.Number}.");
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number + 1} to #{newDb.Number}");
@@ -133,19 +133,17 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(DigAndMoveTest))]
-	[Skip("Failing Test - Needs Investigation")]
-	// 	"#-2 I DON'T KNOW WHICH ONE YOU MEAN"
 	public async ValueTask NameObject()
 	{
-		// Create an object first
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DigAndMoveTest - Rename Test"));
+		// Create an object first, capturing the dbref to avoid ambiguous name lookup
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DigAndMoveTest - Rename Test"));
+		var newDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// Rename it
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@name DigAndMoveTest - Rename Test=DigAndMoveTest - New Name"));
+		// Rename it using dbref to avoid "#-2 I DON'T KNOW WHICH ONE YOU MEAN" ambiguity
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@name {newDbRef}=DigAndMoveTest - New Name"));
 
-		var newObject = (await Parser.FunctionParse(MModule.single("name(DigAndMoveTest - New Name)")))!.Message!.ToPlainText();
-
-		await Assert.That(newObject).IsEqualTo("DigAndMoveTest - New Name");
+		var renamedObject = await Mediator.Send(new GetObjectNodeQuery(newDbRef));
+		await Assert.That(renamedObject.Object()!.Name).IsEqualTo("DigAndMoveTest - New Name");
 	}
 
 	[Test]
@@ -171,11 +169,12 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Room With Exits created with room number #{newObject.Object()!.DBRef.Number}.");
+			.Notify(Arg.Any<DBRef>(), $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.");
 	}
 
 	[Test]
 	[DependsOn(nameof(DigRoomWithExits))]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LinkExit()
 	{
@@ -184,7 +183,7 @@ public class BuildingCommandTests
 		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!);
 
 		var exitResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@open LinkExitTestExit"));
-		var exitDbRef = DBRef.Parse(exitResult.Message!.ToPlainText()!.Split("with dbref ")[1].TrimEnd('.'));
+		var exitDbRef = DBRef.Parse(exitResult.Message!.ToPlainText()!);
 
 		// Link them
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@link {exitDbRef}={roomDbRef}"));
@@ -200,6 +199,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(LinkExit))]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask CloneObject()
 	{
@@ -419,6 +419,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(CloneObject))]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
 	public async ValueTask SetParent()
 	{
@@ -489,6 +490,7 @@ public class BuildingCommandTests
 
 	[Test]
 	[DependsOn(nameof(RecycleObject))]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{
@@ -518,6 +520,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LockObject()
 	{
@@ -533,6 +536,7 @@ public class BuildingCommandTests
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask UnlockObject()
 	{
@@ -549,5 +553,139 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), "Unlocked.");
+	}
+
+	/// <summary>
+	/// Tests that @desc (and other @attribute commands) evaluate their argument before storing.
+	/// This confirms PennMUSH-compatible behavior:
+	/// - @desc me=[add(1,2)] should store "3" (not "[add(1,2)]")
+	/// - look should display "3" (no re-evaluation)
+	/// Using @desc to verify prefix matching correctly chooses DESCRIBE over DESCFORMAT (shorter match wins).
+	/// </summary>
+	[Test]
+	public async ValueTask DescribeCommand_EvaluatesBeforeStoring()
+	{
+		// Create an object for testing
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescEvalTestObject"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Get the object for attribute service
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Assert.That(obj.IsNone).IsFalse();
+
+		// Use @desc with a function that should be evaluated
+		// @desc should match DESCRIBE (not DESCFORMAT) due to length sorting in prefix matching
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[add(1,2)]"));
+
+		// Verify the notification shows it was set
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "DESCRIBE") && TestHelpers.MessageContains(msg, "Set")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+
+		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var descAttr = await attributeService.GetAttributeAsync(
+			obj.Known, obj.Known, "DESCRIBE",
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(descAttr.IsAttribute).IsTrue();
+		var storedValue = descAttr.AsAttribute.Last().Value.ToPlainText();
+		await Assert.That(storedValue).IsEqualTo("3");
+	}
+
+	/// <summary>
+	/// Tests that @desc (prefix) works and correctly matches DESCRIBE over DESCFORMAT.
+	/// </summary>
+	[Test]
+	public async ValueTask DescribeCommand_PrefixMatch_Works()
+	{
+		// Create an object for testing
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescPrefixMatchTestObject"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Get the object for attribute service
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Assert.That(obj.IsNone).IsFalse();
+
+		// Use @desc (prefix) - should match DESCRIBE, not DESCFORMAT, due to shorter name
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=Test description text"));
+
+		// Verify the attribute was set
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var descAttr = await attributeService.GetAttributeAsync(
+			obj.Known, obj.Known, "DESCRIBE",
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(descAttr.IsAttribute).IsTrue();
+		var storedValue = descAttr.AsAttribute.Last().Value.ToPlainText();
+		await Assert.That(storedValue).IsEqualTo("Test description text");
+	}
+
+	/// <summary>
+	/// Tests that look displays the pre-evaluated DESCRIBE value without re-evaluating.
+	/// If DESCRIBE contained "[mul(2,5)]" and was set via @desc, look should show "10".
+	/// </summary>
+	[Test]
+	public async ValueTask Look_DisplaysStoredDescribe_NoReEvaluation()
+	{
+		// Create an object for testing
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LookDescTestObject"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Use @desc with a function - this should be evaluated to "10"
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[mul(2,5)]"));
+
+		// Look at the object
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"look {objDbRef}"));
+
+		// Verify look displayed "10" (the evaluated result of [mul(2,5)])
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "10")));
+	}
+
+	/// <summary>
+	/// Tests error case: @desc with invalid target shows error notification.
+	/// </summary>
+	[Test]
+	public async ValueTask DescribeCommand_InvalidTarget_ShowsError()
+	{
+		// Try to @desc an object that doesn't exist
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
+
+		// Verify error notification was sent ("I can't see that here" or similar)
+		// The locate service sends the error with a sender parameter
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "can't see") ||
+				TestHelpers.MessageContains(msg, "not found") ||
+				TestHelpers.MessageContains(msg, "Invalid") ||
+				TestHelpers.MessageContains(msg, "No match")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
+	/// <summary>
+	/// Tests that @desc without = clears the attribute.
+	/// </summary>
+	[Test]
+	public async ValueTask DescribeCommand_MissingEquals_ClearsAttribute()
+	{
+		// Create an object first
+		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescClearTest"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		// Set a description first
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=Initial description"));
+
+		// Now clear it by using @desc without =
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}"));
+
+		// Verify "Cleared" notification was sent
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "Cleared")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }

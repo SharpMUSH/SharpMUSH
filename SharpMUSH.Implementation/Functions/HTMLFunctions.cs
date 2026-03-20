@@ -98,7 +98,7 @@ public partial class Functions
 		}
 
 		// Check permissions
-		var isWizard = executor.IsGod() || await executor.IsWizard();
+		var isWizard = await executor.IsWizard();
 		var isSelf = executor.Object().DBRef == located.Object().DBRef;
 
 		if (!isWizard && !isSelf)
@@ -136,7 +136,7 @@ public partial class Functions
 				continue;
 			}
 
-			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
+			await Mediator!.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
 				connection.Handle,
 				wsMessage));
 		}
@@ -180,7 +180,7 @@ public partial class Functions
 		}
 
 		// Check permissions
-		var isWizard = executor.IsGod() || await executor.IsWizard();
+		var isWizard = await executor.IsWizard();
 		var isSelf = executor.Object().DBRef == located.Object().DBRef;
 
 		if (!isWizard && !isSelf)
@@ -203,7 +203,7 @@ public partial class Functions
 				continue;
 			}
 
-			await Mediator!.Publish(new SharpMUSH.Messages.WebSocketOutputMessage(
+			await Mediator!.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
 				connection.Handle,
 				wsMessage));
 		}

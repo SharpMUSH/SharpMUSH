@@ -41,7 +41,7 @@ public class ListFunctionUnitTests
 
 		// Set up mix test attribute  
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&CONCAT #{_testObjectDbRef.Number}=cat(%0,%b,%1)"));
+			MModule.single($"&CONCAT #{_testObjectDbRef.Number}=%0%b%1"));
 
 		// Set up munge test attribute (sort function)
 		await CommandParser.CommandParse(1, ConnectionService,
@@ -71,6 +71,9 @@ public class ListFunctionUnitTests
 	[Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%i1)),|,-)", "2 3 4-3 4 5-4 5 6")]
 	// TODO: %iL does not evaluate to the correct value.
 	// [Arguments("iter(1|2|3,iter(1 2 3,add(%i0,%iL)),|,-)", "2 3 4-3 4 5-4 5 6")]
+	[Arguments("iter(1 2 3,##)", "1 2 3")]
+	[Arguments("iter(1 2 3,add(##,1))", "2 3 4")]
+	[Arguments("iter(1|2|3,##,|,-)", "1-2-3")]
 	public async Task IterationValue(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
@@ -212,7 +215,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Implementation incomplete - sort function needs full implementation")]
 	[Arguments("sort(3 1 2)", "1 2 3")]
 	[Arguments("sort(foo bar baz)", "bar baz foo")]
 	public async Task Sort(string function, string expected)
@@ -232,6 +234,47 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	[Test, NotInParallel]
+	[Arguments(@"filter(#lambda/mod\(\%0\,2\),1 2 3 4 5 6)", "1 3 5")]
+	[Arguments(@"filter(#apply/isnum,1 foo 3 bar 5 6)", "1 3 5 6")]
+	public async Task FilterWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments("map(test/is_odd,1 2 3 4 5 6)", "1 0 1 0 1 0")]
+	public async Task Map(string function, string expected)
+	{
+		await EnsureTestObjectsExist();
+		// Replace "test" with actual DBRef
+		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"map(#lambda/strlen\(\%0\),hello world foo)", "5 5 3")]
+	[Arguments(@"map(#lambda/strlen\(\%0\),hello;world;foo,;)", "5;5;3")]
+	[Arguments(@"map(#lambda/\%0,a b c)", "a b c")]
+	// Bracket-form lambda: verify [func()] syntax in lambda code passes attribute validation
+	[Arguments(@"map(#lambda/[strlen\(\%0\)],hello world foo)", "5 5 3")]
+	public async Task MapWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"map(#apply/strlen,hello world foo)", "5 5 3")]
+	[Arguments(@"map(#apply/strlen,hello;world;foo,;)", "5;5;3")]
+	public async Task MapWithApply(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
 	[Test]
 	[Arguments("fold(test/add_func,1 2 3)", "6")]
 	public async Task Fold(string function, string expected)
@@ -240,6 +283,16 @@ public class ListFunctionUnitTests
 		// Replace "test" with actual DBRef
 		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(@"fold(#lambda/add\(\%0\,\%1\),1 2 3)", "6")]
+	[Arguments(@"fold(#lambda/add\(\%0\,\%1\),1 2 3 4,0)", "10")]
+	[Arguments(@"fold(#apply2/add,1 2 3)", "6")]
+	public async Task FoldWithLambda(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -307,7 +360,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Implementation doesn't match expected behavior - returns wrong indices")]
 	[Arguments("matchall(foo bar baz,ba*)", "2 3")]
 	public async Task Matchall(string function, string expected)
 	{
@@ -316,7 +368,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("User-defined function execution issue - attribute not being called correctly")]
 	[Arguments("mix(test/concat,a b c,1 2 3)", "a 1 b 2 c 3")]
 	public async Task Mix(string function, string expected)
 	{
@@ -384,7 +435,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Formatting logic incorrect - conjunction and punctuation not formatted properly")]
 	[Arguments("itemize(a b c)", "a, b, and c")]
 	public async Task Itemize(string function, string expected)
 	{
@@ -420,8 +470,7 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsNotNull();
 	}
 
-	[Test]
-	[Skip("Lambda function syntax not fully supported - #lambda/\\%0 pattern needs implementation")]
+	[Test, NotInParallel]
 	[Arguments(@"filterbool(#lambda/\%0,1 0 1)", "1 1")]
 	public async Task FilterBool(string function, string expected)
 	{
@@ -438,7 +487,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Implementation issue - splice logic doesn't handle output separator correctly")]
 	[Arguments("splice(a b c,d e f, )", "a d  b e  c f")]
 	public async Task Splice(string str, string expected)
 	{
@@ -457,7 +505,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Indexing issue - 1-based position handling for insert incorrect")]
 	[Arguments("linsert(a b c,2,x)", "a x b c")]
 	public async Task ListInsert(string str, string expected)
 	{
@@ -488,7 +535,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Formatting logic incorrect - same issue as itemize")]
 	[Arguments("elist(a b c)", "a, b, and c")]
 	public async Task Elist(string str, string expected)
 	{
@@ -513,7 +559,6 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Skip("Error handling outside iteration - should return error but doesn't")]
 	[Arguments("itext(0)", "#-1 REGISTER OUT OF RANGE")]
 	public async Task Itext(string str, string expected)
 	{

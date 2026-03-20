@@ -18,6 +18,7 @@ public class UserDefinedCommandsTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
 	[Test]
+	[Category("TestInfrastructure")]
 	[Skip("Test needs investigation - unrelated to communication commands")]
 	public async Task SetAndResetCacheTest()
 	{

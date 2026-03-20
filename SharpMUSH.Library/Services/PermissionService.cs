@@ -19,6 +19,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	{
 		if (!await Controls(executor, target)) return false;
 
+		if (attribute.Length == 0) return true;
+
 		var compressedAttribute = attribute[^1] with
 		{
 			Flags = attribute.SelectMany(a => a.Flags)
@@ -131,13 +133,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 		// Check all attributes in the path for execution permissions
 		// All must allow evaluation for the final attribute to be executable
-		foreach (var attr in attribute)
-		{
-			if (!await CanEvalAttr(viewer, target, attr))
-				return false;
-		}
-
-		return true;
+		return await attribute.ToAsyncEnumerable()
+			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
 	}
 
 	/// <summary>
@@ -152,13 +149,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 		// Check all attributes in the path for execution permissions
 		// All must allow evaluation for the final attribute to be executable
-		foreach (var attr in attribute)
-		{
-			if (!await CanEvalAttr(viewer, target, attr))
-				return false;
-		}
-
-		return true;
+		return await attribute.ToAsyncEnumerable()
+			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
@@ -375,5 +367,5 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			 || await ChannelCanModifyAsync(target, channel);
 
 	public async ValueTask<bool> CanNoSpoof(AnySharpObject executor)
-		=> await executor.HasPower("NOSPOOF") || await executor.IsWizard() || executor.IsGod();
+		=> await executor.HasPower("NOSPOOF") || await executor.IsWizard();
 }

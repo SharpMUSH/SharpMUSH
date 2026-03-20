@@ -3,6 +3,7 @@
 public static class DatabaseConstants
 {
 	public const string Objects = "node_objects";
+	public const string GodObjectId = $"{Objects}/1";
 	public const string ObjectData = "node_object_data";
 	public const string ServerData = "node_server_data";
 	public const string Players = "node_players";

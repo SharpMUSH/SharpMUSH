@@ -194,4 +194,36 @@ public class OutputTransformServiceTests
 		// UTF-8 encoding converts invalid bytes to replacement character
 		await Assert.That(resultText).Contains("\uFFFD"); // Replacement character
 	}
+
+	[Test]
+	public async Task TransformAsync_StripsOsc8Hyperlinks_WhenAnsiEnabled()
+	{
+		// Arrange - OSC 8 hyperlink: ESC]8;;url BEL text ESC]8;; BEL
+		var input = "See \u001b]8;;help newbie2\u0007newbie2\u001b]8;;\u0007 for more."u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true);
+		var preferences = new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: true);
+
+		// Act
+		var result = await _service.TransformAsync(input, capabilities, preferences);
+
+		// Assert - OSC 8 should be stripped, preserving display text
+		var resultText = Encoding.UTF8.GetString(result);
+		await Assert.That(resultText).IsEqualTo("See newbie2 for more.");
+		await Assert.That(resultText).DoesNotContain("]8;;");
+	}
+
+	[Test]
+	public async Task TransformAsync_StripsOsc8Hyperlinks_WhenAnsiDisabled()
+	{
+		// Arrange - OSC 8 hyperlink with additional ANSI formatting
+		var input = "\u001b[1m\u001b]8;;help topic\u0007topic text\u001b]8;;\u0007\u001b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: false);
+
+		// Act
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		// Assert - Both ANSI and OSC 8 should be stripped
+		var resultText = Encoding.UTF8.GetString(result);
+		await Assert.That(resultText).IsEqualTo("topic text");
+	}
 }

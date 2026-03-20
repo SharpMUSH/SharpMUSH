@@ -1,12 +1,12 @@
 using SharpMUSH.ConnectionServer.Services;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Text;
 
 namespace SharpMUSH.ConnectionServer.Consumers;
 
 /// <summary>
-/// Consumes WebSocket output messages from Kafka and sends to connections
+/// Consumes WebSocket output messages from NATS JetStream and sends to connections
 /// </summary>
 public class WebSocketOutputConsumer(
 	IConnectionServerService connectionService,
@@ -44,7 +44,7 @@ public class WebSocketOutputConsumer(
 }
 
 /// <summary>
-/// Consumes WebSocket prompt messages from Kafka and sends to connections
+/// Consumes WebSocket prompt messages from NATS JetStream and sends to connections
 /// </summary>
 public class WebSocketPromptConsumer(
 	IConnectionServerService connectionService,

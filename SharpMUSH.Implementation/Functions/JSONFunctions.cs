@@ -11,6 +11,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -56,50 +57,8 @@ public partial class Functions
 	public static async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
-		var objAttr =
-			HelperFunctions.SplitOptionalObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message!));
-		if (objAttr is { IsT1: true, AsT1: false })
-		{
-			return new CallState(Errors.ErrorObjectAttributeString);
-		}
-
-		var (dbref, attrName) = objAttr.AsT0;
-		dbref ??= executor.Object().DBRef.ToString();
-
-		var locate = await LocateService!.LocateAndNotifyIfInvalid(
-			parser,
-			enactor,
-			executor,
-			dbref,
-			LocateFlags.All);
-
-		if (!locate.IsValid())
-		{
-			return CallState.Empty;
-		}
-
-		var located = locate.WithoutError().WithoutNone();
-
-		var maybeAttr = await AttributeService!.GetAttributeAsync(
-			executor,
-			located,
-			attrName,
-			mode: IAttributeService.AttributeMode.Execute,
-			parent: true);
-
-		if (maybeAttr.IsNone)
-		{
-			return new CallState(Errors.ErrorNoSuchAttribute);
-		}
-
-		if (maybeAttr.IsError)
-		{
-			return new CallState(maybeAttr.AsError.Value);
-		}
-
-		var attr = maybeAttr.AsAttribute;
-		var attrValue = attr.Last().Value;
+		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
+		var rawAttrStr = MModule.plainText(rawAttrArg)!;
 
 		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToString();
 		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
@@ -108,6 +67,62 @@ public partial class Functions
 		for (int i = 3; i < parser.CurrentState.Arguments.Count; i++)
 		{
 			userArgs[i.ToString()] = parser.CurrentState.Arguments[i.ToString()];
+		}
+
+		// Resolved attribute text for the standard (non-lambda) path; only set in the if-block below.
+		MString attrValue = MModule.empty();
+
+		// Helper to evaluate a function call (attribute or lambda) with a given args dict.
+		// For #lambda / #apply, EvaluateAttributeFunctionAsync handles the special prefix.
+		// For regular attribute references, we use the pre-resolved attrValue via FunctionParse.
+		async ValueTask<MString> EvalWithArgs(Dictionary<string, CallState> callArgs)
+		{
+			if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
+			{
+				return await AttributeService!.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, callArgs);
+			}
+
+			var callParser = parser.Push(parser.CurrentState with
+			{
+				Arguments = callArgs,
+				EnvironmentRegisters = callArgs
+			});
+			return (await callParser.FunctionParse(attrValue))!.Message!;
+		}
+
+		if (!HelperFunctions.IsLambdaOrApply(rawAttrStr))
+		{
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
+			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
+			if (objAttr is { IsT1: true, AsT1: false })
+			{
+				return new CallState(Errors.ErrorObjectAttributeString);
+			}
+
+			var (dbref, attrName) = objAttr.AsT0;
+			dbref ??= executor.Object().DBRef.ToString();
+
+			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, enactor, executor, dbref, LocateFlags.All);
+			if (!locate.IsValid())
+			{
+				return CallState.Empty;
+			}
+
+			var located = locate.WithoutError().WithoutNone();
+			var maybeAttr = await AttributeService!.GetAttributeAsync(executor, located, attrName,
+				mode: IAttributeService.AttributeMode.Execute, parent: true);
+
+			if (maybeAttr.IsNone)
+			{
+				return new CallState(Errors.ErrorNoSuchAttribute);
+			}
+
+			if (maybeAttr.IsError)
+			{
+				return new CallState(maybeAttr.AsError.Value);
+			}
+
+			attrValue = maybeAttr.AsAttribute.Last().Value;
 		}
 
 		try
@@ -129,16 +144,8 @@ public partial class Functions
 						{ "0", new CallState(JsonHelpers.GetJsonType(rootElement)) },
 						{ "1", new CallState(rootElement.GetRawText()) }
 					};
-					foreach (var ua in userArgs)
-					{
-						args[ua.Key] = ua.Value;
-					}
-					var newParser = parser.Push(parser.CurrentState with
-					{
-						Arguments = args,
-						EnvironmentRegisters = args
-					});
-					result.Add((await newParser.FunctionParse(attrValue))!.Message!);
+					foreach (var ua in userArgs) args[ua.Key] = ua.Value;
+					result.Add(await EvalWithArgs(args));
 					break;
 
 				case JsonValueKind.Array:
@@ -151,40 +158,23 @@ public partial class Functions
 							{ "1", new CallState(element.GetRawText()) },
 							{ "2", new CallState(arrayIndex.ToString()) }
 						};
-						foreach (var ua in userArgs)
-						{
-							arrayArgs[ua.Key] = ua.Value;
-						}
-						var arrayParser = parser.Push(parser.CurrentState with
-						{
-							Arguments = arrayArgs,
-							EnvironmentRegisters = arrayArgs
-						});
-						result.Add((await arrayParser.FunctionParse(attrValue))!.Message!);
+						foreach (var ua in userArgs) arrayArgs[ua.Key] = ua.Value;
+						result.Add(await EvalWithArgs(arrayArgs));
 						arrayIndex++;
 					}
 					break;
 
 				case JsonValueKind.Object:
-					foreach (var objArgs in rootElement
-										 .EnumerateObject()
-										 .Select(property => new Dictionary<string, CallState>
-									 {
-										 { "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
-										 { "1", new CallState(property.Value.GetRawText()) },
-										 { "2", new CallState(property.Name) }
-									 }))
+					foreach (var property in rootElement.EnumerateObject())
 					{
-						foreach (var ua in userArgs)
+						var objArgs = new Dictionary<string, CallState>
 						{
-							objArgs[ua.Key] = ua.Value;
-						}
-						var objParser = parser.Push(parser.CurrentState with
-						{
-							Arguments = objArgs,
-							EnvironmentRegisters = objArgs
-						});
-						result.Add((await objParser.FunctionParse(attrValue))!.Message!);
+							{ "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
+							{ "1", new CallState(property.Value.GetRawText()) },
+							{ "2", new CallState(property.Name) }
+						};
+						foreach (var ua in userArgs) objArgs[ua.Key] = ua.Value;
+						result.Add(await EvalWithArgs(objArgs));
 					}
 					break;
 				case JsonValueKind.Undefined:
@@ -393,7 +383,7 @@ public partial class Functions
 			}
 		}
 
-		var isWizard = executor.IsGod() || await executor.IsWizard();
+		var isWizard = await executor.IsWizard();
 		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
 
 		int sentCount = 0;
@@ -433,7 +423,7 @@ public partial class Functions
 					continue;
 				}
 
-				await MessageBus!.Publish(new Messages.GMCPOutputMessage(
+				await MessageBus!.Publish(new GMCPOutputMessage(
 					connection.Handle,
 					package,
 					message));

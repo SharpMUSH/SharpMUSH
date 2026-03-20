@@ -38,6 +38,7 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConversionResultIncludesStatistics()
 	{
@@ -89,6 +90,7 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConverterUpdatesGodPlayerNameAndPassword()
 	{
@@ -127,6 +129,7 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConverterUpdatesRoom0Name()
 	{
@@ -165,6 +168,7 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConverterSetsParentRelationships()
 	{
@@ -216,6 +220,7 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Creates objects in shared database that affect other tests - needs isolated database")]
 	public async ValueTask ConverterSetsZoneRelationships()
 	{

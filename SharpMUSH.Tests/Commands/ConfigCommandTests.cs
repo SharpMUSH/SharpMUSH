@@ -16,7 +16,7 @@ public class ConfigCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	[Test, Skip("TODO")]
+	[Test]
 	public async ValueTask ConfigCommand_NoArgs_ListsCategories()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config"));
@@ -31,7 +31,6 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	[Skip("Failing. Needs Investigation")]
 	public async ValueTask ConfigCommand_CategoryArg_ShowsCategoryOptions()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));
@@ -73,6 +72,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MonikerCommand()
 	{
@@ -84,6 +84,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MotdCommand()
 	{
@@ -108,6 +109,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WizmotdCommand()
 	{
@@ -119,6 +121,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RejectmotdCommand()
 	{
@@ -130,6 +133,7 @@ public class ConfigCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DoingCommand()
 	{

@@ -40,6 +40,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits()
 	{
@@ -284,6 +285,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_TypePreference_ShouldRespectPlayerPreference()
 	{
@@ -328,6 +330,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_PartialMatching_ShouldFindObjectByPartialName()
 	{
@@ -406,6 +409,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom()
 	{
@@ -446,6 +450,7 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Skip for now")]
 	public async Task LocateMatch_MultipleObjects_ShouldHandleAmbiguousMatches()
 	{

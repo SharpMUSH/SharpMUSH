@@ -1,44 +1,37 @@
-using KafkaFlow;
 using Microsoft.AspNetCore.Connections;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using OpenTelemetry.ResourceDetectors.Container;
 using Serilog;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Consumers;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.ConnectionServer.Strategy;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
-using SharpMUSH.Messaging.KafkaFlow;
-using Testcontainers.Redpanda;
+using SharpMUSH.Messaging.NATS;
+using SharpMUSH.Messaging.NATS.Strategy;
 
 namespace SharpMUSH.ConnectionServer;
 
 public class Program
 {
-	private static RedpandaContainer? _container;
-	private static RedisStrategy? _redisStrategy;
-
 	public static async Task Main(string[] args)
 	{
-		var app = await CreateHostBuilderAsync(args);
+		var natsStrategy = NatsStrategyProvider.GetStrategy();
+		var natsUrl = await natsStrategy.GetUrlAsync();
 
-		// Get logger for startup logging
-		var logger = app.Services.GetRequiredService<ILogger<Program>>();
-
-		// Start Kafka bus
-		logger.LogTrace("[KAFKA-STARTUP] Starting Kafka bus...");
-		var bus = app.Services.CreateKafkaBus();
-		await bus.StartAsync();
-		logger.LogInformation("[KAFKA-STARTUP] Kafka bus started successfully");
+		var app = await CreateHostBuilderAsync(args, natsUrl);
 
 		try
 		{
-			// Enable WebSocket support
-			app.UseWebSockets();
+			// Enable WebSocket support with keep-alive to detect dropped connections
+			var webSocketOptions = new WebSocketOptions
+			{
+				KeepAliveInterval = TimeSpan.FromSeconds(30)
+			};
+			app.UseWebSockets(webSocketOptions);
 			var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
 			app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
 
@@ -51,19 +44,14 @@ public class Program
 			// Prometheus metrics endpoint (for scraping, not for logging to console)
 			app.MapPrometheusScrapingEndpoint();
 
+			var logger = app.Services.GetRequiredService<ILogger<Program>>();
+			logger.LogInformation("[NATS] Connected to NATS at {NatsUrl}", natsUrl);
+
 			await app.RunAsync();
 		}
 		finally
 		{
-			await bus.StopAsync();
-			if (_redisStrategy is not null)
-			{
-				await _redisStrategy.DisposeAsync();
-			}
-			if (_container is not null)
-			{
-				await _container.DisposeAsync();
-			}
+			await natsStrategy.DisposeAsync();
 		}
 	}
 
@@ -71,7 +59,15 @@ public class Program
 	/// Creates and configures the WebApplication host.
 	/// This method is used by WebApplicationFactory for testing.
 	/// </summary>
-	public static async Task<WebApplication> CreateHostBuilderAsync(string[] args)
+	/// <param name="args">Application arguments.</param>
+	/// <param name="natsUrl">
+	/// NATS URL to use.  When called from <see cref="Main"/> this is resolved via
+	/// <see cref="NatsStrategyProvider"/> before this method is invoked.  When called
+	/// from a test <c>WebApplicationFactory</c> (with no explicit URL) the value is read
+	/// lazily from <c>NATS_URL</c> inside each DI registration lambda, which executes after
+	/// the factory's <c>ConfigureWebHost</c> callback has set the environment variable.
+	/// </param>
+	public static async Task<WebApplication> CreateHostBuilderAsync(string[] args, string? natsUrl = null)
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
@@ -91,48 +87,15 @@ public class Program
 			logging.AddSerilog(loggerConfig.CreateLogger());
 		});
 
-		// Get Kafka/RedPanda configuration from environment or configuration
-		var kafkaHost = Environment.GetEnvironmentVariable("KAFKA_HOST");
-
-		if (string.IsNullOrEmpty(kafkaHost))
+		// Add NATS-backed connection state store.
+		// Resolve the URL lazily so that WebApplicationFactory's ConfigureWebHost (which sets
+		// NATS_URL via Environment.SetEnvironmentVariable) takes effect before the service is built.
+		builder.Services.AddSingleton<IConnectionStateStore>(sp =>
 		{
-			_container = new RedpandaBuilder("docker.redpanda.com/redpandadata/redpanda:latest")
-				.WithPortBinding(9092, 9092)
-				.Build();
-			await _container.StartAsync();
-
-			kafkaHost = "localhost";
-		}
-
-		// Initialize Redis strategy
-		_redisStrategy = RedisStrategyProvider.GetStrategy();
-		await _redisStrategy.InitializeAsync();
-
-		// Capture the strategy for use in the factory delegate
-		var redisStrategy = _redisStrategy;
-
-		// Configure Redis connection using strategy pattern
-		builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
-		{
-			var logger = sp.GetRequiredService<ILogger<StackExchange.Redis.ConnectionMultiplexer>>();
-
-			try
-			{
-				// Note: This is executed when IConnectionMultiplexer is first requested from DI
-				// The connection is already initialized above, so this should be fast
-				var multiplexer = redisStrategy.GetConnectionAsync().AsTask().GetAwaiter().GetResult();
-				logger.LogInformation("Connected to Redis successfully");
-				return multiplexer;
-			}
-			catch (Exception ex)
-			{
-				logger.LogWarning(ex, "Failed to connect to Redis. Connection state will not be shared.");
-				throw;
-			}
+			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
+			var logger = sp.GetRequiredService<ILogger<NatsConnectionStateStore>>();
+			return NatsConnectionStateStore.CreateAsync(url, logger).GetAwaiter().GetResult();
 		});
-
-		// Add Redis-backed connection state store
-		builder.Services.AddSingleton<IConnectionStateStore, RedisConnectionStateStore>();
 
 		// Add ConnectionService
 		builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
@@ -149,49 +112,35 @@ public class Program
 		// Add WebSocketServer
 		builder.Services.AddSingleton<WebSocketServer>();
 
+		// Register the telnet interpreter factory (server mode) with the DI system.
+		// This resolves the logger from DI automatically. Protocol plugins and per-connection
+		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
+		builder.Services.AddTelnetServer();
+
 		// Add health monitoring service
 		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
 
-		// Configure MassTransit with Kafka/RedPanda
-		builder.Services.AddConnectionServerMessaging(
+		// Add startup cleanup service to purge stale connection state
+		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.ConnectionCleanupService>();
+
+		// Configure NATS messaging (URL resolved lazily for the same reason as above)
+		builder.Services.AddNatsConnectionServerMessaging(
 			options =>
 			{
-				options.Host = kafkaHost;
-				options.Port = 9092;
-				options.MaxMessageBytes = 6 * 1024 * 1024; // 6MB
-				options.ConsumerGroupId = "connectionserver-consumer-group"; // Separate group from main server
-				options.BatchMaxSize = 100;
-				options.BatchTimeLimit = TimeSpan.FromMilliseconds(8);
+				options.Url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
 			},
 			x =>
 			{
-				// Each consumer registration creates an INDEPENDENT KafkaFlow consumer with its own:
-				// - Topic subscription
-				// - Middleware pipeline  
-				// - Worker configuration
-				// - Buffer settings
-				//
-				// This means batch processing for TelnetOutputMessage does NOT affect other message types.
-
-				// TelnetOutputMessage: Uses BATCH PROCESSING
-				// - Middleware: TelnetOutputBatchMiddleware (IMessageMiddleware)
-				// - Pipeline: Deserialize → AddBatching(100, 10ms) → TelnetOutputBatchMiddleware
-				// - Groups messages by Handle, concatenates data IN ORDER, sends batched output
-				// - Batch timeout: 10ms for good performance with low latency
-				// - BytesSum distribution: Messages with same Handle go to same worker (ordering)
-				// - Multiple workers (Environment.ProcessorCount): Different connections processed in parallel
-				x.AddBatchConsumer<TelnetOutputBatchMiddleware, TelnetOutputMessage>(100, TimeSpan.FromMilliseconds(10));
-
-				// All other messages: Use REGULAR CONSUMERS (individual message processing)
-				// - Pipeline: Deserialize → TypedHandler (processes each message individually)
+				x.AddConsumer<TelnetOutputConsumer>();
 				x.AddConsumer<TelnetPromptConsumer>();
 				x.AddConsumer<BroadcastConsumer>();
 				x.AddConsumer<DisconnectConnectionConsumer>();
 				x.AddConsumer<GMCPOutputConsumer>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer>();
-
 				x.AddConsumer<WebSocketOutputConsumer>();
 				x.AddConsumer<WebSocketPromptConsumer>();
+				x.AddConsumer<MainProcessReadyConsumer>();
+				x.AddConsumer<MainProcessShutdownConsumer>();
 			});
 
 		// Configure Kestrel to listen for Telnet and WebSocket connections
@@ -212,13 +161,44 @@ public class Program
 		// Add API controllers
 		builder.Services.AddControllers();
 
-		// Configure OpenTelemetry Metrics - NO console logging, only Prometheus exporter for metrics endpoint
+		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
+		// Prometheus exporter is compatible with both GKE Managed Prometheus and standard Prometheus
+		var isGKE = LoggingConfiguration.IsRunningInGKE();
+		var isK8s = LoggingConfiguration.IsRunningInKubernetes();
+
 		builder.Services.AddOpenTelemetry()
-			.ConfigureResource(resource => resource
-				.AddService("SharpMUSH.ConnectionServer", serviceVersion: "1.0.0"))
+			.ConfigureResource(resource =>
+			{
+				resource.AddService(
+					serviceName: "sharpmush-connectionserver",
+					serviceVersion: "1.0.0",
+					serviceInstanceId: Environment.MachineName);
+
+				// Add container resource detection for Kubernetes environments
+				if (isK8s)
+				{
+					resource.AddDetector(new ContainerResourceDetector());
+				}
+
+				// Add GKE-specific attributes for Google Cloud Monitoring compatibility
+				if (isGKE)
+				{
+					var projectId = LoggingConfiguration.GetGoogleCloudProjectId();
+					if (!string.IsNullOrEmpty(projectId))
+					{
+						resource.AddAttributes(new[]
+						{
+							new KeyValuePair<string, object>("cloud.provider", "gcp"),
+							new KeyValuePair<string, object>("cloud.platform", "gcp_kubernetes_engine"),
+							new KeyValuePair<string, object>("gcp.project.id", projectId)
+						});
+					}
+				}
+			})
 			.WithMetrics(metrics => metrics
 				.AddMeter("SharpMUSH")
 				.AddRuntimeInstrumentation()
+				.AddAspNetCoreInstrumentation()
 				.AddPrometheusExporter());
 
 		return builder.Build();

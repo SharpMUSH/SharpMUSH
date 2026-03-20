@@ -59,6 +59,7 @@ public class ListenerRoutingServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with room and objects configured")]
 	public async ValueTask ProcessNotificationAsync_WithMonitorFlag_MatchesListenPatterns()
 	{
@@ -71,6 +72,7 @@ public class ListenerRoutingServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with puppet configured")]
 	public async ValueTask ProcessNotificationAsync_WithPuppetFlag_RelaysToOwner()
 	{
@@ -83,6 +85,7 @@ public class ListenerRoutingServiceTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Integration test - requires database with @listen attribute")]
 	public async ValueTask ProcessNotificationAsync_WithListenAttribute_MatchesPattern()
 	{

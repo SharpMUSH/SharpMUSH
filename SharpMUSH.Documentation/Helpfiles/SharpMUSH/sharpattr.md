@@ -75,7 +75,7 @@ See [attribute trees2] for more information and examples.
 
 Attribute trees provide two immediate benefits. First, they reduce spam when examining objects. The usual * and ? wildcards for attributes do not match the \` character; the new ** wildcard does. Some examples of using examine:
 
-```
+```sharp
 examine obj              displays top-level attributes (plus object header)
 examine obj/*            displays top-level attributes
 examine obj/BRANCH`      displays only attributes immediately under BRANCH
@@ -103,7 +103,7 @@ The second benefit of attributes trees is convenient access control. Attribute f
 Attribute flags that grant access (e.g. visual) do NOT propagate down trees.
 
 These properties make attribute trees ideal for data attributes:
-```
+```sharp
 > &DATA bank = Data for each depositor is stored here, by dbref
 > @set bank/DATA = no_command
 > &DATA`#30 bank = $2000 savings:$1000 loan @ 5%
@@ -111,7 +111,7 @@ These properties make attribute trees ideal for data attributes:
 etc.
 
 They're also handy for things like character attributes:
-```
+```sharp
 > @attribute/access CHAR = wizard mortal_dark no_clone no_inherit
 > &CHAR #30 = Character data
 > &CHAR`SKILLS #30 = coding:3 documentation:1 obfuscation:5
@@ -129,7 +129,7 @@ Attribute trees interact with `@parent` in several ways.
 
 As usual, children inherit attributes from their parent unless the child has its own overriding attribute. However, children that wish to override a leaf attribute must also have their own (overriding) copy of all branches leading to that leaf. This means that when you do:
 
-```
+```sharp
 > &BRANCH parent = a branch
 > &BRANCH`LEAF parent = a leaf
 > &BRANCH`LEAF child = a new leaf
@@ -137,7 +137,7 @@ As usual, children inherit attributes from their parent unless the child has its
 
 In this case, a new BRANCH attribute will be created on the child, so '-[get(child/BRANCH)]-' will return '--'. This may not be what you actually want. In these cases, the pfun() function can be useful:
 
-```
+```sharp
 > &BRANCH child=pfun(BRANCH)
 ```
 

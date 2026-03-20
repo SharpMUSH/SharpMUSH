@@ -17,6 +17,7 @@ public class NetworkCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HttpCommand()
 	{
@@ -28,6 +29,7 @@ public class NetworkCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SqlCommand()
 	{
@@ -39,6 +41,7 @@ public class NetworkCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MapsqlCommand()
 	{
@@ -62,6 +65,7 @@ public class NetworkCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SocksetCommand()
 	{
@@ -73,6 +77,7 @@ public class NetworkCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SlaveCommand()
 	{

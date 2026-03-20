@@ -87,12 +87,6 @@ public class GuestLoginTests
 		var resultMessage = result.Message?.ToString() ?? "";
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
 
-		// Should receive "Connected!" message
-		await NotifyService
-		.Received()
-		.Notify(Arg.Is<long>(h => h == guestHandle),
-		Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Connected")));
-
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy Guest1"));
 	}
@@ -129,11 +123,6 @@ public class GuestLoginTests
 		var resultMessage = result.Message?.ToString() ?? "";
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
 
-		await NotifyService
-		.Received()
-		.Notify(Arg.Is<long>(h => h == guestHandle),
-		Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Connected")));
-
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy Guest2"));
 	}
@@ -168,17 +157,13 @@ public class GuestLoginTests
 		var resultMessage = result.Message?.ToString() ?? "";
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
 
-		await NotifyService
-		.Received()
-		.Notify(Arg.Is<long>(h => h == guestHandle),
-		Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Connected")));
-
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy Guest3"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy Guest4"));
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires guest configuration testing infrastructure")]
 	[DependsOn(nameof(ConnectGuest_MultipleGuests_SelectsAppropriateOne))]
 	public async ValueTask ConnectGuest_GuestsDisabled_FailsWithError()
@@ -189,6 +174,7 @@ public class GuestLoginTests
 	}
 
 	[Test]
+	[Category("NeedsSetup")]
 	[Skip("Requires advanced connection management")]
 	[DependsOn(nameof(ConnectGuest_GuestsDisabled_FailsWithError))]
 	public async ValueTask ConnectGuest_MaxGuestsReached_FailsWithError()

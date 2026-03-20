@@ -26,6 +26,7 @@ public class InformationFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
+	[Category("NotImplemented")]
 	[Test, Skip("Not Yet Implemented")]
 	public async Task Name()
 	{
@@ -82,11 +83,15 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("quota(%#)", "0 999999")]
-	public async Task Quota(string str, string expected)
+	public async Task Quota()
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		var result = (await Parser.FunctionParse(MModule.single("quota(%#)")))?.Message!;
+		var text = result.ToPlainText();
+		// Format is "<owned_count> <max_quota>". Owned count varies by test order; max quota is always 999999.
+		var parts = text.Split(' ');
+		await Assert.That(parts).Count().IsEqualTo(2);
+		await Assert.That(int.TryParse(parts[0], out var owned) && owned >= 3).IsTrue();
+		await Assert.That(parts[1]).IsEqualTo("999999");
 	}
 
 	[Test]
@@ -107,6 +112,7 @@ public class InformationFunctionUnitTests
 
 	[Test]
 	[Arguments("hidden(%#)", "0")]
+	[Category("TestInfrastructure")]
 	[Skip("Test infrastructure issue - intermittent failure, returns '1' instead of '0'")]
 	public async Task Hidden(string str, string expected)
 	{

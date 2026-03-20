@@ -23,8 +23,11 @@ public static partial class HelperFunctions
 	public static async ValueTask<AnySharpObject> GetGod(IMediator mediator)
 		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
 
+	/// <summary>
+	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
+	/// </summary>
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> await (obj.Object().Flags.Value)
+		=> obj.IsGod() || await (obj.Object().Flags.Value)
 			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase));
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
@@ -91,13 +94,13 @@ public static partial class HelperFunctions
 
 	public static async ValueTask<bool> HasPower(this AnySharpObject obj, string power)
 		=> await obj.Object().Powers.Value
-			.AnyAsync(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase)
-										 || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
 		=> await obj.Powers.Value
-			.AnyAsync(x => x.Name.Equals(power, StringComparison.InvariantCultureIgnoreCase)
-										 || x.Alias.Equals(power, StringComparison.InvariantCultureIgnoreCase));
+			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
+										 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
 
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
@@ -309,7 +312,7 @@ public static partial class HelperFunctions
 
 		return string.IsNullOrEmpty(obj)
 			? false
-			: (obj, attr);
+			: (obj, string.IsNullOrEmpty(attr) ? null : attr);
 	}
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)
@@ -397,5 +400,30 @@ public static partial class HelperFunctions
 			return false;
 
 		return AttributeNameValidationRegex.IsMatch(attributeName);
+	}
+
+	/// <summary>
+	/// Returns <see langword="true"/> when the attribute specifier is an anonymous
+	/// <c>#lambda/…</c> or <c>#apply[N]/…</c> expression rather than an
+	/// <c>object/attribute</c> database reference.
+	/// </summary>
+	/// <param name="attributeSpecifier">The plain-text attribute specifier string.</param>
+	public static bool IsLambdaOrApply(string attributeSpecifier)
+		=> attributeSpecifier.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase)
+		|| attributeSpecifier.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// Strips a single pair of outer braces from an <see cref="MString"/>, if present.
+	/// This is the SharpMUSH equivalent of PennMUSH's <c>PE_COMMAND_BRACES</c> flag,
+	/// which strips only the first (outermost) brace level at execution time.
+	/// Used by command handlers whose arguments were preserved via
+	/// <see cref="ParserInterfaces.ParserStateFlags.PreserveBraces"/> during argument parsing.
+	/// </summary>
+	public static MString StripOuterBraces(MString input)
+	{
+		var text = MModule.plainText(input);
+		if (text.Length >= 2 && text[0] == '{' && text[^1] == '}')
+			return MModule.substring(1, MModule.getLength(input) - 2, input);
+		return input;
 	}
 }

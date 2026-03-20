@@ -11,7 +11,7 @@ public class TrimUnitTests
     public async Task Trim(TrimTestData data)
     {
         var (str, trimStr, trimType, expected) = data;
-        var result = MarkupStringModule.trim(str, trimStr, trimType);
+        var result = MModule.trim(str, MModule.plainText(trimStr), trimType);
 
         Log.Logger.Information("Result: {Result}{NewLine}Expected: {Expected}", result, Environment.NewLine, expected);
 

@@ -123,12 +123,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 					return unlockerOwnerDbRef == gatedOwner.Object.DBRef;
 				}
 
-				// If target is a DBRef like "#123", compare owner DBRefs
-				if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
-				{
-					// Get the target object by DBRef and check if same owner
+				// If target is a DBRef or objid like "#123" or "#123:timestamp", compare owner DBRefs
+				var parsedTargetOpt = HelperFunctions.ParseDbRef(target);
+if (parsedTargetOpt.IsSome())
+{
+					// Get the target object by DBRef (validates creation timestamp if objid format)
 					var targetObjResult = med.Send(
-							new GetObjectNodeQuery(new DBRef(targetDbrefNum)),
+							new GetObjectNodeQuery(parsedTargetOpt.AsValue()),
 							CancellationToken.None)
 						.AsTask()
 						.ConfigureAwait(false).GetAwaiter().GetResult();
@@ -199,16 +200,18 @@ public class SharpMUSHBooleanExpressionVisitor(
 			if (unlockerObj.Aliases.Any(a => a.Equals(target, StringComparison.OrdinalIgnoreCase)))
 				return true;
 
-			// If target is a DBRef, check if carrying that specific object
-			if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
-			{
+			// If target is a DBRef or objid like "#123" or "#123:timestamp", check if carrying that specific object
+			var parsedCarryOpt = HelperFunctions.ParseDbRef(target);
+if (parsedCarryOpt.IsSome())
+{
 				try
 				{
 					if (unlockerObj.IsContainer)
 					{
+						var searchDbRef = parsedCarryOpt.AsValue();
 						var contents = unlockerObj.AsContainer.Content(med);
 						return contents
-							.AnyAsync(item => item.Object().DBRef.Number == targetDbrefNum, CancellationToken.None)
+							.AnyAsync(item => item.Object().DBRef.Matches(searchDbRef), CancellationToken.None)
 							.AsTask().GetAwaiter().GetResult();
 					}
 				}
@@ -467,7 +470,17 @@ public class SharpMUSHBooleanExpressionVisitor(
 	public override Expression VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
 		var targetIdentifier = context.@string().GetText();
+		return BuildExactObjectExpression(targetIdentifier);
+	}
 
+	public override Expression VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
+	{
+		var targetIdentifier = context.@string().GetText();
+		return BuildExactObjectExpression(targetIdentifier);
+	}
+
+	private Expression BuildExactObjectExpression(string targetIdentifier)
+	{
 		// Check if unlocker matches the exact target object
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
@@ -623,11 +636,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 			{
 				AnySharpObject? targetObj = null;
 
-				// If target is a DBRef like "#123", resolve it
-				if (target.StartsWith('#') && int.TryParse(target.Substring(1), out int targetDbrefNum))
-				{
+				// If target is a DBRef or objid like "#123" or "#123:timestamp", resolve it
+				var parsedIndirectOpt = HelperFunctions.ParseDbRef(target);
+if (parsedIndirectOpt.IsSome())
+{
+					// Validates creation timestamp if objid format
 					var targetObjResult = med.Send(
-							new GetObjectNodeQuery(new DBRef(targetDbrefNum)),
+							new GetObjectNodeQuery(parsedIndirectOpt.AsValue()),
 							CancellationToken.None)
 						.AsTask()
 						.ConfigureAwait(false).GetAwaiter().GetResult();

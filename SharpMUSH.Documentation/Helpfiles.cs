@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Documentation;
@@ -129,6 +130,12 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		// Match markdown headers: # Topic Name
 		var matches = MarkdownHeaders().Matches(textBody);
 
+		// Track consecutive headers (aliases) that share the same content block.
+		// When a header has no content before the next header, it is treated as an
+		// alias for the next topic that does have content.
+		var pendingTopics = new List<string>();
+		var firstPendingHeaderText = (string?)null;
+
 		foreach (Match match in matches)
 		{
 			var topicName = match.Groups["Topic"].Value.Trim();
@@ -141,10 +148,111 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 			// Extract the content between this header and the next
 			var content = textBody.Substring(startIndex, endIndex - startIndex).Trim();
 
-			// Include the header in the content
-			var fullContent = match.Value + content;
+			pendingTopics.Add(topicName);
+			firstPendingHeaderText ??= match.Value;
 
-			dict[topicName] = fullContent;
+			if (!string.IsNullOrEmpty(content))
+			{
+				// Include the first pending header in the content so that looking up any
+				// alias shows the primary topic name at the top.
+				var fullContent = firstPendingHeaderText + content;
+
+				foreach (var topic in pendingTopics)
+				{
+					dict[topic] = fullContent;
+				}
+
+				pendingTopics.Clear();
+				firstPendingHeaderText = null;
+			}
+		}
+
+		// Any remaining pending topics had no content; store just the header for them.
+		foreach (var topic in pendingTopics)
+		{
+			dict[topic] = "# " + topic;
+		}
+
+		return dict;
+	}
+
+	/// <summary>
+	/// Indexes a markdown help file and returns byte positions for each entry.
+	/// Consecutive headers without content between them are treated as aliases
+	/// that all share the same byte range (from the first alias header to the
+	/// end of the content block).
+	/// </summary>
+	public static OneOf<Dictionary<string, (long Start, long End)>, Error<string>> IndexMarkdownPositions(FileInfo file)
+	{
+		if (!file.Exists)
+		{
+			return new Error<string>($"File {file.FullName} does not exist.");
+		}
+
+		var dict = new Dictionary<string, (long Start, long End)>(StringComparer.OrdinalIgnoreCase);
+
+		// Read raw bytes to ensure byte offsets correspond exactly to file positions.
+		// Using StreamReader would silently strip BOM bytes, and replacing \r\n with \n
+		// would shift all positions when files have CRLF line endings.
+		var rawBytes = File.ReadAllBytes(file.FullName);
+		var preamble = Encoding.UTF8.Preamble;
+		var bomLength = rawBytes.AsSpan().StartsWith(preamble) ? preamble.Length : 0;
+		var textBody = Encoding.UTF8.GetString(rawBytes, bomLength, rawBytes.Length - bomLength);
+
+		// Pre-compute cumulative byte offsets so we can convert any char index
+		// to a byte position in O(1) instead of re-encoding prefixes.
+		var byteOffsets = new int[textBody.Length + 1];
+		var running = bomLength;
+		for (var i = 0; i < textBody.Length; i++)
+		{
+			byteOffsets[i] = running;
+			running += Encoding.UTF8.GetByteCount(textBody.AsSpan(i, 1));
+		}
+		byteOffsets[textBody.Length] = running;
+
+		var matches = MarkdownHeaders().Matches(textBody);
+
+		var pendingTopics = new List<string>();
+		var firstPendingCharIndex = -1;
+
+		foreach (Match match in matches)
+		{
+			var topicName = match.Groups["Topic"].Value.Trim();
+			var startIndex = match.Index + match.Length;
+
+			var nextMatch = match.NextMatch();
+			var endIndex = nextMatch.Success ? nextMatch.Index : textBody.Length;
+
+			var content = textBody.AsSpan(startIndex, endIndex - startIndex).Trim();
+
+			pendingTopics.Add(topicName);
+			if (firstPendingCharIndex < 0)
+			{
+				firstPendingCharIndex = match.Index;
+			}
+
+			if (!content.IsEmpty)
+			{
+				var startByte = (long)byteOffsets[firstPendingCharIndex];
+				var endByte = (long)byteOffsets[endIndex];
+
+				foreach (var topic in pendingTopics)
+				{
+					dict[topic] = (startByte, endByte);
+				}
+
+				pendingTopics.Clear();
+				firstPendingCharIndex = -1;
+			}
+		}
+
+		// Remaining pending topics had no content; store the header range.
+		foreach (var topic in pendingTopics)
+		{
+			var charStart = firstPendingCharIndex >= 0 ? firstPendingCharIndex : 0;
+			var startByte = (long)byteOffsets[charStart];
+			var endByte = (long)byteOffsets[textBody.Length];
+			dict[topic] = (startByte, endByte);
 		}
 
 		return dict;

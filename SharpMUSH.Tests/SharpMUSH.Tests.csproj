@@ -12,7 +12,7 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="bunit" Version="2.5.3" />
+    <PackageReference Include="bunit" Version="2.6.2" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.3" />
     <PackageReference Include="coverlet.collector" Version="8.0.0">
@@ -27,9 +27,8 @@
     <PackageReference Include="Testcontainers.MySql" Version="4.10.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.10.0" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
-    <PackageReference Include="Testcontainers.Redpanda" Version="4.10.0" />
-		<PackageReference Include="TUnit" Version="1.16.4" />
-		<PackageReference Include="TUnit.AspNetCore" Version="1.16.4" />
+		<PackageReference Include="TUnit" Version="1.19.16" />
+		<PackageReference Include="TUnit.AspNetCore" Version="1.19.16" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +41,7 @@
     <ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
     <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.fsproj" />
     <ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -54,6 +54,13 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<Content Include="Configuration\Testfile\mushcnf.dst">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Integration\TestData\*.txt">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\SharpMUSH.Server\*.txt">
+			<Link>txt\%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">

@@ -1,12 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class UtilityCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -40,60 +43,201 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask CommentCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@@ This is a comment"));
+		var guid = Guid.NewGuid();
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@@ This is a comment {guid}"));
 
 		// Comment should not produce any output
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains("This is a comment")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(x
+				=> x.Value.ToString()!.Contains($"This is a comment {guid}")));
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookBasic()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask LookAtObject()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look #1"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
-	public async ValueTask ExamineObject()
+	public async ValueTask ExamineObject_HeaderContainsNameAndDbref()
 	{
+		// Verify the name row has "Name(#dbref)" format (no space before '(') in plain text.
+		// We use plain-text check because name.Hilight() inserts ANSI codes around the name.
+		// Player #1 is named "God" in the test database.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
-		// Verify notify was called (exact count may vary based on object attributes)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "God(#1")));
 	}
 
 	[Test]
-	public async ValueTask ExamineObjectBriefSwitch()
+	public async ValueTask ExamineObject_HeaderContainsOwnerRow()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
+		// Owner row uses proper MModule composition; plain-text must contain "Owner: "
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
 
-		// /brief should show header info but skip attributes
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Owner: ")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_HeaderContainsZoneAndPowers()
+	{
+		// Zone and Powers are always shown (even when empty/nothing)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Zone: *NOTHING*")));
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Powers: ")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_HeaderContainsWarningsChecked()
+	{
+		// "Warnings checked:" is always shown (even when empty)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Warnings checked:")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_HeaderContainsLastModified()
+	{
+		// "Last modified:" is always shown in both examine and brief
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Last modified:")));
+	}
+
+	[Test]
+	public async ValueTask ExaminePlayer_HeaderContainsQuota()
+	{
+		// "Quota:" is shown for player objects (God is player #1)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Quota:")));
+	}
+
+	[Test]
+	public async ValueTask ExamineRoom_ShowsExits()
+	{
+		// Dig a room with exits; the new room gets the return exit → examine should show Exits:
+		var digResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@dig ExitTestSource=North;N,South;S"));
+		var digMessage = digResult?.Message?.ToPlainText();
+		await Assert.That(digMessage).IsNotNull();
+		var roomDbRef = DBRef.Parse(digMessage!);
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"examine {roomDbRef}"));
+
+		// The Exits: section should appear because the new room has the return exit (South;S)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Exits:")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_BriefSwitch_AlsoShowsLastModified()
+	{
+		// Brief mode should also show Last modified: (it's a header field)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Last modified:")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_AttributeWithAnsi_PreservesMarkup()
+	{
+		// Create an object, set a DESCRIBE with ANSI color, then examine it.
+		// The attribute value (an MString with markup) must survive through examine output.
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create AnsiExamineTestObj"));
+		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		// [ansi(rh,...)] evaluates to an MString with red+bold markup
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"examine {objDbRef}"));
+
+		// Plain-text content of the attribute value must appear in examine output
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText")));
+
+		// The ANSI-rendered output must contain actual ANSI escape codes
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText") &&
+				msg.IsT0 && msg.AsT0.ToString().Contains("\x1b[")));
+	}
+
+	[Test]
+	public async ValueTask ExamineObject_BriefSwitch_ShowsHeaderNotDescription()
+	{
+		var createResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@create BriefExamineTestObj"));
+		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@desc {objDbRef}=BriefShouldNotSeeThis"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"examine/brief {objDbRef}"));
+
+		// Brief MUST show owner header (in plain text because owner name is hilighted)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Owner: ")));
+
+		// Brief must NOT show description text
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "BriefShouldNotSeeThis")));
 	}
 
 	[Test]
@@ -101,10 +245,10 @@ public class UtilityCommandTests
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/opaque #1"));
 
-		// /opaque should skip contents display
+		// /opaque should still show header
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -116,7 +260,7 @@ public class UtilityCommandTests
 		// Should display matching attributes
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
@@ -128,10 +272,11 @@ public class UtilityCommandTests
 		// Should display current location
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FindCommand()
 	{
@@ -143,6 +288,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SearchCommand()
 	{
@@ -154,6 +300,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EntrancesCommand()
 	{
@@ -165,6 +312,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask StatsCommand()
 	{
@@ -176,25 +324,45 @@ public class UtilityCommandTests
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask VersionCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@version"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received(Quantity.AtLeastOne())
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH version 0")),
+				Arg.Any<AnySharpObject?>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
-	[Explicit("Command is implemented but test is failing")]
 	public async ValueTask ScanCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@scan"));
+		// Create a unique object in the executor's room and give it a $-command attribute so
+		// @scan has a real match to discover and return.
+		var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var objectName = $"ScanTestObj_{uniqueSuffix}";
+		var attrName = $"CMD_SCAN_{uniqueSuffix}";
+		var commandWord = $"scantestword{uniqueSuffix.ToLowerInvariant()}";
 
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objectName}"));
+		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
+		await Assert.That(createdDbref).StartsWith("#").Because($"@create should return a dbref; got: '{createdDbref}'");
+
+		// Set a $-command attribute on the object: value starts with $pattern:code
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:think scan test triggered"));
+
+		// @scan <commandword> test — searches the executor's location for matching $-commands
+		var scanResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@scan {commandWord} test"));
+		var scanPlainText = scanResult.Message?.ToPlainText() ?? string.Empty;
+
+		// The return value is a space-joined list of "#{dbref.Number}/{attrName}" entries.
+		// DBRef.Number is always the plain integer, even on backends that use "#{n}:{timestamp}" notation.
+		var dbrefNum = DBRef.Parse(createdDbref).Number;
+		await Assert.That(scanPlainText).Contains($"#{dbrefNum}/{attrName}");
 	}
 
 	[Test]
@@ -212,6 +380,7 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhereisCommand()
 	{

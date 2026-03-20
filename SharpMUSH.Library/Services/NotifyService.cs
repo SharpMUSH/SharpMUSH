@@ -6,7 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messages;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Text;
 
@@ -143,7 +143,7 @@ public class NotifyService(
 	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MarkupStringModule.getLength(markupString) == 0,
+			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 		))
 		{
@@ -174,7 +174,7 @@ public class NotifyService(
 	public async ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MarkupStringModule.getLength(markupString) == 0,
+			markupString => MModule.getLength(markupString) == 0,
 			str => str.Length == 0
 		))
 		{
@@ -209,15 +209,11 @@ public class NotifyService(
 		// Get all handles for the target location/object
 		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
 
-		// Get all handles to exclude
-		var excludeHandles = new HashSet<long>();
-		foreach (var exceptDbRef in except)
-		{
-			await foreach (var conn in connections.Get(exceptDbRef))
-			{
-				excludeHandles.Add(conn.Handle);
-			}
-		}
+		// Get all handles to exclude using async LINQ SelectMany over all except-DBRefs
+		var excludeHandles = await except.ToAsyncEnumerable()
+			.SelectMany(dbRef => connections.Get(dbRef))
+			.Select(conn => conn.Handle)
+			.ToHashSetAsync();
 
 		// Filter out excluded handles and notify the rest
 		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();

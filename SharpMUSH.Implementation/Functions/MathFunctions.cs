@@ -882,31 +882,6 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(output);
 	}
 
-	private static ValueTask<CallState> SingleVectorOperation(IMUSHCodeParser parser,
-		Func<Vector<decimal>, Vector<decimal>> func)
-	{
-		var delimiter = parser.CurrentState.Arguments.TryGetValue("1", out var tmpDelimiter)
-			? tmpDelimiter.Message
-			: MModule.single(" ");
-		var sep = parser.CurrentState.Arguments.TryGetValue("2", out var tmpSep) ? tmpSep.Message : delimiter;
-		var list1 = MModule.split2(delimiter, parser.CurrentState.Arguments["0"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-
-		if (list1.Any(x => !x.Item1))
-		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
-		}
-
-		var vector1 = new Vector<decimal>(list1.Select(x => x.result).ToArray().AsSpan());
-		var vectorResult = func(vector1);
-
-		var result = new decimal[list1.Length];
-		vectorResult.CopyTo(result);
-
-		var output = result.Select(x => MModule.single(x.ToString(CultureInfo.InvariantCulture)));
-		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(sep, output)));
-	}
-
 	[SharpFunction(Name = "vadd", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public static ValueTask<CallState> VAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> VectorOperation(parser, Vector.Add);
@@ -987,7 +962,31 @@ public partial class Functions
 
 	[SharpFunction(Name = "vunit", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
 	public static ValueTask<CallState> vunit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> SingleVectorOperation(parser, Vector.OnesComplement);
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
+			? tmpDelimiter.Message
+			: MModule.single(" ");
+
+		var list = MModule.split2(delimiter, args["0"].Message)
+			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+
+		if (list.Any(x => !x.Item1))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorNumbers));
+		}
+
+		// Math.Sqrt requires double; the cast from decimal to double introduces minimal precision
+		// loss acceptable for vector normalization, consistent with PennMUSH float behavior.
+		var magnitude = (decimal)Math.Sqrt((double)list.Sum(x => x.result * x.result));
+		if (magnitude == 0)
+		{
+			return ValueTask.FromResult(new CallState("#-1 DIVISION BY ZERO"));
+		}
+
+		var output = list.Select(x => MModule.single((x.result / magnitude).ToString(CultureInfo.InvariantCulture)));
+		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delimiter, output)));
+	}
 
 	[SharpFunction(Name = "vdim", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
 	public static ValueTask<CallState> vdim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
