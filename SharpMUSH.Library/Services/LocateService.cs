@@ -112,6 +112,13 @@ public partial class LocateService(
 		if (match.IsNone) return match.AsNone;
 
 		var result = match.WithoutError().WithoutNone();
+
+		// Skip visibility check when NoVisibilityCheck flag is set (e.g. hasflag).
+		if (flags.HasFlag(LocateFlags.NoVisibilityCheck))
+		{
+			return result.WithNoneOption().WithErrorOption();
+		}
+
 		var location = await FriendlyWhereIs(result);
 
 		if (await permissionService.CanExamine(executor, location.WithExitOption()) ||

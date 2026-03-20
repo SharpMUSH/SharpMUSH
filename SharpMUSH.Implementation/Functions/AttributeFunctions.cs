@@ -551,7 +551,7 @@ public partial class Functions
 		var (db, attr) = details;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All, async realLocated =>
+			parser, executor, executor, db, LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
 				return split.AsT0 switch
 				{
