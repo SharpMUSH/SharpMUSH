@@ -538,14 +538,14 @@ public class DebugVerboseTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create PuppetThingObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set PuppetThingObj=PUPPET"));
 
-		// Assert that PUPPET was set — success notification
+		// Assert that PUPPET was set — success notification "Flag: PUPPET Set."
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("set"),
-						str => str.Contains("PUPPET") && str.Contains("set"))),
+						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("Set"),
+						str => str.Contains("PUPPET") && str.Contains("Set"))),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
