@@ -335,7 +335,8 @@ public partial class Commands
 				var stateForElement = parser.CurrentState with
 				{
 					Registers = registerStack,
-					Executor = target.Object().DBRef
+					Executor = target.Object().DBRef,
+					Caller = parser.CurrentState.Executor
 				};
 
 				// Execute the attribute with the element as %0
@@ -2748,7 +2749,7 @@ public partial class Commands
 
 		// Note: Queue infrastructure available via QueueCommandListRequest if needed
 		// Currently executes inline for immediate response (default PennMUSH behavior)
-		await parser.With(state => state with { Executor = found.Object().DBRef },
+		await parser.With(state => state with { Executor = found.Object().DBRef, Caller = state.Executor },
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
 		return CallState.Empty;
@@ -4325,6 +4326,7 @@ public partial class Commands
 			{
 				Executor = targetObject.Object().DBRef,
 				Enactor = executionEnactor,
+				Caller = parser.CurrentState.Executor,
 				Registers = registerStack
 			};
 
@@ -5190,6 +5192,7 @@ public partial class Commands
 					{
 						Executor = victim.Object().DBRef,
 						Enactor = actor.Object().DBRef,
+						Caller = state.Executor,
 						Arguments = stackArgs
 					},
 					newParser => newParser.WithAttributeDebug(attribute,
@@ -5228,6 +5231,7 @@ public partial class Commands
 			{
 				Executor = victim.Object().DBRef,
 				Enactor = actor.Object().DBRef,
+				Caller = state.Executor,
 				Arguments = stackArgs
 			},
 			newParser => attributeService.EvaluateAttributeFunctionAsync(
@@ -5643,7 +5647,7 @@ public partial class Commands
 			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 			{
 				var execResult = await parser.With(
-					state => state with { EnvironmentRegisters = envArgs },
+					state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
 					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(attributeText))));
 
 				// Handle NOBREAK switch to prevent @break/@assert propagation.
