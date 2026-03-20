@@ -321,7 +321,8 @@ public partial class Functions
 
 				return maybeAttr switch
 				{
-					{ IsError: true } or { IsNone: true } => maybeAttr.AsCallStateError,
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
 					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
 				};
 			});
@@ -538,8 +539,8 @@ public partial class Functions
 	public static async ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToString();
-		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToString();
+		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr);
 
 		if (!split.TryPickT0(out var details, out _))
@@ -1463,6 +1464,8 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
+					Executor = actualObject.Object().DBRef,
+					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
@@ -1516,7 +1519,9 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
-					Registers = []
+					Registers = [],
+					Executor = actualObject.Object().DBRef,
+					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
@@ -1946,7 +1951,12 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: false);
 
-				return maybeAttr.AsCallState;
+				return maybeAttr switch
+				{
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
+					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+				};
 			});
 	}
 

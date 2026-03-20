@@ -191,6 +191,40 @@ public class SemaphoreCommandTests
 	}
 
 	/// <summary>
+	/// Verifies that @wait callbacks with multiple semicolon-separated commands in braces
+	/// execute ALL commands, not just the first one.
+	/// </summary>
+	[Test]
+	public async ValueTask WaitCommand_MultipleCommandsInBraces()
+	{
+		var testObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitMulti");
+		var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var attrA = $"WAITMULTI_A_{uniqueId}";
+		var attrB = $"WAITMULTI_B_{uniqueId}";
+
+		// @wait with braces containing two & commands separated by semicolon
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@wait 1={{&{attrA} {testObj}=valueA; &{attrB} {testObj}=valueB}}"));
+
+		await Task.Delay(3000);
+
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+
+		var attrResultA = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrA,
+			IAttributeService.AttributeMode.Read, false);
+		var attrResultB = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrB,
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(attrResultA.IsAttribute).IsTrue()
+			.Because($"First command in @wait callback should set {attrA}");
+		await Assert.That(attrResultA.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("valueA");
+
+		await Assert.That(attrResultB.IsAttribute).IsTrue()
+			.Because($"Second command in @wait callback should set {attrB}");
+		await Assert.That(attrResultB.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("valueB");
+	}
+
+	/// <summary>
 	/// PennMUSH compatibility regression test.
 	///
 	/// On PennMUSH, <c>@wait 1={&amp;attr obj=[add(1,1)]}</c> evaluates the function call
@@ -271,5 +305,88 @@ public class SemaphoreCommandTests
 
 		await Assert.That(attr.IsAttribute).IsTrue();
 		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("2");
+	}
+
+	/// <summary>
+	/// Tests the BBS-style pattern: user-defined command creates an object, then @wait
+	/// callback uses num() + setr() to get its dbref and store it in an attribute.
+	/// Simulates the +bbnewgroup flow: $cmd *:@create %0; @wait 1={&amp;groups store=[num(%0)]}
+	/// </summary>
+	[Test]
+	public async ValueTask WaitCommand_PatternMatchPreservesPercentZero()
+	{
+		// Arrange - create objects for the test
+		var storeObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WaitStore");
+		var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var uniqueAttr = $"WAITSTOR_{uniqueId}";
+		var cmdAttr = $"CMD_WAITST_{uniqueId}";
+
+		// Install a pattern-matched command that creates an object and uses @wait to store its dbref
+		// Pattern: $+waitstore_xxx *:@create %0; @wait 1={&WAITSTOR_xxx <storeObj>=[num(%0)]}
+		var cmdPattern = $"$+waitstore_{uniqueId.ToLower()} *:@create %0; @wait 1={{&{uniqueAttr} {storeObj}=[num(%0)]}}";
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{cmdAttr} {storeObj}={cmdPattern}"));
+
+		// Act - trigger the pattern-matched command with a unique object name
+		var targetName = $"WaitTgt_{uniqueId}";
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"+waitstore_{uniqueId.ToLower()} {targetName}"));
+
+		// Wait for @create to complete and @wait callback to fire
+		await Task.Delay(3000);
+
+		// Assert - the attribute should contain the dbref of the created object (not empty, not literal)
+		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
+		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, uniqueAttr,
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(attr.IsAttribute).IsTrue()
+			.Because($"&{uniqueAttr} should have been set by the @wait callback");
+
+		var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
+		await Assert.That(attrValue).StartsWith("#")
+			.Because($"num(%0) in the @wait callback should resolve to a dbref like #N, but got: {attrValue}");
+		await Assert.That(attrValue).DoesNotContain("-1")
+			.Because($"num(%0) should find the created object, not return #-1. Got: {attrValue}");
+	}
+
+	/// <summary>
+	/// Simulates the BBS +bbnewgroup flow more closely:
+	/// $pattern *:@switch hasflag(%#,wizard)=1, {@create %0; @wait 1={@switch [setr(0,num(%0))]=#-1,...,{&groups store=%q0}}}
+	/// </summary>
+	[Test]
+	public async ValueTask WaitCommand_BBSNewGroupFlow()
+	{
+		var storeObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "BBSFlow");
+		var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var grpAttr = $"GROUPS_{uniqueId}";
+		var cmdAttr = $"CMD_BBSFL_{uniqueId}";
+
+		// Install a pattern-matched command that mimics +bbnewgroup:
+		// $+bbsflow_xxx *:@switch hasflag(%#,wizard)=1,{@create %0; @wait 1={@switch [setr(0,num(%0))]=#-1,{@pemit %#=Bad name},{&GROUPS_xxx <storeObj>=%q0}}}
+		var cmdPattern = $"$+bbsflow_{uniqueId.ToLower()} *:@switch hasflag(%#,wizard)=1,{{@create %0; @wait 1={{@switch [setr(0,num(%0))]=#-1,{{@pemit %#=Bad name}},{{&{grpAttr} {storeObj}=%q0}}}}}}";
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{cmdAttr} {storeObj}={cmdPattern}"));
+
+		// Act - trigger the command
+		var targetName = $"BBSTgt_{uniqueId}";
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"+bbsflow_{uniqueId.ToLower()} {targetName}"));
+
+		await Task.Delay(3000);
+
+		// Assert - the groups attribute on storeObj should contain the dbref of the created object
+		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
+		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, grpAttr,
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(attr.IsAttribute).IsTrue()
+			.Because($"&{grpAttr} should have been set by the @wait callback's @switch non-#-1 branch");
+
+		var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
+		await Assert.That(attrValue).StartsWith("#")
+			.Because($"The groups attribute should contain a dbref, but got: {attrValue}");
+		await Assert.That(attrValue).DoesNotContain("-1")
+			.Because($"num(%0) should find the created object, not return #-1. Got: {attrValue}");
 	}
 }

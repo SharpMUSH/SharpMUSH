@@ -1325,6 +1325,12 @@ public class SharpMUSHParserVisitor(
 		// Execute hooks with the new parser state that includes named registers
 		return await prs.With(state =>
 			{
+				// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
+				// This allows @wait/@force to preserve pattern-match variables in queued callbacks.
+				var callerArgs = state.Arguments
+					.Where(x => int.TryParse(x.Key, out _))
+					.ToDictionary(x => x.Key, x => x.Value);
+
 				// Add named registers to the register stack
 				var newState = state with
 				{
@@ -1334,7 +1340,8 @@ public class SharpMUSHParserVisitor(
 						.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
 						.ToDictionary(),
 					CommandInvoker = libraryCommandDefinition.Command,
-					Function = null
+					Function = null,
+					CallerArguments = callerArgs.Count > 0 ? callerArgs : null
 				};
 
 				// Push named registers onto the stack
@@ -1419,7 +1426,21 @@ public class SharpMUSHParserVisitor(
 					return new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}");
 				}
 
-				// 4. Execute the built-in command
+				// 4. Check CommandLock before executing
+				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
+				if (!string.IsNullOrEmpty(commandLockStr) && !executor.IsNone)
+				{
+					var executorObj = executor.Known();
+					var passesLock = await Mediator.Send(
+						new SharpMUSH.Library.Queries.EvaluateLockQuery(commandLockStr, executorObj, executorObj));
+					if (!passesLock)
+					{
+						await NotifyService.Notify(executorObj, ErrorMessages.Notifications.PermissionDenied);
+						return new CallState(ErrorMessages.Returns.PermissionDenied);
+					}
+				}
+
+				// 5. Execute the built-in command
 				var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 				var commandSuccess = true;
 				Option<CallState> commandResult;
@@ -1647,7 +1668,19 @@ public class SharpMUSHParserVisitor(
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
 
 		// Do not parse the argument splitting.
-		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse });
+		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
+		// - RSBrace (PennMUSH CS_BRACES): commands like @wait, @force, @halt preserve braces
+		//   during parsing, then strip them at execution time via StripOuterBraces.
+		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like & store the raw value text.
+		//   In PennMUSH, noeval arguments never go through process_expression, so braces
+		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
+		//   preserve braces via the flag to match PennMUSH behavior.
+		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
+			|| behavior.HasFlag(CommandBehavior.NoParse);
+		var newFlags = preserveBraces
+			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
+			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
+		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse, Flags = newFlags });
 		var realSubtext = MModule.substring(
 			context.evaluationString().Start.StartIndex,
 			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
@@ -1845,12 +1878,22 @@ public class SharpMUSHParserVisitor(
 		CallState? result;
 		var vc = await VisitChildren(context);
 
-		if (_braceDepthCounter <= 1)
+		if (_braceDepthCounter <= 1
+			&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.PreserveBraces))
 		{
+			// Normal evaluation: strip the outermost braces.
+			// PennMUSH equivalent: PE_STRIP_BRACES strips all brace levels during evaluation.
 			result = vc ?? new CallState(GetContextText(context), context.Depth());
 		}
 		else
 		{
+			// Either nested braces (depth > 1) or PreserveBraces flag set:
+			// preserve braces in the output.
+			// PreserveBraces is set for:
+			// - RSBrace commands (@wait, @force, @halt): handler strips them at execution
+			//   time via StripOuterBraces (PennMUSH PE_COMMAND_BRACES equivalent).
+			// - NoParse commands (&): braces are preserved literally in the stored value
+			//   (PennMUSH QUEUE_NOLIST/noeval — value never enters process_expression).
 			result = vc is not null
 				? vc with
 				{

@@ -106,6 +106,13 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 		return true;
 	}
 
+	public override bool? VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
+	{
+		// Default (bare name) locks are always valid - they check at runtime
+		var value = context.@string().GetText();
+		return true;
+	}
+
 	public override bool? VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
 		// Attribute locks are always valid syntactically

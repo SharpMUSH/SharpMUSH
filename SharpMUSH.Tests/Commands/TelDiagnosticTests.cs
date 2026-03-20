@@ -277,15 +277,20 @@ public class TelDiagnosticTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&groups {pocketDbref}="));
 
 		// Step 3: Use num() to find objects (like BBS @force me=@edit)
+		// num() returns bare #N format (PennMUSH behavior), while @create returns #N:timestamp.
+		// Extract just the #N portion from @create output for comparison.
+		var pocketBareDbref = pocketDbref.Contains(':') ? pocketDbref[..pocketDbref.IndexOf(':')] : pocketDbref;
+		var boardBareDbref = boardDbref.Contains(':') ? boardDbref[..boardDbref.IndexOf(':')] : boardDbref;
+
 		var numPocket = await Eval("num(bbsdiag_pocket)");
 		var numBoard = await Eval("num(bbsdiag_board)");
 		Console.WriteLine($"num(bbsdiag_pocket) = {numPocket}");
 		Console.WriteLine($"num(bbsdiag_board) = {numBoard}");
 
-		await Assert.That(numPocket).IsEqualTo(pocketDbref)
-			.Because("num() should find the pocket object by name");
-		await Assert.That(numBoard).IsEqualTo(boardDbref)
-			.Because("num() should find the board object by name");
+		await Assert.That(numPocket).IsEqualTo(pocketBareDbref)
+			.Because("num() should find the pocket object by name and return bare #N format");
+		await Assert.That(numBoard).IsEqualTo(boardBareDbref)
+			.Because("num() should find the board object by name and return bare #N format");
 
 		// Step 4: @edit to replace placeholder (like BBS @force me=@edit)
 		await Parser.CommandParse(1, ConnectionService,

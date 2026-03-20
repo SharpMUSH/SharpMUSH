@@ -107,7 +107,8 @@ public static class SendMail
 					await parser.With(state => state with
 					{
 						Executor = player.Object.DBRef,
-						Enactor = sender.Object().DBRef
+						Enactor = sender.Object().DBRef,
+						Caller = state.Executor
 					}, async newParser =>
 					{
 						await newParser.CommandListParse(attribute.Value);
