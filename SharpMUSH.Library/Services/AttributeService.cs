@@ -173,7 +173,9 @@ public class AttributeService(
 						Arguments = args,
 						EnvironmentRegisters = args,
 						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
-						Function = attributeName
+						Function = attributeName,
+						Executor = obj.Object().DBRef,
+						Caller = s.Executor
 					},
 				async newParser =>
 					await newParser.FunctionParse(attr.AsAttribute.Last().Value));

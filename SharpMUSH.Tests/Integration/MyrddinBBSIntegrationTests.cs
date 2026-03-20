@@ -423,8 +423,6 @@ public class MyrddinBBSIntegrationTests
 	///   &amp;groups bbpocket=%q0 [get(bbpocket/groups)]  → stores "#5 #-1 NO SUCH ATTRIBUTE"
 	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("v() inside u(obj/attr) does not use obj as executor context — v(groups) returns empty instead of #3's groups attribute")]
 	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
 	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
 	{

@@ -1464,6 +1464,8 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
+					Executor = actualObject.Object().DBRef,
+					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
@@ -1517,7 +1519,9 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
-					Registers = []
+					Registers = [],
+					Executor = actualObject.Object().DBRef,
+					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
