@@ -11,53 +11,9 @@ namespace SharpMUSH.Tests.Integration;
 
 /// <summary>
 /// Integration tests for Myrddin's BBS v4.0.6 installation.
-/// These tests validate that SharpMUSH can process a real-world MUSHCode package
-/// by loading the Myrddin BBS installer script and running it through the parser.
+/// Validates that SharpMUSH can install and operate a real-world MUSHCode package.
 ///
 /// Source: https://mushcode.com/File/Myrddins-BBS-v4-0-6#
-///
-/// The test sets #1 to DEBUG and VERBOSE to capture detailed evaluation output,
-/// runs each line of the installer through CommandParse, then executes +bbread
-/// to verify the installation produces output without #-1 errors.
-///
-/// ANTLR PARSER ERRORS: 0 remaining (all 8 original lines resolved)
-///
-/// FIXED BY FIX A (3 lines) — bracket depth tracking:
-///   Lines 74, 83, 96: Orphaned ] from \[ escapes now treated as generic text
-///   via { inBracketDepth == 0 }? predicate in beginGenericText
-///
-/// FIXED BY FIX B (4 lines) — brace function semantics:
-///   Lines 91, 109, 110, 111: Multi-arg functions now parse inside braces
-///   via inFunctionInsideBrace counter with save/restore stack
-///
-/// FIXED BY inFunction save/restore in bracePattern (1 line):
-///   Line 57: Bare parens before bracket patterns no longer cause scope leakage.
-///   inFunction is saved/restored in bracePattern (reset to 0 on entry, restore on exit)
-///   so ) inside brackets always correctly closes functions.
-///   Fix C (inParenDepth) was removed — PennMUSH does not match bare parentheses.
-///   Line 101: Also resolved — { inFunction == 0 }? predicate handles this correctly.
-///
-/// FIXED: +bbread runtime #-1 errors — iter() phantom iteration:
-///   Root cause: MModule.split() returned [| empty |] for empty input, causing
-///   iter() to produce one phantom iteration with empty value. This led to:
-///     name("") → #-1 CAN'T SEE THAT HERE
-///     get(/LAST_MOD) → #-1 BAD ARGUMENT FORMAT TO GET
-///     words(error_string) → misleading count displayed as message count
-///   Fix: split() now returns empty array for empty input (PennMUSH behavior).
-///   +bbread #-1 errors: 0 (was 1).
-///
-/// REMAINING NON-PARSER ERRORS:
-///
-/// Lock evaluator errors (3 lines — not parser errors):
-///   Lines 134, 136, 138: &amp;bb_read/bb_omit/bb_silent me — attribute clear commands
-///   These are parsed by the lock evaluator which expects flag/attribute names,
-///   not the bare identifier 'me'.
-///   Errors: "mismatched input 'me' expecting {NAME, BIT_FLAG, ...}"
-///
-/// Install #-1 false positives (3 — not actual errors):
-///   These are attribute values that contain "#-1" as part of conditional checks
-///   (e.g., @switch [first(grep(me,*,a))]=#-1,...). They are detected by the
-///   notification counter but are intentional error-checking patterns, not failures.
 /// </summary>
 [NotInParallel]
 public class MyrddinBBSIntegrationTests
@@ -136,19 +92,8 @@ public class MyrddinBBSIntegrationTests
 	}
 
 	/// <summary>
-	/// Integration test: Install Myrddin's BBS v4.0.6 and run +bbread.
-	/// Writes the full test output to Integration/TestData/MyrddinBBS_v406_TestOutput.txt.
-	///
-	/// This test:
-	/// 1. Sets DEBUG and VERBOSE flags on #1 to capture detailed output
-	/// 2. Reads the Myrddin BBS installer script from the test data file
-	/// 3. Processes each line through CommandParse (simulating a player pasting the script)
-	/// 4. Captures ANTLR parser errors per line by redirecting stderr
-	/// 5. Runs +bbread to check the installation output
-	/// 6. Writes the complete results to a text file and to console
-	///
-	/// Known: This test documents errors and does NOT attempt to fix them.
-	/// The goal is to create a baseline integration test for MUSHCode compatibility.
+	/// Installs Myrddin's BBS v4.0.6 by running the installer script through CommandParse,
+	/// then runs +bbread to verify the installation completes without crashing.
 	/// </summary>
 	[Test]
 	public async Task InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash()
@@ -162,8 +107,10 @@ public class MyrddinBBSIntegrationTests
 		}
 
 		// ====================================================================
-		// Step 1: Set #1 to DEBUG and VERBOSE for detailed output
+		// Step 1: Set #1 to DEBUG and VERBOSE for detailed output,
+		// and ensure the WIZARD flag is set (required by BBS commands).
 		// ====================================================================
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=WIZARD"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=VERBOSE"));
 
@@ -179,11 +126,19 @@ public class MyrddinBBSIntegrationTests
 		var preInstallNotificationCount = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
+		string? bbpocketDbref = null; // Will be set after @create bbpocket=10
+
 		for (var i = 0; i < scriptLines.Length; i++)
 		{
 			var line = scriptLines[i];
 			if (!IsExecutableLine(line))
 				continue;
+
+			// Substitute hardcoded #222 with the actual bbpocket dbref once known
+			if (bbpocketDbref != null)
+			{
+				line = line.Replace("#222", bbpocketDbref);
+			}
 
 			try
 			{
@@ -196,6 +151,15 @@ public class MyrddinBBSIntegrationTests
 
 				await Parser.CommandParse(1, ConnectionService, MModule.single(line));
 				executedLines++;
+
+				// After creating bbpocket, capture its actual dbref
+				if (bbpocketDbref == null && line.TrimStart().StartsWith("@create bbpocket", StringComparison.OrdinalIgnoreCase))
+				{
+					var numResult = await Parser.CommandParse(1, ConnectionService,
+						MModule.single("think [num(bbpocket)]"));
+					bbpocketDbref = numResult.Message?.ToPlainText()?.Trim();
+					Log($"[BBS INSTALL] bbpocket created with dbref: {bbpocketDbref} (replacing #222 in remaining lines)");
+				}
 			}
 			catch (Exception ex)
 			{
@@ -206,6 +170,10 @@ public class MyrddinBBSIntegrationTests
 		}
 
 		Log($"[BBS INSTALL] Executed {executedLines} commands from {scriptLines.Length} total lines.");
+
+		// Wait for delayed @wait callbacks in the BBS install to complete
+		// The install script uses @wait 1={...} and @wait 3={...} at the end
+		await Task.Delay(5000);
 
 		// Track notification count after installation but before +bbread
 		var postInstallNotificationCount = NotifyService.ReceivedCalls()
@@ -380,5 +348,67 @@ public class MyrddinBBSIntegrationTests
 		if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
 			return value;
 		return value[..(maxLength - 3)] + "...";
+	}
+
+	/// <summary>
+	/// Installs the BBS, runs +bbnewgroup to create a group, and verifies +bbread lists it.
+	/// Validates no ANTLR parser errors and no #-1 errors during the workflow.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
+	public async Task BBS_NewGroup_ThenBBRead_ShowsGroup()
+	{
+		var groupName = $"TestGrp_{Guid.NewGuid():N}"[..20]; // Keep name short for BBS
+
+		// Track baseline notification count
+		var preTestNotifications = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
+		// +bbnewgroup should have no ANTLR parse errors
+		var newGroupCmd = $"+bbnewgroup {groupName}";
+		var parseErrors = Parser.ValidateAndGetErrors(MModule.single(newGroupCmd), ParseType.CommandList);
+		await Assert.That(parseErrors.Count).IsEqualTo(0)
+			.Because("+bbnewgroup command should not produce any ANTLR parser errors");
+
+		// Execute +bbnewgroup and wait for the @wait callback to complete
+		await Parser.CommandParse(1, ConnectionService, MModule.single(newGroupCmd));
+		await Task.Delay(5000);
+
+		// Reset baseline for +bbread
+		preTestNotifications = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
+		// +bbread should have no ANTLR parse errors
+		var bbreadParseErrors = Parser.ValidateAndGetErrors(MModule.single("+bbread"), ParseType.CommandList);
+		await Assert.That(bbreadParseErrors.Count).IsEqualTo(0)
+			.Because("+bbread command should not produce any ANTLR parser errors");
+
+		// Execute +bbread and collect output
+		await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
+
+		var bbreadMessages = new List<string>();
+		var errorMessages = new List<string>();
+		var notifyIndex = 0;
+
+		foreach (var messageText in NotifyService.ReceivedCalls()
+			.Select(ExtractMessageText)
+			.OfType<string>())
+		{
+			notifyIndex++;
+			if (notifyIndex <= preTestNotifications) continue;
+
+			bbreadMessages.Add(messageText);
+			if (messageText.Contains("#-1"))
+				errorMessages.Add(messageText);
+		}
+
+		// The group name should appear in the +bbread output
+		var bbreadOutput = string.Join("\n", bbreadMessages);
+		await Assert.That(bbreadOutput).Contains(groupName)
+			.Because($"+bbread should list the newly created group '{groupName}'");
+
+		// No #-1 errors in the +bbread output
+		await Assert.That(errorMessages.Count).IsEqualTo(0)
+			.Because("there should be no #-1 errors in the +bbnewgroup/+bbread workflow");
 	}
 }

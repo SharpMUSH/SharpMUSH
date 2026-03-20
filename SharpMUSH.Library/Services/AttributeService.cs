@@ -137,7 +137,7 @@ public class AttributeService(
 
 		if (attr.IsNone)
 		{
-			return MModule.single(Errors.ErrorNoSuchAttribute);
+			return MModule.empty();
 		}
 
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
@@ -173,7 +173,9 @@ public class AttributeService(
 						Arguments = args,
 						EnvironmentRegisters = args,
 						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
-						Function = attributeName
+						Function = attributeName,
+						Executor = obj.Object().DBRef,
+						Caller = s.Executor
 					},
 				async newParser =>
 					await newParser.FunctionParse(attr.AsAttribute.Last().Value));

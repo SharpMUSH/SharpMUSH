@@ -470,7 +470,17 @@ if (parsedCarryOpt.IsSome())
 	public override Expression VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
 	{
 		var targetIdentifier = context.@string().GetText();
+		return BuildExactObjectExpression(targetIdentifier);
+	}
 
+	public override Expression VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
+	{
+		var targetIdentifier = context.@string().GetText();
+		return BuildExactObjectExpression(targetIdentifier);
+	}
+
+	private Expression BuildExactObjectExpression(string targetIdentifier)
+	{
 		// Check if unlocker matches the exact target object
 		Func<AnySharpObject, AnySharpObject, string, bool> func = (gatedObj, unlockerObj, target) =>
 		{
