@@ -112,8 +112,9 @@ public class MyrddinBBSIntegrationTests
 		// ====================================================================
 		// Step 1: Set #1 to DEBUG, VERBOSE, and PUPPET for detailed output,
 		// and ensure the WIZARD flag is set (required by BBS commands).
-		// PUPPET may fail on a player object (only valid for things) - that is
-		// expected and documented.
+		// PUPPET is only valid for Things per PennMUSH, so @set #1=PUPPET on
+		// a Player will produce a "permission denied" or no-op - this is expected
+		// and not treated as a test failure.
 		// ====================================================================
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=WIZARD"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=DEBUG"));
@@ -467,9 +468,16 @@ public class MyrddinBBSIntegrationTests
 			if (groupDbref != null && !groupDbref.Contains("#-1"))
 			{
 				Log($"[BBS NEWGROUP] Group '{groupName}' created with dbref: {groupDbref}");
-				await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=DEBUG"));
-				await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=VERBOSE"));
-				await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=PUPPET"));
+				try
+				{
+					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=DEBUG"));
+					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=VERBOSE"));
+					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=PUPPET"));
+				}
+				catch (Exception flagEx)
+				{
+					Log($"[BBS NEWGROUP] WARNING: Failed to set diagnostic flags on group: {flagEx.Message}");
+				}
 			}
 			else
 			{
@@ -659,7 +667,7 @@ public class MyrddinBBSIntegrationTests
 		}
 
 		// Wait for any @wait callbacks in the post flow
-		await Task.Delay(3000);
+		await Task.Delay(5000);
 
 		// Collect +bbpost notifications
 		var postPostNotifications = NotifyService.ReceivedCalls()
@@ -667,8 +675,8 @@ public class MyrddinBBSIntegrationTests
 
 		var postMessages = new List<(int Index, string Message)>();
 		var postErrors = new List<(int Index, string Message)>();
-		var missingCparenMessages = new List<(int Index, string Message)>();
-		var cantSeeMessages = new List<(int Index, string Message)>();
+		var missingCparenMessages = new List<(int Index, string Phase, string Message)>();
+		var cantSeeMessages = new List<(int Index, string Phase, string Message)>();
 
 		var pIndex = 0;
 		foreach (var messageText in NotifyService.ReceivedCalls()
@@ -684,10 +692,10 @@ public class MyrddinBBSIntegrationTests
 			if (messageText.Contains("#-1"))
 				postErrors.Add((pIndex, messageText));
 			if (messageText.Contains("missing CPAREN", StringComparison.OrdinalIgnoreCase))
-				missingCparenMessages.Add((pIndex, messageText));
+				missingCparenMessages.Add((pIndex, "+bbpost", messageText));
 			if (messageText.Contains("I can't see that here", StringComparison.OrdinalIgnoreCase)
 				|| messageText.Contains("CAN'T SEE THAT HERE", StringComparison.OrdinalIgnoreCase))
-				cantSeeMessages.Add((pIndex, messageText));
+				cantSeeMessages.Add((pIndex, "+bbpost", messageText));
 		}
 
 		Log($"\n{new string('-', 78)}");
@@ -742,10 +750,10 @@ public class MyrddinBBSIntegrationTests
 			if (messageText.Contains("#-1"))
 				readErrors.Add((rIndex, messageText));
 			if (messageText.Contains("missing CPAREN", StringComparison.OrdinalIgnoreCase))
-				missingCparenMessages.Add((rIndex, messageText));
+				missingCparenMessages.Add((rIndex, "+bbread 1/1", messageText));
 			if (messageText.Contains("I can't see that here", StringComparison.OrdinalIgnoreCase)
 				|| messageText.Contains("CAN'T SEE THAT HERE", StringComparison.OrdinalIgnoreCase))
-				cantSeeMessages.Add((rIndex, messageText));
+				cantSeeMessages.Add((rIndex, "+bbread 1/1", messageText));
 		}
 
 		Log($"\n{new string('-', 78)}");
@@ -785,10 +793,10 @@ public class MyrddinBBSIntegrationTests
 			if (messageText.Contains("#-1"))
 				readErrors.Add((lIndex, messageText));
 			if (messageText.Contains("missing CPAREN", StringComparison.OrdinalIgnoreCase))
-				missingCparenMessages.Add((lIndex, messageText));
+				missingCparenMessages.Add((lIndex, "+bbread list", messageText));
 			if (messageText.Contains("I can't see that here", StringComparison.OrdinalIgnoreCase)
 				|| messageText.Contains("CAN'T SEE THAT HERE", StringComparison.OrdinalIgnoreCase))
-				cantSeeMessages.Add((lIndex, messageText));
+				cantSeeMessages.Add((lIndex, "+bbread list", messageText));
 		}
 
 		Log($"\n{new string('-', 78)}");
@@ -818,8 +826,8 @@ public class MyrddinBBSIntegrationTests
 			Log($"\n{new string('-', 78)}");
 			Log("MISMATCH: 'missing CPAREN' messages (should not appear in PennMUSH):");
 			Log(new string('-', 78));
-			foreach (var (idx, msg) in missingCparenMessages)
-				Log($"  [{idx}] {Truncate(msg, 200)}");
+			foreach (var (idx, phase, msg) in missingCparenMessages)
+				Log($"  [{idx}] ({phase}) {Truncate(msg, 200)}");
 		}
 
 		if (cantSeeMessages.Count > 0)
@@ -827,8 +835,8 @@ public class MyrddinBBSIntegrationTests
 			Log($"\n{new string('-', 78)}");
 			Log("MISMATCH: 'can't see that here' messages (should not appear in PennMUSH):");
 			Log(new string('-', 78));
-			foreach (var (idx, msg) in cantSeeMessages)
-				Log($"  [{idx}] {Truncate(msg, 200)}");
+			foreach (var (idx, phase, msg) in cantSeeMessages)
+				Log($"  [{idx}] ({phase}) {Truncate(msg, 200)}");
 		}
 
 		if (postErrors.Count > 0)
