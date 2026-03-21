@@ -475,7 +475,7 @@ public partial class LocateService(
 				if (flow == ControlFlow.Continue) continue;
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
-			// Partial (prefix) match for non-exit objects, matching PennMUSH string_match() behaviour
+			// Partial (prefix) match for non-exit objects, matching PennMUSH string_match() behavior
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
 							 && !cur.IsExit
 							 && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
@@ -713,14 +713,22 @@ public partial class LocateService(
 			count = int.Parse(ordinalMatch.Groups["Number"].Value);
 			var ordinal = ordinalMatch.Groups["Ordinal"].Value;
 
-			// This is really only valid in English.
-			if (count < 1
-					|| Enumerable.Range(10, 14).Contains(count) &&
-					!ordinal.Equals("th", StringComparison.CurrentCultureIgnoreCase)
-					|| count % 10 == 1 && !ordinal.Equals("st", StringComparison.CurrentCultureIgnoreCase)
-					|| count % 10 == 2 && !ordinal.Equals("nd", StringComparison.CurrentCultureIgnoreCase)
-					|| count % 10 == 3 && !ordinal.Equals("rd", StringComparison.CurrentCultureIgnoreCase)
-					|| ordinal != "th")
+			// Validate the ordinal suffix, following PennMUSH parse_english() rules:
+			//   11th, 12th, 13th  → always "th"  (teen exception – not st/nd/rd)
+			//   *1  (excl. 11)    → "st"
+			//   *2  (excl. 12)    → "nd"
+			//   *3  (excl. 13)    → "rd"
+			//   everything else   → "th"
+			var mod100 = count % 100;
+			var isTeen = mod100 >= 11 && mod100 <= 13;
+			var mod10 = count % 10;
+
+			string expectedSuffix = (isTeen || mod10 == 0 || mod10 > 3) ? "th"
+				: mod10 == 1 ? "st"
+				: mod10 == 2 ? "nd"
+				: "rd"; // mod10 == 3
+
+			if (count < 1 || !ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
 			{
 				return (name, flags, 0);
 			}

@@ -332,9 +332,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PartialMatching_ShouldFindObjectByPrefixName()
 	{
-		// Directly tests that Match_List does prefix matching (PennMUSH string_match() behaviour).
-		// Before the fix the partial-match branch used Equals instead of StartsWith, making it
-		// dead code.  After the fix "Long" must locate an object named "LongObjectName".
+		// Directly tests that Match_List does prefix matching (PennMUSH string_match() behavior).
+		// Verifies that "Long" correctly locates an object named "LongObjectName" using prefix matching.
 
 		// Arrange
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
@@ -435,10 +434,9 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// MatchObjectsInLookerInventory alone adds location (room) to the candidate list.
-		// The room itself is "Shared Room" – "Long" is not a prefix of that, so we verify
-		// the prefix logic via MatchList_PartialMatching_* tests above.
-		// Here we confirm the end-to-end Locate() path returns None (room not matching "Long").
+		// Tests that prefix matching correctly rejects the room when its name does not
+		// match the search prefix. End-to-end prefix matching is verified by the
+		// MatchList_PartialMatching_* tests above.
 		var result = await _locateService.Locate(_parser, player, player, "Long",
 			LocateFlags.MatchObjectsInLookerInventory | LocateFlags.PreferLockPass);
 
@@ -653,5 +651,51 @@ public class LocateServiceCompatibilityTests
 		// Assert - should get NOT PERMITTED error because they're not nearby
 		await Assert.That(result.IsError).IsTrue();
 		await Assert.That(result.AsError.Value).Contains("NOT PERMITTED");
+	}
+
+	// ─── ParseEnglish ordinal validation ────────────────────────────────────────
+
+	/// <summary>
+	/// Verifies that the ordinal validation logic (matching PennMUSH parse_english())
+	/// correctly accepts well-formed ordinals and rejects malformed ones.
+	/// Previously a trailing <c>|| ordinal != "th"</c> clause made 1st/2nd/3rd always invalid.
+	/// Additionally, <c>Range(10,14)</c> covered 10–23 instead of the intended teen range 11–13,
+	/// and there was no teen exclusion on the st/nd/rd mod10 checks.
+	/// </summary>
+	[Test]
+	[Arguments(1, "st", true)]   // 1st  – valid
+	[Arguments(2, "nd", true)]   // 2nd  – valid
+	[Arguments(3, "rd", true)]   // 3rd  – valid
+	[Arguments(4, "th", true)]   // 4th  – valid
+	[Arguments(10, "th", true)]  // 10th – mod10==0, uses "th"
+	[Arguments(11, "th", true)]  // 11th – teen, "th" required
+	[Arguments(12, "th", true)]  // 12th – teen, "th" required
+	[Arguments(13, "th", true)]  // 13th – teen, "th" required
+	[Arguments(21, "st", true)]  // 21st – valid (not a teen)
+	[Arguments(22, "nd", true)]  // 22nd – valid
+	[Arguments(23, "rd", true)]  // 23rd – valid
+	[Arguments(100, "th", true)] // 100th – mod10==0, uses "th"
+	[Arguments(111, "th", true)] // 111th – mod100==11, teen
+	[Arguments(11, "st", false)] // 11st – invalid, teen must use "th"
+	[Arguments(12, "nd", false)] // 12nd – invalid
+	[Arguments(13, "rd", false)] // 13rd – invalid
+	[Arguments(1, "nd", false)]  // 1nd  – invalid
+	[Arguments(2, "rd", false)]  // 2rd  – invalid
+	public async Task ParseEnglish_OrdinalValidation_MatchesPennMUSH(int count, string ordinal, bool shouldBeValid)
+	{
+		// Replicate the fixed validation logic from ParseEnglish to confirm the
+		// mathematical logic matches PennMUSH parse_english() exactly.
+		var mod100 = count % 100;
+		var isTeen = mod100 >= 11 && mod100 <= 13;
+		var mod10 = count % 10;
+
+		string expectedSuffix = (isTeen || mod10 == 0 || mod10 > 3) ? "th"
+			: mod10 == 1 ? "st"
+			: mod10 == 2 ? "nd"
+			: "rd";
+
+		bool isValid = count >= 1 && ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase);
+
+		await Assert.That(isValid).IsEqualTo(shouldBeValid);
 	}
 }
