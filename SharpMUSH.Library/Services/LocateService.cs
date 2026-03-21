@@ -525,7 +525,9 @@ public partial class LocateService(
 		if (flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 				&& !await permissionService.Controls(looker, cur))
 		{
-			return (new Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
+			// PennMUSH match_list: uncontrolled objects are silently skipped (continue),
+			// preserving any previously found controlled match.
+			return (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
 		}
 
 		if (final == 0) // Not doing an English Match.
