@@ -444,12 +444,10 @@ public class SharpMUSHParserVisitor(
 			// Consider moving after RefinedArguments to avoid extra parsing. However, each
 			// RefinedArguments call creates a new FunctionParser call without depth info.
 
-			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
-			{
-				limitExceeded.IsExceeded = true;
-				return new CallState(Errors.ErrorDepth, contextDepth);
-			}
-
+			// Note: PennMUSH does NOT limit built-in function nesting depth.
+			// Only user-defined function recursion is limited (see FunctionRecursionLimit
+			// in AttributeService.EvaluateAttributeFunctionAsync).
+			// The CallLimit below provides a safety net against infinite built-in nesting.
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
 				limitExceeded.IsExceeded = true;
