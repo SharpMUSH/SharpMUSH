@@ -459,9 +459,9 @@ public partial class LocateService(
 			}
 			else if (!await permissionService.CanInteract(looker, cur, IPermissionService.InteractType.Match))
 			{
-				// continue;
+				continue;
 			}
-			// Fixed: Corrected the inverted logic for non-exit name matching
+			// Exact name/alias match (full == true → 'exact' match in PennMUSH terms)
 			else if (
 				(cur.IsPlayer && cur.Aliases.Contains(name))
 				|| (cur.IsExit && (cur.Aliases.Contains(name) ||
@@ -475,9 +475,10 @@ public partial class LocateService(
 				if (flow == ControlFlow.Continue) continue;
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
+			// Partial (prefix) match for non-exit objects, matching PennMUSH string_match() behaviour
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
 							 && !cur.IsExit
-							 && cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+							 && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
