@@ -232,8 +232,6 @@ public class AttributeService(
 		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
 
-		// When there is no "/" separator (e.g. u(attrname,...)), the entire input
-		// is the attribute name and the executor is the target object, matching PennMUSH.
 		if (!applyPredicate && !lambdaPredicate && attribute.Length == 0)
 		{
 			return await EvaluateAttributeFunctionAsync(parser, executor, executor,

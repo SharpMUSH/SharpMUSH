@@ -162,10 +162,6 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_PermissionCheck_ShouldUseCorrectLogic()
 	{
-		// This test verifies the permission check logic for 'me' resolution.
-		// After the PennMUSH compatibility fix, 'me' resolves to the looker (executor),
-		// not the where parameter. So Controls(looker, looker) is checked.
-
 		// Arrange
 		var room1 = _factory.CreateRoom(1001, "Room 1");
 		var room2 = _factory.CreateRoom(1002, "Room 2");
@@ -177,15 +173,12 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		// Player can control themselves
 		_permissionService.Controls(player, player)
 			.Returns(true);
 
-		// Player cannot control target
 		_permissionService.Controls(player, target)
 			.Returns(false);
 
-		// Target can control themselves  
 		_permissionService.Controls(target, target)
 			.Returns(true);
 
@@ -196,29 +189,21 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - 'me' resolves to looker (player), and Controls(player, player) is true,
-		// so OnlyMatchLookerControlledObjects should succeed
 		var resultWithControlRequired = await _locateService.Locate(_parser, player, target, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
-		// Act - without OnlyMatchLookerControlledObjects, should also succeed
 		var resultWithoutControlRequired = await _locateService.Locate(_parser, player, target, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
-		// Assert - both should succeed since 'me' = looker = player, and player controls themselves
 		await Assert.That(resultWithControlRequired.IsValid()).IsTrue();
 		await Assert.That(resultWithoutControlRequired.IsValid()).IsTrue();
 
-		// Now test when the executor does NOT control themselves (edge case).
-		// In Locate(parser, looker=player, executor=target, "me", ...), the 'me' resolution
-		// uses the executor (target) as the LocateMatch 'looker', so Controls(target, target) is checked.
 		_permissionService.Controls(target, target)
 			.Returns(false);
 
 		var resultNoSelfControl = await _locateService.Locate(_parser, player, target, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
-		// Should fail with permission error when executor can't control themselves
 		await Assert.That(resultNoSelfControl.IsError).IsTrue();
 		await Assert.That(resultNoSelfControl.AsError.Value).IsEqualTo(Errors.ErrorPerm);
 	}

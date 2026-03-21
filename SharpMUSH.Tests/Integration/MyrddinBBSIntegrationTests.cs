@@ -95,9 +95,6 @@ public class MyrddinBBSIntegrationTests
 	/// <summary>
 	/// Installs Myrddin's BBS v4.0.6 by running the installer script through CommandParse,
 	/// then runs +bbread to verify the installation completes without crashing.
-	///
-	/// Sets DEBUG, VERBOSE, and PUPPET flags on ALL objects for comprehensive diagnostic
-	/// output matching PennMUSH behavior. The output is written to a file for analysis.
 	/// </summary>
 	[Test]
 	public async Task InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash()
@@ -110,22 +107,11 @@ public class MyrddinBBSIntegrationTests
 			Console.WriteLine(message);
 		}
 
-		// ====================================================================
-		// Step 1: Set #1 to DEBUG, VERBOSE, and PUPPET for detailed output,
-		// and ensure the WIZARD flag is set (required by BBS commands).
-		// PUPPET is only valid for Things per PennMUSH, so @set #1=PUPPET on
-		// a Player is expected to fail with a type-restriction message such as
-		// "Flag: PUPPET cannot be set on object type: PLAYER." and is not treated
-		// as a test failure.
-		// ====================================================================
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=WIZARD"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=VERBOSE"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=PUPPET"));
 
-		// ====================================================================
-		// Step 2: Read and process the BBS install script
-		// ====================================================================
 		var scriptLines = ReadBBSInstallScript();
 		var executedLines = 0;
 		var executionExceptions = new List<(int LineNumber, string Line, string Error)>();
@@ -208,9 +194,6 @@ public class MyrddinBBSIntegrationTests
 		var postInstallNotificationCount = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
-		// ====================================================================
-		// Step 3: Run +bbread to verify the installation
-		// ====================================================================
 		try
 		{
 			await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
@@ -222,11 +205,7 @@ public class MyrddinBBSIntegrationTests
 			Log($"[BBS ERROR] +bbread execution failed: {ex.Message}");
 		}
 
-		// ====================================================================
-		// Step 4: Document results with comprehensive notification logging
-		// ====================================================================
 
-		// Collect all notification messages from the installation and +bbread
 		var allCalls = NotifyService.ReceivedCalls().ToList();
 		var installMessages = new List<(int Index, string Message)>();
 		var bbreadMessages = new List<(int Index, string Message)>();
@@ -246,7 +225,6 @@ public class MyrddinBBSIntegrationTests
 			if (notifyIndex <= preInstallNotificationCount)
 				continue; // Skip pre-existing notifications from other tests
 
-			// Track specific error patterns
 			if (messageText.Contains("missing CPAREN", StringComparison.OrdinalIgnoreCase))
 				missingCparenMessages.Add((notifyIndex, messageText));
 			if (messageText.Contains("I can't see that here", StringComparison.OrdinalIgnoreCase)
@@ -267,7 +245,6 @@ public class MyrddinBBSIntegrationTests
 			}
 		}
 
-		// Log the comprehensive summary
 		Log("");
 		Log(new string('=', 78));
 		Log("MYRDDIN BBS v4.0.6 INSTALLATION TEST RESULTS");
@@ -368,9 +345,6 @@ public class MyrddinBBSIntegrationTests
 			}
 		}
 
-		// ====================================================================
-		// Step 5: Log ALL notifications with indices for mismatch analysis
-		// ====================================================================
 		Log($"\n{new string('-', 78)}");
 		Log("ALL INSTALL NOTIFICATIONS (with index for mismatch tracking):");
 		Log(new string('-', 78));
@@ -392,23 +366,14 @@ public class MyrddinBBSIntegrationTests
 
 		Log($"\n{new string('=', 78)}");
 
-		// ====================================================================
-		// Step 6: Write output to text file
-		// ====================================================================
 		var outputFileRelative = Path.Combine(TestDataDir, OutputFileName);
 		var outputPath = Path.Combine(AppContext.BaseDirectory, outputFileRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"[BBS INSTALL] Full test output written to: {outputPath}");
 
-		// ====================================================================
-		// Step 7: Assertions
-		// ====================================================================
-
-		// The test should not crash - if we get here, the parser handled the script
 		await Assert.That(executedLines).IsGreaterThan(0)
 			.Because("at least some commands from the BBS script should have been executed");
 
-		// Log summary warnings for visibility
 		if (installErrorMessages.Count > 0 || bbreadErrorMessages.Count > 0
 			|| missingCparenMessages.Count > 0 || cantSeeMessages.Count > 0)
 		{

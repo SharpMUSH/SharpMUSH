@@ -63,8 +63,6 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task StackDepth_NestedDifferentFunctions_IsTracked()
 	{
-		// Arrange: Create nested function calls with different function names
-		// PennMUSH does not limit built-in function nesting, so 12 levels should succeed.
 		var nestedCalls = "x";
 		for (int i = 0; i < 12; i++)
 		{
@@ -74,12 +72,10 @@ public class RecursionAndInvocationLimitTests
 		// Act: Parse the deeply nested structure
 		var result = await FunctionParser.FunctionParse(MModule.single(nestedCalls));
 
-		// Assert: Built-in nesting should succeed (PennMUSH compatibility)
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		Console.WriteLine($"Stack depth test result: {output}");
 
-		// 12-deep strlen nesting should succeed and return "1"
 		await Assert.That(output).IsEqualTo("1");
 	}
 
@@ -90,17 +86,12 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task StackDepth_ExactLimit_IsEnforced()
 	{
-		// Arrange: PennMUSH does not limit built-in function nesting.
-		// Both 10-deep and 11-deep should succeed.
-
-		// Create exactly 10 nested calls - should succeed
 		var nested10 = "x";
 		for (int i = 0; i < 10; i++)
 		{
 			nested10 = $"[strlen({nested10})]";
 		}
 
-		// Create exactly 11 nested calls - should also succeed (no built-in depth limit)
 		var nested11 = "x";
 		for (int i = 0; i < 11; i++)
 		{
@@ -121,7 +112,6 @@ public class RecursionAndInvocationLimitTests
 		Console.WriteLine($"10-deep result: {output10}");
 		Console.WriteLine($"11-deep result: {output11}");
 
-		// Both should succeed and return "1" (length of "x")
 		await Assert.That(output10).IsEqualTo("1");
 		await Assert.That(output11).IsEqualTo("1");
 	}
@@ -134,8 +124,6 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MutualRecurse");
 
-		// Arrange: Create two functions that call each other with a counter
-		// Use counters exceeding FunctionRecursionLimit (100 in test config) to trigger the limit
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_A_LIM_UNIQUE {objDbRef}=[setq(a,add(r(a),1))][if(lte(r(a),120),[u({objDbRef}/FUNC_B_LIM_UNIQUE)],DONE_A)]"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_B_LIM_UNIQUE {objDbRef}=[setq(b,add(r(b),1))][if(lte(r(b),120),[u({objDbRef}/FUNC_A_LIM_UNIQUE)],DONE_B)]"));
 
@@ -214,9 +202,6 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "RecursePerFunc");
 
-		// Arrange: Create a function that calls itself through another function
-		// This tests that recursionDepth correctly counts occurrences of the same function name
-		// Use counters exceeding FunctionRecursionLimit (100 in test config) to trigger the limit
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&WRAP_LIM_UNIQUE {objDbRef}=[setq(w,add(r(w),1))][if(lte(r(w),120),[u({objDbRef}/INNER_LIM_UNIQUE)],DONE_W)]"));
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&INNER_LIM_UNIQUE {objDbRef}=[setq(i,add(r(i),1))][if(lte(r(i),120),[u({objDbRef}/WRAP_LIM_UNIQUE)],DONE_I)]"));
 
@@ -257,13 +242,10 @@ public class RecursionAndInvocationLimitTests
 		// Evaluation halts immediately when limit is hit
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "DiffLimits");
 
-		// Test 1: Recursion limit - same function many times (limit is 100 via FunctionRecursionLimit)
 		var recursiveAttr = $"[setq(c,add(r(c),1))][if(lte(r(c),150),[u({objDbRef}/REC_LIM_UNIQUE)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&REC_LIM_UNIQUE {objDbRef}={recursiveAttr}"));
 		var recursionResult = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/REC_LIM_UNIQUE)]"));
 
-		// Test 2: Built-in function nesting - PennMUSH does NOT limit this.
-		// 12-deep built-in nesting should succeed (only CallLimit matters).
 		var deepNest = "x";
 		for (int i = 0; i < 12; i++)
 		{
@@ -271,20 +253,16 @@ public class RecursionAndInvocationLimitTests
 		}
 		var stackResult = await FunctionParser.FunctionParse(MModule.single(deepNest));
 
-		// Assert: Recursion should return error, built-in nesting should succeed
 		await Assert.That(recursionResult).IsNotNull();
 		await Assert.That(stackResult).IsNotNull();
 
 		var recursionError = recursionResult!.Message.ToPlainText();
 		var stackOutput = stackResult!.Message.ToPlainText();
 
-		// Recursion should contain error
 		await Assert.That(recursionError).Contains("#-1");
 
-		// Built-in nesting should succeed (PennMUSH compatibility)
 		await Assert.That(stackOutput).IsEqualTo("1");
 
-		// Log the actual results to document behavior
 		Console.WriteLine($"Recursion error: {recursionError}");
 		Console.WriteLine($"Stack depth result: {stackOutput}");
 	}

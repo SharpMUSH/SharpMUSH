@@ -113,10 +113,7 @@ public partial class LocateService(
 
 		var result = match.WithoutError().WithoutNone();
 
-		// Skip visibility check when NoVisibilityCheck flag is set (e.g. hasflag),
-		// or when matching by absolute dbref. PennMUSH's match_absolute() never checks
-		// visibility — if you know an object's dbref, you can always reference it.
-		// Individual functions/commands are responsible for their own permission checks.
+		// PennMUSH: absolute dbref matches (#N) always bypass visibility checks.
 		if (flags.HasFlag(LocateFlags.NoVisibilityCheck) || HelperFunctions.ParseDbRef(name).IsSome())
 		{
 			return result.WithNoneOption().WithErrorOption();

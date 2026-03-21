@@ -299,8 +299,6 @@ public class SharpMUSHParserVisitor(
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
 		}
 
-		// PennMUSH increments nest_depth after creating the debug string (src/parse.c:2176-2177)
-		// so that inner function calls during argument evaluation see a higher depth.
 		if (shouldDebug) _debugNestDepth++;
 
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
