@@ -282,12 +282,11 @@ public partial class LocateService(
 
 		while (true)
 		{
-			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents) &&
-					where.IsContainer)
+			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) && where.IsContainer)
 			{
 				var contents = mediator
 					.CreateStream(new GetContentsQuery(where.AsContainer))
-					.Select(x => x.WithRoomOption());
+					?.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
 
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -297,7 +296,6 @@ public partial class LocateService(
 			}
 
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
-					&& !flags.HasFlag(LocateFlags.MatchRemoteContents)
 					&& location.Object().DBRef != where.Object().DBRef)
 			{
 				var maybeContents = mediator.CreateStream(new GetContentsQuery(location));
@@ -375,16 +373,6 @@ public partial class LocateService(
 				}
 			}
 
-			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
-			{
-				var list = new List<AnySharpObject> { location.WithExitOption() };
-				(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, list.ToAsyncEnumerable(), looker,
-					where,
-					bestMatch, exact, final, curr, right_type, flags, name);
-				if (c == ControlFlow.Break) break;
-				if (c == ControlFlow.Return) break;
-			}
-
 			if (flags.HasFlag(LocateFlags.ExitsPreference) || flags.HasFlag(LocateFlags.NoTypePreference))
 			{
 				if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
@@ -434,7 +422,7 @@ public partial class LocateService(
 			LocateFlags flags,
 			string name)
 	{
-		ControlFlow flow = ControlFlow.Break;
+		ControlFlow flow = ControlFlow.Continue;
 
 		await foreach (var item in list)
 		{
@@ -463,8 +451,8 @@ public partial class LocateService(
 			}
 			// Exact name/alias match (full == true → 'exact' match in PennMUSH terms)
 			else if (
-				(cur.IsPlayer && cur.Aliases.Contains(name))
-				|| (cur.IsExit && (cur.Aliases.Contains(name) ||
+				(cur.IsPlayer && cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)))
+				|| (cur.IsExit && (cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)) ||
 													 cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
 				|| (!cur.IsExit && string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
@@ -475,10 +463,10 @@ public partial class LocateService(
 				if (flow == ControlFlow.Continue) continue;
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
-			// Partial (prefix) match for non-exit objects, matching PennMUSH string_match() behavior
+			// Partial (prefix) match for non-exit objects and player aliases, matching PennMUSH string_match() behavior
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
-							 && !cur.IsExit
-							 && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+							 && ((cur.IsPlayer && cur.Aliases.Any(a => a.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
+									 || (!cur.IsExit && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -535,7 +523,7 @@ public partial class LocateService(
 			LocateFlags flags)
 	{
 		if (flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-				&& !await permissionService.Controls(looker, where))
+				&& !await permissionService.Controls(looker, cur))
 		{
 			return (new Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
 		}

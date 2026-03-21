@@ -287,10 +287,10 @@ without bypassing visibility.
 | 4.1 | `CanInteract` proximity check | Enforces Interact_Lock and proximity | Always returns `true` (stub) | ⚠️ Stub |
 | 4.2 | `CanGoto` lock check | Checks Leave_Lock / Enter_Lock | Always returns `true` (stub) | ⚠️ Stub |
 | 4.3 | `OnlyMatchLookerControlledObjects` | Per-candidate check | Checks `where`, not `cur` | ⚠️ Bug |
-| 4.4 | Inventory search without remote flag | Searches contents of looker | Adds room as single candidate | ⚠️ Bug |
-| 4.5 | `All` flag completeness | Includes remote contents | Missing `MatchRemoteContents` | ⚠️ Gap |
-| 4.6 | `MatchRemoteContents` exclusion | Additive search | Mutually exclusive with location search | ⚠️ Gap |
-| 4.7 | `CreateStream` null safety | N/A | Inconsistent null guards | ⚠️ Risk |
-| 4.8 | Player alias prefix matching | Prefix search on aliases | Exact only | ⚠️ Gap |
+| 4.4 | Inventory search without remote flag | Searches contents of looker | Fixed: iterates `where` contents directly | ✅ Fixed |
+| 4.5 | `All` flag completeness | Includes remote contents | Fixed: `MatchRemoteContents` added to `All` | ✅ Fixed |
+| 4.6 | `MatchAgainstLookerLocationName` exclusion | Additive search | Fixed: removed `!MatchRemoteContents` guard | ✅ Fixed |
+| 4.7 | `CreateStream` null safety | N/A | Fixed: `?.` guard applied consistently | ✅ Fixed |
+| 4.8 | Player alias prefix matching | Prefix search on aliases | Fixed: `Any(a => a.StartsWith(...))` | ✅ Fixed |
 | 4.9 | `MAT_NOFAIL` / `NoVisibilityCheck` | Suppresses notification | Skips visibility check | ⚠️ Semantic diff |
 | 5.x | Various code quality | N/A | See §5 | ⚠️ Quality |
