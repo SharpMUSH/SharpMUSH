@@ -209,14 +209,16 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(resultWithControlRequired.IsValid()).IsTrue();
 		await Assert.That(resultWithoutControlRequired.IsValid()).IsTrue();
 
-		// Now test when player does NOT control themselves (edge case)
-		_permissionService.Controls(player, player)
+		// Now test when the executor does NOT control themselves (edge case).
+		// In Locate(parser, looker=player, executor=target, "me", ...), the 'me' resolution
+		// uses the executor (target) as the LocateMatch 'looker', so Controls(target, target) is checked.
+		_permissionService.Controls(target, target)
 			.Returns(false);
 
 		var resultNoSelfControl = await _locateService.Locate(_parser, player, target, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
-		// Should fail with permission error when looker can't control themselves
+		// Should fail with permission error when executor can't control themselves
 		await Assert.That(resultNoSelfControl.IsError).IsTrue();
 		await Assert.That(resultNoSelfControl.AsError.Value).IsEqualTo(Errors.ErrorPerm);
 	}
