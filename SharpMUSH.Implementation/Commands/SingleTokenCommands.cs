@@ -40,7 +40,7 @@ public partial class Commands
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			enactor,
 			executor,
-			args["1"].Message!.ToString(), LocateFlags.All, async realLocated =>
+			args["1"].Message!.ToString(), LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
 				MString contents;
 				if (args.TryGetValue("2", out var tmpContents))

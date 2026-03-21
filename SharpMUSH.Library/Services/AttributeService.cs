@@ -232,6 +232,12 @@ public class AttributeService(
 		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
 
+		if (!applyPredicate && !lambdaPredicate && attribute.Length == 0)
+		{
+			return await EvaluateAttributeFunctionAsync(parser, executor, executor,
+				objPlainText, args, evalParent, ignorePermissions);
+		}
+
 		// Skip attribute name validation for lambda/apply: the "attribute" part is
 		// executable code, not a database attribute name, and can contain characters
 		// (e.g. '[', ']', '\') that are not valid in attribute names.

@@ -112,6 +112,13 @@ public partial class LocateService(
 		if (match.IsNone) return match.AsNone;
 
 		var result = match.WithoutError().WithoutNone();
+
+		// PennMUSH: absolute dbref matches (#N) always bypass visibility checks.
+		if (flags.HasFlag(LocateFlags.NoVisibilityCheck) || HelperFunctions.ParseDbRef(name).IsSome())
+		{
+			return result.WithNoneOption().WithErrorOption();
+		}
+
 		var location = await FriendlyWhereIs(result);
 
 		if (await permissionService.CanExamine(executor, location.WithExitOption()) ||
@@ -191,9 +198,9 @@ public partial class LocateService(
 				&& name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					|| await permissionService.Controls(looker, where))
+					|| await permissionService.Controls(looker, looker))
 			{
-				return where.WithNoneOption().WithErrorOption();
+				return looker.WithNoneOption().WithErrorOption();
 			}
 
 			return new Error<string>(Errors.ErrorPerm);
@@ -204,9 +211,9 @@ public partial class LocateService(
 				&& name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					|| await permissionService.Controls(looker, where))
+					|| await permissionService.Controls(looker, looker))
 			{
-				return (await FriendlyWhereIs(where)).WithExitOption().WithNoneOption().WithErrorOption();
+				return (await FriendlyWhereIs(looker)).WithExitOption().WithNoneOption().WithErrorOption();
 			}
 
 			return new Error<string>(Errors.ErrorPerm);

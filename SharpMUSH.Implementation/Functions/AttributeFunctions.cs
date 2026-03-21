@@ -551,7 +551,7 @@ public partial class Functions
 		var (db, attr) = details;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All, async realLocated =>
+			parser, executor, executor, db, LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
 				return split.AsT0 switch
 				{
@@ -1519,7 +1519,7 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
-					Registers = [],
+					Registers = new([[]]),
 					Executor = actualObject.Object().DBRef,
 					Caller = s.Executor
 				},
@@ -1593,7 +1593,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		return await parser.With(s => s with { Registers = [] },
+		return await parser.With(s => s with { Registers = new([[]]) },
 			async np => await AttributeService!.EvaluateAttributeFunctionAsync(
 				np,
 				executor,
