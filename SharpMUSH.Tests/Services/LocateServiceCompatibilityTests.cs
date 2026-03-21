@@ -162,10 +162,11 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_PermissionCheck_ShouldUseCorrectLogic()
 	{
-		// This test verifies the fix for the permission check logic
+		// This test verifies the permission check logic for 'me' resolution.
+		// After the PennMUSH compatibility fix, 'me' resolves to the looker (executor),
+		// not the where parameter. So Controls(looker, looker) is checked.
 
 		// Arrange
-		// Create players in DIFFERENT locations to test permission check
 		var room1 = _factory.CreateRoom(1001, "Room 1");
 		var room2 = _factory.CreateRoom(1002, "Room 2");
 
@@ -176,12 +177,13 @@ public class LocateServiceCompatibilityTests
 		_mediator.Send(Arg.Is<GetPlayerQuery>(q => true), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult(AsyncEnumerable.Empty<SharpPlayer>()));
 
-		_permissionService.Controls(player, target)
-			.Returns(false);
-
-		// But player can control themselves
+		// Player can control themselves
 		_permissionService.Controls(player, player)
 			.Returns(true);
+
+		// Player cannot control target
+		_permissionService.Controls(player, target)
+			.Returns(false);
 
 		// Target can control themselves  
 		_permissionService.Controls(target, target)
@@ -194,19 +196,29 @@ public class LocateServiceCompatibilityTests
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
-		// Act - with OnlyMatchLookerControlledObjects, should fail when player doesn't control target
-		// Use PreferLockPass to prevent auto-adding flags
+		// Act - 'me' resolves to looker (player), and Controls(player, player) is true,
+		// so OnlyMatchLookerControlledObjects should succeed
 		var resultWithControlRequired = await _locateService.Locate(_parser, player, target, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
-		// Act - without OnlyMatchLookerControlledObjects, should succeed
+		// Act - without OnlyMatchLookerControlledObjects, should also succeed
 		var resultWithoutControlRequired = await _locateService.Locate(_parser, player, target, "me",
 			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
-		// Assert
-		await Assert.That(resultWithControlRequired.IsError).IsTrue();
-		await Assert.That(resultWithControlRequired.AsError.Value).IsEqualTo(Errors.ErrorPerm);
+		// Assert - both should succeed since 'me' = looker = player, and player controls themselves
+		await Assert.That(resultWithControlRequired.IsValid()).IsTrue();
 		await Assert.That(resultWithoutControlRequired.IsValid()).IsTrue();
+
+		// Now test when player does NOT control themselves (edge case)
+		_permissionService.Controls(player, player)
+			.Returns(false);
+
+		var resultNoSelfControl = await _locateService.Locate(_parser, player, target, "me",
+			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
+
+		// Should fail with permission error when looker can't control themselves
+		await Assert.That(resultNoSelfControl.IsError).IsTrue();
+		await Assert.That(resultNoSelfControl.AsError.Value).IsEqualTo(Errors.ErrorPerm);
 	}
 
 	[Test]
