@@ -28,8 +28,10 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 				.DistinctBy(x => x.Name)
 		};
 
+		// PennMUSH: God can always set. Wizard can set non-God attrs. Non-wizard can set
+		// if attr is not wizard-level and (not locked or attr-owner matches target-owner).
+		// TODO: Internal and SAFE attribute flag checks not yet implemented.
 		return !(!executor.IsGod()
-						 // && (It's Internal // SAFE when we care about SAFE)
 						 && !(await executor.IsWizard()
 									|| (!compressedAttribute.IsWizard()
 											&& (!compressedAttribute.IsLocked()
