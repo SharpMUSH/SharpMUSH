@@ -1519,7 +1519,7 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
-					Registers = [],
+					Registers = new([[]]),
 					Executor = actualObject.Object().DBRef,
 					Caller = s.Executor
 				},
@@ -1593,7 +1593,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		return await parser.With(s => s with { Registers = [] },
+		return await parser.With(s => s with { Registers = new([[]]) },
 			async np => await AttributeService!.EvaluateAttributeFunctionAsync(
 				np,
 				executor,
