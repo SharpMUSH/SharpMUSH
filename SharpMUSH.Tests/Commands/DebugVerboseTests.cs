@@ -700,6 +700,15 @@ public class DebugVerboseTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
 
+		// Assert: pre-eval debug line should preserve ## token literally in strlen(##)
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, "strlen(##)")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
 		// Assert: strlen result (5 = length of "Hello") should appear in debug output
 		await NotifyService
 			.Received()

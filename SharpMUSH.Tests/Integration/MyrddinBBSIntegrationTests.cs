@@ -34,7 +34,8 @@ public class MyrddinBBSIntegrationTests
 	/// </summary>
 	private static string[] ReadBBSInstallScript()
 	{
-		var scriptPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, ScriptFileName);
+		var scriptRelative = Path.Combine(TestDataDir, ScriptFileName);
+		var scriptPath = Path.Combine(AppContext.BaseDirectory, scriptRelative);
 		if (!File.Exists(scriptPath))
 		{
 			throw new FileNotFoundException(
@@ -113,8 +114,9 @@ public class MyrddinBBSIntegrationTests
 		// Step 1: Set #1 to DEBUG, VERBOSE, and PUPPET for detailed output,
 		// and ensure the WIZARD flag is set (required by BBS commands).
 		// PUPPET is only valid for Things per PennMUSH, so @set #1=PUPPET on
-		// a Player will produce a "permission denied" or no-op - this is expected
-		// and not treated as a test failure.
+		// a Player is expected to fail with a type-restriction message such as
+		// "Flag: PUPPET cannot be set on object type: PLAYER." and is not treated
+		// as a test failure.
 		// ====================================================================
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=WIZARD"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=DEBUG"));
@@ -393,7 +395,8 @@ public class MyrddinBBSIntegrationTests
 		// ====================================================================
 		// Step 6: Write output to text file
 		// ====================================================================
-		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, OutputFileName);
+		var outputFileRelative = Path.Combine(TestDataDir, OutputFileName);
+		var outputPath = Path.Combine(AppContext.BaseDirectory, outputFileRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"[BBS INSTALL] Full test output written to: {outputPath}");
 
@@ -474,7 +477,7 @@ public class MyrddinBBSIntegrationTests
 					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=VERBOSE"));
 					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=PUPPET"));
 				}
-				catch (Exception flagEx)
+				catch (Exception flagEx) when (flagEx is not OperationCanceledException and not TaskCanceledException)
 				{
 					Log($"[BBS NEWGROUP] WARNING: Failed to set diagnostic flags on group: {flagEx.Message}");
 				}
@@ -484,7 +487,7 @@ public class MyrddinBBSIntegrationTests
 				Log($"[BBS NEWGROUP] WARNING: Could not find group '{groupName}', num() returned: {groupDbref}");
 			}
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException and not TaskCanceledException)
 		{
 			Log($"[BBS NEWGROUP] WARNING: Exception looking up group dbref: {ex.Message}");
 		}
@@ -598,7 +601,8 @@ public class MyrddinBBSIntegrationTests
 		}
 
 		// Write output file for this test
-		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_NewGroup_TestOutput.txt");
+		var outputFileRelative = Path.Combine(TestDataDir, "MyrddinBBS_NewGroup_TestOutput.txt");
+		var outputPath = Path.Combine(AppContext.BaseDirectory, outputFileRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"[BBS NEWGROUP] Full test output written to: {outputPath}");
 
@@ -664,8 +668,8 @@ public class MyrddinBBSIntegrationTests
 		catch (Exception ex)
 		{
 			Log($"[BBS POST ERROR] +bbpost execution failed: {ex.Message}");
+			throw;
 		}
-
 		// Wait for any @wait callbacks in the post flow
 		await Task.Delay(5000);
 
@@ -731,6 +735,7 @@ public class MyrddinBBSIntegrationTests
 		catch (Exception ex)
 		{
 			Log($"[BBS READ ERROR] +bbread 1/1 execution failed: {ex.Message}");
+			throw;
 		}
 
 		// Collect +bbread 1/1 notifications
@@ -778,6 +783,7 @@ public class MyrddinBBSIntegrationTests
 		catch (Exception ex)
 		{
 			Log($"\n[BBS READ ERROR] +bbread (list) execution failed: {ex.Message}");
+			throw;
 		}
 
 		var listMessages = new List<(int Index, string Message)>();
@@ -860,7 +866,8 @@ public class MyrddinBBSIntegrationTests
 		Log($"\n{new string('=', 78)}");
 
 		// Write output file for this test
-		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_PostRead_TestOutput.txt");
+		var postReadOutputRelative = Path.Combine(TestDataDir, "MyrddinBBS_PostRead_TestOutput.txt");
+		var outputPath = Path.Combine(AppContext.BaseDirectory, postReadOutputRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
 		Console.WriteLine($"[BBS POST/READ] Full test output written to: {outputPath}");
 
