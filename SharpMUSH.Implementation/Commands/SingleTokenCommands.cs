@@ -37,6 +37,13 @@ public partial class Commands
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
+		// The attribute name (arg["0"]) is extracted from the raw command token (e.g. &hdr_%q1 obj=val
+		// → attr="hdr_%q1"). In PennMUSH, the attribute name IS evaluated so that register
+		// substitutions like %q1 resolve to their current values before the attribute is set.
+		var attrNameRaw = args["0"].Message ?? MModule.empty();
+		var attrNameParsed = (await parser.FunctionParse(attrNameRaw))?.Message ?? attrNameRaw;
+		var attrName = MModule.plainText(attrNameParsed);
+
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			enactor,
 			executor,
@@ -60,16 +67,15 @@ public partial class Commands
 				}
 
 				var setResult =
-					await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!),
-						contents);
+					await AttributeService!.SetAttributeAsync(executor, realLocated, attrName, contents);
 				await NotifyService!.Notify(enactor,
 					setResult.Match(
-						_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+						_ => $"{realLocated.Object().Name}/{attrNameParsed} - Set.",
 						failure => failure.Value)
 				);
 
 				return new CallState(setResult.Match(
-					_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+					_ => $"{realLocated.Object().Name}/{attrNameParsed}",
 					_ => string.Empty));
 			});
 	}

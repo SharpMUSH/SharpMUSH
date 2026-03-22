@@ -1676,9 +1676,11 @@ public class SharpMUSHParserVisitor(
 
 		if (eqSplit)
 		{
-			arguments.Add(noParse
-				? new CallState(argCallState.Arguments.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
-				: (await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);
+			// The LHS of an EqSplit command (object reference, expression, etc.) is always evaluated
+			// even for NoParse commands like '&'. In PennMUSH, '&' NoParse behavior applies only to
+			// the RHS value — the object/attribute name LHS is fully evaluated so that register
+			// substitutions like %q0 resolve to their current values before the locate step.
+			arguments.Add((await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);
 
 			if (nArgs < 2) return arguments;
 

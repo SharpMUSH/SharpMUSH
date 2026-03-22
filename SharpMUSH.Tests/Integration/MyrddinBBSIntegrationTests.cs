@@ -847,5 +847,39 @@ public class MyrddinBBSIntegrationTests
 		// The +bbread 1/1 command should produce some output
 		await Assert.That(readMessages.Count).IsGreaterThan(0)
 			.Because("+bbread 1/1 should produce at least one notification");
+
+		// The post confirmation should include the correct title (not just the group number)
+		var postConfirmation = postMessages
+			.FirstOrDefault(m => m.Message.Contains("You post your note about", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(postConfirmation.Message).IsNotNull()
+			.Because("+bbpost should emit 'You post your note about' confirmation");
+		await Assert.That(postConfirmation.Message).Contains("Title Goes Here")
+			.Because("+bbpost should use the correct title 'Title Goes Here', not the group number");
+
+		// The attributes (mess_lst, hdr, bdy) should all be SET on the group
+		var messLstSet = postMessages.Any(m => m.Message.Contains("mess_lst SET", StringComparison.OrdinalIgnoreCase)
+			|| m.Message.Contains("/mess_lst - Set.", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(messLstSet).IsTrue()
+			.Because("mess_lst attribute should be SET on the group after +bbpost");
+
+		var hdrSet = postMessages.Any(m => m.Message.Contains("hdr_", StringComparison.OrdinalIgnoreCase)
+			&& m.Message.Contains("SET", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(hdrSet).IsTrue()
+			.Because("hdr_ attribute should be SET on the group after +bbpost");
+
+		var bdySet = postMessages.Any(m => m.Message.Contains("bdy_", StringComparison.OrdinalIgnoreCase)
+			&& m.Message.Contains("SET", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(bdySet).IsTrue()
+			.Because("bdy_ attribute should be SET on the group after +bbpost");
+
+		// +bbread 1/1 should show the message header with the correct title
+		var readHasTitle = readMessages.Any(m => m.Message.Contains("Title Goes Here", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(readHasTitle).IsTrue()
+			.Because("+bbread 1/1 should display the message title 'Title Goes Here'");
+
+		// +bbread 1/1 should show the message body
+		var readHasBody = readMessages.Any(m => m.Message.Contains("Body of the test post.", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(readHasBody).IsTrue()
+			.Because("+bbread 1/1 should display the message body 'Body of the test post.'");
 	}
 }
