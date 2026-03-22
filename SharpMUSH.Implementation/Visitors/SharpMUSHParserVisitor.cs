@@ -1564,15 +1564,14 @@ public class SharpMUSHParserVisitor(
 		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
 		// - RSBrace (PennMUSH CS_BRACES): commands like @wait, @force, @halt preserve braces
 		//   during parsing, then strip them at execution time via StripOuterBraces.
-		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like & store the raw value text.
+		//   Also used for & (attribute value storage): player-typed `& ATTR OBJ={code}` must
+		//   store the braces verbatim so get(OBJ/ATTR) returns `{code}`, matching PennMUSH.
+		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like ] store the raw value text.
 		//   In PennMUSH, noeval arguments never go through process_expression, so braces
 		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
 		//   preserve braces via the flag to match PennMUSH behavior.
-		// - RSNoParse: same reasoning as NoParse — the RHS value is stored as raw MUSH code
-		//   and must have its braces preserved during the ANTLR walk.
 		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
-			|| behavior.HasFlag(CommandBehavior.NoParse)
-			|| behavior.HasFlag(CommandBehavior.RSNoParse);
+			|| behavior.HasFlag(CommandBehavior.NoParse);
 		var newFlags = preserveBraces
 			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;

@@ -703,6 +703,12 @@ public class MyrddinBBSIntegrationTests
 			throw;
 		}
 
+		// Wait for async @dolist callbacks to complete (the BBS +bbread uses @dolist without
+		// INLINE/INPLACE, so each iteration body is queued asynchronously via the scheduler).
+		await Task.Delay(5000);
+		var postReadNotifications = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
 		// Collect +bbread 1/1 notifications
 		var readMessages = new List<(int Index, string Message)>();
 		var readErrors = new List<(int Index, string Message)>();
@@ -714,6 +720,7 @@ public class MyrddinBBSIntegrationTests
 		{
 			rIndex++;
 			if (rIndex <= preReadNotifications) continue;
+			if (rIndex > postReadNotifications) break;
 
 			readMessages.Add((rIndex, messageText));
 
@@ -848,9 +855,11 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(readMessages.Count).IsGreaterThan(0)
 			.Because("+bbread 1/1 should produce at least one notification");
 
-		// The post confirmation should include the correct title (not just the group number)
+		// The post confirmation should include the correct title (not just the group number).
+		// Use StartsWith to avoid matching the VERBOSE output line (e.g., "#4] ...@pemit %#=You post your note about '%1'...")
+		// which contains the raw command code before %1 is substituted.
 		var postConfirmation = postMessages
-			.FirstOrDefault(m => m.Message.Contains("You post your note about", StringComparison.OrdinalIgnoreCase));
+			.FirstOrDefault(m => m.Message.TrimStart().StartsWith("You post your note about", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(postConfirmation.Message).IsNotNull()
 			.Because("+bbpost should emit 'You post your note about' confirmation");
 		await Assert.That(postConfirmation.Message).Contains("Title Goes Here")
