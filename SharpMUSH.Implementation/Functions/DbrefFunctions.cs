@@ -586,7 +586,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Localize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await parser
 				 .With(
-					 x => x with { Registers = [] },
+					 x => x with { Registers = new([[]]) },
 					 newParser => newParser.FunctionParse(parser.CurrentState.Arguments["0"].Message!))
 			 ?? CallState.Empty;
 

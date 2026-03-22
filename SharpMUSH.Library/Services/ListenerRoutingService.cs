@@ -255,7 +255,7 @@ public class ListenerRoutingService(
 
 		var prefix = prefixAttr.IsAttribute
 			? prefixAttr.AsAttribute.Last().Value.ToPlainText()
-			: $"[{puppet.Object().Name}] ";
+			: $"{puppet.Object().Name}> ";
 
 		// Relay message to owner with prefix
 		var relayedText = message.Match(

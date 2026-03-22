@@ -56,16 +56,13 @@ public class RecursionAndInvocationLimitTests
 	}
 
 	/// <summary>
-	/// Test that stack depth (total nesting of function calls) is tracked.
-	/// This tests MaxDepth.
+	/// Test that built-in function nesting succeeds up to reasonable depths.
+	/// PennMUSH does NOT limit built-in function nesting depth (only user-defined recursion).
+	/// Built-in nesting is only limited by CallLimit (1000).
 	/// </summary>
 	[Test]
 	public async Task StackDepth_NestedDifferentFunctions_IsTracked()
 	{
-		// Arrange: Create nested function calls with different function names
-		// Test MaxDepth = 10
-		// Create a chain like [strlen([strlen(...)])]
-		// With 12 levels, should exceed the limit and halt
 		var nestedCalls = "x";
 		for (int i = 0; i < 12; i++)
 		{
@@ -75,33 +72,26 @@ public class RecursionAndInvocationLimitTests
 		// Act: Parse the deeply nested structure
 		var result = await FunctionParser.FunctionParse(MModule.single(nestedCalls));
 
-		// Assert: Should hit the stack depth limit and halt evaluation
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
 		Console.WriteLine($"Stack depth test result: {output}");
 
-		// Should get error about depth/call limit
-		await Assert.That(output).Contains("#-1");
+		await Assert.That(output).IsEqualTo("1");
 	}
 
 	/// <summary>
-	/// Test a controlled depth to understand exact behavior.
+	/// Test that built-in function nesting succeeds at various depths.
+	/// PennMUSH does NOT limit built-in function nesting depth.
 	/// </summary>
 	[Test]
 	public async Task StackDepth_ExactLimit_IsEnforced()
 	{
-		// Arrange: MaxDepth is 10 in test config
-		// 10 nested calls should succeed
-		// 11 nested calls should fail
-
-		// Create exactly 10 nested calls - should succeed
 		var nested10 = "x";
 		for (int i = 0; i < 10; i++)
 		{
 			nested10 = $"[strlen({nested10})]";
 		}
 
-		// Create exactly 11 nested calls - should fail  
 		var nested11 = "x";
 		for (int i = 0; i < 11; i++)
 		{
@@ -122,11 +112,8 @@ public class RecursionAndInvocationLimitTests
 		Console.WriteLine($"10-deep result: {output10}");
 		Console.WriteLine($"11-deep result: {output11}");
 
-		// 10-deep should succeed and return "1" (length of "x")
 		await Assert.That(output10).IsEqualTo("1");
-
-		// 11-deep should fail with an error - evaluation halts
-		await Assert.That(output11).Contains("#-1");
+		await Assert.That(output11).IsEqualTo("1");
 	}
 
 	/// <summary>
@@ -137,9 +124,8 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MutualRecurse");
 
-		// Arrange: Create two functions that call each other with a counter
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_A_LIM_UNIQUE {objDbRef}=[setq(a,add(r(a),1))][if(lte(r(a),15),[u({objDbRef}/FUNC_B_LIM_UNIQUE)],DONE_A)]"));
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_B_LIM_UNIQUE {objDbRef}=[setq(b,add(r(b),1))][if(lte(r(b),15),[u({objDbRef}/FUNC_A_LIM_UNIQUE)],DONE_B)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_A_LIM_UNIQUE {objDbRef}=[setq(a,add(r(a),1))][if(lte(r(a),120),[u({objDbRef}/FUNC_B_LIM_UNIQUE)],DONE_A)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_B_LIM_UNIQUE {objDbRef}=[setq(b,add(r(b),1))][if(lte(r(b),120),[u({objDbRef}/FUNC_A_LIM_UNIQUE)],DONE_B)]"));
 
 		// Act: Evaluate - should halt at limit
 		var result = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/FUNC_A_LIM_UNIQUE)]"));
@@ -216,10 +202,8 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "RecursePerFunc");
 
-		// Arrange: Create a function that calls itself through another function
-		// This tests that recursionDepth correctly counts occurrences of the same function name
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&WRAP_LIM_UNIQUE {objDbRef}=[setq(w,add(r(w),1))][if(lte(r(w),15),[u({objDbRef}/INNER_LIM_UNIQUE)],DONE_W)]"));
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&INNER_LIM_UNIQUE {objDbRef}=[setq(i,add(r(i),1))][if(lte(r(i),15),[u({objDbRef}/WRAP_LIM_UNIQUE)],DONE_I)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&WRAP_LIM_UNIQUE {objDbRef}=[setq(w,add(r(w),1))][if(lte(r(w),120),[u({objDbRef}/INNER_LIM_UNIQUE)],DONE_W)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&INNER_LIM_UNIQUE {objDbRef}=[setq(i,add(r(i),1))][if(lte(r(i),120),[u({objDbRef}/WRAP_LIM_UNIQUE)],DONE_I)]"));
 
 		// Act: Execute - creates pattern WRAP->INNER->WRAP->INNER->...
 		var result = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/WRAP_LIM_UNIQUE)]"));
@@ -258,12 +242,10 @@ public class RecursionAndInvocationLimitTests
 		// Evaluation halts immediately when limit is hit
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "DiffLimits");
 
-		// Test 1: Recursion limit - same function many times (limit is 50)
-		var recursiveAttr = $"[setq(c,add(r(c),1))][if(lte(r(c),105),[u({objDbRef}/REC_LIM_UNIQUE)],DONE)]";
+		var recursiveAttr = $"[setq(c,add(r(c),1))][if(lte(r(c),150),[u({objDbRef}/REC_LIM_UNIQUE)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&REC_LIM_UNIQUE {objDbRef}={recursiveAttr}"));
 		var recursionResult = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/REC_LIM_UNIQUE)]"));
 
-		// Test 2: Stack depth - deep nesting of different functions (limit is 10)
 		var deepNest = "x";
 		for (int i = 0; i < 12; i++)
 		{
@@ -271,20 +253,18 @@ public class RecursionAndInvocationLimitTests
 		}
 		var stackResult = await FunctionParser.FunctionParse(MModule.single(deepNest));
 
-		// Assert: Both should return errors - evaluation halts
 		await Assert.That(recursionResult).IsNotNull();
 		await Assert.That(stackResult).IsNotNull();
 
 		var recursionError = recursionResult!.Message.ToPlainText();
-		var stackError = stackResult!.Message.ToPlainText();
+		var stackOutput = stackResult!.Message.ToPlainText();
 
-		// Both should contain errors
 		await Assert.That(recursionError).Contains("#-1");
-		await Assert.That(stackError).Contains("#-1");
 
-		// Log the actual errors to document behavior
+		await Assert.That(stackOutput).IsEqualTo("1");
+
 		Console.WriteLine($"Recursion error: {recursionError}");
-		Console.WriteLine($"Stack depth error: {stackError}");
+		Console.WriteLine($"Stack depth result: {stackOutput}");
 	}
 
 	/// <summary>

@@ -112,6 +112,13 @@ public partial class LocateService(
 		if (match.IsNone) return match.AsNone;
 
 		var result = match.WithoutError().WithoutNone();
+
+		// PennMUSH: absolute dbref matches (#N) always bypass visibility checks.
+		if (flags.HasFlag(LocateFlags.NoVisibilityCheck) || HelperFunctions.ParseDbRef(name).IsSome())
+		{
+			return result.WithNoneOption().WithErrorOption();
+		}
+
 		var location = await FriendlyWhereIs(result);
 
 		if (await permissionService.CanExamine(executor, location.WithExitOption()) ||
@@ -191,9 +198,9 @@ public partial class LocateService(
 				&& name.Equals("me", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					|| await permissionService.Controls(looker, where))
+					|| await permissionService.Controls(looker, looker))
 			{
-				return where.WithNoneOption().WithErrorOption();
+				return looker.WithNoneOption().WithErrorOption();
 			}
 
 			return new Error<string>(Errors.ErrorPerm);
@@ -204,9 +211,9 @@ public partial class LocateService(
 				&& name.Equals("here", StringComparison.InvariantCultureIgnoreCase))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-					|| await permissionService.Controls(looker, where))
+					|| await permissionService.Controls(looker, looker))
 			{
-				return (await FriendlyWhereIs(where)).WithExitOption().WithNoneOption().WithErrorOption();
+				return (await FriendlyWhereIs(looker)).WithExitOption().WithNoneOption().WithErrorOption();
 			}
 
 			return new Error<string>(Errors.ErrorPerm);
@@ -275,12 +282,11 @@ public partial class LocateService(
 
 		while (true)
 		{
-			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory | LocateFlags.MatchRemoteContents) &&
-					where.IsContainer)
+			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory) && where.IsContainer)
 			{
 				var contents = mediator
 					.CreateStream(new GetContentsQuery(where.AsContainer))
-					.Select(x => x.WithRoomOption());
+					?.Select(x => x.WithRoomOption()) ?? Enumerable.Empty<AnySharpObject>().ToAsyncEnumerable();
 
 				(bestMatch, final, curr, right_type, exact, c) =
 					await Match_List(parser, contents, looker, where, bestMatch, exact, final, curr, right_type, flags, name);
@@ -290,7 +296,6 @@ public partial class LocateService(
 			}
 
 			if (flags.HasFlag(LocateFlags.MatchAgainstLookerLocationName)
-					&& !flags.HasFlag(LocateFlags.MatchRemoteContents)
 					&& location.Object().DBRef != where.Object().DBRef)
 			{
 				var maybeContents = mediator.CreateStream(new GetContentsQuery(location));
@@ -368,16 +373,6 @@ public partial class LocateService(
 				}
 			}
 
-			if (flags.HasFlag(LocateFlags.MatchObjectsInLookerInventory))
-			{
-				var list = new List<AnySharpObject> { location.WithExitOption() };
-				(bestMatch, final, curr, right_type, exact, c) = await Match_List(parser, list.ToAsyncEnumerable(), looker,
-					where,
-					bestMatch, exact, final, curr, right_type, flags, name);
-				if (c == ControlFlow.Break) break;
-				if (c == ControlFlow.Return) break;
-			}
-
 			if (flags.HasFlag(LocateFlags.ExitsPreference) || flags.HasFlag(LocateFlags.NoTypePreference))
 			{
 				if (flags.HasFlag(LocateFlags.ExitsInsideOfLooker)
@@ -427,7 +422,7 @@ public partial class LocateService(
 			LocateFlags flags,
 			string name)
 	{
-		ControlFlow flow = ControlFlow.Break;
+		ControlFlow flow = ControlFlow.Continue;
 
 		await foreach (var item in list)
 		{
@@ -452,12 +447,12 @@ public partial class LocateService(
 			}
 			else if (!await permissionService.CanInteract(looker, cur, IPermissionService.InteractType.Match))
 			{
-				// continue;
+				continue;
 			}
-			// Fixed: Corrected the inverted logic for non-exit name matching
+			// Exact name/alias match (full == true → 'exact' match in PennMUSH terms)
 			else if (
-				(cur.IsPlayer && cur.Aliases.Contains(name))
-				|| (cur.IsExit && (cur.Aliases.Contains(name) ||
+				(cur.IsPlayer && cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)))
+				|| (cur.IsExit && (cur.Aliases.Any(a => a.Equals(name, StringComparison.OrdinalIgnoreCase)) ||
 													 cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
 				|| (!cur.IsExit && string.Equals(cur.Object().Name, name, StringComparison.OrdinalIgnoreCase)))
 			{
@@ -468,9 +463,10 @@ public partial class LocateService(
 				if (flow == ControlFlow.Continue) continue;
 				if (flow == ControlFlow.Return) return (bestMatch, final, curr, rightType, exact, ControlFlow.Return);
 			}
+			// Partial (prefix) match for non-exit objects and player aliases, matching PennMUSH string_match() behavior
 			else if (!flags.HasFlag(LocateFlags.NoPartialMatches)
-							 && !cur.IsExit
-							 && cur.Object().Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+							 && ((cur.IsPlayer && cur.Aliases.Any(a => a.StartsWith(name, StringComparison.OrdinalIgnoreCase)))
+									 || (!cur.IsExit && cur.Object().Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))))
 			{
 				(bestMatch, final, curr, rightType, exact, flow) =
 					await Matched(parser, false, exact, final, curr, rightType, looker, where, cur, bestMatch, flags);
@@ -527,9 +523,11 @@ public partial class LocateService(
 			LocateFlags flags)
 	{
 		if (flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-				&& !await permissionService.Controls(looker, where))
+				&& !await permissionService.Controls(looker, cur))
 		{
-			return (new Error<string>(Errors.ErrorPerm), final, curr, right_type, exact, ControlFlow.Continue);
+			// PennMUSH match_list: uncontrolled objects are silently skipped (continue),
+			// preserving any previously found controlled match.
+			return (bestMatch, final, curr, right_type, exact, ControlFlow.Continue);
 		}
 
 		if (final == 0) // Not doing an English Match.
@@ -705,14 +703,22 @@ public partial class LocateService(
 			count = int.Parse(ordinalMatch.Groups["Number"].Value);
 			var ordinal = ordinalMatch.Groups["Ordinal"].Value;
 
-			// This is really only valid in English.
-			if (count < 1
-					|| Enumerable.Range(10, 14).Contains(count) &&
-					!ordinal.Equals("th", StringComparison.CurrentCultureIgnoreCase)
-					|| count % 10 == 1 && !ordinal.Equals("st", StringComparison.CurrentCultureIgnoreCase)
-					|| count % 10 == 2 && !ordinal.Equals("nd", StringComparison.CurrentCultureIgnoreCase)
-					|| count % 10 == 3 && !ordinal.Equals("rd", StringComparison.CurrentCultureIgnoreCase)
-					|| ordinal != "th")
+			// Validate the ordinal suffix, following PennMUSH parse_english() rules:
+			//   11th, 12th, 13th  → always "th"  (teen exception – not st/nd/rd)
+			//   *1  (excl. 11)    → "st"
+			//   *2  (excl. 12)    → "nd"
+			//   *3  (excl. 13)    → "rd"
+			//   everything else   → "th"
+			var mod100 = count % 100;
+			var isTeen = mod100 >= 11 && mod100 <= 13;
+			var mod10 = count % 10;
+
+			string expectedSuffix = (isTeen || mod10 == 0 || mod10 > 3) ? "th"
+				: mod10 == 1 ? "st"
+				: mod10 == 2 ? "nd"
+				: "rd"; // mod10 == 3
+
+			if (count < 1 || !ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
 			{
 				return (name, flags, 0);
 			}

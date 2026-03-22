@@ -3128,7 +3128,6 @@ public class Migration_CreateDatabase : IArangoMigration
 			Symbol = "P",
 			System = true,
 			TypeRestrictions = DatabaseConstants.typesThing
-				.Union(DatabaseConstants.typesRoom)
 		}),
 		await migrator.Context.Document.CreateAsync(handle, DatabaseConstants.ObjectFlags, new
 		{
