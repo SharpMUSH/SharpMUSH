@@ -40,7 +40,8 @@ public enum LocateFlags
 	NoVisibilityCheck = OnlyMatchLookerControlledObjects << 1,
 
 	All = (MatchMeForLooker | MatchHereForLookerLocation | AbsoluteMatch | MatchOptionalWildCardForPlayerName |
-				 MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching)
+				 MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching |
+				 MatchRemoteContents)
 }
 
 public interface ILocateService
