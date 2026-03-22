@@ -27,7 +27,11 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse | CommandBehavior.EqSplit,
+	// RSNoParse: only the RHS value is kept unevaluated (deferred/literal).
+	// The LHS (object/attribute name slot) is evaluated normally by ArgumentSplit so that
+	// register substitutions like %q0 in "& attr %q0=[value]" resolve before the locate step.
+	// This matches PennMUSH's CS_NOPARSE semantics for &, which apply only to the stored value.
+	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.RSNoParse | CommandBehavior.EqSplit,
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["object/attribute", "value"])]
 	public static async ValueTask<Option<CallState>> SetAttribute(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)

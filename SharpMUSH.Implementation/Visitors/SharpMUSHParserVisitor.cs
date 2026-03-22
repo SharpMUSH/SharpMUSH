@@ -1568,8 +1568,11 @@ public class SharpMUSHParserVisitor(
 		//   In PennMUSH, noeval arguments never go through process_expression, so braces
 		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
 		//   preserve braces via the flag to match PennMUSH behavior.
+		// - RSNoParse: same reasoning as NoParse — the RHS value is stored as raw MUSH code
+		//   and must have its braces preserved during the ANTLR walk.
 		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
-			|| behavior.HasFlag(CommandBehavior.NoParse);
+			|| behavior.HasFlag(CommandBehavior.NoParse)
+			|| behavior.HasFlag(CommandBehavior.RSNoParse);
 		var newFlags = preserveBraces
 			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
@@ -1676,11 +1679,12 @@ public class SharpMUSHParserVisitor(
 
 		if (eqSplit)
 		{
-			// The LHS of an EqSplit command (object reference, expression, etc.) is always evaluated
-			// even for NoParse commands like '&'. In PennMUSH, '&' NoParse behavior applies only to
-			// the RHS value — the object/attribute name LHS is fully evaluated so that register
-			// substitutions like %q0 resolve to their current values before the locate step.
-			arguments.Add((await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);
+			// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
+			// Commands that only want their RHS unevaluated (like &) use RSNoParse instead of NoParse,
+			// so that the LHS (object reference) is evaluated normally here while the RHS is deferred.
+			arguments.Add(noParse
+				? new CallState(argCallState.Arguments.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
+				: (await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);
 
 			if (nArgs < 2) return arguments;
 
