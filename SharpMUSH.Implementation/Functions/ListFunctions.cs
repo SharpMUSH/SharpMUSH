@@ -85,7 +85,7 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "LENGTH (arg 3)"));
 		}
 
-		var list = MModule.split2(delimiter, listArg);
+		var list = SplitList(delimiter, listArg);
 		var range = firstNumber > 0
 			? list.Skip(firstNumber - 1)
 			: Enumerable.TakeLast(list, Math.Abs(firstNumber));
@@ -94,6 +94,24 @@ public partial class Functions
 			: Enumerable.TakeLast(range, Math.Abs(lengthNumber));
 
 		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
+	}
+
+	/// <summary>
+	/// Splits a list by the given delimiter, matching PennMUSH list semantics:
+	/// when delimiter is a single space, empty entries (from leading/trailing/multiple spaces)
+	/// are filtered out, matching PennMUSH whitespace-list behavior.
+	/// </summary>
+	private static MString[] SplitList(MString delimiter, MString? list)
+	{
+		var items = MModule.split2(delimiter, list);
+		// PennMUSH space-delimited lists ignore leading/trailing/multiple spaces.
+		// Filter empty elements so extract(" 1", 1, 1) = "1" (not ""), matching PennMUSH.
+		// Use Length+Text check to avoid ToPlainText() allocation on non-space delimiters.
+		if (delimiter.Length == 1 && delimiter.Text == " ")
+		{
+			return items.Where(x => x.Length > 0).ToArray();
+		}
+		return items;
 	}
 
 	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
@@ -830,7 +848,7 @@ public partial class Functions
 		var list = args["0"].Message!;
 		var word = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MModule.split2(delimiter, list).Select(x => x.ToPlainText()).ToList();
+		var splitList = SplitList(delimiter, list).Select(x => x.ToPlainText()).ToList();
 
 		return ValueTask.FromResult<CallState>(splitList.IndexOf(word) + 1);
 	}
@@ -1870,7 +1888,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ListCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
-		var list = MModule.split2(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+		var list = SplitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
 		return new CallState(list.Length.ToString());
 	}
