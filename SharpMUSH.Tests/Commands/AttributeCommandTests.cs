@@ -70,6 +70,40 @@ public class AttributeCommandTests
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
+	/// <summary>
+	/// PennMUSH compatibility: braces inside NoParse attribute storage must be preserved.
+	/// Without this fix, <c>&amp;CMD obj=$cmd *:@switch expr=1,{body1},{body2}</c> would lose
+	/// the braces around <c>body1</c> and <c>body2</c>, breaking @switch flow control when the
+	/// command pattern is later triggered.
+	/// </summary>
+	[Test]
+	public async ValueTask SetAttribute_PreservesBracesInNoParse()
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBrace");
+		var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var attrName = $"CMD_BRACE_{uniqueId}";
+
+		// Store a $command pattern with braces around @switch case bodies
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{attrName} {objDbRef}=$+test_{uniqueId} *:@switch hasflag(%#,wizard)=1,{{@pemit %#=yes}},{{@pemit %#=no}}"));
+
+		// Verify the attribute was stored with braces intact
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
+			IAttributeService.AttributeMode.Read, false);
+
+		await Assert.That(attr.IsAttribute).IsTrue()
+			.Because($"&{attrName} should have been set");
+
+		var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
+
+		// The braces around @pemit bodies must survive NoParse attribute storage
+		await Assert.That(attrValue).Contains("{@pemit %#=yes}")
+			.Because("braces around @switch case bodies must be preserved in attribute storage");
+		await Assert.That(attrValue).Contains("{@pemit %#=no}")
+			.Because("braces around @switch case bodies must be preserved in attribute storage");
+	}
+
 	[Test]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{

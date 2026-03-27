@@ -51,7 +51,13 @@ public class TestObjectFactory
 	/// <summary>
 	/// Creates a player with all required properties and relationships
 	/// </summary>
-	public AnySharpObject CreatePlayer(int key, string name, SharpRoom? location = null)
+	public AnySharpObject CreatePlayer(int key, string name, SharpRoom? location = null) =>
+		CreatePlayer(key, name, Array.Empty<string>(), location);
+
+	/// <summary>
+	/// Creates a player with aliases and all required properties and relationships
+	/// </summary>
+	public AnySharpObject CreatePlayer(int key, string name, string[] aliases, SharpRoom? location = null)
 	{
 		if (_objects.TryGetValue(key, out var existingObject))
 			return existingObject;
@@ -88,7 +94,7 @@ public class TestObjectFactory
 		var player = new SharpPlayer
 		{
 			Object = sharpObject,
-			Aliases = Array.Empty<string>(),
+			Aliases = aliases,
 			Location = new(async ct => { await ValueTask.CompletedTask; return playerLocation; }),
 			Home = new(async ct => { await ValueTask.CompletedTask; return playerLocation; }),
 			PasswordHash = string.Empty,
@@ -104,7 +110,14 @@ public class TestObjectFactory
 	/// <summary>
 	/// Creates a thing with all required properties and relationships
 	/// </summary>
-	public AnySharpObject CreateThing(int key, string name, SharpRoom? location = null, AnySharpObject? owner = null)
+	public AnySharpObject CreateThing(int key, string name, SharpRoom? location = null, AnySharpObject? owner = null) =>
+		CreateThing(key, name, Array.Empty<string>(), location, owner);
+
+	/// <summary>
+	/// Creates a thing with aliases and all required properties and relationships
+	/// </summary>
+	public AnySharpObject CreateThing(int key, string name, string[] aliases, SharpRoom? location = null,
+		AnySharpObject? owner = null)
 	{
 		if (_objects.TryGetValue(key, out var existingObject))
 			return existingObject;
@@ -139,7 +152,7 @@ public class TestObjectFactory
 		var thing = new SharpThing
 		{
 			Object = sharpObject,
-			Aliases = Array.Empty<string>(),
+			Aliases = aliases,
 			Location = new(async ct => { await ValueTask.CompletedTask; return thingLocation; }),
 			Home = new(async ct => { await ValueTask.CompletedTask; return thingLocation; })
 		};
@@ -153,6 +166,49 @@ public class TestObjectFactory
 	/// Gets all rooms created by this factory
 	/// </summary>
 	public IEnumerable<SharpRoom> GetAllRooms() => _rooms.Values;
+
+	/// <summary>
+	/// Creates an exit with all required properties, aliases, source room and destination room.
+	/// </summary>
+	public AnySharpObject CreateExit(int key, string name, string[] aliases, SharpRoom sourceRoom,
+		SharpRoom? destRoom = null)
+	{
+		if (_objects.TryGetValue(key, out var existingObject))
+			return existingObject;
+
+		var destination = destRoom ?? sourceRoom;
+
+		var sharpObject = new SharpObject
+		{
+			Key = key,
+			CreationTime = 0L,
+			Name = name,
+			Type = "Exit",
+			Locks = ImmutableDictionary<string, Library.Models.SharpLockData>.Empty,
+			Owner = new(async ct => { await ValueTask.CompletedTask; return null!; }),
+			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
+			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
+			LazyAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
+			AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
+			LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
+			Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
+			Parent = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+			Zone = new(async ct => { await ValueTask.CompletedTask; return new None(); }),
+			Children = new(() => AsyncEnumerable.Empty<SharpObject>())
+		};
+
+		var exit = new SharpExit
+		{
+			Object = sharpObject,
+			Aliases = aliases,
+			Location = new(async ct => { await ValueTask.CompletedTask; return (AnySharpContainer)destination; }),
+			Home = new(async ct => { await ValueTask.CompletedTask; return (AnySharpContainer)sourceRoom; })
+		};
+
+		var anySharpObject = new AnySharpObject(exit);
+		_objects[key] = anySharpObject;
+		return anySharpObject;
+	}
 
 	/// <summary>
 	/// Gets all objects created by this factory

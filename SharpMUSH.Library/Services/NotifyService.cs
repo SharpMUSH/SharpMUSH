@@ -33,7 +33,7 @@ public class NotifyService(
 
 		// Ensure it ends with exactly one \r\n
 		text = text.TrimEnd('\r', '\n');
-		return text + "\r\n";
+		return text;
 	}
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)

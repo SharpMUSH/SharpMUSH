@@ -32,9 +32,16 @@ public enum LocateFlags
 	EnglishStyleMatching = MatchOptionalWildCardForPlayerName << 1,
 	NoPartialMatches = EnglishStyleMatching << 1,
 	OnlyMatchLookerControlledObjects = NoPartialMatches << 1,
+	/// <summary>
+	/// Skips the visibility check after locating the object. Used by functions like
+	/// hasflag() that should work on any object the executor can reference by dbref,
+	/// matching PennMUSH behavior.
+	/// </summary>
+	NoVisibilityCheck = OnlyMatchLookerControlledObjects << 1,
 
 	All = (MatchMeForLooker | MatchHereForLookerLocation | AbsoluteMatch | MatchOptionalWildCardForPlayerName |
-				 MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching)
+				 MatchObjectsInLookerLocation | MatchObjectsInLookerInventory | ExitsInTheRoomOfLooker | EnglishStyleMatching |
+				 MatchRemoteContents)
 }
 
 public interface ILocateService

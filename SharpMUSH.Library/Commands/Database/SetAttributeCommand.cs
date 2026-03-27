@@ -11,5 +11,5 @@ public record SetAttributeCommand(DBRef DBRef, string[] Attribute, MString Value
 		$"attribute:{DBRef}:{string.Join("`", Attribute)})",
 		$"commands:{DBRef}"
 	];
-	public string[] CacheTags => []; // [Definitions.CacheTags.ObjectAttributes];
+	public string[] CacheTags => [Definitions.CacheTags.ObjectAttributes];
 }

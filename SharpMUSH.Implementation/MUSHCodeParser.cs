@@ -221,9 +221,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public ValueTask<CallState?> CommandListParse(MString text)
 	{
 		// Push a fresh CommandHistory so @retry can track previous commands in this parse session.
+		// Also clear DirectInput: a CommandListParse is always a queue/callback context, never
+		// direct player input (equivalent to PennMUSH dropping the QUEUE_NOLIST flag here).
 		var freshParser = State.IsEmpty ? this : Push(CurrentState with
 		{
-			CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>()
+			CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>(),
+			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput
 		});
 		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse), freshParser);
 	}
@@ -252,7 +255,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		var chatContext = sharpParser.startCommandString();
 
-		SharpMUSHParserVisitor visitor = new(Logger, this,
+		// Clear DirectInput for the same reason as CommandListParse: this visitor is always
+		// used in a queue/callback context (e.g., @force, @trigger), never for direct player input.
+		var parserForList = State.IsEmpty ? this : Push(CurrentState with { Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput });
+
+		SharpMUSHParserVisitor visitor = new(Logger, parserForList,
 			Configuration,
 			_mediator,
 			_notifyService,
@@ -297,7 +304,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CallDepth: new InvocationCounter(),
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag()));
+			LimitExceeded: new LimitExceededFlag(),
+			Flags: ParserStateFlags.DirectInput));
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 
@@ -311,8 +319,17 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <returns>A completed task.</returns>
 	public async ValueTask<CallState> CommandParse(MString text)
 	{
-		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse));
+		// Derive DirectInput from the presence of a Handle: a live Handle means this is direct
+		// player input (equivalent to PennMUSH's QUEUE_NOLIST). No Handle means it is running
+		// in a programmatic or queue context where the RHS of & should be evaluated.
+		var baseFlags = State.IsEmpty ? ParserStateFlags.None : CurrentState.Flags;
+		var handle = State.IsEmpty ? null : CurrentState.Handle;
+		var derivedFlags = handle.HasValue
+			? baseFlags | ParserStateFlags.DirectInput
+			: baseFlags & ~ParserStateFlags.DirectInput;
 
+		var parserToUse = State.IsEmpty ? this : Push(CurrentState with { Flags = derivedFlags });
+		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), parserToUse);
 		return result ?? CallState.Empty;
 	}
 

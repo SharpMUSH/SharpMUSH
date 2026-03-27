@@ -586,7 +586,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Localize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await parser
 				 .With(
-					 x => x with { Registers = [] },
+					 x => x with { Registers = new([[]]) },
 					 newParser => newParser.FunctionParse(parser.CurrentState.Arguments["0"].Message!))
 			 ?? CallState.Empty;
 
@@ -1569,7 +1569,7 @@ LOCATE()
 			arg0,
 			LocateFlags.All,
 			found =>
-				ValueTask.FromResult<CallState>(found.Object().DBRef));
+				ValueTask.FromResult<CallState>($"#{found.Object().DBRef.Number}"));
 	}
 
 	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
