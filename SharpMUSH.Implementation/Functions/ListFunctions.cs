@@ -25,7 +25,7 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
 		var sep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
-		var list = MModule.split2(delimiter, listArg);
+		var list = MModule.splitList(delimiter, listArg);
 		var numbers = numbersArg.Split(" ");
 
 		var result = list.Where((_, i) => numbers.Contains(i.ToString()));
@@ -43,7 +43,7 @@ public partial class Functions
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, space);
 		var outSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delim);
 		var punctuation = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, ",");
-		var splitList = MModule.split2(delim, list) ?? [];
+		var splitList = MModule.splitList(delim, list) ?? [];
 
 		if (splitList.Length == 2)
 		{
@@ -85,7 +85,7 @@ public partial class Functions
 			return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "LENGTH (arg 3)"));
 		}
 
-		var list = SplitList(delimiter, listArg);
+		var list = MModule.splitList(delimiter, listArg);
 		var range = firstNumber > 0
 			? list.Skip(firstNumber - 1)
 			: Enumerable.TakeLast(list, Math.Abs(firstNumber));
@@ -94,24 +94,6 @@ public partial class Functions
 			: Enumerable.TakeLast(range, Math.Abs(lengthNumber));
 
 		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
-	}
-
-	/// <summary>
-	/// Splits a list by the given delimiter, matching PennMUSH list semantics:
-	/// when delimiter is a single space, empty entries (from leading/trailing/multiple spaces)
-	/// are filtered out, matching PennMUSH whitespace-list behavior.
-	/// </summary>
-	private static MString[] SplitList(MString delimiter, MString? list)
-	{
-		var items = MModule.split2(delimiter, list);
-		// PennMUSH space-delimited lists ignore leading/trailing/multiple spaces.
-		// Filter empty elements so extract(" 1", 1, 1) = "1" (not ""), matching PennMUSH.
-		// Use Length+Text check to avoid ToPlainText() allocation on non-space delimiters.
-		if (delimiter.Length == 1 && delimiter.Text == " ")
-		{
-			return items.Where(x => x.Length > 0).ToArray();
-		}
-		return items;
 	}
 
 	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
@@ -129,7 +111,7 @@ public partial class Functions
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		// Handle #lambda and #apply anonymous attribute forms
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -219,7 +201,7 @@ public partial class Functions
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		// Handle #lambda and #apply anonymous attribute forms
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -309,7 +291,7 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments["0"].Message;
-		var list = MModule.split2(delim, listArg);
+		var list = MModule.splitList(delim, listArg);
 		var first = list.FirstOrDefault() ?? MModule.empty();
 
 		return ValueTask.FromResult(new CallState(first));
@@ -344,7 +326,7 @@ public partial class Functions
 			? baseCaseArg.Message
 			: null;
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (list.Length == 0)
 		{
@@ -467,7 +449,7 @@ public partial class Functions
 		var regex = new System.Text.RegularExpressions.Regex(regPattern,
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MModule.split2(delimiter, list) ?? [];
+		var splitList = MModule.splitList(delimiter, list) ?? [];
 
 		return ValueTask.FromResult<CallState>(splitList
 			.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MModule.empty());
@@ -483,7 +465,7 @@ public partial class Functions
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
-		var splitList = MModule.split2(delimiter, list) ?? [];
+		var splitList = MModule.splitList(delimiter, list) ?? [];
 
 		return ValueTask.FromResult<CallState>(
 			MModule.multipleWithDelimiter(outputSep, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
@@ -508,7 +490,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
 		}
 
-		var list = MModule.split2(delimiter, listArg);
+		var list = MModule.splitList(delimiter, listArg);
 		var range = first > 0
 			? list.Skip(first - 1)
 			: Enumerable.TakeLast(list, Math.Abs(first));
@@ -526,7 +508,7 @@ public partial class Functions
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.split2(delim, listArg);
+		var list = MModule.splitList(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
 		{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
 		var result = new List<MString>();
@@ -597,7 +579,7 @@ public partial class Functions
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, space);
 		var conjunction = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "and");
 		var punctuation = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, ",");
-		var splitList = MModule.split2(delim, list) ?? [];
+		var splitList = MModule.splitList(delim, list) ?? [];
 
 		if (splitList.Length == 2)
 		{
@@ -682,7 +664,7 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
 		var listArg = parser.CurrentState.Arguments["0"].Message;
-		var list = MModule.split2(delim, listArg);
+		var list = MModule.splitList(delim, listArg);
 		var last = list.LastOrDefault() ?? MModule.empty();
 
 		return ValueTask.FromResult(new CallState(last));
@@ -697,7 +679,7 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
-		var list = MModule.split2(delimiter, listArg);
+		var list = MModule.splitList(delimiter, listArg);
 		var positions = positionsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 			.Select(p => int.TryParse(p, out var pos) ? pos : (int?)null)
 			.Where(p => p.HasValue)
@@ -734,7 +716,7 @@ public partial class Functions
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		// Handle #lambda and #apply anonymous attribute forms
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -812,7 +794,7 @@ public partial class Functions
 		var regex = new System.Text.RegularExpressions.Regex(regPattern,
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MModule.split2(delimiter, list) ?? [];
+		var splitList = MModule.splitList(delimiter, list) ?? [];
 
 		var index = splitList
 			.Select((item, i) => (item, pos: i + 1))
@@ -831,7 +813,7 @@ public partial class Functions
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
-		var splitList = MModule.split2(delimiter, list) ?? [];
+		var splitList = MModule.splitList(delimiter, list) ?? [];
 
 		var positions = splitList
 			.Select((item, i) => (item, pos: i + 1))
@@ -848,7 +830,7 @@ public partial class Functions
 		var list = args["0"].Message!;
 		var word = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = SplitList(delimiter, list).Select(x => x.ToPlainText()).ToList();
+		var splitList = MModule.splitList(delimiter, list).Select(x => x.ToPlainText()).ToList();
 
 		return ValueTask.FromResult<CallState>(splitList.IndexOf(word) + 1);
 	}
@@ -885,7 +867,7 @@ public partial class Functions
 		var maxLength = 0;
 		for (var i = 1; i <= listCount; i++)
 		{
-			var list = MModule.split2(delimiter, parser.CurrentState.ArgumentsOrdered[i.ToString()].Message!);
+			var list = MModule.splitList(delimiter, parser.CurrentState.ArgumentsOrdered[i.ToString()].Message!);
 			lists.Add(list);
 			maxLength = Math.Max(maxLength, list.Length);
 		}
@@ -991,8 +973,8 @@ public partial class Functions
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
 
-		var list1 = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
-		var list2 = MModule.split2(delim, parser.CurrentState.Arguments["2"].Message!);
+		var list1 = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list2 = MModule.splitList(delim, parser.CurrentState.Arguments["2"].Message!);
 
 		// Build args for the transformation call: %0 = whole list1, %1 = delimiter
 		var mungeArgs = new Dictionary<string, CallState>
@@ -1063,7 +1045,7 @@ public partial class Functions
 			transformedList1Str = (await newParser.FunctionParse(attrValue))!.Message!;
 		}
 
-		var transformedList1 = MModule.split2(delim, transformedList1Str);
+		var transformedList1 = MModule.splitList(delim, transformedList1Str);
 
 		// Create mapping from original list1 to list2
 		var mapping = new Dictionary<string, MString>();
@@ -1183,7 +1165,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(Errors.ErrorInteger));
 		}
 
-		var list = MModule.split2(delimiter, listArg);
+		var list = MModule.splitList(delimiter, listArg);
 		if (list.Length == 0)
 		{
 			return ValueTask.FromResult(CallState.Empty);
@@ -1219,7 +1201,7 @@ public partial class Functions
 		var list = orderedArgs["0"].Message!;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 1, " ");
 		return ValueTask.FromResult<CallState>(
-			MModule.split2(delimiter, list).RandomSubset(1).FirstOrDefault() ?? MModule.empty());
+			MModule.splitList(delimiter, list).RandomSubset(1).FirstOrDefault() ?? MModule.empty());
 	}
 
 	[SharpFunction(Name = "remove", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "words", "delimiter"])]
@@ -1230,8 +1212,8 @@ public partial class Functions
 		var words = parser.CurrentState.Arguments["1"].Message!;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 2, " ");
 
-		var splitList = MModule.split2(delimiter, list).ToList();
-		var splitWords = MModule.split2(delimiter, words);
+		var splitList = MModule.splitList(delimiter, list).ToList();
+		var splitWords = MModule.splitList(delimiter, words);
 
 		foreach (var word in splitWords)
 		{
@@ -1255,7 +1237,7 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var list = MModule.split2(delimiter, listArg).ToList();
+		var list = MModule.splitList(delimiter, listArg).ToList();
 		var positions = positionsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 			.Select(p => int.TryParse(p, out var pos) ? pos : (int?)null)
 			.Where(p => p.HasValue)
@@ -1282,7 +1264,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, " ");
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["0"].Message);
+		var list = MModule.splitList(delim, parser.CurrentState.Arguments["0"].Message);
 
 		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delim, list.Skip(1))));
 	}
@@ -1292,7 +1274,7 @@ public partial class Functions
 	{
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.split2(
+		var list = MModule.splitList(
 			delim,
 			(await parser.CurrentState.Arguments["0"].ParsedMessage())!) ?? [];
 
@@ -1307,7 +1289,7 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
 		var sep = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, delimiter);
 
-		var list = MModule.split2(delimiter, listArg) ?? [];
+		var list = MModule.splitList(delimiter, listArg) ?? [];
 		var shuffled = ShuffleExtension.Shuffle(list);
 		var result = MModule.multipleWithDelimiter(sep, shuffled);
 
@@ -1322,7 +1304,7 @@ public partial class Functions
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 1, MModule.single("")).ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 2, MModule.single(" "));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
-		var listItems = MModule.split2(delimiter, list);
+		var listItems = MModule.splitList(delimiter, list);
 
 		var sorted = SortService!.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
 			SortService!.StringToSortType(sortType));
@@ -1339,7 +1321,7 @@ public partial class Functions
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!).ToList();
+		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!).ToList();
 
 		async Task<int> CompareViaLambda(MString a, MString b)
 		{
@@ -1477,7 +1459,7 @@ public partial class Functions
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
 
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		IEnumerable<string> keys;
 
@@ -1585,8 +1567,8 @@ public partial class Functions
 		// The 4th argument is the delimiter used to split both lists and join the result
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
 
-		var list = MModule.split2(delimiter, listArg);
-		var list2 = MModule.split2(delimiter, list2Arg);
+		var list = MModule.splitList(delimiter, listArg);
+		var list2 = MModule.splitList(delimiter, list2Arg);
 
 		if (list.Length != list2.Length)
 		{
@@ -1621,7 +1603,7 @@ public partial class Functions
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
-		var list = MModule.split2(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
@@ -1793,7 +1775,7 @@ public partial class Functions
 		{
 			return new CallState("#-1 FIELD WIDTH EXCEEDS LINE WIDTH");
 		}
-		var list = MModule.split2(delimiterArg, listArg);
+		var list = MModule.splitList(delimiterArg, listArg);
 		var resultFields = list.Select(x =>
 			MModule.pad(x,
 				MModule.single(" "),
@@ -1821,7 +1803,7 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
-		var list = MModule.split2(delimiter, listArg);
+		var list = MModule.splitList(delimiter, listArg);
 
 		// Remove consecutive duplicates based on sort type comparison
 		var result = new List<MString>();
@@ -1871,7 +1853,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorUInteger);
 		}
 
-		var list = MModule.split2(delimiter, listArg);
+		var list = MModule.splitList(delimiter, listArg);
 		var lengths = list.Select(x => x.Length).ToList();
 
 		if (number > lengths.Sum())
@@ -1888,7 +1870,7 @@ public partial class Functions
 	public static async ValueTask<CallState> ListCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
-		var list = SplitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+		var list = MModule.splitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
 		return new CallState(list.Length.ToString());
 	}
@@ -1909,7 +1891,7 @@ public partial class Functions
 			return new CallState(Errors.ErrorUInteger);
 		}
 
-		var listItems = MModule.split2(delimiter, listArg).ToList();
+		var listItems = MModule.splitList(delimiter, listArg).ToList();
 		var count = listItems.Count;
 
 		// Handle empty list edge case
@@ -1975,8 +1957,8 @@ public partial class Functions
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.split2(delimiter, list1);
-		var aList2 = MModule.split2(delimiter, list2);
+		var aList1 = MModule.splitList(delimiter, list1);
+		var aList2 = MModule.splitList(delimiter, list2);
 
 		var sortTypeType = SortService!.StringToSortType(sortType.ToPlainText());
 		var sorted = SortService.Sort(Enumerable.DistinctBy(aList1
@@ -1995,8 +1977,8 @@ public partial class Functions
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.split2(delimiter, list1);
-		var aList2 = MModule.split2(delimiter, list2);
+		var aList1 = MModule.splitList(delimiter, list1);
+		var aList2 = MModule.splitList(delimiter, list2);
 		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
 
 		// Elements in list1 that aren't in list2
@@ -2019,8 +2001,8 @@ public partial class Functions
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.split2(delimiter, list1);
-		var aList2 = MModule.split2(delimiter, list2);
+		var aList1 = MModule.splitList(delimiter, list1);
+		var aList2 = MModule.splitList(delimiter, list2);
 		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
 
 		// Elements that appear in both lists
@@ -2043,8 +2025,8 @@ public partial class Functions
 		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.split2(delimiter, list1);
-		var aList2 = MModule.split2(delimiter, list2);
+		var aList1 = MModule.splitList(delimiter, list1);
+		var aList2 = MModule.splitList(delimiter, list2);
 		var set1 = new HashSet<string>(aList1.Select(MModule.plainText));
 		var set2 = new HashSet<string>(aList2.Select(MModule.plainText));
 
