@@ -38,6 +38,7 @@ lockExpr:
     | exactObjectExpr
     | attributeExpr
     | evaluationExpr
+    | defaultExpr
 ;
 
 notExpr: NOT lockExpr;
@@ -59,6 +60,7 @@ nameExpr: NAME string;
 exactObjectExpr: EXACTOBJECT string;
 attributeExpr: attributeName ATTRIBUTE_COLON string;
 evaluationExpr: attributeName EVALUATION string;
+defaultExpr: string;
 
 indirectExpr:
     INDIRECT string EVALUATION attributeName

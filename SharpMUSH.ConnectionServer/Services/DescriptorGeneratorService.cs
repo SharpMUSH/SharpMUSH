@@ -14,6 +14,16 @@ public interface IDescriptorGeneratorService
 	/// Get next descriptor for WebSocket connections
 	/// </summary>
 	long GetNextWebSocketDescriptor();
+
+	/// <summary>
+	/// Release a previously allocated Telnet descriptor so it can be reused
+	/// </summary>
+	void ReleaseTelnetDescriptor(long descriptor);
+
+	/// <summary>
+	/// Release a previously allocated WebSocket descriptor so it can be reused
+	/// </summary>
+	void ReleaseWebSocketDescriptor(long descriptor);
 }
 
 /// <summary>
@@ -21,22 +31,45 @@ public interface IDescriptorGeneratorService
 /// </summary>
 public class DescriptorGeneratorService : IDescriptorGeneratorService
 {
-	private long _telnetCurrent;
-	private long _webSocketCurrent;
+	private readonly Library.Services.NextUnoccupiedNumberGenerator _telnetGenerator;
+	private readonly Library.Services.NextUnoccupiedNumberGenerator _webSocketGenerator;
+	private readonly object _lock = new();
 
 	public DescriptorGeneratorService(Configuration.ConnectionServerOptions options)
 	{
-		_telnetCurrent = options.TelnetDescriptorStart;
-		_webSocketCurrent = options.WebSocketDescriptorStart;
+		_telnetGenerator = new Library.Services.NextUnoccupiedNumberGenerator(options.TelnetDescriptorStart + 1);
+		_webSocketGenerator = new Library.Services.NextUnoccupiedNumberGenerator(options.WebSocketDescriptorStart + 1);
 	}
 
 	public long GetNextTelnetDescriptor()
 	{
-		return Interlocked.Increment(ref _telnetCurrent);
+		lock (_lock)
+		{
+			return _telnetGenerator.Get().First();
+		}
 	}
 
 	public long GetNextWebSocketDescriptor()
 	{
-		return Interlocked.Increment(ref _webSocketCurrent);
+		lock (_lock)
+		{
+			return _webSocketGenerator.Get().First();
+		}
+	}
+
+	public void ReleaseTelnetDescriptor(long descriptor)
+	{
+		lock (_lock)
+		{
+			_telnetGenerator.Release(descriptor);
+		}
+	}
+
+	public void ReleaseWebSocketDescriptor(long descriptor)
+	{
+		lock (_lock)
+		{
+			_webSocketGenerator.Release(descriptor);
+		}
 	}
 }

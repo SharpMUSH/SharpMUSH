@@ -321,7 +321,8 @@ public partial class Functions
 
 				return maybeAttr switch
 				{
-					{ IsError: true } or { IsNone: true } => maybeAttr.AsCallStateError,
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
 					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
 				};
 			});
@@ -538,8 +539,8 @@ public partial class Functions
 	public static async ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToString();
-		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToString();
+		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr);
 
 		if (!split.TryPickT0(out var details, out _))
@@ -550,7 +551,7 @@ public partial class Functions
 		var (db, attr) = details;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All, async realLocated =>
+			parser, executor, executor, db, LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
 				return split.AsT0 switch
 				{
@@ -1463,6 +1464,8 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
+					Executor = actualObject.Object().DBRef,
+					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
@@ -1516,7 +1519,9 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
-					Registers = []
+					Registers = new([[]]),
+					Executor = actualObject.Object().DBRef,
+					Caller = s.Executor
 				},
 					async np => await np.FunctionParse(get.Value)))!;
 			});
@@ -1588,7 +1593,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		return await parser.With(s => s with { Registers = [] },
+		return await parser.With(s => s with { Registers = new([[]]) },
 			async np => await AttributeService!.EvaluateAttributeFunctionAsync(
 				np,
 				executor,
@@ -1946,7 +1951,12 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: false);
 
-				return maybeAttr.AsCallState;
+				return maybeAttr switch
+				{
+					{ IsError: true } => maybeAttr.AsCallStateError,
+					{ IsNone: true } => CallState.Empty,
+					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+				};
 			});
 	}
 

@@ -82,6 +82,27 @@ public class ParserErrorTests
 	}
 
 	[Test]
+	public async Task EqualsInsideFunctionArgs_InEqSplitContext_ShouldNotError()
+	{
+		// PennMUSH: '=' inside function arguments is a literal character.
+		// strmatch(%1,*=*) should parse without errors even in EqSplit context.
+		var errors = Parser.ValidateAndGetErrors(
+			MModule.single("strmatch(test,*=*)"), ParseType.CommandEqSplit);
+
+		await Assert.That(errors).IsEmpty();
+	}
+
+	[Test]
+	public async Task EqualsInsideNestedFunction_InEqSplitArgsContext_ShouldNotError()
+	{
+		// = inside nested function args should be literal even with EqSplitArgs parsing
+		var errors = Parser.ValidateAndGetErrors(
+			MModule.single("[strmatch(a=b,*=*)]"), ParseType.CommandEqSplitArgs);
+
+		await Assert.That(errors).IsEmpty();
+	}
+
+	[Test]
 	public async Task ParseError_ShouldHaveInputText()
 	{
 		var input = "add(1,2";

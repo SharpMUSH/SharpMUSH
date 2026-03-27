@@ -112,6 +112,12 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(IMediator med)
 		return $"={NormalizeDbRef(value)}";
 	}
 
+	public override string VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
+	{
+		var value = context.@string().GetText();
+		return NormalizeDbRef(value);
+	}
+
 	public override string VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
 		var attrName = context.attributeName().GetText();
