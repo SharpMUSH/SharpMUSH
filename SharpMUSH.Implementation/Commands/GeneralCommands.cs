@@ -2041,12 +2041,17 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var strArg = args["0"];
 		Option<MString> defaultArg = new None();
-		var pairs = args.Values.Skip(1).Pairwise();
 		var matched = false;
 
+		// Separate out the default action (last element when total arg count is even).
+		// args["0"] is the test expression; remaining args are (pattern, action) pairs plus optional default.
+		// Even total args means: test + pairs + default → odd remaining → default is last.
+		var remainingArgs = args.Values.Skip(1).ToList();
 		if (args.Count % 2 == 0)
 		{
-			defaultArg = args.Last().Value.Message!;
+			// Even count: test + N*(pat,act) + default → take default, leave pairs
+			defaultArg = remainingArgs.Last().Message!;
+			remainingArgs = remainingArgs.Take(remainingArgs.Count - 1).ToList();
 		}
 
 		// Push the switch string onto the context stack
@@ -2054,16 +2059,25 @@ public partial class Commands
 
 		try
 		{
-			foreach (var (expr, action) in pairs)
+			// Iterate over non-overlapping (pattern, action) pairs — step by 2.
+			for (var i = 0; i + 1 < remainingArgs.Count; i += 2)
 			{
-				if (expr is null) break;
+				var exprArg = remainingArgs[i];
+				var actionArg = remainingArgs[i + 1];
+
+				if (exprArg is null) break;
+
+				// Patterns are RSNoParse (stored raw); evaluate lazily before comparing.
+				// This matches PennMUSH behavior where pattern expressions like [func()] are
+				// evaluated at match time, not pre-evaluated.
+				var evaluatedPattern = (await exprArg.ParsedMessage()) ?? exprArg.Message!;
 
 				// Use wildcard/glob pattern matching
-				if (MModule.isWildcardMatch(strArg.Message!, expr.Message!))
+				if (MModule.isWildcardMatch(strArg.Message!, evaluatedPattern))
 				{
 					matched = true;
 					// This is Inline.
-					await parser.CommandListParseVisitor(action.Message!)();
+					await parser.CommandListParseVisitor(actionArg.Message!)();
 				}
 			}
 
@@ -4264,19 +4278,20 @@ public partial class Commands
 		// Build argument registers from all provided arguments.
 		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
 		// RSArgs that become %0, %1, %2, … inside the triggered attribute.
-		var registerDict = new Dictionary<string, MString>();
+		// These go into EnvironmentRegisters (the positional %0-%9 args), NOT the q-register stack.
+		var envRegisters = new Dictionary<string, CallState>();
 		for (var i = 1; i < args.Count; i++)
 		{
 			if (args.TryGetValue(i.ToString(), out var argValue) && argValue.Message != null)
 			{
-				registerDict[(i - 1).ToString()] = argValue.Message;
+				envRegisters[(i - 1).ToString()] = argValue;
 			}
 		}
 
-		// Always push a frame (even if empty) so that setq() works inside the triggered attribute
+		// Push a fresh empty q-register frame so setq() works inside the triggered attribute
 		// and so the triggered scope never inherits %q registers from the calling context.
 		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
-		registerStack.Push(registerDict);
+		registerStack.Push(new Dictionary<string, MString>());
 
 		// Handle /match switch for pattern matching
 		if (switches.Contains("MATCH"))
@@ -4331,7 +4346,8 @@ public partial class Commands
 				Executor = targetObject.Object().DBRef,
 				Enactor = executionEnactor,
 				Caller = parser.CurrentState.Executor,
-				Registers = registerStack
+				Registers = registerStack,
+				EnvironmentRegisters = envRegisters
 			};
 
 			await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,

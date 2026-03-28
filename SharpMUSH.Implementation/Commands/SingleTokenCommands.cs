@@ -59,8 +59,10 @@ public partial class Commands
 				if (!args.TryGetValue("2", out var tmpContents))
 				{
 					// PennMUSH: & attr obj (no '=') deletes (wipes) the attribute.
+					// Use enactor (cause/%#) for permission checking, matching PennMUSH do_set_atr()
+					// which uses the triggering player's permissions, not the object executing the command.
 					var clearResult = await AttributeService!.ClearAttributeAsync(
-						executor, realLocated, attrName,
+						enactor, realLocated, attrName,
 						IAttributeService.AttributePatternMode.Exact,
 						IAttributeService.AttributeClearMode.Safe);
 					await NotifyService!.Notify(enactor,
@@ -82,8 +84,10 @@ public partial class Commands
 					? tmpContents.Message!
 					: await tmpContents.ParsedMessage() ?? MModule.empty();
 
+				// Use enactor (cause/%#) for permission checking, matching PennMUSH do_set_atr()
+				// semantics: the player who triggered the command is the permission grantor.
 				var setResult =
-					await AttributeService!.SetAttributeAsync(executor, realLocated, attrName, contents);
+					await AttributeService!.SetAttributeAsync(enactor, realLocated, attrName, contents);
 				await NotifyService!.Notify(enactor,
 					setResult.Match(
 						_ => $"{realLocated.Object().Name}/{attrNameParsed} - Set.",
