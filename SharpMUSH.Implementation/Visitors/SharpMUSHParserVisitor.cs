@@ -605,13 +605,17 @@ public class SharpMUSHParserVisitor(
 			if (firstCommandMatch?.SourceInterval.Length is null or 0)
 				return new None();
 
-			var command = firstCommandMatch.GetText();
+			var command = firstCommandMatch.GetText().TrimStart();
 
 			var spaceIndex = command.AsSpan().IndexOf(' ');
 			if (spaceIndex != -1)
 			{
 				command = command[..spaceIndex];
 			}
+
+			// Guard: empty command name (e.g., from a command body that began with only whitespace).
+			if (command.Length == 0)
+				return new None();
 
 			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
