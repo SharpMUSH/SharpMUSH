@@ -22,6 +22,12 @@ public class MyrddinBBSIntegrationTests
 	private const string ScriptFileName = "MyrddinBBS_v406.txt";
 	private const string OutputFileName = "MyrddinBBS_v406_TestOutput.txt";
 
+	/// <summary>
+	/// Shared bbpocket dbref captured during install, reused by all dependent tests.
+	/// Static so it survives across test method invocations within the same session.
+	/// </summary>
+	private static string? _bbpocketDbref;
+
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
@@ -154,6 +160,7 @@ public class MyrddinBBSIntegrationTests
 					var numResult = await Parser.CommandParse(1, ConnectionService,
 						MModule.single("think [num(bbpocket)]"));
 					bbpocketDbref = numResult.Message?.ToPlainText()?.Trim();
+					_bbpocketDbref = bbpocketDbref; // Share with all dependent tests
 					Log($"[BBS INSTALL] bbpocket created with dbref: {bbpocketDbref} (replacing #222 in remaining lines)");
 
 					// Set DEBUG, VERBOSE, PUPPET on bbpocket for comprehensive diagnostics
@@ -420,8 +427,11 @@ public class MyrddinBBSIntegrationTests
 	/// <summary>Returns the name of the BBS group at the given 1-based position.</summary>
 	private async Task<string> GetGroupName(int position = 1)
 	{
+		var bbpocket = _bbpocketDbref;
+		if (string.IsNullOrEmpty(bbpocket))
+			return string.Empty;
 		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"think [name(extract(get(num(bbpocket)/groups),{position},1))]"));
+			MModule.single($"think [name(extract(get({bbpocket}/groups),{position},1))]"));
 		return result.Message?.ToPlainText()?.Trim() ?? string.Empty;
 	}
 
