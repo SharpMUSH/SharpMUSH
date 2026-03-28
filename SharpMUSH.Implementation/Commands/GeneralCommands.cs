@@ -4261,23 +4261,22 @@ public partial class Commands
 		// no /spoof: target object becomes both enactor and executor
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
 
-		// Build argument registers from all provided arguments
-		// Arguments start at index 1 (index 0 is the object/attribute path)
-		// They map to %0, %1, %2, etc. with no upper limit
+		// Build argument registers from all provided arguments.
+		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
+		// RSArgs that become %0, %1, %2, … inside the triggered attribute.
 		var registerDict = new Dictionary<string, MString>();
 		for (var i = 1; i < args.Count; i++)
 		{
-			if (args.TryGetValue((i - 1).ToString(), out var argValue) && argValue.Message != null)
+			if (args.TryGetValue(i.ToString(), out var argValue) && argValue.Message != null)
 			{
 				registerDict[(i - 1).ToString()] = argValue.Message;
 			}
 		}
 
+		// Always push a frame (even if empty) so that setq() works inside the triggered attribute
+		// and so the triggered scope never inherits %q registers from the calling context.
 		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
-		if (registerDict.Count > 0)
-		{
-			registerStack.Push(registerDict);
-		}
+		registerStack.Push(registerDict);
 
 		// Handle /match switch for pattern matching
 		if (switches.Contains("MATCH"))
