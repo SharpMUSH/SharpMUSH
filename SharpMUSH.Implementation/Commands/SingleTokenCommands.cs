@@ -56,22 +56,31 @@ public partial class Commands
 			executor,
 			args["1"].Message!.ToString(), LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
-				MString contents;
-				if (args.TryGetValue("2", out var tmpContents))
+				if (!args.TryGetValue("2", out var tmpContents))
 				{
-					// PennMUSH QUEUE_NOLIST behavior via ParserStateFlags.DirectInput:
-					// - DirectInput set   → command came directly from a player's network connection;
-					//   treat the value as literal code (NoParse — no function evaluation).
-					// - DirectInput clear → command is running from a queue/callback (@wait, @trigger,
-					//   @force, etc.); evaluate the value before storage, matching PennMUSH behavior.
-					contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
-						? tmpContents.Message!
-						: await tmpContents.ParsedMessage() ?? MModule.empty();
+					// PennMUSH: & attr obj (no '=') deletes (wipes) the attribute.
+					var clearResult = await AttributeService!.ClearAttributeAsync(
+						executor, realLocated, attrName,
+						IAttributeService.AttributePatternMode.Exact,
+						IAttributeService.AttributeClearMode.Safe);
+					await NotifyService!.Notify(enactor,
+						clearResult.Match(
+							_ => $"Attribute {attrName} SET.",
+							failure => failure.Value)
+					);
+					return new CallState(clearResult.Match(
+						_ => $"{realLocated.Object().Name}/{attrNameParsed}",
+						_ => string.Empty));
 				}
-				else
-				{
-					contents = MModule.empty();
-				}
+
+				// PennMUSH QUEUE_NOLIST behavior via ParserStateFlags.DirectInput:
+				// - DirectInput set   → command came directly from a player's network connection;
+				//   treat the value as literal code (NoParse — no function evaluation).
+				// - DirectInput clear → command is running from a queue/callback (@wait, @trigger,
+				//   @force, etc.); evaluate the value before storage, matching PennMUSH behavior.
+				var contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
+					? tmpContents.Message!
+					: await tmpContents.ParsedMessage() ?? MModule.empty();
 
 				var setResult =
 					await AttributeService!.SetAttributeAsync(executor, realLocated, attrName, contents);
