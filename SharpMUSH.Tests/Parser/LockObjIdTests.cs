@@ -49,7 +49,7 @@ public class LockObjIdTests
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
-		// Get creation time from the database object (create() returns bare #N; objid includes timestamp)
+		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Lock string with full objid (dbref:creationtime)
@@ -73,7 +73,7 @@ public class LockObjIdTests
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
-		// Get creation time from the database object (create() returns bare #N; objid includes timestamp)
+		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Lock string with full objid but DIFFERENT creation time
@@ -127,7 +127,7 @@ public class LockObjIdTests
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
-		// Get creation time from the database object (create() returns bare #N; objid includes timestamp)
+		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Create an object to hold the dbref list
@@ -158,7 +158,7 @@ public class LockObjIdTests
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
-		// Get creation time from the database object (create() returns bare #N; objid includes timestamp)
+		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Create an object to hold the dbref list

@@ -25,7 +25,7 @@ public class LockNormalizationTests
 		var createResult = (await Parser.FunctionParse(MModule.single("create(NormTestObj1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		// Get creation time from the database (create() returns bare #N; objid includes timestamp)
+		// Get full DBRef with creation time from the database (create() returns bare #N; objid includes timestamp)
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
 		var testObjFullDbRef = testObj.Object().DBRef;
 
@@ -46,7 +46,7 @@ public class LockNormalizationTests
 		var createResult = (await Parser.FunctionParse(MModule.single("create(NormTestObjId1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		// Get creation time from the database (create() returns bare #N; objid includes timestamp)
+		// Get full DBRef with creation time from the database (create() returns bare #N; objid includes timestamp)
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
 		var testObjFullDbRef = testObj.Object().DBRef;
 
