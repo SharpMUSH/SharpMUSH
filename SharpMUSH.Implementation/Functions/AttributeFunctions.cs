@@ -840,8 +840,7 @@ public partial class Functions
 				if (dbrefAndMaybeArg.AsT0.Attribute is null)
 				{
 					var objOwner = await actualObject.Object().Owner.WithCancellation(CancellationToken.None);
-					return new CallState(objOwner.Object.DBRef
-						.ToString());
+					return new CallState($"#{objOwner.Object.DBRef.Number}");
 				}
 
 				var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
@@ -853,9 +852,7 @@ public partial class Functions
 				{
 					{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
 					{ IsError: true } => new CallState(attributeObject.AsError.Value),
-					{ AsAttribute: var attr } => (await attr.Last().Owner.WithCancellation(CancellationToken.None))!
-						.Object
-						.DBRef.ToString()
+					{ AsAttribute: var attr } => new CallState($"#{(await attr.Last().Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}")
 				};
 			}
 		);

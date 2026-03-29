@@ -22,6 +22,12 @@ public class MyrddinBBSIntegrationTests
 	private const string ScriptFileName = "MyrddinBBS_v406.txt";
 	private const string OutputFileName = "MyrddinBBS_v406_TestOutput.txt";
 
+	/// <summary>
+	/// Shared bbpocket dbref captured during install, reused by all dependent tests.
+	/// Static so it survives across test method invocations within the same session.
+	/// </summary>
+	private static string? _bbpocketDbref;
+
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
@@ -154,6 +160,7 @@ public class MyrddinBBSIntegrationTests
 					var numResult = await Parser.CommandParse(1, ConnectionService,
 						MModule.single("think [num(bbpocket)]"));
 					bbpocketDbref = numResult.Message?.ToPlainText()?.Trim();
+					_bbpocketDbref = bbpocketDbref; // Share with all dependent tests
 					Log($"[BBS INSTALL] bbpocket created with dbref: {bbpocketDbref} (replacing #222 in remaining lines)");
 
 					// Set DEBUG, VERBOSE, PUPPET on bbpocket for comprehensive diagnostics
@@ -390,6 +397,42 @@ public class MyrddinBBSIntegrationTests
 		if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
 			return value;
 		return value[..(maxLength - 3)] + "...";
+	}
+
+	/// <summary>Returns the current notification count.</summary>
+	private int NotificationCount()
+		=> NotifyService.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
+	/// <summary>Collects notification messages in the range (fromCount, toCount].</summary>
+	private IReadOnlyList<string> GetNotificationMessages(int fromCount, int toCount)
+	{
+		var all = NotifyService.ReceivedCalls().Select(ExtractMessageText).OfType<string>();
+		var sliced = all.Skip(fromCount);
+		if (toCount > 0)
+			sliced = sliced.Take(toCount - fromCount);
+		return sliced.ToList();
+	}
+
+	/// <summary>Runs a command and collects all notifications it produces.</summary>
+	private async Task<IReadOnlyList<string>> RunAndCollect(string command, int delayMs = 0)
+	{
+		var before = NotificationCount();
+		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		if (delayMs > 0)
+			await Task.Delay(delayMs);
+		var after = NotificationCount();
+		return GetNotificationMessages(before, after);
+	}
+
+	/// <summary>Returns the name of the BBS group at the given 1-based position.</summary>
+	private async Task<string> GetGroupName(int position = 1)
+	{
+		var bbpocket = _bbpocketDbref;
+		if (string.IsNullOrEmpty(bbpocket))
+			return string.Empty;
+		var result = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"think [name(extract(get({bbpocket}/groups),{position},1))]"));
+		return result.Message?.ToPlainText()?.Trim() ?? string.Empty;
 	}
 
 	/// <summary>
@@ -703,6 +746,12 @@ public class MyrddinBBSIntegrationTests
 			throw;
 		}
 
+		// Wait for async @dolist callbacks to complete (the BBS +bbread uses @dolist without
+		// INLINE/INPLACE, so each iteration body is queued asynchronously via the scheduler).
+		await Task.Delay(5000);
+		var postReadNotifications = NotifyService.ReceivedCalls()
+			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+
 		// Collect +bbread 1/1 notifications
 		var readMessages = new List<(int Index, string Message)>();
 		var readErrors = new List<(int Index, string Message)>();
@@ -714,6 +763,7 @@ public class MyrddinBBSIntegrationTests
 		{
 			rIndex++;
 			if (rIndex <= preReadNotifications) continue;
+			if (rIndex > postReadNotifications) break;
 
 			readMessages.Add((rIndex, messageText));
 
@@ -847,5 +897,751 @@ public class MyrddinBBSIntegrationTests
 		// The +bbread 1/1 command should produce some output
 		await Assert.That(readMessages.Count).IsGreaterThan(0)
 			.Because("+bbread 1/1 should produce at least one notification");
+
+		// The post confirmation should include the correct title (not just the group number).
+		// Use StartsWith to avoid matching the VERBOSE output line (e.g., "#4] ...@pemit %#=You post your note about '%1'...")
+		// which contains the raw command code before %1 is substituted.
+		var postConfirmation = postMessages
+			.FirstOrDefault(m => m.Message.TrimStart().StartsWith("You post your note about", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(postConfirmation.Message).IsNotNull()
+			.Because("+bbpost should emit 'You post your note about' confirmation");
+		await Assert.That(postConfirmation.Message).Contains("Title Goes Here")
+			.Because("+bbpost should use the correct title 'Title Goes Here', not the group number");
+
+		// The attributes (mess_lst, hdr, bdy) should all be SET on the group
+		var messLstSet = postMessages.Any(m => m.Message.Contains("mess_lst SET", StringComparison.OrdinalIgnoreCase)
+			|| m.Message.Contains("/mess_lst - Set.", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(messLstSet).IsTrue()
+			.Because("mess_lst attribute should be SET on the group after +bbpost");
+
+		var hdrSet = postMessages.Any(m => m.Message.Contains("hdr_", StringComparison.OrdinalIgnoreCase)
+			&& m.Message.Contains("SET", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(hdrSet).IsTrue()
+			.Because("hdr_ attribute should be SET on the group after +bbpost");
+
+		var bdySet = postMessages.Any(m => m.Message.Contains("bdy_", StringComparison.OrdinalIgnoreCase)
+			&& m.Message.Contains("SET", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(bdySet).IsTrue()
+			.Because("bdy_ attribute should be SET on the group after +bbpost");
+
+		// +bbread 1/1 should show the message header with the correct title
+		var readHasTitle = readMessages.Any(m => m.Message.Contains("Title Goes Here", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(readHasTitle).IsTrue()
+			.Because("+bbread 1/1 should display the message title 'Title Goes Here'");
+
+		// +bbread 1/1 should show the message body
+		var readHasBody = readMessages.Any(m => m.Message.Contains("Body of the test post.", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(readHasBody).IsTrue()
+			.Because("+bbread 1/1 should display the message body 'Body of the test post.'");
+	}
+
+	/// <summary>
+	/// Reads the message list for group 1 with +bbread 1 and verifies the header,
+	/// column headers, message row, and footer are present.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_Post_ThenBBRead_ShowsPost))]
+	public async Task BBS_BBRead_GroupScan()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBREAD_GROUPSCAN");
+		Log(new string('=', 78));
+
+		var group1Name = await GetGroupName(1);
+		Log($"  Group 1 name: {group1Name}");
+
+		var msgs = await RunAndCollect("+bbread 1", 5000);
+
+		Log($"  Notifications received: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBReadGroupScan_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBREAD GROUPSCAN] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Count).IsGreaterThanOrEqualTo(2)
+			.Because("+bbread 1 should produce at least header + one message row");
+
+		await Assert.That(msgs.Any(m => m.Contains($"**** {group1Name} ****"))).IsTrue()
+			.Because("+bbread 1 should display the group name in the header");
+
+		await Assert.That(msgs.Any(m => m.Contains("Message") && m.Contains("Posted") && m.Contains("By"))).IsTrue()
+			.Because("+bbread 1 should display column headers: Message, Posted, By");
+
+		await Assert.That(msgs.Any(m => m.Contains("1/1") && m.Contains("Title Goes Here") && m.Contains("God"))).IsTrue()
+			.Because("+bbread 1 should list message 1/1 with title and author");
+
+		await Assert.That(msgs.Any(m => m.EndsWith("=============================================================================="))).IsTrue()
+			.Because("+bbread 1 should end with a footer separator");
+	}
+
+	/// <summary>
+	/// Runs +bblist and verifies the full table showing available groups.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBRead_GroupScan))]
+	public async Task BBS_BBList_ShowsGroups()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBLIST_SHOWSGROUPS");
+		Log(new string('=', 78));
+
+		var group1Name = await GetGroupName(1);
+		Log($"  Group 1 name: {group1Name}");
+
+		var msgs = await RunAndCollect("+bblist");
+
+		Log($"  Notifications received: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var combinedOutput = string.Join("\n", msgs);
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBList_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBLIST] Full test output written to: {outputPath}");
+
+		await Assert.That(combinedOutput).Contains("Available Bulletin Board Groups");
+		await Assert.That(combinedOutput).Contains("Member?");
+		await Assert.That(combinedOutput).Contains("Timeout (in days)");
+		await Assert.That(combinedOutput).Contains(group1Name);
+		await Assert.That(combinedOutput).Contains("Yes");
+		await Assert.That(combinedOutput).Contains("none");
+		await Assert.That(combinedOutput).Contains("To join groups, type '+bbjoin <group number or name>'");
+	}
+
+	/// <summary>
+	/// Toggles post notification for group 1 off and back on with +bbnotify.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBList_ShowsGroups))]
+	public async Task BBS_BBNotify_Toggle()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBNOTIFY_TOGGLE");
+		Log(new string('=', 78));
+
+		var group1Name = await GetGroupName(1);
+		Log($"  Group 1 name: {group1Name}");
+
+		var offMsgs = await RunAndCollect("+bbnotify 1=off");
+		Log($"  +bbnotify off notifications: {offMsgs.Count}");
+		for (var i = 0; i < offMsgs.Count; i++)
+			Log($"  [off/{i}] {Truncate(offMsgs[i], 200)}");
+
+		var onMsgs = await RunAndCollect("+bbnotify 1=on");
+		Log($"  +bbnotify on notifications: {onMsgs.Count}");
+		for (var i = 0; i < onMsgs.Count; i++)
+			Log($"  [on/{i}] {Truncate(onMsgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBNotify_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBNOTIFY] Full test output written to: {outputPath}");
+
+		var expectedOff = $"Post notification for BB Group '{group1Name}' turned off. You will no longer be notified of new postings to that Group.";
+		await Assert.That(offMsgs.Any(m => m == expectedOff)).IsTrue()
+			.Because("+bbnotify 1=off should confirm notification was turned off");
+
+		var expectedOn = $"Post notification for BB Group '{group1Name}' turned on. You will now be notified of new postings to that Group.";
+		await Assert.That(onMsgs.Any(m => m == expectedOn)).IsTrue()
+			.Because("+bbnotify 1=on should confirm notification was turned on");
+	}
+
+	/// <summary>
+	/// Starts a staged post, appends text, proofs it, then tosses it.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBNotify_Toggle))]
+	public async Task BBS_StagedPost_WriteProofToss()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_STAGEDPOST_WRITEPROOFTOSS");
+		Log(new string('=', 78));
+
+		var startMsgs = await RunAndCollect("+bbpost 1/Proof Test Title");
+		Log($"  +bbpost start notifications: {startMsgs.Count}");
+		for (var i = 0; i < startMsgs.Count; i++)
+			Log($"  [start/{i}] {Truncate(startMsgs[i], 200)}");
+
+		var writeMsgs = await RunAndCollect("+bbwrite First line of staged body.");
+		Log($"  +bbwrite notifications: {writeMsgs.Count}");
+		for (var i = 0; i < writeMsgs.Count; i++)
+			Log($"  [write/{i}] {Truncate(writeMsgs[i], 200)}");
+
+		var bbMsgs = await RunAndCollect("+bb Appended line.");
+		Log($"  +bb notifications: {bbMsgs.Count}");
+		for (var i = 0; i < bbMsgs.Count; i++)
+			Log($"  [bb/{i}] {Truncate(bbMsgs[i], 200)}");
+
+		var proofMsgs = await RunAndCollect("+bbproof");
+		Log($"  +bbproof notifications: {proofMsgs.Count}");
+		for (var i = 0; i < proofMsgs.Count; i++)
+			Log($"  [proof/{i}] {Truncate(proofMsgs[i], 200)}");
+
+		var tossMsgs = await RunAndCollect("+bbtoss");
+		Log($"  +bbtoss notifications: {tossMsgs.Count}");
+		for (var i = 0; i < tossMsgs.Count; i++)
+			Log($"  [toss/{i}] {Truncate(tossMsgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_StagedWriteProofToss_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS STAGED POST] Full test output written to: {outputPath}");
+
+		await Assert.That(startMsgs.Any(m => m.Contains("You start your posting to Group #1"))).IsTrue()
+			.Because("+bbpost 1/Proof Test Title should confirm start of posting");
+
+		await Assert.That(writeMsgs.Any(m => m == "Text added to bbpost.")).IsTrue()
+			.Because("+bbwrite should confirm text was added");
+
+		await Assert.That(bbMsgs.Any(m => m == "Text added to bbpost.")).IsTrue()
+			.Because("+bb should confirm text was appended");
+
+		await Assert.That(proofMsgs.Any(m => m.Contains("BB Post in Progress"))).IsTrue()
+			.Because("+bbproof should display BB Post in Progress header");
+		await Assert.That(proofMsgs.Any(m => m.Contains("Proof Test Title"))).IsTrue()
+			.Because("+bbproof should display the title");
+		await Assert.That(proofMsgs.Any(m => m.Contains("First line of staged body."))).IsTrue()
+			.Because("+bbproof should display the staged body text");
+
+		await Assert.That(tossMsgs.Any(m => m == "Your bbpost has been discarded.")).IsTrue()
+			.Because("+bbtoss should confirm the post was discarded");
+	}
+
+	/// <summary>
+	/// Starts a staged post, writes the body, then posts it. Verifies the posted message
+	/// can be read back with +bbread 1/2.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_StagedPost_WriteProofToss))]
+	public async Task BBS_StagedPost_WriteAndPost()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_STAGEDPOST_WRITEANDPOST");
+		Log(new string('=', 78));
+
+		var startMsgs = await RunAndCollect("+bbpost 1/Staged Test Post");
+		Log($"  +bbpost start notifications: {startMsgs.Count}");
+		for (var i = 0; i < startMsgs.Count; i++)
+			Log($"  [start/{i}] {Truncate(startMsgs[i], 200)}");
+
+		var writeMsgs = await RunAndCollect("+bbwrite Body of staged test post.");
+		Log($"  +bbwrite notifications: {writeMsgs.Count}");
+		for (var i = 0; i < writeMsgs.Count; i++)
+			Log($"  [write/{i}] {Truncate(writeMsgs[i], 200)}");
+
+		// +bbpost with no args finalises the staged post
+		var postMsgs = await RunAndCollect("+bbpost", 5000);
+		Log($"  +bbpost (finalise) notifications: {postMsgs.Count}");
+		for (var i = 0; i < postMsgs.Count; i++)
+			Log($"  [post/{i}] {Truncate(postMsgs[i], 200)}");
+
+		// Read back message 2
+		var readMsgs = await RunAndCollect("+bbread 1/2", 5000);
+		Log($"  +bbread 1/2 notifications: {readMsgs.Count}");
+		for (var i = 0; i < readMsgs.Count; i++)
+			Log($"  [read/{i}] {Truncate(readMsgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_StagedWriteAndPost_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS STAGED POST AND READ] Full test output written to: {outputPath}");
+
+		await Assert.That(startMsgs.Any(m => m.Contains("You start your posting"))).IsTrue()
+			.Because("+bbpost 1/Staged Test Post should confirm start of posting");
+
+		await Assert.That(writeMsgs.Any(m => m == "Text added to bbpost.")).IsTrue()
+			.Because("+bbwrite should confirm text was added");
+
+		await Assert.That(postMsgs.Any(m => m.Contains("You post your note about 'Staged Test Post'"))).IsTrue()
+			.Because("+bbpost should confirm the post was submitted");
+
+		await Assert.That(readMsgs.Any(m => m.Contains("Staged Test Post"))).IsTrue()
+			.Because("+bbread 1/2 should show the title 'Staged Test Post'");
+
+		await Assert.That(readMsgs.Any(m => m.Contains("Body of staged test post."))).IsTrue()
+			.Because("+bbread 1/2 should show the body 'Body of staged test post.'");
+	}
+
+	/// <summary>
+	/// Clears the player's bb_read list to simulate unread messages, then runs
+	/// +bbscan to verify unread postings are reported.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_StagedPost_WriteAndPost))]
+	public async Task BBS_BBScan_ShowsUnread()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBSCAN_SHOWSUNREAD");
+		Log(new string('=', 78));
+
+		var group1Name = await GetGroupName(1);
+		Log($"  Group 1 name: {group1Name}");
+
+		// Clear bb_read to make all messages appear unread
+		await Parser.CommandParse(1, ConnectionService, MModule.single("&bb_read #1"));
+
+		var msgs = await RunAndCollect("+bbscan");
+		Log($"  +bbscan notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var combinedOutput = string.Join("\n", msgs);
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBScanUnread_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBSCAN UNREAD] Full test output written to: {outputPath}");
+
+		await Assert.That(combinedOutput).Contains("Unread Postings on the Global Bulletin Board");
+		await Assert.That(combinedOutput).Contains(group1Name);
+		await Assert.That(combinedOutput).Contains("2 unread");
+	}
+
+	/// <summary>
+	/// Reads unread messages for group 1 with +bbread 1/u and verifies both messages appear.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBScan_ShowsUnread))]
+	public async Task BBS_BBRead_UnreadFilter()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBREAD_UNREADFILTER");
+		Log(new string('=', 78));
+
+		var msgs = await RunAndCollect("+bbread 1/u", 5000);
+		Log($"  +bbread 1/u notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBReadUnread_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBREAD UNREAD] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Any(m => m.Contains("Title Goes Here"))).IsTrue()
+			.Because("+bbread 1/u should include unread message 1 'Title Goes Here'");
+
+		await Assert.That(msgs.Any(m => m.Contains("Staged Test Post"))).IsTrue()
+			.Because("+bbread 1/u should include unread message 2 'Staged Test Post'");
+	}
+
+	/// <summary>
+	/// Marks all postings on all boards as read with +bbcatchup all.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBRead_UnreadFilter))]
+	public async Task BBS_BBCatchup_All()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBCATCHUP_ALL");
+		Log(new string('=', 78));
+
+		var msgs = await RunAndCollect("+bbcatchup all");
+		Log($"  +bbcatchup all notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBCatchupAll_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBCATCHUP ALL] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Any(m => m == "All postings on all boards marked as read.")).IsTrue()
+			.Because("+bbcatchup all should confirm all postings marked as read");
+	}
+
+	/// <summary>
+	/// After catching up, verifies +bbscan reports no unread postings.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBCatchup_All))]
+	public async Task BBS_BBScan_NoUnread()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBSCAN_NOUNREAD");
+		Log(new string('=', 78));
+
+		var msgs = await RunAndCollect("+bbscan");
+		Log($"  +bbscan notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var combinedOutput = string.Join("", msgs);
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBScanNoUnread_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBSCAN NO UNREAD] Full test output written to: {outputPath}");
+
+		await Assert.That(combinedOutput).Contains("There are no unread postings on the Global Bulletin Board.");
+	}
+
+	/// <summary>
+	/// Edits message 1/2 body text with +bbedit and verifies the new body is shown.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBScan_NoUnread))]
+	public async Task BBS_BBEdit_EditsMessage()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBEDIT_EDITSMESSAGE");
+		Log(new string('=', 78));
+
+		var group1Name = await GetGroupName(1);
+		Log($"  Group 1 name: {group1Name}");
+
+		var msgs = await RunAndCollect("+bbedit 1/2=Body of staged test post./Edited body content.");
+		Log($"  +bbedit notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBEdit_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBEDIT] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Any(m => m.Contains("Message 1/2 (") && m.Contains(group1Name) && m.Contains("/2) now reads:"))).IsTrue()
+			.Because("+bbedit should show the 'Message X/Y now reads:' header");
+
+		await Assert.That(msgs.Any(m => m.Contains("Edited body content."))).IsTrue()
+			.Because("+bbedit output should include the new body text");
+
+		await Assert.That(msgs.Any(m => m.StartsWith("=============================================================================="))).IsTrue()
+			.Because("+bbedit output should include separator lines");
+	}
+
+	/// <summary>
+	/// Searches group 1 for posts by God with +bbsearch 1/God and verifies both messages appear.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBEdit_EditsMessage))]
+	public async Task BBS_BBSearch_FindsMessages()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBSEARCH_FINDSMESSAGES");
+		Log(new string('=', 78));
+
+		var group1Name = await GetGroupName(1);
+		Log($"  Group 1 name: {group1Name}");
+
+		var msgs = await RunAndCollect("+bbsearch 1/God", 5000);
+		Log($"  +bbsearch notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBSearch_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBSEARCH] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Any(m => m.Contains($"**** {group1Name} ****"))).IsTrue()
+			.Because("+bbsearch should show group name in header");
+
+		await Assert.That(msgs.Any(m => m.Contains("Title Goes Here"))).IsTrue()
+			.Because("+bbsearch should find message 1 'Title Goes Here'");
+
+		await Assert.That(msgs.Any(m => m.Contains("Staged Test Post"))).IsTrue()
+			.Because("+bbsearch should find message 2 'Staged Test Post'");
+	}
+
+	/// <summary>
+	/// Sets a 30-day timeout on message 1/2 with +bbtimeout.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBSearch_FindsMessages))]
+	public async Task BBS_BBTimeout_SetsTimeout()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBTIMEOUT_SETSTIMEOUT");
+		Log(new string('=', 78));
+
+		var group1Name = await GetGroupName(1);
+		Log($"  Group 1 name: {group1Name}");
+
+		var msgs = await RunAndCollect("+bbtimeout 1/2=30", 5000);
+		Log($"  +bbtimeout notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBTimeout_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBTIMEOUT] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Any(m => m.Contains("Message 2 in group") && m.Contains("30 day timeout"))).IsTrue()
+			.Because("+bbtimeout should confirm the 30-day timeout was set");
+	}
+
+	/// <summary>
+	/// Removes message 1/2 from group 1 with +bbremove.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBTimeout_SetsTimeout))]
+	public async Task BBS_BBRemove_RemovesMessage()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBREMOVE_REMOVESMESSAGE");
+		Log(new string('=', 78));
+
+		var group1Name = await GetGroupName(1);
+		Log($"  Group 1 name: {group1Name}");
+
+		var msgs = await RunAndCollect("+bbremove 1/2", 5000);
+		Log($"  +bbremove notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBRemove_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBREMOVE] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Any(m => m.Contains("Message 2 removed from group") && m.Contains(group1Name))).IsTrue()
+			.Because("+bbremove should confirm message 2 was removed from the group");
+	}
+
+	/// <summary>
+	/// Creates a second BBS group with +bbnewgroup BBTestGroup2.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBRemove_RemovesMessage))]
+	public async Task BBS_BBNewGroup_Second()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBNEWGROUP_SECOND");
+		Log(new string('=', 78));
+
+		var msgs = await RunAndCollect("+bbnewgroup BBTestGroup2", 5000);
+		Log($"  +bbnewgroup BBTestGroup2 notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBNewGroupSecond_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBNEWGROUP SECOND] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Any(m => m.Contains("Group number 2 added as 'BBTestGroup2'"))).IsTrue()
+			.Because("+bbnewgroup should confirm BBTestGroup2 was created as group 2");
+	}
+
+	/// <summary>
+	/// Moves message 1/1 from group 1 to group 2 with +bbmove 1/1 to 2.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBNewGroup_Second))]
+	public async Task BBS_BBMove_MovesMessage()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBMOVE_MOVESMESSAGE");
+		Log(new string('=', 78));
+
+		var msgs = await RunAndCollect("+bbmove 1/1 to 2");
+		Log($"  +bbmove notifications: {msgs.Count}");
+		for (var i = 0; i < msgs.Count; i++)
+			Log($"  [{i}] {Truncate(msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBMove_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBMOVE] Full test output written to: {outputPath}");
+
+		await Assert.That(msgs.Any(m =>
+			m.Contains("removed from group '1'") && m.Contains("added to group '2' as message #1") ||
+			m.Contains("Message '1'") && m.Contains("removed from group '1'") && m.Contains("added to group '2'"))).IsTrue()
+			.Because("+bbmove should confirm message was moved from group 1 to group 2");
+	}
+
+	/// <summary>
+	/// Leaves and re-joins BBTestGroup2 with +bbleave and +bbjoin.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBMove_MovesMessage))]
+	public async Task BBS_BBLeaveAndJoin()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBLEAVE_AND_JOIN");
+		Log(new string('=', 78));
+
+		var leaveMsgs = await RunAndCollect("+bbleave 2");
+		Log($"  +bbleave 2 notifications: {leaveMsgs.Count}");
+		for (var i = 0; i < leaveMsgs.Count; i++)
+			Log($"  [leave/{i}] {Truncate(leaveMsgs[i], 200)}");
+
+		var joinMsgs = await RunAndCollect("+bbjoin 2");
+		Log($"  +bbjoin 2 notifications: {joinMsgs.Count}");
+		for (var i = 0; i < joinMsgs.Count; i++)
+			Log($"  [join/{i}] {Truncate(joinMsgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBLeaveAndJoin_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBLEAVE/BBJOIN] Full test output written to: {outputPath}");
+
+		await Assert.That(leaveMsgs.Any(m => m == "You have removed yourself from the BBTestGroup2 board.")).IsTrue()
+			.Because("+bbleave 2 should confirm leaving BBTestGroup2");
+
+		await Assert.That(joinMsgs.Any(m => m == "You have joined the BBTestGroup2 board.")).IsTrue()
+			.Because("+bbjoin 2 should confirm joining BBTestGroup2");
+	}
+
+	/// <summary>
+	/// Shows and sets global BBS config values with +bbconfig.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBLeaveAndJoin))]
+	public async Task BBS_BBConfig_ShowsAndSets()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBCONFIG_SHOWSANDSETS");
+		Log(new string('=', 78));
+
+		var showMsgs = await RunAndCollect("+bbconfig");
+		Log($"  +bbconfig show notifications: {showMsgs.Count}");
+		for (var i = 0; i < showMsgs.Count; i++)
+			Log($"  [show/{i}] {Truncate(showMsgs[i], 200)}");
+
+		var set30Msgs = await RunAndCollect("+bbconfig timeout=30");
+		Log($"  +bbconfig timeout=30 notifications: {set30Msgs.Count}");
+		for (var i = 0; i < set30Msgs.Count; i++)
+			Log($"  [set30/{i}] {Truncate(set30Msgs[i], 200)}");
+
+		var reset0Msgs = await RunAndCollect("+bbconfig timeout=0");
+		Log($"  +bbconfig timeout=0 notifications: {reset0Msgs.Count}");
+		for (var i = 0; i < reset0Msgs.Count; i++)
+			Log($"  [reset/{i}] {Truncate(reset0Msgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBConfig_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBCONFIG] Full test output written to: {outputPath}");
+
+		var showOutput = string.Join("\n", showMsgs);
+		await Assert.That(showOutput).Contains("Myrddin's Global BBS");
+		await Assert.That(showOutput).Contains("timeout:");
+		await Assert.That(showOutput).Contains("autotimeout:");
+
+		await Assert.That(set30Msgs.Any(m => m.Contains("30 days"))).IsTrue()
+			.Because("+bbconfig timeout=30 should confirm the new 30-day timeout");
+
+		await Assert.That(reset0Msgs.Any(m => m.Contains("none"))).IsTrue()
+			.Because("+bbconfig timeout=0 should confirm timeout reset to none");
+	}
+
+	/// <summary>
+	/// Locks group 2 for read and write access using +bblock and +bbwritelock.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBConfig_ShowsAndSets))]
+	public async Task BBS_BBLock_RestrictsGroup()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBLOCK_RESTRICTSGROUP");
+		Log(new string('=', 78));
+
+		var lockMsgs = await RunAndCollect("+bblock 2=flag/wizard");
+		Log($"  +bblock notifications: {lockMsgs.Count}");
+		for (var i = 0; i < lockMsgs.Count; i++)
+			Log($"  [lock/{i}] {Truncate(lockMsgs[i], 200)}");
+
+		var wlockMsgs = await RunAndCollect("+bbwritelock 2=flag/wizard");
+		Log($"  +bbwritelock notifications: {wlockMsgs.Count}");
+		for (var i = 0; i < wlockMsgs.Count; i++)
+			Log($"  [wlock/{i}] {Truncate(wlockMsgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBLock_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBLOCK] Full test output written to: {outputPath}");
+
+		await Assert.That(lockMsgs.Any(m => m.Contains("locked") && m.Contains("flag=wizard"))).IsTrue()
+			.Because("+bblock should confirm group 2 was locked for flag=wizard");
+
+		await Assert.That(wlockMsgs.Any(m => m.Contains("locked") && m.Contains("flag=wizard"))).IsTrue()
+			.Because("+bbwritelock should confirm group 2 write access locked for flag=wizard");
+	}
+
+	/// <summary>
+	/// Creates a temporary group, prompts for confirmation with +bbcleargroup, then deletes it.
+	/// </summary>
+	[Test]
+	[DependsOn(nameof(BBS_BBLock_RestrictsGroup))]
+	public async Task BBS_BBClearGroup_DeletesGroup()
+	{
+		var output = new StringBuilder();
+		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+
+		Log(new string('=', 78));
+		Log("BBS_BBCLEARGROUP_DELETESGROUP");
+		Log(new string('=', 78));
+
+		var newGroupMsgs = await RunAndCollect("+bbnewgroup TempGroupForDeletion", 5000);
+		Log($"  +bbnewgroup TempGroupForDeletion notifications: {newGroupMsgs.Count}");
+		for (var i = 0; i < newGroupMsgs.Count; i++)
+			Log($"  [newgroup/{i}] {Truncate(newGroupMsgs[i], 200)}");
+
+		var clearMsgs = await RunAndCollect("+bbcleargroup 3");
+		Log($"  +bbcleargroup 3 notifications: {clearMsgs.Count}");
+		for (var i = 0; i < clearMsgs.Count; i++)
+			Log($"  [clear/{i}] {Truncate(clearMsgs[i], 200)}");
+
+		var confirmMsgs = await RunAndCollect("+bbconfirm 3");
+		Log($"  +bbconfirm 3 notifications: {confirmMsgs.Count}");
+		for (var i = 0; i < confirmMsgs.Count; i++)
+			Log($"  [confirm/{i}] {Truncate(confirmMsgs[i], 200)}");
+
+		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBClearGroup_TestOutput.txt");
+		await File.WriteAllTextAsync(outputPath, output.ToString());
+		Console.WriteLine($"[BBS BBCLEARGROUP] Full test output written to: {outputPath}");
+
+		await Assert.That(newGroupMsgs.Any(m => m.Contains("Group number 3 added as 'TempGroupForDeletion'"))).IsTrue()
+			.Because("+bbnewgroup should confirm TempGroupForDeletion was created as group 3");
+
+		await Assert.That(clearMsgs.Any(m => m.Contains("Warning") && m.Contains("+bbconfirm 3"))).IsTrue()
+			.Because("+bbcleargroup should warn and prompt for +bbconfirm 3");
+
+		await Assert.That(confirmMsgs.Any(m => m.Contains("Group number 3 removed."))).IsTrue()
+			.Because("+bbconfirm should confirm group 3 was removed");
 	}
 }

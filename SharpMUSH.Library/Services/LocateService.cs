@@ -223,9 +223,13 @@ public partial class LocateService(
 					&& name.StartsWith('*'))
 				&& (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
+			// In PennMUSH, a name starting with '*' in locate() is a player-name prefix indicator, not a regex
+			// wildcard. Strip the leading '*' before doing the global player lookup so that
+			// locate(%#, "*God", "p") correctly finds the player named "God".
+			var playerName = name.StartsWith('*') ? name[1..] : name;
 			// Async streaming pattern is correct - mediator creates IAsyncEnumerable
 			var maybeMatch = await mediator
-				.CreateStream(new GetPlayerQuery(name))
+				.CreateStream(new GetPlayerQuery(playerName))
 				.FirstOrDefaultAsync();
 
 			match = maybeMatch is null

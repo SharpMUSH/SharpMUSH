@@ -27,7 +27,14 @@ public partial class Commands
 		return new CallState(string.Empty);
 	}
 
-	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse | CommandBehavior.EqSplit,
+	// RSNoParse: only the RHS value is kept unevaluated (deferred/literal).
+	// The LHS (object/attribute name slot) is evaluated normally by ArgumentSplit so that
+	// register substitutions like %q0 in "& attr %q0=[value]" resolve before the locate step.
+	// This matches PennMUSH's CS_NOPARSE semantics for &, which apply only to the stored value.
+	// RSBrace: braces in the RHS are preserved during ANTLR parsing so that
+	// `& ATTR OBJ={code}` stores `{code}` verbatim (matching PennMUSH get(OBJ/ATTR) behavior).
+	// The SetAttribute handler handles DirectInput vs queue context to evaluate vs store raw.
+	[SharpCommand(Name = "&", Behavior = CommandBehavior.SingleToken | CommandBehavior.RSNoParse | CommandBehavior.RSBrace | CommandBehavior.EqSplit,
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["object/attribute", "value"])]
 	public static async ValueTask<Option<CallState>> SetAttribute(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
@@ -37,39 +44,58 @@ public partial class Commands
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
+		// The attribute name (arg["0"]) is extracted from the raw command token (e.g. &hdr_%q1 obj=val
+		// → attr="hdr_%q1"). In PennMUSH, the attribute name IS evaluated so that register
+		// substitutions like %q1 resolve to their current values before the attribute is set.
+		var attrNameRaw = args["0"].Message ?? MModule.empty();
+		var attrNameParsed = (await parser.FunctionParse(attrNameRaw))?.Message ?? attrNameRaw;
+		var attrName = MModule.plainText(attrNameParsed);
+
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			enactor,
 			executor,
 			args["1"].Message!.ToString(), LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
-				MString contents;
-				if (args.TryGetValue("2", out var tmpContents))
+				if (!args.TryGetValue("2", out var tmpContents))
 				{
-					// PennMUSH QUEUE_NOLIST behavior via ParserStateFlags.DirectInput:
-					// - DirectInput set   → command came directly from a player's network connection;
-					//   treat the value as literal code (NoParse — no function evaluation).
-					// - DirectInput clear → command is running from a queue/callback (@wait, @trigger,
-					//   @force, etc.); evaluate the value before storage, matching PennMUSH behavior.
-					contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
-						? tmpContents.Message!
-						: await tmpContents.ParsedMessage() ?? MModule.empty();
-				}
-				else
-				{
-					contents = MModule.empty();
+					// PennMUSH: & attr obj (no '=') deletes (wipes) the attribute.
+					// Use enactor (cause/%#) for permission checking, matching PennMUSH do_set_atr()
+					// which uses the triggering player's permissions, not the object executing the command.
+					var clearResult = await AttributeService!.ClearAttributeAsync(
+						enactor, realLocated, attrName,
+						IAttributeService.AttributePatternMode.Exact,
+						IAttributeService.AttributeClearMode.Safe);
+					await NotifyService!.Notify(enactor,
+						clearResult.Match(
+							_ => $"Attribute {attrName} SET.",
+							failure => failure.Value)
+					);
+					return new CallState(clearResult.Match(
+						_ => $"{realLocated.Object().Name}/{attrNameParsed}",
+						_ => string.Empty));
 				}
 
+				// PennMUSH QUEUE_NOLIST behavior via ParserStateFlags.DirectInput:
+				// - DirectInput set   → command came directly from a player's network connection;
+				//   treat the value as literal code (NoParse — no function evaluation).
+				// - DirectInput clear → command is running from a queue/callback (@wait, @trigger,
+				//   @force, etc.); evaluate the value before storage, matching PennMUSH behavior.
+				var contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
+					? tmpContents.Message!
+					: await tmpContents.ParsedMessage() ?? MModule.empty();
+
+				// Use enactor (cause/%#) for permission checking, matching PennMUSH do_set_atr()
+				// semantics: the player who triggered the command is the permission grantor.
 				var setResult =
-					await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(args["0"].Message!),
-						contents);
+					await AttributeService!.SetAttributeAsync(enactor, realLocated, attrName, contents);
 				await NotifyService!.Notify(enactor,
 					setResult.Match(
-						_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
+						_ => $"{realLocated.Object().Name}/{attrNameParsed} - Set.",
 						failure => failure.Value)
 				);
 
 				return new CallState(setResult.Match(
-					_ => $"{realLocated.Object().Name}/{args["0"].Message}",
+					_ => $"{realLocated.Object().Name}/{attrNameParsed}",
 					_ => string.Empty));
 			});
 	}
