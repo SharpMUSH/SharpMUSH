@@ -312,7 +312,7 @@ public static partial class HelperFunctions
 
 		return string.IsNullOrEmpty(obj)
 			? false
-			: (obj, attr);
+			: (obj, string.IsNullOrEmpty(attr) ? null : attr);
 	}
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)
@@ -342,23 +342,24 @@ public static partial class HelperFunctions
 
 	/// <summary>
 	/// A regular expression for literal attribute names (no wildcards).
-	/// Only allows alphanumeric, @, _, -, ., and ` (for tree navigation).
+	/// Allows alphanumeric, @, _, -, ., `, and # (PennMUSH permits # in attribute names,
+	/// e.g. bb_post_bdy_#1 produced by &amp; attr_%# obj=value patterns).
 	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`]+)$")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`#]+)$")]
 	private static partial Regex ObjectWithLiteralAttribute();
 
 	/// <summary>
 	/// A regular expression for wildcard attribute patterns.
-	/// Allows * and ? for pattern matching in addition to literal characters.
+	/// Allows * and ? for pattern matching in addition to literal characters (including #).
 	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\*\?]+)$")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\*\?#]+)$")]
 	private static partial Regex ObjectWithWildcardAttribute();
 
 	/// <summary>
 	/// A regular expression for regex attribute patterns.
-	/// Allows full regex syntax for advanced pattern matching.
+	/// Allows full regex syntax for advanced pattern matching (including # as a literal).
 	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]
 	private static partial Regex ObjectWithRegexAttribute();
 
 	/// <summary>
@@ -366,27 +367,29 @@ public static partial class HelperFunctions
 	/// Legacy method - use ObjectWithLiteralAttribute, ObjectWithWildcardAttribute, or ObjectWithRegexAttribute instead.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]
 	private static partial Regex ObjectWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"^(?:(?<Object>[^/]+)/)?(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
+	[GeneratedRegex(@"^(?:(?<Object>[^/]+)/)?(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]
 	private static partial Regex OptionalDatabaseReferenceWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"^(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+))?$")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+))?$")]
 	private static partial Regex DatabaseReferenceWithOptionalAttribute();
 
 	/// <summary>
-	/// Validates basic attribute name format (alphanumeric, underscores, hyphens, backticks)
+	/// Validates basic attribute name format. Matches PennMUSH good_atr_name() which permits
+	/// any printable character except backtick, pipe, semicolon, and braces.
+	/// Includes # because attribute names set via &amp; attr_%# obj=val expand the dbref into the name.
 	/// </summary>
-	[GeneratedRegex(@"^[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+$")]
+	[GeneratedRegex(@"^[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+$")]
 	private static partial Regex AttributeNameValidation();
 
 	/// <summary>
@@ -411,4 +414,19 @@ public static partial class HelperFunctions
 	public static bool IsLambdaOrApply(string attributeSpecifier)
 		=> attributeSpecifier.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase)
 		|| attributeSpecifier.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// Strips a single pair of outer braces from an <see cref="MString"/>, if present.
+	/// This is the SharpMUSH equivalent of PennMUSH's <c>PE_COMMAND_BRACES</c> flag,
+	/// which strips only the first (outermost) brace level at execution time.
+	/// Used by command handlers whose arguments were preserved via
+	/// <see cref="ParserInterfaces.ParserStateFlags.PreserveBraces"/> during argument parsing.
+	/// </summary>
+	public static MString StripOuterBraces(MString input)
+	{
+		var text = MModule.plainText(input);
+		if (text.Length >= 2 && text[0] == '{' && text[^1] == '}')
+			return MModule.substring(1, MModule.getLength(input) - 2, input);
+		return input;
+	}
 }

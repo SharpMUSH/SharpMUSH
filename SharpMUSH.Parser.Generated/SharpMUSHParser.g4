@@ -156,7 +156,7 @@ beginGenericText:
       { inFunction == 0 }? CPAREN
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
-    | { !lookingForCommandArgEquals }? EQUALS
+    | { !lookingForCommandArgEquals || inFunction > 0 }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
     | (escapedText|OPAREN|OTHER|ansi) 
 ;

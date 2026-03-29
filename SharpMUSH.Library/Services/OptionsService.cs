@@ -156,7 +156,7 @@ public class OptionsService(ISharpDatabase database) : IOptionsFactory<SharpMUSH
 				MaxAliases: 3,
 				MaxAttributesPerObj: 2048,
 				MaxDbReference: null,
-				MaxDepth: 10,
+				MaxDepth: 50,
 				MaxGuestPennies: 1000000000,
 				MaxGuests: -1,
 				MaxLogins: 120,

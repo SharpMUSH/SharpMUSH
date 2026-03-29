@@ -838,6 +838,17 @@ module MarkupStringModule =
     let split2 (delimiter: MarkupString) (ams: MarkupString) : MarkupString array =
         split (delimiter.ToPlainText()) ams
 
+    /// Splits by an MarkupString delimiter following PennMUSH list semantics:
+    /// when delimiter is a single space, normalizes whitespace by filtering empty segments,
+    /// matching PennMUSH's trim_space_sep() — leading/trailing spaces and multiple consecutive
+    /// spaces are ignored.  Non-space delimiters behave identically to split2.
+    let splitList (delimiter: MarkupString) (ams: MarkupString) : MarkupString array =
+        let items = split2 delimiter ams
+        if delimiter.Length = 1 && delimiter.Text = " " then
+            items |> Array.filter (fun x -> x.Length > 0)
+        else
+            items
+
     /// Applies a transformation function, operating on each segment individually.
     let apply2 (ams: MarkupString) (transform: MarkupString -> MarkupString) : MarkupString =
         let segments =

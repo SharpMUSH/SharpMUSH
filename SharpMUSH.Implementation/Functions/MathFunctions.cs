@@ -283,7 +283,7 @@ public partial class Functions
 
 		var operation = MModule.plainText(args["0"].Message).ToLower();
 		var delimiter = args.Count == 3 ? args["2"].Message : MModule.single(" ");
-		var list = MModule.split2(delimiter, args["1"].Message).ToList();
+		var list = MModule.splitList(delimiter, args["1"].Message).ToList();
 
 		var values = new List<decimal>();
 		foreach (var item in list)
@@ -836,9 +836,9 @@ public partial class Functions
 			? tmpDelimiter.Message
 			: MModule.single(" ");
 		var sep = parser.CurrentState.Arguments.TryGetValue("4", out var tmpSep) ? tmpSep.Message : delimiter;
-		var list1 = MModule.split2(delimiter, parser.CurrentState.Arguments["0"].Message)
+		var list1 = MModule.splitList(delimiter, parser.CurrentState.Arguments["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		var list2 = MModule.split2(delimiter, parser.CurrentState.Arguments["1"].Message)
+		var list2 = MModule.splitList(delimiter, parser.CurrentState.Arguments["1"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
@@ -863,9 +863,9 @@ public partial class Functions
 		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
 			? tmpDelimiter.Message
 			: MModule.single(" ");
-		var list1 = MModule.split2(delimiter, parser.CurrentState.Arguments["0"].Message)
+		var list1 = MModule.splitList(delimiter, parser.CurrentState.Arguments["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		var list2 = MModule.split2(delimiter, parser.CurrentState.Arguments["1"].Message)
+		var list2 = MModule.splitList(delimiter, parser.CurrentState.Arguments["1"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
@@ -895,9 +895,9 @@ public partial class Functions
 			: MModule.single(" ");
 		var sep = args.TryGetValue("3", out var tmpSep) ? tmpSep.Message : delimiter;
 
-		var list1 = MModule.split2(delimiter, args["0"].Message)
+		var list1 = MModule.splitList(delimiter, args["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		var list2 = MModule.split2(delimiter, args["1"].Message)
+		var list2 = MModule.splitList(delimiter, args["1"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
@@ -946,7 +946,7 @@ public partial class Functions
 			? tmpDelimiter.Message
 			: MModule.single(" ");
 
-		var list = MModule.split2(delimiter, args["0"].Message)
+		var list = MModule.splitList(delimiter, args["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 
 		if (list.Any(x => !x.Item1))
@@ -968,7 +968,7 @@ public partial class Functions
 			? tmpDelimiter.Message
 			: MModule.single(" ");
 
-		var list = MModule.split2(delimiter, args["0"].Message)
+		var list = MModule.splitList(delimiter, args["0"].Message)
 			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
 
 		if (list.Any(x => !x.Item1))
@@ -991,7 +991,7 @@ public partial class Functions
 	[SharpFunction(Name = "vdim", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
 	public static ValueTask<CallState> vdim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(new CallState(
-			MModule.split2(
+			MModule.splitList(
 				ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MModule.single(" ")),
 				parser.CurrentState.Arguments["0"].Message).Length.ToString()
 			));

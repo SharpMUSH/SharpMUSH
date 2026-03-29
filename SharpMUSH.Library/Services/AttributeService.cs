@@ -137,7 +137,7 @@ public class AttributeService(
 
 		if (attr.IsNone)
 		{
-			return MModule.single(Errors.ErrorNoSuchAttribute);
+			return MModule.empty();
 		}
 
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
@@ -173,7 +173,9 @@ public class AttributeService(
 						Arguments = args,
 						EnvironmentRegisters = args,
 						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
-						Function = attributeName
+						Function = attributeName,
+						Executor = obj.Object().DBRef,
+						Caller = s.Executor
 					},
 				async newParser =>
 					await newParser.FunctionParse(attr.AsAttribute.Last().Value));
@@ -229,6 +231,12 @@ public class AttributeService(
 		var objPlainText = obj.ToPlainText();
 		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
+
+		if (!applyPredicate && !lambdaPredicate && attribute.Length == 0)
+		{
+			return await EvaluateAttributeFunctionAsync(parser, executor, executor,
+				objPlainText, args, evalParent, ignorePermissions);
+		}
 
 		// Skip attribute name validation for lambda/apply: the "attribute" part is
 		// executable code, not a database attribute name, and can contain characters

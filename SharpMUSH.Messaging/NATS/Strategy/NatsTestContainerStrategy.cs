@@ -48,9 +48,7 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 	{
 		if (_container is not null)
 		{
-			// With WithReuse(true), Testcontainers will NOT stop the Docker container on
-			// disposal — the Ryuk cleanup agent manages its lifetime.  We still call
-			// DisposeAsync to release the client-side .NET resources.
+			await _container.StopAsync();
 			await _container.DisposeAsync();
 			_container = null;
 		}

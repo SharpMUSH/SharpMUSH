@@ -335,7 +335,8 @@ public partial class Commands
 				var stateForElement = parser.CurrentState with
 				{
 					Registers = registerStack,
-					Executor = target.Object().DBRef
+					Executor = target.Object().DBRef,
+					Caller = parser.CurrentState.Executor
 				};
 
 				// Execute the attribute with the element as %0
@@ -1645,6 +1646,11 @@ public partial class Commands
 		var hasReplacementActions = args.Count >= 2;
 		var replacementActions = hasReplacementActions ? args["1"].Message : null;
 
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		if (replacementActions is not null)
+			replacementActions = HelperFunctions.StripOuterBraces(replacementActions);
+
 		if (target.IsPlayer)
 		{
 			await Mediator!.Send(new HaltObjectQueueRequest(targetObject.DBRef));
@@ -2035,12 +2041,17 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var strArg = args["0"];
 		Option<MString> defaultArg = new None();
-		var pairs = args.Values.Skip(1).Pairwise();
 		var matched = false;
 
+		// Separate out the default action (last element when total arg count is even).
+		// args["0"] is the test expression; remaining args are (pattern, action) pairs plus optional default.
+		// Even total args means: test + pairs + default → odd remaining → default is last.
+		var remainingArgs = args.Values.Skip(1).ToList();
 		if (args.Count % 2 == 0)
 		{
-			defaultArg = args.Last().Value.Message!;
+			// Even count: test + N*(pat,act) + default → take default, leave pairs
+			defaultArg = remainingArgs.Last().Message!;
+			remainingArgs = remainingArgs.Take(remainingArgs.Count - 1).ToList();
 		}
 
 		// Push the switch string onto the context stack
@@ -2048,16 +2059,25 @@ public partial class Commands
 
 		try
 		{
-			foreach (var (expr, action) in pairs)
+			// Iterate over non-overlapping (pattern, action) pairs — step by 2.
+			for (var i = 0; i + 1 < remainingArgs.Count; i += 2)
 			{
-				if (expr is null) break;
+				var exprArg = remainingArgs[i];
+				var actionArg = remainingArgs[i + 1];
+
+				if (exprArg is null) break;
+
+				// Patterns are RSNoParse (stored raw); evaluate lazily before comparing.
+				// This matches PennMUSH behavior where pattern expressions like [func()] are
+				// evaluated at match time, not pre-evaluated.
+				var evaluatedPattern = (await exprArg.ParsedMessage()) ?? exprArg.Message!;
 
 				// Use wildcard/glob pattern matching
-				if (MModule.isWildcardMatch(strArg.Message!, expr.Message!))
+				if (MModule.isWildcardMatch(strArg.Message!, evaluatedPattern))
 				{
 					matched = true;
 					// This is Inline.
-					await parser.CommandListParseVisitor(action.Message!)();
+					await parser.CommandListParseVisitor(actionArg.Message!)();
 				}
 			}
 
@@ -2084,6 +2104,18 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		if (arg1 is not null)
+			arg1 = HelperFunctions.StripOuterBraces(arg1);
+
+		// Restore caller's pattern-match args (%0-%9) for the queued callback state.
+		// Without this, %0 inside @wait callbacks would resolve to @wait's own arg (the delay time)
+		// instead of the enclosing $command pattern match. Equivalent to PennMUSH wenv preservation.
+		var callbackState = parser.CurrentState.CallerArguments is not null
+			? parser.CurrentState with { Arguments = new Dictionary<string, CallState>(parser.CurrentState.CallerArguments) }
+			: parser.CurrentState;
+
 		/*
 		 *  @wait/pid <pid>=<seconds>
 		 *	@wait/pid <pid>=[+-]<adjustment>
@@ -2104,7 +2136,7 @@ public partial class Commands
 		if (double.TryParse(arg0, out var time))
 		{
 			TimeSpan convertedTime;
-			if (!switches.Contains("UNTIL"))
+			if (switches.Contains("UNTIL"))
 			{
 				convertedTime = DateTimeOffset.FromUnixTimeSeconds((long)time) - DateTimeOffset.UtcNow;
 			}
@@ -2113,7 +2145,7 @@ public partial class Commands
 				convertedTime = TimeSpan.FromSeconds(time);
 			}
 
-			await Mediator!.Send(new QueueDelayedCommandListRequest(arg1, parser.CurrentState, convertedTime));
+			await Mediator!.Send(new QueueDelayedCommandListRequest(arg1, callbackState, convertedTime));
 			return CallState.Empty;
 		}
 
@@ -2137,7 +2169,7 @@ public partial class Commands
 				return new CallState(Errors.ErrorPerm);
 			}
 
-			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1);
+			await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1, callbackState);
 			return CallState.Empty;
 		}
 
@@ -2166,12 +2198,12 @@ public partial class Commands
 
 					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
 
-					await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1);
+					await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, newUntilTime, arg1, callbackState);
 					return CallState.Empty;
 				}
 
 			case 2 when double.TryParse(splitBySlashes[1], out untilTime):
-				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1);
+				await QueueSemaphoreWithDelay(parser, foundObject, DefaultSemaphoreAttributeArray, TimeSpan.FromSeconds(untilTime), arg1, callbackState);
 				return CallState.Empty;
 
 			// @wait <object>/<attribute>=<command list>
@@ -2187,7 +2219,7 @@ public partial class Commands
 						return new CallState("#-1 INVALID SEMAPHORE ATTRIBUTE");
 					}
 
-					await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1);
+					await QueueSemaphore(parser, foundObject, customSemaphoreAttr, arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2210,7 +2242,7 @@ public partial class Commands
 					}
 
 					var newUntilTime = DateTimeOffset.FromUnixTimeSeconds((long)untilTime) - DateTimeOffset.UtcNow;
-					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1);
+					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr, newUntilTime, arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2226,7 +2258,7 @@ public partial class Commands
 					}
 
 					await QueueSemaphoreWithDelay(parser, foundObject, customSemaphoreAttr,
-						TimeSpan.FromSeconds(untilTime), arg1);
+						TimeSpan.FromSeconds(untilTime), arg1, callbackState);
 					return CallState.Empty;
 				}
 
@@ -2237,9 +2269,9 @@ public partial class Commands
 	}
 
 	private static async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
-		MString arg1)
+		MString arg1, ParserState? callbackState = null)
 	{
-
+		var stateForCallback = callbackState ?? parser.CurrentState;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
@@ -2253,7 +2285,7 @@ public partial class Commands
 
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
 
-			await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 				dbRefAttr, 0));
 
 			return;
@@ -2270,14 +2302,15 @@ public partial class Commands
 
 		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
 
-		await Mediator.Send(new QueueCommandListRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 			dbRefAttr2, last));
 
 	}
 
 	private static async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
-		string[] attribute, TimeSpan delay, MString arg1)
+		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
 	{
+		var stateForCallback = callbackState ?? parser.CurrentState;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var one = await Mediator!.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
@@ -2287,7 +2320,7 @@ public partial class Commands
 		{
 			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
 				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
 			return;
 		}
@@ -2300,7 +2333,7 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
 			one.AsPlayer));
-		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, parser.CurrentState,
+		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
 	}
 
@@ -2701,6 +2734,10 @@ public partial class Commands
 		var cmdListArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
+		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
+		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
+		cmdListArg = HelperFunctions.StripOuterBraces(cmdListArg);
+
 		var maybeFound =
 			await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(),
 				LocateFlags.All);
@@ -2726,7 +2763,12 @@ public partial class Commands
 
 		// Note: Queue infrastructure available via QueueCommandListRequest if needed
 		// Currently executes inline for immediate response (default PennMUSH behavior)
-		await parser.With(state => state with { Executor = found.Object().DBRef },
+		await parser.With(
+			state => state with
+			{
+				Executor = found.Object().DBRef,
+				Caller = state.Executor
+			},
 			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
 
 		return CallState.Empty;
@@ -3321,7 +3363,7 @@ public partial class Commands
 
 			if (!isQuiet && !isCheck)
 			{
-				await NotifyService!.Notify(executor, $"{attrName} - Set: {newText}");
+				await NotifyService!.Notify(executor, $"{attrName} - Set.");
 			}
 			else if (!isQuiet && isCheck)
 			{
@@ -4233,23 +4275,23 @@ public partial class Commands
 		// no /spoof: target object becomes both enactor and executor
 		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
 
-		// Build argument registers from all provided arguments
-		// Arguments start at index 1 (index 0 is the object/attribute path)
-		// They map to %0, %1, %2, etc. with no upper limit
-		var registerDict = new Dictionary<string, MString>();
+		// Build argument registers from all provided arguments.
+		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
+		// RSArgs that become %0, %1, %2, … inside the triggered attribute.
+		// These go into EnvironmentRegisters (the positional %0-%9 args), NOT the q-register stack.
+		var envRegisters = new Dictionary<string, CallState>();
 		for (var i = 1; i < args.Count; i++)
 		{
-			if (args.TryGetValue((i - 1).ToString(), out var argValue) && argValue.Message != null)
+			if (args.TryGetValue(i.ToString(), out var argValue) && argValue.Message != null)
 			{
-				registerDict[(i - 1).ToString()] = argValue.Message;
+				envRegisters[(i - 1).ToString()] = argValue;
 			}
 		}
 
+		// Push a fresh empty q-register frame so setq() works inside the triggered attribute
+		// and so the triggered scope never inherits %q registers from the calling context.
 		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
-		if (registerDict.Count > 0)
-		{
-			registerStack.Push(registerDict);
-		}
+		registerStack.Push(new Dictionary<string, MString>());
 
 		// Handle /match switch for pattern matching
 		if (switches.Contains("MATCH"))
@@ -4303,7 +4345,9 @@ public partial class Commands
 			{
 				Executor = targetObject.Object().DBRef,
 				Enactor = executionEnactor,
-				Registers = registerStack
+				Caller = parser.CurrentState.Executor,
+				Registers = registerStack,
+				EnvironmentRegisters = envRegisters
 			};
 
 			await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
@@ -5168,6 +5212,7 @@ public partial class Commands
 					{
 						Executor = victim.Object().DBRef,
 						Enactor = actor.Object().DBRef,
+						Caller = state.Executor,
 						Arguments = stackArgs
 					},
 					newParser => newParser.WithAttributeDebug(attribute,
@@ -5206,6 +5251,7 @@ public partial class Commands
 			{
 				Executor = victim.Object().DBRef,
 				Enactor = actor.Object().DBRef,
+				Caller = state.Executor,
 				Arguments = stackArgs
 			},
 			newParser => attributeService.EvaluateAttributeFunctionAsync(
@@ -5621,7 +5667,7 @@ public partial class Commands
 			var result = await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 			{
 				var execResult = await parser.With(
-					state => state with { EnvironmentRegisters = envArgs },
+					state => state with { EnvironmentRegisters = envArgs, Caller = state.Executor },
 					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(attributeText))));
 
 				// Handle NOBREAK switch to prevent @break/@assert propagation.

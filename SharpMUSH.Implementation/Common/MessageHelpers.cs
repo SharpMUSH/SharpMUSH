@@ -263,7 +263,9 @@ public static class MessageHelpers
 			var result = await parser.With(
 				state => state with
 				{
+					Executor = finalObjToEvaluate.Object().DBRef,
 					Enactor = enactor.Object().DBRef,
+					Caller = state.Executor,
 					Arguments = processedArgs
 				},
 				newParser => newParser.FunctionParse(pinnedAttribute.Last().Value));
@@ -285,7 +287,8 @@ public static class MessageHelpers
 				var result = await parser.With(
 					state => state with
 					{
-						Enactor = enactor.Object().DBRef
+						Enactor = enactor.Object().DBRef,
+						Caller = state.Executor
 					},
 					newParser => attributeService.EvaluateAttributeFunctionAsync(
 						newParser, recipient, recipient, attrToEvaluate, processedArgs));
