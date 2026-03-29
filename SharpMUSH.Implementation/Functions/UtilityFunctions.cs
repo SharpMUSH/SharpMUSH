@@ -576,7 +576,7 @@ public partial class Functions
 				.Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
 
-		return new CallState(thing);
+		return new CallState($"#{thing.Number}");
 	}
 
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

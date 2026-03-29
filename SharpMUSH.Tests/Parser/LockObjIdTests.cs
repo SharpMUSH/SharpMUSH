@@ -49,9 +49,11 @@ public class LockObjIdTests
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		// Get creation time from the database object (create() returns bare #N; objid includes timestamp)
+		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Lock string with full objid (dbref:creationtime)
-		var lockString = $"=#{testObjDbRef.Number}:{testObjDbRef.CreationMilliseconds}";
+		var lockString = $"=#{testObjFullDbRef.Number}:{testObjFullDbRef.CreationMilliseconds}";
 
 		var bep = BooleanParser;
 		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
@@ -71,10 +73,12 @@ public class LockObjIdTests
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		// Get creation time from the database object (create() returns bare #N; objid includes timestamp)
+		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Lock string with full objid but DIFFERENT creation time
-		var differentCreationTime = (testObjDbRef.CreationMilliseconds ?? 0) + 1000;
-		var lockString = $"=#{testObjDbRef.Number}:{differentCreationTime}";
+		var differentCreationTime = (testObjFullDbRef.CreationMilliseconds ?? 0) + 1000;
+		var lockString = $"=#{testObjFullDbRef.Number}:{differentCreationTime}";
 
 		var bep = BooleanParser;
 		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
@@ -123,6 +127,8 @@ public class LockObjIdTests
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		// Get creation time from the database object (create() returns bare #N; objid includes timestamp)
+		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Create an object to hold the dbref list
 		var lockHolderResult = (await Parser.FunctionParse(MModule.single("create(LockHolderObjId1)")))?.Message!;
@@ -131,7 +137,7 @@ public class LockObjIdTests
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
 
 		// Set an attribute with a full objid
-		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/allowedlistobjid,#{testObjDbRef.Number}:{testObjDbRef.CreationMilliseconds})"));
+		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/allowedlistobjid,#{testObjFullDbRef.Number}:{testObjFullDbRef.CreationMilliseconds})"));
 
 		var lockString = "dbreflist^allowedlistobjid";
 
@@ -152,6 +158,8 @@ public class LockObjIdTests
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
 		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		// Get creation time from the database object (create() returns bare #N; objid includes timestamp)
+		var testObjFullDbRef = testObj.Object().DBRef;
 
 		// Create an object to hold the dbref list
 		var lockHolderResult = (await Parser.FunctionParse(MModule.single("create(LockHolderObjId2)")))?.Message!;
@@ -160,8 +168,8 @@ public class LockObjIdTests
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
 
 		// Set an attribute with objid but DIFFERENT creation time
-		var differentCreationTime = (testObjDbRef.CreationMilliseconds ?? 0) + 1000;
-		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/allowedlistdiff,#{testObjDbRef.Number}:{differentCreationTime})"));
+		var differentCreationTime = (testObjFullDbRef.CreationMilliseconds ?? 0) + 1000;
+		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/allowedlistdiff,#{testObjFullDbRef.Number}:{differentCreationTime})"));
 
 		var lockString = "dbreflist^allowedlistdiff";
 
@@ -182,11 +190,14 @@ public class LockObjIdTests
 		var testObjDbRefStr1 = createResult1.ToPlainText();
 		var testObjDbRef1 = HelperFunctions.ParseDbRef(testObjDbRefStr1).AsValue();
 		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Known();
+		// Get creation times from database objects (create() returns bare #N; objid includes timestamp)
+		var testObjFullDbRef1 = testObj1.Object().DBRef;
 
 		var createResult2 = (await Parser.FunctionParse(MModule.single("create(LockTestMulti2)")))?.Message!;
 		var testObjDbRefStr2 = createResult2.ToPlainText();
 		var testObjDbRef2 = HelperFunctions.ParseDbRef(testObjDbRefStr2).AsValue();
 		var testObj2 = (await Database.GetObjectNodeAsync(testObjDbRef2)).Known();
+		var testObjFullDbRef2 = testObj2.Object().DBRef;
 
 		// Create an object to hold the dbref list
 		var lockHolderResult = (await Parser.FunctionParse(MModule.single("create(LockHolderMulti)")))?.Message!;
@@ -195,7 +206,7 @@ public class LockObjIdTests
 		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
 
 		// Set an attribute with multiple objids
-		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/multilist,#{testObjDbRef1.Number}:{testObjDbRef1.CreationMilliseconds} #{testObjDbRef2.Number}:{testObjDbRef2.CreationMilliseconds})"));
+		await Parser.FunctionParse(MModule.single($"attrib_set({lockHolderDbRefStr}/multilist,#{testObjFullDbRef1.Number}:{testObjFullDbRef1.CreationMilliseconds} #{testObjFullDbRef2.Number}:{testObjFullDbRef2.CreationMilliseconds})"));
 
 		var lockString = "dbreflist^multilist";
 
