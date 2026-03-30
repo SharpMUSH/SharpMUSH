@@ -1,10 +1,13 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -15,6 +18,7 @@ public class MiscCommandTests
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
@@ -146,11 +150,32 @@ public class MiscCommandTests
 	[Test]
 	public async ValueTask QuitCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("quit"));
+		// Create an isolated player so we don't disconnect the shared handle-1 connection
+		var playerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "QuitCmdTest");
 
-		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+		// Register a temporary connection handle for the test player
+		const long tempHandle = 999_002L;
+		if (ConnectionService.Get(tempHandle) != null)
+		{
+			await ConnectionService.Disconnect(tempHandle);
+		}
+		await ConnectionService.Register(tempHandle, "127.0.0.1", "localhost", "test",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await ConnectionService.Bind(tempHandle, playerDbRef);
+
+		// Run quit using the temp handle — should disconnect tempHandle, not handle 1
+		var preCount = NotifyService.ReceivedCalls().Count();
+		await Parser.CommandParse(tempHandle, ConnectionService, MModule.single("quit"));
+
+		var newCalls = NotifyService.ReceivedCalls().Skip(preCount).ToList();
+		await Assert.That(newCalls.Any()).IsTrue();
+
+		// The quit command must have disconnected the temp handle
+		await Assert.That(ConnectionService.Get(tempHandle)).IsNull();
+
+		// The shared handle 1 must still be alive
+		await Assert.That(ConnectionService.Get(1)).IsNotNull();
 	}
 
 	[Test]
