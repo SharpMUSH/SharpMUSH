@@ -991,7 +991,7 @@ public partial class Functions
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.split2(delim, listArg);
+		var list = MModule.splitList(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
 		{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
 		var result = new List<MString>();
