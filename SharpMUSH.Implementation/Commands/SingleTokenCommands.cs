@@ -59,10 +59,13 @@ public partial class Commands
 				if (!args.TryGetValue("2", out var tmpContents))
 				{
 					// PennMUSH: & attr obj (no '=') deletes (wipes) the attribute.
-					// Use enactor (cause/%#) for permission checking: the triggering player provides
-					// authority (e.g. God can always modify their own attributes). Notifications go
-					// to executor — when executor is a non-connected MUSH object, the player won't
-					// see the confirmation message, matching PennMUSH do_set_atr() behavior.
+					// PennMUSH command_atrset (cmds.c) passes executor to do_set_atr() for both
+					// the match_controlled() permission check and notify(). SharpMUSH intentionally
+					// uses enactor for permission checking so the triggering player's authority
+					// applies (e.g. a God-level trigger can modify objects the executor doesn't own).
+					// Notifications go to executor, matching PennMUSH do_set_atr()'s notify(player,...):
+					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/cmds.c#L1790
+					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
 					var clearResult = await AttributeService!.ClearAttributeAsync(
 						enactor, realLocated, attrName,
 						IAttributeService.AttributePatternMode.Exact,
@@ -86,10 +89,11 @@ public partial class Commands
 					? tmpContents.Message!
 					: await tmpContents.ParsedMessage() ?? MModule.empty();
 
-				// Use enactor (cause/%#) for permission checking: the triggering player provides
-				// authority to modify attributes. Notifications go to executor — when executor is
-				// a non-connected MUSH object (softcoded command), the player won't see the
-				// confirmation message, matching PennMUSH do_set_atr() behavior.
+				// SharpMUSH intentionally uses enactor for permission checking so the triggering
+				// player's authority applies. Notifications go to executor, matching PennMUSH
+				// do_set_atr()'s notify(player,...) where player=executor:
+				// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/cmds.c#L1790
+				// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
 				var setResult =
 					await AttributeService!.SetAttributeAsync(enactor, realLocated, attrName, contents);
 				await NotifyService!.Notify(executor,
