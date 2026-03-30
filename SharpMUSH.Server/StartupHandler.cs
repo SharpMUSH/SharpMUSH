@@ -31,6 +31,13 @@ public class StartupHandler(
 			NextPurgeTime: DateTimeOffset.UtcNow + TimeSpan.FromDays(1)
 		));
 
+		logger.LogInformation("Seeding default MOTD data if not already present.");
+		var existingMotd = await data.GetExpandedServerDataAsync<MotdData>();
+		if (existingMotd is null)
+		{
+			await data.SetExpandedServerDataAsync(new MotdData());
+		}
+
 		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
 		var currentOptions = options.CurrentValue;
 		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
