@@ -619,12 +619,6 @@ public class AttributeService(
 				await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
 		}
 
-		foreach (var attrDone in attrArr)
-		{
-			await notifyService.Notify(executor,
-				$"Attribute {attrDone.LongName} CLEARED.", obj);
-		}
-
 		return new Success();
 	}
 }
