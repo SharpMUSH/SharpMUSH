@@ -382,7 +382,7 @@ public class MyrddinBBSIntegrationTests
 			.Because("at least some commands from the BBS script should have been executed");
 
 		await Assert.That(cantSeeMessages.Count).IsEqualTo(0)
-			.Because("no 'I can't see that here' messages should be emitted during BBS installation");
+			.Because("no 'I can't see that here' or 'CAN'T SEE THAT HERE' (#-1) messages should be emitted during BBS installation");
 
 		if (installErrorMessages.Count > 0 || bbreadErrorMessages.Count > 0
 			|| missingCparenMessages.Count > 0)
