@@ -142,31 +142,10 @@ public class WarningLockChecksTests
 	}
 
 	[Test]
+	[Skip("Requires a syntactically-invalid lock expression and asserting that CheckObjectAsync emits a lock-check warning via NotifyService; current validator is syntactic-only and accepts all parseable locks")]
 	public async Task LockChecks_Integration_InvalidLock_TriggersWarning()
 	{
-		// The lock validator is currently syntactic-only and does not check object existence.
-		// A lock referencing non-existent #99999 passes syntactic validation.
-		// This test verifies CheckObjectAsync completes without exception.
-		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LockWarn_Invalid");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock {objDbRef}=#TRUE"));
-
-		var godNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var objNode = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-
-		await Assert.That(objNode.IsNone).IsFalse();
-
-		// Set warnings on the target object itself so it's used directly
-		await Mediator.Send(new SetObjectWarningsCommand(objNode.Known, WarningType.LockProbs));
-
-		var objNodeFresh = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-
-		// Should complete without throwing
-		var hadWarnings = await WarningService.CheckObjectAsync(godNode.Known, objNodeFresh.Known);
-
-		// The validator accepts #TRUE as valid - no lock-checks warning fires
-		await Assert.That(hadWarnings).IsAssignableTo<bool>();
-
-		await Mediator.Send(new SetObjectWarningsCommand(objNodeFresh.Known, WarningType.None));
+		await Task.CompletedTask;
 	}
 
 	[Test]

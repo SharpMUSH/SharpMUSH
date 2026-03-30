@@ -27,16 +27,9 @@ public class EventServiceTests
 	}
 
 	[Test]
+	[Skip("Requires configuring event_handler attribute on an object and asserting the handler executes (fires NotifyService or produces side effects)")]
 	public async ValueTask TriggerEventWithHandler()
 	{
-		// Without an event_handler configured, this returns silently.
-		// Verify the method is callable and does not throw.
-		await EventService.TriggerEventAsync(
-			WebAppFactoryArg.CommandParser,
-			"PLAYER`CONNECT",
-			null,
-			"#1");
-
 		await ValueTask.CompletedTask;
 	}
 

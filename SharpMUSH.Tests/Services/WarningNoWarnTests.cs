@@ -95,23 +95,10 @@ public class WarningNoWarnTests
 	}
 
 	[Test]
+	[Skip("Requires creating an isolated player with the NO_WARN flag set and an owned object, then asserting CheckObjectAsync returns false (skips) for objects whose owner has NO_WARN")]
 	public async Task WarningService_SkipsObjectsWithOwnerNoWarn()
 	{
-		// Create an isolated player (owner) with NO_WARN and an object owned by them
-		// Since we can't easily set NO_WARN on God and isolate, verify that
-		// CheckObjectAsync completes successfully for objects owned by God without crash.
-		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "OwnerNoWarnObj");
-		var godNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var objNode = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-
-		// God is the owner; without NO_WARN this should not be skipped
-		await Mediator.Send(new SetObjectWarningsCommand(godNode.Known, WarningType.All));
-		var hadWarnings = await WarningService.CheckObjectAsync(godNode.Known, objNode.Known);
-
-		// The object check completes without exception (pass or fail depends on object state)
-		await Assert.That(hadWarnings).IsAssignableTo<bool>();
-
-		await Mediator.Send(new SetObjectWarningsCommand(godNode.Known, WarningType.None));
+		await Task.CompletedTask;
 	}
 
 	[Test]

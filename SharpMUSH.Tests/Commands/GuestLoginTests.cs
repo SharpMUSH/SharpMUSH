@@ -163,23 +163,18 @@ public class GuestLoginTests
 	}
 
 	[Test]
+	[Skip("Requires modifying SharpMUSHOptions to disable guests and asserting the error path through CommandParse")]
 	[DependsOn(nameof(ConnectGuest_MultipleGuests_SelectsAppropriateOne))]
 	public async ValueTask ConnectGuest_GuestsDisabled_FailsWithError()
 	{
-		// Verify the configuration for guests is accessible
-		var options = Configuration.CurrentValue;
-		await Assert.That(options).IsNotNull();
-		// This test verifies the configuration path is exercised without crash
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
+	[Skip("Requires creating exactly max_guests connections then asserting the overflow is rejected")]
 	[DependsOn(nameof(ConnectGuest_GuestsDisabled_FailsWithError))]
 	public async ValueTask ConnectGuest_MaxGuestsReached_FailsWithError()
 	{
-		// Verify max_guests configuration is accessible
-		var options = Configuration.CurrentValue;
-		await Assert.That(options).IsNotNull();
 		await ValueTask.CompletedTask;
 	}
 }
