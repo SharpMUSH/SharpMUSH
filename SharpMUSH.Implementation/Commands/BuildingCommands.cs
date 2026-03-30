@@ -206,7 +206,7 @@ public partial class Commands
 			var setResult =
 				await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
 
-			await NotifyService!.Notify(enactor,
+			await NotifyService!.Notify(executor,
 				setResult.Match(
 					_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
 					failure => failure.Value)

@@ -59,13 +59,15 @@ public partial class Commands
 				if (!args.TryGetValue("2", out var tmpContents))
 				{
 					// PennMUSH: & attr obj (no '=') deletes (wipes) the attribute.
-					// Use enactor (cause/%#) for permission checking, matching PennMUSH do_set_atr()
-					// which uses the triggering player's permissions, not the object executing the command.
+					// Use enactor (cause/%#) for permission checking: the triggering player provides
+					// authority (e.g. God can always modify their own attributes). Notifications go
+					// to executor — when executor is a non-connected MUSH object, the player won't
+					// see the confirmation message, matching PennMUSH do_set_atr() behavior.
 					var clearResult = await AttributeService!.ClearAttributeAsync(
 						enactor, realLocated, attrName,
 						IAttributeService.AttributePatternMode.Exact,
 						IAttributeService.AttributeClearMode.Safe);
-					await NotifyService!.Notify(enactor,
+					await NotifyService!.Notify(executor,
 						clearResult.Match(
 							_ => $"Attribute {attrName} SET.",
 							failure => failure.Value)
@@ -84,11 +86,13 @@ public partial class Commands
 					? tmpContents.Message!
 					: await tmpContents.ParsedMessage() ?? MModule.empty();
 
-				// Use enactor (cause/%#) for permission checking, matching PennMUSH do_set_atr()
-				// semantics: the player who triggered the command is the permission grantor.
+				// Use enactor (cause/%#) for permission checking: the triggering player provides
+				// authority to modify attributes. Notifications go to executor — when executor is
+				// a non-connected MUSH object (softcoded command), the player won't see the
+				// confirmation message, matching PennMUSH do_set_atr() behavior.
 				var setResult =
 					await AttributeService!.SetAttributeAsync(enactor, realLocated, attrName, contents);
-				await NotifyService!.Notify(enactor,
+				await NotifyService!.Notify(executor,
 					setResult.Match(
 						_ => $"{realLocated.Object().Name}/{attrNameParsed} - Set.",
 						failure => failure.Value)

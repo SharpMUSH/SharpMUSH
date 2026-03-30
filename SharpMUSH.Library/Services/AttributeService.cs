@@ -571,9 +571,6 @@ public class AttributeService(
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
 
-		await notifyService.Notify(executor,
-			$"Attribute {string.Join("`", attrPath)} SET.", obj);
-
 		return new Success();
 	}
 
