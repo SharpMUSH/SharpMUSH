@@ -5716,12 +5716,12 @@ public partial class Commands
 		finally
 		{
 			// Restore Q-registers if /localize was set
-			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var currentRegs))
+			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
 			{
-				currentRegs.Clear();
+				regsToRestore.Clear();
 				foreach (var (key, value) in savedRegisters)
 				{
-					currentRegs[key] = value;
+					regsToRestore[key] = value;
 				}
 			}
 		}
