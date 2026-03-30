@@ -377,7 +377,8 @@ public partial class Commands
 				var stateForElement = parser.CurrentState with
 				{
 					Registers = registerStack,
-					Executor = target.Object().DBRef
+					Executor = target.Object().DBRef,
+					Caller = parser.CurrentState.Executor
 				};
 
 				await Mediator!.Send(new QueueCommandListRequest(
@@ -5654,9 +5655,6 @@ public partial class Commands
 			}
 		}
 
-		// Q-register management is now handled by the hook system
-		// CLEARREGS and LOCALIZE switches are implemented there
-
 		// Build EnvironmentRegisters from provided arguments so %0, %1, ... are substituted.
 		// args["0"] is the attribute path; args["1"], args["2"], ... map to %0, %1, ...
 		var envArgs = new Dictionary<string, CallState>(parser.CurrentState.EnvironmentRegisters);
@@ -5666,6 +5664,26 @@ public partial class Commands
 			{
 				envArgs[(i - 1).ToString()] = argVal;
 			}
+		}
+
+		// Implement /localize: save Q-registers so the included code cannot permanently change
+		// the caller's Q-registers. /clearregs: start the included code with empty Q-registers.
+		// Pattern matches the hook execution in SharpMUSHParserVisitor.cs.
+		var hasClearRegs = switches.Contains("CLEARREGS");
+		var hasLocalize = switches.Contains("LOCALIZE");
+
+		Dictionary<string, MString>? savedRegisters = null;
+		if (hasLocalize)
+		{
+			if (parser.CurrentState.Registers.TryPeek(out var currentRegs))
+			{
+				savedRegisters = new Dictionary<string, MString>(currentRegs);
+			}
+		}
+
+		if (hasClearRegs && parser.CurrentState.Registers.TryPeek(out var regsForClear))
+		{
+			regsForClear.Clear();
 		}
 
 		// Execute the attribute content in-place with recursion tracking and DEBUG/VERBOSE support
@@ -5697,6 +5715,18 @@ public partial class Commands
 		{
 			await NotifyService!.Notify(executor, $"Error executing included attribute: {ex.Message}");
 			return new CallState($"#-1 ERROR: {ex.Message}");
+		}
+		finally
+		{
+			// Restore Q-registers if /localize was set
+			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var currentRegs))
+			{
+				currentRegs.Clear();
+				foreach (var (key, value) in savedRegisters)
+				{
+					currentRegs[key] = value;
+				}
+			}
 		}
 	}
 
