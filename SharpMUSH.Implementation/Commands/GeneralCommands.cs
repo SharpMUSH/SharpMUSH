@@ -4244,9 +4244,9 @@ public partial class Commands
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
-		// Get the attribute - must be visible to enactor
+		// Get the attribute - must be visible to executor (who controls the object and is issuing @trigger)
 		var attributeResult = await AttributeService!.GetAttributeAsync(
-			enactor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
+			executor, targetObject, attributeName, IAttributeService.AttributeMode.Read, false);
 
 		if (attributeResult.IsError)
 		{
@@ -4270,10 +4270,11 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Determine enactor/executor for execution based on /spoof switch
-		// /spoof: enactor stays the same (original caller)
-		// no /spoof: target object becomes both enactor and executor
-		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : targetObject.Object().DBRef;
+		// Determine enactor for execution based on /spoof switch.
+		// PennMUSH semantics (@trigger2 help):
+		//   No /spoof (default): the object USING @trigger (executor) becomes the enactor (%#)
+		//   /spoof: preserve the current enactor (the original player who started the chain)
+		var executionEnactor = switches.Contains("SPOOF") ? enactor.Object().DBRef : executor.Object().DBRef;
 
 		// Build argument registers from all provided arguments.
 		// args["0"] is the object/attribute path (LHS); args["1"] onward are the comma-separated
@@ -4288,10 +4289,21 @@ public partial class Commands
 			}
 		}
 
-		// Push a fresh empty q-register frame so setq() works inside the triggered attribute
-		// and so the triggered scope never inherits %q registers from the calling context.
+		// Q-registers from the calling context are copied into the triggered attribute unless
+		// /clearregs is specified (PennMUSH @trigger2 help: "Q-registers set at the time @trigger
+		// is run will be copied and made available in the triggered attribute").
 		var registerStack = new ConcurrentStack<Dictionary<string, MString>>();
-		registerStack.Push(new Dictionary<string, MString>());
+		if (switches.Contains("CLEARREGS"))
+		{
+			registerStack.Push(new Dictionary<string, MString>());
+		}
+		else
+		{
+			parser.CurrentState.Registers.TryPeek(out var currentRegs);
+			registerStack.Push(currentRegs != null
+				? new Dictionary<string, MString>(currentRegs)
+				: new Dictionary<string, MString>());
+		}
 
 		// Handle /match switch for pattern matching
 		if (switches.Contains("MATCH"))
