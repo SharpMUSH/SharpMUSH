@@ -5673,12 +5673,9 @@ public partial class Commands
 		var hasLocalize = switches.Contains("LOCALIZE");
 
 		Dictionary<string, MString>? savedRegisters = null;
-		if (hasLocalize)
+		if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var currentRegs))
 		{
-			if (parser.CurrentState.Registers.TryPeek(out var currentRegs))
-			{
-				savedRegisters = new Dictionary<string, MString>(currentRegs);
-			}
+			savedRegisters = new Dictionary<string, MString>(currentRegs);
 		}
 
 		if (hasClearRegs && parser.CurrentState.Registers.TryPeek(out var regsForClear))
