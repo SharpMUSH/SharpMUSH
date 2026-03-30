@@ -38,12 +38,12 @@ public class GuestLoginTests
 
 		// Should receive error message about no guest characters
 		await NotifyService
-		.Received()
-		.Notify(Arg.Is<long>(h => h == guestHandle),
-		Arg.Is<OneOf<MString, string>>(s =>
-		TestHelpers.MessageContains(s, "guest") ||
-		TestHelpers.MessageContains(s, "available") ||
-		TestHelpers.MessageContains(s, "find")));
+			.Received()
+			.Notify(Arg.Is<long>(h => h == guestHandle),
+				Arg.Is<OneOf<MString, string>>(s =>
+					TestHelpers.MessageContains(s, "guest") ||
+					TestHelpers.MessageContains(s, "available") ||
+					TestHelpers.MessageContains(s, "find")));
 	}
 
 	[Test]
