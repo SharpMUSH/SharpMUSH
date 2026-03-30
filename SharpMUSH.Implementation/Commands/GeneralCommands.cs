@@ -4300,9 +4300,7 @@ public partial class Commands
 		else
 		{
 			parser.CurrentState.Registers.TryPeek(out var currentRegs);
-			registerStack.Push(currentRegs != null
-				? new Dictionary<string, MString>(currentRegs)
-				: new Dictionary<string, MString>());
+			registerStack.Push(currentRegs != null ? new Dictionary<string, MString>(currentRegs) : new());
 		}
 
 		// Handle /match switch for pattern matching
