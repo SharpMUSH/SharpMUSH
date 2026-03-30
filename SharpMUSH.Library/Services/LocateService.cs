@@ -28,6 +28,13 @@ public partial class LocateService(
 		None
 	};
 
+	private static string LocateNotifyMessage(AnyOptionalSharpObjectOrError loc)
+		=> loc.IsNone
+			? ErrorMessages.Notifications.NoMatch
+			: loc.AsError.Value == ErrorMessages.Returns.CantSeeThat
+				? ErrorMessages.Notifications.CantSeeThat
+				: loc.AsError.Value;
+
 	public async ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
 	{
@@ -35,8 +42,7 @@ public partial class LocateService(
 		var caller = await parser.CurrentState.CallerObject(mediator);
 		if (!loc.IsValid())
 		{
-			await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : ErrorMessages.Notifications.NoMatch,
-				caller.WithoutNone());
+			await notifyService.Notify(executor, LocateNotifyMessage(loc), caller.WithoutNone());
 		}
 
 		return loc;
@@ -53,9 +59,8 @@ public partial class LocateService(
 			return loc.AsAnyObject;
 		}
 
-		await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : ErrorMessages.Notifications.NoMatch,
-			caller.WithoutNone());
-		var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
+		await notifyService.Notify(executor, LocateNotifyMessage(loc), caller.WithoutNone());
+		var callStateMessage = loc.IsError ? loc.AsError.Value : ErrorMessages.Returns.NoMatch;
 
 		return new Error<CallState>(new CallState(callStateMessage));
 	}
@@ -128,7 +133,7 @@ public partial class LocateService(
 			return result.WithNoneOption().WithErrorOption();
 		}
 
-		return new None();
+		return new Error<string>(ErrorMessages.Returns.CantSeeThat);
 	}
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
