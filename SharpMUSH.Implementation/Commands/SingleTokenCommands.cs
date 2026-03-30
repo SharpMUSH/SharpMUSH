@@ -60,14 +60,11 @@ public partial class Commands
 				{
 					// PennMUSH: & attr obj (no '=') deletes (wipes) the attribute.
 					// PennMUSH command_atrset (cmds.c) passes executor to do_set_atr() for both
-					// the match_controlled() permission check and notify(). SharpMUSH intentionally
-					// uses enactor for permission checking so the triggering player's authority
-					// applies (e.g. a God-level trigger can modify objects the executor doesn't own).
-					// Notifications go to executor, matching PennMUSH do_set_atr()'s notify(player,...):
+					// the match_controlled() permission check and notify().
 					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/cmds.c#L1790
 					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
 					var clearResult = await AttributeService!.ClearAttributeAsync(
-						enactor, realLocated, attrName,
+						executor, realLocated, attrName,
 						IAttributeService.AttributePatternMode.Exact,
 						IAttributeService.AttributeClearMode.Safe);
 					await NotifyService!.Notify(executor,
@@ -89,13 +86,12 @@ public partial class Commands
 					? tmpContents.Message!
 					: await tmpContents.ParsedMessage() ?? MModule.empty();
 
-				// SharpMUSH intentionally uses enactor for permission checking so the triggering
-				// player's authority applies. Notifications go to executor, matching PennMUSH
-				// do_set_atr()'s notify(player,...) where player=executor:
+				// PennMUSH command_atrset (cmds.c) passes executor to do_set_atr() for both
+				// the match_controlled() permission check and notify().
 				// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/cmds.c#L1790
 				// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
 				var setResult =
-					await AttributeService!.SetAttributeAsync(enactor, realLocated, attrName, contents);
+					await AttributeService!.SetAttributeAsync(executor, realLocated, attrName, contents);
 				await NotifyService!.Notify(executor,
 					setResult.Match(
 						_ => $"{realLocated.Object().Name}/{attrNameParsed} - Set.",
