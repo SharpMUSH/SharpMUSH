@@ -381,10 +381,13 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(executedLines).IsGreaterThan(0)
 			.Because("at least some commands from the BBS script should have been executed");
 
+		await Assert.That(cantSeeMessages.Count).IsEqualTo(0)
+			.Because("no 'I can't see that here' messages should be emitted during BBS installation");
+
 		if (installErrorMessages.Count > 0 || bbreadErrorMessages.Count > 0
-			|| missingCparenMessages.Count > 0 || cantSeeMessages.Count > 0)
+			|| missingCparenMessages.Count > 0)
 		{
-			Console.WriteLine($"\n[BBS INSTALL] WARNING: Found {installErrorMessages.Count} install #-1 errors, {bbreadErrorMessages.Count} +bbread #-1 errors, {missingCparenMessages.Count} missing CPAREN, {cantSeeMessages.Count} can't see messages.");
+			Console.WriteLine($"\n[BBS INSTALL] WARNING: Found {installErrorMessages.Count} install #-1 errors, {bbreadErrorMessages.Count} +bbread #-1 errors, {missingCparenMessages.Count} missing CPAREN.");
 			Console.WriteLine("[BBS INSTALL] These are documented above for future investigation.");
 		}
 	}

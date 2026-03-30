@@ -35,7 +35,7 @@ public partial class LocateService(
 		var caller = await parser.CurrentState.CallerObject(mediator);
 		if (!loc.IsValid())
 		{
-			await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
+			await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I don't see that here.",
 				caller.WithoutNone());
 		}
 
@@ -53,7 +53,7 @@ public partial class LocateService(
 			return loc.AsAnyObject;
 		}
 
-		await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
+		await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I don't see that here.",
 			caller.WithoutNone());
 		var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
 
