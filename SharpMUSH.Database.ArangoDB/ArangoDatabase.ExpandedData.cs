@@ -16,6 +16,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
@@ -117,6 +118,11 @@ public partial class ArangoDatabase
 				dataType, cancellationToken: ct);
 
 			return result.Data;
+		}
+		catch (ArangoException ex) when (ex.Code == HttpStatusCode.NotFound)
+		{
+			// Document not found is a normal condition (e.g. on first startup before seeding).
+			return default;
 		}
 		catch (Exception ex)
 		{
