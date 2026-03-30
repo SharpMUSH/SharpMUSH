@@ -50,7 +50,7 @@ public class TelDiagnosticTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 		return NotifyService.ReceivedCalls().Skip(preCount)
 			.Select(ExtractMessage)
-			.Where(m => m != null && (m.Contains("#-1") || m.Contains("can't see") || m.Contains("can't go")))
+			.Where(m => m != null && (m.Contains("#-1") || m.Contains("can't see") || m.Contains("don't see") || m.Contains("can't go")))
 			.ToList()!;
 	}
 
