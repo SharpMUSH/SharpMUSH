@@ -30,6 +30,12 @@ public class MyrddinBBSIntegrationTests
 	private static string? _bbpocketDbref;
 
 	/// <summary>
+	/// DBRef of the mbboard object created during BBS install.
+	/// Used to co-locate the BBSTester player so that mbboard's $-commands fire.
+	/// </summary>
+	private static string? _mbboardDbref;
+
+	/// <summary>
 	/// Connection handle for a non-God test player, used by BBS tests that require
 	/// a regular user (not God). WIZARD BBS objects cannot set attributes on God (#1),
 	/// matching PennMUSH's controls() behaviour (Wizard can't control God).
@@ -188,6 +194,7 @@ public class MyrddinBBSIntegrationTests
 					var numResult = await Parser.CommandParse(1, ConnectionService,
 						MModule.single("think [num(mbboard)]"));
 					mbboardDbref = numResult.Message?.ToPlainText()?.Trim();
+					_mbboardDbref = mbboardDbref; // Share with dependent tests
 					Log($"[BBS INSTALL] mbboard created with dbref: {mbboardDbref}");
 
 					// Set DEBUG, VERBOSE, PUPPET on mbboard for comprehensive diagnostics
@@ -228,6 +235,22 @@ public class MyrddinBBSIntegrationTests
 				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8);
 			await ConnectionService.Bind(2L, testerDbRef!.Value);
 			Log($"[BBS INSTALL] Regular test user bound to handle {_regularUserHandle}.");
+
+			// Teleport BBSTester to the same room as mbboard so that mbboard's $-commands fire.
+			// In PennMUSH, $-commands on an object fire for players in the same room.
+			// mbboard is in God's room at creation time; BBSTester's default home may differ.
+			if (!string.IsNullOrEmpty(_mbboardDbref))
+			{
+				var mbboardLocResult = await Parser.CommandParse(1, ConnectionService,
+					MModule.single($"think [loc({_mbboardDbref})]"));
+				var mbboardLoc = mbboardLocResult.Message?.ToPlainText()?.Trim();
+				if (!string.IsNullOrEmpty(mbboardLoc) && !mbboardLoc.StartsWith("#-"))
+				{
+					await Parser.CommandParse(1, ConnectionService,
+						MModule.single($"@tel {_regularUserDbref}={mbboardLoc}"));
+					Log($"[BBS INSTALL] Teleported BBSTester to mbboard's room: {mbboardLoc}.");
+				}
+			}
 		}
 		else
 		{
