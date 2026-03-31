@@ -2105,7 +2105,7 @@ public partial class Commands
 				{
 					try
 					{
-						patternMatched = Regex.IsMatch(testString, patternText);
+						patternMatched = Regex.IsMatch(testString, patternText, RegexOptions.IgnoreCase);
 					}
 					catch (ArgumentException ex)
 					{

@@ -2236,7 +2236,7 @@ public partial class Commands
 			}
 
 			// Trigger @alfail attribute (actions on failed leave)
-		// Executor = the container whose leave-lock failed; enactor = player (PennMUSH @a* semantics)
+			// Executor = the container whose leave-lock failed; enactor = player (PennMUSH @a* semantics)
 			var alfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALFail, IAttributeService.AttributeMode.Read, true);
 			if (alfailAttr.IsAttribute && alfailAttr.AsT0.Length > 0)
 			{
