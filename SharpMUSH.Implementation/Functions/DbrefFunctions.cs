@@ -698,7 +698,7 @@ LOCATE()
 			}
 		}
 
-		return found.Object().DBRef;
+		return $"#{found.Object().DBRef.Number}";
 	}
 
 	private static LocateFlags ParseLocateParameters(string parameters)

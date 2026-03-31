@@ -605,13 +605,17 @@ public class SharpMUSHParserVisitor(
 			if (firstCommandMatch?.SourceInterval.Length is null or 0)
 				return new None();
 
-			var command = firstCommandMatch.GetText();
+			var command = firstCommandMatch.GetText().TrimStart();
 
 			var spaceIndex = command.AsSpan().IndexOf(' ');
 			if (spaceIndex != -1)
 			{
 				command = command[..spaceIndex];
 			}
+
+			// Guard: empty command name (e.g., from a command body that began with only whitespace).
+			if (command.Length == 0)
+				return new None();
 
 			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
@@ -1564,7 +1568,9 @@ public class SharpMUSHParserVisitor(
 		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
 		// - RSBrace (PennMUSH CS_BRACES): commands like @wait, @force, @halt preserve braces
 		//   during parsing, then strip them at execution time via StripOuterBraces.
-		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like & store the raw value text.
+		//   Also used for & (attribute value storage): player-typed `& ATTR OBJ={code}` must
+		//   store the braces verbatim so get(OBJ/ATTR) returns `{code}`, matching PennMUSH.
+		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like ] store the raw value text.
 		//   In PennMUSH, noeval arguments never go through process_expression, so braces
 		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
 		//   preserve braces via the flag to match PennMUSH behavior.
@@ -1676,6 +1682,9 @@ public class SharpMUSHParserVisitor(
 
 		if (eqSplit)
 		{
+			// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
+			// Commands that only want their RHS unevaluated (like &) use RSNoParse instead of NoParse,
+			// so that the LHS (object reference) is evaluated normally here while the RHS is deferred.
 			arguments.Add(noParse
 				? new CallState(argCallState.Arguments.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
 				: (await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);

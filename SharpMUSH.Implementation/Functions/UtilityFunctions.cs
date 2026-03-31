@@ -576,7 +576,7 @@ public partial class Functions
 				.Owner.WithCancellation(CancellationToken.None),
 			location.Known.AsContainer));
 
-		return new CallState(thing);
+		return new CallState($"#{thing.Number}");
 	}
 
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1097,7 +1097,7 @@ public partial class Functions
 		}
 
 		// Split the list
-		var items = MModule.split2(MModule.single(inputDelimiter), listStr).ToList();
+		var items = MModule.splitList(MModule.single(inputDelimiter), listStr).ToList();
 
 		// Check if position is valid (1-based indexing)
 		if (position < 1 || position > items.Count)

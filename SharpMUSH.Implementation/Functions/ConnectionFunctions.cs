@@ -583,7 +583,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ListWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var arg0 = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls.
+		// Use IsNullOrEmpty to distinguish a truly absent optional arg from an explicitly empty one.
+		var arg0Raw = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		var arg0 = string.IsNullOrEmpty(arg0Raw) ? null : arg0Raw;
 		var arg1 = args.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
 			: ["online"];
@@ -666,7 +669,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var arg0 = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls.
+		// Use IsNullOrEmpty to distinguish a truly absent optional arg from an explicitly empty one.
+		var arg0Raw = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		var arg0 = string.IsNullOrEmpty(arg0Raw) ? null : arg0Raw;
 		var arg1 = args.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
 			: ["online"];

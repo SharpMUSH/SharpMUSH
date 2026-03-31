@@ -28,6 +28,13 @@ public partial class LocateService(
 		None
 	};
 
+	private static string LocateNotifyMessage(AnyOptionalSharpObjectOrError loc)
+		=> loc.IsNone
+			? ErrorMessages.Notifications.NoMatch
+			: loc.AsError.Value == ErrorMessages.Returns.CantSeeThat
+				? ErrorMessages.Notifications.CantSeeThat
+				: loc.AsError.Value;
+
 	public async ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
 	{
@@ -35,8 +42,7 @@ public partial class LocateService(
 		var caller = await parser.CurrentState.CallerObject(mediator);
 		if (!loc.IsValid())
 		{
-			await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
-				caller.WithoutNone());
+			await notifyService.Notify(executor, LocateNotifyMessage(loc), caller.WithoutNone());
 		}
 
 		return loc;
@@ -53,9 +59,8 @@ public partial class LocateService(
 			return loc.AsAnyObject;
 		}
 
-		await notifyService.Notify(executor, loc.IsError ? loc.AsError.Value : "I can't see that here",
-			caller.WithoutNone());
-		var callStateMessage = loc.IsError ? loc.AsError.Value : Errors.ErrorCantSeeThat;
+		await notifyService.Notify(executor, LocateNotifyMessage(loc), caller.WithoutNone());
+		var callStateMessage = loc.IsError ? loc.AsError.Value : ErrorMessages.Returns.NoMatch;
 
 		return new Error<CallState>(new CallState(callStateMessage));
 	}
@@ -128,7 +133,7 @@ public partial class LocateService(
 			return result.WithNoneOption().WithErrorOption();
 		}
 
-		return new None();
+		return new Error<string>(ErrorMessages.Returns.CantSeeThat);
 	}
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
@@ -223,9 +228,13 @@ public partial class LocateService(
 					&& name.StartsWith('*'))
 				&& (flags.HasFlag(LocateFlags.PlayersPreference) || flags.HasFlag(LocateFlags.NoTypePreference)))
 		{
+			// In PennMUSH, a name starting with '*' in locate() is a player-name prefix indicator, not a regex
+			// wildcard. Strip the leading '*' before doing the global player lookup so that
+			// locate(%#, "*God", "p") correctly finds the player named "God".
+			var playerName = name.StartsWith('*') ? name[1..] : name;
 			// Async streaming pattern is correct - mediator creates IAsyncEnumerable
 			var maybeMatch = await mediator
-				.CreateStream(new GetPlayerQuery(name))
+				.CreateStream(new GetPlayerQuery(playerName))
 				.FirstOrDefaultAsync();
 
 			match = maybeMatch is null
