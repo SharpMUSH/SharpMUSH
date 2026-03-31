@@ -213,9 +213,11 @@ public class MyrddinBBSIntegrationTests
 		// Create a regular (non-God) player for BBS tests that need a normal user.
 		// The WIZARD BBS object cannot set attributes on God (#1) — controls(WIZARD, God) → false
 		// in both PennMUSH and SharpMUSH. BBS operations should be tested as a regular player.
+		// Use pmatch() (not num()) to look up the player by name — num() requires the object to be
+		// visible from the caller's location, but pmatch() does a global player-name search.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate BBSTester=bbs_test_password_123"));
 		var testerDbrefResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("think [num(BBSTester)]"));
+			MModule.single("think [pmatch(BBSTester)]"));
 		_regularUserDbref = testerDbrefResult.Message?.ToPlainText()?.Trim();
 		Log($"[BBS INSTALL] Regular test user created with dbref: {_regularUserDbref}");
 		if (!string.IsNullOrEmpty(_regularUserDbref) && _regularUserDbref != "#-1"
