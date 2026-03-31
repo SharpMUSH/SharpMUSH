@@ -1,5 +1,4 @@
-﻿using DotNext;
-using Mediator;
+﻿using Mediator;
 using NaturalSort.Extension;
 using OneOf;
 using OneOf.Types;
@@ -603,7 +602,7 @@ public class AttributeService(
 
 		var attrArr = await attr.ToArrayAsync();
 
-		if (attrArr.IsNullOrEmpty()
+		if (attrArr.Length == 0
 				|| !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
