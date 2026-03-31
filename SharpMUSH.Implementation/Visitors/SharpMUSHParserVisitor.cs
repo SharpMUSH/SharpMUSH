@@ -962,7 +962,8 @@ public class SharpMUSHParserVisitor(
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef
+				Executor = obj.Object().DBRef,
+				Caller = prs.CurrentState.Executor
 			});
 
 			await newParser.CommandListParse(MModule.substring(
@@ -1495,7 +1496,8 @@ public class SharpMUSHParserVisitor(
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef
+				Executor = obj.Object().DBRef,
+				Caller = prs.CurrentState.Executor
 			});
 
 			// Execute inline by parsing the command list directly
