@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DotNext" Version="5.26.3" />
+    <PackageReference Include="DotNext" Version="6.1.0" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
   </ItemGroup>
 
