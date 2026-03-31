@@ -34,6 +34,14 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 			var pattern = match.Value.Remove(match.Length - 1, 1).Remove(0, 1);
 			var isRegex = attr.Flags.Any(flag => flag.Name == "REGEX");
 
+			// CommandListIndex points to the start of the command body (after the "$pattern:" prefix).
+			// Skip any optional leading whitespace so that "$cmd: @pemit" and "$cmd:@pemit" are
+			// both handled correctly — a leading space would otherwise cause an empty command name
+			// when EvaluateCommands strips the first token at its space boundary.
+			var commandBodyStart = match.Length;
+			while (commandBodyStart < plainValue.Length && plainValue[commandBodyStart] == ' ')
+				commandBodyStart++;
+
 			try
 			{
 				// Pre-compile the regex pattern
@@ -42,7 +50,7 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 					: new Regex(MModule.getWildcardMatchAsRegex(MModule.single(pattern)), RegexOptions.Compiled);
 
 				commandAttributes.Add(new CommandAttributeCache(
-					attr with { CommandListIndex = match.Length },
+					attr with { CommandListIndex = commandBodyStart },
 					regex,
 					isRegex));
 			}

@@ -655,11 +655,12 @@ public class BuildingCommandTests
 		// Try to @desc an object that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
 
-		// Verify error notification was sent ("I can't see that here" or similar)
+		// Verify error notification was sent ("I don't see that here." or similar)
 		// The locate service sends the error with a sender parameter
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, "don't see") ||
 				TestHelpers.MessageContains(msg, "can't see") ||
 				TestHelpers.MessageContains(msg, "not found") ||
 				TestHelpers.MessageContains(msg, "Invalid") ||

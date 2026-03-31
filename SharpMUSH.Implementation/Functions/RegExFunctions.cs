@@ -222,7 +222,7 @@ public partial class Functions
 			}
 
 			var regex = new Regex(pattern, options);
-			var splitList = MModule.split2(delimiter, list) ?? [];
+			var splitList = MModule.splitList(delimiter, list) ?? [];
 
 			if (all)
 			{
@@ -263,7 +263,7 @@ public partial class Functions
 			}
 
 			var regex = new Regex(pattern, options);
-			var splitList = MModule.split2(delimiter, list) ?? [];
+			var splitList = MModule.splitList(delimiter, list) ?? [];
 
 			if (all)
 			{
