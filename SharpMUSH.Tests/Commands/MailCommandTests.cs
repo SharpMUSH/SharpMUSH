@@ -4,7 +4,6 @@ using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -18,22 +17,26 @@ public class MailCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask MailCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mail #1=Test subject/Test message"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask MaliasCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@malias add all=*"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 }

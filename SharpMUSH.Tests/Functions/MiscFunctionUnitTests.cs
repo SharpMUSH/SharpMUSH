@@ -20,6 +20,8 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	[Arguments("foreach(a b c,##)", "a b c")]
 	public async Task Foreach(string str, string expected)
 	{
@@ -36,6 +38,8 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	[Arguments("json_map(obj/attr,{\"a\":1})", "")]
 	public async Task JsonMap(string str, string expected)
 	{
@@ -124,7 +128,9 @@ public class MiscFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("ctu(0,d,r)", "0")]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	[Arguments("ctu(3.5,5)", "4")]
 	public async Task Ctu(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

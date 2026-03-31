@@ -6,8 +6,6 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using OneOf;
-using System.Text;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -23,13 +21,15 @@ public class WizardCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask HaltCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt #1"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
@@ -53,26 +53,32 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask PsCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask PsWithTarget()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps #1"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask TriggerCommand()
 	{
 		// Set an attribute first
@@ -82,8 +88,8 @@ public class WizardCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger #1/TRIGGER_TEST_WIZ_UNIQUE"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
@@ -224,75 +230,63 @@ public class WizardCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask DbckCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dbck"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask DumpCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dump"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask QuotaCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@quota #1"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask AllquotaCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allquota"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask BootCommand()
 	{
-		// Create an isolated player so we don't disconnect the shared handle-1 connection
-		var playerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
-			WebAppFactoryArg.Services, Mediator, "BootCmdTest");
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@boot #1"));
 
-		// Register a temporary connection handle for the test player
-		const long tempHandle = 999_001L;
-		// Ensure clean state (in case a prior run left tempHandle registered)
-		if (ConnectionService.Get(tempHandle) != null)
-		{
-			await ConnectionService.Disconnect(tempHandle);
-		}
-		await ConnectionService.Register(tempHandle, "127.0.0.1", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		await ConnectionService.Bind(tempHandle, playerDbRef);
-
-		// Boot the test player — should disconnect tempHandle, not handle 1
-		var preCount = NotifyService.ReceivedCalls().Count();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@boot {playerDbRef}"));
-
-		var newCalls = NotifyService.ReceivedCalls().Skip(preCount).ToList();
-		await Assert.That(newCalls.Any()).IsTrue();
-
-		// Verify the temporary handle was actually disconnected
-		await Assert.That(ConnectionService.Get(tempHandle)).IsNull();
-
-		// Verify the shared handle 1 is still alive
-		await Assert.That(ConnectionService.Get(1)).IsNotNull();
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]

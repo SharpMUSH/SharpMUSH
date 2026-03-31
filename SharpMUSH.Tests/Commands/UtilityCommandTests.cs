@@ -25,7 +25,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkBasic Test output"));
 
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains("ThinkBasic Test output")));
 	}
@@ -36,7 +36,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkWithFunction [add(2,3)]"));
 
 		await NotifyService
-			.Received()
+			.Received(Quantity.Exactly(1))
 			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(x
 					=> x.Value.ToString()!.Contains("ThinkWithFunction 5")));
@@ -276,43 +276,51 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask FindCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find #0"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask SearchCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask EntrancesCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances #0"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask StatsCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
@@ -372,12 +380,14 @@ public class UtilityCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask WhereisCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 }

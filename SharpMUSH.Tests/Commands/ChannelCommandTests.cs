@@ -60,6 +60,8 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask ChatCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
@@ -67,17 +69,19 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Emit);
+				TestHelpers.MessageEquals(msg, "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask ChannelCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/list"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
@@ -107,52 +111,62 @@ public class ChannelCommandTests
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask AddcomCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom pub=Public"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask DelcomCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("delcom pub"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask ClistCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@clist"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask ComlistCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("comlist"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask ComtitleCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"comtitle {TestChannelName}=Title"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 }

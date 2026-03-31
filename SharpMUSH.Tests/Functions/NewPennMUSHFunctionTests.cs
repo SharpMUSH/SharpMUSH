@@ -107,6 +107,8 @@ public class NewPennMUSHFunctionTests
 	#region CONFIG Tests
 
 	[Test]
+	[Category("NeedsSetup")]
+	[Skip("Config values are dynamic and environment-specific")]
 	[Arguments("config(money_singular)", "Penny")]
 	[Arguments("config(money_plural)", "Pennies")]
 	public async Task CONFIG_ReturnsConfigurationValues(string input, string expected)

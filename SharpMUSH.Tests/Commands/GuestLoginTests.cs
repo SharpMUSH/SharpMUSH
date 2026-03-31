@@ -38,12 +38,12 @@ public class GuestLoginTests
 
 		// Should receive error message about no guest characters
 		await NotifyService
-			.Received()
-			.Notify(Arg.Is<long>(h => h == guestHandle),
-				Arg.Is<OneOf<MString, string>>(s =>
-					TestHelpers.MessageContains(s, "guest") ||
-					TestHelpers.MessageContains(s, "available") ||
-					TestHelpers.MessageContains(s, "find")));
+		.Received()
+		.Notify(Arg.Is<long>(h => h == guestHandle),
+		Arg.Is<OneOf<MString, string>>(s =>
+		TestHelpers.MessageContains(s, "guest") ||
+		TestHelpers.MessageContains(s, "available") ||
+		TestHelpers.MessageContains(s, "find")));
 	}
 
 	[Test]
@@ -163,18 +163,27 @@ public class GuestLoginTests
 	}
 
 	[Test]
-	[Skip("Requires modifying SharpMUSHOptions to disable guests and asserting the error path through CommandParse")]
+	[Category("NeedsSetup")]
+	[Skip("Requires guest configuration testing infrastructure")]
 	[DependsOn(nameof(ConnectGuest_MultipleGuests_SelectsAppropriateOne))]
 	public async ValueTask ConnectGuest_GuestsDisabled_FailsWithError()
 	{
+		// This test would require modifying the configuration to disable guests
+		// Skipping for now as it requires configuration testing infrastructure
 		await ValueTask.CompletedTask;
 	}
 
 	[Test]
-	[Skip("Requires creating exactly max_guests connections then asserting the overflow is rejected")]
+	[Category("NeedsSetup")]
+	[Skip("Requires advanced connection management")]
 	[DependsOn(nameof(ConnectGuest_GuestsDisabled_FailsWithError))]
 	public async ValueTask ConnectGuest_MaxGuestsReached_FailsWithError()
 	{
+		// This test would require:
+		// 1. Setting max_guests configuration
+		// 2. Creating exactly that many guest connections
+		// 3. Attempting to connect one more
+		// Skipping for now as it requires more complex setup
 		await ValueTask.CompletedTask;
 	}
 }

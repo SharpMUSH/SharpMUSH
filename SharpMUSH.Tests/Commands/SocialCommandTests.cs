@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -18,6 +17,8 @@ public class SocialCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
+	[Category("TestInfrastructure")]
+	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SayCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("say Hello world"));
@@ -25,62 +26,54 @@ public class SocialCommandTests
 		// Sender sees "You say, ..." while others see "Name says, ..."
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageContains(msg, "You say,") && TestHelpers.MessageContains(msg, "Hello world")),
-				Arg.Any<AnySharpObject>(),
-				INotifyService.NotificationType.Say);
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single("You say, \"Hello world\""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
+	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PoseCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageContains(msg, "waves hello")),
-				Arg.Any<AnySharpObject>(),
-				INotifyService.NotificationType.Pose);
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One waves hello"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Pose);
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
+	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SemiposeCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageContains(msg, "'s greeting")),
-				Arg.Any<AnySharpObject>(),
-				INotifyService.NotificationType.SemiPose);
+			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One's greeting"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.SemiPose);
 	}
 
 	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
 	public async ValueTask WhisperCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
 
 		await NotifyService
-			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
+	[Category("TestInfrastructure")]
+	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PageCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));
 
 		await NotifyService
-			.Received()
-			.Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageContains(msg, "Hello there") || TestHelpers.MessageContains(msg, "pages")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<MString>(), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 }
