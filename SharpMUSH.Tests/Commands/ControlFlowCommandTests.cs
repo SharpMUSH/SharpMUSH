@@ -32,15 +32,13 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SwitchCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@switch 1=1,@pemit #1=One,@pemit #1=Other"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), "One", Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

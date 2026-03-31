@@ -2036,12 +2036,13 @@ public partial class Commands
 		//  @switch/first runs <action> for the first matching <expr> only. Same as @select, and often the desired behaviour.
 		//	@switch/notify queues "@notify me" after the last <action>. 
 		//	@switch/inline runs all actions in place, instead of creating a new queue entry for them.
-		//	@switch/regexp makes <expr>s case-insensitive regular expressions, not wildcard/glob patterns.
+		//	@switch/regexp makes <expr>s regular expressions, not wildcard/glob patterns.
 
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches.ToArray();
 		var strArg = args["0"];
+		var testString = strArg.Message?.ToPlainText() ?? string.Empty;
 		Option<MString> defaultArg = new None();
 		var matched = false;
 
@@ -2055,6 +2056,9 @@ public partial class Commands
 			defaultArg = remainingArgs.Last().Message!;
 			remainingArgs = remainingArgs.Take(remainingArgs.Count - 1).ToList();
 		}
+
+		var isFirst = switches.Contains("FIRST") && !switches.Contains("ALL");
+		var isRegexp = switches.Contains("REGEXP");
 
 		// Implement /LOCALIZE: save Q-registers so matched actions cannot permanently change
 		// the caller's Q-registers. /CLEARREGS: start each action with empty Q-registers.
@@ -2094,19 +2098,52 @@ public partial class Commands
 				// This matches PennMUSH behavior where pattern expressions like [func()] are
 				// evaluated at match time, not pre-evaluated.
 				var evaluatedPattern = (await exprArg.ParsedMessage()) ?? exprArg.Message!;
+				var patternText = evaluatedPattern.ToPlainText();
 
-				// Use wildcard/glob pattern matching
-				if (MModule.isWildcardMatch(strArg.Message!, evaluatedPattern))
+				bool patternMatched;
+				if (isRegexp)
+				{
+					try
+					{
+						patternMatched = Regex.IsMatch(testString, patternText);
+					}
+					catch (ArgumentException ex)
+					{
+						await NotifyService!.Notify(executor, $"Invalid regexp: {patternText}: {ex.Message}");
+						continue;
+					}
+				}
+				else
+				{
+					patternMatched = MModule.isWildcardMatch(strArg.Message!, evaluatedPattern);
+				}
+
+				if (patternMatched)
 				{
 					matched = true;
-					// This is Inline.
-					await parser.CommandListParseVisitor(actionArg.Message!)();
+					// Substitute #$ with the test string in the action, matching PennMUSH behavior.
+					var actionText = actionArg.Message!.ToPlainText().Replace("#$", testString);
+					await parser.CommandListParseVisitor(MModule.single(actionText))();
+
+					// /FIRST (or no /ALL): stop after the first matching action.
+					if (isFirst) break;
 				}
 			}
 
 			if (defaultArg.IsSome() && !matched)
 			{
-				await parser.CommandListParseVisitor(defaultArg.AsValue())();
+				var defaultText = defaultArg.AsValue().ToPlainText().Replace("#$", testString);
+				await parser.CommandListParseVisitor(MModule.single(defaultText))();
+			}
+
+			// /NOTIFY: queue "@notify me" after all actions have been queued/run.
+			if (switches.Contains("NOTIFY"))
+			{
+				await Mediator!.Send(new QueueCommandListRequest(
+					MModule.single("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
 			}
 
 			return new CallState(matched);
