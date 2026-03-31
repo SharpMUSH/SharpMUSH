@@ -2040,6 +2040,7 @@ public partial class Commands
 
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var switches = parser.CurrentState.Switches.ToArray();
 		var strArg = args["0"];
 		Option<MString> defaultArg = new None();
 		var matched = false;
@@ -2053,6 +2054,27 @@ public partial class Commands
 			// Even count: test + N*(pat,act) + default → take default, leave pairs
 			defaultArg = remainingArgs.Last().Message!;
 			remainingArgs = remainingArgs.Take(remainingArgs.Count - 1).ToList();
+		}
+
+		// Implement /LOCALIZE: save Q-registers so matched actions cannot permanently change
+		// the caller's Q-registers. /CLEARREGS: start each action with empty Q-registers.
+		// NOTE: Save must happen before Clear. new Dictionary<> creates an independent copy,
+		// so the subsequent Clear() of the original does not affect savedRegisters.
+		var hasLocalize = switches.Contains("LOCALIZE");
+		var hasClearRegs = switches.Contains("CLEARREGS");
+
+		Dictionary<string, MString>? savedRegisters = null;
+		if ((hasLocalize || hasClearRegs) && parser.CurrentState.Registers.TryPeek(out var switchTopRegs))
+		{
+			if (hasLocalize)
+			{
+				savedRegisters = new Dictionary<string, MString>(switchTopRegs);
+			}
+
+			if (hasClearRegs)
+			{
+				switchTopRegs.Clear();
+			}
 		}
 
 		// Push the switch string onto the context stack
@@ -2093,6 +2115,16 @@ public partial class Commands
 		{
 			// Pop the switch string from the context stack
 			parser.CurrentState.SwitchStack.TryPop(out _);
+
+			// Restore Q-registers if /localize was set
+			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
+			{
+				regsToRestore.Clear();
+				foreach (var (key, value) in savedRegisters)
+				{
+					regsToRestore[key] = value;
+				}
+			}
 		}
 	}
 
@@ -2762,15 +2794,51 @@ public partial class Commands
 			return new CallState(Errors.NothingToDo);
 		}
 
-		// Note: Queue infrastructure available via QueueCommandListRequest if needed
-		// Currently executes inline for immediate response (default PennMUSH behavior)
-		await parser.With(
-			state => state with
+		var switches = parser.CurrentState.Switches.ToArray();
+		var hasLocalize = switches.Contains("LOCALIZE");
+		var hasClearRegs = switches.Contains("CLEARREGS");
+
+		// Implement /LOCALIZE: save Q-registers so forced code cannot permanently change
+		// the caller's Q-registers. /CLEARREGS: start with empty Q-registers.
+		// NOTE: Save must happen before Clear (both use a single TryPeek for safety).
+		Dictionary<string, MString>? savedRegisters = null;
+		if ((hasLocalize || hasClearRegs) && parser.CurrentState.Registers.TryPeek(out var forceTopRegs))
+		{
+			if (hasLocalize)
 			{
-				Executor = found.Object().DBRef,
-				Caller = state.Executor
-			},
-			async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
+				savedRegisters = new Dictionary<string, MString>(forceTopRegs);
+			}
+
+			if (hasClearRegs)
+			{
+				forceTopRegs.Clear();
+			}
+		}
+
+		try
+		{
+			// Note: Queue infrastructure available via QueueCommandListRequest if needed
+			// Currently executes inline for immediate response (default PennMUSH behavior)
+			await parser.With(
+				state => state with
+				{
+					Executor = found.Object().DBRef,
+					Caller = state.Executor
+				},
+				async newParser => await newParser.CommandListParseVisitor(cmdListArg)());
+		}
+		finally
+		{
+			// Restore Q-registers if /localize was set
+			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
+			{
+				regsToRestore.Clear();
+				foreach (var (key, value) in savedRegisters)
+				{
+					regsToRestore[key] = value;
+				}
+			}
+		}
 
 		return CallState.Empty;
 	}
@@ -4037,6 +4105,29 @@ public partial class Commands
 			return new CallState("#-1 NO TEST STRING");
 		}
 
+		// Pattern matching flags (declared outside try/finally for /localize restore access)
+		bool isRegexp = switches.Contains("REGEXP");
+		bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
+		bool localizeRegs = switches.Contains("LOCALIZE");
+		bool clearRegs = switches.Contains("CLEARREGS");
+
+		// Implement /LOCALIZE: save Q-registers so matched actions cannot permanently change
+		// the caller's Q-registers. /CLEARREGS: start the action with empty Q-registers.
+		// NOTE: Save must happen before Clear (both use a single TryPeek for safety).
+		Dictionary<string, MString>? savedRegisters = null;
+		if ((localizeRegs || clearRegs) && parser.CurrentState.Registers.TryPeek(out var selectTopRegs))
+		{
+			if (localizeRegs)
+			{
+				savedRegisters = new Dictionary<string, MString>(selectTopRegs);
+			}
+
+			if (clearRegs)
+			{
+				selectTopRegs.Clear();
+			}
+		}
+
 		// Push the switch string onto the context stack
 		parser.CurrentState.SwitchStack.Push(args["0"].Message!);
 
@@ -4093,11 +4184,6 @@ public partial class Commands
 				await NotifyService.Notify(executor, "  Will queue @notify after completion");
 			}
 
-			// Pattern matching implementation
-			bool isRegexp = switches.Contains("REGEXP");
-			bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
-			bool localizeRegs = switches.Contains("LOCALIZE");
-			bool clearRegs = switches.Contains("CLEARREGS");
 
 			// Process expression/action pairs
 			bool matchFound = false;
@@ -4193,6 +4279,16 @@ public partial class Commands
 		{
 			// Pop the switch string from the context stack
 			parser.CurrentState.SwitchStack.TryPop(out _);
+
+			// Restore Q-registers if /localize was set
+			if (localizeRegs && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
+			{
+				regsToRestore.Clear();
+				foreach (var (key, value) in savedRegisters)
+				{
+					regsToRestore[key] = value;
+				}
+			}
 		}
 	}
 
@@ -5668,19 +5764,22 @@ public partial class Commands
 
 		// Implement /localize: save Q-registers so the included code cannot permanently change
 		// the caller's Q-registers. /clearregs: start the included code with empty Q-registers.
-		// Pattern matches the hook execution in SharpMUSHParserVisitor.cs.
+		// NOTE: Save must happen before Clear (both use a single TryPeek for safety).
 		var hasClearRegs = switches.Contains("CLEARREGS");
 		var hasLocalize = switches.Contains("LOCALIZE");
 
 		Dictionary<string, MString>? savedRegisters = null;
-		if (hasLocalize && parser.CurrentState.Registers.TryPeek(out var currentRegs))
+		if ((hasLocalize || hasClearRegs) && parser.CurrentState.Registers.TryPeek(out var includeTopRegs))
 		{
-			savedRegisters = new Dictionary<string, MString>(currentRegs);
-		}
+			if (hasLocalize)
+			{
+				savedRegisters = new Dictionary<string, MString>(includeTopRegs);
+			}
 
-		if (hasClearRegs && parser.CurrentState.Registers.TryPeek(out var regsForClear))
-		{
-			regsForClear.Clear();
+			if (hasClearRegs)
+			{
+				includeTopRegs.Clear();
+			}
 		}
 
 		// Execute the attribute content in-place with recursion tracking and DEBUG/VERBOSE support
