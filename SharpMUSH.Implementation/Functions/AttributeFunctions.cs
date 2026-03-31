@@ -215,16 +215,12 @@ public partial class Functions
 				continue;
 			}
 
-			return await parser.With(s => s with
-			{
-				Enactor = parser.CurrentState.Executor
-			},
-				async newParser => await AttributeService.EvaluateAttributeFunctionAsync(
-					newParser,
+			return await AttributeService.EvaluateAttributeFunctionAsync(
+					parser,
 					executor,
 					found,
 					attribute,
-					parser.CurrentState.EnvironmentRegisters));
+					parser.CurrentState.EnvironmentRegisters);
 		}
 
 		return await defaultArg.ParsedMessage();
@@ -239,16 +235,12 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, dbref,
 			LocateFlags.All,
-			async actualObject => await parser.With(s => s with
-			{
-				Enactor = parser.CurrentState.Executor
-			},
-					async newParser => await AttributeService!.EvaluateAttributeFunctionAsync(
-						newParser,
-						executor,
-						actualObject,
-						attribute,
-						parser.CurrentState.EnvironmentRegisters)));
+			async actualObject => await AttributeService!.EvaluateAttributeFunctionAsync(
+					parser,
+					executor,
+					actualObject,
+					attribute,
+					parser.CurrentState.EnvironmentRegisters));
 	}
 
 	[SharpFunction(Name = "flags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -345,19 +337,12 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, dbref,
 			LocateFlags.All,
-			async actualObject =>
-			{
-				return await parser.With(s => s with
-				{
-					Enactor = parser.CurrentState.Executor
-				},
-					async newParser => await AttributeService!.EvaluateAttributeFunctionAsync(
-						newParser,
-						executor,
-						actualObject,
-						attribute,
-						parser.CurrentState.EnvironmentRegisters));
-			});
+			async actualObject => await AttributeService!.EvaluateAttributeFunctionAsync(
+					parser,
+					executor,
+					actualObject,
+					attribute,
+					parser.CurrentState.EnvironmentRegisters));
 	}
 
 	[SharpFunction(Name = "grep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
