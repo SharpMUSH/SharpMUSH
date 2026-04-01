@@ -17,7 +17,7 @@ public record DebugOptions(
 		Order = 1,
 		Tooltip = "SLL is faster but less powerful; LL handles complex grammars")]
     
-	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.LL,
+	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.SLL,
 
 	[property: SharpConfig(
 		Name = "parser_strict_mode",

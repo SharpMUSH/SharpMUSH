@@ -247,7 +247,7 @@ public static partial class ReadPennMushConfig
 			),
 			Debug = new DebugOptions(
 				Boolean(Get(nameof(DebugOptions.DebugSharpParser)), false),
-				Enum.TryParse<ParserPredictionMode>(Get(nameof(DebugOptions.ParserPredictionMode)), out var predMode) ? predMode : ParserPredictionMode.LL,
+				Enum.TryParse<ParserPredictionMode>(Get(nameof(DebugOptions.ParserPredictionMode)), true, out var predMode) ? predMode : ParserPredictionMode.SLL,
 				Boolean(Get(nameof(DebugOptions.ParserStrictMode)), false)
 			),
 			Alias = new AliasOptions(
