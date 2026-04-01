@@ -34,7 +34,7 @@ public static partial class Substitutions
 			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Moniker - using regular name as fallback
 			"S" or "s" =>
 				await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
-					await parser.CurrentState.KnownExecutorObject(mediator),
+					await parser.CurrentState.KnownEnactorObject(mediator),
 					configuration.CurrentValue.Attribute.GenderAttribute,
 					configuration.CurrentValue.Attribute.SubjectivePronounAttribute,
 					x => x switch
@@ -44,7 +44,7 @@ public static partial class Substitutions
 						_ => "they"
 					}),
 			"O" or "o" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
-				await parser.CurrentState.KnownExecutorObject(mediator),
+				await parser.CurrentState.KnownEnactorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.ObjectivePronounAttribute,
 				x => x switch
@@ -54,7 +54,7 @@ public static partial class Substitutions
 					_ => "them"
 				}),
 			"P" or "p" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
-				await parser.CurrentState.KnownExecutorObject(mediator),
+				await parser.CurrentState.KnownEnactorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.PossessivePronounAttribute,
 				x => x switch
@@ -64,7 +64,7 @@ public static partial class Substitutions
 					_ => "their"
 				}),
 			"A" or "a" => await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
-				await parser.CurrentState.KnownExecutorObject(mediator),
+				await parser.CurrentState.KnownEnactorObject(mediator),
 				configuration.CurrentValue.Attribute.GenderAttribute,
 				configuration.CurrentValue.Attribute.AbsolutePossessivePronounAttribute,
 				x => x switch
@@ -90,8 +90,8 @@ public static partial class Substitutions
 
 	private static async ValueTask<string> GetLocationDbRefString(IMUSHCodeParser parser, IMediator mediator)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var location = await executor.Where();
+		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
+		var location = await enactor.Where();
 		var locationDbRef = location.Object().DBRef.Number.ToString();
 		return $"#{locationDbRef}";
 	}
