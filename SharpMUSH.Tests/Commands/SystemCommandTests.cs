@@ -33,7 +33,7 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Flags:")),
-				Arg.Any<AnySharpObject>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -49,7 +49,7 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Powers:")),
-				Arg.Any<AnySharpObject>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -65,20 +65,24 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "No hooks set for command '@EMIT'.")),
-				Arg.Any<AnySharpObject>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
-	// PennMUSH reference: cmd_function with no args/switches calls do_function(executor, NULL, NULL, 0)
-	// which lists user-defined and built-in functions. SharpMUSH outputs "Global user-defined functions:".
-	// Note: @function has no /list switch; calling @function/list returns an invalid-switch error.
-	// The expected full output is "#-1 INVALID SWITCH: list".
+	// PennMUSH reference: cmd_function with no args calls do_function(executor, NULL, NULL, 0)
+	// which lists user-defined and built-in functions. Output begins with "Global user-defined functions:".
 	[Test]
 	public async ValueTask FunctionCommand()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@function/list"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
-		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: list");
+		await NotifyService
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Global user-defined functions:")),
+				Arg.Any<AnySharpObject?>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
 	// PennMUSH reference: @command with no arg returns an error.
@@ -108,7 +112,7 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")),
-				Arg.Any<AnySharpObject>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 
 		// Restore to visible state.
@@ -130,7 +134,7 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "That player is not connected.")),
-				Arg.Any<AnySharpObject>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -150,7 +154,7 @@ public class SystemCommandTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageEquals(msg, $"{uniqueAttr} -- Attribute permissions now: wizard")),
-				Arg.Any<AnySharpObject>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -174,7 +178,7 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute locked.")),
-				Arg.Any<AnySharpObject>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -199,7 +203,7 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute owner changed.")),
-				Arg.Any<AnySharpObject>(),
+				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 	}
 

@@ -500,7 +500,7 @@ public partial class Commands
 			return new CallState("#-1 FAILED");
 		}
 
-			await NotifyService!.Notify(executor, "Attribute owner changed.");
+		await NotifyService!.Notify(executor, "Attribute owner changed.");
 		return new CallState(string.Empty);
 	}
 
