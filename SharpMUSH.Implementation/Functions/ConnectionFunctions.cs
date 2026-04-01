@@ -583,7 +583,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ListWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var arg0 = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls.
+		// Use IsNullOrEmpty to distinguish a truly absent optional arg from an explicitly empty one.
+		var arg0Raw = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		var arg0 = string.IsNullOrEmpty(arg0Raw) ? null : arg0Raw;
 		var arg1 = args.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
 			: ["online"];
@@ -666,7 +669,10 @@ public partial class Functions
 	public static async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var arg0 = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls.
+		// Use IsNullOrEmpty to distinguish a truly absent optional arg from an explicitly empty one.
+		var arg0Raw = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
+		var arg0 = string.IsNullOrEmpty(arg0Raw) ? null : arg0Raw;
 		var arg1 = args.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
 			: ["online"];
@@ -1599,15 +1605,22 @@ public partial class Functions
 	public static async ValueTask<CallState> IdleSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// IDLESECS() is an alias for idle()
-		// If no argument, return idle time for executor
-		if (!parser.CurrentState.Arguments.ContainsKey("0"))
+		// When called with no argument (or an empty argument), return idle time for executor.
+		// Note: the parser always injects Arguments["0"] = CallState.Empty via DefaultIfEmpty,
+		// so ContainsKey("0") is always true. Check for a non-empty value instead.
+		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0State)
+			? arg0State.Message?.ToPlainText()
+			: null;
+
+		if (string.IsNullOrEmpty(arg0))
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-			// Find executor's connection
+			// Find executor's connection; return -1 if not connected
 			var data = ConnectionService!.Get(executor.Object().DBRef);
 			var idleSeconds = await data
 				.Select(x => x.Idle?.TotalSeconds ?? -1)
+				.DefaultIfEmpty(-1)
 				.MinAsync();
 			return new CallState(((int)idleSeconds).ToString());
 		}

@@ -58,6 +58,7 @@ public class SharpMUSHParserVisitor(
 	MString source)
 	: SharpMUSHParserBaseVisitor<ValueTask<CallState?>>
 {
+	private int _debugNestDepth;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
 
@@ -124,101 +125,6 @@ public class SharpMUSHParserVisitor(
 		}
 	}
 
-	/// <summary>
-	/// Formats register output for DEBUG mode, showing q-registers, stack registers,
-	/// and iteration registers separately.
-	/// </summary>
-	/// <param name="state">Parser state containing registers</param>
-	/// <param name="dbrefNumber">DBRef number for output prefix</param>
-	/// <param name="indent">Indentation string</param>
-	/// <returns>Formatted register output string, or empty if no registers</returns>
-	private string FormatRegisterOutput(ParserState state, int dbrefNumber, string indent)
-	{
-		var output = new System.Text.StringBuilder();
-		var qRegisters = new List<string>();
-		var stackRegisters = new List<string>();
-		var iterRegisters = new List<string>();
-
-		// Get q-registers from Registers stack (set via setq())
-		if (state.Registers.TryPeek(out var registers) && registers.Count > 0)
-		{
-			foreach (var reg in registers.OrderBy(r => r.Key))
-			{
-				var key = reg.Key;
-				var value = reg.Value.ToString();
-
-				// Check if it's a q-register (single letter A-Z)
-				if (key.Length == 1 && char.IsLetter(key[0]))
-				{
-					qRegisters.Add($"%q{key.ToLower()}:{value}");
-				}
-			}
-		}
-
-		// Get stack registers from EnvironmentRegisters (set via command arguments like $-commands)
-		if (state.EnvironmentRegisters.Count > 0)
-		{
-			foreach (var reg in state.EnvironmentRegisters.OrderBy(r => r.Key))
-			{
-				var key = reg.Key;
-				var value = reg.Value.Message?.ToString() ?? string.Empty;
-
-				// Check if it's a stack register (0-9)
-				if (key.Length == 1 && char.IsDigit(key[0]))
-				{
-					stackRegisters.Add($"%{key}:{value}");
-				}
-			}
-		}
-
-		// Get iteration registers from IterationRegisters stack (set via iter())
-		if (!state.IterationRegisters.IsEmpty)
-		{
-			var iterIndex = 0;
-			foreach (var iter in state.IterationRegisters)
-			{
-				var iterValue = iter.Value?.ToString() ?? string.Empty;
-				if (iterIndex == 0)
-				{
-					// %iL is an alias for the top (most recent) iteration value
-					iterRegisters.Add($"%iL:{iterValue}");
-				}
-				else
-				{
-					iterRegisters.Add($"%i{iterIndex}:{iterValue}");
-				}
-				iterIndex++;
-			}
-		}
-
-		// Output q-registers if any exist
-		if (qRegisters.Count > 0)
-		{
-			output.Append($"#{dbrefNumber}! {indent}[Q-Registers: {string.Join(", ", qRegisters)}]");
-		}
-
-		// Output stack registers if any exist
-		if (stackRegisters.Count > 0)
-		{
-			if (output.Length > 0)
-			{
-				output.AppendLine();
-			}
-			output.Append($"#{dbrefNumber}! {indent}[Registers: {string.Join(", ", stackRegisters)}]");
-		}
-
-		// Output iteration registers if any exist
-		if (iterRegisters.Count > 0)
-		{
-			if (output.Length > 0)
-			{
-				output.AppendLine();
-			}
-			output.Append($"#{dbrefNumber}! {indent}[Iter-Registers: {string.Join(", ", iterRegisters)}]");
-		}
-
-		return output.ToString();
-	}
 
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
@@ -382,8 +288,7 @@ public class SharpMUSHParserVisitor(
 
 			if (shouldDebug)
 			{
-				var depth = parser.CurrentState.ParserFunctionDepth ?? 0;
-				indent = new string(' ', depth);
+				indent = new string(' ', _debugNestDepth);
 				dbrefNumber = executorObj.Object().DBRef.Number;
 			}
 		}
@@ -392,28 +297,18 @@ public class SharpMUSHParserVisitor(
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} :";
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
-
-			// Output register contents before evaluation
-			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
-			if (!string.IsNullOrEmpty(registerOutput))
-			{
-				await SendDebugOrVerboseOutput(executorObj, registerOutput);
-			}
 		}
 
+		if (shouldDebug) _debugNestDepth++;
+
 		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
+
+		if (shouldDebug) _debugNestDepth--;
 
 		if (shouldDebug && executorObj != null && indent != null)
 		{
 			var debugOutput = $"#{dbrefNumber}! {indent}{context.GetText()} => {result.Message?.ToPlainText() ?? ""}";
 			await SendDebugOrVerboseOutput(executorObj, debugOutput);
-
-			// Output register contents after evaluation
-			var registerOutput = FormatRegisterOutput(parser.CurrentState, dbrefNumber, indent);
-			if (!string.IsNullOrEmpty(registerOutput))
-			{
-				await SendDebugOrVerboseOutput(executorObj, registerOutput);
-			}
 		}
 
 		return result;
@@ -547,12 +442,10 @@ public class SharpMUSHParserVisitor(
 			// Consider moving after RefinedArguments to avoid extra parsing. However, each
 			// RefinedArguments call creates a new FunctionParser call without depth info.
 
-			if (currentDepth > Configuration.CurrentValue.Limit.MaxDepth)
-			{
-				limitExceeded.IsExceeded = true;
-				return new CallState(Errors.ErrorDepth, contextDepth);
-			}
-
+			// Note: PennMUSH does NOT limit built-in function nesting depth.
+			// Only user-defined function recursion is limited (see FunctionRecursionLimit
+			// in AttributeService.EvaluateAttributeFunctionAsync).
+			// The CallLimit below provides a safety net against infinite built-in nesting.
 			if (currentDepth > Configuration.CurrentValue.Limit.CallLimit)
 			{
 				limitExceeded.IsExceeded = true;
@@ -712,13 +605,17 @@ public class SharpMUSHParserVisitor(
 			if (firstCommandMatch?.SourceInterval.Length is null or 0)
 				return new None();
 
-			var command = firstCommandMatch.GetText();
+			var command = firstCommandMatch.GetText().TrimStart();
 
 			var spaceIndex = command.AsSpan().IndexOf(' ');
 			if (spaceIndex != -1)
 			{
 				command = command[..spaceIndex];
 			}
+
+			// Guard: empty command name (e.g., from a command body that began with only whitespace).
+			if (command.Length == 0)
+				return new None();
 
 			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
@@ -1065,7 +962,8 @@ public class SharpMUSHParserVisitor(
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef
+				Executor = obj.Object().DBRef,
+				Caller = prs.CurrentState.Executor
 			});
 
 			await newParser.CommandListParse(MModule.substring(
@@ -1598,7 +1496,8 @@ public class SharpMUSHParserVisitor(
 				EnvironmentRegisters = arguments,
 				Arguments = arguments,
 				Function = null,
-				Executor = obj.Object().DBRef
+				Executor = obj.Object().DBRef,
+				Caller = prs.CurrentState.Executor
 			});
 
 			// Execute inline by parsing the command list directly
@@ -1671,7 +1570,9 @@ public class SharpMUSHParserVisitor(
 		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
 		// - RSBrace (PennMUSH CS_BRACES): commands like @wait, @force, @halt preserve braces
 		//   during parsing, then strip them at execution time via StripOuterBraces.
-		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like & store the raw value text.
+		//   Also used for & (attribute value storage): player-typed `& ATTR OBJ={code}` must
+		//   store the braces verbatim so get(OBJ/ATTR) returns `{code}`, matching PennMUSH.
+		// - NoParse (PennMUSH QUEUE_NOLIST/noeval): commands like ] store the raw value text.
 		//   In PennMUSH, noeval arguments never go through process_expression, so braces
 		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
 		//   preserve braces via the flag to match PennMUSH behavior.
@@ -1783,6 +1684,9 @@ public class SharpMUSHParserVisitor(
 
 		if (eqSplit)
 		{
+			// The LHS of an EqSplit command is evaluated unless the command declares full NoParse.
+			// Commands that only want their RHS unevaluated (like &) use RSNoParse instead of NoParse,
+			// so that the LHS (object reference) is evaluated normally here while the RHS is deferred.
 			arguments.Add(noParse
 				? new CallState(argCallState.Arguments.FirstOrDefault() ?? MModule.empty(), argCallState.Depth)
 				: (await prs.FunctionParse(argCallState.Arguments.FirstOrDefault() ?? MModule.empty()))!);

@@ -1,0 +1,216 @@
+==============================================================================
+PENNMUSH BBS TEST - DEBUG/VERBOSE/PUPPET OUTPUT CAPTURE
+==============================================================================
+
+--- WELCOME ---
+"<This is where you announce that they've connected to your MUSH>
+<It's a good idea to include the version/patchlevel of MUSH you're running>
+<It's a good idea to include an email address for questions about the MUSH>
+-----------------------------------------------------------------------------
+Use QUIT to logout.
+Use the WHO command to find out who is online currently.
+-----------------------------------------------------------------------------
+Yell at your local god to personalize this file!
+
+--- LOGIN ---
+Welcome to PennMUSH!
+--------------------------------------------------------------------------
+Yell at your god to personalize this file
+
+Wizards, tell your friendly neighborhood god to personalize this file!
+
+MAIL: You have no mail.
+
+Room Zero(#0RL)
+You are in Room Zero.
+
+==============================================================================
+STEP 1: SET FLAGS ON #1
+==============================================================================
+  CMD: @set #1=WIZARD
+  RSP: One - WIZARD (already) set.
+  CMD: @set #1=DEBUG
+  RSP: One - DEBUG set.
+  CMD: @set #1=VERBOSE
+  RSP: One - VERBOSE set.
+  CMD: @set #1=PUPPET
+  RSP:
+PUPPET - I don't recognize that flag.
+
+==============================================================================
+STEP 2: INSTALL MYRDDIN BBS
+==============================================================================
+  [17] CMD: @set me=quiet
+  [17] RSP:
+One - QUIET set.
+  [19] CMD: @pemit me=[repeat(=,78)]%r[center(Constructing Myrddin's BBS v4.0.6,78)]%r[repeat(-,78)]%rPlease wait...%r
+  [19] RSP:
+  [21] CMD: @create bbpocket=10
+  [21] RSP:
+Created: Object #3.
+bbpocket is now listening.
+  [23] CMD: @lock bbpocket=me
+  [23] RSP:
+  [24] CMD: @Desc bbpocket=[iter(setdiff(lattr(me),Desc),ljust(##,18))]
+  [24] RSP:
+  [25] CMD: &BBTIME bbpocket=extract(time(), 1, 3)
+  [25] RSP:
+  [26] CMD: &GET_GROUP bbpocket=switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni))
+  [26] RSP:
+  [27] CMD: &NXT_MESS bbpocket=1
+  [27] RSP:
+  [28] CMD: &VALID_GROUPS bbpocket=iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##))
+  [28] RSP:
+  [29] CMD: &ISGROUPREAD bbpocket=switch(setdiff(%1,get(%0/bb_read)),,,U)
+  [29] RSP:
+  [30] CMD: &UNREADNUMS bbpocket=sort(iter(setdiff(get(%1/mess_lst),get(%0/bb_read)),member(get(%1/mess_lst),##)))
+  [30] RSP:
+  [31] CMD: &FN_MAKELIST bbpocket=map(me/fn_maplist,secure(%0))
+  [31] RSP:
+  [32] CMD: &FN_MAPLIST bbpocket=switch(strmatch(%0,?*-*),1,lnum(before(%0,-),after(%0,-)),%0)
+  [32] RSP:
+  [33] CMD: &FN_MAPLIST_2 bbpocket=switch(strmatch(%0,*-*),1,u(fn_lnum,before(%0,-),after(%0,-)),%0)
+  [33] RSP:
+  [34] CMD: &FN_UNREAD_LIST bbpocket=edit(sort(iter(%0,member(%1,##))),%b,\,%b)
+  [34] RSP:
+  [35] CMD: &FN_LNUM bbpocket=iter(lnum(add(sub(%1,%0),1)),add(##,%0))
+  [35] RSP:
+  [37] CMD: @switch lnum(1,2)=1 2,{@pemit %#=BBS INSTALLER> Your lnum() accepts two arguments. Good.; &FN_MAPLIST_2 bbpocket; &FN_LN
+  [37] RSP:
+  [39] CMD: &ADDEM bbpocket=add(%0,%1)
+  [39] RSP:
+  [40] CMD: &B36_DIGITS bbpocket=0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+  [40] RSP:
+  [41] CMD: &B36_POWS bbpocket=1 36 1296 46656 1679616 60466176
+  [41] RSP:
+  [42] CMD: &FN_B36_MAGS bbpocket=revwords(iter(v(b36_pows),switch([div(##,%0)]:[eq(##,%0)],0:*,##,*:1,##)))
+  [42] RSP:
+  [43] CMD: &FN_B36-TO-B10 bbpocket=[setq(0,ucstr(%0))][setq(1,strlen(%q0))][fold(me/addem,[iter(lnum(%q1),mul(sub(member(v(b36_digi
+  [43] RSP:
+  [44] CMD: &FN_B10-TO-B36 bbpocket=[setq(0,%0)][edit(iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,s
+  [44] RSP:
+  [45] CMD: &FN_INC_NEXT_MESS bbpocket=u(fn_b10-to-b36,add(u(fn_b36-to-b10,%0),1))
+  [45] RSP:
+  [46] CMD: &VALID_CONFIGS bbpocket=anonymous timeout
+  [46] RSP:
+  [47] CMD: &VALID_GLOBAL_CONFIGS bbpocket=timeout autotimeout
+  [47] RSP:
+  [48] CMD: &CONFIG_TIMEOUT bbpocket=2592000
+  [48] RSP:
+  [49] CMD: &TR_TIMEOUT bbpocket=@dolist v(groups)={@trigger me/tr_timeout_group=##}
+  [49] RSP:
+  [50] CMD: &TR_TIMEOUT_GROUP bbpocket=@dolist get(%0/mess_lst)={@switch and(extract(get(%0/hdr_##),5,1,|),gt(secs(),extract(get(%0/
+  [50] RSP:
+  [51] CMD: &DO_TIMEOUTS bbpocket=@trigger me/tr_timeout; @wait 86400={@trigger me/do_timeouts}
+  [51] RSP:
+  [52] CMD: &TR_CONFIG_ANONYMOUS bbpocket=&anonymous %0=[ifelse([%1],[%1],)]; @pemit %2=Posters on the [name(%0)] group will show up
+  [52] RSP:
+  [53] CMD: &TR_CONFIG_TIMEOUT bbpocket=&config_timeout %0=[mul(%1,86400)]; @pemit %2=New messages for group '[name(%0)]' have [ifel
+  [53] RSP:
+  [54] CMD: &TR_GCONFIG_TIMEOUT bbpocket=&config_timeout me=[mul(%0,86400)]; @pemit %1=BB global config parameter 'timeout': [ifelse
+  [54] RSP:
+  [55] CMD: &TR_GCONFIG_AUTOTIMEOUT bbpocket=@switch [eq(hasattr(me,startup),setr(0,switch(%0,on,1,0)))]:%0=1:*,{@pemit %1=BB autoti
+  [55] RSP:
+  [56] CMD: &FN_MSG_FLAGS bbpocket=switch([member(get(%0/bb_read),%2)]:[u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1))],0:*,U,*:1,T
+  [56] RSP:
+  [57] CMD: &TR_POST_NOTIFY bbpocket=@switch hasflag(%0,DARK)=0,{@pemit/list iter(remove(lwho(),%0),switch(or(member([get(##/bb_omit
+  [57] RSP:
+  [58] CMD: &FN_TIMEOUT_CLOSE bbpocket=switch(%0:[lte(sub(%0,secs()),259200)],0:*,0,*:1,1,0)
+  [58] RSP:
+  [59] CMD: &FN_HASCONFIG bbpocket=or(hasattr(%0,anonymous),neq(get(%0/config_timeout),get(#3/config_timeout)))
+  [59] RSP:
+  [60] CMD: &VERSION bbpocket=4.0.6
+  [60] RSP:
+  [61] CMD: @set bbpocket=!HALT
+  [61] RSP:
+  [62] CMD: @set bbpocket=INHERIT
+  [62] RSP:
+  [63] CMD: @set bbpocket=SAFE
+  [63] RSP:
+  [65] CMD: @switch strlen(repeat(.,7998))=7998,&BUFFER_SIZE bbpocket=8000,&BUFFER_SIZE bbpocket=4000
+  [65] RSP:
+
+  [142] CMD: @force me=@edit [num(bbpocket)]/*=#3,[num(bbpocket)]
+  [142] RSP:
+  [143] CMD: @force me=@edit [num(mbboard)]/*=#3,[num(bbpocket)]
+  [143] RSP:
+  [146] CMD: @wait 3={@tel bbpocket=mbboard; @name mbboard=BBS - Myrddin's Global BBS v4.0.6; @set me=!quiet}
+  [146] RSP:
+  [148] CMD: @switch/first %#:[first(version())]=#1:Tiny*,{@attribute/access bb_read=hidden wizard; @attribute/access bb_omit=hidden 
+  [148] RSP:
+  [150] CMD: @wait 1=@pemit me=%rBulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!%r[repeat
+  [150] RSP:
+
+  Executed 102 commands. bbpocket=#3, mbboard=#4
+
+One - QUIET reset.
+
+Bulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!
+==============================================================================
+
+==============================================================================
+STEP 3: +BBREAD (INITIAL)
+==============================================================================
+==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+
+==============================================================================
+STEP 4: +BBNEWGROUP TestGroup
+==============================================================================
+Group number 1 added as 'TestGroup'. Messages will have a 30 day timeout.
+
+==============================================================================
+STEP 5: +BBREAD (AFTER GROUP CREATION)
+==============================================================================
+==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+ 1     TestGroup                     Fri Mar 20            0   
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+
+==============================================================================
+STEP 6: +BBPOST 1/Title Goes Here=Body
+==============================================================================
+You post your note about 'Title Goes Here' in group 1 (TestGroup) as message #1
+
+==============================================================================
+STEP 7: +BBREAD 1 (LIST MESSAGES)
+==============================================================================
+==============================================================================
+                             **** TestGroup ****                              
+        Message                            Posted        By
+------------------------------------------------------------------------------
+1/1   U Title Goes Here                    Fri Mar 20    One
+==============================================================================
+
+==============================================================================
+STEP 8: +BBREAD 1/1 (READ MESSAGE)
+==============================================================================
+
+================================= TestGroup ==================================
+Message: 1/1                       Posted        Author
+Title Goes Here                    Fri Mar 20    One
+------------------------------------------------------------------------------
+Body of the test post.
+==============================================================================
+
+==============================================================================
+STEP 9: +BBREAD (FINAL LIST VIEW)
+==============================================================================
+==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+ 1     TestGroup                     Fri Mar 20            1 U 
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+
+==============================================================================
+DONE - OUTPUT CAPTURED
+==============================================================================

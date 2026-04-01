@@ -32,15 +32,13 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SwitchCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@switch 1=1,@pemit #1=One,@pemit #1=Other"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), "One", Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -234,5 +232,122 @@ public class ControlFlowCommandTests
 			.DidNotReceive()
 			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "BreakQueued_After_36489")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask Switch_FirstSwitch_OnlyRunsFirstMatch()
+	{
+		// @switch/first: only the first matching action fires, second match should not run.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@switch/first 1=1,@pemit #1=SwFirst_A_47592,1,@pemit #1=SwFirst_B_47592"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwFirst_A_47592")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwFirst_B_47592")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask Switch_AllSwitch_RunsAllMatches()
+	{
+		// @switch (default) / @switch/all: all matching actions run.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@switch/all 1=1,@pemit #1=SwAll_A_58603,1,@pemit #1=SwAll_B_58603"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwAll_A_58603")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwAll_B_58603")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask Switch_RegexpSwitch_MatchesRegexp()
+	{
+		// @switch/regexp: patterns are treated as case-insensitive regular expressions.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@switch/regexp hello=HEL+O,@pemit #1=SwRegexp_Match_69714,world,@pemit #1=SwRegexp_NoMatch_69714"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwRegexp_Match_69714")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwRegexp_NoMatch_69714")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask Switch_RegexpSwitch_IsCaseInsensitive()
+	{
+		// @switch/regexp: per helpfile, matches are case-insensitive.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@switch/regexp HELLO=hello,@pemit #1=SwRegexpCI_Match_70825,world,@pemit #1=SwRegexpCI_NoMatch_70825"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwRegexpCI_Match_70825")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwRegexpCI_NoMatch_70825")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask Switch_HashDollarSubstitution_ReplacedWithTestString()
+	{
+		// #$ in action text should be replaced with the test string before execution.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@switch hello=hel*,@pemit #1=SwHashDollar_#$_81936,nomatch,@pemit #1=SwHashDollar_NoMatch_81936"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwHashDollar_hello_81936")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask Switch_HashDollarSubstitution_InDefaultAction()
+	{
+		// #$ in default action text should also be replaced with the test string.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@switch goodbye=hello,@pemit #1=SwHashDollarDef_NoMatch_92047,@pemit #1=SwHashDollarDef_#$_92047"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwHashDollarDef_goodbye_92047")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask Switch_NotifySwitch_RunsActionAndQueuesNotify()
+	{
+		// @switch/notify: action fires normally; @notify me is also queued.
+		// Verify the action itself executes correctly.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("@switch/notify 1=1,@pemit #1=SwNotify_Match_93158,@pemit #1=SwNotify_Default_93158"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwNotify_Match_93158")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "SwNotify_Default_93158")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 }

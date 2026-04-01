@@ -215,16 +215,12 @@ public partial class Functions
 				continue;
 			}
 
-			return await parser.With(s => s with
-			{
-				Enactor = parser.CurrentState.Executor
-			},
-				async newParser => await AttributeService.EvaluateAttributeFunctionAsync(
-					newParser,
+			return await AttributeService.EvaluateAttributeFunctionAsync(
+					parser,
 					executor,
 					found,
 					attribute,
-					parser.CurrentState.EnvironmentRegisters));
+					parser.CurrentState.EnvironmentRegisters);
 		}
 
 		return await defaultArg.ParsedMessage();
@@ -239,16 +235,12 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, dbref,
 			LocateFlags.All,
-			async actualObject => await parser.With(s => s with
-			{
-				Enactor = parser.CurrentState.Executor
-			},
-					async newParser => await AttributeService!.EvaluateAttributeFunctionAsync(
-						newParser,
-						executor,
-						actualObject,
-						attribute,
-						parser.CurrentState.EnvironmentRegisters)));
+			async actualObject => await AttributeService!.EvaluateAttributeFunctionAsync(
+					parser,
+					executor,
+					actualObject,
+					attribute,
+					parser.CurrentState.EnvironmentRegisters));
 	}
 
 	[SharpFunction(Name = "flags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -345,19 +337,12 @@ public partial class Functions
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, dbref,
 			LocateFlags.All,
-			async actualObject =>
-			{
-				return await parser.With(s => s with
-				{
-					Enactor = parser.CurrentState.Executor
-				},
-					async newParser => await AttributeService!.EvaluateAttributeFunctionAsync(
-						newParser,
-						executor,
-						actualObject,
-						attribute,
-						parser.CurrentState.EnvironmentRegisters));
-			});
+			async actualObject => await AttributeService!.EvaluateAttributeFunctionAsync(
+					parser,
+					executor,
+					actualObject,
+					attribute,
+					parser.CurrentState.EnvironmentRegisters));
 	}
 
 	[SharpFunction(Name = "grep", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["object", "pattern"])]
@@ -551,7 +536,7 @@ public partial class Functions
 		var (db, attr) = details;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All, async realLocated =>
+			parser, executor, executor, db, LocateFlags.All | LocateFlags.NoVisibilityCheck, async realLocated =>
 			{
 				return split.AsT0 switch
 				{
@@ -840,8 +825,7 @@ public partial class Functions
 				if (dbrefAndMaybeArg.AsT0.Attribute is null)
 				{
 					var objOwner = await actualObject.Object().Owner.WithCancellation(CancellationToken.None);
-					return new CallState(objOwner.Object.DBRef
-						.ToString());
+					return new CallState($"#{objOwner.Object.DBRef.Number}");
 				}
 
 				var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
@@ -853,9 +837,7 @@ public partial class Functions
 				{
 					{ IsNone: true } => new CallState(Errors.ErrorNoSuchAttribute),
 					{ IsError: true } => new CallState(attributeObject.AsError.Value),
-					{ AsAttribute: var attr } => (await attr.Last().Owner.WithCancellation(CancellationToken.None))!
-						.Object
-						.DBRef.ToString()
+					{ AsAttribute: var attr } => new CallState($"#{(await attr.Last().Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}")
 				};
 			}
 		);
@@ -1519,7 +1501,7 @@ public partial class Functions
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, get.Name),
 					Arguments = arguments.ToDictionary(),
 					EnvironmentRegisters = arguments.ToDictionary(),
-					Registers = [],
+					Registers = new([[]]),
 					Executor = actualObject.Object().DBRef,
 					Caller = s.Executor
 				},
@@ -1593,7 +1575,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		return await parser.With(s => s with { Registers = [] },
+		return await parser.With(s => s with { Registers = new([[]]) },
 			async np => await AttributeService!.EvaluateAttributeFunctionAsync(
 				np,
 				executor,

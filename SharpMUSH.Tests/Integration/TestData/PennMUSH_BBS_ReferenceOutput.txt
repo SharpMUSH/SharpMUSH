@@ -1,0 +1,1585 @@
+==============================================================================
+PENNMUSH BBS TEST - DEBUG/VERBOSE/PUPPET OUTPUT CAPTURE
+==============================================================================
+
+--- WELCOME ---
+"<This is where you announce that they've connected to your MUSH>
+<It's a good idea to include the version/patchlevel of MUSH you're running>
+<It's a good idea to include an email address for questions about the MUSH>
+-----------------------------------------------------------------------------
+Use create <name> <password> to create a character.
+Use connect <name> <password> to connect to your existing character.
+Use 'ch <name> <pass>' to connect hidden, and cd to connect DARK (admin)
+Use QUIT to logout.
+Use the WHO command to find out who is online currently.
+-----------------------------------------------------------------------------
+Yell at your local god to personalize this file!
+
+
+
+--- LOGIN ---
+Welcome to PennMUSH!
+--------------------------------------------------------------------------
+Yell at your god to personalize this file
+
+Wizards, tell your friendly neighborhood god to personalize this file!
+
+ 
+
+
+MAIL: You have no mail.
+
+Room Zero(#0RL)
+You are in Room Zero.
+
+
+==============================================================================
+STEP 1: SET FLAGS ON #1
+==============================================================================
+  CMD: @set #1=WIZARD
+  RSP: One - WIZARD (already) set.
+  CMD: @set #1=DEBUG
+  RSP: One - DEBUG set.
+  CMD: @set #1=VERBOSE
+  RSP: One - VERBOSE set.
+  CMD: @set #1=PUPPET
+  RSP: #1] @set #1=PUPPET
+PUPPET - I don't recognize that flag.
+
+==============================================================================
+STEP 2: INSTALL MYRDDIN BBS
+==============================================================================
+  [17] CMD: @set me=quiet
+  [17] RSP: #1] @set me=quiet
+One - QUIET set.
+  [19] CMD: @pemit me=[repeat(=,78)]%r[center(Constructing Myrddin's BBS v4.0.6,78)]%r[repeat(-,78)]%rPlease wait...%r
+  [19] RSP: #1] @pemit me=[repeat(=,78)]%r[center(Constructing Myrddin's BBS v4.0.6,78)]%r[repeat(-,78)]%rPlease wait...%r
+#1! [repeat(=,78)]%r[center(Constructing Myrddin's BBS v4.0.6,78)]%r[repeat(-,78)]%rPlea
+  [21] CMD: @create bbpocket=10
+  [21] RSP: #1] @create bbpocket=10
+Created: Object #3.
+  >> bbpocket dbref: #3
+  >> @set #3=DEBUG: #1] @set #3=DEBUG
+  >> @set #3=VERBOSE: #1] @set #3=VERBOSE
+  >> @set #3=PUPPET: #1] @set #3=PUPPET
+bbpocket is now listening.
+bbpocket> bbpocket is now listening.
+bbpocket> bbpo
+  [23] CMD: @lock bbpocket=me
+  [23] RSP: #1] @lock bbpocket=me
+  [24] CMD: @Desc bbpocket=[iter(setdiff(lattr(me),Desc),ljust(##,18))]
+  [24] RSP: #1] @Desc bbpocket=[iter(setdiff(lattr(me),Desc),ljust(##,18))]
+  [25] CMD: &BBTIME bbpocket=extract(time(), 1, 3)
+  [25] RSP: #1] &BBTIME bbpocket=extract(time(), 1, 3)
+  [26] CMD: &GET_GROUP bbpocket=switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni))
+  [26] RSP: #1] &GET_GROUP bbpocket=switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni))
+  [27] CMD: &NXT_MESS bbpocket=1
+  [27] RSP: #1] &NXT_MESS bbpocket=1
+  [28] CMD: &VALID_GROUPS bbpocket=iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##))
+  [28] RSP: #1] &VALID_GROUPS bbpocket=iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##))
+  [29] CMD: &ISGROUPREAD bbpocket=switch(setdiff(%1,get(%0/bb_read)),,,U)
+  [29] RSP: #1] &ISGROUPREAD bbpocket=switch(setdiff(%1,get(%0/bb_read)),,,U)
+  [30] CMD: &UNREADNUMS bbpocket=sort(iter(setdiff(get(%1/mess_lst),get(%0/bb_read)),member(get(%1/mess_lst),##)))
+  [30] RSP: #1] &UNREADNUMS bbpocket=sort(iter(setdiff(get(%1/mess_lst),get(%0/bb_read)),member(get(%1/mess_lst),##)))
+  [31] CMD: &FN_MAKELIST bbpocket=map(me/fn_maplist,secure(%0))
+  [31] RSP: #1] &FN_MAKELIST bbpocket=map(me/fn_maplist,secure(%0))
+  [32] CMD: &FN_MAPLIST bbpocket=switch(strmatch(%0,?*-*),1,lnum(before(%0,-),after(%0,-)),%0)
+  [32] RSP: #1] &FN_MAPLIST bbpocket=switch(strmatch(%0,?*-*),1,lnum(before(%0,-),after(%0,-)),%0)
+  [33] CMD: &FN_MAPLIST_2 bbpocket=switch(strmatch(%0,*-*),1,u(fn_lnum,before(%0,-),after(%0,-)),%0)
+  [33] RSP: #1] &FN_MAPLIST_2 bbpocket=switch(strmatch(%0,*-*),1,u(fn_lnum,before(%0,-),after(%0,-)),%0)
+  [34] CMD: &FN_UNREAD_LIST bbpocket=edit(sort(iter(%0,member(%1,##))),%b,\,%b)
+  [34] RSP: #1] &FN_UNREAD_LIST bbpocket=edit(sort(iter(%0,member(%1,##))),%b,\,%b)
+  [35] CMD: &FN_LNUM bbpocket=iter(lnum(add(sub(%1,%0),1)),add(##,%0))
+  [35] RSP: #1] &FN_LNUM bbpocket=iter(lnum(add(sub(%1,%0),1)),add(##,%0))
+  [37] CMD: @switch lnum(1,2)=1 2,{@pemit %#=BBS INSTALLER> Your lnum() accepts two arguments. Good.; &FN_MAPLIST_2 bbpocket; &FN_LN
+  [37] RSP: #1] @switch lnum(1,2)=1 2,{@pemit %#=BBS INSTALLER> Your lnum() accepts two arguments. Good.; &FN_MAPLIST_2 bbpocket; &FN_LNUM bbpocket},{@pemit %#=BBS INSTALLER> Hmmm. Your lnum() is archaic... I'll 
+  [39] CMD: &ADDEM bbpocket=add(%0,%1)
+  [39] RSP: #1] &ADDEM bbpocket=add(%0,%1)
+  [40] CMD: &B36_DIGITS bbpocket=0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+  [40] RSP: #1] &B36_DIGITS bbpocket=0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+  [41] CMD: &B36_POWS bbpocket=1 36 1296 46656 1679616 60466176
+  [41] RSP: #1] &B36_POWS bbpocket=1 36 1296 46656 1679616 60466176
+  [42] CMD: &FN_B36_MAGS bbpocket=revwords(iter(v(b36_pows),switch([div(##,%0)]:[eq(##,%0)],0:*,##,*:1,##)))
+  [42] RSP: #1] &FN_B36_MAGS bbpocket=revwords(iter(v(b36_pows),switch([div(##,%0)]:[eq(##,%0)],0:*,##,*:1,##)))
+  [43] CMD: &FN_B36-TO-B10 bbpocket=[setq(0,ucstr(%0))][setq(1,strlen(%q0))][fold(me/addem,[iter(lnum(%q1),mul(sub(member(v(b36_digi
+  [43] RSP: #1] &FN_B36-TO-B10 bbpocket=[setq(0,ucstr(%0))][setq(1,strlen(%q0))][fold(me/addem,[iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1))))],0)]
+  [44] CMD: &FN_B10-TO-B36 bbpocket=[setq(0,%0)][edit(iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,s
+  [44] RSP: #1] &FN_B10-TO-B36 bbpocket=[setq(0,%0)][edit(iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,sub(%q0,mul(##,div(%q0,##))))]),%b,)]
+  [45] CMD: &FN_INC_NEXT_MESS bbpocket=u(fn_b10-to-b36,add(u(fn_b36-to-b10,%0),1))
+  [45] RSP: #1] &FN_INC_NEXT_MESS bbpocket=u(fn_b10-to-b36,add(u(fn_b36-to-b10,%0),1))
+  [46] CMD: &VALID_CONFIGS bbpocket=anonymous timeout
+  [46] RSP: #1] &VALID_CONFIGS bbpocket=anonymous timeout
+  [47] CMD: &VALID_GLOBAL_CONFIGS bbpocket=timeout autotimeout
+  [47] RSP: #1] &VALID_GLOBAL_CONFIGS bbpocket=timeout autotimeout
+  [48] CMD: &CONFIG_TIMEOUT bbpocket=2592000
+  [48] RSP: #1] &CONFIG_TIMEOUT bbpocket=2592000
+  [49] CMD: &TR_TIMEOUT bbpocket=@dolist v(groups)={@trigger me/tr_timeout_group=##}
+  [49] RSP: #1] &TR_TIMEOUT bbpocket=@dolist v(groups)={@trigger me/tr_timeout_group=##}
+  [50] CMD: &TR_TIMEOUT_GROUP bbpocket=@dolist get(%0/mess_lst)={@switch and(extract(get(%0/hdr_##),5,1,|),gt(secs(),extract(get(%0/
+  [50] RSP: #1] &TR_TIMEOUT_GROUP bbpocket=@dolist get(%0/mess_lst)={@switch and(extract(get(%0/hdr_##),5,1,|),gt(secs(),extract(get(%0/hdr_##),5,1,|)))=1,{&hdr_## %0; &bdy_## %0; &mess_lst %0=[remove(get(%0/mess
+  [51] CMD: &DO_TIMEOUTS bbpocket=@trigger me/tr_timeout; @wait 86400={@trigger me/do_timeouts}
+  [51] RSP: #1] &DO_TIMEOUTS bbpocket=@trigger me/tr_timeout; @wait 86400={@trigger me/do_timeouts}
+  [52] CMD: &TR_CONFIG_ANONYMOUS bbpocket=&anonymous %0=[ifelse([%1],[%1],)]; @pemit %2=Posters on the [name(%0)] group will show up
+  [52] RSP: #1] &TR_CONFIG_ANONYMOUS bbpocket=&anonymous %0=[ifelse([%1],[%1],)]; @pemit %2=Posters on the [name(%0)] group will show up as [ifelse([%1],['%1'],themselves)].
+  [53] CMD: &TR_CONFIG_TIMEOUT bbpocket=&config_timeout %0=[mul(%1,86400)]; @pemit %2=New messages for group '[name(%0)]' have [ifel
+  [53] RSP: #1] &TR_CONFIG_TIMEOUT bbpocket=&config_timeout %0=[mul(%1,86400)]; @pemit %2=New messages for group '[name(%0)]' have [ifelse(%1,a %1 day,no)] timeout.
+  [54] CMD: &TR_GCONFIG_TIMEOUT bbpocket=&config_timeout me=[mul(%0,86400)]; @pemit %1=BB global config parameter 'timeout': [ifelse
+  [54] RSP: #1] &TR_GCONFIG_TIMEOUT bbpocket=&config_timeout me=[mul(%0,86400)]; @pemit %1=BB global config parameter 'timeout': [ifelse(%0,%0 days,none)].%rAny new groups will have this value set as their defaul
+  [55] CMD: &TR_GCONFIG_AUTOTIMEOUT bbpocket=@switch [eq(hasattr(me,startup),setr(0,switch(%0,on,1,0)))]:%0=1:*,{@pemit %1=BB autoti
+  [55] RSP: #1] &TR_GCONFIG_AUTOTIMEOUT bbpocket=@switch [eq(hasattr(me,startup),setr(0,switch(%0,on,1,0)))]:%0=1:*,{@pemit %1=BB autotimeout is already [ifelse(%q0,on,off)].},0:on,{@startup me=@trigger me/do_tim
+  [56] CMD: &FN_MSG_FLAGS bbpocket=switch([member(get(%0/bb_read),%2)]:[u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1))],0:*,U,*:1,T
+  [56] RSP: #1] &FN_MSG_FLAGS bbpocket=switch([member(get(%0/bb_read),%2)]:[u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1))],0:*,U,*:1,T)
+  [57] CMD: &TR_POST_NOTIFY bbpocket=@switch hasflag(%0,DARK)=0,{@pemit/list iter(remove(lwho(),%0),switch(or(member([get(##/bb_omit
+  [57] RSP: #1] &TR_POST_NOTIFY bbpocket=@switch hasflag(%0,DARK)=0,{@pemit/list iter(remove(lwho(),%0),switch(or(member([get(##/bb_omit)] [get(##/bb_silent)],%1),not(u(%1/canread,##))),0,##))=(New BB message ([m
+  [58] CMD: &FN_TIMEOUT_CLOSE bbpocket=switch(%0:[lte(sub(%0,secs()),259200)],0:*,0,*:1,1,0)
+  [58] RSP: #1] &FN_TIMEOUT_CLOSE bbpocket=switch(%0:[lte(sub(%0,secs()),259200)],0:*,0,*:1,1,0)
+  [59] CMD: &FN_HASCONFIG bbpocket=or(hasattr(%0,anonymous),neq(get(%0/config_timeout),get(#3/config_timeout)))
+  [59] RSP: #1] &FN_HASCONFIG bbpocket=or(hasattr(%0,anonymous),neq(get(%0/config_timeout),get(#3/config_timeout)))
+  [60] CMD: &VERSION bbpocket=4.0.6
+  [60] RSP: #1] &VERSION bbpocket=4.0.6
+  [61] CMD: @set bbpocket=!HALT
+  [61] RSP: #1] @set bbpocket=!HALT
+  [62] CMD: @set bbpocket=INHERIT
+  [62] RSP: #1] @set bbpocket=INHERIT
+  [63] CMD: @set bbpocket=SAFE
+  [63] RSP: #1] @set bbpocket=SAFE
+  [65] CMD: @switch strlen(repeat(.,7998))=7998,&BUFFER_SIZE bbpocket=8000,&BUFFER_SIZE bbpocket=4000
+  [65] RSP: #1] @switch strlen(repeat(.,7998))=7998,&BUFFER_SIZE bbpocket=8000,&BUFFER_SIZE bbpocket=4000
+#1! strlen(repeat(.,7998)) :
+#1!  repeat(.,7998) => ....................................................
+  [68] CMD: @create mbboard=10
+  [68] RSP: #1] @create mbboard=10
+Created: Object #4.
+  >> mbboard dbref: #4
+  >> @set #4=DEBUG: #1] @set #4=DEBUG
+  >> @set #4=VERBOSE: #1] @set #4=VERBOSE
+  >> @set #4=PUPPET: #1] @set #4=PUPPET
+mbboard is now listening.
+mbboard> mbboard is now listening.
+bbpocket> mbboard
+  [70] CMD: @lock mbboard=me
+  [70] RSP: #1] @lock mbboard=me
+  [71] CMD: @Desc mbboard=[iter(setdiff(lattr(me),Desc),ljust(##,18))]
+  [71] RSP: #1] @Desc mbboard=[iter(setdiff(lattr(me),Desc),ljust(##,18))]
+  [72] CMD: @Fail mbboard=It's bolted down... you aint budgin' it.
+  [72] RSP: #1] @Fail mbboard=It's bolted down... you aint budgin' it.
+  [73] CMD: &CMD_+BBNEWGROUP mbboard=$+bbnewgroup *:@switch hasflag(%#,wizard)=1, {@create %0; @wait 1={@switch [setr(0,num(%0))]=#-
+  [73] RSP: #1] &CMD_+BBNEWGROUP mbboard=$+bbnewgroup *:@switch hasflag(%#,wizard)=1, {@create %0; @wait 1={@switch [setr(0,num(%0))]=#-1,{@pemit %#=That's not a good name for a group.},{&groups #3=[switch(words(
+  [74] CMD: &CMD_+BBLOCK mbboard=$+bblock *=*/*:@switch hasflag(%#,wizard)=1,{@switch member(get(#3/groups),setr(0,u(#3/get_group,%0
+  [74] RSP: #1] &CMD_+BBLOCK mbboard=$+bblock *=*/*:@switch hasflag(%#,wizard)=1,{@switch member(get(#3/groups),setr(0,u(#3/get_group,%0)))=0,{@pemit %#=No such group as '%0'.},{@switch %1=flag,{&CANREAD %q0=\[or
+  [75] CMD: &CMD_+BBCLEARGROUP mbboard=$+bbcleargroup *:@switch and(hasflag(%#, wizard),member(get(#3/groups),setr(0,u(#3/get_group,
+  [75] RSP: #1] &CMD_+BBCLEARGROUP mbboard=$+bbcleargroup *:@switch and(hasflag(%#, wizard),member(get(#3/groups),setr(0,u(#3/get_group,%0))))=1, {&delete_grp #3=%q0; @pemit %#=%r[space(15)]******** Warning *****
+  [76] CMD: &DO_CLEARGROUP mbboard=$+bbconfirm *:@switch get(#3/DELETE_GRP)=[setr(0,u(#3/get_group,%0))], {&groups #3=[remove(get(#3
+  [76] RSP: #1] &DO_CLEARGROUP mbboard=$+bbconfirm *:@switch get(#3/DELETE_GRP)=[setr(0,u(#3/get_group,%0))], {&groups #3=[remove(get(#3/groups),%q0)]; &master_lst #3=[setdiff(get(#3/master_lst),get(%q0/mess_lst)
+  [78] CMD: &CMD_+BBPOST mbboard=$+bbpost */*=*:@switch member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0)))=0, {@pemit %#
+  [78] RSP: #1] &CMD_+BBPOST mbboard=$+bbpost */*=*:@switch member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0)))=0, {@pemit %#=Either you do not subscribe to Group #%0, or are unable to post to it.},{&m
+  [80] CMD: &CMD_+BBREMOVE mbboard=$+bbremove */*:@dolist [setq(0,u(#3/get_group,%0))][revwords(sort(u(#3/fn_makelist,%1)))]={@switc
+  [80] RSP: #1] &CMD_+BBREMOVE mbboard=$+bbremove */*:@dolist [setq(0,u(#3/get_group,%0))][revwords(sort(u(#3/fn_makelist,%1)))]={@switch or(strmatch(index(get(%q0/HDR_[setr(1,extract(get(%q0/MESS_LST),##,1))]),|
+  [83] CMD: &CMD_+BBREAD2 mbboard=$+bbread *:@switch strmatch([%0],*/*)=0,{@switch member(u(#3/valid_groups,%#,read),setr(0,u(#3/get
+  [83] RSP: #1] &CMD_+BBREAD2 mbboard=$+bbread *:@switch strmatch([%0],*/*)=0,{@switch member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,%0)))=0,{@pemit %#=[switch(%q0,#-2,That Group name is not specific en
+  [85] CMD: &CMD_+BBEDIT mbboard=$+bbedit */*=*/*:@switch strmatch(index(get([setq(0,u(#3/get_group,%0))]%q0/HDR_[setq(1,extract(get
+  [85] RSP: #1] &CMD_+BBEDIT mbboard=$+bbedit */*=*/*:@switch strmatch(index(get([setq(0,u(#3/get_group,%0))]%q0/HDR_[setq(1,extract(get(%q0/MESS_LST),%1,1))]%q1),|,4, 1),%#)=1,{&BDY_%q1 %q0=[edit(get(%q0/BDY_%q1
+  [86] CMD: &CMD_+BBLEAVE mbboard=$+bbleave *:@switch member(u(#3/valid_groups,%#,read),[setq(0,u(#3/get_group,%0))]%q0)=0,{@pemit %
+  [86] RSP: #1] &CMD_+BBLEAVE mbboard=$+bbleave *:@switch member(u(#3/valid_groups,%#,read),[setq(0,u(#3/get_group,%0))]%q0)=0,{@pemit %#=You aren't currently subscribing to Board #%0. No ommission necessary.},{&
+  [87] CMD: &CMD_+BBJOIN mbboard=$+bbjoin *:@switch member(NULL [get(%#/bb_omit)],[setq(0,u(#3/get_group,%0))]%q0)=0,{@pemit %#=[swi
+  [87] RSP: #1] &CMD_+BBJOIN mbboard=$+bbjoin *:@switch member(NULL [get(%#/bb_omit)],[setq(0,u(#3/get_group,%0))]%q0)=0,{@pemit %#=[switch(member(u(#3/valid_groups,%#,read),%q0),0,{Sorry, you don't have access t
+  [89] CMD: &CMD_+BBSCAN mbboard=$+bbscan: @pemit %#=[switch(hasattr(#3,BB_POST_HDR_%#),1,** BB Warning: You are in the middle of wr
+  [89] RSP: #1] &CMD_+BBSCAN mbboard=$+bbscan: @pemit %#=[switch(hasattr(#3,BB_POST_HDR_%#),1,** BB Warning: You are in the middle of writing a bbpost. **%r)][switch(setdiff(iter(setr(0,u(#3/VALID_GROUPS,%#,read)
+  [91] CMD: &CMD_+BBLIST mbboard=$+bblist:@pemit %#=[repeat(=,78)]%r[ljust(Available Bulletin Board Groups,37)]Member?[space(8)]Time
+  [91] RSP: #1] &CMD_+BBLIST mbboard=$+bblist:@pemit %#=[repeat(=,78)]%r[ljust(Available Bulletin Board Groups,37)]Member?[space(8)]Timeout (in days)%r[repeat(-,78)]%r%b[iter(get(#3/groups),switch(u(##/canread,%#
+  [92] CMD: &CREDITS mbboard=Myrddin's BBS was written by Myrddin@Witchcraft/Dreaming/Elysium (email: merlin@firstmagic.com). The mo
+  [92] RSP: #1] &CREDITS mbboard=Myrddin's BBS was written by Myrddin@Witchcraft/Dreaming/Elysium (email: merlin@firstmagic.com). The most recent version of this code can be found at http://www.firstmagic.com/~me
+  [93] CMD: @set mbboard/CREDITS = no_command
+  [93] RSP: #1] @set mbboard/CREDITS = no_command
+  [94] CMD: &CMD_+BBCATCHUP mbboard=$+bbcatchup *:@switch lcstr(%0)=all,{&bb_read %#=[get(#3/master_lst)]; @pemit %#=All postings on
+  [94] RSP: #1] &CMD_+BBCATCHUP mbboard=$+bbcatchup *:@switch lcstr(%0)=all,{&bb_read %#=[get(#3/master_lst)]; @pemit %#=All postings on all boards marked as read.},{@dolist [setq(1,u(#3/valid_groups,%#,read))][u
+  [95] CMD: &CMD_+BBMOVE mbboard=$+bbmove */* to *:@switch and(member(u(#3/valid_groups,%#,read),[setq(0,u(#3/get_group,%0))]%q0),me
+  [95] RSP: #1] &CMD_+BBMOVE mbboard=$+bbmove */* to *:@switch and(member(u(#3/valid_groups,%#,read),[setq(0,u(#3/get_group,%0))]%q0),member(u(#3/valid_groups,%#,write),[setq(2,u(#3/get_group,%2))]%q2),not(strmat
+  [96] CMD: &CMD_+BBWRITELOCK mbboard=$+bbwritelock *=*/*:@switch hasflag(%#,wizard)=1,{@switch member(get(#3/groups),[setq(0,u(#3/g
+  [96] RSP: #1] &CMD_+BBWRITELOCK mbboard=$+bbwritelock *=*/*:@switch hasflag(%#,wizard)=1,{@switch member(get(#3/groups),[setq(0,u(#3/get_group,%0))]%q0)=0,{@pemit %#=No such group as '%0'.},{@switch %1=flag,{&C
+  [97] CMD: &CMD_+BBPOST2 mbboard=$+bbpost */*:@switch hasattr(#3,bb_post_hdr_%#)=1,{@pemit %#=You are already in the middle of writ
+  [97] RSP: #1] &CMD_+BBPOST2 mbboard=$+bbpost */*:@switch hasattr(#3,bb_post_hdr_%#)=1,{@pemit %#=You are already in the middle of writing a bbpost.},{@switch strmatch(%1,*=*)=0,{@switch member(u(#3/valid_groups
+  [98] CMD: &CMD_+BBWRITE mbboard=$+bbwrite *:@switch hasattr(#3,bb_post_hdr_%#)=0,{@pemit %#=You do not have a bbpost in progress.}
+  [98] RSP: #1] &CMD_+BBWRITE mbboard=$+bbwrite *:@switch hasattr(#3,bb_post_hdr_%#)=0,{@pemit %#=You do not have a bbpost in progress.},{&bb_post_bdy_%# #3=[get(#3/bb_post_bdy_%#)]%0; @pemit %#=Text added to bbp
+  [99] CMD: &CMD_+BBPROOF mbboard=$+bbproof:@switch hasattr(#3,bb_post_hdr_%#)=0,{@pemit %#=You do not have a bbpost in progress.},{
+  [99] RSP: #1] &CMD_+BBPROOF mbboard=$+bbproof:@switch hasattr(#3,bb_post_hdr_%#)=0,{@pemit %#=You do not have a bbpost in progress.},{@pemit %#=[center(= BB Post in Progress =,78,=)]%rGroup: %b[name(index(get(#
+  [100] CMD: &CMD_+BBPOST-POST mbboard=$+bbpost:@switch [hasattr(#3,bb_post_hdr_%#)]:[hasattr(#3,bb_post_bdy_%#)]=0:0,{@pemit %#=You 
+  [100] RSP: #1] &CMD_+BBPOST-POST mbboard=$+bbpost:@switch [hasattr(#3,bb_post_hdr_%#)]:[hasattr(#3,bb_post_bdy_%#)]=0:0,{@pemit %#=You do not have a bbpost in progress.},1:0,{@pemit %#=Your post is empty. Please
+  [101] CMD: &CMD_+BBREAD mbboard=$+bbread:@pemit %#=[repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%
+  [101] RSP: #1] &CMD_+BBREAD mbboard=$+bbread:@pemit %#=[repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/group
+  [102] CMD: &CMD_+BBTOSS mbboard=$+bbtoss:@switch hasattr(#3,bb_post_hdr_%#)=0,{@pemit %#=You do not have bbpost in progress.},{&bb_
+  [102] RSP: #1] &CMD_+BBTOSS mbboard=$+bbtoss:@switch hasattr(#3,bb_post_hdr_%#)=0,{@pemit %#=You do not have bbpost in progress.},{&bb_post_hdr_%# #3; &bb_post_bdy_%# #3; @pemit %#=Your bbpost has been discarded
+  [103] CMD: &CMD_+BB mbboard=$+bb *:@switch hasattr(#3,bb_post_hdr_%#)=0,{@pemit %#=You do not have a bbpost in progress.},{&bb_post
+  [103] RSP: #1] &CMD_+BB mbboard=$+bb *:@switch hasattr(#3,bb_post_hdr_%#)=0,{@pemit %#=You do not have a bbpost in progress.},{&bb_post_bdy_%# #3=[get(#3/bb_post_bdy_%#)]%b%0; @pemit %#=Text added to bbpost.}
+  [104] CMD: &CMD_+BBEDIT2 mbboard=$+bbedit *=*/*:@switch strmatch([setq(0,ucstr(%0))]%q0,*/*)=0,{@switch %q0=TEXT,{@edit #3/bb_post_
+  [104] RSP: #1] &CMD_+BBEDIT2 mbboard=$+bbedit *=*/*:@switch strmatch([setq(0,ucstr(%0))]%q0,*/*)=0,{@switch %q0=TEXT,{@edit #3/bb_post_bdy_%#={%1},{%2}},TITLE,{&bb_post_hdr_%# #3=[index(get(#3/bb_post_hdr_%#),|,
+  [105] CMD: &CMD_+BBHELP mbboard=$+bbhelp:@pemit %#=Please use '+help bb'.
+  [105] RSP: #1] &CMD_+BBHELP mbboard=$+bbhelp:@pemit %#=Please use '+help bb'.
+  [106] CMD: &CMD_+BBCONFIG mbboard=$+bbconfig:@pemit %#=[center(= Myrddin's Global BBS v[get(#3/version)] =,78,=)]%rGlobal Config Pa
+  [106] RSP: #1] &CMD_+BBCONFIG mbboard=$+bbconfig:@pemit %#=[center(= Myrddin's Global BBS v[get(#3/version)] =,78,=)]%rGlobal Config Parameters:%r%r[rjust(timeout:,15)] [div(get(#3/config_timeout),86400)] days%r
+  [107] CMD: &CMD_+BBCONFIG2 mbboard=$+bbconfig *=*:@switch [strmatch(%0,*/*)]:[hasflag(%#,wizard)]=1:*,{},0:0,{@pemit %#=Huh?%b%b(Ty
+  [107] RSP: #1] &CMD_+BBCONFIG2 mbboard=$+bbconfig *=*:@switch [strmatch(%0,*/*)]:[hasflag(%#,wizard)]=1:*,{},0:0,{@pemit %#=Huh?%b%b(Type "help" for help.)},{@switch [member(get(#3/valid_global_configs),lcstr(%0
+  [108] CMD: &CMD_+BBCONFIG3 mbboard=$+bbconfig */*=*:@switch/first hasflag(%#,wizard)=0,{@pemit %#=Huh?%b%b(Type "help" for help.)},
+  [108] RSP: #1] &CMD_+BBCONFIG3 mbboard=$+bbconfig */*=*:@switch/first hasflag(%#,wizard)=0,{@pemit %#=Huh?%b%b(Type "help" for help.)},{@switch [setr(0,u(#3/get_group,%0))]:[member(get(#3/valid_configs),lcstr(%1
+  [109] CMD: &CMD_+BBTIMEOUT mbboard=$+bbtimeout */*=*:@dolist [sort(u(#3/fn_makelist,%1))][setq(0,u(#3/get_group,%0))]={@switch [or(
+  [109] RSP: #1] &CMD_+BBTIMEOUT mbboard=$+bbtimeout */*=*:@dolist [sort(u(#3/fn_makelist,%1))][setq(0,u(#3/get_group,%0))]={@switch [or(strmatch(index(get(%q0/HDR_[setq(1,extract(get(%q0/MESS_LST),##,1))]%q1),|,4
+  [110] CMD: &CMD_+BBSEARCH mbboard=$+bbsearch */*:@switch [member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0)))]:[hasattr(
+  [110] RSP: #1] &CMD_+BBSEARCH mbboard=$+bbsearch */*:@switch [member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0)))]:[hasattr(%q0,anonymous)]:[isdbref(setr(1,locate(%#,*%1,p)))]=0:*:*,{@pemit %#=BB Grou
+  [111] CMD: &CMD_+BBSEARCH_NOGREP mbboard=$+bbsearch */*:@switch [member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0)))]:[h
+  [111] RSP: #1] &CMD_+BBSEARCH_NOGREP mbboard=$+bbsearch */*:@switch [member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0)))]:[hasattr(%q0,anonymous)]:[isdbref(setr(1,locate(%#,*%1,p)))]=0:*:*,{@pemit %#=
+  [112] CMD: &CMD_+BBNOTIFY mbboard=$+bbnotify *=*:@switch/first [member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,%0)))]:[mem
+  [112] RSP: #1] &CMD_+BBNOTIFY mbboard=$+bbnotify *=*:@switch/first [member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,%0)))]:[member(on off,lcstr(%1))]:[lcstr(%1)]=0:*:*,{@pemit %#=[switch(%q0,#-2,That Gro
+  [113] CMD: @set mbboard=!HALT
+  [113] RSP: #1] @set mbboard=!HALT
+  [114] CMD: @set mbboard=INHERIT
+  [114] RSP: #1] @set mbboard=INHERIT
+  [115] CMD: @set mbboard=SAFE
+  [115] RSP: #1] @set mbboard=SAFE
+  [117] CMD: &FN_IFELSE bbpocket=switch({%0},0,{%2},,{%2},{%1})
+  [117] RSP: #1] &FN_IFELSE bbpocket=switch({%0},0,{%2},,{%2},{%1})
+  [118] CMD: &FN_SETR bbpocket=[setq(%0,%1)][s(\%q%0)]
+  [118] RSP: #1] &FN_SETR bbpocket=[setq(%0,%1)][s(\%q%0)]
+  [119] CMD: &FN_GREP bbpocket=iter(lattr(%0/%1),switch(strmatch(get(%0/##),*%2*),1,##))
+  [119] RSP: #1] &FN_GREP bbpocket=iter(lattr(%0/%1),switch(strmatch(get(%0/##),*%2*),1,##))
+  [122] CMD: @switch ifelse(1,1,0)=1,{@pemit %#=BBS INSTALLER> You have a working ifelse(). Good.; &FN_IFELSE bbpocket;},{@pemit %#=B
+  [122] RSP: #1] @switch ifelse(1,1,0)=1,{@pemit %#=BBS INSTALLER> You have a working ifelse(). Good.; &FN_IFELSE bbpocket;},{@pemit %#=BBS INSTALLER> You don't have an ifelse() func. That's ok, I'll make my own.%
+  [123] CMD: @switch setr(0,1)=1,{@pemit %#=BBS INSTALLER> You have a working setr(). Good.; &FN_SETR bbpocket;},{@pemit %#=BBS INSTA
+  [123] RSP: #1] @switch setr(0,1)=1,{@pemit %#=BBS INSTALLER> You have a working setr(). Good.; &FN_SETR bbpocket;},{@pemit %#=BBS INSTALLER> You don't have an setr() func. That's ok, I'll make my own.%r[space(15
+  [124] CMD: @switch [first(grep(me,*,a))]=#-1,{@pemit %#=BBS INSTALLER> You don't have grep()... that's ok, I'll make my own.; @mvat
+  [124] RSP: #1] @switch [first(grep(me,*,a))]=#-1,{@pemit %#=BBS INSTALLER> You don't have grep()... that's ok, I'll make my own.; @mvattr mbboard=CMD_+BBSEARCH_NOGREP,CMD_+BBSEARCH},{&FN_GREP bbpocket; &CMD_+BBS
+  [128] CMD: @switch version()=TinyMUSH *version 3.*,{@set mbboard=COMMANDS; @set mbboard=STOP},TinyMUSH version 2.2.*,{@set mbboard=
+  [128] RSP: #1] @switch version()=TinyMUSH *version 3.*,{@set mbboard=COMMANDS; @set mbboard=STOP},TinyMUSH version 2.2.*,{@set mbboard=COMMANDS; @set mbboard=STOP},PennMUSH*,{@edit mbboard/CMD_+BBNEWGROUP=inheri
+  [133] CMD: &bb_read me=1
+  [133] RSP: #1] &bb_read me=1
+  [134] CMD: &bb_read me
+  [134] RSP: #1] &bb_read me
+  [135] CMD: &bb_omit me=1
+  [135] RSP: #1] &bb_omit me=1
+  [136] CMD: &bb_omit me
+  [136] RSP: #1] &bb_omit me
+  [137] CMD: &bb_silent me=1
+  [137] RSP: #1] &bb_silent me=1
+  [138] CMD: &bb_silent me
+  [138] RSP: #1] &bb_silent me
+  [141] CMD: @pemit %#=BBS INSTALLER> Cleaning up attributes...%r
+  [141] RSP: #1] @pemit %#=BBS INSTALLER> Cleaning up attributes...%r
+#1! %# => #1
+#1! BBS INSTALLER> Cleaning up attributes...%r => BBS INSTALLER> Cleaning up attributes...
+
+BBS INSTALLER> Cleaning up attribu
+  [142] CMD: @force me=@edit [num(bbpocket)]/*=#3,[num(bbpocket)]
+  [142] RSP: #1] @force me=@edit [num(bbpocket)]/*=#3,[num(bbpocket)]
+#1! @edit [num(bbpocket)]/*=#3,[num(bbpocket)] :
+#1!  num(bbpocket) => #3
+#1!  num(bbpocket) => #3
+#1! @edit [num(bbpocket)]/*=#3,[num(bbpo
+  [143] CMD: @force me=@edit [num(mbboard)]/*=#3,[num(bbpocket)]
+  [143] RSP: #1] @force me=@edit [num(mbboard)]/*=#3,[num(bbpocket)]
+#1! @edit [num(mbboard)]/*=#3,[num(bbpocket)] :
+#1!  num(mbboard) => #4
+#1!  num(bbpocket) => #3
+#1! @edit [num(mbboard)]/*=#3,[num(bbpocket
+  [146] CMD: @wait 3={@tel bbpocket=mbboard; @name mbboard=BBS - Myrddin's Global BBS v4.0.6; @set me=!quiet}
+  [146] RSP: #1] @wait 3={@tel bbpocket=mbboard; @name mbboard=BBS - Myrddin's Global BBS v4.0.6; @set me=!quiet}
+  [148] CMD: @switch/first %#:[first(version())]=#1:Tiny*,{@attribute/access bb_read=hidden wizard; @attribute/access bb_omit=hidden 
+  [148] RSP: #1] @switch/first %#:[first(version())]=#1:Tiny*,{@attribute/access bb_read=hidden wizard; @attribute/access bb_omit=hidden wizard},#1:Penn*,{@set bboard=WIZARD},*:Tiny*,{@pemit me=Reminder! Make sure
+  [150] CMD: @wait 1=@pemit me=%rBulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!%r[repeat
+  [150] RSP: #1] @wait 1=@pemit me=%rBulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!%r[repeat(=,78)]
+
+  Executed 102 commands. bbpocket=#3, mbboard=#4
+
+  Waiting 8 seconds for @wait callbacks...
+  DEFERRED OUTPUT:
+#1] @tel bbpocket=mbboard
+mbboard> bbpocket has left.
+bbpocket> mbboard(#4TWXbvp)
+#4! [iter(setdiff(lattr(me),Desc),ljust(##,18))] :
+#4!  iter(setdiff(lattr(me),Desc),ljust(##,18)) :
+#4!   setdiff(lattr(me),Desc) :
+#4!    lattr(me) => CMD_+BB CMD_+BBCATCHUP CMD_+BBCLEARGROUP CMD_+BBCONFIG CMD_+BBCONFIG2 CMD_+BBCONFIG3 CMD_+BBEDIT CMD_+BBEDIT2 CMD_+BBHELP CMD_+BBJOIN CMD_+BBLEAVE CMD_+BBLIST CMD_+BBLOCK CMD_+BBMOVE CMD_+BBNEWGROUP CMD_+BBNOTIFY CMD_+BBPOST CMD_+BBPOST-POST CMD_+BBPOST2 CMD_+BBPROOF CMD_+BBREAD CMD_+BBREAD2 CMD_+BBREMOVE CMD_+BBSCAN CMD_+BBSEARCH CMD_+BBTIMEOUT CMD_+BBTOSS CMD_+BBWRITE CMD_+BBWRITELOCK CREDITS DESCRIBE DO_CLEARGROUP FAILURE
+#4!   setdiff(lattr(me),Desc) => CMD_+BB CMD_+BBCATCHUP CMD_+BBCLEARGROUP CMD_+BBCONFIG CMD_+BBCONFIG2 CMD_+BBCONFIG3 CMD_+BBEDIT CMD_+BBEDIT2 CMD_+BBHELP CMD_+BBJOIN CMD_+BBLEAVE CMD_+BBLIST CMD_+BBLOCK CMD_+BBMOVE CMD_+BBNEWGROUP CMD_+BBNOTIFY CMD_+BBPOST CMD_+BBPOST-POST CMD_+BBPOST2 CMD_+BBPROOF CMD_+BBREAD CMD_+BBREAD2 CMD_+BBREMOVE CMD_+BBSCAN CMD_+BBSEARCH CMD_+BBTIMEOUT CMD_+BBTOSS CMD_+BBWRITE CMD_+BBWRITELOCK CREDITS DESCRIBE DO_CLEARGROUP FAILURE
+#4!   ljust(CMD_+BB,18) => CMD_+BB           
+#4!   ljust(CMD_+BBCATCHUP,18) => CMD_+BBCATCHUP    
+#4!   ljust(CMD_+BBCLEARGROUP,18) => CMD_+BBCLEARGROUP 
+#4!   ljust(CMD_+BBCONFIG,18) => CMD_+BBCONFIG     
+#4!   ljust(CMD_+BBCONFIG2,18) => CMD_+BBCONFIG2    
+#4!   ljust(CMD_+BBCONFIG3,18) => CMD_+BBCONFIG3    
+#4!   ljust(CMD_+BBEDIT,18) => CMD_+BBEDIT       
+#4!   ljust(CMD_+BBEDIT2,18) => CMD_+BBEDIT2      
+#4!   ljust(CMD_+BBHELP,18) => CMD_+BBHELP       
+#4!   ljust(CMD_+BBJOIN,18) => CMD_+BBJOIN       
+#4!   ljust(CMD_+BBLEAVE,18) => CMD_+BBLEAVE      
+#4!   ljust(CMD_+BBLIST,18) => CMD_+BBLIST       
+#4!   ljust(CMD_+BBLOCK,18) => CMD_+BBLOCK       
+#4!   ljust(CMD_+BBMOVE,18) => CMD_+BBMOVE       
+#4!   ljust(CMD_+BBNEWGROUP,18) => CMD_+BBNEWGROUP   
+#4!   ljust(CMD_+BBNOTIFY,18) => CMD_+BBNOTIFY     
+#4!   ljust(CMD_+BBPOST,18) => CMD_+BBPOST       
+#4!   ljust(CMD_+BBPOST-POST,18) => CMD_+BBPOST-POST  
+#4!   ljust(CMD_+BBPOST2,18) => CMD_+BBPOST2      
+#4!   ljust(CMD_+BBPROOF,18) => CMD_+BBPROOF      
+#4!   ljust(CMD_+BBREAD,18) => CMD_+BBREAD       
+#4!   ljust(CMD_+BBREAD2,18) => CMD_+BBREAD2      
+#4!   ljust(CMD_+BBREMOVE,18) => CMD_+BBREMOVE     
+#4!   ljust(CMD_+BBSCAN,18) => CMD_+BBSCAN       
+#4!   ljust(CMD_+BBSEARCH,18) => CMD_+BBSEARCH     
+#4!   ljust(CMD_+BBTIMEOUT,18) => CMD_+BBTIMEOUT    
+#4!   ljust(CMD_+BBTOSS,18) => CMD_+BBTOSS       
+#4!   ljust(CMD_+BBWRITE,18) => CMD_+BBWRITE      
+#4!   ljust(CMD_+BBWRITELOCK,18) => CMD_+BBWRITELOCK  
+#4!   ljust(CREDITS,18) => CREDITS           
+#4!   ljust(DESCRIBE,18) => DESCRIBE          
+#4!   ljust(DO_CLEARGROUP,18) => DO_CLEARGROUP     
+#4!   ljust(FAILURE,18) => FAILURE           
+#4!  iter(setdiff(lattr(me),Desc),ljust(##,18)) => CMD_+BB            CMD_+BBCATCHUP     CMD_+BBCLEARGROUP  CMD_+BBCONFIG      CMD_+BBCONFIG2     CMD_+BBCONFIG3     CMD_+BBEDIT        CMD_+BBEDIT2       CMD_+BBHELP        CMD_+BBJOIN        CMD_+BBLEAVE       CMD_+BBLIST        CMD_+BBLOCK        CMD_+BBMOVE        CMD_+BBNEWGROUP    CMD_+BBNOTIFY      CMD_+BBPOST        CMD_+BBPOST-POST   CMD_+BBPOST2       CMD_+BBPROOF       CMD_+BBREAD        CMD_+BBREAD2       CMD_+BBREMOVE      CMD_+BBSCAN        CMD_+BBSEARCH      CMD_+BBTIMEOUT     CMD_+BBTOSS        CMD_+BBWRITE       CMD_+BBWRITELOCK   CREDITS            DESCRIBE           DO_CLEARGROUP      FAILURE           
+#4! [iter(setdiff(lattr(me),Desc),ljust(##,18))] => CMD_+BB            CMD_+BBCATCHUP     CMD_+BBCLEARGROUP  CMD_+BBCONFIG      CMD_+BBCONFIG2     CMD_+BBCONFIG3     CMD_+BBEDIT        CMD_+BBEDIT2       CMD_+BBHELP        CMD_+BBJOIN        CMD_+BBLEAVE       CMD_+BBLIST        CMD_+BBLOCK        CMD_+BBMOVE        CMD_+BBNEWGROUP    CMD_+BBNOTIFY      CMD_+BBPOST        CMD_+BBPOST-POST   CMD_+BBPOST2       CMD_+BBPROOF       CMD_+BBREAD        CMD_+BBREAD2       CMD_+BBREMOVE      CMD_+BBSCAN        CMD_+BBSEARCH      CMD_+BBTIMEOUT     CMD_+BBTOSS        CMD_+BBWRITE       CMD_+BBWRITELOCK   CREDITS            DESCRIBE           DO_CLEARGROUP      FAILURE           
+bbpocket> CMD_+BB            CMD_+BBCATCHUP     CMD_+BBCLEARGROUP  CMD_+BBCONFIG      CMD_+BBCONFIG2     CMD_+BBCONFIG3     CMD_+BBEDIT        CMD_+BBEDIT2       CMD_+BBHELP        CMD_+BBJOIN        CMD_+BBLEAVE       CMD_+BBLIST        CMD_+BBLOCK        CMD_+BBMOVE        CMD_+BBNEWGROUP    CMD_+BBNOTIFY      CMD_+BBPOST        CMD_+BBPOST-POST   CMD_+BBPOST2       CMD_+BBPROOF       CMD_+BBREAD        CMD_+BBREAD2       CMD_+BBREMOVE      CMD_+BBSCAN        CMD_+BBSEARCH      CMD_+BBTIMEOUT     CMD_+BBTOSS        CMD_+BBWRITE       CMD_+BBWRITELOCK   CREDITS            DESCRIBE           DO_CLEARGROUP      FAILURE           
+#1] @name mbboard=BBS - Myrddin's Global BBS v4.0.6
+#1] @set me=!quiet
+One - QUIET reset.
+#1] @pemit me=%rBulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!%r[repeat(=,78)]
+#1! %rBulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!%r[repeat(=,78)] :
+#1!  repeat(=,78) => ==============================================================================
+#1! %rBulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!%r[repeat(=,78)] => 
+Bulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!
+==============================================================================
+
+Bulletin Board construction complete. Just place the Global BB in the Master Room... Enjoy!
+==============================================================================
+
+
+==============================================================================
+STEP 3: +BBREAD (INITIAL)
+==============================================================================
+#1] +bbread
+#4] @pemit %#=[repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)]
+#4! %# => #1
+#4! [repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)] :
+#4!  repeat(=,78) => ==============================================================================
+#4!  space(7) =>        
+#4!  space(20) =>                     
+#4!  space(6) =>       
+#4!  repeat(-,78) => ------------------------------------------------------------------------------
+#4!  iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)]) :
+#4!   u(#3/valid_groups,%#,read) :
+#4!    %# => #1
+#3!    iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) :
+#3!     v(groups) => 
+#3!    iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) => 
+#4!   u(#3/valid_groups,%#,read) => 
+#4!  iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)]) => 
+#4!  repeat(-,78) => ------------------------------------------------------------------------------
+#4!  center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78) :
+#4!   '*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write :
+#4!    space(5) =>      
+#4!    space(5) =>      
+#4!   '*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write => '*' = restricted     '-' = read only     '(-)' = read only, but you can write
+#4!  center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78) => '*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+#4!  center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=) :
+#4!   =[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]= :
+#4!    switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=) :
+#4!     {= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =} => = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =
+#4!     hasflag(%#,wizard) :
+#4!      %# => #1
+#4!     hasflag(%#,wizard) => 1
+#4!     = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity = :
+#4!      round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1) :
+#4!       mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100) :
+#4!        fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)) :
+#4!         strlen(get(#3/master_lst)) :
+#4!          get(#3/master_lst) => 
+#4!         strlen(get(#3/master_lst)) => 0
+#4!         get(#3/buffer_size) => 8000
+#4!        fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)) => 0
+#4!       mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100) => 0
+#4!      round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1) => 0.0
+#4!     = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity = => = BBS at 0.0% capacity =
+#4!    switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=) => = BBS at 0.0% capacity =
+#4!   =[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]= => == BBS at 0.0% capacity ==
+#4!  center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=) => ============================ BBS at 0.0% capacity ============================
+#4! [repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)] => ==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+BBS - Myrddin's Global BBS v4.0.6> You pemit "==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================" to One.
+
+
+==============================================================================
+STEP 4: +BBNEWGROUP TestGroup
+==============================================================================
+#1] +bbnewgroup TestGroup
+#4] @switch hasflag(%#,wizard)=1, {@create %0; @wait 1={@switch [setr(0,num(%0))]=#-1,{@pemit %#=That's not a good name for a group.},{&groups #3=[switch(words(get(#3/groups)),0,,[get(#3/groups)]%b)]%q0; &own %q0=%#; @set %q0=safe; @set %q0=wizard; &last_mod %q0=[u(#3/bbtime)]; &CANREAD %q0=1; &CANWRITE %q0=1; &config_timeout %q0=[get(#3/config_timeout)]; @pemit %#=Group number [member(get(#3/groups),%q0)] added as '%0'. Messages will have [ifelse(get(%q0/config_timeout),a [div(get(%q0/config_timeout),86400)] day,no)] timeout.}}}, {@pemit %#=You can't add groups to the message base.}
+#4! hasflag(%#,wizard) :
+#4!  %# => #1
+#4! hasflag(%#,wizard) => 1
+#4] @create %0
+#4! %0 => TestGroup
+BBS - Myrddin's Global BBS v4.0.6> Created: Object #5.
+#4] @wait 1={@switch [setr(0,num(%0))]=#-1,{@pemit %#=That's not a good name for a group.},{&groups #3=[switch(words(get(#3/groups)),0,,[get(#3/groups)]%b)]%q0; &own %q0=%#; @set %q0=safe; @set %q0=wizard; &last_mod %q0=[u(#3/bbtime)]; &CANREAD %q0=1; &CANWRITE %q0=1; &config_timeout %q0=[get(#3/config_timeout)]; @pemit %#=Group number [member(get(#3/groups),%q0)] added as '%0'. Messages will have [ifelse(get(%q0/config_timeout),a [div(get(%q0/config_timeout),86400)] day,no)] timeout.}}
+#4] @switch [setr(0,num(%0))]=#-1,{@pemit %#=That's not a good name for a group.},{&groups #3=[switch(words(get(#3/groups)),0,,[get(#3/groups)]%b)]%q0; &own %q0=%#; @set %q0=safe; @set %q0=wizard; &last_mod %q0=[u(#3/bbtime)]; &CANREAD %q0=1; &CANWRITE %q0=1; &config_timeout %q0=[get(#3/config_timeout)]; @pemit %#=Group number [member(get(#3/groups),%q0)] added as '%0'. Messages will have [ifelse(get(%q0/config_timeout),a [div(get(%q0/config_timeout),86400)] day,no)] timeout.}
+#4! [setr(0,num(%0))] :
+#4!  setr(0,num(%0)) :
+#4!   num(%0) :
+#4!    %0 => TestGroup
+#4!   num(%0) => #5
+#4!  setr(0,num(%0)) => #5
+#4! [setr(0,num(%0))] => #5
+#4] &groups #3=[switch(words(get(#3/groups)),0,,[get(#3/groups)]%b)]%q0
+#4! [switch(words(get(#3/groups)),0,,[get(#3/groups)]%b)]%q0 :
+#4!  switch(words(get(#3/groups)),0,,[get(#3/groups)]%b) :
+#4!   words(get(#3/groups)) :
+#4!    get(#3/groups) => 
+#4!   words(get(#3/groups)) => 0
+#4!  switch(words(get(#3/groups)),0,,[get(#3/groups)]%b) => 
+#4! [switch(words(get(#3/groups)),0,,[get(#3/groups)]%b)]%q0 => #5
+BBS - Myrddin's Global BBS v4.0.6> bbpocket/GROUPS - Set.
+#4] &own %q0=%#
+#4! %q0 => #5
+#4! %# => #1
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/OWN - Set.
+#4] @set %q0=safe
+#4! %q0 => #5
+BBS - Myrddin's Global BBS v4.0.6> TestGroup - SAFE set.
+#4] @set %q0=wizard
+#4! %q0 => #5
+BBS - Myrddin's Global BBS v4.0.6> TestGroup - WIZARD set.
+#4] &last_mod %q0=[u(#3/bbtime)]
+#4! %q0 => #5
+#4! [u(#3/bbtime)] :
+#4!  u(#3/bbtime) :
+#3!   extract(time(), 1, 3) :
+#3!    time() => Fri Mar 20 19:03:10 2026
+#3!   extract(time(), 1, 3) => Fri Mar 20
+#4!  u(#3/bbtime) => Fri Mar 20
+#4! [u(#3/bbtime)] => Fri Mar 20
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/LAST_MOD - Set.
+#4] &CANREAD %q0=1
+#4! %q0 => #5
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/CANREAD - Set.
+#4] &CANWRITE %q0=1
+#4! %q0 => #5
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/CANWRITE - Set.
+#4] &config_timeout %q0=[get(#3/config_timeout)]
+#4! %q0 => #5
+#4! [get(#3/config_timeout)] :
+#4!  get(#3/config_timeout) => 2592000
+#4! [get(#3/config_timeout)] => 2592000
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/CONFIG_TIMEOUT - Set.
+#4] @pemit %#=Group number [member(get(#3/groups),%q0)] added as '%0'. Messages will have [ifelse(get(%q0/config_timeout),a [div(get(%q0/config_timeout),86400)] day,no)] timeout.
+#4! %# => #1
+#4! Group number [member(get(#3/groups),%q0)] added as '%0'. Messages will have [ifelse(get(%q0/config_timeout),a [div(get(%q0/config_timeout),86400)] day,no)] timeout. :
+#4!  member(get(#3/groups),%q0) :
+#4!   get(#3/groups) => #5
+#4!   %q0 => #5
+#4!  member(get(#3/groups),%q0) => 1
+#4!  ifelse(get(%q0/config_timeout),a [div(get(%q0/config_timeout),86400)] day,no) :
+#4!   get(%q0/config_timeout) :
+#4!    %q0/config_timeout => #5/config_timeout
+#4!   get(%q0/config_timeout) => 2592000
+#4!   a [div(get(%q0/config_timeout),86400)] day :
+#4!    div(get(%q0/config_timeout),86400) :
+#4!     get(%q0/config_timeout) :
+#4!      %q0/config_timeout => #5/config_timeout
+#4!     get(%q0/config_timeout) => 2592000
+#4!    div(get(%q0/config_timeout),86400) => 30
+#4!   a [div(get(%q0/config_timeout),86400)] day => a 30 day
+#4!  ifelse(get(%q0/config_timeout),a [div(get(%q0/config_timeout),86400)] day,no) => a 30 day
+#4! Group number [member(get(#3/groups),%q0)] added as '%0'. Messages will have [ifelse(get(%q0/config_timeout),a [div(get(%q0/config_timeout),86400)] day,no)] timeout. => Group number 1 added as 'TestGroup'. Messages will have a 30 day timeout.
+Group number 1 added as 'TestGroup'. Messages will have a 30 day timeout.
+BBS - Myrddin's Global BBS v4.0.6> You pemit "Group number 1 added as 'TestGroup'. Messages will have a 30 day timeout." to One.
+
+  Waiting 5 seconds for @wait callback...
+  Group dbref: None
+
+==============================================================================
+STEP 5: +BBREAD (AFTER GROUP CREATION)
+==============================================================================
+#1] +bbread
+#4] @pemit %#=[repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)]
+#4! %# => #1
+#4! [repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)] :
+#4!  repeat(=,78) => ==============================================================================
+#4!  space(7) =>        
+#4!  space(20) =>                     
+#4!  space(6) =>       
+#4!  repeat(-,78) => ------------------------------------------------------------------------------
+#4!  iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)]) :
+#4!   u(#3/valid_groups,%#,read) :
+#4!    %# => #1
+#3!    iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) :
+#3!     v(groups) => #5
+#3!     switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) :
+#3!      and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) :
+#3!       u(#5/can%1,%0) :
+#3!        #5/can%1 => #5/canread
+#3!        %0 => #1
+#3!       u(#5/can%1,%0) => 1
+#3!       not(member(get(%0/bb_omit),#5)) :
+#3!        member(get(%0/bb_omit),#5) :
+#3!         get(%0/bb_omit) :
+#3!          %0/bb_omit => #1/bb_omit
+#3!         get(%0/bb_omit) => 
+#3!        member(get(%0/bb_omit),#5) => 0
+#3!       not(member(get(%0/bb_omit),#5)) => 1
+#3!      and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) => 1
+#3!     switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) => #5
+#3!    iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) => #5
+#4!   u(#3/valid_groups,%#,read) => #5
+#4!   %r[rjust(member(get(#3/groups),#5),2)][center([switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(#5),30)][ljust(get(#5/LAST_MOD),20)][rjust(words([setq(0,get(#5/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)] :
+#4!    rjust(member(get(#3/groups),#5),2) :
+#4!     member(get(#3/groups),#5) :
+#4!      get(#3/groups) => #5
+#4!     member(get(#3/groups),#5) => 1
+#4!    rjust(member(get(#3/groups),#5),2) =>  1
+#4!    center([switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5) :
+#4!     [switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)] :
+#4!      switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*) :
+#4!       {(-)} => (-)
+#4!       [get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)] :
+#4!        get(#5/CANREAD) => 1
+#4!        get(#5/CANWRITE) => 1
+#4!        u(#5/CANWRITE,%#) :
+#4!         %# => #1
+#4!        u(#5/CANWRITE,%#) => 1
+#4!       [get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)] => 1:1:1
+#4!      switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*) => 
+#4!     [switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)] => 
+#4!    center([switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5) =>      
+#4!    ljust(name(#5),30) :
+#4!     name(#5) => TestGroup
+#4!    ljust(name(#5),30) => TestGroup                     
+#4!    ljust(get(#5/LAST_MOD),20) :
+#4!     get(#5/LAST_MOD) => Fri Mar 20
+#4!    ljust(get(#5/LAST_MOD),20) => Fri Mar 20          
+#4!    rjust(words([setq(0,get(#5/MESS_LST))]%q0),3) :
+#4!     words([setq(0,get(#5/MESS_LST))]%q0) :
+#4!      [setq(0,get(#5/MESS_LST))]%q0 :
+#4!       setq(0,get(#5/MESS_LST)) :
+#4!        get(#5/MESS_LST) => 
+#4!       setq(0,get(#5/MESS_LST)) => 
+#4!      [setq(0,get(#5/MESS_LST))]%q0 => 
+#4!     words([setq(0,get(#5/MESS_LST))]%q0) => 0
+#4!    rjust(words([setq(0,get(#5/MESS_LST))]%q0),3) =>   0
+#4!    ljust(u(#3/isgroupread,%#,%q0),2) :
+#4!     u(#3/isgroupread,%#,%q0) :
+#4!      %# => #1
+#4!      %q0 => 
+#3!      switch(setdiff(%1,get(%0/bb_read)),,,U) :
+#3!       setdiff(%1,get(%0/bb_read)) :
+#3!        %1 => 
+#3!        get(%0/bb_read) :
+#3!         %0/bb_read => #1/bb_read
+#3!        get(%0/bb_read) => 
+#3!       setdiff(%1,get(%0/bb_read)) => 
+#3!      switch(setdiff(%1,get(%0/bb_read)),,,U) => 
+#4!     u(#3/isgroupread,%#,%q0) => 
+#4!    ljust(u(#3/isgroupread,%#,%q0),2) =>   
+#4!   %r[rjust(member(get(#3/groups),#5),2)][center([switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(#5),30)][ljust(get(#5/LAST_MOD),20)][rjust(words([setq(0,get(#5/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)] => 
+ 1     TestGroup                     Fri Mar 20            0   
+#4!  iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)]) => 
+ 1     TestGroup                     Fri Mar 20            0   
+#4!  repeat(-,78) => ------------------------------------------------------------------------------
+#4!  center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78) :
+#4!   '*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write :
+#4!    space(5) =>      
+#4!    space(5) =>      
+#4!   '*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write => '*' = restricted     '-' = read only     '(-)' = read only, but you can write
+#4!  center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78) => '*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+#4!  center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=) :
+#4!   =[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]= :
+#4!    switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=) :
+#4!     {= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =} => = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =
+#4!     hasflag(%#,wizard) :
+#4!      %# => #1
+#4!     hasflag(%#,wizard) => 1
+#4!     = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity = :
+#4!      round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1) :
+#4!       mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100) :
+#4!        fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)) :
+#4!         strlen(get(#3/master_lst)) :
+#4!          get(#3/master_lst) => 
+#4!         strlen(get(#3/master_lst)) => 0
+#4!         get(#3/buffer_size) => 8000
+#4!        fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)) => 0
+#4!       mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100) => 0
+#4!      round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1) => 0.0
+#4!     = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity = => = BBS at 0.0% capacity =
+#4!    switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=) => = BBS at 0.0% capacity =
+#4!   =[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]= => == BBS at 0.0% capacity ==
+#4!  center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=) => ============================ BBS at 0.0% capacity ============================
+#4! [repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)] => ==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+ 1     TestGroup                     Fri Mar 20            0   
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+ 1     TestGroup                     Fri Mar 20            0   
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+BBS - Myrddin's Global BBS v4.0.6> You pemit "==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+ 1     TestGroup                     Fri Mar 20            0   
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================" to One.
+
+
+==============================================================================
+STEP 6: +BBPOST 1/Title Goes Here=Body
+==============================================================================
+#1] +bbpost 1/Title Goes Here=Body of the test post.
+#4] @switch member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0)))=0, {@pemit %#=Either you do not subscribe to Group #%0, or are unable to post to it.},{&mess_lst %q0=[cat(get(%q0/mess_lst),setr(1,get(#3/nxt_mess)))]; &nxt_mess #3=[ulocal(#3/fn_inc_next_mess,%q1)]; &master_lst #3=[cat(get(#3/master_lst),%q1)]; &hdr_%q1 %q0=[mid(%1, 0, 34)]|[u(#3/bbtime)]|[edefault(%q0/anonymous,mid(name(%#),0,24))]|[owner(%#)]|[ifelse(get(%q0/config_timeout),add(get(%q0/config_timeout),secs()),0)]; &last_mod %q0=[u(#3/bbtime)]; &bdy_%q1 %q0=[%2][ifelse(and(hasattr(%#,bb_sig),not(hasattr(%q0,anonymous))),{%r[ulocal(%#/bb_sig)]},)]; @pemit %#=You post your note about '%1' in group [member(get(#3/groups),%q0)] ([name(%q0)]) as message #[member(get(%q0/mess_lst),%q1)][ifelse(and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)),{%b%bThis is an anonymous group, your BB_SIG was -not- appended.},)]; &bb_read %#=[setunion(get(%#/bb_read),%q1)]; @trigger #3/tr_post_notify=%#,%q0,[member(get(%q0/mess_lst),%q1)],[mid(%1, 0, 34)]}
+#4! member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0))) :
+#4!  u(#3/valid_groups,%#,write) :
+#4!   %# => #1
+#3!   iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) :
+#3!    v(groups) => #5
+#3!    switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) :
+#3!     and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) :
+#3!      u(#5/can%1,%0) :
+#3!       #5/can%1 => #5/canwrite
+#3!       %0 => #1
+#3!      u(#5/can%1,%0) => 1
+#3!      not(member(get(%0/bb_omit),#5)) :
+#3!       member(get(%0/bb_omit),#5) :
+#3!        get(%0/bb_omit) :
+#3!         %0/bb_omit => #1/bb_omit
+#3!        get(%0/bb_omit) => 
+#3!       member(get(%0/bb_omit),#5) => 0
+#3!      not(member(get(%0/bb_omit),#5)) => 1
+#3!     and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) => 1
+#3!    switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) => #5
+#3!   iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) => #5
+#4!  u(#3/valid_groups,%#,write) => #5
+#4!  setr(0,u(#3/get_group,%0)) :
+#4!   u(#3/get_group,%0) :
+#4!    %0 => 1
+#3!    switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni)) :
+#3!     isnum(%0) :
+#3!      %0 => 1
+#3!     isnum(%0) => 1
+#3!     extract(v(groups),%0,1) :
+#3!      v(groups) => #5
+#3!      %0 => 1
+#3!     extract(v(groups),%0,1) => #5
+#3!    switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni)) => #5
+#4!   u(#3/get_group,%0) => #5
+#4!  setr(0,u(#3/get_group,%0)) => #5
+#4! member(u(#3/valid_groups,%#,write),setr(0,u(#3/get_group,%0))) => 1
+#4] @switch hasattr(#3,bb_post_hdr_%#)=1,{@pemit %#=You are already in the middle of writing a bbpost.},{@switch strmatch(%1,*=*)=0,{@switch member(u(#3/valid_groups,%#,write),[setq(0,u(#3/get_group,%0))]%q0)=0,{@pemit %#=Either you do not subscribe to Group #%0 or are unable to post to it.},{&bb_post_hdr_%# #3=%q0|[mid(%1,0,34)]; @pemit %#=%rYou start your posting to Group #[member(get(#3/groups),%q0)] ([name(%q0)]).%rYou can now compose the body of the post by using '+bbwrite <text>'%ror '+bb <text>'.  When you are finished, type '+bbpost' by itself.[ifelse(and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)),{%b%bThis is an anonymous group. Your BB_SIG will -not- be appended.},)]}}}
+#4! hasattr(#3,bb_post_hdr_%#) :
+#4!  bb_post_hdr_%# => bb_post_hdr_#1
+#4! hasattr(#3,bb_post_hdr_%#) => 0
+#4] &mess_lst %q0=[cat(get(%q0/mess_lst),setr(1,get(#3/nxt_mess)))]
+#4! %q0 => #5
+#4! [cat(get(%q0/mess_lst),setr(1,get(#3/nxt_mess)))] :
+#4!  cat(get(%q0/mess_lst),setr(1,get(#3/nxt_mess))) :
+#4!   get(%q0/mess_lst) :
+#4!    %q0/mess_lst => #5/mess_lst
+#4!   get(%q0/mess_lst) => 
+#4!   setr(1,get(#3/nxt_mess)) :
+#4!    get(#3/nxt_mess) => 1
+#4!   setr(1,get(#3/nxt_mess)) => 1
+#4!  cat(get(%q0/mess_lst),setr(1,get(#3/nxt_mess))) =>  1
+#4! [cat(get(%q0/mess_lst),setr(1,get(#3/nxt_mess)))] =>  1
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/MESS_LST - Set.
+#4] &nxt_mess #3=[ulocal(#3/fn_inc_next_mess,%q1)]
+#4! [ulocal(#3/fn_inc_next_mess,%q1)] :
+#4!  ulocal(#3/fn_inc_next_mess,%q1) :
+#4!   %q1 => 1
+#3!   u(fn_b10-to-b36,add(u(fn_b36-to-b10,%0),1)) :
+#3!    add(u(fn_b36-to-b10,%0),1) :
+#3!     u(fn_b36-to-b10,%0) :
+#3!      %0 => 1
+#3!      [setq(0,ucstr(%0))][setq(1,strlen(%q0))][fold(me/addem,[iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1))))],0)] :
+#3!       setq(0,ucstr(%0)) :
+#3!        ucstr(%0) :
+#3!         %0 => 1
+#3!        ucstr(%0) => 1
+#3!       setq(0,ucstr(%0)) => 
+#3!       setq(1,strlen(%q0)) :
+#3!        strlen(%q0) :
+#3!         %q0 => 1
+#3!        strlen(%q0) => 1
+#3!       setq(1,strlen(%q0)) => 
+#3!       fold(me/addem,[iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1))))],0) :
+#3!        [iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1))))] :
+#3!         iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1)))) :
+#3!          lnum(%q1) :
+#3!           %q1 => 1
+#3!          lnum(%q1) => 0
+#3!          mul(sub(member(v(b36_digits),mid(%q0,0,1)),1),power(36,sub(sub(%q1,0),1))) :
+#3!           sub(member(v(b36_digits),mid(%q0,0,1)),1) :
+#3!            member(v(b36_digits),mid(%q0,0,1)) :
+#3!             v(b36_digits) => 0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+#3!             mid(%q0,0,1) :
+#3!              %q0 => 1
+#3!             mid(%q0,0,1) => 1
+#3!            member(v(b36_digits),mid(%q0,0,1)) => 2
+#3!           sub(member(v(b36_digits),mid(%q0,0,1)),1) => 1
+#3!           power(36,sub(sub(%q1,0),1)) :
+#3!            sub(sub(%q1,0),1) :
+#3!             sub(%q1,0) :
+#3!              %q1 => 1
+#3!             sub(%q1,0) => 1
+#3!            sub(sub(%q1,0),1) => 0
+#3!           power(36,sub(sub(%q1,0),1)) => 1
+#3!          mul(sub(member(v(b36_digits),mid(%q0,0,1)),1),power(36,sub(sub(%q1,0),1))) => 1
+#3!         iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1)))) => 1
+#3!        [iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1))))] => 1
+#3!        add(%0,%1) :
+#3!         %0 => 0
+#3!         %1 => 1
+#3!        add(%0,%1) => 1
+#3!       fold(me/addem,[iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1))))],0) => 1
+#3!      [setq(0,ucstr(%0))][setq(1,strlen(%q0))][fold(me/addem,[iter(lnum(%q1),mul(sub(member(v(b36_digits),mid(%q0,##,1)),1),power(36,sub(sub(%q1,##),1))))],0)] => 1
+#3!     u(fn_b36-to-b10,%0) => 1
+#3!    add(u(fn_b36-to-b10,%0),1) => 2
+#3!    [setq(0,%0)][edit(iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,sub(%q0,mul(##,div(%q0,##))))]),%b,)] :
+#3!     setq(0,%0) :
+#3!      %0 => 2
+#3!     setq(0,%0) => 
+#3!     edit(iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,sub(%q0,mul(##,div(%q0,##))))]),%b,) :
+#3!      iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,sub(%q0,mul(##,div(%q0,##))))]) :
+#3!       u(fn_b36_mags,%q0) :
+#3!        %q0 => 2
+#3!        revwords(iter(v(b36_pows),switch([div(##,%0)]:[eq(##,%0)],0:*,##,*:1,##))) :
+#3!         iter(v(b36_pows),switch([div(##,%0)]:[eq(##,%0)],0:*,##,*:1,##)) :
+#3!          v(b36_pows) => 1 36 1296 46656 1679616 60466176
+#3!          switch([div(1,%0)]:[eq(1,%0)],0:*,1,*:1,1) :
+#3!           [div(1,%0)]:[eq(1,%0)] :
+#3!            div(1,%0) :
+#3!             %0 => 2
+#3!            div(1,%0) => 0
+#3!            eq(1,%0) :
+#3!             %0 => 2
+#3!            eq(1,%0) => 0
+#3!           [div(1,%0)]:[eq(1,%0)] => 0:0
+#3!          switch([div(1,%0)]:[eq(1,%0)],0:*,1,*:1,1) => 1
+#3!          switch([div(36,%0)]:[eq(36,%0)],0:*,36,*:1,36) :
+#3!           [div(36,%0)]:[eq(36,%0)] :
+#3!            div(36,%0) :
+#3!             %0 => 2
+#3!            div(36,%0) => 18
+#3!            eq(36,%0) :
+#3!             %0 => 2
+#3!            eq(36,%0) => 0
+#3!           [div(36,%0)]:[eq(36,%0)] => 18:0
+#3!          switch([div(36,%0)]:[eq(36,%0)],0:*,36,*:1,36) => 
+#3!          switch([div(1296,%0)]:[eq(1296,%0)],0:*,1296,*:1,1296) :
+#3!           [div(1296,%0)]:[eq(1296,%0)] :
+#3!            div(1296,%0) :
+#3!             %0 => 2
+#3!            div(1296,%0) => 648
+#3!            eq(1296,%0) :
+#3!             %0 => 2
+#3!            eq(1296,%0) => 0
+#3!           [div(1296,%0)]:[eq(1296,%0)] => 648:0
+#3!          switch([div(1296,%0)]:[eq(1296,%0)],0:*,1296,*:1,1296) => 
+#3!          switch([div(46656,%0)]:[eq(46656,%0)],0:*,46656,*:1,46656) :
+#3!           [div(46656,%0)]:[eq(46656,%0)] :
+#3!            div(46656,%0) :
+#3!             %0 => 2
+#3!            div(46656,%0) => 23328
+#3!            eq(46656,%0) :
+#3!             %0 => 2
+#3!            eq(46656,%0) => 0
+#3!           [div(46656,%0)]:[eq(46656,%0)] => 23328:0
+#3!          switch([div(46656,%0)]:[eq(46656,%0)],0:*,46656,*:1,46656) => 
+#3!          switch([div(1679616,%0)]:[eq(1679616,%0)],0:*,1679616,*:1,1679616) :
+#3!           [div(1679616,%0)]:[eq(1679616,%0)] :
+#3!            div(1679616,%0) :
+#3!             %0 => 2
+#3!            div(1679616,%0) => 839808
+#3!            eq(1679616,%0) :
+#3!             %0 => 2
+#3!            eq(1679616,%0) => 0
+#3!           [div(1679616,%0)]:[eq(1679616,%0)] => 839808:0
+#3!          switch([div(1679616,%0)]:[eq(1679616,%0)],0:*,1679616,*:1,1679616) => 
+#3!          switch([div(60466176,%0)]:[eq(60466176,%0)],0:*,60466176,*:1,60466176) :
+#3!           [div(60466176,%0)]:[eq(60466176,%0)] :
+#3!            div(60466176,%0) :
+#3!             %0 => 2
+#3!            div(60466176,%0) => 30233088
+#3!            eq(60466176,%0) :
+#3!             %0 => 2
+#3!            eq(60466176,%0) => 0
+#3!           [div(60466176,%0)]:[eq(60466176,%0)] => 30233088:0
+#3!          switch([div(60466176,%0)]:[eq(60466176,%0)],0:*,60466176,*:1,60466176) => 
+#3!         iter(v(b36_pows),switch([div(##,%0)]:[eq(##,%0)],0:*,##,*:1,##)) => 1     
+#3!        revwords(iter(v(b36_pows),switch([div(##,%0)]:[eq(##,%0)],0:*,##,*:1,##))) => 1
+#3!       u(fn_b36_mags,%q0) => 1
+#3!       [extract(v(b36_digits),add(div(%q0,1),1),1)][setq(0,sub(%q0,mul(1,div(%q0,1))))] :
+#3!        extract(v(b36_digits),add(div(%q0,1),1),1) :
+#3!         v(b36_digits) => 0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+#3!         add(div(%q0,1),1) :
+#3!          div(%q0,1) :
+#3!           %q0 => 2
+#3!          div(%q0,1) => 2
+#3!         add(div(%q0,1),1) => 3
+#3!        extract(v(b36_digits),add(div(%q0,1),1),1) => 2
+#3!        setq(0,sub(%q0,mul(1,div(%q0,1)))) :
+#3!         sub(%q0,mul(1,div(%q0,1))) :
+#3!          %q0 => 2
+#3!          mul(1,div(%q0,1)) :
+#3!           div(%q0,1) :
+#3!            %q0 => 2
+#3!           div(%q0,1) => 2
+#3!          mul(1,div(%q0,1)) => 2
+#3!         sub(%q0,mul(1,div(%q0,1))) => 0
+#3!        setq(0,sub(%q0,mul(1,div(%q0,1)))) => 
+#3!       [extract(v(b36_digits),add(div(%q0,1),1),1)][setq(0,sub(%q0,mul(1,div(%q0,1))))] => 2
+#3!      iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,sub(%q0,mul(##,div(%q0,##))))]) => 2
+#3!      %b =>  
+#3!     edit(iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,sub(%q0,mul(##,div(%q0,##))))]),%b,) => 2
+#3!    [setq(0,%0)][edit(iter(u(fn_b36_mags,%q0),[extract(v(b36_digits),add(div(%q0,##),1),1)][setq(0,sub(%q0,mul(##,div(%q0,##))))]),%b,)] => 2
+#3!   u(fn_b10-to-b36,add(u(fn_b36-to-b10,%0),1)) => 2
+#4!  ulocal(#3/fn_inc_next_mess,%q1) => 2
+#4! [ulocal(#3/fn_inc_next_mess,%q1)] => 2
+BBS - Myrddin's Global BBS v4.0.6> bbpocket/NXT_MESS - Set.
+#4] &master_lst #3=[cat(get(#3/master_lst),%q1)]
+#4! [cat(get(#3/master_lst),%q1)] :
+#4!  cat(get(#3/master_lst),%q1) :
+#4!   get(#3/master_lst) => 
+#4!   %q1 => 1
+#4!  cat(get(#3/master_lst),%q1) =>  1
+#4! [cat(get(#3/master_lst),%q1)] =>  1
+BBS - Myrddin's Global BBS v4.0.6> bbpocket/MASTER_LST - Set.
+#4] &hdr_%q1 %q0=[mid(%1, 0, 34)]|[u(#3/bbtime)]|[edefault(%q0/anonymous,mid(name(%#),0,24))]|[owner(%#)]|[ifelse(get(%q0/config_timeout),add(get(%q0/config_timeout),secs()),0)]
+#4! &hdr_%q1 => &hdr_1
+#4! %q0 => #5
+#4! [mid(%1, 0, 34)]|[u(#3/bbtime)]|[edefault(%q0/anonymous,mid(name(%#),0,24))]|[owner(%#)]|[ifelse(get(%q0/config_timeout),add(get(%q0/config_timeout),secs()),0)] :
+#4!  mid(%1, 0, 34) :
+#4!   %1 => Title Goes Here
+#4!  mid(%1, 0, 34) => Title Goes Here
+#4!  u(#3/bbtime) :
+#3!   extract(time(), 1, 3) :
+#3!    time() => Fri Mar 20 19:03:29 2026
+#3!   extract(time(), 1, 3) => Fri Mar 20
+#4!  u(#3/bbtime) => Fri Mar 20
+#4!  edefault(%q0/anonymous,mid(name(%#),0,24)) :
+#4!   %q0/anonymous => #5/anonymous
+#4!   mid(name(%#),0,24) :
+#4!    name(%#) :
+#4!     %# => #1
+#4!    name(%#) => One
+#4!   mid(name(%#),0,24) => One
+#4!  edefault(%q0/anonymous,mid(name(%#),0,24)) => One
+#4!  owner(%#) :
+#4!   %# => #1
+#4!  owner(%#) => #1
+#4!  ifelse(get(%q0/config_timeout),add(get(%q0/config_timeout),secs()),0) :
+#4!   get(%q0/config_timeout) :
+#4!    %q0/config_timeout => #5/config_timeout
+#4!   get(%q0/config_timeout) => 2592000
+#4!   add(get(%q0/config_timeout),secs()) :
+#4!    get(%q0/config_timeout) :
+#4!     %q0/config_timeout => #5/config_timeout
+#4!    get(%q0/config_timeout) => 2592000
+#4!    secs() => 1774033409
+#4!   add(get(%q0/config_timeout),secs()) => 1776625409
+#4!  ifelse(get(%q0/config_timeout),add(get(%q0/config_timeout),secs()),0) => 1776625409
+#4! [mid(%1, 0, 34)]|[u(#3/bbtime)]|[edefault(%q0/anonymous,mid(name(%#),0,24))]|[owner(%#)]|[ifelse(get(%q0/config_timeout),add(get(%q0/config_timeout),secs()),0)] => Title Goes Here|Fri Mar 20|One|#1|1776625409
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/HDR_1 - Set.
+#4] &last_mod %q0=[u(#3/bbtime)]
+#4! %q0 => #5
+#4! [u(#3/bbtime)] :
+#4!  u(#3/bbtime) :
+#3!   extract(time(), 1, 3) :
+#3!    time() => Fri Mar 20 19:03:29 2026
+#3!   extract(time(), 1, 3) => Fri Mar 20
+#4!  u(#3/bbtime) => Fri Mar 20
+#4! [u(#3/bbtime)] => Fri Mar 20
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/LAST_MOD - Set.
+#4] &bdy_%q1 %q0=[%2][ifelse(and(hasattr(%#,bb_sig),not(hasattr(%q0,anonymous))),{%r[ulocal(%#/bb_sig)]},)]
+#4! &bdy_%q1 => &bdy_1
+#4! %q0 => #5
+#4! [%2][ifelse(and(hasattr(%#,bb_sig),not(hasattr(%q0,anonymous))),{%r[ulocal(%#/bb_sig)]},)] :
+#4!  %2 => Body of the test post.
+#4!  ifelse(and(hasattr(%#,bb_sig),not(hasattr(%q0,anonymous))),{%r[ulocal(%#/bb_sig)]},) :
+#4!   {%r[ulocal(%#/bb_sig)]} => %r[ulocal(%#/bb_sig)]
+#4!   and(hasattr(%#,bb_sig),not(hasattr(%q0,anonymous))) :
+#4!    hasattr(%#,bb_sig) :
+#4!     %# => #1
+#4!    hasattr(%#,bb_sig) => 0
+#4!    not(hasattr(%q0,anonymous)) :
+#4!     hasattr(%q0,anonymous) :
+#4!      %q0 => #5
+#4!     hasattr(%q0,anonymous) => 0
+#4!    not(hasattr(%q0,anonymous)) => 1
+#4!   and(hasattr(%#,bb_sig),not(hasattr(%q0,anonymous))) => 0
+#4!  ifelse(and(hasattr(%#,bb_sig),not(hasattr(%q0,anonymous))),{%r[ulocal(%#/bb_sig)]},) => 
+#4! [%2][ifelse(and(hasattr(%#,bb_sig),not(hasattr(%q0,anonymous))),{%r[ulocal(%#/bb_sig)]},)] => Body of the test post.
+BBS - Myrddin's Global BBS v4.0.6> TestGroup/BDY_1 - Set.
+#4] @pemit %#=You post your note about '%1' in group [member(get(#3/groups),%q0)] ([name(%q0)]) as message #[member(get(%q0/mess_lst),%q1)][ifelse(and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)),{%b%bThis is an anonymous group, your BB_SIG was -not- appended.},)]
+#4! %# => #1
+#4! You post your note about '%1' in group [member(get(#3/groups),%q0)] ([name(%q0)]) as message #[member(get(%q0/mess_lst),%q1)][ifelse(and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)),{%b%bThis is an anonymous group, your BB_SIG was -not- appended.},)] :
+#4!  member(get(#3/groups),%q0) :
+#4!   get(#3/groups) => #5
+#4!   %q0 => #5
+#4!  member(get(#3/groups),%q0) => 1
+#4!  [name(%q0)] :
+#4!   name(%q0) :
+#4!    %q0 => #5
+#4!   name(%q0) => TestGroup
+#4!  [name(%q0)] => TestGroup
+#4!  member(get(%q0/mess_lst),%q1) :
+#4!   get(%q0/mess_lst) :
+#4!    %q0/mess_lst => #5/mess_lst
+#4!   get(%q0/mess_lst) =>  1
+#4!   %q1 => 1
+#4!  member(get(%q0/mess_lst),%q1) => 1
+#4!  ifelse(and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)),{%b%bThis is an anonymous group, your BB_SIG was -not- appended.},) :
+#4!   {%b%bThis is an anonymous group, your BB_SIG was -not- appended.} => %b%bThis is an anonymous group, your BB_SIG was -not- appended.
+#4!   and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)) :
+#4!    hasattr(%#,bb_sig) :
+#4!     %# => #1
+#4!    hasattr(%#,bb_sig) => 0
+#4!    hasattr(%q0,anonymous) :
+#4!     %q0 => #5
+#4!    hasattr(%q0,anonymous) => 0
+#4!   and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)) => 0
+#4!  ifelse(and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)),{%b%bThis is an anonymous group, your BB_SIG was -not- appended.},) => 
+#4! You post your note about '%1' in group [member(get(#3/groups),%q0)] ([name(%q0)]) as message #[member(get(%q0/mess_lst),%q1)][ifelse(and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)),{%b%bThis is an anonymous group, your BB_SIG was -not- appended.},)] => You post your note about 'Title Goes Here' in group 1 (TestGroup) as message #1
+You post your note about 'Title Goes Here' in group 1 (TestGroup) as message #1
+BBS - Myrddin's Global BBS v4.0.6> You pemit "You post your note about 'Title Goes Here' in group 1 (TestGroup) as message #1" to One.
+#4] &bb_read %#=[setunion(get(%#/bb_read),%q1)]
+#4! %# => #1
+#4! [setunion(get(%#/bb_read),%q1)] :
+#4!  setunion(get(%#/bb_read),%q1) :
+#4!   get(%#/bb_read) :
+#4!    %#/bb_read => #1/bb_read
+#4!   get(%#/bb_read) => 
+#4!   %q1 => 1
+#4!  setunion(get(%#/bb_read),%q1) => 1
+#4! [setunion(get(%#/bb_read),%q1)] => 1
+BBS - Myrddin's Global BBS v4.0.6> Permission denied.
+#4] @trigger #3/tr_post_notify=%#,%q0,[member(get(%q0/mess_lst),%q1)],[mid(%1, 0, 34)]
+#4! %# => #1
+#4! %q0 => #5
+#4! [member(get(%q0/mess_lst),%q1)] :
+#4!  member(get(%q0/mess_lst),%q1) :
+#4!   get(%q0/mess_lst) :
+#4!    %q0/mess_lst => #5/mess_lst
+#4!   get(%q0/mess_lst) =>  1
+#4!   %q1 => 1
+#4!  member(get(%q0/mess_lst),%q1) => 1
+#4! [member(get(%q0/mess_lst),%q1)] => 1
+#4! [mid(%1, 0, 34)] :
+#4!  mid(%1, 0, 34) :
+#4!   %1 => Title Goes Here
+#4!  mid(%1, 0, 34) => Title Goes Here
+#4! [mid(%1, 0, 34)] => Title Goes Here
+BBS - Myrddin's Global BBS v4.0.6> bbpocket - Triggered.
+#4] @switch strmatch(%1,*=*)=0,{@switch member(u(#3/valid_groups,%#,write),[setq(0,u(#3/get_group,%0))]%q0)=0,{@pemit %#=Either you do not subscribe to Group #%0 or are unable to post to it.},{&bb_post_hdr_%# #3=%q0|[mid(%1,0,34)]; @pemit %#=%rYou start your posting to Group #[member(get(#3/groups),%q0)] ([name(%q0)]).%rYou can now compose the body of the post by using '+bbwrite <text>'%ror '+bb <text>'.  When you are finished, type '+bbpost' by itself.[ifelse(and(hasattr(%#,bb_sig),hasattr(%q0,anonymous)),{%b%bThis is an anonymous group. Your BB_SIG will -not- be appended.},)]}}
+#4! strmatch(%1,*=*) :
+#4!  %1 => Title Goes Here=Body of the test post.
+#4! strmatch(%1,*=*) => 1
+#3] @switch hasflag(%0,DARK)=0,{@pemit/list iter(remove(lwho(),%0),switch(or(member([get(##/bb_omit)] [get(##/bb_silent)],%1),not(u(%1/canread,##))),0,##))=(New BB message ([member(v(groups),%1)]/%2) posted to '[name(%1)]' by [ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0))]: %3)}
+#3! hasflag(%0,DARK) :
+#3!  %0 => #1
+#3! hasflag(%0,DARK) => 0
+#3] @pemit/list iter(remove(lwho(),%0),switch(or(member([get(##/bb_omit)] [get(##/bb_silent)],%1),not(u(%1/canread,##))),0,##))=(New BB message ([member(v(groups),%1)]/%2) posted to '[name(%1)]' by [ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0))]: %3)
+#3! iter(remove(lwho(),%0),switch(or(member([get(##/bb_omit)] [get(##/bb_silent)],%1),not(u(%1/canread,##))),0,##)) :
+#3!  remove(lwho(),%0) :
+#3!   lwho() => #1
+#3!   %0 => #1
+#3!  remove(lwho(),%0) => 
+#3! iter(remove(lwho(),%0),switch(or(member([get(##/bb_omit)] [get(##/bb_silent)],%1),not(u(%1/canread,##))),0,##)) => 
+#3! (New BB message ([member(v(groups),%1)]/%2) posted to '[name(%1)]' by [ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0))]: %3) :
+#3!  New BB message ([member(v(groups),%1)]/%2) posted to '[name(%1)]' by [ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0))]: %3 :
+#3!   [member(v(groups),%1)]/%2 :
+#3!    member(v(groups),%1) :
+#3!     v(groups) => #5
+#3!     %1 => #5
+#3!    member(v(groups),%1) => 1
+#3!   [member(v(groups),%1)]/%2 => 1/1
+#3!   name(%1) :
+#3!    %1 => #5
+#3!   name(%1) => TestGroup
+#3!   ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0)) :
+#3!    hasattr(%1,anonymous) :
+#3!     %1 => #5
+#3!    hasattr(%1,anonymous) => 0
+#3!    name(%0) :
+#3!     %0 => #1
+#3!    name(%0) => One
+#3!   ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0)) => One
+#3!  New BB message ([member(v(groups),%1)]/%2) posted to '[name(%1)]' by [ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0))]: %3 => New BB message (1/1) posted to 'TestGroup' by One: Title Goes Here
+#3! (New BB message ([member(v(groups),%1)]/%2) posted to '[name(%1)]' by [ifelse(hasattr(%1,anonymous),get(%1/anonymous),name(%0))]: %3) => (New BB message (1/1) posted to 'TestGroup' by One: Title Goes Here)
+
+
+==============================================================================
+STEP 7: +BBREAD 1 (LIST MESSAGES)
+==============================================================================
+#1] +bbread 1
+#4] @switch strmatch([%0],*/*)=0,{@switch member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,%0)))=0,{@pemit %#=[switch(%q0,#-2,That Group name is not specific enough.,You do not subscribe to that Group.)]},{@pemit %#=[repeat(=,78)]%r[center(**** [name(%q0)] ****,78)]%r[space(8)]Message[space(28)]Posted[space(8)]By%r[repeat(-,78)]; @dolist get(%q0/MESS_LST)={@pemit %#=[ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),##)],6)][ljust(u(#3/fn_msg_flags,%#,%q0,##),2)][ljust(index(setr(1,get(%q0/HDR_##)),|,1,1),35)][ljust(index(%q1,|,2,1),14)][mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21)][switch(member(get(%q0/MESS_LST),##),words(get(%q0/MESS_LST)),%r[repeat(=,78)])]}}},{@switch member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,setr(2,first(%0,/)))))=0,{@pemit %#=[switch(%q0,#-2,That Group name is not specific enough.,You do not subscribe to that Group.)]},{@dolist [setq(4,member(get(#3/groups),%q0))][switch(rest(%0,/),u,u(#3/unreadnums,%#,%q0),u(#3/fn_makelist,rest(%0,/)))]={@switch [and(lte(##,words(get(%q0/MESS_LST))),isnum(##),gt(##,0))]=0,{@pemit %#=Message %q4/## ([name(%q0)]/##) does not exist.},{@pemit %#=%r[center(= [name(%q0)] =,78,=)]%r[ljust(Message: %q4/##[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),##,1)])),|,5,1)),1,{%b(timeout warning)})],35)]Posted[space(8)]Author%r[ljust(index(%q3,|,1,1),35)][ljust(index(%q3,|,2,1),14)][mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29)]%r[repeat(-,78)]%r[get(%q0/BDY_[extract(get(%q0/MESS_LST),##,1)])]%r[repeat(=,78)]; &bb_read %#=[setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),##,1)])]}}; @wait 2={&bb_read %#=[setinter(get(%#/bb_read),get(#3/master_lst))]}}}
+#4! strmatch([%0],*/*) :
+#4!  [%0] :
+#4!   %0 => 1
+#4!  [%0] => 1
+#4! strmatch([%0],*/*) => 0
+#4] @switch member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,%0)))=0,{@pemit %#=[switch(%q0,#-2,That Group name is not specific enough.,You do not subscribe to that Group.)]},{@pemit %#=[repeat(=,78)]%r[center(**** [name(%q0)] ****,78)]%r[space(8)]Message[space(28)]Posted[space(8)]By%r[repeat(-,78)]; @dolist get(%q0/MESS_LST)={@pemit %#=[ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),##)],6)][ljust(u(#3/fn_msg_flags,%#,%q0,##),2)][ljust(index(setr(1,get(%q0/HDR_##)),|,1,1),35)][ljust(index(%q1,|,2,1),14)][mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21)][switch(member(get(%q0/MESS_LST),##),words(get(%q0/MESS_LST)),%r[repeat(=,78)])]}}
+#4! member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,%0))) :
+#4!  u(#3/valid_groups,%#,read) :
+#4!   %# => #1
+#3!   iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) :
+#3!    v(groups) => #5
+#3!    switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) :
+#3!     and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) :
+#3!      u(#5/can%1,%0) :
+#3!       #5/can%1 => #5/canread
+#3!       %0 => #1
+#3!      u(#5/can%1,%0) => 1
+#3!      not(member(get(%0/bb_omit),#5)) :
+#3!       member(get(%0/bb_omit),#5) :
+#3!        get(%0/bb_omit) :
+#3!         %0/bb_omit => #1/bb_omit
+#3!        get(%0/bb_omit) => 
+#3!       member(get(%0/bb_omit),#5) => 0
+#3!      not(member(get(%0/bb_omit),#5)) => 1
+#3!     and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) => 1
+#3!    switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) => #5
+#3!   iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) => #5
+#4!  u(#3/valid_groups,%#,read) => #5
+#4!  setr(0,u(#3/get_group,%0)) :
+#4!   u(#3/get_group,%0) :
+#4!    %0 => 1
+#3!    switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni)) :
+#3!     isnum(%0) :
+#3!      %0 => 1
+#3!     isnum(%0) => 1
+#3!     extract(v(groups),%0,1) :
+#3!      v(groups) => #5
+#3!      %0 => 1
+#3!     extract(v(groups),%0,1) => #5
+#3!    switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni)) => #5
+#4!   u(#3/get_group,%0) => #5
+#4!  setr(0,u(#3/get_group,%0)) => #5
+#4! member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,%0))) => 1
+#4] @pemit %#=[repeat(=,78)]%r[center(**** [name(%q0)] ****,78)]%r[space(8)]Message[space(28)]Posted[space(8)]By%r[repeat(-,78)]
+#4! %# => #1
+#4! [repeat(=,78)]%r[center(**** [name(%q0)] ****,78)]%r[space(8)]Message[space(28)]Posted[space(8)]By%r[repeat(-,78)] :
+#4!  repeat(=,78) => ==============================================================================
+#4!  center(**** [name(%q0)] ****,78) :
+#4!   **** [name(%q0)] **** :
+#4!    name(%q0) :
+#4!     %q0 => #5
+#4!    name(%q0) => TestGroup
+#4!   **** [name(%q0)] **** => **** TestGroup ****
+#4!  center(**** [name(%q0)] ****,78) =>                              **** TestGroup ****                              
+#4!  space(8) =>         
+#4!  space(28) =>                             
+#4!  space(8) =>         
+#4!  repeat(-,78) => ------------------------------------------------------------------------------
+#4! [repeat(=,78)]%r[center(**** [name(%q0)] ****,78)]%r[space(8)]Message[space(28)]Posted[space(8)]By%r[repeat(-,78)] => ==============================================================================
+                             **** TestGroup ****                              
+        Message                            Posted        By
+------------------------------------------------------------------------------
+==============================================================================
+                             **** TestGroup ****                              
+        Message                            Posted        By
+------------------------------------------------------------------------------
+BBS - Myrddin's Global BBS v4.0.6> You pemit "==============================================================================
+                             **** TestGroup ****                              
+        Message                            Posted        By
+------------------------------------------------------------------------------" to One.
+#4] @dolist get(%q0/MESS_LST)={@pemit %#=[ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),##)],6)][ljust(u(#3/fn_msg_flags,%#,%q0,##),2)][ljust(index(setr(1,get(%q0/HDR_##)),|,1,1),35)][ljust(index(%q1,|,2,1),14)][mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21)][switch(member(get(%q0/MESS_LST),##),words(get(%q0/MESS_LST)),%r[repeat(=,78)])]}
+#4! get(%q0/MESS_LST) :
+#4!  %q0/MESS_LST => #5/MESS_LST
+#4! get(%q0/MESS_LST) =>  1
+#4] @pemit %#=[ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),1)],6)][ljust(u(#3/fn_msg_flags,%#,%q0,1),2)][ljust(index(setr(1,get(%q0/HDR_1)),|,1,1),35)][ljust(index(%q1,|,2,1),14)][mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21)][switch(member(get(%q0/MESS_LST),1),words(get(%q0/MESS_LST)),%r[repeat(=,78)])]
+#4! %# => #1
+#4! [ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),1)],6)][ljust(u(#3/fn_msg_flags,%#,%q0,1),2)][ljust(index(setr(1,get(%q0/HDR_1)),|,1,1),35)][ljust(index(%q1,|,2,1),14)][mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21)][switch(member(get(%q0/MESS_LST),1),words(get(%q0/MESS_LST)),%r[repeat(=,78)])] :
+#4!  ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),1)],6) :
+#4!   [member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),1)] :
+#4!    member(get(#3/groups),%q0) :
+#4!     get(#3/groups) => #5
+#4!     %q0 => #5
+#4!    member(get(#3/groups),%q0) => 1
+#4!    member(get(%q0/MESS_LST),1) :
+#4!     get(%q0/MESS_LST) :
+#4!      %q0/MESS_LST => #5/MESS_LST
+#4!     get(%q0/MESS_LST) =>  1
+#4!    member(get(%q0/MESS_LST),1) => 1
+#4!   [member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),1)] => 1/1
+#4!  ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),1)],6) => 1/1   
+#4!  ljust(u(#3/fn_msg_flags,%#,%q0,1),2) :
+#4!   u(#3/fn_msg_flags,%#,%q0,1) :
+#4!    %# => #1
+#4!    %q0 => #5
+#3!    switch([member(get(%0/bb_read),%2)]:[u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1))],0:*,U,*:1,T) :
+#3!     [member(get(%0/bb_read),%2)]:[u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1))] :
+#3!      member(get(%0/bb_read),%2) :
+#3!       get(%0/bb_read) :
+#3!        %0/bb_read => #1/bb_read
+#3!       get(%0/bb_read) => 
+#3!       %2 => 1
+#3!      member(get(%0/bb_read),%2) => 0
+#3!      u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1)) :
+#3!       index(get(%1/hdr_%2),|,5,1) :
+#3!        get(%1/hdr_%2) :
+#3!         %1/hdr_%2 => #5/hdr_1
+#3!        get(%1/hdr_%2) => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#3!       index(get(%1/hdr_%2),|,5,1) => 1776625409
+#3!       switch(%0:[lte(sub(%0,secs()),259200)],0:*,0,*:1,1,0) :
+#3!        %0:[lte(sub(%0,secs()),259200)] :
+#3!         lte(sub(%0,secs()),259200) :
+#3!          sub(%0,secs()) :
+#3!           %0 => 1776625409
+#3!           secs() => 1774033421
+#3!          sub(%0,secs()) => 2591988
+#3!         lte(sub(%0,secs()),259200) => 0
+#3!        %0:[lte(sub(%0,secs()),259200)] => 1776625409:0
+#3!       switch(%0:[lte(sub(%0,secs()),259200)],0:*,0,*:1,1,0) => 0
+#3!      u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1)) => 0
+#3!     [member(get(%0/bb_read),%2)]:[u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1))] => 0:0
+#3!    switch([member(get(%0/bb_read),%2)]:[u(fn_timeout_close,index(get(%1/hdr_%2),|,5,1))],0:*,U,*:1,T) => U
+#4!   u(#3/fn_msg_flags,%#,%q0,1) => U
+#4!  ljust(u(#3/fn_msg_flags,%#,%q0,1),2) => U 
+#4!  ljust(index(setr(1,get(%q0/HDR_1)),|,1,1),35) :
+#4!   index(setr(1,get(%q0/HDR_1)),|,1,1) :
+#4!    setr(1,get(%q0/HDR_1)) :
+#4!     get(%q0/HDR_1) :
+#4!      %q0/HDR_1 => #5/HDR_1
+#4!     get(%q0/HDR_1) => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!    setr(1,get(%q0/HDR_1)) => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!   index(setr(1,get(%q0/HDR_1)),|,1,1) => Title Goes Here
+#4!  ljust(index(setr(1,get(%q0/HDR_1)),|,1,1),35) => Title Goes Here                    
+#4!  ljust(index(%q1,|,2,1),14) :
+#4!   index(%q1,|,2,1) :
+#4!    %q1 => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!   index(%q1,|,2,1) => Fri Mar 20
+#4!  ljust(index(%q1,|,2,1),14) => Fri Mar 20    
+#4!  mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21) :
+#4!   [index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)] :
+#4!    index(%q1,|,3,1) :
+#4!     %q1 => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!    index(%q1,|,3,1) => One
+#4!    ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),) :
+#4!     and(hasattr(%q0,anonymous),hasflag(%#,wizard)) :
+#4!      hasattr(%q0,anonymous) :
+#4!       %q0 => #5
+#4!      hasattr(%q0,anonymous) => 0
+#4!      hasflag(%#,wizard) :
+#4!       %# => #1
+#4!      hasflag(%#,wizard) => 1
+#4!     and(hasattr(%q0,anonymous),hasflag(%#,wizard)) => 0
+#4!    ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),) => 
+#4!   [index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)] => One
+#4!  mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21) => One
+#4!  switch(member(get(%q0/MESS_LST),1),words(get(%q0/MESS_LST)),%r[repeat(=,78)]) :
+#4!   member(get(%q0/MESS_LST),1) :
+#4!    get(%q0/MESS_LST) :
+#4!     %q0/MESS_LST => #5/MESS_LST
+#4!    get(%q0/MESS_LST) =>  1
+#4!   member(get(%q0/MESS_LST),1) => 1
+#4!   words(get(%q0/MESS_LST)) :
+#4!    get(%q0/MESS_LST) :
+#4!     %q0/MESS_LST => #5/MESS_LST
+#4!    get(%q0/MESS_LST) =>  1
+#4!   words(get(%q0/MESS_LST)) => 1
+#4!   %r[repeat(=,78)] :
+#4!    repeat(=,78) => ==============================================================================
+#4!   %r[repeat(=,78)] => 
+==============================================================================
+#4!  switch(member(get(%q0/MESS_LST),1),words(get(%q0/MESS_LST)),%r[repeat(=,78)]) => 
+==============================================================================
+#4! [ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),1)],6)][ljust(u(#3/fn_msg_flags,%#,%q0,1),2)][ljust(index(setr(1,get(%q0/HDR_1)),|,1,1),35)][ljust(index(%q1,|,2,1),14)][mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21)][switch(member(get(%q0/MESS_LST),1),words(get(%q0/MESS_LST)),%r[repeat(=,78)])] => 1/1   U Title Goes Here                    Fri Mar 20    One
+==============================================================================
+1/1   U Title Goes Here                    Fri Mar 20    One
+==============================================================================
+BBS - Myrddin's Global BBS v4.0.6> You pemit "1/1   U Title Goes Here                    Fri Mar 20    One
+==============================================================================" to One.
+
+
+==============================================================================
+STEP 8: +BBREAD 1/1 (READ MESSAGE)
+==============================================================================
+#1] +bbread 1/1
+#4] @switch strmatch([%0],*/*)=0,{@switch member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,%0)))=0,{@pemit %#=[switch(%q0,#-2,That Group name is not specific enough.,You do not subscribe to that Group.)]},{@pemit %#=[repeat(=,78)]%r[center(**** [name(%q0)] ****,78)]%r[space(8)]Message[space(28)]Posted[space(8)]By%r[repeat(-,78)]; @dolist get(%q0/MESS_LST)={@pemit %#=[ljust([member(get(#3/groups),%q0)]/[member(get(%q0/MESS_LST),##)],6)][ljust(u(#3/fn_msg_flags,%#,%q0,##),2)][ljust(index(setr(1,get(%q0/HDR_##)),|,1,1),35)][ljust(index(%q1,|,2,1),14)][mid([index(%q1,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q1,|,4,1))]\),)],0,21)][switch(member(get(%q0/MESS_LST),##),words(get(%q0/MESS_LST)),%r[repeat(=,78)])]}}},{@switch member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,setr(2,first(%0,/)))))=0,{@pemit %#=[switch(%q0,#-2,That Group name is not specific enough.,You do not subscribe to that Group.)]},{@dolist [setq(4,member(get(#3/groups),%q0))][switch(rest(%0,/),u,u(#3/unreadnums,%#,%q0),u(#3/fn_makelist,rest(%0,/)))]={@switch [and(lte(##,words(get(%q0/MESS_LST))),isnum(##),gt(##,0))]=0,{@pemit %#=Message %q4/## ([name(%q0)]/##) does not exist.},{@pemit %#=%r[center(= [name(%q0)] =,78,=)]%r[ljust(Message: %q4/##[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),##,1)])),|,5,1)),1,{%b(timeout warning)})],35)]Posted[space(8)]Author%r[ljust(index(%q3,|,1,1),35)][ljust(index(%q3,|,2,1),14)][mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29)]%r[repeat(-,78)]%r[get(%q0/BDY_[extract(get(%q0/MESS_LST),##,1)])]%r[repeat(=,78)]; &bb_read %#=[setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),##,1)])]}}; @wait 2={&bb_read %#=[setinter(get(%#/bb_read),get(#3/master_lst))]}}}
+#4! strmatch([%0],*/*) :
+#4!  [%0] :
+#4!   %0 => 1/1
+#4!  [%0] => 1/1
+#4! strmatch([%0],*/*) => 1
+#4] @switch member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,setr(2,first(%0,/)))))=0,{@pemit %#=[switch(%q0,#-2,That Group name is not specific enough.,You do not subscribe to that Group.)]},{@dolist [setq(4,member(get(#3/groups),%q0))][switch(rest(%0,/),u,u(#3/unreadnums,%#,%q0),u(#3/fn_makelist,rest(%0,/)))]={@switch [and(lte(##,words(get(%q0/MESS_LST))),isnum(##),gt(##,0))]=0,{@pemit %#=Message %q4/## ([name(%q0)]/##) does not exist.},{@pemit %#=%r[center(= [name(%q0)] =,78,=)]%r[ljust(Message: %q4/##[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),##,1)])),|,5,1)),1,{%b(timeout warning)})],35)]Posted[space(8)]Author%r[ljust(index(%q3,|,1,1),35)][ljust(index(%q3,|,2,1),14)][mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29)]%r[repeat(-,78)]%r[get(%q0/BDY_[extract(get(%q0/MESS_LST),##,1)])]%r[repeat(=,78)]; &bb_read %#=[setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),##,1)])]}}; @wait 2={&bb_read %#=[setinter(get(%#/bb_read),get(#3/master_lst))]}}
+#4! member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,setr(2,first(%0,/))))) :
+#4!  u(#3/valid_groups,%#,read) :
+#4!   %# => #1
+#3!   iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) :
+#3!    v(groups) => #5
+#3!    switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) :
+#3!     and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) :
+#3!      u(#5/can%1,%0) :
+#3!       #5/can%1 => #5/canread
+#3!       %0 => #1
+#3!      u(#5/can%1,%0) => 1
+#3!      not(member(get(%0/bb_omit),#5)) :
+#3!       member(get(%0/bb_omit),#5) :
+#3!        get(%0/bb_omit) :
+#3!         %0/bb_omit => #1/bb_omit
+#3!        get(%0/bb_omit) => 
+#3!       member(get(%0/bb_omit),#5) => 0
+#3!      not(member(get(%0/bb_omit),#5)) => 1
+#3!     and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) => 1
+#3!    switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) => #5
+#3!   iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) => #5
+#4!  u(#3/valid_groups,%#,read) => #5
+#4!  setr(0,u(#3/get_group,setr(2,first(%0,/)))) :
+#4!   u(#3/get_group,setr(2,first(%0,/))) :
+#4!    setr(2,first(%0,/)) :
+#4!     first(%0,/) :
+#4!      %0 => 1/1
+#4!     first(%0,/) => 1
+#4!    setr(2,first(%0,/)) => 1
+#3!    switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni)) :
+#3!     isnum(%0) :
+#3!      %0 => 1
+#3!     isnum(%0) => 1
+#3!     extract(v(groups),%0,1) :
+#3!      v(groups) => #5
+#3!      %0 => 1
+#3!     extract(v(groups),%0,1) => #5
+#3!    switch(isnum(%0),1,extract(v(groups),%0,1),locate(#3,%0,ni)) => #5
+#4!   u(#3/get_group,setr(2,first(%0,/))) => #5
+#4!  setr(0,u(#3/get_group,setr(2,first(%0,/)))) => #5
+#4! member(u(#3/valid_groups,%#,read),setr(0,u(#3/get_group,setr(2,first(%0,/))))) => 1
+#4] @dolist [setq(4,member(get(#3/groups),%q0))][switch(rest(%0,/),u,u(#3/unreadnums,%#,%q0),u(#3/fn_makelist,rest(%0,/)))]={@switch [and(lte(##,words(get(%q0/MESS_LST))),isnum(##),gt(##,0))]=0,{@pemit %#=Message %q4/## ([name(%q0)]/##) does not exist.},{@pemit %#=%r[center(= [name(%q0)] =,78,=)]%r[ljust(Message: %q4/##[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),##,1)])),|,5,1)),1,{%b(timeout warning)})],35)]Posted[space(8)]Author%r[ljust(index(%q3,|,1,1),35)][ljust(index(%q3,|,2,1),14)][mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29)]%r[repeat(-,78)]%r[get(%q0/BDY_[extract(get(%q0/MESS_LST),##,1)])]%r[repeat(=,78)]; &bb_read %#=[setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),##,1)])]}}
+#4! [setq(4,member(get(#3/groups),%q0))][switch(rest(%0,/),u,u(#3/unreadnums,%#,%q0),u(#3/fn_makelist,rest(%0,/)))] :
+#4!  setq(4,member(get(#3/groups),%q0)) :
+#4!   member(get(#3/groups),%q0) :
+#4!    get(#3/groups) => #5
+#4!    %q0 => #5
+#4!   member(get(#3/groups),%q0) => 1
+#4!  setq(4,member(get(#3/groups),%q0)) => 
+#4!  switch(rest(%0,/),u,u(#3/unreadnums,%#,%q0),u(#3/fn_makelist,rest(%0,/))) :
+#4!   rest(%0,/) :
+#4!    %0 => 1/1
+#4!   rest(%0,/) => 1
+#4!   u(#3/fn_makelist,rest(%0,/)) :
+#4!    rest(%0,/) :
+#4!     %0 => 1/1
+#4!    rest(%0,/) => 1
+#3!    map(me/fn_maplist,secure(%0)) :
+#3!     secure(%0) :
+#3!      %0 => 1
+#3!     secure(%0) => 1
+#3!     switch(strmatch(%0,?*-*),1,lnum(before(%0,-),after(%0,-)),%0) :
+#3!      strmatch(%0,?*-*) :
+#3!       %0 => 1
+#3!      strmatch(%0,?*-*) => 0
+#3!      %0 => 1
+#3!     switch(strmatch(%0,?*-*),1,lnum(before(%0,-),after(%0,-)),%0) => 1
+#3!    map(me/fn_maplist,secure(%0)) => 1
+#4!   u(#3/fn_makelist,rest(%0,/)) => 1
+#4!  switch(rest(%0,/),u,u(#3/unreadnums,%#,%q0),u(#3/fn_makelist,rest(%0,/))) => 1
+#4! [setq(4,member(get(#3/groups),%q0))][switch(rest(%0,/),u,u(#3/unreadnums,%#,%q0),u(#3/fn_makelist,rest(%0,/)))] => 1
+#4] @wait 2={&bb_read %#=[setinter(get(%#/bb_read),get(#3/master_lst))]}
+#4] @switch [and(lte(1,words(get(%q0/MESS_LST))),isnum(1),gt(1,0))]=0,{@pemit %#=Message %q4/1 ([name(%q0)]/1) does not exist.},{@pemit %#=%r[center(= [name(%q0)] =,78,=)]%r[ljust(Message: %q4/1[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)})],35)]Posted[space(8)]Author%r[ljust(index(%q3,|,1,1),35)][ljust(index(%q3,|,2,1),14)][mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29)]%r[repeat(-,78)]%r[get(%q0/BDY_[extract(get(%q0/MESS_LST),1,1)])]%r[repeat(=,78)]; &bb_read %#=[setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),1,1)])]}
+#4! [and(lte(1,words(get(%q0/MESS_LST))),isnum(1),gt(1,0))] :
+#4!  and(lte(1,words(get(%q0/MESS_LST))),isnum(1),gt(1,0)) :
+#4!   lte(1,words(get(%q0/MESS_LST))) :
+#4!    words(get(%q0/MESS_LST)) :
+#4!     get(%q0/MESS_LST) :
+#4!      %q0/MESS_LST => #5/MESS_LST
+#4!     get(%q0/MESS_LST) =>  1
+#4!    words(get(%q0/MESS_LST)) => 1
+#4!   lte(1,words(get(%q0/MESS_LST))) => 1
+#4!   isnum(1) => 1
+#4!   gt(1,0) => 1
+#4!  and(lte(1,words(get(%q0/MESS_LST))),isnum(1),gt(1,0)) => 1
+#4! [and(lte(1,words(get(%q0/MESS_LST))),isnum(1),gt(1,0))] => 1
+#4] @pemit %#=%r[center(= [name(%q0)] =,78,=)]%r[ljust(Message: %q4/1[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)})],35)]Posted[space(8)]Author%r[ljust(index(%q3,|,1,1),35)][ljust(index(%q3,|,2,1),14)][mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29)]%r[repeat(-,78)]%r[get(%q0/BDY_[extract(get(%q0/MESS_LST),1,1)])]%r[repeat(=,78)]
+#4! %# => #1
+#4! %r[center(= [name(%q0)] =,78,=)]%r[ljust(Message: %q4/1[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)})],35)]Posted[space(8)]Author%r[ljust(index(%q3,|,1,1),35)][ljust(index(%q3,|,2,1),14)][mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29)]%r[repeat(-,78)]%r[get(%q0/BDY_[extract(get(%q0/MESS_LST),1,1)])]%r[repeat(=,78)] :
+#4!  center(= [name(%q0)] =,78,=) :
+#4!   = [name(%q0)] = :
+#4!    name(%q0) :
+#4!     %q0 => #5
+#4!    name(%q0) => TestGroup
+#4!   = [name(%q0)] = => = TestGroup =
+#4!  center(= [name(%q0)] =,78,=) => ================================= TestGroup ==================================
+#4!  ljust(Message: %q4/1[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)})],35) :
+#4!   Message: %q4/1[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)})] :
+#4!    switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)}) :
+#4!     {%b(timeout warning)} => %b(timeout warning)
+#4!     u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)) :
+#4!      index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1) :
+#4!       setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])) :
+#4!        get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)]) :
+#4!         %q0/HDR_[extract(get(%q0/MESS_LST),1,1)] :
+#4!          extract(get(%q0/MESS_LST),1,1) :
+#4!           get(%q0/MESS_LST) :
+#4!            %q0/MESS_LST => #5/MESS_LST
+#4!           get(%q0/MESS_LST) =>  1
+#4!          extract(get(%q0/MESS_LST),1,1) => 1
+#4!         %q0/HDR_[extract(get(%q0/MESS_LST),1,1)] => #5/HDR_1
+#4!        get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)]) => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!       setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])) => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!      index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1) => 1776625409
+#3!      switch(%0:[lte(sub(%0,secs()),259200)],0:*,0,*:1,1,0) :
+#3!       %0:[lte(sub(%0,secs()),259200)] :
+#3!        lte(sub(%0,secs()),259200) :
+#3!         sub(%0,secs()) :
+#3!          %0 => 1776625409
+#3!          secs() => 1774033427
+#3!         sub(%0,secs()) => 2591982
+#3!        lte(sub(%0,secs()),259200) => 0
+#3!       %0:[lte(sub(%0,secs()),259200)] => 1776625409:0
+#3!      switch(%0:[lte(sub(%0,secs()),259200)],0:*,0,*:1,1,0) => 0
+#4!     u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)) => 0
+#4!    switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)}) => 
+#4!   Message: %q4/1[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)})] => Message: 1/1
+#4!  ljust(Message: %q4/1[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)})],35) => Message: 1/1                       
+#4!  space(8) =>         
+#4!  ljust(index(%q3,|,1,1),35) :
+#4!   index(%q3,|,1,1) :
+#4!    %q3 => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!   index(%q3,|,1,1) => Title Goes Here
+#4!  ljust(index(%q3,|,1,1),35) => Title Goes Here                    
+#4!  ljust(index(%q3,|,2,1),14) :
+#4!   index(%q3,|,2,1) :
+#4!    %q3 => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!   index(%q3,|,2,1) => Fri Mar 20
+#4!  ljust(index(%q3,|,2,1),14) => Fri Mar 20    
+#4!  mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29) :
+#4!   [index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)] :
+#4!    index(%q3,|,3,1) :
+#4!     %q3 => Title Goes Here|Fri Mar 20|One|#1|1776625409
+#4!    index(%q3,|,3,1) => One
+#4!    ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),) :
+#4!     and(hasattr(%q0,anonymous),hasflag(%#,wizard)) :
+#4!      hasattr(%q0,anonymous) :
+#4!       %q0 => #5
+#4!      hasattr(%q0,anonymous) => 0
+#4!      hasflag(%#,wizard) :
+#4!       %# => #1
+#4!      hasflag(%#,wizard) => 1
+#4!     and(hasattr(%q0,anonymous),hasflag(%#,wizard)) => 0
+#4!    ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),) => 
+#4!   [index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)] => One
+#4!  mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29) => One
+#4!  repeat(-,78) => ------------------------------------------------------------------------------
+#4!  get(%q0/BDY_[extract(get(%q0/MESS_LST),1,1)]) :
+#4!   %q0/BDY_[extract(get(%q0/MESS_LST),1,1)] :
+#4!    extract(get(%q0/MESS_LST),1,1) :
+#4!     get(%q0/MESS_LST) :
+#4!      %q0/MESS_LST => #5/MESS_LST
+#4!     get(%q0/MESS_LST) =>  1
+#4!    extract(get(%q0/MESS_LST),1,1) => 1
+#4!   %q0/BDY_[extract(get(%q0/MESS_LST),1,1)] => #5/BDY_1
+#4!  get(%q0/BDY_[extract(get(%q0/MESS_LST),1,1)]) => Body of the test post.
+#4!  repeat(=,78) => ==============================================================================
+#4! %r[center(= [name(%q0)] =,78,=)]%r[ljust(Message: %q4/1[switch(u(#3/fn_timeout_close,index(setr(3,get(%q0/HDR_[extract(get(%q0/MESS_LST),1,1)])),|,5,1)),1,{%b(timeout warning)})],35)]Posted[space(8)]Author%r[ljust(index(%q3,|,1,1),35)][ljust(index(%q3,|,2,1),14)][mid([index(%q3,|,3,1)][ifelse(and(hasattr(%q0,anonymous),hasflag(%#,wizard)),%b\([name(index(%q3,|,4,1))]\),)],0,29)]%r[repeat(-,78)]%r[get(%q0/BDY_[extract(get(%q0/MESS_LST),1,1)])]%r[repeat(=,78)] => 
+================================= TestGroup ==================================
+Message: 1/1                       Posted        Author
+Title Goes Here                    Fri Mar 20    One
+------------------------------------------------------------------------------
+Body of the test post.
+==============================================================================
+
+================================= TestGroup ==================================
+Message: 1/1                       Posted        Author
+Title Goes Here                    Fri Mar 20    One
+------------------------------------------------------------------------------
+Body of the test post.
+==============================================================================
+BBS - Myrddin's Global BBS v4.0.6> You pemit "
+================================= TestGroup ==================================
+Message: 1/1                       Posted        Author
+Title Goes Here                    Fri Mar 20    One
+------------------------------------------------------------------------------
+Body of the test post.
+==============================================================================" to One.
+#4] &bb_read %#=[setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),1,1)])]
+#4! %# => #1
+#4! [setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),1,1)])] :
+#4!  setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),1,1)]) :
+#4!   get(%#/bb_read) :
+#4!    %#/bb_read => #1/bb_read
+#4!   get(%#/bb_read) => 
+#4!   [extract(get(%q0/MESS_LST),1,1)] :
+#4!    extract(get(%q0/MESS_LST),1,1) :
+#4!     get(%q0/MESS_LST) :
+#4!      %q0/MESS_LST => #5/MESS_LST
+#4!     get(%q0/MESS_LST) =>  1
+#4!    extract(get(%q0/MESS_LST),1,1) => 1
+#4!   [extract(get(%q0/MESS_LST),1,1)] => 1
+#4!  setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),1,1)]) => 1
+#4! [setunion(get(%#/bb_read),[extract(get(%q0/MESS_LST),1,1)])] => 1
+BBS - Myrddin's Global BBS v4.0.6> Permission denied.
+#4] &bb_read %#=[setinter(get(%#/bb_read),get(#3/master_lst))]
+#4! %# => #1
+#4! [setinter(get(%#/bb_read),get(#3/master_lst))] :
+#4!  setinter(get(%#/bb_read),get(#3/master_lst)) :
+#4!   get(%#/bb_read) :
+#4!    %#/bb_read => #1/bb_read
+#4!   get(%#/bb_read) => 
+#4!   get(#3/master_lst) =>  1
+#4!  setinter(get(%#/bb_read),get(#3/master_lst)) => 
+#4! [setinter(get(%#/bb_read),get(#3/master_lst))] => 
+BBS - Myrddin's Global BBS v4.0.6> Permission denied.
+
+
+==============================================================================
+STEP 9: +BBREAD (FINAL LIST VIEW)
+==============================================================================
+#1] +bbread
+#4] @pemit %#=[repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)]
+#4! %# => #1
+#4! [repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)] :
+#4!  repeat(=,78) => ==============================================================================
+#4!  space(7) =>        
+#4!  space(20) =>                     
+#4!  space(6) =>       
+#4!  repeat(-,78) => ------------------------------------------------------------------------------
+#4!  iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)]) :
+#4!   u(#3/valid_groups,%#,read) :
+#4!    %# => #1
+#3!    iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) :
+#3!     v(groups) => #5
+#3!     switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) :
+#3!      and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) :
+#3!       u(#5/can%1,%0) :
+#3!        #5/can%1 => #5/canread
+#3!        %0 => #1
+#3!       u(#5/can%1,%0) => 1
+#3!       not(member(get(%0/bb_omit),#5)) :
+#3!        member(get(%0/bb_omit),#5) :
+#3!         get(%0/bb_omit) :
+#3!          %0/bb_omit => #1/bb_omit
+#3!         get(%0/bb_omit) => 
+#3!        member(get(%0/bb_omit),#5) => 0
+#3!       not(member(get(%0/bb_omit),#5)) => 1
+#3!      and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))) => 1
+#3!     switch(and(u(#5/can%1,%0),not(member(get(%0/bb_omit),#5))),1,#5) => #5
+#3!    iter(v(groups),switch(and(u(##/can%1,%0),not(member(get(%0/bb_omit),##))),1,##)) => #5
+#4!   u(#3/valid_groups,%#,read) => #5
+#4!   %r[rjust(member(get(#3/groups),#5),2)][center([switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(#5),30)][ljust(get(#5/LAST_MOD),20)][rjust(words([setq(0,get(#5/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)] :
+#4!    rjust(member(get(#3/groups),#5),2) :
+#4!     member(get(#3/groups),#5) :
+#4!      get(#3/groups) => #5
+#4!     member(get(#3/groups),#5) => 1
+#4!    rjust(member(get(#3/groups),#5),2) =>  1
+#4!    center([switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5) :
+#4!     [switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)] :
+#4!      switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*) :
+#4!       {(-)} => (-)
+#4!       [get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)] :
+#4!        get(#5/CANREAD) => 1
+#4!        get(#5/CANWRITE) => 1
+#4!        u(#5/CANWRITE,%#) :
+#4!         %# => #1
+#4!        u(#5/CANWRITE,%#) => 1
+#4!       [get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)] => 1:1:1
+#4!      switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*) => 
+#4!     [switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)] => 
+#4!    center([switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5) =>      
+#4!    ljust(name(#5),30) :
+#4!     name(#5) => TestGroup
+#4!    ljust(name(#5),30) => TestGroup                     
+#4!    ljust(get(#5/LAST_MOD),20) :
+#4!     get(#5/LAST_MOD) => Fri Mar 20
+#4!    ljust(get(#5/LAST_MOD),20) => Fri Mar 20          
+#4!    rjust(words([setq(0,get(#5/MESS_LST))]%q0),3) :
+#4!     words([setq(0,get(#5/MESS_LST))]%q0) :
+#4!      [setq(0,get(#5/MESS_LST))]%q0 :
+#4!       setq(0,get(#5/MESS_LST)) :
+#4!        get(#5/MESS_LST) =>  1
+#4!       setq(0,get(#5/MESS_LST)) => 
+#4!      [setq(0,get(#5/MESS_LST))]%q0 =>  1
+#4!     words([setq(0,get(#5/MESS_LST))]%q0) => 1
+#4!    rjust(words([setq(0,get(#5/MESS_LST))]%q0),3) =>   1
+#4!    ljust(u(#3/isgroupread,%#,%q0),2) :
+#4!     u(#3/isgroupread,%#,%q0) :
+#4!      %# => #1
+#4!      %q0 =>  1
+#3!      switch(setdiff(%1,get(%0/bb_read)),,,U) :
+#3!       setdiff(%1,get(%0/bb_read)) :
+#3!        %1 =>  1
+#3!        get(%0/bb_read) :
+#3!         %0/bb_read => #1/bb_read
+#3!        get(%0/bb_read) => 
+#3!       setdiff(%1,get(%0/bb_read)) => 1
+#3!      switch(setdiff(%1,get(%0/bb_read)),,,U) => U
+#4!     u(#3/isgroupread,%#,%q0) => U
+#4!    ljust(u(#3/isgroupread,%#,%q0),2) => U 
+#4!   %r[rjust(member(get(#3/groups),#5),2)][center([switch([get(#5/CANREAD)]:[get(#5/CANWRITE)]:[u(#5/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(#5),30)][ljust(get(#5/LAST_MOD),20)][rjust(words([setq(0,get(#5/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)] => 
+ 1     TestGroup                     Fri Mar 20            1 U 
+#4!  iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)]) => 
+ 1     TestGroup                     Fri Mar 20            1 U 
+#4!  repeat(-,78) => ------------------------------------------------------------------------------
+#4!  center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78) :
+#4!   '*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write :
+#4!    space(5) =>      
+#4!    space(5) =>      
+#4!   '*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write => '*' = restricted     '-' = read only     '(-)' = read only, but you can write
+#4!  center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78) => '*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+#4!  center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=) :
+#4!   =[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]= :
+#4!    switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=) :
+#4!     {= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =} => = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =
+#4!     hasflag(%#,wizard) :
+#4!      %# => #1
+#4!     hasflag(%#,wizard) => 1
+#4!     = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity = :
+#4!      round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1) :
+#4!       mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100) :
+#4!        fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)) :
+#4!         strlen(get(#3/master_lst)) :
+#4!          get(#3/master_lst) =>  1
+#4!         strlen(get(#3/master_lst)) => 2
+#4!         get(#3/buffer_size) => 8000
+#4!        fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)) => 0.00025
+#4!       mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100) => 0.025
+#4!      round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1) => 0.0
+#4!     = BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity = => = BBS at 0.0% capacity =
+#4!    switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=) => = BBS at 0.0% capacity =
+#4!   =[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]= => == BBS at 0.0% capacity ==
+#4!  center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=) => ============================ BBS at 0.0% capacity ============================
+#4! [repeat(=,78)]%r[space(7)]Group Name[space(20)]Last Post[space(6)]# of messages%r[repeat(-,78)][iter(u(#3/valid_groups,%#,read),%r[rjust(member(get(#3/groups),##),2)][center([switch([get(##/CANREAD)]:[get(##/CANWRITE)]:[u(##/CANWRITE,%#)],1:1:1,,1:*:1,{(-)},1:*:0,-,*)],5)][ljust(name(##),30)][ljust(get(##/LAST_MOD),20)][rjust(words([setq(0,get(##/MESS_LST))]%q0),3)]%b[ljust(u(#3/isgroupread,%#,%q0),2)])]%r[repeat(-,78)]%r[center('*' = restricted[space(5)]'-' = read only[space(5)]'\(-\)' = read only\, but you can write,78)]%r[center(=[switch(hasflag(%#,wizard),1,{= BBS at [round(mul(fdiv(strlen(get(#3/master_lst)),get(#3/buffer_size)),100),1)]\% capacity =},=)]=,78,=)] => ==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+ 1     TestGroup                     Fri Mar 20            1 U 
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+ 1     TestGroup                     Fri Mar 20            1 U 
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================
+BBS - Myrddin's Global BBS v4.0.6> You pemit "==============================================================================
+       Group Name                    Last Post      # of messages
+------------------------------------------------------------------------------
+ 1     TestGroup                     Fri Mar 20            1 U 
+------------------------------------------------------------------------------
+'*' = restricted     '-' = read only     '(-)' = read only, but you can write 
+============================ BBS at 0.0% capacity ============================" to One.
+
+
+==============================================================================
+DONE - OUTPUT CAPTURED
+==============================================================================

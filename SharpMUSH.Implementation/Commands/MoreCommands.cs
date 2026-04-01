@@ -1121,14 +1121,16 @@ public partial class Commands
 		}
 
 		// Trigger @adrop attribute (actions)
+		// Executor = the dropped object; enactor = the player who dropped it (PennMUSH @a* semantics)
 		var adropAttr = await AttributeService!.GetAttributeAsync(executor, objectToDrop, AttrADrop, IAttributeService.AttributeMode.Read, true);
 		if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
 		{
 			var adropActions = adropAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
 			{
-				// Execute attribute as actions
-				await parser.CommandParse(adropActions);
+				await parser.With(
+					state => state with { Executor = objectToDrop.Object().DBRef, Caller = state.Executor },
+					async p => await p.CommandParse(adropActions));
 			}
 		}
 
@@ -1320,13 +1322,16 @@ public partial class Commands
 				}
 
 				// Trigger @asuccess attribute (actions)
+				// Executor = the item being picked up; enactor = player (PennMUSH @a* semantics)
 				var asuccessAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrASuccess, IAttributeService.AttributeMode.Read, true);
 				if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
 				{
 					var asuccessActions = asuccessAttr.AsT0[0].Value;
 					if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
 					{
-						await parser.CommandParse(asuccessActions);
+						await parser.With(
+							state => state with { Executor = itemObj.Object().DBRef, Caller = state.Executor },
+							async p => await p.CommandParse(asuccessActions));
 					}
 				}
 
@@ -1396,13 +1401,16 @@ public partial class Commands
 				}
 
 				// Trigger @adrop attribute (actions)
+				// Executor = the dropped item; enactor = player (PennMUSH @a* semantics)
 				var adropAttr = await AttributeService!.GetAttributeAsync(executor, itemObj, AttrADrop, IAttributeService.AttributeMode.Read, true);
 				if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
 				{
 					var adropActions = adropAttr.AsT0[0].Value;
 					if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
 					{
-						await parser.CommandParse(adropActions);
+						await parser.With(
+							state => state with { Executor = itemObj.Object().DBRef, Caller = state.Executor },
+							async p => await p.CommandParse(adropActions));
 					}
 				}
 
@@ -1505,13 +1513,16 @@ public partial class Commands
 			}
 
 			// Trigger @aefail attribute (actions)
+			// Executor = the container whose enter-lock failed; enactor = player (PennMUSH @a* semantics)
 			var aefailAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrAEFail, IAttributeService.AttributeMode.Read, true);
 			if (aefailAttr.IsAttribute && aefailAttr.AsT0.Length > 0)
 			{
 				var aefailActions = aefailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(aefailActions.ToPlainText()))
 				{
-					await parser.CommandParse(aefailActions);
+					await parser.With(
+						state => state with { Executor = objectToEnter.Object().DBRef, Caller = state.Executor },
+						async p => await p.CommandParse(aefailActions));
 				}
 			}
 
@@ -1588,14 +1599,16 @@ public partial class Commands
 		}
 
 		// Trigger @aenter attribute (actions)
+		// Executor = the container being entered; enactor = player (PennMUSH @a* semantics)
 		var aenterAttr = await AttributeService!.GetAttributeAsync(executor, objectToEnter, AttrAEnter, IAttributeService.AttributeMode.Read, true);
 		if (aenterAttr.IsAttribute && aenterAttr.AsT0.Length > 0)
 		{
 			var aenterActions = aenterAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(aenterActions.ToPlainText()))
 			{
-				// Execute attribute as actions
-				await parser.CommandParse(aenterActions);
+				await parser.With(
+					state => state with { Executor = objectToEnter.Object().DBRef, Caller = state.Executor },
+					async p => await p.CommandParse(aenterActions));
 			}
 		}
 
@@ -1812,14 +1825,16 @@ public partial class Commands
 		}
 
 		// Trigger @asuccess attribute (actions)
+		// Executor = the object being gotten; enactor = player (PennMUSH @a* semantics)
 		var asuccessAttr = await AttributeService!.GetAttributeAsync(executor, objectToGet, AttrASuccess, IAttributeService.AttributeMode.Read, true);
 		if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
 		{
 			var asuccessActions = asuccessAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
 			{
-				// Execute attribute as actions
-				await parser.CommandParse(asuccessActions);
+				await parser.With(
+					state => state with { Executor = objectToGet.Object().DBRef, Caller = state.Executor },
+					async p => await p.CommandParse(asuccessActions));
 			}
 		}
 
@@ -2028,24 +2043,30 @@ public partial class Commands
 		}
 
 		// Trigger @areceive attribute (actions)
+		// Executor = the recipient; enactor = player who gave (PennMUSH @a* semantics)
 		var areceiveAttr = await AttributeService!.GetAttributeAsync(executor, recipient, AttrAReceive, IAttributeService.AttributeMode.Read, true);
 		if (areceiveAttr.IsAttribute && areceiveAttr.AsT0.Length > 0)
 		{
 			var areceiveActions = areceiveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(areceiveActions.ToPlainText()))
 			{
-				await parser.CommandParse(areceiveActions);
+				await parser.With(
+					state => state with { Executor = recipient.Object().DBRef, Caller = state.Executor },
+					async p => await p.CommandParse(areceiveActions));
 			}
 		}
 
-		// Trigger @success attribute on object
+		// Trigger @success attribute on object being given
+		// Executor = the object being given; enactor = player who gave (PennMUSH @a* semantics)
 		var successAttr = await AttributeService!.GetAttributeAsync(executor, objectToGive, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
 		{
 			var successActions = successAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(successActions.ToPlainText()))
 			{
-				await parser.CommandParse(successActions);
+				await parser.With(
+					state => state with { Executor = objectToGive.Object().DBRef, Caller = state.Executor },
+					async p => await p.CommandParse(successActions));
 			}
 		}
 
@@ -2215,13 +2236,16 @@ public partial class Commands
 			}
 
 			// Trigger @alfail attribute (actions on failed leave)
+			// Executor = the container whose leave-lock failed; enactor = player (PennMUSH @a* semantics)
 			var alfailAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALFail, IAttributeService.AttributeMode.Read, true);
 			if (alfailAttr.IsAttribute && alfailAttr.AsT0.Length > 0)
 			{
 				var alfailActions = alfailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(alfailActions.ToPlainText()))
 				{
-					await parser.CommandParse(alfailActions);
+					await parser.With(
+						state => state with { Executor = container.Object().DBRef, Caller = state.Executor },
+						async p => await p.CommandParse(alfailActions));
 				}
 			}
 
@@ -2285,13 +2309,16 @@ public partial class Commands
 		}
 
 		// Trigger @aleave attribute (actions after leaving)
+		// Executor = the container left; enactor = player (PennMUSH @a* semantics)
 		var aleaveAttr = await AttributeService!.GetAttributeAsync(executor, container, AttrALeave, IAttributeService.AttributeMode.Read, true);
 		if (aleaveAttr.IsAttribute && aleaveAttr.AsT0.Length > 0)
 		{
 			var aleaveActions = aleaveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(aleaveActions.ToPlainText()))
 			{
-				await parser.CommandParse(aleaveActions);
+				await parser.With(
+					state => state with { Executor = container.Object().DBRef, Caller = state.Executor },
+					async p => await p.CommandParse(aleaveActions));
 			}
 		}
 
@@ -2431,7 +2458,10 @@ public partial class Commands
 							}
 						case { IsAttribute: true, AsAttribute: var attr }:
 							{
-								await parser.CommandParse(attr.Last().Value);
+								// Executor = the recipient (PAGE_LOCK`AFAILURE is on the recipient); enactor = pager
+								await parser.With(
+									state => state with { Executor = recipient.Object().DBRef, Caller = state.Executor },
+									async p => await p.CommandParse(attr.Last().Value));
 								break;
 							}
 					}
@@ -2684,13 +2714,16 @@ public partial class Commands
 			}
 
 			// Trigger @AUFAIL attribute (actions on failure)
+			// Executor = the object with @AUFAIL; enactor = player (PennMUSH @a* semantics)
 			var aufailAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "AUFAIL", IAttributeService.AttributeMode.Read, true);
 			if (aufailAttr.IsAttribute && aufailAttr.AsT0.Length > 0)
 			{
 				var aufailActions = aufailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(aufailActions.ToPlainText()))
 				{
-					await parser.CommandParse(aufailActions);
+					await parser.With(
+						state => state with { Executor = objectToUse.Object().DBRef, Caller = state.Executor },
+						async p => await p.CommandParse(aufailActions));
 				}
 			}
 
@@ -2726,13 +2759,16 @@ public partial class Commands
 		}
 
 		// Trigger @AUSE attribute (actions after use)
+		// Executor = the object used; enactor = player (PennMUSH @a* semantics)
 		var auseAttr = await AttributeService!.GetAttributeAsync(executor, objectToUse, "AUSE", IAttributeService.AttributeMode.Read, true);
 		if (auseAttr.IsAttribute && auseAttr.AsT0.Length > 0)
 		{
 			var auseActions = auseAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(auseActions.ToPlainText()))
 			{
-				await parser.CommandParse(auseActions);
+				await parser.With(
+					state => state with { Executor = objectToUse.Object().DBRef, Caller = state.Executor },
+					async p => await p.CommandParse(auseActions));
 			}
 		}
 

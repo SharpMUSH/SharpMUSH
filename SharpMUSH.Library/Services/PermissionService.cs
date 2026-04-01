@@ -28,9 +28,9 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 				.DistinctBy(x => x.Name)
 		};
 
+		// TODO: Internal and SAFE attribute flag checks not yet implemented.
 		return !(!executor.IsGod()
-						 // && (It's Internal // SAFE when we care about SAFE)
-						 || !(await executor.IsWizard()
+						 && !(await executor.IsWizard()
 									|| (!compressedAttribute.IsWizard()
 											&& (!compressedAttribute.IsLocked()
 													|| await compressedAttribute.Owner.WithCancellation(CancellationToken.None) ==

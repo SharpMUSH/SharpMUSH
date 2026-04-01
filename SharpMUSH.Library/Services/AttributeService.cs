@@ -1,5 +1,4 @@
-﻿using DotNext;
-using Mediator;
+﻿using Mediator;
 using NaturalSort.Extension;
 using OneOf;
 using OneOf.Types;
@@ -231,6 +230,12 @@ public class AttributeService(
 		var objPlainText = obj.ToPlainText();
 		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
+
+		if (!applyPredicate && !lambdaPredicate && attribute.Length == 0)
+		{
+			return await EvaluateAttributeFunctionAsync(parser, executor, executor,
+				objPlainText, args, evalParent, ignorePermissions);
+		}
 
 		// Skip attribute name validation for lambda/apply: the "attribute" part is
 		// executable code, not a database attribute name, and can contain characters
@@ -565,9 +570,6 @@ public class AttributeService(
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
 
-		await notifyService.Notify(executor,
-			$"Attribute {string.Join("`", attrPath)} SET.", obj);
-
 		return new Success();
 	}
 
@@ -597,7 +599,7 @@ public class AttributeService(
 
 		var attrArr = await attr.ToArrayAsync();
 
-		if (attrArr.IsNullOrEmpty()
+		if (attrArr.Length == 0
 				|| !await attrArr.ToAsyncEnumerable().AllAsync(async (x, _) => await ps.CanSet(executor, obj, x)))
 		{
 			return new Error<string>(Errors.ErrorAttrSetPermissions);
@@ -614,12 +616,6 @@ public class AttributeService(
 				await mediator.Send(new WipeAttributeCommand(obj.Object().DBRef, pathParts));
 			else
 				await mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, pathParts));
-		}
-
-		foreach (var attrDone in attrArr)
-		{
-			await notifyService.Notify(executor,
-				$"Attribute {attrDone.LongName} CLEARED.", obj);
 		}
 
 		return new Success();
