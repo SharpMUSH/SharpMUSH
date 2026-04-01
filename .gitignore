@@ -412,3 +412,4 @@ gen
 # Text files directory - managed separately
 TextFiles/
 /nul
+test_output.txt

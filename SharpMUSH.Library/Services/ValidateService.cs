@@ -40,6 +40,8 @@ public partial class ValidateService(
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.AttributeValue when target is { IsT1: true }
 				=> ValidateAttributeValue(value, target.AsT1),
+			IValidateService.ValidationType.AttributeValue
+				=> ValidateAttributeValueBasic(value),
 			IValidateService.ValidationType.ColorName
 				=> true,
 			IValidateService.ValidationType.AnsiCode
@@ -163,6 +165,16 @@ public partial class ValidateService(
 				=> CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
 			_ => false
 		};
+	}
+
+	/// <summary>
+	/// Validates an attribute value without a specific target attribute — only checks byte length.
+	/// </summary>
+	private bool ValidateAttributeValueBasic(MString value)
+	{
+		var plainValue = value.ToPlainText();
+		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
+		return Encoding.UTF8.GetByteCount(plainValue) <= maxBytes;
 	}
 
 	/// <summary>
