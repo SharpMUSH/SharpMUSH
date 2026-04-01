@@ -1521,7 +1521,7 @@ public partial class Functions
 		}
 
 		var maybeLocate = await LocateService!.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError || !maybeLocate.IsPlayer)
+		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState("#-1");
 		}
