@@ -252,10 +252,10 @@ public class AttributeFunctionUnitTests
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_CHILD")]
 	[Arguments(
-		"[setq(0,create(Pgrep_IsolChild1))][setq(1,parent(%q0,create(Pgrep_IsolParent1)))]" +
-		"[attrib_set(%q1/PGREP_ISOL_PARENT_ATTR,child_value)]" +
-		"[pgrep(%q0,PGREP_ISOL_PARENT_*,child)]",
-		"PGREP_ISOL_PARENT_ATTR")]
+		"[setq(0,create(AttrFuncTest_Pgrep_ChildObj_ParentInherit))][setq(1,parent(%q0,create(AttrFuncTest_Pgrep_ParentObj_ParentInherit)))]" +
+		"[attrib_set(%q1/PGREP_PARENTINHERIT_ATTR,child_value)]" +
+		"[pgrep(%q0,PGREP_PARENTINHERIT_*,child)]",
+		"PGREP_PARENTINHERIT_ATTR")]
 	public async Task Test_Pgrep_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -265,12 +265,12 @@ public class AttributeFunctionUnitTests
 	[Test]
 	[NotInParallel]
 	[Arguments(
-		"[setq(0,create(Reglattrp_IsolChild))][setq(1,parent(%q0,create(Reglattrp_IsolParent)))]" +
-		"[attrib_set(%q0/REGLATTRP_ISOL_001,value1)]" +
-		"[attrib_set(%q1/REGLATTRP_ISOL_002,value2)]" +
-		"[attrib_set(%q0/REGLATTRP_ISOL_100,value3)]" +
-		"[reglattrp(%q0/^REGLATTRP_ISOL_)]",
-		"REGLATTRP_ISOL_001 REGLATTRP_ISOL_002 REGLATTRP_ISOL_100")]
+		"[setq(0,create(AttrFuncTest_Reglattrp_ChildObj_ParentInherit))][setq(1,parent(%q0,create(AttrFuncTest_Reglattrp_ParentObj_ParentInherit)))]" +
+		"[attrib_set(%q0/REGLATTRP_PARENTINHERIT_001,value1)]" +
+		"[attrib_set(%q1/REGLATTRP_PARENTINHERIT_002,value2)]" +
+		"[attrib_set(%q0/REGLATTRP_PARENTINHERIT_100,value3)]" +
+		"[reglattrp(%q0/^REGLATTRP_PARENTINHERIT_)]",
+		"REGLATTRP_PARENTINHERIT_001 REGLATTRP_PARENTINHERIT_002 REGLATTRP_PARENTINHERIT_100")]
 	public async Task Test_Reglattrp_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -280,11 +280,11 @@ public class AttributeFunctionUnitTests
 	[Test]
 	[NotInParallel]
 	[Arguments(
-		"[setq(0,create(Regnattrp_IsolChild))][setq(1,parent(%q0,create(Regnattrp_IsolParent)))]" +
-		"[attrib_set(%q0/REGNATTRP_ISOL_001,value1)]" +
-		"[attrib_set(%q1/REGNATTRP_ISOL_002,value2)]" +
-		"[attrib_set(%q0/REGNATTRP_ISOL_100,value3)]" +
-		"[regnattrp(%q0/^REGNATTRP_ISOL_)]",
+		"[setq(0,create(AttrFuncTest_Regnattrp_ChildObj_ParentInherit))][setq(1,parent(%q0,create(AttrFuncTest_Regnattrp_ParentObj_ParentInherit)))]" +
+		"[attrib_set(%q0/REGNATTRP_PARENTINHERIT_001,value1)]" +
+		"[attrib_set(%q1/REGNATTRP_PARENTINHERIT_002,value2)]" +
+		"[attrib_set(%q0/REGNATTRP_PARENTINHERIT_100,value3)]" +
+		"[regnattrp(%q0/^REGNATTRP_PARENTINHERIT_)]",
 		"3")]
 	public async Task Test_Regnattrp_CountWithParents(string str, string expected)
 	{
@@ -300,12 +300,12 @@ public class AttributeFunctionUnitTests
 						 "[regxattrp(%!/Test_Regxattrp_RangeWithParents_\\[0-9\\]+,1,2)]",
 		"TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")]
 	[Arguments(
-		"[setq(0,create(Regxattrp_IsolChild2))][setq(1,parent(%q0,create(Regxattrp_IsolParent2)))]" +
-		"[attrib_set(%q0/REGXATTRP_ISOL2_001,value1)]" +
-		"[attrib_set(%q1/REGXATTRP_ISOL2_002,value2)]" +
-		"[attrib_set(%q0/REGXATTRP_ISOL2_100,value3)]" +
-		"[regxattrp(%q0/^REGXATTRP_ISOL2_,1,2)]",
-		"REGXATTRP_ISOL2_001 REGXATTRP_ISOL2_002")]
+		"[setq(0,create(AttrFuncTest_Regxattrp_ChildObj_ParentInherit))][setq(1,parent(%q0,create(AttrFuncTest_Regxattrp_ParentObj_ParentInherit)))]" +
+		"[attrib_set(%q0/REGXATTRP_PARENTINHERIT_001,value1)]" +
+		"[attrib_set(%q1/REGXATTRP_PARENTINHERIT_002,value2)]" +
+		"[attrib_set(%q0/REGXATTRP_PARENTINHERIT_100,value3)]" +
+		"[regxattrp(%q0/^REGXATTRP_PARENTINHERIT_,1,2)]",
+		"REGXATTRP_PARENTINHERIT_001 REGXATTRP_PARENTINHERIT_002")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
