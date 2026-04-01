@@ -1,12 +1,16 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class SystemCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -15,6 +19,7 @@ public class SystemCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Category("NotImplemented")]
@@ -81,7 +86,9 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HideCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide #1"));
+		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestHide");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hide {testDbRef}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -93,7 +100,9 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask KickCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@kick #1"));
+		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestKick");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@kick {testDbRef}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -105,7 +114,9 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AttributeCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TEST=wizard"));
+		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATTRTEST").ToUpperInvariant();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@attribute/access {uniqueAttr}=wizard"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -117,7 +128,10 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrlockCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrlock #1/TEST=me"));
+		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrlock");
+		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRLOCKATTR").ToUpperInvariant();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {testDbRef}/{uniqueAttr}=me"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -129,7 +143,11 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrchownCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@atrchown #1/TEST=#2"));
+		var sourceDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrchownSrc");
+		var targetPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "SystemTestAtrchownPly");
+		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRCHOWNATTR").ToUpperInvariant();
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrchown {sourceDbRef}/{uniqueAttr}={targetPlayerDbRef}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -141,7 +159,19 @@ public class SystemCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FirstexitCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@firstexit #1=#2"));
+		var roomName = TestIsolationHelpers.GenerateUniqueName("SystemTestFirstexitRoom");
+		var roomResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var roomMessage = roomResult.Message?.ToPlainText()
+			?? throw new InvalidOperationException($"@dig {roomName} returned a null message.");
+		var roomDbRef = DBRef.Parse(roomMessage);
+
+		var exitName = TestIsolationHelpers.GenerateUniqueName("SystemTestFirstexitExit");
+		var exitResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@open {exitName}"));
+		var exitMessage = exitResult.Message?.ToPlainText()
+			?? throw new InvalidOperationException($"@open {exitName} returned a null message.");
+		var exitDbRef = DBRef.Parse(exitMessage);
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@firstexit {roomDbRef}={exitDbRef}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
