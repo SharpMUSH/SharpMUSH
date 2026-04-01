@@ -198,43 +198,45 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Zones Not Yet Implemented")]
-	[Arguments("zfun(TEST_ATTR)", "#-1 ZONES NOT YET IMPLEMENTED")]
-	public async Task Test_Zfun_NotImplemented(string str, string expected)
+	[Arguments("zfun(TEST_ATTR)", "#-1 NO ZONE SET")]
+	public async Task Test_Zfun_NoZoneSet(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regrep(%#,test,*)", "")]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/Regrep_Unique_Attr_A1,hello_world)][attrib_set(%!/Regrep_Unique_Attr_A2,goodbye)][regrep(%!,Regrep_Unique_Attr_A*,hello)]",
+		"REGREP_UNIQUE_ATTR_A1")]
+	[Arguments("[attrib_set(%!/Regrep_Unique_Attr_B1,match_prefix_value)][attrib_set(%!/Regrep_Unique_Attr_B2,no_match)][regrep(%!,Regrep_Unique_Attr_B*,match_prefix)]",
+		"REGREP_UNIQUE_ATTR_B1")]
 	public async Task Regrep(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regrepi(%#,test,*)", "")]
+	[NotInParallel]
+	[Arguments("[attrib_set(%!/Regrepi_Unique_Attr_C1,HELLO_WORLD)][attrib_set(%!/Regrepi_Unique_Attr_C2,goodbye)][regrepi(%!,Regrepi_Unique_Attr_C*,hello)]",
+		"REGREPI_UNIQUE_ATTR_C1")]
+	[Arguments("[attrib_set(%!/Regrepi_Unique_Attr_D1,MixedCase_Value)][attrib_set(%!/Regrepi_Unique_Attr_D2,other)][regrepi(%!,Regrepi_Unique_Attr_D*,mixedcase)]",
+		"REGREPI_UNIQUE_ATTR_D1")]
 	public async Task Regrepi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	[Arguments("regedit(obj/attr,pattern,replacement)", "")]
+	[Arguments("regedit(hello world,hello,goodbye)", "goodbye world")]
+	[Arguments("regedit(test_value,value,replacement)", "test_replacement")]
+	[Arguments("regedit(aaa,a,b)", "baa")]
 	public async Task Regedit(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -249,9 +251,11 @@ public class AttributeFunctionUnitTests
 	[Test]
 	[NotInParallel]
 	[Arguments("[attrib_set(%!/PGREP_CHILD,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_CHILD")]
-	[Category("NotImplemented")]
-	[Arguments("[attrib_set([parent(me,create(PGREP_PARENT))]/PGREP_PARENT,child_value)][pgrep(%!,PGREP_*,child)]", "PGREP_PARENT")
-	 , Skip("Parent Mode not implemented yet.")]
+	[Arguments(
+		"[setq(0,create(Pgrep_IsolChild1))][setq(1,parent(%q0,create(Pgrep_IsolParent1)))]" +
+		"[attrib_set(%q1/PGREP_ISOL_PARENT_ATTR,child_value)]" +
+		"[pgrep(%q0,PGREP_ISOL_PARENT_*,child)]",
+		"PGREP_ISOL_PARENT_ATTR")]
 	public async Task Test_Pgrep_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -260,13 +264,13 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Category("NotImplemented")]
-	[Arguments("[attrib_set(%!/Test_Reglattrp_IncludesParents_001,value1)]" +
-						 "[attrib_set([parent(me,create(Test_Reglattrp_IncludesParents))]/Test_Reglattrp_IncludesParents_002,value2)]" +
-						 "[attrib_set(%!/Test_Reglattrp_IncludesParents_100,value3)]" +
-						 "[reglattrp(%!,Test_Reglattrp_IncludesParents_[0-9]+)]",
-		"Test_Reglattrp_IncludesParents_001 Test_Reglattrp_IncludesParents_002 Test_Reglattrp_IncludesParents_100")
-	 , Skip("Parent Mode not implemented yet.")]
+	[Arguments(
+		"[setq(0,create(Reglattrp_IsolChild))][setq(1,parent(%q0,create(Reglattrp_IsolParent)))]" +
+		"[attrib_set(%q0/REGLATTRP_ISOL_001,value1)]" +
+		"[attrib_set(%q1/REGLATTRP_ISOL_002,value2)]" +
+		"[attrib_set(%q0/REGLATTRP_ISOL_100,value3)]" +
+		"[reglattrp(%q0/^REGLATTRP_ISOL_)]",
+		"REGLATTRP_ISOL_001 REGLATTRP_ISOL_002 REGLATTRP_ISOL_100")]
 	public async Task Test_Reglattrp_IncludesParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -275,12 +279,13 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Category("NotImplemented")]
-	[Arguments("[attrib_set(%!/Test_Regnattrp_CountWithParents_001,value1)]" +
-						 "[attrib_set([parent(me,create(Test_Regnattrp_CountWithParents))]/Test_Regnattrp_CountWithParents_002,value2)]" +
-						 "[attrib_set(%!/Test_Regnattrp_CountWithParents_100,value3)]" +
-						 "[regnattrp(%!,Test_Regnattrp_CountWithParents_[0-9]+)]", "3")
-	 , Skip("Parent Mode not implemented yet.")]
+	[Arguments(
+		"[setq(0,create(Regnattrp_IsolChild))][setq(1,parent(%q0,create(Regnattrp_IsolParent)))]" +
+		"[attrib_set(%q0/REGNATTRP_ISOL_001,value1)]" +
+		"[attrib_set(%q1/REGNATTRP_ISOL_002,value2)]" +
+		"[attrib_set(%q0/REGNATTRP_ISOL_100,value3)]" +
+		"[regnattrp(%q0/^REGNATTRP_ISOL_)]",
+		"3")]
 	public async Task Test_Regnattrp_CountWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -289,19 +294,18 @@ public class AttributeFunctionUnitTests
 
 	[Test]
 	[NotInParallel]
-	[Category("NotImplemented")]
 	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents_001,value1)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_002,value2)]" +
 						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents_100,value3)]" +
-						 "[regxattrp(%!/Test_Regxattrp_RangeWithParents_[0-9]+,1,2)]",
-		"TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")
-	 , Skip("Parent Mode not implemented yet.")]
-	[Category("NotImplemented")]
-	[Arguments("[attrib_set(%!/Test_Regxattrp_RangeWithParents2_001,value1)]" +
-						 "[attrib_set([parent(me,create(Test_Regxattrp_RangeWithParents2))]/Test_Regxattrp_RangeWithParents2_002,value2)]" +
-						 "[attrib_set(%!/Test_Regxattrp_RangeWithParents2_100,value3)][regxattrp(%!/Test_Regxattrp_RangeWithParents2_[0-9]+,1,2)]",
-		"TEST_REGXATTRP_RANGEWITHPARENTS2_001 TEST_REGXATTRP_RANGEWITHPARENTS2_002")
-	 , Skip("Parent Mode not implemented yet.")]
+						 "[regxattrp(%!/Test_Regxattrp_RangeWithParents_\\[0-9\\]+,1,2)]",
+		"TEST_REGXATTRP_RANGEWITHPARENTS_001 TEST_REGXATTRP_RANGEWITHPARENTS_002")]
+	[Arguments(
+		"[setq(0,create(Regxattrp_IsolChild2))][setq(1,parent(%q0,create(Regxattrp_IsolParent2)))]" +
+		"[attrib_set(%q0/REGXATTRP_ISOL2_001,value1)]" +
+		"[attrib_set(%q1/REGXATTRP_ISOL2_002,value2)]" +
+		"[attrib_set(%q0/REGXATTRP_ISOL2_100,value3)]" +
+		"[regxattrp(%q0/^REGXATTRP_ISOL2_,1,2)]",
+		"REGXATTRP_ISOL2_001 REGXATTRP_ISOL2_002")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -555,8 +559,6 @@ public class AttributeFunctionUnitTests
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Attribute value validation without target attribute requires ValidateService enhancement")]
 	[Arguments("valid(attrvalue,test_value)", "1")]
 	[Arguments("valid(attrvalue,test_value,NONEXISTENT_ATTR)", "1")]
 	public async Task Valid_AttributeValue(string str, string expected)
