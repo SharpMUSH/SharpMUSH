@@ -59,13 +59,16 @@ public partial class Commands
 				if (!args.TryGetValue("2", out var tmpContents))
 				{
 					// PennMUSH: & attr obj (no '=') deletes (wipes) the attribute.
-					// Use enactor (cause/%#) for permission checking, matching PennMUSH do_set_atr()
-					// which uses the triggering player's permissions, not the object executing the command.
+					// command_atrset() in cmds.c passes executor to do_set_atr() for both
+					// match_controlled() permission check and notify().
+					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/cmds.c#L1790
+					// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
+					// Notifications go to executor so softcoded WIZARD objects don't leak confirmations to players.
 					var clearResult = await AttributeService!.ClearAttributeAsync(
-						enactor, realLocated, attrName,
+						executor, realLocated, attrName,
 						IAttributeService.AttributePatternMode.Exact,
 						IAttributeService.AttributeClearMode.Safe);
-					await NotifyService!.Notify(enactor,
+					await NotifyService!.Notify(executor,
 						clearResult.Match(
 							_ => $"Attribute {attrName} SET.",
 							failure => failure.Value)
@@ -84,11 +87,14 @@ public partial class Commands
 					? tmpContents.Message!
 					: await tmpContents.ParsedMessage() ?? MModule.empty();
 
-				// Use enactor (cause/%#) for permission checking, matching PennMUSH do_set_atr()
-				// semantics: the player who triggered the command is the permission grantor.
+				// command_atrset() in cmds.c passes executor to do_set_atr() for both
+				// match_controlled() permission check and notify().
+				// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/cmds.c#L1790
+				// https://github.com/pennmush/pennmush/blob/80a1d5b9dffee3587d0110759bdfc5f0f60cfb3f/src/attrib.c#L2449
+				// Notifications go to executor so softcoded WIZARD objects don't leak confirmations to players.
 				var setResult =
-					await AttributeService!.SetAttributeAsync(enactor, realLocated, attrName, contents);
-				await NotifyService!.Notify(enactor,
+					await AttributeService!.SetAttributeAsync(executor, realLocated, attrName, contents);
+				await NotifyService!.Notify(executor,
 					setResult.Match(
 						_ => $"{realLocated.Object().Name}/{attrNameParsed} - Set.",
 						failure => failure.Value)

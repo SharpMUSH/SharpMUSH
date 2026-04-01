@@ -4,6 +4,7 @@ using NSubstitute;
 using NSubstitute.Core;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -27,6 +28,24 @@ public class MyrddinBBSIntegrationTests
 	/// Static so it survives across test method invocations within the same session.
 	/// </summary>
 	private static string? _bbpocketDbref;
+
+	/// <summary>
+	/// DBRef of the mbboard object created during BBS install.
+	/// Used to co-locate the BBSTester player so that mbboard's $-commands fire.
+	/// </summary>
+	private static string? _mbboardDbref;
+
+	/// <summary>
+	/// Connection handle for a non-God test player, used by BBS tests that require
+	/// a regular user (not God). WIZARD BBS objects cannot set attributes on God (#1),
+	/// matching PennMUSH's controls() behaviour (Wizard can't control God).
+	/// </summary>
+	private static long _regularUserHandle;
+
+	/// <summary>
+	/// DBRef of the regular test user created during BBS install.
+	/// </summary>
+	private static string? _regularUserDbref;
 
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -175,6 +194,7 @@ public class MyrddinBBSIntegrationTests
 					var numResult = await Parser.CommandParse(1, ConnectionService,
 						MModule.single("think [num(mbboard)]"));
 					mbboardDbref = numResult.Message?.ToPlainText()?.Trim();
+					_mbboardDbref = mbboardDbref; // Share with dependent tests
 					Log($"[BBS INSTALL] mbboard created with dbref: {mbboardDbref}");
 
 					// Set DEBUG, VERBOSE, PUPPET on mbboard for comprehensive diagnostics
@@ -196,6 +216,46 @@ public class MyrddinBBSIntegrationTests
 		// Wait for delayed @wait callbacks in the BBS install to complete
 		// The install script uses @wait 1={...} and @wait 3={...} at the end
 		await Task.Delay(5000);
+
+		// Create a regular (non-God) player for BBS tests that need a normal user.
+		// The WIZARD BBS object cannot set attributes on God (#1) — controls(WIZARD, God) → false
+		// in both PennMUSH and SharpMUSH. BBS operations should be tested as a regular player.
+		// Use pmatch() (not num()) to look up the player by name — num() requires the object to be
+		// visible from the caller's location, but pmatch() does a global player-name search.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate BBSTester=bbs_test_password_123"));
+		var testerDbrefResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single("think [pmatch(BBSTester)]"));
+		_regularUserDbref = testerDbrefResult.Message?.ToPlainText()?.Trim();
+		Log($"[BBS INSTALL] Regular test user created with dbref: {_regularUserDbref}");
+		if (!string.IsNullOrEmpty(_regularUserDbref) && _regularUserDbref != "#-1"
+			&& DBRef.TryParse(_regularUserDbref, out var testerDbRef))
+		{
+			_regularUserHandle = 2L;
+			await ConnectionService.Register(2L, "localhost", "localhost", "test",
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8);
+			await ConnectionService.Bind(2L, testerDbRef!.Value);
+			Log($"[BBS INSTALL] Regular test user bound to handle {_regularUserHandle}.");
+
+			// Teleport BBSTester to the same room as mbboard so that mbboard's $-commands fire.
+			// In PennMUSH, $-commands on an object fire for players in the same room.
+			// mbboard is in God's room at creation time; BBSTester's default home may differ.
+			if (!string.IsNullOrEmpty(_mbboardDbref))
+			{
+				var mbboardLocResult = await Parser.CommandParse(1, ConnectionService,
+					MModule.single($"think [loc({_mbboardDbref})]"));
+				var mbboardLoc = mbboardLocResult.Message?.ToPlainText()?.Trim();
+				if (!string.IsNullOrEmpty(mbboardLoc) && !mbboardLoc.StartsWith("#-"))
+				{
+					await Parser.CommandParse(1, ConnectionService,
+						MModule.single($"@tel {_regularUserDbref}={mbboardLoc}"));
+					Log($"[BBS INSTALL] Teleported BBSTester to mbboard's room: {mbboardLoc}.");
+				}
+			}
+		}
+		else
+		{
+			Log("[BBS INSTALL] WARNING: Failed to create regular test user — some tests may use God.");
+		}
 
 		// Track notification count after installation but before +bbread
 		var postInstallNotificationCount = NotifyService.ReceivedCalls()
@@ -421,6 +481,17 @@ public class MyrddinBBSIntegrationTests
 	{
 		var before = NotificationCount();
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		if (delayMs > 0)
+			await Task.Delay(delayMs);
+		var after = NotificationCount();
+		return GetNotificationMessages(before, after);
+	}
+
+	/// <summary>Runs a command as a specific connection handle and collects all notifications.</summary>
+	private async Task<IReadOnlyList<string>> RunAndCollectAs(string command, long handle, int delayMs = 0)
+	{
+		var before = NotificationCount();
+		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
 		if (delayMs > 0)
 			await Task.Delay(delayMs);
 		var after = NotificationCount();
@@ -1492,6 +1563,8 @@ public class MyrddinBBSIntegrationTests
 
 	/// <summary>
 	/// Leaves and re-joins BBTestGroup2 with +bbleave and +bbjoin.
+	/// Uses a non-God regular player because WIZARD BBS objects cannot set attributes on God (#1)
+	/// — this matches PennMUSH's controls() semantics where Wizard can't control God.
 	/// </summary>
 	[Test]
 	[DependsOn(nameof(BBS_BBMove_MovesMessage))]
@@ -1504,12 +1577,18 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBLEAVE_AND_JOIN");
 		Log(new string('=', 78));
 
-		var leaveMsgs = await RunAndCollect("+bbleave 2");
+		// Use the non-God test player: the WIZARD BBS executor cannot set bb_omit on God (#1).
+		// In PennMUSH, controls(WIZARD_obj, God) → false — same as SharpMUSH.
+		// The regular user handle was created during BBS installation.
+		var userHandle = _regularUserHandle > 0 ? _regularUserHandle : 1L;
+		Log($"  Using handle {userHandle} (regular user: {_regularUserDbref ?? "God fallback"})");
+
+		var leaveMsgs = await RunAndCollectAs("+bbleave 2", userHandle);
 		Log($"  +bbleave 2 notifications: {leaveMsgs.Count}");
 		for (var i = 0; i < leaveMsgs.Count; i++)
 			Log($"  [leave/{i}] {Truncate(leaveMsgs[i], 200)}");
 
-		var joinMsgs = await RunAndCollect("+bbjoin 2");
+		var joinMsgs = await RunAndCollectAs("+bbjoin 2", userHandle);
 		Log($"  +bbjoin 2 notifications: {joinMsgs.Count}");
 		for (var i = 0; i < joinMsgs.Count; i++)
 			Log($"  [join/{i}] {Truncate(joinMsgs[i], 200)}");
