@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
+using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -21,97 +21,123 @@ public class SystemCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	// PennMUSH reference: cmd_flag with SWITCH_LIST calls do_list_flags("FLAG", ..., FLAG_LIST_NAMECHAR, T("Flags"))
+	// SharpMUSH outputs a table beginning with "Object Flags:".
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask FlagCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Flags:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PennMUSH reference: cmd_power with SWITCH_LIST calls do_list_flags("POWER", ..., FLAG_LIST_NAMECHAR, T("Powers"))
+	// SharpMUSH outputs a table beginning with "Object Powers:".
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask PowerCommand()
 	{
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Powers:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PennMUSH reference: cmd_hook with SWITCH_LIST calls do_hook_list(executor, arg_left, 1).
+	// With a command name argument but no hooks set, SharpMUSH outputs "No hooks set for command '<CMD>'."
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask HookCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hook/list"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hook/list @emit"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "No hooks set for command '@EMIT'.")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PennMUSH reference: cmd_function with no args/switches calls do_function(executor, NULL, NULL, 0)
+	// which lists user-defined and built-in functions. SharpMUSH outputs "Global user-defined functions:".
+	// Note: @function has no /list switch; calling @function/list returns an invalid-switch error.
+	// The expected full output is "#-1 INVALID SWITCH: list".
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask FunctionCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@function/list"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@function/list"));
 
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: list");
 	}
 
+	// PennMUSH reference: @command with no arg returns an error.
+	// SharpMUSH @command has no /list switch; calling @command/list returns an invalid-switch error.
+	// The expected full output is "#-1 INVALID SWITCH: list".
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask CommandCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@command/list"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@command/list"));
 
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: list");
 	}
 
+	// PennMUSH reference: cmd_hide calls hide_player(executor, status, arg_left).
+	// @HIDE acts on the executor. /off ensures a known starting state, /on then hides the executor.
+	// Expected: "You are now hidden from the WHO list."
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask HideCommand()
 	{
-		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestHide");
+		// Ensure executor starts visible so the subsequent /on produces a deterministic message.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hide {testDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+
+		// Restore to visible state.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
 	}
 
+	// PennMUSH reference: cmd_kick calls do_kick(executor, arg_left).
+	// Kicking a player who has no active connections outputs "That player is not connected."
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask KickCommand()
 	{
-		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestKick");
+		var testPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "SystemTestKick");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@kick {testDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@kick {testPlayerDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "That player is not connected.")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PennMUSH reference: do_attribute_access outputs:
+	//   notify_format(player, T("%s -- Attribute permissions now: %s"), name, privs_to_string(attr_privs_view, flags))
+	// e.g. "MYATTR -- Attribute permissions now: wizard"
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask AttributeCommand()
 	{
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATTRTEST").ToUpperInvariant();
@@ -119,62 +145,81 @@ public class SystemCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@attribute/access {uniqueAttr}=wizard"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, $"{uniqueAttr} -- Attribute permissions now: wizard")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PennMUSH reference: do_atrlock on success outputs "Attribute locked." (attrib.c).
+	// The attribute must already exist before @atrlock can lock it.
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrlockCommand()
 	{
 		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrlock");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRLOCKATTR").ToUpperInvariant();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {testDbRef}/{uniqueAttr}=me"));
+		// Create the attribute first so it exists on the object.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{uniqueAttr} {testDbRef}=atrlock_test_value"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@atrlock {testDbRef}/{uniqueAttr}=on"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute locked.")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PennMUSH reference: do_atrchown on success outputs "Attribute owner changed." (attrib.c).
+	// The attribute must already exist before @atrchown can change its owner.
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask AtrchownCommand()
 	{
 		var sourceDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrchownSrc");
 		var targetPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "SystemTestAtrchownPly");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRCHOWNATTR").ToUpperInvariant();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrchown {sourceDbRef}/{uniqueAttr}={targetPlayerDbRef}"));
+		// Create the attribute first so it exists on the object.
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"&{uniqueAttr} {sourceDbRef}=atrchown_test_value"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@atrchown {sourceDbRef}/{uniqueAttr}={targetPlayerDbRef}"));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Received()
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute owner changed.")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
 	}
 
+	// PennMUSH reference: do_firstexit re-links an exit to move it to the front of the room's exit list.
+	// No output is produced on success in PennMUSH. @firstexit takes exit names as space-separated args (CMD_T_ARGS).
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask FirstexitCommand()
 	{
-		var roomName = TestIsolationHelpers.GenerateUniqueName("SystemTestFirstexitRoom");
-		var roomResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
-		var roomMessage = roomResult.Message?.ToPlainText()
-			?? throw new InvalidOperationException($"@dig {roomName} returned a null message.");
-		var roomDbRef = DBRef.Parse(roomMessage);
-
 		var exitName = TestIsolationHelpers.GenerateUniqueName("SystemTestFirstexitExit");
-		var exitResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@open {exitName}"));
+		var exitResult = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@open {exitName}"));
 		var exitMessage = exitResult.Message?.ToPlainText()
 			?? throw new InvalidOperationException($"@open {exitName} returned a null message.");
 		var exitDbRef = DBRef.Parse(exitMessage);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@firstexit {roomDbRef}={exitDbRef}"));
+		// @firstexit is silent on success (PennMUSH: do_firstexit produces no notify).
+		// Pass just the exit dbref as a space-separated argument (not room=exit).
+		var result = await Parser.CommandParse(1, ConnectionService,
+			MModule.single($"@firstexit {exitDbRef}"));
 
-		await NotifyService
-			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsEqualTo(string.Empty);
 	}
 }
