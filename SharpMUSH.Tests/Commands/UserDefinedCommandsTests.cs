@@ -5,6 +5,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -16,6 +17,24 @@ public class UserDefinedCommandsTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+
+	[Test]
+	public async ValueTask WildcardEqSplitCommandPassesArgsToEmit()
+	{
+		// Set a $ command attribute with an EqSplit wildcard pattern on #1 (God player, in room #0)
+		await Parser.CommandParse(1, ConnectionService,
+			MModule.single("&UTEST_WILDEQ #1=$utest_wildeq *=*:@emit Boo! %0 - %1"));
+
+		// Fire the command — %0 should be "a", %1 should be "b"
+		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_wildeq a=b"));
+
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Boo! a - b")),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
+	}
 
 	[Test]
 	[Category("TestInfrastructure")]
