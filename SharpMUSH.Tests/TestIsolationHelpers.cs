@@ -1,3 +1,4 @@
+using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
@@ -14,6 +15,11 @@ namespace SharpMUSH.Tests;
 /// </summary>
 public static class TestIsolationHelpers
 {
+	/// <summary>
+	/// Monotonically increasing handle counter.  Starts above any well-known handles
+	/// (handle 1 = God, handle 2 = BBS tester) to avoid collisions.
+	/// </summary>
+	private static long _nextHandle = 100;
 	/// <summary>
 	/// Generates a unique name by combining <paramref name="prefix"/> with the current
 	/// UTC Unix-millisecond timestamp and a random four-digit number.
@@ -48,6 +54,45 @@ public static class TestIsolationHelpers
 			defaultHome,
 			defaultHome,
 			startingQuota));
+	}
+
+	/// <summary>
+	/// Result returned by <see cref="CreateTestPlayerWithHandleAsync"/>: the player's
+	/// <see cref="DBRef"/> together with the connection handle that was registered and
+	/// bound so that <c>CommandParse(handle, …)</c> executes as that player.
+	/// </summary>
+	public record TestPlayer(DBRef DbRef, long Handle);
+
+	/// <summary>
+	/// Creates a fresh, isolated player <b>and</b> registers + binds a unique connection
+	/// handle for it, so commands can be executed as that player via
+	/// <c>Parser.CommandParse(testPlayer.Handle, ConnectionService, …)</c>.
+	/// </summary>
+	/// <param name="services">The test service provider (e.g. <c>WebAppFactoryArg.Services</c>).</param>
+	/// <param name="mediator">The mediator used to send the <see cref="CreatePlayerCommand"/>.</param>
+	/// <param name="connectionService">The connection service to register the handle on.</param>
+	/// <param name="namePrefix">
+	/// A short, human-readable prefix included in the player name
+	/// (e.g. <c>"MvtTelSelf"</c> or <c>"MvtHome"</c>).
+	/// </param>
+	/// <returns>A <see cref="TestPlayer"/> with the DBRef and handle.</returns>
+	public static async Task<TestPlayer> CreateTestPlayerWithHandleAsync(
+		IServiceProvider services,
+		IMediator mediator,
+		IConnectionService connectionService,
+		string namePrefix)
+	{
+		var playerDbRef = await CreateTestPlayerAsync(services, mediator, namePrefix);
+		var handle = Interlocked.Increment(ref _nextHandle);
+
+		await connectionService.Register(
+			handle, "localhost", "localhost", "test",
+			_ => ValueTask.CompletedTask,
+			_ => ValueTask.CompletedTask,
+			() => Encoding.UTF8);
+		await connectionService.Bind(handle, playerDbRef);
+
+		return new TestPlayer(playerDbRef, handle);
 	}
 
 	/// <summary>
