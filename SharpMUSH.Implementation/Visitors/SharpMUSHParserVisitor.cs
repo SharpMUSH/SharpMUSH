@@ -177,7 +177,11 @@ public class SharpMUSHParserVisitor(
 			({ Arguments: not null } agg, { Arguments: not null } next)
 				=> agg with { Arguments = [.. agg.Arguments, .. next.Arguments] },
 			({ Message: not null } agg, { Message: not null } next)
-				=> new CallState(MModule.concat(agg.Message, next.Message), agg.Depth),
+				=> agg with {
+					Message = MModule.concat(agg.Message, next.Message), 
+					ParsedMessage = () => ValueTask.FromResult<MString?>(MModule.concat(agg.Message, next.Message))
+				},
+				// => new CallState(MModule.concat(agg.Message, next.Message), agg.Depth),
 			var (agg, next)
 				=> agg ?? next
 		};
