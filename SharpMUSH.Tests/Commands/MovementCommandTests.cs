@@ -73,7 +73,7 @@ public class MovementCommandTests
 	[Test]
 	public async ValueTask TeleportSelfToRoom()
 	{
-		var player = await CreateTestPlayerAsync("MvtTelSelf");
+		var player = await CreateTestPlayerAsync("TeleportSelf");
 
 		// Create a destination room (as God, who has permission to @dig)
 		var roomName = TestIsolationHelpers.GenerateUniqueName("TelSelfRoom");
@@ -156,7 +156,7 @@ public class MovementCommandTests
 	[Test]
 	public async ValueTask HomeCommand()
 	{
-		var player = await CreateTestPlayerAsync("MvtHome");
+		var player = await CreateTestPlayerAsync("HomeCmd");
 
 		// Create a test room to use as home (as God)
 		var roomName = TestIsolationHelpers.GenerateUniqueName("HomeRoom");
@@ -175,7 +175,7 @@ public class MovementCommandTests
 	[Test]
 	public async ValueTask HomeCommandAlreadyHome()
 	{
-		var player = await CreateTestPlayerAsync("MvtHomeAlready");
+		var player = await CreateTestPlayerAsync("HomeAlready");
 
 		// Execute home command when already at home
 		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("home"));
@@ -199,7 +199,7 @@ public class MovementCommandTests
 	[Test]
 	public async ValueTask LeaveCommand()
 	{
-		var player = await CreateTestPlayerAsync("MvtLeave");
+		var player = await CreateTestPlayerAsync("LeaveCmd");
 
 		// Create a container thing with a unique name (as God)
 		var boxName = TestIsolationHelpers.GenerateUniqueName("LeaveBox");
@@ -222,7 +222,7 @@ public class MovementCommandTests
 	[Test]
 	public async ValueTask LeaveCommandInRoom()
 	{
-		var player = await CreateTestPlayerAsync("MvtLeaveRoom");
+		var player = await CreateTestPlayerAsync("LeaveRoom");
 
 		// Try to leave when in a room (should fail)
 		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("leave"));
