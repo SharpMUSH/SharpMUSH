@@ -32,7 +32,7 @@ public static class SharpAttributeExtensions
 		=> attribute.Flags.Any(x => x.Name is "VISUAL" or "PUBLIC");
 
 	public static bool IsRegexp(this SharpAttribute attribute)
-		=> attribute.Flags.Any(x => x.Name == "REGEXP");
+		=> attribute.Flags.Any(x => x.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
 
 	public static bool IsCase(this SharpAttribute attribute)
 		=> attribute.Flags.Any(x => x.Name == "CASE");

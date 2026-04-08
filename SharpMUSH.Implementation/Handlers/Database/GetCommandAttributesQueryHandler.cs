@@ -32,9 +32,7 @@ public class GetCommandAttributesQueryHandler : IQueryHandler<GetCommandAttribut
 
 			// Extract command pattern and determine if it's REGEX or wildcard
 			var pattern = match.Value.Remove(match.Length - 1, 1).Remove(0, 1);
-			var isRegex = attr.Flags.Any(flag => flag.Name == "REGEX");
-
-			// CommandListIndex points to the start of the command body (after the "$pattern:" prefix).
+			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
 			// Skip any optional leading whitespace so that "$cmd: @pemit" and "$cmd:@pemit" are
 			// both handled correctly — a leading space would otherwise cause an empty command name
 			// when EvaluateCommands strips the first token at its space boundary.
