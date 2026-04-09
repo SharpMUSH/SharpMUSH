@@ -19,6 +19,11 @@ public class TelDiagnosticTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	private static string? ExtractMessage(ICall call)
 	{
@@ -37,7 +42,7 @@ public class TelDiagnosticTests
 	/// </summary>
 	private async ValueTask<string> Eval(string expression)
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"think {expression}"));
+		var result = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"think {expression}"));
 		return result.Message?.ToPlainText()?.Trim() ?? "";
 	}
 
@@ -47,7 +52,7 @@ public class TelDiagnosticTests
 	private async ValueTask<List<string>> ExecAndCollectErrors(string command)
 	{
 		var preCount = NotifyService.ReceivedCalls().Count();
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 		return NotifyService.ReceivedCalls().Skip(preCount)
 			.Select(ExtractMessage)
 			.Where(m => m != null && (m.Contains("#-1") || m.Contains("can't see") || m.Contains("don't see") || m.Contains("can't go")))
@@ -60,14 +65,15 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelThingIntoThingByName()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TelThiIntThi");
 		// Ensure player is in a known room so the locate service can find inventory objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@tel me=#0"));
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("telobj");
 		var destName = TestIsolationHelpers.GenerateUniqueName("teldst");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {destName}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {objName}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {destName}"));
 
 		// Verify both objects are locatable by name before @tel
 		var numObj = await Eval($"num({objName})");
@@ -90,11 +96,12 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelThingIntoThingByDbref()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TelThiIntThi");
 		var objName = TestIsolationHelpers.GenerateUniqueName("telobj2");
 		var destName = TestIsolationHelpers.GenerateUniqueName("teldst2");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
+		var r1 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {objName}"));
 		var obj = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {destName}"));
+		var r2 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {destName}"));
 		var dest = r2.Message!.ToPlainText()!.Trim();
 
 		var errors = await ExecAndCollectErrors($"@tel {obj}={dest}");
@@ -110,12 +117,13 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelSelfIntoThing()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TelSelIntThi");
 		// Ensure player is in a known room so the locate service can find inventory objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@tel me=#0"));
 
 		var containerName = TestIsolationHelpers.GenerateUniqueName("telcont");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {containerName}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {containerName}=ENTER_OK"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {containerName}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {containerName}=ENTER_OK"));
 
 		var errors = await ExecAndCollectErrors($"@tel {containerName}");
 
@@ -130,13 +138,14 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask NameAndGetFunctions()
 	{
+		var testPlayer = await CreateTestPlayerAsync("NamAndGetFun");
 		// Ensure player is in a known room so the locate service can find inventory objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@tel me=#0"));
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("ngobj");
-		var r = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
+		var r = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {objName}"));
 		var dbref = r.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&last_mod {dbref}=2024-01-01"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&last_mod {dbref}=2024-01-01"));
 
 		Console.WriteLine($"Created {objName} = {dbref}");
 
@@ -174,19 +183,20 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask NameAndGetOnObjectInsideContainer()
 	{
+		var testPlayer = await CreateTestPlayerAsync("NamAndGetOn");
 		// Create a container and an inner object with unique names
 		var containerName = TestIsolationHelpers.GenerateUniqueName("diagcont");
 		var innerName = TestIsolationHelpers.GenerateUniqueName("diaginn");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {containerName}"));
+		var r1 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {containerName}"));
 		var containerDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {innerName}"));
+		var r2 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {innerName}"));
 		var innerDbref = r2.Message!.ToPlainText()!.Trim();
 
 		// Set an attribute on the inner object
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&test_attr {innerDbref}=test_value"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&test_attr {innerDbref}=test_value"));
 
 		// Teleport inner inside container (no @wait - direct)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {innerDbref}={containerDbref}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@tel {innerDbref}={containerDbref}"));
 
 		// Now test name() and get() on the inner object by DBREF
 		var nameResult = await Eval($"name({innerDbref})");
@@ -208,20 +218,21 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask NameAndGetOnObjectInsideContainerByName()
 	{
+		var testPlayer = await CreateTestPlayerAsync("NamAndGetOn");
 		// Ensure player is in a known room so the locate service can find inventory objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@tel me=#0"));
 
 		var outerName = TestIsolationHelpers.GenerateUniqueName("diagout");
 		var innerName = TestIsolationHelpers.GenerateUniqueName("diagitm");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {outerName}"));
+		var r1 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {outerName}"));
 		var outerDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {innerName}"));
+		var r2 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {innerName}"));
 		var innerDbref = r2.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&test_attr {innerDbref}=inner_value"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&test_attr {innerDbref}=inner_value"));
 
 		// Teleport inner inside outer
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {innerDbref}={outerDbref}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@tel {innerDbref}={outerDbref}"));
 
 		// Try name() and get() by NAME (not dbref) - these may fail because
 		// the object is no longer in the player's inventory or location
@@ -256,15 +267,16 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelByNameWithObjectsInInventory()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TelByNamWit");
 		// Ensure player is in a known room so the locate service can find inventory objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@tel me=#0"));
 
 		// Create fresh objects with unique names
 		var srcName = TestIsolationHelpers.GenerateUniqueName("telsrc");
 		var dstName = TestIsolationHelpers.GenerateUniqueName("teldst");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {srcName}"));
+		var r1 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {srcName}"));
 		var srcDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {dstName}"));
+		var r2 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {dstName}"));
 		var dstDbref = r2.Message!.ToPlainText()!.Trim();
 
 		Console.WriteLine($"Created {srcName} = {srcDbref}");
@@ -298,23 +310,24 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask BBSStyleEditAndTelFlow()
 	{
+		var testPlayer = await CreateTestPlayerAsync("BBSStyEdiAnd");
 		// Ensure player is in a known room so the locate service can find inventory objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@tel me=#0"));
 
 		// Step 1: Create objects like the BBS does
 		var pocketName = TestIsolationHelpers.GenerateUniqueName("bbspkt");
 		var boardName = TestIsolationHelpers.GenerateUniqueName("bbsbrd");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {pocketName}"));
+		var r1 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {pocketName}"));
 		var pocketDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boardName}"));
+		var r2 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {boardName}"));
 		var boardDbref = r2.Message!.ToPlainText()!.Trim();
 
 		Console.WriteLine($"Created {pocketName} = {pocketDbref}");
 		Console.WriteLine($"Created {boardName} = {boardDbref}");
 
 		// Step 2: Set an attribute with a placeholder reference (like BBS uses #222)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&test_ref {pocketDbref}=Object is #222"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&groups {pocketDbref}="));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&test_ref {pocketDbref}=Object is #222"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&groups {pocketDbref}="));
 
 		// Step 3: Use num() to find objects (like BBS @force me=@edit)
 		// num() returns bare #N format (PennMUSH behavior), while @create returns #N:timestamp.
@@ -333,7 +346,7 @@ public class TelDiagnosticTests
 			.Because("num() should find the board object by name and return bare #N format");
 
 		// Step 4: @edit to replace placeholder (like BBS @force me=@edit)
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@edit {pocketDbref}/*=#222,{pocketDbref}"));
 
 		// Verify the @edit worked
@@ -396,6 +409,7 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask IterOnEmptyString()
 	{
+		var testPlayer = await CreateTestPlayerAsync("IteOnEmpStr");
 		// Test iter with empty list - should produce NO output
 		var r1 = await Eval("iter(,name(##))");
 		Console.WriteLine($"iter(,name(##)) = '{r1}'");
@@ -403,7 +417,7 @@ public class TelDiagnosticTests
 		// Test iter with empty attribute - should produce NO output
 		// Create a unique object and set an empty attribute on it to avoid mutating shared state
 		var emptyAttrObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "IterEmpty");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&empty_attr {emptyAttrObj}="));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&empty_attr {emptyAttrObj}="));
 		var r2 = await Eval($"iter(get({emptyAttrObj}/empty_attr),name(##))");
 		Console.WriteLine($"iter(get({emptyAttrObj}/empty_attr),name(##)) = '{r2}'");
 
@@ -431,24 +445,25 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask BBSReadFailureChain()
 	{
+		var testPlayer = await CreateTestPlayerAsync("BBSReaFaiCha");
 		// Create the BBS objects with unique names
 		var pocketName = TestIsolationHelpers.GenerateUniqueName("bbsrpkt");
 		var boardName = TestIsolationHelpers.GenerateUniqueName("bbsrbrd");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {pocketName}"));
+		var r1 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {pocketName}"));
 		var pocketDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boardName}"));
+		var r2 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {boardName}"));
 		var boardDbref = r2.Message!.ToPlainText()!.Trim();
 
 		Console.WriteLine($"pocket = {pocketDbref}");
 		Console.WriteLine($"board = {boardDbref}");
 
 		// Set attributes like BBS does (GROUPS is empty - no groups created yet)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&groups {pocketDbref}="));
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&groups {pocketDbref}="));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"&valid_groups {pocketDbref}=iter(v(groups),switch(1,1,##))"));
 
 		// Move pocket into board (like @tel bbpocket=mbboard)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {pocketDbref}={boardDbref}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@tel {pocketDbref}={boardDbref}"));
 
 		// Now simulate what +bbread does: u(pocket/valid_groups)
 		var validGroups = await Eval($"u({pocketDbref}/valid_groups)");
@@ -484,6 +499,7 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask WordsOnErrorStrings()
 	{
+		var testPlayer = await CreateTestPlayerAsync("WorOnErrStr");
 		// Test: words() on a typical error string
 		var r1 = await Eval("words(#-1 NO SUCH OBJECT VISIBLE)");
 		Console.WriteLine($"words(#-1 NO SUCH OBJECT VISIBLE) = {r1}");
@@ -503,7 +519,7 @@ public class TelDiagnosticTests
 		// Confirm: words("") should be 0 (not 1)
 		// Create a unique object and set empty attribute to avoid mutating shared state
 		var emptyObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WordsEmpty");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&wordstest_empty {emptyObj}="));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&wordstest_empty {emptyObj}="));
 		var r4 = await Eval($"words(get({emptyObj}/wordstest_empty))");
 		Console.WriteLine($"words(get({emptyObj}/wordstest_empty)) = {r4}");
 		await Assert.That(r4).IsEqualTo("0")
@@ -517,21 +533,22 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelAfterForceEdit()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TelAftForEdi");
 		// Ensure player is in a known room so the locate service can find inventory objects
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@tel me=#0"));
 
 		var aName = TestIsolationHelpers.GenerateUniqueName("frcda");
 		var bName = TestIsolationHelpers.GenerateUniqueName("frcdb");
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {aName}"));
+		var r1 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {aName}"));
 		var aDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {bName}"));
+		var r2 = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {bName}"));
 		var bDbref = r2.Message!.ToPlainText()!.Trim();
 
 		// Set attribute with placeholder
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&ref {aDbref}=#222"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&ref {aDbref}=#222"));
 
 		// @force me=@edit (like BBS)
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@force me=@edit {aDbref}/*=#222,{aDbref}"));
 
 		// Verify edit worked

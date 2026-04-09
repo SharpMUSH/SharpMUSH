@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using NSubstitute;
@@ -22,6 +23,11 @@ public class DatabaseCommandTests
 	private INotifyService NotifyService => SqlWebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => SqlWebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => SqlWebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+	private IMediator Mediator => SqlWebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Before(Test)]
 	public async Task InitializeAsync()
@@ -94,8 +100,9 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ListCommand()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list commands"));
+		var testPlayer = await CreateTestPlayerAsync("LisCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list commands"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -107,8 +114,9 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnrecycleCommand()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@unrecycle #100"));
+		var testPlayer = await CreateTestPlayerAsync("UnrCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@unrecycle #100"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -120,8 +128,10 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DisableCommand()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable TestCommand"));
+		var testPlayer = await CreateTestPlayerAsync("DisCom");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@disable TestCommand"));
 		
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -133,8 +143,10 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EnableCommand()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable TestCommand"));
+		var testPlayer = await CreateTestPlayerAsync("EnaCom");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@enable TestCommand"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -144,11 +156,12 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask ClockCommand()
 	{
+		var testPlayer = await CreateTestPlayerAsync("CloCom");
 		// First create a test channel
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/add TestClockChannel"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@channel/add TestClockChannel"));
 
 		// Now test @clock to set a lock on the channel
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@clock/join TestClockChannel=#TRUE"));
+		var result = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@clock/join TestClockChannel=#TRUE"));
 
 		// Verify the command executed successfully (didn't throw or return error)
 		await Assert.That(result).IsNotNull();
@@ -157,8 +170,9 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectSingleRow()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name, value FROM test_sql_data_cmd WHERE id = 1"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlSelSin");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT name, value FROM test_sql_data_cmd WHERE id = 1"));
 
 		await NotifyService
 			.Received()
@@ -170,8 +184,9 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectMultipleRows()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT name FROM test_sql_data_cmd ORDER BY id"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlSelMul");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT name FROM test_sql_data_cmd ORDER BY id"));
 
 		await NotifyService
 			.Received()
@@ -183,8 +198,9 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_SelectWithWhere()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT value FROM test_sql_data_cmd WHERE name = 'test_sql_row2'"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlSelWit");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT value FROM test_sql_data_cmd WHERE name = 'test_sql_row2'"));
 
 		await NotifyService
 			.Received()
@@ -196,8 +212,9 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_Count()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT COUNT(*) as total FROM test_sql_data_cmd"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlCou");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT COUNT(*) as total FROM test_sql_data_cmd"));
 
 		await NotifyService
 			.Received()
@@ -209,8 +226,9 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_NoResults()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test_sql_data_cmd WHERE id = 999"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlNoRes");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT * FROM test_sql_data_cmd WHERE id = 999"));
 
 		await NotifyService
 			.Received()
@@ -223,10 +241,11 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_MapSql_Basic()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesMapSqlBas");
+		var executor = testPlayer.DbRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdBasic");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_basic {objDbRef}=think Test_MapSql_Basic: %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&mapsql_test_attr_basic {objDbRef}=think Test_MapSql_Basic: %0 - %1 - %2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Wait for the channel consumer to process the queued attribute execution
 		await Task.Delay(500);
@@ -242,10 +261,11 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_MapSql_WithMultipleRows()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesMapSqlWit");
+		var executor = testPlayer.DbRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdMulti");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_mr {objDbRef}=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&mapsql_test_attr_mr {objDbRef}=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
 		// Wait for the channel consumer to process the queued attribute executions
 		await Task.Delay(500);
@@ -288,10 +308,11 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_MapSql_WithColnamesSwitch()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesMapSqlWit");
+		var executor = testPlayer.DbRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdColnames");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_test_attr_cn {objDbRef}=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&mapsql_test_attr_cn {objDbRef}=think Test_MapSql_WithColnamesSwitch: %0 - %1 - %2 - %3"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Wait for the channel consumer to process the queued attribute executions
 		await Task.Delay(500);
@@ -313,8 +334,9 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_MapSql_InvalidObjectAttribute()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql invalid=SELECT * FROM test_mapsql_data_cmd"));
+		var testPlayer = await CreateTestPlayerAsync("TesMapSqlInv");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@mapsql invalid=SELECT * FROM test_mapsql_data_cmd"));
 
 		await NotifyService
 			.Received()
@@ -326,8 +348,9 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_InvalidQuery()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM nonexistent_table"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlInvQue");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT * FROM nonexistent_table"));
 
 		await NotifyService
 			.Received()
@@ -342,9 +365,10 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithParameter()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
+		var executor = testPlayer.DbRef;
 		// Test using lit() to protect the query
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id = ?),1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id = ?),1"));
 
 		await NotifyService
 			.Received()
@@ -357,8 +381,9 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_SelectWithMultipleParameters()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id >= ? AND id <= ? ORDER BY id),1,2"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id >= ? AND id <= ? ORDER BY id),1,2"));
 
 		await NotifyService
 			.Received()
@@ -371,8 +396,9 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_WhereClauseWithStringParameter()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT value FROM test_sql_data_cmd WHERE name = ?),test_sql_row2"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT value FROM test_sql_data_cmd WHERE name = ?),test_sql_row2"));
 
 		await NotifyService
 			.Received()
@@ -385,8 +411,9 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_Sql_PrepareSwitch_NoResults()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT * FROM test_sql_data_cmd WHERE id = ?),999"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT * FROM test_sql_data_cmd WHERE id = ?),999"));
 
 		await NotifyService
 			.Received()
@@ -399,10 +426,11 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_MapSql_PrepareSwitch_Basic()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesMapSqlPre");
+		var executor = testPlayer.DbRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdPrepBasic");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_prepare_test_attr_basic {objDbRef}=think Test_MapSql_PrepareSwitch_Basic: %0 - %1 - %2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&mapsql_prepare_test_attr_basic {objDbRef}=think Test_MapSql_PrepareSwitch_Basic: %0 - %1 - %2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
 		// Wait for the channel consumer to process the queued attribute execution
 		await Task.Delay(500);
@@ -418,10 +446,11 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_MapSql_PrepareSwitch_WithMultipleRows()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesMapSqlPre");
+		var executor = testPlayer.DbRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlCmdPrepMulti");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&mapsql_prepare_test_attr_mr {objDbRef}=think Test_MapSql_PrepareSwitch_WithMultipleRows: %0 - %1 - %2 - %3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&mapsql_prepare_test_attr_mr {objDbRef}=think Test_MapSql_PrepareSwitch_WithMultipleRows: %0 - %1 - %2 - %3"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
 
 		// Wait for the channel consumer to process the queued attribute executions
 		await Task.Delay(500);
@@ -443,8 +472,9 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async ValueTask Test_MapSql_PrepareSwitch_InvalidObjectAttribute()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql/PREPARE invalid=SELECT * FROM test_mapsql_data_cmd"));
+		var testPlayer = await CreateTestPlayerAsync("TesMapSqlPre");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@mapsql/PREPARE invalid=SELECT * FROM test_mapsql_data_cmd"));
 
 		await NotifyService
 			.Received()
@@ -456,8 +486,9 @@ public class DatabaseCommandTests
 	[Test]
 	public async ValueTask Test_Sql_PrepareSwitch_InvalidQuery()
 	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql/PREPARE SELECT * FROM nonexistent_table"));
+		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE SELECT * FROM nonexistent_table"));
 
 		await NotifyService
 			.Received()

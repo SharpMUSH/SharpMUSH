@@ -25,15 +25,20 @@ public class GeneralCommandTests
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
+
 	[Test]
 	[Arguments("@pemit #1=1 This is a test", "1 This is a test")]
 	[Arguments("@pemit #1=2 This is a test;", "2 This is a test;")]
 	public async ValueTask SimpleCommandParse(string str, string expected)
 	{
+		var testPlayer = await CreateTestPlayerAsync("SimComPar");
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(str));
 
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var executor = testPlayer.DbRef;
 		await NotifyService
 			.Received()
 			.Notify(
@@ -48,15 +53,17 @@ public class GeneralCommandTests
 	[Arguments("l"), Skip("Not yet implemented properly")]
 	public async ValueTask CommandAliasRuns(string str)
 	{
+		var testPlayer = await CreateTestPlayerAsync("ComAliRun");
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(str));
 	}
 
 	[Test]
 	public async ValueTask DoListSimple()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=3 This is a test"));
+		var testPlayer = await CreateTestPlayerAsync("DoLisSim");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=3 This is a test"));
 
 		await NotifyService
 			.Received()
@@ -67,8 +74,9 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple2()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1={4 This is, a test};"));
+		var testPlayer = await CreateTestPlayerAsync("DoLisSim");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}={4 This is, a test};"));
 
 		await NotifyService
 			.Received()
@@ -79,8 +87,9 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DolistDoubleHashReplacement()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=dolist-hash-##"));
+		var testPlayer = await CreateTestPlayerAsync("DolDouHasRep");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=dolist-hash-##"));
 
 		await NotifyService
 			.Received()
@@ -100,9 +109,10 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dolist/inline 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
+		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@dolist/inline 1 2 3={@pemit {testPlayer.DbRef}=5 This is a test; @pemit {testPlayer.DbRef}=6 This is also a test}"));
 
 		await NotifyService
 			.Received()
@@ -118,10 +128,10 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex2()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
-				"@dolist/inline 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
+		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@dolist/inline 1 2 3={@pemit {testPlayer.DbRef}=7 This is a test; @pemit {testPlayer.DbRef}=8 This is also a test}; @pemit {testPlayer.DbRef}=9 Repeat 3 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -141,10 +151,10 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex3()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
-				"@dolist/inline 1={@dolist/inline 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
+		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@dolist/inline 1={@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=10 This is a test}; @pemit {testPlayer.DbRef}=11 Repeat 1 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -159,10 +169,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex4()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
-				"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
+		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=12 This is a test}; @pemit {testPlayer.DbRef}=13 Repeat 2 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -177,10 +187,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex5()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
-				"@dolist/inline a b={@dolist/inline 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
+		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@dolist/inline a b={@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=14 This is a test %i0}; @pemit {testPlayer.DbRef}=15 Repeat 1 times in this mode %i0"));
 
 		await NotifyService
 			.Received()
@@ -207,8 +217,9 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex6()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
+		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single(
 				"@dolist/inline a b={@dolist/inline 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
 
@@ -229,7 +240,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleCommandList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoBreSimCom");
+		var executor = testPlayer.DbRef;
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
 		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
 
@@ -244,7 +256,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleTruthyCommandList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoBreSimTru");
+		var executor = testPlayer.DbRef;
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
 		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
 
@@ -259,7 +272,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleFalsyCommandList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoBreSimFal");
+		var executor = testPlayer.DbRef;
 		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
 		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
 
@@ -274,7 +288,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakCommandList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoBreComLis");
+		var executor = testPlayer.DbRef;
 		await Parser.CommandListParse(
 			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
@@ -287,7 +302,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakCommandList2()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoBreComLis");
+		var executor = testPlayer.DbRef;
 		await Parser.CommandListParse(
 			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
@@ -301,7 +317,8 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoFlagSet()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=DEBUG"));
+		var testPlayer = await CreateTestPlayerAsync("DoFlaSet");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=DEBUG"));
 
 		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		var onePlayer = one.AsPlayer;
@@ -313,9 +330,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask WhereIs_ValidPlayer_ReportsLocation()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("WheIsValPla");
+		var executor = testPlayer.DbRef;
 		// Test @whereis with a valid player
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@whereis {testPlayer.DbRef}"));
 
 		// Should notify about the location
 		await NotifyService
@@ -328,12 +346,13 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask WhereIs_NonPlayer_ReturnsError()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("WheIsNonPla");
+		var executor = testPlayer.DbRef;
 		// First create a thing (non-player object)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create test_object_whereis"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create test_object_whereis"));
 
 		// Try to @whereis a non-player
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis test_object_whereis"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@whereis test_object_whereis"));
 
 		// Should notify that it's not a player
 		await NotifyService
@@ -346,9 +365,11 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ResValObjRes");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		var executor = testPlayer.DbRef;
 		// Test @restart with a valid object
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@restart {testPlayer.DbRef}"));
 
 		// Should notify about restart
 		await NotifyService
@@ -361,9 +382,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Find_SearchesForObjects()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("FinSeaForObj");
+		var executor = testPlayer.DbRef;
 		// Test @find command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@find test"));
 
 		// Should notify about searching
 		await NotifyService
@@ -376,9 +398,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Stats_ShowsDatabaseStatistics()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("StaShoDatSta");
+		var executor = testPlayer.DbRef;
 		// Test @stats command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@stats"));
 
 		// Should notify about database statistics
 		await NotifyService
@@ -391,9 +414,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Search_PerformsDatabaseSearch()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("SeaPerDatSea");
+		var executor = testPlayer.DbRef;
 		// Test @search command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@search"));
 
 		// Should notify about search
 		await NotifyService
@@ -406,9 +430,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Entrances_ShowsLinkedObjects()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("EntShoLinObj");
+		var executor = testPlayer.DbRef;
 		// Test @entrances command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@entrances"));
 
 		// Should notify about entrances
 		await NotifyService
@@ -420,9 +445,11 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Command_ShowsCommandInfo()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ComShoComInf");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		var executor = testPlayer.DbRef;
 		// Test @command with a command name
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@command @emit"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@command @emit"));
 
 		// Should notify about command information
 		await NotifyService
@@ -435,9 +462,11 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("FunLisGloFun");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		var executor = testPlayer.DbRef;
 		// Test @function with no arguments to list functions
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@function"));
 
 		// Should notify about global functions
 		await NotifyService
@@ -450,9 +479,11 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("FunShoFunInf");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		var executor = testPlayer.DbRef;
 		// Test @function with a function name
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@function name"));
 
 		// Should notify about function information
 		await NotifyService
@@ -465,11 +496,12 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Map_ExecutesAttributeOverList()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("MapExeAttOve");
+		var executor = testPlayer.DbRef;
 		// Test @map command — attribute does not exist on the unique object
 		var mapObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapTest");
 		var uniqueAttr = $"MAPATTR_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@map {mapObj}/{uniqueAttr}=foo bar baz"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@map {mapObj}/{uniqueAttr}=foo bar baz"));
 
 		// Should notify about mapping
 		await NotifyService
@@ -482,11 +514,12 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Trigger_QueuesAttribute()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TriQueAtt");
+		var executor = testPlayer.DbRef;
 		// Test @trigger command — attribute does not exist on the unique object
 		var trigObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TrigTest");
 		var uniqueAttr = $"TRIGATTR_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@trigger {trigObj}/{uniqueAttr}=arg1,arg2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@trigger {trigObj}/{uniqueAttr}=arg1,arg2"));
 
 		// Should notify with error since the attribute doesn't exist
 		await NotifyService
@@ -498,11 +531,12 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Include_InsertsAttributeInPlace()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("IncInsAttIn");
+		var executor = testPlayer.DbRef;
 		// Test @include command — attribute does not exist on the unique object
 		var inclObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclTest");
 		var uniqueAttr = $"INCLATTR_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@include {inclObj}/{uniqueAttr}=arg1,arg2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@include {inclObj}/{uniqueAttr}=arg1,arg2"));
 
 		// Should attempt to locate the object and get the attribute
 		// Since the attribute doesn't exist, it will fail with an error message
@@ -516,9 +550,11 @@ public class GeneralCommandTests
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask Halt_ClearsQueue()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("HalCleQue");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		var executor = testPlayer.DbRef;
 		// Test @halt command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt me"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@halt me"));
 
 		// Should notify about halting
 		await NotifyService
@@ -531,9 +567,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask PS_ShowsQueueStatus()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("PShoQueSta");
+		var executor = testPlayer.DbRef;
 		// Test @ps command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@ps"));
 
 		// Should notify about queue
 		await NotifyService
@@ -545,9 +582,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Select_MatchesFirstExpression()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("SelMatFirExp");
+		var executor = testPlayer.DbRef;
 		// Test @select command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
 
 		// Should notify about select
 		await NotifyService
@@ -560,12 +598,14 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("AttDisAttInf");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		var executor = testPlayer.DbRef;
 		// Create the attribute entry first so it exists in the standard table
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access DESCRIPTION="));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@attribute/access DESCRIPTION="));
 
 		// Test @attribute command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute DESCRIPTION"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@attribute DESCRIPTION"));
 
 		// Should notify about attribute info
 		await NotifyService
@@ -578,8 +618,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessCreatesAttributeEntry()
 	{
+		var testPlayer = await CreateTestPlayerAsync("AttAccCreAtt");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		// Test @attribute/access command creates an attribute entry with no_command flag
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
 
 		// Verify the entry was created in the database
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
@@ -593,8 +635,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessValidatesFlags()
 	{
+		var testPlayer = await CreateTestPlayerAsync("AttAccValFla");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		// Test @attribute/access validates flag names
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR=INVALIDFLAG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@attribute/access TESTATTR=INVALIDFLAG"));
 
 		// Verify that no entry was created with an invalid flag
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
@@ -608,8 +652,10 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_EntryFlagsAreAppliedWhenAttributeCreated()
 	{
+		var testPlayer = await CreateTestPlayerAsync("AttEntFlaAre");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		// First create an attribute entry with no_command flag
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR2=no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@attribute/access TESTATTR2=no_command"));
 
 		// Verify the entry was created with correct flags
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
@@ -644,7 +690,8 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithDBRefNotificationBatching()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoLisWitDB");
+		var executor = testPlayer.DbRef;
 		// This test validates that DBRef-based notifications respect batching scopes.
 		// Before the fix, Notify(DBRef) would bypass batching and send messages immediately.
 		// After the fix, messages should be accumulated and sent as a batch.
@@ -652,7 +699,7 @@ public class GeneralCommandTests
 
 		// Use @pemit which uses Notify(AnySharpObject) -> Notify(DBRef)
 		// This should call Notify three times with the same message
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Batched test message"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=Batched test message"));
 
 		// Verify that Notify was called 3 times (once per iteration)
 		// All three should have been batched together internally, but we verify they all went through
@@ -666,9 +713,10 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoLisBatTo");
+		var executor = testPlayer.DbRef;
 		// Send to player #2 (different from enactor #1)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
 
 		// Verify all three notifications were called
 		await NotifyService
@@ -681,12 +729,13 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask NestedDoListBatching()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("NesDoLisBat");
+		var executor = testPlayer.DbRef;
 		// This test validates that nested @dolists properly use ref-counting for batching context.
 		// Messages from both outer and inner loops should be batched together.
 
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2={@dolist/inline a b=@pemit {testPlayer.DbRef}=Nested message}"));
 
 		// Verify 4 notifications were called (2 outer * 2 inner)
 		await NotifyService
@@ -699,10 +748,11 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoLisWitBre");
+		var executor = testPlayer.DbRef;
 		// Negative test: Without @break, all loop iterations should send messages
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=DoListWithoutBreak_AllMessagesReceived"));
 
 		// Should receive exactly 3 messages (one per iteration)
 		await NotifyService
@@ -715,12 +765,13 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithBreakAfterFirst_OnlyFirstMessageReceived()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoLisWitBre");
+		var executor = testPlayer.DbRef;
 		// Positive test: @break should stop the loop after first iteration
 		// Use @break as a conditional command to stop after first iteration
 
 		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3={@pemit {testPlayer.DbRef}=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}"));
 
 		// With {@pemit; @break}, @pemit runs in each iteration then @break happens
 		// So we get 3 messages (one per loop start) but @break doesn't prevent them
@@ -745,13 +796,14 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithBreakFlushesMessages()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoLisWitBre");
+		var executor = testPlayer.DbRef;
 		// This test validates that @break properly flushes batched messages.
 		// Even with @break in the command list, the using statement should
 		// ensure messages are flushed via disposal.
 
 		// Loop with @break - both @pemit and @break execute in each iteration
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3={@pemit {testPlayer.DbRef}=Message before break; @break}"));
 
 		// With command list {@pemit; @break}, both execute in each iteration
 		// So we get 3 messages, and batching still works
@@ -765,7 +817,8 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask NestedDoListWithBreakFlushesMessages()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("NesDoLisWit");
+		var executor = testPlayer.DbRef;
 		// This test validates that @break in a nested @dolist/inline properly handles
 		// the ref-counted batching context and still flushes messages.
 		// Note: With the command structure {@pemit; @break}, both commands execute
@@ -774,7 +827,7 @@ public class GeneralCommandTests
 		// Outer loop runs twice, inner loop has 3 items
 		// With {@pemit; @break}, the @pemit runs in each inner iteration
 		// Expected: 2 outer iterations * 3 inner iterations = 6 messages
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b c={@pemit #1=Inner message; @break}}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2={@dolist/inline a b c={@pemit {testPlayer.DbRef}=Inner message; @break}}"));
 
 		// Should receive 6 messages (all inner iterations run, @break is after @pemit)
 		// This validates that batching still works and flushes correctly even with @break
@@ -787,12 +840,13 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListWithDelimiter()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DoLisWitDel");
+		var executor = testPlayer.DbRef;
 		// Test @dolist with /delimit switch
 		// Format: @dolist/delimit <delimiter> <list>=<action>
 		// Delimiter is separated by space from list
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dolist/inline/delimit , apple,banana,orange=@pemit #1=Fruit: %i0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@dolist/inline/delimit , apple,banana,orange=@pemit {testPlayer.DbRef}=Fruit: %i0"));
 
 		await NotifyService
 			.Received()

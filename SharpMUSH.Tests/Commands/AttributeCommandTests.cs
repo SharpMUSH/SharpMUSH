@@ -24,16 +24,21 @@ public class AttributeCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async ValueTask SetAttributeBasic()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("SetAttBas");
+		var executor = testPlayer.DbRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBasic");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
 		await NotifyService
 			.Received()
@@ -50,10 +55,11 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask SetAttributeEmpty()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("SetAttEmp");
+		var executor = testPlayer.DbRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrEmpty");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
 		await NotifyService
 			.Received()
@@ -63,10 +69,11 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask SetAttributeComplexValue()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("SetAttComVal");
+		var executor = testPlayer.DbRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrComplex");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 
 		await NotifyService
 			.Received()
@@ -82,12 +89,13 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask SetAttribute_PreservesBracesInNoParse()
 	{
+		var testPlayer = await CreateTestPlayerAsync("SetAttPreBra");
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBrace");
 		var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var attrName = $"CMD_BRACE_{uniqueId}";
 
 		// Store a $command pattern with braces around @switch case bodies
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"&{attrName} {objDbRef}=$+test_{uniqueId} *:@switch hasflag(%#,wizard)=1,{{@pemit %#=yes}},{{@pemit %#=no}}"));
 
 		// Verify the attribute was stored with braces intact
@@ -110,7 +118,8 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesCopAttDir");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object and set attribute directly via database
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrDirect");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
@@ -122,7 +131,7 @@ public class AttributeCommandTests
 		await Assert.That(sourceList).Count().IsEqualTo(1);
 
 		// Copy it using command
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_DIRECT_CPATTR={objDbRef}/DEST_DIRECT_CPATTR"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_DIRECT_CPATTR={objDbRef}/DEST_DIRECT_CPATTR"));
 
 		// Verify command sent a success notification with unique attribute name
 		await NotifyService
@@ -146,15 +155,16 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesCopAttBas");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrBasic");
 
 		// First set an attribute with unique test string
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&SOURCE_CPATTR_BASIC {objDbRef}=test_string_CPATTR_basic_unique"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&SOURCE_CPATTR_BASIC {objDbRef}=test_string_CPATTR_basic_unique"));
 
 		// Copy it
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_CPATTR_BASIC={objDbRef}/DEST_CPATTR_BASIC"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_CPATTR_BASIC={objDbRef}/DEST_CPATTR_BASIC"));
 
 		// Verify command executed with success notification mentioning destination.
 		await NotifyService
@@ -181,15 +191,16 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesCopAttMul");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrMulti");
 
 		// Set source attribute with unique name
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&SOURCE_CPATTR_MULTI_UNIQUE {objDbRef}=test_string_CPATTR_multi_value"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&SOURCE_CPATTR_MULTI_UNIQUE {objDbRef}=test_string_CPATTR_multi_value"));
 
 		// Copy to multiple destinations
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_CPATTR_MULTI_UNIQUE={objDbRef}/DEST1_CPATTR_MULTI,{objDbRef}/DEST2_CPATTR_MULTI"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_CPATTR_MULTI_UNIQUE={objDbRef}/DEST1_CPATTR_MULTI,{objDbRef}/DEST2_CPATTR_MULTI"));
 
 		// Verify command executed successfully with notification mentioning 2 destinations
 		await NotifyService
@@ -216,15 +227,16 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesMovAttBas");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MvAttrBasic");
 
 		// First set an attribute with unique test string
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&MOVESOURCE_UNIQUE {objDbRef}=test_string_MVATTR_basic_moved"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&MOVESOURCE_UNIQUE {objDbRef}=test_string_MVATTR_basic_moved"));
 
 		// Move it
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mvattr {objDbRef}/MOVESOURCE_UNIQUE={objDbRef}/MOVEDEST_UNIQUE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mvattr {objDbRef}/MOVESOURCE_UNIQUE={objDbRef}/MOVEDEST_UNIQUE"));
 
 		// Verify command executed successfully with notification about move
 		await NotifyService
@@ -251,13 +263,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesWipAttAll");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WipeAttrs");
 
 		// Set some attributes with unique test strings
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WIPE1_UNIQUE {objDbRef}=test_string_WIPE_val1_unique"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WIPE2_UNIQUE {objDbRef}=test_string_WIPE_val2_unique"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&WIPE1_UNIQUE {objDbRef}=test_string_WIPE_val1_unique"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&WIPE2_UNIQUE {objDbRef}=test_string_WIPE_val2_unique"));
 
 		// Verify they exist
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -266,7 +279,7 @@ public class AttributeCommandTests
 		await Assert.That(attr1Before.IsAttribute).IsTrue();
 
 		// Wipe them with pattern
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wipe {objDbRef}/WIPE*_UNIQUE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@wipe {objDbRef}/WIPE*_UNIQUE"));
 
 		// Verify command sent notification about wiping with the pattern
 		await NotifyService
@@ -289,15 +302,16 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrLock_LockAndUnlock()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesAtrLocLoc");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrLock");
 
 		// Set an attribute with unique name
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LOCKTEST_UNIQUE_ATTR {objDbRef}=test_string_ATRLOCK_value_unique"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&LOCKTEST_UNIQUE_ATTR {objDbRef}=test_string_ATRLOCK_value_unique"));
 
 		// Lock it
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=on"));
 
 		// Verify lock notification sent
 		await NotifyService
@@ -318,7 +332,7 @@ public class AttributeCommandTests
 		await Assert.That(isLocked).IsTrue();
 
 		// Unlock it
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=off"));
 
 		// Verify unlock notification sent
 		await NotifyService
@@ -337,15 +351,16 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrLock_QueryStatus()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesAtrLocQue");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrLockQuery");
 
 		// Set an attribute with unique name
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&QUERYLOCK_UNIQUE_ATTR {objDbRef}=test_value_unique_query"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&QUERYLOCK_UNIQUE_ATTR {objDbRef}=test_value_unique_query"));
 
 		// Query lock status (no =on or =off)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/QUERYLOCK_UNIQUE_ATTR"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@atrlock {objDbRef}/QUERYLOCK_UNIQUE_ATTR"));
 
 		// Should receive a notification about lock status with the attribute name
 		await NotifyService
@@ -359,12 +374,13 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrChown_InvalidArguments()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesAtrChoInv");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrChownInvalid");
 
 		// Try to chown without proper arguments
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrchown {objDbRef}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@atrchown {objDbRef}"));
 
 		// Should receive error notification
 		await NotifyService
@@ -375,12 +391,13 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_InvalidSource()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesCopAttInv");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrInvalid");
 
 		// Try to copy a non-existent attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/NONEXISTENT_ATTR_TEST={objDbRef}/DEST"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@cpattr {objDbRef}/NONEXISTENT_ATTR_TEST={objDbRef}/DEST"));
 
 		// Should receive error notification
 		await NotifyService
@@ -391,12 +408,13 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_MoveAttribute_InvalidSource()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesMovAttInv");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MvAttrInvalid");
 
 		// Try to move a non-existent attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mvattr {objDbRef}/NONEXISTENT_MOVE_TEST={objDbRef}/DEST"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mvattr {objDbRef}/NONEXISTENT_MOVE_TEST={objDbRef}/DEST"));
 
 		// Should receive error notification
 		await NotifyService
@@ -407,13 +425,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_SimpleReplace()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TesEdiSimRep");
 		// Create an isolated test object and set up attribute
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditSimple");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_TEST"], A.single("Hello World"), owner);
 
 		// Edit it - replace "World" with "Universe"
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_TEST=World,Universe"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_TEST=World,Universe"));
 
 		// Verify the attribute was changed
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_TEST"]);
@@ -424,13 +443,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_Append()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TesEdiApp");
 		// Create an isolated test object and set up attribute
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditAppend");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_APPEND_TEST"], A.single("Start"), owner);
 
 		// Edit it - append " End" (use braces to preserve leading space)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_APPEND_TEST=$,{{ End}}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_APPEND_TEST=$,{{ End}}"));
 
 		// Verify the attribute was changed
 		// Note: RSArgs parser trims whitespace from arguments, so " End" becomes "End"
@@ -442,13 +462,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_Prepend()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TesEdiPre");
 		// Create an isolated test object and set up attribute
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditPrepend");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_PREPEND_TEST"], A.single("End"), owner);
 
 		// Edit it - prepend "Start "
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_PREPEND_TEST=^,Start "));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_PREPEND_TEST=^,Start "));
 
 		// Verify the attribute was changed
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_PREPEND_TEST"]);
@@ -459,13 +480,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_FirstOnly()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TesEdiFirOnl");
 		// Create an isolated test object and set up attribute with repeated text
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditFirst");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_FIRST_TEST"], A.single("foo bar foo baz"), owner);
 
 		// Edit it - replace only first "foo"
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit/first {objDbRef}/EDIT_FIRST_TEST=foo,qux"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@edit/first {objDbRef}/EDIT_FIRST_TEST=foo,qux"));
 
 		// Verify only first occurrence was replaced
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_FIRST_TEST"]);
@@ -476,13 +498,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_ReplaceAll()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TesEdiRepAll");
 		// Create an isolated test object and set up attribute with repeated text
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditAll");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_ALL_TEST"], A.single("foo bar foo baz"), owner);
 
 		// Edit it - replace all "foo"
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_ALL_TEST=foo,qux"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_ALL_TEST=foo,qux"));
 
 		// Verify all occurrences were replaced
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_ALL_TEST"]);
@@ -493,13 +516,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_Check_NoChange()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TesEdiCheNo");
 		// Create an isolated test object and set up attribute
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditCheck");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_CHECK_TEST"], A.single("Original"), owner);
 
 		// Edit with /check - should preview but not change
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit/check {objDbRef}/EDIT_CHECK_TEST=Original,Changed"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@edit/check {objDbRef}/EDIT_CHECK_TEST=Original,Changed"));
 
 		// Verify the attribute was NOT changed
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_CHECK_TEST"]);
@@ -510,13 +534,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_Regex()
 	{
+		var testPlayer = await CreateTestPlayerAsync("TesEdiReg");
 		// Create an isolated test object and set up attribute
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditRegex");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_TEST"], A.single("foo123bar"), owner);
 
 		// Edit with regex - replace digits
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit/regexp {objDbRef}/EDIT_REGEX_TEST=\\\\d+,XXX"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@edit/regexp {objDbRef}/EDIT_REGEX_TEST=\\\\d+,XXX"));
 
 		// Verify the regex replacement worked
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_REGEX_TEST"]);
@@ -527,12 +552,13 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_NoMatch()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("TesEdiNoMat");
+		var executor = testPlayer.DbRef;
 		// Create an isolated test object (attribute does not exist on it)
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditNoMatch");
 
 		// Try to edit a non-existent attribute
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/NONEXISTENT_EDIT_TEST=foo,bar"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@edit {objDbRef}/NONEXISTENT_EDIT_TEST=foo,bar"));
 
 		// Should receive error notification
 		await NotifyService

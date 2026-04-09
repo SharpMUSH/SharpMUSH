@@ -30,6 +30,10 @@ public class CommunicationCommandTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
+
 	private SharpChannel? _testChannel;
 	private SharpPlayer? _testPlayer;
 
@@ -67,9 +71,10 @@ public class CommunicationCommandTests
 	[Arguments("@pemit #1=Another test", "Another test")]
 	public async ValueTask PemitBasic(string command, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("PemBas");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -81,9 +86,10 @@ public class CommunicationCommandTests
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]
 	public async ValueTask EmitBasic(string command, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("EmiBas");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// @emit broadcasts to room via CommunicationService.SendToRoomAsync which calls
 		// Notify(AnySharpObject, ..., NotificationType.Emit)
@@ -99,8 +105,9 @@ public class CommunicationCommandTests
 	[Arguments("@lemit Test local emit", "Test local emit")]
 	public async ValueTask LemitBasic(string command, string expected)
 	{
+		var testPlayer = await CreateTestPlayerAsync("LemBas");
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received()
@@ -115,8 +122,9 @@ public class CommunicationCommandTests
 	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
 	public async ValueTask RemitBasic(string command, string expected)
 	{
+		var testPlayer = await CreateTestPlayerAsync("RemBas");
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received()
@@ -130,15 +138,16 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask OemitBasic()
 	{
+		var testPlayer = await CreateTestPlayerAsync("OemBas");
 		Console.WriteLine("Testing: @oemit");
 
 		// Create a unique thing to omit so that the executor (player #1) still receives the emit.
 		var excludeName = TestIsolationHelpers.GenerateUniqueName("OemitExclude");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {excludeName}"));
+		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {excludeName}"));
 		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		var expectedMsg = "Test omit emit";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@oemit {excludeDbRef}={expectedMsg}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@oemit {excludeDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received()
@@ -152,20 +161,21 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask ZemitBasic()
 	{
+		var testPlayer = await CreateTestPlayerAsync("ZemBas");
 		Console.WriteLine("Testing: @zemit");
 
 		var expectedMsg = "Test zone emit";
 
 		// Create a unique zone master object (ZMO).
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("ZemitZMO");
-		var zmoResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zmoName}"));
+		var zmoResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {zmoName}"));
 		var zmoDbRef = DBRef.Parse(zmoResult.Message!.ToPlainText()!);
 
 		// Zone room #0 to the ZMO so that it participates in the zone.  Player #1 is in room #0.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone #0={zmoDbRef}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@chzone #0={zmoDbRef}"));
 
 		// Emit to the zone — player #1 (in room #0, which is now in the zone) should receive it.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@zemit {zmoDbRef}={expectedMsg}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@zemit {zmoDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received()
@@ -176,15 +186,16 @@ public class CommunicationCommandTests
 				INotifyService.NotificationType.Emit);
 
 		// Clean up: remove the temporary zone from room #0.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@chzone #0=none"));
 	}
 
 	[Test]
 	[Arguments("@nsemit Test nospoof emit")]
 	public async ValueTask NsemitBasic(string command)
 	{
+		var testPlayer = await CreateTestPlayerAsync("NseBas");
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received()
@@ -199,8 +210,9 @@ public class CommunicationCommandTests
 	[Arguments("@nslemit Test nospoof local")]
 	public async ValueTask NslemitBasic(string command)
 	{
+		var testPlayer = await CreateTestPlayerAsync("NslBas");
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received()
@@ -215,8 +227,9 @@ public class CommunicationCommandTests
 	[Arguments("@nsremit #0=Test nospoof remote")]
 	public async ValueTask NsremitBasic(string command)
 	{
+		var testPlayer = await CreateTestPlayerAsync("NsrBas");
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received()
@@ -231,8 +244,9 @@ public class CommunicationCommandTests
 	[Arguments("@nsoemit #1=Test nospoof omit")]
 	public async ValueTask NsoemitBasic(string command)
 	{
+		var testPlayer = await CreateTestPlayerAsync("NsoBas");
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received()
@@ -247,8 +261,9 @@ public class CommunicationCommandTests
 	[Arguments("@nspemit #1=Test nospoof pemit")]
 	public async ValueTask NspemitBasic(string command)
 	{
+		var testPlayer = await CreateTestPlayerAsync("NspBas");
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received()
@@ -262,20 +277,21 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask NszemitBasic()
 	{
+		var testPlayer = await CreateTestPlayerAsync("NszBas");
 		Console.WriteLine("Testing: @nszemit");
 
 		var expectedMsg = "Test nospoof zone";
 
 		// Create a unique zone master object (ZMO).
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("NsZemitZMO");
-		var zmoResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zmoName}"));
+		var zmoResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {zmoName}"));
 		var zmoDbRef = DBRef.Parse(zmoResult.Message!.ToPlainText()!);
 
 		// Zone room #0 to the ZMO so that it participates in the zone.  Player #1 is in room #0.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone #0={zmoDbRef}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@chzone #0={zmoDbRef}"));
 
 		// Emit to the zone — player #1 (in room #0, which is now in the zone) should receive it.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nszemit {zmoDbRef}={expectedMsg}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@nszemit {zmoDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received()
@@ -286,7 +302,7 @@ public class CommunicationCommandTests
 				INotifyService.NotificationType.NSEmit);
 
 		// Clean up: remove the temporary zone from room #0.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@chzone #0=none"));
 	}
 
 	[Test]
@@ -294,10 +310,11 @@ public class CommunicationCommandTests
 	[Arguments("addcom test_alias_ADDCOM2=Public")]
 	public async ValueTask AddComBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("AddComBas");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify notification was sent with message containing the alias and channel
 		await NotifyService
@@ -313,9 +330,10 @@ public class CommunicationCommandTests
 	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("AddComInvArg");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify error notification was sent containing the expected text
 		await NotifyService
@@ -330,14 +348,15 @@ public class CommunicationCommandTests
 	[Arguments("delcom test_alias_DELCOM1")]
 	public async ValueTask DelComBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DelComBas");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
 		// First add an alias
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"addcom {alias}=Public"));
 
 		// Now delete it
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify the deletion notification was sent
 		// Check for the specific deletion message (not the addcom message from earlier)
@@ -353,10 +372,11 @@ public class CommunicationCommandTests
 	[Arguments("delcom nonexistent_alias_DELCOM")]
 	public async ValueTask DelComNotFound(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("DelComNotFou");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify error notification was sent
 		await NotifyService
@@ -372,9 +392,10 @@ public class CommunicationCommandTests
 	[Arguments("@clist/full")]
 	public async ValueTask CListBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("CLisBas");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify a notification was sent (channel list output)
 		// The exact format depends on ChannelList.Handle, but it should send something
@@ -388,17 +409,18 @@ public class CommunicationCommandTests
 	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
 	public async ValueTask ComTitleBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ComTitBas");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		var parts = command.Split('=');
 		var alias = parts[0].Split(' ')[1];
 		var title = parts[1];
 
 		// First add an alias
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"addcom {alias}=Public"));
 
 		// Now set title
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify the title set notification was sent containing the title and alias
 		// Note: This command sends TWO notifications - one from ChannelTitle.Handle and one custom message
@@ -415,10 +437,11 @@ public class CommunicationCommandTests
 	[Arguments("comtitle nonexistent_alias_COMTITLE=title")]
 	public async ValueTask ComTitleNotFound(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ComTitNotFou");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify error notification was sent
 		await NotifyService
@@ -433,14 +456,15 @@ public class CommunicationCommandTests
 	[Arguments("comlist")]
 	public async ValueTask ComListBasic(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ComLisBas");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		// First add some aliases
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST2=Public"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("addcom test_alias_COMLIST2=Public"));
 
 		// Now list them
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify we received at least one notification (the comlist output)
 		// The output is sent as a multi-line MString containing all aliases (in lowercase)
@@ -458,12 +482,13 @@ public class CommunicationCommandTests
 	[Arguments("comlist")]
 	public async ValueTask ComListEmpty(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ComLisEmp");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		// Wipe all channel aliases for the executor to ensure an empty state
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe me/CHANALIAS*"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@wipe me/CHANALIAS*"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		// Verify the empty list message was sent
 		await NotifyService

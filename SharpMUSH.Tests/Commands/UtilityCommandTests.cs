@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -6,6 +7,8 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -18,12 +21,18 @@ public class UtilityCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Test]
 	public async ValueTask ThinkBasic()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkBasic Test output"));
+		var testPlayer = await CreateTestPlayerAsync("ThiBas");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("think ThinkBasic Test output"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -34,8 +43,9 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ThinkWithFunction()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkWithFunction [add(2,3)]"));
+		var testPlayer = await CreateTestPlayerAsync("ThiWitFun");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("think ThinkWithFunction [add(2,3)]"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -47,9 +57,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask CommentCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ComCom");
+		var executor = testPlayer.DbRef;
 		var guid = Guid.NewGuid();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@@ This is a comment {guid}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@@ This is a comment {guid}"));
 
 		// Comment should not produce any output
 		await NotifyService
@@ -61,8 +72,9 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask LookBasic()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("look"));
+		var testPlayer = await CreateTestPlayerAsync("LooBas");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("look"));
 
 		await NotifyService
 			.Received()
@@ -72,8 +84,9 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask LookAtObject()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("look #1"));
+		var testPlayer = await CreateTestPlayerAsync("LooAtObj");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"look {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
@@ -83,11 +96,12 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsNameAndDbref()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaObjHeaCon");
+		var executor = testPlayer.DbRef;
 		// Verify the name row has "Name(#dbref)" format (no space before '(') in plain text.
 		// We use plain-text check because name.Hilight() inserts ANSI codes around the name.
 		// Player #1 is named "God" in the test database.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
@@ -98,9 +112,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsOwnerRow()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaObjHeaCon");
+		var executor = testPlayer.DbRef;
 		// Owner row uses proper MModule composition; plain-text must contain "Owner: "
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
@@ -111,9 +126,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsZoneAndPowers()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaObjHeaCon");
+		var executor = testPlayer.DbRef;
 		// Zone and Powers are always shown (even when empty/nothing)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
@@ -128,9 +144,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsWarningsChecked()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaObjHeaCon");
+		var executor = testPlayer.DbRef;
 		// "Warnings checked:" is always shown (even when empty)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
@@ -141,9 +158,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_HeaderContainsLastModified()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaObjHeaCon");
+		var executor = testPlayer.DbRef;
 		// "Last modified:" is always shown in both examine and brief
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
@@ -154,9 +172,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExaminePlayer_HeaderContainsQuota()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaPlaHeaCon");
+		var executor = testPlayer.DbRef;
 		// "Quota:" is shown for player objects (God is player #1)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
@@ -167,15 +186,16 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineRoom_ShowsExits()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaRooShoExi");
+		var executor = testPlayer.DbRef;
 		// Dig a room with exits; the new room gets the return exit → examine should show Exits:
-		var digResult = await Parser.CommandParse(1, ConnectionService,
+		var digResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single("@dig ExitTestSource=North;N,South;S"));
 		var digMessage = digResult?.Message?.ToPlainText();
 		await Assert.That(digMessage).IsNotNull();
 		var roomDbRef = DBRef.Parse(digMessage!);
 
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"examine {roomDbRef}"));
 
 		// The Exits: section should appear because the new room has the return exit (South;S)
@@ -188,9 +208,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_BriefSwitch_AlsoShowsLastModified()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaObjBriSwi");
+		var executor = testPlayer.DbRef;
 		// Brief mode should also show Last modified: (it's a header field)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/brief #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine/brief {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
@@ -201,18 +222,19 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_AttributeWithAnsi_PreservesMarkup()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaObjAttWit");
+		var executor = testPlayer.DbRef;
 		// Create an object, set a DESCRIBE with ANSI color, then examine it.
 		// The attribute value (an MString with markup) must survive through examine output.
-		var createResult = await Parser.CommandParse(1, ConnectionService,
+		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single("@create AnsiExamineTestObj"));
 		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		// [ansi(rh,...)] evaluates to an MString with red+bold markup
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
 
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"examine {objDbRef}"));
 
 		// Plain-text content of the attribute value must appear in examine output
@@ -232,14 +254,15 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObject_BriefSwitch_ShowsHeaderNotDescription()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var createResult = await Parser.CommandParse(1, ConnectionService,
+		var testPlayer = await CreateTestPlayerAsync("ExaObjBriSwi");
+		var executor = testPlayer.DbRef;
+		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single("@create BriefExamineTestObj"));
 		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@desc {objDbRef}=BriefShouldNotSeeThis"));
 
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"examine/brief {objDbRef}"));
 
 		// Brief MUST show owner header (in plain text because owner name is hilighted)
@@ -258,8 +281,9 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineObjectOpaqueSwitch()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine/opaque #1"));
+		var testPlayer = await CreateTestPlayerAsync("ExaObjOpaSwi");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine/opaque {testPlayer.DbRef}"));
 
 		// /opaque should still show header
 		await NotifyService
@@ -270,9 +294,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineWithAttributePattern()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaWitAttPat");
+		var executor = testPlayer.DbRef;
 		// Test examining with attribute pattern (e.g., examine #1/DESC*)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1/DESC*"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {testPlayer.DbRef}/DESC*"));
 
 		// Should display matching attributes
 		await NotifyService
@@ -283,9 +308,10 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ExamineCurrentLocation()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ExaCurLoc");
+		var executor = testPlayer.DbRef;
 		// Test examining with no argument (examines current location)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine"));
 
 		// Should display current location
 		await NotifyService
@@ -298,8 +324,9 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask FindCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@find #0"));
+		var testPlayer = await CreateTestPlayerAsync("FinCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@find #0"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -311,8 +338,9 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SearchCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
+		var testPlayer = await CreateTestPlayerAsync("SeaCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@search"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -324,8 +352,9 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EntrancesCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances #0"));
+		var testPlayer = await CreateTestPlayerAsync("EntCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@entrances #0"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -337,8 +366,9 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask StatsCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
+		var testPlayer = await CreateTestPlayerAsync("StaCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@stats"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -348,8 +378,9 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask VersionCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@version"));
+		var testPlayer = await CreateTestPlayerAsync("VerCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@version"));
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
@@ -362,7 +393,8 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask ScanCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("ScaCom");
+		var executor = testPlayer.DbRef;
 		// Create a unique object in the executor's room and give it a $-command attribute so
 		// @scan has a real match to discover and return.
 		var uniqueSuffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
@@ -370,16 +402,16 @@ public class UtilityCommandTests
 		var attrName = $"CMD_SCAN_{uniqueSuffix}";
 		var commandWord = $"scantestword{uniqueSuffix.ToLowerInvariant()}";
 
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objectName}"));
+		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {objectName}"));
 		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
 		await Assert.That(createdDbref).StartsWith("#").Because($"@create should return a dbref; got: '{createdDbref}'");
 
 		// Set a $-command attribute on the object: value starts with $pattern:code
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:think scan test triggered"));
 
 		// @scan <commandword> test — searches the executor's location for matching $-commands
-		var scanResult = await Parser.CommandParse(1, ConnectionService,
+		var scanResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@scan {commandWord} test"));
 		var scanPlainText = scanResult.Message?.ToPlainText() ?? string.Empty;
 
@@ -392,8 +424,9 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask DecompileCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@decompile #1"));
+		var testPlayer = await CreateTestPlayerAsync("DecCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@decompile {testPlayer.DbRef}"));
 
 		// Should receive notifications for decompiled output
 		await NotifyService
@@ -409,8 +442,9 @@ public class UtilityCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhereisCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
+		var testPlayer = await CreateTestPlayerAsync("WheCom");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@whereis {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))

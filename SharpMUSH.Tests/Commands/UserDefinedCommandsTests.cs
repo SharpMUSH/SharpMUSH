@@ -1,3 +1,4 @@
+using Mediator;
 ﻿using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -18,17 +19,23 @@ public class UserDefinedCommandsTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Test]
 	public async ValueTask WildcardEqSplitCommandPassesArgsToEmit()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await CreateTestPlayerAsync("WilEqSplCom");
+		var executor = testPlayer.DbRef;
 		// Set a $ command attribute with an EqSplit wildcard pattern on #1 (God player, in room #0)
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_WILDEQ #1=$utest_wildeq *=*:@emit Boo! %0 - %1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&UTEST_WILDEQ {testPlayer.DbRef}=$utest_wildeq *=*:@emit Boo! %0 - %1"));
 
 		// Fire the command — %0 should be "a", %1 should be "b"
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_wildeq a=b"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_wildeq a=b"));
 
 		await NotifyService
 			.Received()
@@ -46,11 +53,12 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_Single_SubstitutesArg()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_SINGLE #1=$utest_greet *:@emit Hello, %0!"));
+		var testPlayer = await CreateTestPlayerAsync("WilSinSubArg");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&UTEST_SINGLE {testPlayer.DbRef}=$utest_greet *:@emit Hello, %0!"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_greet World"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_greet World"));
 
 		await NotifyService
 			.Received()
@@ -66,11 +74,12 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_TwoCaptures_WithLiteralBetween_SubstitutesBothArgs()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_TWO #1=$utest_msg * to *:@emit Message from %0 to %1"));
+		var testPlayer = await CreateTestPlayerAsync("WilTwoCapWit");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&UTEST_TWO {testPlayer.DbRef}=$utest_msg * to *:@emit Message from %0 to %1"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_msg Alice to Bob"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_msg Alice to Bob"));
 
 		await NotifyService
 			.Received()
@@ -86,11 +95,12 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_ExactMatch_NoWildcards_FiresCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_EXACT #1=$utest_ping:@emit Pong!"));
+		var testPlayer = await CreateTestPlayerAsync("WilExaMatNo");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&UTEST_EXACT {testPlayer.DbRef}=$utest_ping:@emit Pong!"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_ping"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_ping"));
 
 		await NotifyService
 			.Received()
@@ -106,11 +116,12 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_ThreeCaptures_SubstitutesAllThreeArgs()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_THREE #1=$utest_three * * *:@emit A=%0 B=%1 C=%2"));
+		var testPlayer = await CreateTestPlayerAsync("WilThrCapSub");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&UTEST_THREE {testPlayer.DbRef}=$utest_three * * *:@emit A=%0 B=%1 C=%2"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_three foo bar baz"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_three foo bar baz"));
 
 		await NotifyService
 			.Received()
@@ -128,13 +139,14 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_SingleCaptureGroup_SubstitutesArg()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
+		var testPlayer = await CreateTestPlayerAsync("RegSinCapGro");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single(@"&UTEST_RX1 #1=$utest_rsay (.+):@emit You said: %1"));
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@set #1/UTEST_RX1=regexp"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@set {testPlayer.DbRef}/UTEST_RX1=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_rsay hello world"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_rsay hello world"));
 
 		await NotifyService
 			.Received()
@@ -151,13 +163,14 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_PercentZeroIsFullMatch_PercentOneIsCaptureGroup()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_RX2 #1=$utest_rfull prefix_([0-9]+):@emit Full: %0, Part: %1"));
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@set #1/UTEST_RX2=regexp"));
+		var testPlayer = await CreateTestPlayerAsync("RegPerZerIs");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&UTEST_RX2 {testPlayer.DbRef}=$utest_rfull prefix_([0-9]+):@emit Full: %0, Part: %1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@set {testPlayer.DbRef}/UTEST_RX2=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_rfull prefix_42"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_rfull prefix_42"));
 
 		await NotifyService
 			.Received()
@@ -174,13 +187,14 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_TwoCaptureGroups_SubstitutesBothArgs()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_RX3 #1=$utest_rtell ([A-Za-z]+) ([A-Za-z]+):@emit %1 messaged %2"));
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@set #1/UTEST_RX3=regexp"));
+		var testPlayer = await CreateTestPlayerAsync("RegTwoCapGro");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&UTEST_RX3 {testPlayer.DbRef}=$utest_rtell ([A-Za-z]+) ([A-Za-z]+):@emit %1 messaged %2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@set {testPlayer.DbRef}/UTEST_RX3=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_rtell Alice Bob"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_rtell Alice Bob"));
 
 		await NotifyService
 			.Received()
@@ -197,13 +211,14 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_NamedCaptureGroups_AccessibleByIndex()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&UTEST_RX4 #1=$utest_roll (?<num>[0-9]+)d(?<sides>[0-9]+):@emit Rolling %1d%2"));
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@set #1/UTEST_RX4=regexp"));
+		var testPlayer = await CreateTestPlayerAsync("RegNamCapGro");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&UTEST_RX4 {testPlayer.DbRef}=$utest_roll (?<num>[0-9]+)d(?<sides>[0-9]+):@emit Rolling %1d%2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"@set {testPlayer.DbRef}/UTEST_RX4=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("utest_roll 3d6"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("utest_roll 3d6"));
 
 		await NotifyService
 			.Received()
@@ -218,14 +233,15 @@ public class UserDefinedCommandsTests
 	[Skip("Test needs investigation - unrelated to communication commands")]
 	public async Task SetAndResetCacheTest()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&cmd`setandresetcache #1=$test:@pemit #1=Value 1 received"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("test"));
+		var testPlayer = await CreateTestPlayerAsync("SetAndResCac");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&cmd`setandresetcache {testPlayer.DbRef}=$test:@pemit {testPlayer.DbRef}=Value 1 received"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("test"));
 
-		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&cmd`setandresetcache #1=$test2:@pemit #1=Value 2 received"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("test2"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MModule.single($"&cmd`setandresetcache {testPlayer.DbRef}=$test2:@pemit {testPlayer.DbRef}=Value 2 received"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("test2"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
