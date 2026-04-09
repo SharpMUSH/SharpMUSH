@@ -33,9 +33,14 @@ public class GeneralCommandTests
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected, Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(
+				TestHelpers.MatchingObject(executor),
+				expected,
+				Arg.Any<AnySharpObject>(),
+				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
