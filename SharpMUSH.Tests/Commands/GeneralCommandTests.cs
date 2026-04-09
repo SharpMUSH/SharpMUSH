@@ -4,6 +4,7 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -33,9 +34,14 @@ public class GeneralCommandTests
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected, Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(
+				Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object().DBRef == executor),
+				expected,
+				Arg.Any<AnySharpObject>(),
+				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
