@@ -93,11 +93,12 @@ public class LogCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask LogwipeCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@logwipe command"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]

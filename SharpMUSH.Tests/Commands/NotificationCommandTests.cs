@@ -21,11 +21,12 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MessageCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Test message"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -33,11 +34,12 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RespondCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond #1=Response"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -45,11 +47,12 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask RwallCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@rwall Test message"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -57,11 +60,12 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WarningsCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -69,11 +73,12 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WcheckCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck #1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -81,10 +86,11 @@ public class NotificationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SuggestCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest Test suggestion"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 }

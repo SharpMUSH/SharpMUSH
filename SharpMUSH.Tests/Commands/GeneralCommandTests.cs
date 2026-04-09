@@ -516,13 +516,14 @@ public class GeneralCommandTests
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask Halt_ClearsQueue()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @halt command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt me"));
 
 		// Should notify about halting
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@halt:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}

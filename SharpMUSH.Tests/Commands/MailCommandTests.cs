@@ -21,11 +21,12 @@ public class MailCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MailCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mail #1=Test subject/Test message"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -33,10 +34,11 @@ public class MailCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MaliasCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@malias add all=*"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 }

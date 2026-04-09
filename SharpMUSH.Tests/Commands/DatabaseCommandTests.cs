@@ -94,11 +94,12 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ListCommand()
 	{
+		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@list commands"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -106,11 +107,12 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnrecycleCommand()
 	{
+		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@unrecycle #100"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -118,11 +120,12 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DisableCommand()
 	{
+		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable TestCommand"));
 		
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -130,11 +133,12 @@ public class DatabaseCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EnableCommand()
 	{
+		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable TestCommand"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]

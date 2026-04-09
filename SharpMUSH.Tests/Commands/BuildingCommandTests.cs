@@ -182,6 +182,7 @@ public class BuildingCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LinkExit()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create room and exit with unique names
 		var roomResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig LinkExitTestRoom"));
 		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!);
@@ -194,7 +195,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Linked") && mstr.ToString().Contains($"#{exitDbRef.Number}") && mstr.ToString().Contains($"#{roomDbRef.Number}"),
 					str => str.Contains("Linked") && str.Contains($"#{exitDbRef.Number}") && str.Contains($"#{roomDbRef.Number}")
@@ -207,6 +208,7 @@ public class BuildingCommandTests
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask CloneObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object with unique name
 		var sourceResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CloneObjectTestSource"));
 		var sourceDbRef = DBRef.Parse(sourceResult.Message!.ToPlainText()!);
@@ -216,7 +218,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Cloned") && mstr.ToString().Contains("CloneObjectTestSource"),
 					str => str.Contains("Cloned") && str.Contains("CloneObjectTestSource")
@@ -431,6 +433,7 @@ public class BuildingCommandTests
 	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
 	public async ValueTask SetParent()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create two objects
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Parent Object"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Child Object"));
@@ -440,7 +443,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -505,6 +508,7 @@ public class BuildingCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create and link an exit
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Unlink Room"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@open Unlink Exit=#14"));
@@ -514,7 +518,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Unlinked")));
 	}
 
@@ -535,6 +539,7 @@ public class BuildingCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LockObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LockObjectTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -543,7 +548,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Locked.");
+			.Notify(TestHelpers.MatchingObject(executor), "Locked.");
 	}
 
 	[Test]
@@ -551,6 +556,7 @@ public class BuildingCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask UnlockObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create UnlockObjectTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -563,7 +569,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Unlocked.");
+			.Notify(TestHelpers.MatchingObject(executor), "Unlocked.");
 	}
 
 	/// <summary>
@@ -576,6 +582,7 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DescribeCommand_EvaluatesBeforeStoring()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object for testing
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescEvalTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -591,7 +598,7 @@ public class BuildingCommandTests
 		// Verify the notification shows it was set
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "DESCRIBE") && TestHelpers.MessageContains(msg, "Set")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 
 		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
@@ -686,6 +693,7 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DescribeCommand_MissingEquals_ClearsAttribute()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object first
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescClearTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -699,7 +707,7 @@ public class BuildingCommandTests
 		// Verify "Cleared" notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Cleared")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }

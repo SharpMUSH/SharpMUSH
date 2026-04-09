@@ -101,11 +101,12 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UseCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("use test object"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -173,11 +174,12 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DestroyCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy #100"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -185,11 +187,12 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask NukeCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@nuke #100"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -197,10 +200,11 @@ public class ObjectManipulationCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UndestroyCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@undestroy #100"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 }

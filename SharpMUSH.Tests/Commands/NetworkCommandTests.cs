@@ -21,11 +21,12 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HttpCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@http https://example.com"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -33,11 +34,12 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SqlCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -45,11 +47,12 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MapsqlCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql SELECT * FROM test"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -70,11 +73,12 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SocksetCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sockset #1=option"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -82,10 +86,11 @@ public class NetworkCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SlaveCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@slave"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 }

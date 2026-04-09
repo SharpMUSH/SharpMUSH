@@ -64,11 +64,12 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChatCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>());
 	}
 
@@ -77,11 +78,12 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ChannelCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/list"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -117,11 +119,12 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AddcomCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom pub=Public"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -129,11 +132,12 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DelcomCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("delcom pub"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -141,11 +145,12 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ClistCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@clist"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -153,11 +158,12 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ComlistCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("comlist"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -165,10 +171,11 @@ public class ChannelCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ComtitleCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"comtitle {TestChannelName}=Title"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 }

@@ -218,6 +218,7 @@ public class UserDefinedCommandsTests
 	[Skip("Test needs investigation - unrelated to communication commands")]
 	public async Task SetAndResetCacheTest()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&cmd`setandresetcache #1=$test:@pemit #1=Value 1 received"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("test"));
@@ -228,12 +229,12 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText() == "Value 1 received") ||
 				(msg.IsT1 && msg.AsT1 == "Value 1 received")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText() == "Value 2 received") ||
 				(msg.IsT1 && msg.AsT1 == "Value 2 received")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}

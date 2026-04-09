@@ -25,11 +25,12 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask HaltCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt #1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -59,11 +60,12 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PsCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -71,11 +73,12 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask PsWithTarget()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps #1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -83,6 +86,7 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask TriggerCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Set an attribute first
 		await Parser.CommandParse(1, ConnectionService, MModule.single("&TRIGGER_TEST_WIZ_UNIQUE #1=think Triggered!"));
 
@@ -91,7 +95,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -240,11 +244,12 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DbckCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dbck"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -252,11 +257,12 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask DumpCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dump"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -264,11 +270,12 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask QuotaCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@quota #1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -276,11 +283,12 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask AllquotaCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allquota"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -288,31 +296,34 @@ public class WizardCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask BootCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@boot #1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
 	public async ValueTask WallCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wall Test wall message"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<long>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask WizwallCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wizwall Test wizwall message"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<long>(), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]

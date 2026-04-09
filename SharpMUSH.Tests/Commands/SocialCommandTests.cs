@@ -21,12 +21,13 @@ public class SocialCommandTests
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SayCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("say Hello world"));
 
 		// Sender sees "You say, ..." while others see "Name says, ..."
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single("You say, \"Hello world\""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
+			.Notify(TestHelpers.MatchingObject(executor), MModule.single("You say, \"Hello world\""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 
 	[Test]
@@ -34,11 +35,12 @@ public class SocialCommandTests
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PoseCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One waves hello"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Pose);
+			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One waves hello"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Pose);
 	}
 
 	[Test]
@@ -46,11 +48,12 @@ public class SocialCommandTests
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask SemiposeCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), MModule.single("One's greeting"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.SemiPose);
+			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One's greeting"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.SemiPose);
 	}
 
 	[Test]
@@ -58,11 +61,12 @@ public class SocialCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask WhisperCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -70,10 +74,11 @@ public class SocialCommandTests
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PageCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<MString>(), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<MString>(), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 }

@@ -155,13 +155,14 @@ public class WarningCommandTests
 	[Skip("Integration test - requires proper object setup")]
 	public async Task WCheckCommand_WithMe_ChecksOwnedObjects()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - check owned objects
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck/me"));
 
 		// Assert - should complete check
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Checking objects")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
