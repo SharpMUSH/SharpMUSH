@@ -55,6 +55,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=3 This is a test"));
 
 		await NotifyService
@@ -66,6 +67,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple2()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1={4 This is, a test};"));
 
 		await NotifyService
@@ -77,6 +79,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DolistDoubleHashReplacement()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=dolist-hash-##"));
 
 		await NotifyService
@@ -97,6 +100,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dolist/inline 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
 
@@ -114,6 +118,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex2()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
@@ -136,6 +141,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex3()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1={@dolist/inline 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
@@ -153,6 +159,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex4()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
@@ -170,6 +177,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex5()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline a b={@dolist/inline 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
@@ -199,6 +207,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListComplex6()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline a b={@dolist/inline 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
@@ -220,6 +229,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleCommandList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
 		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
 
@@ -234,6 +244,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleTruthyCommandList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
 		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
 
@@ -248,6 +259,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakSimpleFalsyCommandList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
 		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
 
@@ -262,6 +274,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakCommandList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(
 			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
@@ -274,6 +287,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoBreakCommandList2()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(
 			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
@@ -299,6 +313,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask WhereIs_ValidPlayer_ReportsLocation()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @whereis with a valid player
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
 
@@ -313,6 +328,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask WhereIs_NonPlayer_ReturnsError()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// First create a thing (non-player object)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create test_object_whereis"));
 
@@ -330,6 +346,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @restart with a valid object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
 
@@ -344,6 +361,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Find_SearchesForObjects()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @find command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
 
@@ -358,6 +376,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Stats_ShowsDatabaseStatistics()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @stats command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
 
@@ -372,6 +391,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Search_PerformsDatabaseSearch()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @search command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
 
@@ -386,6 +406,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Entrances_ShowsLinkedObjects()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @entrances command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
 
@@ -399,6 +420,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Command_ShowsCommandInfo()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @command with a command name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@command @emit"));
 
@@ -413,6 +435,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @function with no arguments to list functions
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
@@ -427,6 +450,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @function with a function name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
 
@@ -441,6 +465,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Map_ExecutesAttributeOverList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @map command — attribute does not exist on the unique object
 		var mapObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapTest");
 		var uniqueAttr = $"MAPATTR_{Guid.NewGuid():N}";
@@ -457,6 +482,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Trigger_QueuesAttribute()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @trigger command — attribute does not exist on the unique object
 		var trigObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TrigTest");
 		var uniqueAttr = $"TRIGATTR_{Guid.NewGuid():N}";
@@ -472,6 +498,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Include_InsertsAttributeInPlace()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @include command — attribute does not exist on the unique object
 		var inclObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclTest");
 		var uniqueAttr = $"INCLATTR_{Guid.NewGuid():N}";
@@ -503,6 +530,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask PS_ShowsQueueStatus()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @ps command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
@@ -516,6 +544,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Select_MatchesFirstExpression()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @select command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
 
@@ -530,6 +559,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create the attribute entry first so it exists in the standard table
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access DESCRIPTION="));
 
@@ -613,6 +643,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithDBRefNotificationBatching()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test validates that DBRef-based notifications respect batching scopes.
 		// Before the fix, Notify(DBRef) would bypass batching and send messages immediately.
 		// After the fix, messages should be accumulated and sent as a batch.
@@ -634,6 +665,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Send to player #2 (different from enactor #1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
 
@@ -648,6 +680,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask NestedDoListBatching()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test validates that nested @dolists properly use ref-counting for batching context.
 		// Messages from both outer and inner loops should be batched together.
 
@@ -665,6 +698,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Negative test: Without @break, all loop iterations should send messages
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived"));
@@ -680,6 +714,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithBreakAfterFirst_OnlyFirstMessageReceived()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Positive test: @break should stop the loop after first iteration
 		// Use @break as a conditional command to stop after first iteration
 
@@ -709,6 +744,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithBreakFlushesMessages()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test validates that @break properly flushes batched messages.
 		// Even with @break in the command list, the using statement should
 		// ensure messages are flushed via disposal.
@@ -728,6 +764,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask NestedDoListWithBreakFlushesMessages()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test validates that @break in a nested @dolist/inline properly handles
 		// the ref-counted batching context and still flushes messages.
 		// Note: With the command structure {@pemit; @break}, both commands execute
@@ -749,6 +786,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListWithDelimiter()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @dolist with /delimit switch
 		// Format: @dolist/delimit <delimiter> <list>=<action>
 		// Delimiter is separated by space from list

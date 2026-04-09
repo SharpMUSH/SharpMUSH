@@ -51,6 +51,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(CreateObjectWithCost))]
 	public async ValueTask DoDigForCommandListCheck()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
 		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
@@ -164,6 +165,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(DigRoom))]
 	public async ValueTask DigRoomWithExits()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Room With Exits=In;I,Out;O"));
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
@@ -283,6 +285,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ParentUnset))]
 	public async ValueTask ParentCycleDetection_DirectCycle()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create two objects A and B
 		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CycleTest_A"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
@@ -317,6 +320,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ParentCycleDetection_DirectCycle))]
 	public async ValueTask ParentCycleDetection_IndirectCycle()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create three objects A, B, and C
 		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_A"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
@@ -360,6 +364,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ParentCycleDetection_IndirectCycle))]
 	public async ValueTask ParentCycleDetection_SelfParent()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create object
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create SelfParentTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -382,6 +387,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ParentCycleDetection_SelfParent))]
 	public async ValueTask ParentCycleDetection_LongChain()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a long chain of 5 objects
 		var objDbRefs = new List<DBRef>();
 		for (int i = 0; i < 5; i++)
@@ -441,6 +447,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(SetParent))]
 	public async ValueTask ChownObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Chown Test"));
 
@@ -458,6 +465,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ChownObject))]
 	public async ValueTask ChzoneObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create objects
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zone Object"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
@@ -478,6 +486,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ChzoneObject))]
 	public async ValueTask RecycleObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Recycle Test"));
 
@@ -631,6 +640,7 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask Look_DisplaysStoredDescribe_NoReEvaluation()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object for testing
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LookDescTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -654,6 +664,7 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DescribeCommand_InvalidTarget_ShowsError()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to @desc an object that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
 
