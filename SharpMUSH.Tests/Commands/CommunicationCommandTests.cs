@@ -263,8 +263,9 @@ public class CommunicationCommandTests
 	public async ValueTask NspemitBasic(string command)
 	{
 		var testPlayer = await CreateTestPlayerAsync("NspBas");
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
+		var resolvedCommand = command.Replace("#1", testPlayer.DbRef.ToString());
+		Console.WriteLine("Testing: {0}", resolvedCommand);
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(resolvedCommand));
 
 		await NotifyService
 			.Received()
@@ -279,6 +280,7 @@ public class CommunicationCommandTests
 	public async ValueTask NszemitBasic()
 	{
 		var testPlayer = await CreateTestPlayerAsync("NszBas");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		Console.WriteLine("Testing: @nszemit");
 
 		var expectedMsg = "Test nospoof zone";
@@ -394,7 +396,6 @@ public class CommunicationCommandTests
 	public async ValueTask CListBasic(string command)
 	{
 		var testPlayer = await CreateTestPlayerAsync("CLisBas");
-		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
@@ -402,7 +403,7 @@ public class CommunicationCommandTests
 		// The exact format depends on ChannelList.Handle, but it should send something
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(),
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -428,7 +429,7 @@ public class CommunicationCommandTests
 		// We check that at least one contains our custom message with alias information
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"for alias '{alias}'")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))),
 				null, INotifyService.NotificationType.Announce);

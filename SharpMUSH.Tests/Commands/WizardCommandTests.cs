@@ -338,24 +338,24 @@ public class WizardCommandTests
 	public async ValueTask WallCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("WalCom");
-		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@wall Test wall message"));
 
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(testPlayer.Handle, Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask WizwallCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("WizCom");
-		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@wizwall Test wizwall message"));
 
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(testPlayer.Handle, Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 
 	[Test]
