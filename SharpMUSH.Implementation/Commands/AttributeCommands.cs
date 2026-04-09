@@ -20,7 +20,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var objAttrArg))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @atrlock.");
+			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -30,7 +30,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.Notify(executor, "Invalid format. Use: object/attribute[=on|off]");
+			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.");
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
@@ -53,7 +53,7 @@ public partial class Commands
 
 		if (!attribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {attrName} not found.");
+			await NotifyService!.Notify(executor, "No such attribute.");
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -61,7 +61,7 @@ public partial class Commands
 		{
 			// Query mode - show lock status
 			var isLocked = attribute.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
-			await NotifyService!.Notify(executor, $"Attribute {attrName} is {(isLocked ? "locked" : "unlocked")}.");
+			await NotifyService!.Notify(executor, $"That attribute is {(isLocked ? "locked" : "unlocked")}.");
 			return new CallState(string.Empty);
 		}
 
@@ -79,7 +79,7 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Invalid lock value. Use: on or off");
+			await NotifyService!.Notify(executor, "Invalid argument.");
 			return new CallState("#-1 INVALID VALUE");
 		}
 
@@ -104,13 +104,13 @@ public partial class Commands
 				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 			}
 
-			await NotifyService!.Notify(executor, $"Attribute {attrName} locked.");
+			await NotifyService!.Notify(executor, "Attribute locked.");
 		}
 		else
 		{
 			// Unlock the attribute
 			await AttributeService!.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-			await NotifyService!.Notify(executor, $"Attribute {attrName} unlocked.");
+			await NotifyService!.Notify(executor, "Attribute unlocked.");
 		}
 
 		return new CallState(string.Empty);
@@ -397,7 +397,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var ownerArg))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @atrchown.");
+			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.");
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -407,7 +407,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.Notify(executor, "Invalid format. Use: object/attribute=new_owner");
+			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.");
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
@@ -430,7 +430,7 @@ public partial class Commands
 
 		if (!attribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {attrName} not found.");
+			await NotifyService!.Notify(executor, "No such attribute.");
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -441,7 +441,7 @@ public partial class Commands
 
 		if (ownerLocate.IsError)
 		{
-			await NotifyService!.Notify(executor, "Could not find new owner.");
+			await NotifyService!.Notify(executor, "I can't find that player");
 			return ownerLocate.AsError;
 		}
 
@@ -476,7 +476,7 @@ public partial class Commands
 			// Mortals can only chown to themselves
 			if (executor.IsPlayer && newOwnerPlayer.Object.DBRef != executor.AsPlayer.Object.DBRef)
 			{
-				await NotifyService!.Notify(executor, "You can only change attribute ownership to yourself.");
+				await NotifyService!.Notify(executor, "You can only chown an attribute to yourself.");
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 			else if (!executor.IsPlayer)
@@ -484,7 +484,7 @@ public partial class Commands
 				var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 				if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
 				{
-					await NotifyService!.Notify(executor, "You can only change attribute ownership to yourself.");
+					await NotifyService!.Notify(executor, "You can only chown an attribute to yourself.");
 					return new CallState("#-1 PERMISSION DENIED");
 				}
 			}
@@ -500,7 +500,7 @@ public partial class Commands
 			return new CallState("#-1 FAILED");
 		}
 
-		await NotifyService!.Notify(executor, $"Attribute {attrName} owner changed.");
+		await NotifyService!.Notify(executor, "Attribute owner changed.");
 		return new CallState(string.Empty);
 	}
 

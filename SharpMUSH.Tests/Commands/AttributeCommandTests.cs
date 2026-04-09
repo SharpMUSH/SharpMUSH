@@ -295,7 +295,7 @@ public class AttributeCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute LOCKTEST_UNIQUE_ATTR locked."))
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute locked."))
 			);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -316,7 +316,7 @@ public class AttributeCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute LOCKTEST_UNIQUE_ATTR unlocked."))
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute unlocked."))
 			);
 
 		attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
@@ -342,7 +342,7 @@ public class AttributeCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute QUERYLOCK_UNIQUE_ATTR is unlocked."))
+				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("That attribute is unlocked."))
 			);
 	}
 
@@ -358,7 +358,7 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Invalid arguments to @atrchown.")));
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("You need to give an object/attribute pair.")));
 	}
 
 	[Test]

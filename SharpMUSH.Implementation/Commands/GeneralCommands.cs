@@ -6624,7 +6624,7 @@ public partial class Commands
 				return new CallState("#-1 CREATE FAILED");
 			}
 
-			await NotifyService!.Notify(executor, $"Attribute '{attrName}' set with flags: {string.Join(" ", flagNames)}");
+			await NotifyService!.Notify(executor, $"{attrName.ToUpperInvariant()} -- Attribute permissions now: {string.Join(" ", flagNames.Select(f => f.ToLowerInvariant()))}");
 
 			// TODO: Retroactive flag updates to existing attribute instances.
 			// When /retroactive is set, should update flags on all existing copies of this attribute
