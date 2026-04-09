@@ -35,8 +35,9 @@ public class GeneralCommandTests
 	public async ValueTask SimpleCommandParse(string str, string expected)
 	{
 		var testPlayer = await CreateTestPlayerAsync("SimComPar");
-		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(str));
+		var command = str.Replace("#1", testPlayer.DbRef.ToString());
+		Console.WriteLine("Testing: {0}", command);
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
 		var executor = testPlayer.DbRef;
 		await NotifyService
@@ -76,7 +77,7 @@ public class GeneralCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("DoLisSim");
 		var executor = testPlayer.DbRef;
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}={4 This is, a test};"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}={{4 This is, a test}};"));
 
 		await NotifyService
 			.Received()
@@ -112,7 +113,7 @@ public class GeneralCommandTests
 		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@dolist/inline 1 2 3={@pemit {testPlayer.DbRef}=5 This is a test; @pemit {testPlayer.DbRef}=6 This is also a test}"));
+			MModule.single($"@dolist/inline 1 2 3={{@pemit {testPlayer.DbRef}=5 This is a test; @pemit {testPlayer.DbRef}=6 This is also a test}}"));
 
 		await NotifyService
 			.Received()
@@ -131,7 +132,7 @@ public class GeneralCommandTests
 		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@dolist/inline 1 2 3={@pemit {testPlayer.DbRef}=7 This is a test; @pemit {testPlayer.DbRef}=8 This is also a test}; @pemit {testPlayer.DbRef}=9 Repeat 3 times in this mode."));
+			MModule.single($"@dolist/inline 1 2 3={{@pemit {testPlayer.DbRef}=7 This is a test; @pemit {testPlayer.DbRef}=8 This is also a test}}; @pemit {testPlayer.DbRef}=9 Repeat 3 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -154,7 +155,7 @@ public class GeneralCommandTests
 		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@dolist/inline 1={@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=10 This is a test}; @pemit {testPlayer.DbRef}=11 Repeat 1 times in this mode."));
+			MModule.single($"@dolist/inline 1={{@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=10 This is a test}}; @pemit {testPlayer.DbRef}=11 Repeat 1 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -172,7 +173,7 @@ public class GeneralCommandTests
 		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=12 This is a test}; @pemit {testPlayer.DbRef}=13 Repeat 2 times in this mode."));
+			MModule.single($"@dolist/inline 1 2={{@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=12 This is a test}}; @pemit {testPlayer.DbRef}=13 Repeat 2 times in this mode."));
 
 		await NotifyService
 			.Received()
@@ -190,7 +191,7 @@ public class GeneralCommandTests
 		var testPlayer = await CreateTestPlayerAsync("DoLisCom");
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@dolist/inline a b={@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=14 This is a test %i0}; @pemit {testPlayer.DbRef}=15 Repeat 1 times in this mode %i0"));
+			MModule.single($"@dolist/inline a b={{@dolist/inline 1 2 3=@pemit {testPlayer.DbRef}=14 This is a test %i0}}; @pemit {testPlayer.DbRef}=15 Repeat 1 times in this mode %i0"));
 
 		await NotifyService
 			.Received()
@@ -735,7 +736,7 @@ public class GeneralCommandTests
 		// Messages from both outer and inner loops should be batched together.
 
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2={@dolist/inline a b=@pemit {testPlayer.DbRef}=Nested message}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2={{@dolist/inline a b=@pemit {testPlayer.DbRef}=Nested message}}"));
 
 		// Verify 4 notifications were called (2 outer * 2 inner)
 		await NotifyService
@@ -771,7 +772,7 @@ public class GeneralCommandTests
 		// Use @break as a conditional command to stop after first iteration
 
 		// @break after first message - note: using command structure where @pemit runs, then @break stops further iterations
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3={@pemit {testPlayer.DbRef}=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3={{@pemit {testPlayer.DbRef}=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}}"));
 
 		// With {@pemit; @break}, @pemit runs in each iteration then @break happens
 		// So we get 3 messages (one per loop start) but @break doesn't prevent them
@@ -803,7 +804,7 @@ public class GeneralCommandTests
 		// ensure messages are flushed via disposal.
 
 		// Loop with @break - both @pemit and @break execute in each iteration
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3={@pemit {testPlayer.DbRef}=Message before break; @break}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2 3={{@pemit {testPlayer.DbRef}=Message before break; @break}}"));
 
 		// With command list {@pemit; @break}, both execute in each iteration
 		// So we get 3 messages, and batching still works
@@ -827,7 +828,7 @@ public class GeneralCommandTests
 		// Outer loop runs twice, inner loop has 3 items
 		// With {@pemit; @break}, the @pemit runs in each inner iteration
 		// Expected: 2 outer iterations * 3 inner iterations = 6 messages
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2={@dolist/inline a b c={@pemit {testPlayer.DbRef}=Inner message; @break}}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dolist/inline 1 2={{@dolist/inline a b c={{@pemit {testPlayer.DbRef}=Inner message; @break}}}}"));
 
 		// Should receive 6 messages (all inner iterations run, @break is after @pemit)
 		// This validates that batching still works and flushes correctly even with @break

@@ -142,7 +142,7 @@ public class UserDefinedCommandsTests
 		var testPlayer = await CreateTestPlayerAsync("RegSinCapGro");
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single(@"&UTEST_RX1 #1=$utest_rsay (.+):@emit You said: %1"));
+			MModule.single($"&UTEST_RX1 {testPlayer.DbRef}=$utest_rsay (.+):@emit You said: %1"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@set {testPlayer.DbRef}/UTEST_RX1=regexp"));
 

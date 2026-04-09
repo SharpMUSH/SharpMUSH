@@ -144,7 +144,7 @@ public class ControlFlowCommandTests
 
 		// Set an attribute with a $...: command prefix pattern
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"&INCL_DOLLAR_TEST {objDbRef}=$testcmd *:@pemit #1=IncludeDollarPrefix_Executed_71934"));
+			MModule.single($"&INCL_DOLLAR_TEST {objDbRef}=$testcmd *:@pemit {testPlayer.DbRef}=IncludeDollarPrefix_Executed_71934"));
 
 		// @include should strip the $testcmd *: prefix and execute the remainder
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
@@ -165,7 +165,7 @@ public class ControlFlowCommandTests
 
 		// Set an attribute with a ^...: listen prefix pattern
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"&INCL_CARET_TEST {objDbRef}=^*says*:@pemit #1=IncludeCaretPrefix_Executed_82045"));
+			MModule.single($"&INCL_CARET_TEST {objDbRef}=^*says*:@pemit {testPlayer.DbRef}=IncludeCaretPrefix_Executed_82045"));
 
 		// @include should strip the ^*says*: prefix and execute the remainder
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
@@ -186,7 +186,7 @@ public class ControlFlowCommandTests
 
 		// Set an attribute without any prefix pattern
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"&INCL_NOPREFIX_TEST {objDbRef}=@pemit #1=IncludeNoPrefix_Executed_93156"));
+			MModule.single($"&INCL_NOPREFIX_TEST {objDbRef}=@pemit {testPlayer.DbRef}=IncludeNoPrefix_Executed_93156"));
 
 		// @include should execute the attribute content as-is
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
@@ -207,11 +207,11 @@ public class ControlFlowCommandTests
 
 		// Set an attribute that includes an @break
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"&INCL_NOBRK_TEST {objDbRef}=@pemit #1=IncludeNobreak_Before_14267;@break 1"));
+			MModule.single($"&INCL_NOBRK_TEST {objDbRef}=@pemit {testPlayer.DbRef}=IncludeNobreak_Before_14267;@break 1"));
 
 		// Use @include/nobreak so @break doesn't propagate, then execute next command
 		await Parser.CommandListParse(
-			MModule.single($"@include/nobreak {objDbRef}/INCL_NOBRK_TEST;@pemit #1=IncludeNobreak_After_14267"));
+			MModule.single($"@include/nobreak {objDbRef}/INCL_NOBRK_TEST;@pemit {testPlayer.DbRef}=IncludeNobreak_After_14267"));
 
 		await NotifyService
 			.Received()
@@ -234,7 +234,7 @@ public class ControlFlowCommandTests
 
 		// Set an attribute with a $...: prefix that uses %0
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"&INCL_DOLLARARG_TEST {objDbRef}=$testarg *:@pemit #1=IncludeDollarArg_%0_25378"));
+			MModule.single($"&INCL_DOLLARARG_TEST {objDbRef}=$testarg *:@pemit {testPlayer.DbRef}=IncludeDollarArg_%0_25378"));
 
 		// @include with arguments should strip prefix and substitute %0
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,

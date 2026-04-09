@@ -73,8 +73,9 @@ public class CommunicationCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("PemBas");
 		var executor = testPlayer.DbRef;
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
+		var resolvedCommand = command.Replace("#1", testPlayer.DbRef.ToString());
+		Console.WriteLine("Testing: {0}", resolvedCommand);
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(resolvedCommand));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
