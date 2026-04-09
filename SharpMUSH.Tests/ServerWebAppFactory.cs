@@ -46,6 +46,13 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
+	/// <summary>
+	/// The DBRef of the executor bound to connection handle 1 (the God player).
+	/// Use this in test assertions instead of Arg.Any&lt;DBRef&gt;() to verify that
+	/// notifications are sent to the correct specific recipient.
+	/// </summary>
+	public DBRef ExecutorDBRef => _one;
+
 	// Metrics collected via MeterListener — static so they persist across all factory instances
 	// and can be written from the ProcessExit handler regardless of disposal order.
 	private MeterListener? _meterListener;
