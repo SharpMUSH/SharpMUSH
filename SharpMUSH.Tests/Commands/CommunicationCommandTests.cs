@@ -95,8 +95,6 @@ public class CommunicationCommandTests
 
 	[Test]
 	[Arguments("@lemit Test local emit", "Test local emit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask LemitBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -104,13 +102,15 @@ public class CommunicationCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
 	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask RemitBasic(string command, string expected)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -118,56 +118,83 @@ public class CommunicationCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
-	[Arguments("@oemit #1=Test omit emit", "Test omit emit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
-	public async ValueTask OemitBasic(string command, string expected)
+	public async ValueTask OemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		Console.WriteLine("Testing: @oemit");
+
+		// Create a unique thing to omit so that the executor (player #1) still receives the emit.
+		var excludeName = TestIsolationHelpers.GenerateUniqueName("OemitExclude");
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {excludeName}"));
+		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		var expectedMsg = "Test omit emit";
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@oemit {excludeDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
-	[Arguments("@zemit Test zone emit", "Test zone emit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
-	public async ValueTask ZemitBasic(string command, string expected)
+	public async ValueTask ZemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		Console.WriteLine("Testing: @zemit");
+
+		var expectedMsg = "Test zone emit";
+
+		// Create a unique zone master object (ZMO).
+		var zmoName = TestIsolationHelpers.GenerateUniqueName("ZemitZMO");
+		var zmoResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zmoName}"));
+		var zmoDbRef = DBRef.Parse(zmoResult.Message!.ToPlainText()!);
+
+		// Zone room #0 to the ZMO so that it participates in the zone.  Player #1 is in room #0.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone #0={zmoDbRef}"));
+
+		// Emit to the zone — player #1 (in room #0, which is now in the zone) should receive it.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@zemit {zmoDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
+
+		// Clean up: remove the temporary zone from room #0.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
 	}
 
 	[Test]
 	[Arguments("@nsemit Test nospoof emit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NsemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Just verify the command runs without error
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
 	[Arguments("@nslemit Test nospoof local")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NslemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -175,13 +202,15 @@ public class CommunicationCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
 	[Arguments("@nsremit #0=Test nospoof remote")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NsremitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -189,13 +218,15 @@ public class CommunicationCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
 	[Arguments("@nsoemit #1=Test nospoof omit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NsoemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -203,13 +234,15 @@ public class CommunicationCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
 	[Arguments("@nspemit #1=Test nospoof pemit")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
 	public async ValueTask NspemitBasic(string command)
 	{
 		Console.WriteLine("Testing: {0}", command);
@@ -217,21 +250,41 @@ public class CommunicationCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<OneOf<MString, string>>(),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.NSAnnounce);
 	}
 
 	[Test]
-	[Arguments("@nszemit Test nospoof zone")]
-	[Category("NotImplemented")]
-	[Skip("Not yet implemented")]
-	public async ValueTask NszemitBasic(string command)
+	public async ValueTask NszemitBasic()
 	{
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		Console.WriteLine("Testing: @nszemit");
+
+		var expectedMsg = "Test nospoof zone";
+
+		// Create a unique zone master object (ZMO).
+		var zmoName = TestIsolationHelpers.GenerateUniqueName("NsZemitZMO");
+		var zmoResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zmoName}"));
+		var zmoDbRef = DBRef.Parse(zmoResult.Message!.ToPlainText()!);
+
+		// Zone room #0 to the ZMO so that it participates in the zone.  Player #1 is in room #0.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone #0={zmoDbRef}"));
+
+		// Emit to the zone — player #1 (in room #0, which is now in the zone) should receive it.
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nszemit {zmoDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(
+				Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)),
+				Arg.Any<AnySharpObject?>(),
+				INotifyService.NotificationType.NSEmit);
+
+		// Clean up: remove the temporary zone from room #0.
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
 	}
 
 	[Test]
