@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -15,14 +16,20 @@ public class MailCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MailCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mail #1=Test subject/Test message"));
+		var testPlayer = await CreateTestPlayerAsync("Mail");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mail {testPlayer.DbRef}=Test subject/Test message"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -34,8 +41,9 @@ public class MailCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask MaliasCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@malias add all=*"));
+		var testPlayer = await CreateTestPlayerAsync("Malias");
+		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@malias add all=*"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))

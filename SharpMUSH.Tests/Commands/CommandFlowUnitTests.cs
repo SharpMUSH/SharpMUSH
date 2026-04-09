@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -19,6 +20,24 @@ public class CommandFlowUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
+
+	private IMUSHCodeParser ParserForPlayer(TestIsolationHelpers.TestPlayer player)
+	{
+		var parser = Parser;
+		return parser.FromState(parser.CurrentState with
+		{
+			Executor = player.DbRef,
+			Enactor = player.DbRef,
+			Caller = player.DbRef,
+			Handle = player.Handle
+		});
+	}
+
 	[Test]
 	[NotInParallel]
 	[Arguments("@ifelse 1=@pemit #1=1 True,@pemit #1=1 False", "1 True")]
@@ -29,9 +48,11 @@ public class CommandFlowUnitTests
 	[Arguments("@ifelse 1={@pemit #1=6 True}", "6 True")]
 	public async ValueTask IfElse(string str, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandListParse(MModule.single(str));
+		var testPlayer = await CreateTestPlayerAsync("IfElse");
+		var executor = testPlayer.DbRef;
+		var cmd = str.Replace("#1", $"{testPlayer.DbRef}");
+		Console.WriteLine("Testing: {0}", cmd);
+		await ParserForPlayer(testPlayer).CommandListParse(MModule.single(cmd));
 
 		await NotifyService.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -42,8 +63,9 @@ public class CommandFlowUnitTests
 	[Test]
 	public async ValueTask Retry()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
+		var testPlayer = await CreateTestPlayerAsync("Retry");
+		var executor = testPlayer.DbRef;
+		await ParserForPlayer(testPlayer).CommandListParse(MModule.single("think %0; @retry gt(%0,-1)=dec(%0)"));
 
 		await NotifyService.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
