@@ -263,17 +263,20 @@ public class CommunicationCommandTests
 	public async ValueTask NspemitBasic(string command)
 	{
 		var testPlayer = await CreateTestPlayerAsync("NspBas");
+		var executor = testPlayer.DbRef;
 		var resolvedCommand = command.Replace("#1", testPlayer.DbRef.ToString());
 		Console.WriteLine("Testing: {0}", resolvedCommand);
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(resolvedCommand));
 
+		// Non-privileged players lack NoSpoof permission, so @nspemit falls back to Announce
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(),
+				TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageContains(msg, "Test nospoof pemit")),
 				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.NSAnnounce);
+				INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -396,14 +399,16 @@ public class CommunicationCommandTests
 	public async ValueTask CListBasic(string command)
 	{
 		var testPlayer = await CreateTestPlayerAsync("CLisBas");
+		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
-		// Verify a notification was sent (channel list output)
-		// The exact format depends on ChannelList.Handle, but it should send something
+		// Verify the channel list notification was sent to the executor
+		// The default "Public" channel should always exist, so the output should contain "Name: "
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Name: ")),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -424,14 +429,11 @@ public class CommunicationCommandTests
 		// Now set title
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(command));
 
-		// Verify the title set notification was sent containing the title and alias
-		// Note: This command sends TWO notifications - one from ChannelTitle.Handle and one custom message
-		// We check that at least one contains our custom message with alias information
+		// Verify the title set notification was sent to the executor containing the alias
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"for alias '{alias}'")) ||
-				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))),
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageContains(msg, $"for alias '{alias}'")),
 				null, INotifyService.NotificationType.Announce);
 	}
 
