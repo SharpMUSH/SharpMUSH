@@ -35,6 +35,20 @@ IPasswordService passwordService
 
 	#region Helpers
 
+	/// <summary>
+	/// Wraps an <see cref="IAsyncEnumerable{T}"/> factory so that every call to
+	/// <see cref="IAsyncEnumerable{T}.GetAsyncEnumerator"/> creates a brand-new
+	/// <c>async IAsyncEnumerable</c> state machine instead of cloning the original.
+	/// This prevents the <see cref="System.Threading.Tasks.Sources.ManualResetValueTaskSourceCore{T}"/>
+	/// race condition that occurs when the same cached state machine is concurrently enumerated
+	/// (e.g. via <c>.GetAwaiter().GetResult()</c> in lock-expression trees).
+	/// </summary>
+	private sealed class FreshEnumerable<T>(Func<IAsyncEnumerable<T>> factory) : IAsyncEnumerable<T>
+	{
+		public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+			=> factory().GetAsyncEnumerator(cancellationToken);
+	}
+
 	private string ObjectId(int key) => $"Object/{key}";
 	private string PlayerId(int key) => $"Player/{key}";
 	private string RoomId(int key) => $"Room/{key}";
@@ -191,16 +205,16 @@ RETURN c.value AS nextKey
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
 			Locks = DeserializeLocks(locksJson),
-			Flags = new(() => GetObjectFlagsForIdAsync(id, type.ToUpper(), CancellationToken.None)),
-			Powers = new(() => GetPowersForIdAsync(id, CancellationToken.None)),
-			Attributes = new(() => GetTopLevelAttributesAsync(id, CancellationToken.None)),
-			LazyAttributes = new(() => GetTopLevelLazyAttributesAsync(id, CancellationToken.None)),
-			AllAttributes = new(() => GetAllAttributesForIdAsync(id, CancellationToken.None)),
-			LazyAllAttributes = new(() => GetAllLazyAttributesForIdAsync(id, CancellationToken.None)),
+			Flags = new(() => new FreshEnumerable<SharpObjectFlag>(() => GetObjectFlagsForIdAsync(id, type.ToUpper(), CancellationToken.None))),
+			Powers = new(() => new FreshEnumerable<SharpPower>(() => GetPowersForIdAsync(id, CancellationToken.None))),
+			Attributes = new(() => new FreshEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(id, CancellationToken.None))),
+			LazyAttributes = new(() => new FreshEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(id, CancellationToken.None))),
+			AllAttributes = new(() => new FreshEnumerable<SharpAttribute>(() => GetAllAttributesForIdAsync(id, CancellationToken.None))),
+			LazyAllAttributes = new(() => new FreshEnumerable<LazySharpAttribute>(() => GetAllLazyAttributesForIdAsync(id, CancellationToken.None))),
 			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
 			Parent = new(async ct => await GetParentAsync(id, ct)),
 			Zone = new(async ct => await GetZoneAsync(id, ct)),
-			Children = new(() => GetChildrenAsync(id, CancellationToken.None))
+			Children = new(() => new FreshEnumerable<SharpObject>(() => GetChildrenAsync(id, CancellationToken.None)!))
 		};
 	}
 
@@ -537,7 +551,7 @@ RETURN o, p
 		flags,
 		null,
 		node.Properties.ContainsKey("longName") ? node["longName"].As<string?>() : null,
-		new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(innerCt => Task.FromResult(GetTopLevelAttributesAsync(id, innerCt))),
+		new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<SharpAttribute>>(new FreshEnumerable<SharpAttribute>(() => GetTopLevelAttributesAsync(id, innerCt)))),
 		new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 		new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
 		{
@@ -558,7 +572,7 @@ RETURN o, p
 		flags,
 		null,
 		node.Properties.ContainsKey("longName") ? node["longName"].As<string?>() : null,
-		new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(innerCt => Task.FromResult(GetTopLevelLazyAttributesAsync(id, innerCt))),
+		new AsyncLazy<IAsyncEnumerable<LazySharpAttribute>>(innerCt => Task.FromResult<IAsyncEnumerable<LazySharpAttribute>>(new FreshEnumerable<LazySharpAttribute>(() => GetTopLevelLazyAttributesAsync(id, innerCt)))),
 		new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 		new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),
 		Value: new AsyncLazy<MString>(innerCt =>

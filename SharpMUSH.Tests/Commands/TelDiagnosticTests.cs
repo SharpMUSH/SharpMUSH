@@ -60,10 +60,24 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelThingIntoThingByName()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create telfixtest_obj"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create telfixtest_dest"));
+		// Ensure player is in a known room so the locate service can find inventory objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
 
-		var errors = await ExecAndCollectErrors("@tel telfixtest_obj=telfixtest_dest");
+		var objName = TestIsolationHelpers.GenerateUniqueName("telobj");
+		var destName = TestIsolationHelpers.GenerateUniqueName("teldst");
+
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {destName}"));
+
+		// Verify both objects are locatable by name before @tel
+		var numObj = await Eval($"num({objName})");
+		var numDest = await Eval($"num({destName})");
+		await Assert.That(numObj).IsNotEqualTo("#-1")
+			.Because("source object should be locatable by name before @tel");
+		await Assert.That(numDest).IsNotEqualTo("#-1")
+			.Because("destination object should be locatable by name before @tel");
+
+		var errors = await ExecAndCollectErrors($"@tel {objName}={destName}");
 
 		foreach (var e in errors) Console.WriteLine($"ERROR: {e}");
 		await Assert.That(errors).IsEmpty()
@@ -76,9 +90,11 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelThingIntoThingByDbref()
 	{
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create telfixtest_obj2"));
+		var objName = TestIsolationHelpers.GenerateUniqueName("telobj2");
+		var destName = TestIsolationHelpers.GenerateUniqueName("teldst2");
+		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
 		var obj = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create telfixtest_dest2"));
+		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {destName}"));
 		var dest = r2.Message!.ToPlainText()!.Trim();
 
 		var errors = await ExecAndCollectErrors($"@tel {obj}={dest}");
@@ -94,10 +110,14 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelSelfIntoThing()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create telfixtest_container"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set telfixtest_container=ENTER_OK"));
+		// Ensure player is in a known room so the locate service can find inventory objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
 
-		var errors = await ExecAndCollectErrors("@tel telfixtest_container");
+		var containerName = TestIsolationHelpers.GenerateUniqueName("telcont");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {containerName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {containerName}=ENTER_OK"));
+
+		var errors = await ExecAndCollectErrors($"@tel {containerName}");
 
 		foreach (var e in errors) Console.WriteLine($"ERROR: {e}");
 		await Assert.That(errors).IsEmpty()
@@ -110,11 +130,15 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask NameAndGetFunctions()
 	{
-		var r = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ngtest_obj"));
+		// Ensure player is in a known room so the locate service can find inventory objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+
+		var objName = TestIsolationHelpers.GenerateUniqueName("ngobj");
+		var r = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
 		var dbref = r.Message!.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&last_mod {dbref}=2024-01-01"));
 
-		Console.WriteLine($"Created ngtest_obj = {dbref}");
+		Console.WriteLine($"Created {objName} = {dbref}");
 
 		var nameResult = await Eval($"name({dbref})");
 		Console.WriteLine($"name({dbref}) = {nameResult}");
@@ -122,17 +146,17 @@ public class TelDiagnosticTests
 		var getResult = await Eval($"get({dbref}/last_mod)");
 		Console.WriteLine($"get({dbref}/last_mod) = {getResult}");
 
-		var nameResult2 = await Eval("name(ngtest_obj)");
-		Console.WriteLine($"name(ngtest_obj) = {nameResult2}");
+		var nameResult2 = await Eval($"name({objName})");
+		Console.WriteLine($"name({objName}) = {nameResult2}");
 
-		var getResult2 = await Eval("get(ngtest_obj/last_mod)");
-		Console.WriteLine($"get(ngtest_obj/last_mod) = {getResult2}");
+		var getResult2 = await Eval($"get({objName}/last_mod)");
+		Console.WriteLine($"get({objName}/last_mod) = {getResult2}");
 
-		await Assert.That(nameResult).IsEqualTo("ngtest_obj")
+		await Assert.That(nameResult).IsEqualTo(objName)
 			.Because("name() should return the object name");
 		await Assert.That(getResult).IsEqualTo("2024-01-01")
 			.Because("get() should return the attribute value");
-		await Assert.That(nameResult2).IsEqualTo("ngtest_obj")
+		await Assert.That(nameResult2).IsEqualTo(objName)
 			.Because("name() by name should return the object name");
 		await Assert.That(getResult2).IsEqualTo("2024-01-01")
 			.Because("get() by name should return the attribute value");
@@ -150,10 +174,12 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask NameAndGetOnObjectInsideContainer()
 	{
-		// Create a container and an inner object
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create diag_container"));
+		// Create a container and an inner object with unique names
+		var containerName = TestIsolationHelpers.GenerateUniqueName("diagcont");
+		var innerName = TestIsolationHelpers.GenerateUniqueName("diaginn");
+		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {containerName}"));
 		var containerDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create diag_inner"));
+		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {innerName}"));
 		var innerDbref = r2.Message!.ToPlainText()!.Trim();
 
 		// Set an attribute on the inner object
@@ -169,7 +195,7 @@ public class TelDiagnosticTests
 		var getResult = await Eval($"get({innerDbref}/test_attr)");
 		Console.WriteLine($"get({innerDbref}/test_attr) [inside container] = {getResult}");
 
-		await Assert.That(nameResult).IsEqualTo("diag_inner")
+		await Assert.That(nameResult).IsEqualTo(innerName)
 			.Because("name() by dbref should work even when object is inside a container");
 		await Assert.That(getResult).IsEqualTo("test_value")
 			.Because("get() by dbref should work even when object is inside a container");
@@ -182,9 +208,14 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask NameAndGetOnObjectInsideContainerByName()
 	{
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create diag_outerbox"));
+		// Ensure player is in a known room so the locate service can find inventory objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+
+		var outerName = TestIsolationHelpers.GenerateUniqueName("diagout");
+		var innerName = TestIsolationHelpers.GenerateUniqueName("diagitm");
+		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {outerName}"));
 		var outerDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create diag_inneritem"));
+		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {innerName}"));
 		var innerDbref = r2.Message!.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&test_attr {innerDbref}=inner_value"));
@@ -194,11 +225,11 @@ public class TelDiagnosticTests
 
 		// Try name() and get() by NAME (not dbref) - these may fail because
 		// the object is no longer in the player's inventory or location
-		var nameResult = await Eval("name(diag_inneritem)");
-		Console.WriteLine($"name(diag_inneritem) [inside container, by name] = {nameResult}");
+		var nameResult = await Eval($"name({innerName})");
+		Console.WriteLine($"name({innerName}) [inside container, by name] = {nameResult}");
 
-		var getResult = await Eval("get(diag_inneritem/test_attr)");
-		Console.WriteLine($"get(diag_inneritem/test_attr) [inside container, by name] = {getResult}");
+		var getResult = await Eval($"get({innerName}/test_attr)");
+		Console.WriteLine($"get({innerName}/test_attr) [inside container, by name] = {getResult}");
 
 		// Document what actually happens (this test documents behavior, not assert success)
 		Console.WriteLine($"[DIAGNOSTIC] name() by name inside container: '{nameResult}'");
@@ -213,43 +244,47 @@ public class TelDiagnosticTests
 		Console.WriteLine($"[DIAGNOSTIC] get() returned error: {getContainsError}");
 
 		// Prove: the container itself IS still findable by name
-		var containerName = await Eval("name(diag_outerbox)");
-		Console.WriteLine($"name(diag_outerbox) [container, by name] = {containerName}");
-		await Assert.That(containerName).IsEqualTo("diag_outerbox")
+		var containerNameResult = await Eval($"name({outerName})");
+		Console.WriteLine($"name({outerName}) [container, by name] = {containerNameResult}");
+		await Assert.That(containerNameResult).IsEqualTo(outerName)
 			.Because("the container should still be findable by name");
 	}
 
 	/// <summary>
-	/// Prove: @tel by NAME fails when both objects are in player's inventory.
-	/// This is the key test the user reported - @tel fails outside @wait context.
+	/// Prove: @tel by NAME works when both objects are in player's inventory.
 	/// </summary>
 	[Test]
 	public async ValueTask TelByNameWithObjectsInInventory()
 	{
+		// Ensure player is in a known room so the locate service can find inventory objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+
 		// Create fresh objects with unique names
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create telname_src"));
+		var srcName = TestIsolationHelpers.GenerateUniqueName("telsrc");
+		var dstName = TestIsolationHelpers.GenerateUniqueName("teldst");
+		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {srcName}"));
 		var srcDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create telname_dst"));
+		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {dstName}"));
 		var dstDbref = r2.Message!.ToPlainText()!.Trim();
 
-		Console.WriteLine($"Created telname_src = {srcDbref}");
-		Console.WriteLine($"Created telname_dst = {dstDbref}");
+		Console.WriteLine($"Created {srcName} = {srcDbref}");
+		Console.WriteLine($"Created {dstName} = {dstDbref}");
 
 		// Verify both objects are locatable by name BEFORE @tel
-		var numSrc = await Eval("num(telname_src)");
-		var numDst = await Eval("num(telname_dst)");
-		Console.WriteLine($"num(telname_src) = {numSrc}");
-		Console.WriteLine($"num(telname_dst) = {numDst}");
+		var numSrc = await Eval($"num({srcName})");
+		var numDst = await Eval($"num({dstName})");
+		Console.WriteLine($"num({srcName}) = {numSrc}");
+		Console.WriteLine($"num({dstName}) = {numDst}");
 
 		// Try @tel by name (NO @wait)
-		var errors = await ExecAndCollectErrors("@tel telname_src=telname_dst");
+		var errors = await ExecAndCollectErrors($"@tel {srcName}={dstName}");
 		foreach (var e in errors) Console.WriteLine($"@tel ERROR: {e}");
 
 		// Verify no errors
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel by name should succeed when both objects are in player's inventory");
 
-		// Verify the move happened: telname_src should now be inside telname_dst
+		// Verify the move happened: src should now be inside dst
 		var srcLoc = await Eval($"loc({srcDbref})");
 		Console.WriteLine($"loc({srcDbref}) after @tel = {srcLoc}");
 		await Assert.That(srcLoc).IsEqualTo(dstDbref)
@@ -263,14 +298,19 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask BBSStyleEditAndTelFlow()
 	{
+		// Ensure player is in a known room so the locate service can find inventory objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+
 		// Step 1: Create objects like the BBS does
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create bbsdiag_pocket"));
+		var pocketName = TestIsolationHelpers.GenerateUniqueName("bbspkt");
+		var boardName = TestIsolationHelpers.GenerateUniqueName("bbsbrd");
+		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {pocketName}"));
 		var pocketDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create bbsdiag_board"));
+		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boardName}"));
 		var boardDbref = r2.Message!.ToPlainText()!.Trim();
 
-		Console.WriteLine($"Created bbsdiag_pocket = {pocketDbref}");
-		Console.WriteLine($"Created bbsdiag_board = {boardDbref}");
+		Console.WriteLine($"Created {pocketName} = {pocketDbref}");
+		Console.WriteLine($"Created {boardName} = {boardDbref}");
 
 		// Step 2: Set an attribute with a placeholder reference (like BBS uses #222)
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&test_ref {pocketDbref}=Object is #222"));
@@ -282,10 +322,10 @@ public class TelDiagnosticTests
 		var pocketBareDbref = pocketDbref.Contains(':') ? pocketDbref[..pocketDbref.IndexOf(':')] : pocketDbref;
 		var boardBareDbref = boardDbref.Contains(':') ? boardDbref[..boardDbref.IndexOf(':')] : boardDbref;
 
-		var numPocket = await Eval("num(bbsdiag_pocket)");
-		var numBoard = await Eval("num(bbsdiag_board)");
-		Console.WriteLine($"num(bbsdiag_pocket) = {numPocket}");
-		Console.WriteLine($"num(bbsdiag_board) = {numBoard}");
+		var numPocket = await Eval($"num({pocketName})");
+		var numBoard = await Eval($"num({boardName})");
+		Console.WriteLine($"num({pocketName}) = {numPocket}");
+		Console.WriteLine($"num({boardName}) = {numBoard}");
 
 		await Assert.That(numPocket).IsEqualTo(pocketBareDbref)
 			.Because("num() should find the pocket object by name and return bare #N format");
@@ -303,7 +343,7 @@ public class TelDiagnosticTests
 			.Because("@edit should have replaced #222 with the actual dbref");
 
 		// Step 5: @tel pocket into board (NO @wait - direct, like user reported)
-		var errors = await ExecAndCollectErrors($"@tel bbsdiag_pocket=bbsdiag_board");
+		var errors = await ExecAndCollectErrors($"@tel {pocketName}={boardName}");
 		foreach (var e in errors) Console.WriteLine($"@tel ERROR: {e}");
 
 		await Assert.That(errors).IsEmpty()
@@ -315,7 +355,7 @@ public class TelDiagnosticTests
 		Console.WriteLine($"name({pocketDbref}) after @tel = {nameAfter}");
 		Console.WriteLine($"get({pocketDbref}/test_ref) after @tel = {getAfter}");
 
-		await Assert.That(nameAfter).IsEqualTo("bbsdiag_pocket")
+		await Assert.That(nameAfter).IsEqualTo(pocketName)
 			.Because("name() by dbref should work after @tel moved the object into a container");
 		await Assert.That(getAfter).IsEqualTo($"Object is {pocketDbref}")
 			.Because("get() by dbref should work after @tel moved the object into a container");
@@ -391,10 +431,12 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask BBSReadFailureChain()
 	{
-		// Create the BBS objects
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create bbsread_pocket"));
+		// Create the BBS objects with unique names
+		var pocketName = TestIsolationHelpers.GenerateUniqueName("bbsrpkt");
+		var boardName = TestIsolationHelpers.GenerateUniqueName("bbsrbrd");
+		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {pocketName}"));
 		var pocketDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create bbsread_board"));
+		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boardName}"));
 		var boardDbref = r2.Message!.ToPlainText()!.Trim();
 
 		Console.WriteLine($"pocket = {pocketDbref}");
@@ -475,9 +517,14 @@ public class TelDiagnosticTests
 	[Test]
 	public async ValueTask TelAfterForceEdit()
 	{
-		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create forcediag_a"));
+		// Ensure player is in a known room so the locate service can find inventory objects
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
+
+		var aName = TestIsolationHelpers.GenerateUniqueName("frcda");
+		var bName = TestIsolationHelpers.GenerateUniqueName("frcdb");
+		var r1 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {aName}"));
 		var aDbref = r1.Message!.ToPlainText()!.Trim();
-		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single("@create forcediag_b"));
+		var r2 = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {bName}"));
 		var bDbref = r2.Message!.ToPlainText()!.Trim();
 
 		// Set attribute with placeholder
@@ -494,7 +541,7 @@ public class TelDiagnosticTests
 			.Because("@force @edit should have replaced #222 with actual dbref");
 
 		// Now @tel by name (NO @wait)
-		var errors = await ExecAndCollectErrors("@tel forcediag_a=forcediag_b");
+		var errors = await ExecAndCollectErrors($"@tel {aName}={bName}");
 		foreach (var e in errors) Console.WriteLine($"@tel ERROR: {e}");
 
 		await Assert.That(errors).IsEmpty()

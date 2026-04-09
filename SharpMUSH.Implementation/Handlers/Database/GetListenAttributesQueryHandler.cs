@@ -37,9 +37,7 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 
 			// Extract listen pattern
 			var pattern = match.Groups[1].Value;
-			var isRegex = attr.Flags.Any(flag => flag.Name == "REGEX");
-
-			// Determine behavior based on attribute flags
+			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
 			var behavior = ListenBehavior.AHear; // Default
 			if (attr.Flags.Any(flag => flag.Name == "AAHEAR"))
 				behavior = ListenBehavior.AAHear;
