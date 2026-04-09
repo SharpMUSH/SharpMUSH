@@ -190,7 +190,7 @@ public class ObjectManipulationCommandTests
 	public async ValueTask DestroyCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("DesCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy #100"));
 
@@ -205,7 +205,7 @@ public class ObjectManipulationCommandTests
 	public async ValueTask NukeCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("NukCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@nuke #100"));
 

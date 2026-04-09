@@ -32,7 +32,7 @@ public class WizardCommandTests
 	public async ValueTask HaltCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("HalCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@halt {testPlayer.DbRef}"));
 
@@ -45,7 +45,7 @@ public class WizardCommandTests
 	public async ValueTask AllhaltCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("AllCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@allhalt"));
 
@@ -58,7 +58,7 @@ public class WizardCommandTests
 	public async ValueTask DrainCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("DraCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@drain {testPlayer.DbRef}"));
 
@@ -153,7 +153,7 @@ public class WizardCommandTests
 	public async ValueTask NotifyCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("NotCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@notify {testPlayer.DbRef}"));
 
@@ -282,7 +282,7 @@ public class WizardCommandTests
 	public async ValueTask DumpCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("DumCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@dump"));
 
@@ -297,7 +297,7 @@ public class WizardCommandTests
 	public async ValueTask QuotaCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("QuoCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@quota {testPlayer.DbRef}"));
 
@@ -363,7 +363,7 @@ public class WizardCommandTests
 	public async ValueTask PollCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("PolCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@poll"));
 
@@ -376,7 +376,7 @@ public class WizardCommandTests
 	public async ValueTask Hide_NoSwitch_TogglesHidden()
 	{
 		var testPlayer = await CreateTestPlayerAsync("HidNoSwiTog");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Test that @hide without switches toggles the DARK flag
 
@@ -408,7 +408,7 @@ public class WizardCommandTests
 	public async ValueTask Hide_YesSwitch_SetsHidden()
 	{
 		var testPlayer = await CreateTestPlayerAsync("HidYesSwiSet");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Test that @hide/yes sets the DARK flag
 
@@ -430,7 +430,7 @@ public class WizardCommandTests
 	public async ValueTask Hide_OnSwitch_SetsHidden()
 	{
 		var testPlayer = await CreateTestPlayerAsync("HidOnSwiSet");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Test that @hide/on sets the DARK flag
 
@@ -452,7 +452,7 @@ public class WizardCommandTests
 	public async ValueTask Hide_NoSwitch_UnsetsHidden()
 	{
 		var testPlayer = await CreateTestPlayerAsync("HidNoSwiUns");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Test that @hide/no unsets the DARK flag
 
@@ -474,7 +474,7 @@ public class WizardCommandTests
 	public async ValueTask Hide_OffSwitch_UnsetsHidden()
 	{
 		var testPlayer = await CreateTestPlayerAsync("HidOffSwiUns");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Test that @hide/off unsets the DARK flag
 
@@ -496,7 +496,7 @@ public class WizardCommandTests
 	public async ValueTask Hide_AlreadyHidden_ShowsAppropriateMessage()
 	{
 		var testPlayer = await CreateTestPlayerAsync("HidAlrHidSho");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Test that @hide/on when already hidden shows appropriate message
 
@@ -518,7 +518,7 @@ public class WizardCommandTests
 	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
 	{
 		var testPlayer = await CreateTestPlayerAsync("HidAlrVisSho");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Test that @hide/off when already visible shows appropriate message
 
@@ -540,7 +540,7 @@ public class WizardCommandTests
 	public async ValueTask PurgeCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("PurCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@purge"));
 
@@ -553,7 +553,7 @@ public class WizardCommandTests
 	public async ValueTask ReadCacheCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("ReaCacCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@readcache"));
 
@@ -566,7 +566,7 @@ public class WizardCommandTests
 	public async ValueTask ShutdownCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("ShuCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@shutdown"));
 
@@ -579,7 +579,7 @@ public class WizardCommandTests
 	public async ValueTask ShutdownRebootCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("ShuRebCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@shutdown/reboot"));
 
@@ -593,7 +593,7 @@ public class WizardCommandTests
 	public async ValueTask ChownallCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("ChoCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// This test may need adjustment based on actual player setup
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@chownall {testPlayer.DbRef}"));
@@ -608,7 +608,7 @@ public class WizardCommandTests
 	public async ValueTask SuggestListCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("SugLisCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@suggest/list"));
 
@@ -622,7 +622,7 @@ public class WizardCommandTests
 	public async ValueTask SuggestAddCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("SugAddCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@suggest/add testcat547=testword923"));
 
@@ -636,7 +636,7 @@ public class WizardCommandTests
 	public async ValueTask PollSetCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("PolSetCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@poll TestPollMessage897"));
 
@@ -650,7 +650,7 @@ public class WizardCommandTests
 	public async ValueTask PollClearCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("PolCleCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@poll/clear"));
 

@@ -129,7 +129,7 @@ public class DatabaseCommandTests
 	public async ValueTask DisableCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("DisCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@disable TestCommand"));
 		
@@ -144,7 +144,7 @@ public class DatabaseCommandTests
 	public async ValueTask EnableCommand()
 	{
 		var testPlayer = await CreateTestPlayerAsync("EnaCom");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@enable TestCommand"));
 

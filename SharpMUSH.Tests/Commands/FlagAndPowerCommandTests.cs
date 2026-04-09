@@ -34,7 +34,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
 		var testPlayer = await CreateTestPlayerAsync("FlaLisDisAll");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Execute @flag/list
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
@@ -164,7 +164,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Delete_PreventsSystemFlagDeletion()
 	{
 		var testPlayer = await CreateTestPlayerAsync("FlaDelPreSys");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Try to delete a system flag (e.g., WIZARD)
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/delete WIZARD"));
@@ -200,7 +200,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_List_DisplaysAllPowers()
 	{
 		var testPlayer = await CreateTestPlayerAsync("PowLisDisAll");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Execute @power/list
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/list"));
@@ -300,7 +300,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Delete_PreventsSystemPowerDeletion()
 	{
 		var testPlayer = await CreateTestPlayerAsync("PowDelPreSys");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Try to delete a system power (e.g., BUILDER if it exists)
 		// First check if BUILDER exists and is a system power
@@ -341,7 +341,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Add_RequiresBothArguments()
 	{
 		var testPlayer = await CreateTestPlayerAsync("FlaAddReqBot");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Try to create a flag without symbol
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/add TESTFLAG"));
@@ -359,7 +359,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Add_RequiresBothArguments()
 	{
 		var testPlayer = await CreateTestPlayerAsync("PowAddReqBot");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Try to create a power without alias
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/add TESTPOWER"));
@@ -442,7 +442,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Disable_PreventsSystemFlagDisable()
 	{
 		var testPlayer = await CreateTestPlayerAsync("FlaDisPreSys");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Use WIZARD (a system flag stored in the ObjectFlags table).
 		// Note: PLAYER is a type flag added implicitly per-object and is NOT in the ObjectFlags table,
@@ -527,7 +527,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
 	{
 		var testPlayer = await CreateTestPlayerAsync("PowDisPreSys");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		var executor = testPlayer.DbRef;
 		// Try to disable a system power (Builder is a system power)
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/disable Builder"));
