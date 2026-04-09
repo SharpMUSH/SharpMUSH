@@ -4,8 +4,10 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 using SharpMUSH.Tests;
@@ -100,13 +102,15 @@ public class UtilityCommandTests
 		var executor = testPlayer.DbRef;
 		// Verify the name row has "Name(#dbref)" format (no space before '(') in plain text.
 		// We use plain-text check because name.Hilight() inserts ANSI codes around the name.
-		// Player #1 is named "God" in the test database.
+		// Get the player's actual name from the database for assertion
+		var playerObj = await Mediator.Send(new GetObjectNodeQuery(executor));
+		var playerName = playerObj.Known.Object().Name;
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {testPlayer.DbRef}"));
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "God(#1")));
+				TestHelpers.MessagePlainTextContains(msg, $"{playerName}(#{executor.Number}")));
 	}
 
 	[Test]

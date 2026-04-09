@@ -555,9 +555,9 @@ public class BuildingCommandTests
 		var testPlayer = await CreateTestPlayerAsync("SetFla");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=MONITOR"));
 
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var onePlayer = one.AsPlayer;
-		var flags = await onePlayer.Object.Flags.Value.ToArrayAsync();
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testPlayer.DbRef));
+		var player = obj.AsPlayer;
+		var flags = await player.Object.Flags.Value.ToArrayAsync();
 
 		await Assert.That(flags.Any(x => x.Name == "MONITOR" || x.Name == "DEBUG")).IsTrue();
 	}
@@ -629,7 +629,7 @@ public class BuildingCommandTests
 		// Verify the notification shows it was set
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(testPlayer.Handle, Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "DESCRIBE") && TestHelpers.MessageContains(msg, "Set")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 
 		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
@@ -742,7 +742,7 @@ public class BuildingCommandTests
 		// Verify "Cleared" notification was sent
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(testPlayer.Handle, Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Cleared")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }

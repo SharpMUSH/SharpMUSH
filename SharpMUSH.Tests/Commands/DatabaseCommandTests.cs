@@ -172,6 +172,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlSelSin");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT name, value FROM test_sql_data_cmd WHERE id = 1"));
 
 		await NotifyService
@@ -186,6 +187,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlSelMul");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT name FROM test_sql_data_cmd ORDER BY id"));
 
 		await NotifyService
@@ -200,6 +202,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlSelWit");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT value FROM test_sql_data_cmd WHERE name = 'test_sql_row2'"));
 
 		await NotifyService
@@ -214,6 +217,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlCou");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT COUNT(*) as total FROM test_sql_data_cmd"));
 
 		await NotifyService
@@ -228,6 +232,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlNoRes");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT * FROM test_sql_data_cmd WHERE id = 999"));
 
 		await NotifyService
@@ -350,6 +355,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlInvQue");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql SELECT * FROM nonexistent_table"));
 
 		await NotifyService
@@ -367,6 +373,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		// Test using lit() to protect the query
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id = ?),1"));
 
@@ -383,6 +390,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT name FROM test_sql_data_cmd WHERE id >= ? AND id <= ? ORDER BY id),1,2"));
 
 		await NotifyService
@@ -398,6 +406,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT value FROM test_sql_data_cmd WHERE name = ?),test_sql_row2"));
 
 		await NotifyService
@@ -413,6 +422,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE lit(SELECT * FROM test_sql_data_cmd WHERE id = ?),999"));
 
 		await NotifyService
@@ -488,6 +498,7 @@ public class DatabaseCommandTests
 	{
 		var testPlayer = await CreateTestPlayerAsync("TesSqlPreSwi");
 		var executor = testPlayer.DbRef;
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sql/PREPARE SELECT * FROM nonexistent_table"));
 
 		await NotifyService
