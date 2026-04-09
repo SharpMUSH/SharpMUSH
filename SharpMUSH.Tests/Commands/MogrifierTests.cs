@@ -1,6 +1,8 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -12,12 +14,19 @@ public class MogrifierTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Test]
 	public async ValueTask ChannelMogrifier_SetCommand_ExecutesWithoutError()
 	{
+		var testPlayer = await CreateTestPlayerAsync("MogSet");
+
 		// Test that @channel/mogrifier command accepts basic input
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/mogrifier test=#1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@channel/mogrifier test={testPlayer.DbRef}"));
 
 		// Command executes (may fail if channel doesn't exist, but validates command parsing)
 	}
@@ -25,8 +34,10 @@ public class MogrifierTests
 	[Test]
 	public async ValueTask ChannelMogrifier_ClearCommand_ExecutesWithoutError()
 	{
+		var testPlayer = await CreateTestPlayerAsync("MogClear");
+
 		// Test that clearing a mogrifier works
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/mogrifier test"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@channel/mogrifier test"));
 
 		// Command executes without error
 	}
@@ -42,7 +53,7 @@ public class MogrifierTests
 		// 4. Verify the format
 
 		// For now, just verify the command parses
-		// await Parser.CommandParse(1, ConnectionService, MModule.single("pub Hello"));
+		// await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("pub Hello"));
 	}
 
 	[Test]

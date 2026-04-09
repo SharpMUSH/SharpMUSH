@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
@@ -15,15 +16,21 @@ public class VerbCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
+		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Test]
 	public async ValueTask VerbWithDefaultMessages()
 	{
+		var testPlayer = await CreateTestPlayerAsync("VerbDflt");
 		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbDefault");
 
 		// Syntax: @verb victim=actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
 		// Empty what-attr means use the default string directly
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},,VerbActorDefault_Value_52830,,VerbOthersDefault_Value_52830,,"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
@@ -41,13 +48,14 @@ public class VerbCommandTests
 	[Test]
 	public async ValueTask VerbWithAttributes()
 	{
+		var testPlayer = await CreateTestPlayerAsync("VerbAttr");
 		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbAttr");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WHAT_74102 {verbObj}=VerbAction_Value_74102"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&OWHAT_74102 {verbObj}=VerbOther_Value_74102"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&WHAT_74102 {verbObj}=VerbAction_Value_74102"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&OWHAT_74102 {verbObj}=VerbOther_Value_74102"));
 
 		// 7 RHS args: actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat,,"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
@@ -65,12 +73,13 @@ public class VerbCommandTests
 	[Test]
 	public async ValueTask VerbWithStackArguments()
 	{
+		var testPlayer = await CreateTestPlayerAsync("VerbArgs");
 		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbArgs");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WHAT_ARGS_91605 {verbObj}=VerbArgs_Value_91605"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&WHAT_ARGS_91605 {verbObj}=VerbArgs_Value_91605"));
 
 		// 7 RHS args: actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
-		await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"@verb {verbObj}={verbObj},WHAT_ARGS_91605,Default,,,,"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
@@ -88,10 +97,11 @@ public class VerbCommandTests
 	[Test]
 	public async ValueTask VerbInsufficientArgs()
 	{
+		var testPlayer = await CreateTestPlayerAsync("VerbInsuf");
 		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbInsuf");
 
 		// Provide only the victim with no actor/message args — args.Count < 2 triggers the Usage error
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@verb {verbObj}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@verb {verbObj}"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
