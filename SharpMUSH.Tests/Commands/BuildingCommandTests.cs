@@ -96,20 +96,22 @@ public class BuildingCommandTests
 
 		var newDb = DBRef.Parse(newRoom!.Message!.ToPlainText()!);
 
-		// Use Received() instead of Received(Quantity.Exactly()) to make tests more robust
-		// The important thing is that these specific messages were sent, not the exact count
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		// Match against the specific executor DBRef instead of Arg.Any<DBRef>() to verify
+		// that notifications are sent to the correct recipient.
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Foo Room created with room number {newDb.Number}.");
+			.Notify(executor, $"Foo Room created with room number {newDb.Number}.");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number + 1} to #{newDb.Number}");
+			.Notify(executor, $"Linked exit #{newDb.Number + 1} to #{newDb.Number}");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), "Trying to link...");
+			.Notify(executor, "Trying to link...");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}");
+			.Notify(executor, $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}");
 	}
 
 

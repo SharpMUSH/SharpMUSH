@@ -444,7 +444,7 @@ public class WizardCommandTests
 				=> s.Value.ToString()!.Contains("already hidden")));
 	}
 
-	[Test]
+	[Test, NotInParallel]
 	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
 	{
 		// Test that @hide/off when already visible shows appropriate message
