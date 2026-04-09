@@ -238,7 +238,7 @@ public class CommunicationCommandTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<OneOf<MString, string>>(),
 				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
