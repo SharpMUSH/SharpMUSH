@@ -87,11 +87,12 @@ public class ChannelCommandTests
 	[Test]
 	public async ValueTask CemitCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cemit {TestChannelName}=CemitCommand: Test message"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> CemitCommand: Test message") ||
 				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")),
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Emit);
@@ -100,11 +101,12 @@ public class ChannelCommandTests
 	[Test]
 	public async ValueTask NscemitCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("NscemitCommand: Test message")) ||
 				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))),
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.NSEmit);

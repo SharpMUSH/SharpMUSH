@@ -27,6 +27,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task DebugFlag_OutputsFunctionEvaluation_WithSpecificValues()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - Create test object and set DEBUG flag on it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugEvalObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugEvalObj=DEBUG"));
@@ -41,7 +42,7 @@ public class DebugVerboseTests
 		// Assert - Verify debug output contains the specific function call
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("! add(123,456) :"),
@@ -52,7 +53,7 @@ public class DebugVerboseTests
 		// Assert - Verify debug output contains the specific result
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("! add(123,456) => 579"),
@@ -67,6 +68,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task DebugFlag_ShowsNesting_WithIndentation()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - Create test object and set DEBUG flag on it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugNestObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestObj=DEBUG"));
@@ -81,7 +83,7 @@ public class DebugVerboseTests
 		// Assert - Outer function
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("! mul(add(11,22),3) :"),
@@ -92,7 +94,7 @@ public class DebugVerboseTests
 		// Assert - Inner function (has extra space for nesting indentation, matching PennMUSH)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("!  add(11,22) :"),
@@ -103,7 +105,7 @@ public class DebugVerboseTests
 		// Assert - Final result should be 99
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "=> 99")),
 				Arg.Any<AnySharpObject>(),
@@ -116,6 +118,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task VerboseFlag_OutputsCommandExecution()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - Create test object and set VERBOSE flag on it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseObj=VERBOSE"));
@@ -126,7 +129,7 @@ public class DebugVerboseTests
 		// Assert - Verify VERBOSE output (format: "#dbref] command")
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("] ") && mstr.ToString().Contains("@pemit me=UniqueTestMessage789"),
@@ -141,6 +144,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task VerboseFlag_DoesNotDuplicateCommandName()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - Create test object and set VERBOSE flag on it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseNoDupObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseNoDupObj=VERBOSE"));
@@ -151,7 +155,7 @@ public class DebugVerboseTests
 		// Assert - Verbose output should show "think UniqueNoDup777" NOT "think think UniqueNoDup777"
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("] think UniqueNoDup777"),
@@ -161,7 +165,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("] think think"),
@@ -176,6 +180,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task VerboseFlag_DoesNotDuplicateCommandNameWithSwitches()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - Create test object and set VERBOSE flag on it
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseNoDupSwitchObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseNoDupSwitchObj=VERBOSE"));
@@ -186,7 +191,7 @@ public class DebugVerboseTests
 		// Assert - Verbose output should show "@emit/noeval UniqueNoDupSwitch555" NOT "@emit/noeval @emit/noeval UniqueNoDupSwitch555"
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("] @emit/noeval UniqueNoDupSwitch555"),
@@ -196,7 +201,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("@emit/noeval @emit/noeval"),
@@ -258,6 +263,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task AttributeDebugFlag_ForcesOutput_EvenWithoutObjectDebug()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - Create test object WITHOUT DEBUG, set attribute with DEBUG flag
 		// The attribute must contain a command with a function argument so that VisitFunction is called.
 		// Using @emit [add(88,77)] ensures the bracket pattern is evaluated as a command argument.
@@ -271,7 +277,7 @@ public class DebugVerboseTests
 		// Assert - Should see debug output despite object not having DEBUG
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("add(88,77) => 165"),
@@ -286,6 +292,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task AttributeNoDebugFlag_SuppressesOutput_EvenWithObjectDebug()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - Create test object WITH DEBUG but set attribute WITH NODEBUG
 		// The attribute must contain a command with a function argument so that VisitFunction is called.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create AttrNoDebugSuppressTest"));
@@ -299,7 +306,7 @@ public class DebugVerboseTests
 		// Assert - Should NOT see debug output (NODEBUG takes precedence over object DEBUG)
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("! add(55,44)"),
@@ -314,6 +321,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task DebugFlag_DoesNotOutputRegisterDumps()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - Create test object and set DEBUG flag
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugNoRegObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNoRegObj=DEBUG"));
@@ -326,7 +334,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("[Q-Registers:"),
@@ -336,7 +344,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("[Registers:"),
@@ -346,7 +354,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("[Iter-Registers:"),
@@ -361,6 +369,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Debug_ExactPennMUSHFormat_PreEvalColon()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugFmtPre"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugFmtPre=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugFmtPre=!no_command"));
@@ -370,7 +379,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(7,8\) :$"),
@@ -384,6 +393,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Debug_ExactPennMUSHFormat_PostEvalArrow()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugFmtPost"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugFmtPost=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugFmtPost=!no_command"));
@@ -393,7 +403,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +add\(7,8\) => 15$"),
@@ -407,6 +417,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Debug_NestingUsesSpaceIndentation_MatchesPennMUSH()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugNestFmt"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestFmt=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugNestFmt=!no_command"));
@@ -416,7 +427,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(add\(2,3\)\) :$"),
@@ -426,7 +437,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}add\(2,3\) :$"),
@@ -436,7 +447,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! {2,}add\(2,3\) => 5$"),
@@ -446,7 +457,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(add\(2,3\)\) => 1$"),
@@ -460,6 +471,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Verbose_ExactPennMUSHFormat()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerboseFmtObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerboseFmtObj=VERBOSE"));
 
@@ -467,7 +479,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] @pemit me=VerbFmtTest444$"),
@@ -481,11 +493,12 @@ public class DebugVerboseTests
 	[Test]
 	public async Task PuppetFlag_CannotBeSetOnPlayer()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=PUPPET"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("cannot be set"),
@@ -497,12 +510,13 @@ public class DebugVerboseTests
 	[Test]
 	public async Task PuppetFlag_CanBeSetOnThing()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create PuppetThingObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set PuppetThingObj=PUPPET"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("Set"),
@@ -516,6 +530,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Debug_SendsToOwner_NotToExecutor()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugOwnerObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugOwnerObj=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugOwnerObj=!no_command"));
@@ -547,6 +562,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Debug_ShowsPercentQRegister_InExpressionText()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugPctQ"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctQ=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctQ=!no_command"));
@@ -558,7 +574,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "strlen(%qa)")),
 				Arg.Any<AnySharpObject>(),
@@ -566,7 +582,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"strlen\(%qa\) => \d+"),
@@ -580,6 +596,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Debug_ShowsPercentZeroArg_InExpressionText()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugPct0"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPct0=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPct0=!no_command"));
@@ -591,7 +608,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "strlen(%0)")),
 				Arg.Any<AnySharpObject>(),
@@ -599,7 +616,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "strlen(%0) => 5")),
 				Arg.Any<AnySharpObject>(),
@@ -611,6 +628,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Debug_ShowsIterTokens_InExpressionText()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugPctIter"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctIter=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugPctIter=!no_command"));
@@ -622,7 +640,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "iter(")),
 				Arg.Any<AnySharpObject>(),
@@ -630,7 +648,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "strlen(##)")),
 				Arg.Any<AnySharpObject>(),
@@ -638,7 +656,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"strlen\(.+\) => 5"),
@@ -652,6 +670,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Debug_SetqShowsRegisterName_InExpressionText()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DebugSetq"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugSetq=DEBUG"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set DebugSetq=!no_command"));
@@ -663,7 +682,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, "setq(a,TestVal123) :")),
 				Arg.Any<AnySharpObject>(),
@@ -671,7 +690,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"setq\(a,TestVal123\) => $"),
@@ -685,6 +704,7 @@ public class DebugVerboseTests
 	[Test]
 	public async Task Verbose_ShowsEvaluatedCommand_InOutput()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create VerbosePctObj"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@set VerbosePctObj=VERBOSE"));
 
@@ -693,7 +713,7 @@ public class DebugVerboseTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("] think 30"),

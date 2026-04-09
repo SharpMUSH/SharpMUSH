@@ -55,12 +55,13 @@ public class NetworkCommandTests
 	[Test]
 	public async ValueTask SitelockCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@sitelock/list"));
 
 		// Verify the command executed and sent output to the user
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Any<OneOf.OneOf<MString, string>>());
 	}
 

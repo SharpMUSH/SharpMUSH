@@ -27,13 +27,14 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Execute @flag/list
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
 
 		// Verify that a notification was sent with the flag list
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -42,6 +43,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_CreatesNewFlag()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
@@ -59,7 +61,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' created")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -90,6 +92,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_PreventsDuplicateFlags()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique flag name
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
@@ -106,7 +109,7 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "already exists")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -118,6 +121,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Delete_RemovesNonSystemFlag()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a test flag first
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
@@ -138,7 +142,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' deleted")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -147,13 +151,14 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Delete_PreventsSystemFlagDeletion()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to delete a system flag (e.g., WIZARD)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/delete WIZARD"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot delete system flag")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -162,6 +167,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Delete_HandlesNonExistentFlag()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to delete a non-existent flag
 		var flagName = "NONEXISTENT_FLAG_XYZ123";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
@@ -169,7 +175,7 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent with the exact error message produced by the implementation.
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Flag '{flagName}' not found.")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -178,13 +184,14 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_List_DisplaysAllPowers()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Execute @power/list
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
 		// Verify that a notification was sent with the power list
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Powers:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -193,6 +200,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Add_CreatesNewPower()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
@@ -210,7 +218,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' created")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -241,6 +249,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Delete_RemovesNonSystemPower()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a test power first
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
@@ -261,7 +270,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' deleted")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -270,6 +279,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Delete_PreventsSystemPowerDeletion()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to delete a system power (e.g., BUILDER if it exists)
 		// First check if BUILDER exists and is a system power
 		var builderPower = await Mediator.Send(new GetPowerQuery("BUILDER"));
@@ -280,7 +290,7 @@ public class FlagAndPowerCommandTests
 			// Verify error notification was sent
 			await NotifyService
 				.Received(Quantity.Exactly(1))
-				.Notify(Arg.Any<AnySharpObject>(),
+				.Notify(TestHelpers.MatchingObject(executor),
 					Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot delete system power")),
 					Arg.Any<AnySharpObject>(),
 					Arg.Any<INotifyService.NotificationType>());
@@ -290,6 +300,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Delete_HandlesNonExistentPower()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to delete a non-existent power
 		var powerName = "NONEXISTENT_POWER_XYZ123";
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
@@ -297,7 +308,7 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent with the exact error message produced by the implementation.
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Power '{powerName}' not found.")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -306,13 +317,14 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_RequiresBothArguments()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to create a flag without symbol
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/add TESTFLAG"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "requires flag name and symbol")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -321,13 +333,14 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Add_RequiresBothArguments()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to create a power without alias
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/add TESTPOWER"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "requires power name and alias")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -336,6 +349,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Disable_DisablesNonSystemFlag()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
@@ -354,7 +368,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' disabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -366,6 +380,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Enable_EnablesDisabledFlag()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
@@ -385,7 +400,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' enabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -397,6 +412,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Disable_PreventsSystemFlagDisable()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Use WIZARD (a system flag stored in the ObjectFlags table).
 		// Note: PLAYER is a type flag added implicitly per-object and is NOT in the ObjectFlags table,
 		// so it cannot be looked up or disabled via @flag/disable.
@@ -405,7 +421,7 @@ public class FlagAndPowerCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot disable system flag")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -414,6 +430,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Disable_DisablesNonSystemPower()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
@@ -432,7 +449,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' disabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -444,6 +461,7 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Enable_EnablesDisabledPower()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
@@ -463,7 +481,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' enabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -475,13 +493,14 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to disable a system power (Builder is a system power)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/disable Builder"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot disable system power")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());

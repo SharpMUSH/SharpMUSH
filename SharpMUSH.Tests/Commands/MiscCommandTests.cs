@@ -56,67 +56,73 @@ public class MiscCommandTests
 	[Test]
 	public async ValueTask GrepCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1=pattern"));
 
 		// Verify that Notify was called at least once (could be "No matching attributes" or a list)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask GrepCommand_WithPrintSwitch()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/print #1=pattern"));
 
 		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask GrepCommand_WithWildSwitch()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/wild #1=*pattern*"));
 
 		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask GrepCommand_WithRegexpSwitch()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/regexp #1=.*pattern.*"));
 
 		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask GrepCommand_WithNocaseSwitch()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/nocase #1=PATTERN"));
 
 		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask GrepCommand_WithAttributePattern()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1/DESC*=pattern"));
 
 		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]

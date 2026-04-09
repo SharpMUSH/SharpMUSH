@@ -22,6 +22,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask WildcardEqSplitCommandPassesArgsToEmit()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Set a $ command attribute with an EqSplit wildcard pattern on #1 (God player, in room #0)
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&UTEST_WILDEQ #1=$utest_wildeq *=*:@emit Boo! %0 - %1"));
@@ -31,7 +32,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Boo! a - b")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -45,6 +46,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_Single_SubstitutesArg()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&UTEST_SINGLE #1=$utest_greet *:@emit Hello, %0!"));
 
@@ -52,7 +54,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Hello, World!")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -64,6 +66,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_TwoCaptures_WithLiteralBetween_SubstitutesBothArgs()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&UTEST_TWO #1=$utest_msg * to *:@emit Message from %0 to %1"));
 
@@ -71,7 +74,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Message from Alice to Bob")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -83,6 +86,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_ExactMatch_NoWildcards_FiresCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&UTEST_EXACT #1=$utest_ping:@emit Pong!"));
 
@@ -90,7 +94,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Pong!")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -102,6 +106,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Wildcard_ThreeCaptures_SubstitutesAllThreeArgs()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&UTEST_THREE #1=$utest_three * * *:@emit A=%0 B=%1 C=%2"));
 
@@ -109,7 +114,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "A=foo B=bar C=baz")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -123,6 +128,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_SingleCaptureGroup_SubstitutesArg()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(@"&UTEST_RX1 #1=$utest_rsay (.+):@emit You said: %1"));
 		await Parser.CommandParse(1, ConnectionService,
@@ -132,7 +138,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "You said: hello world")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -145,6 +151,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_PercentZeroIsFullMatch_PercentOneIsCaptureGroup()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&UTEST_RX2 #1=$utest_rfull prefix_([0-9]+):@emit Full: %0, Part: %1"));
 		await Parser.CommandParse(1, ConnectionService,
@@ -154,7 +161,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Full: utest_rfull prefix_42, Part: 42")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -167,6 +174,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_TwoCaptureGroups_SubstitutesBothArgs()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&UTEST_RX3 #1=$utest_rtell ([A-Za-z]+) ([A-Za-z]+):@emit %1 messaged %2"));
 		await Parser.CommandParse(1, ConnectionService,
@@ -176,7 +184,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Alice messaged Bob")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -189,6 +197,7 @@ public class UserDefinedCommandsTests
 	[Test]
 	public async ValueTask Regex_NamedCaptureGroups_AccessibleByIndex()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("&UTEST_RX4 #1=$utest_roll (?<num>[0-9]+)d(?<sides>[0-9]+):@emit Rolling %1d%2"));
 		await Parser.CommandParse(1, ConnectionService,
@@ -198,7 +207,7 @@ public class UserDefinedCommandsTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Rolling 3d6")),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);

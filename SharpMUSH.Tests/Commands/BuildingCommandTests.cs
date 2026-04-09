@@ -63,21 +63,21 @@ public class BuildingCommandTests
 		// Use unique room name in assertions to avoid pollution from other tests
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number {newDb.Number}")));
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 1}") && mstr.ToString().Contains($"#{newDb.Number}"),
 					str => str.Contains($"Linked exit #{newDb.Number + 1}") && str.Contains($"#{newDb.Number}")
 				)));
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), "Trying to link...");
+			.Notify(executor, "Trying to link...");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 2}") && mstr.ToString().Contains($"#{currentLocationDbRef.Number}"),
 					str => str.Contains($"Linked exit #{newDb.Number + 2}") && str.Contains($"#{currentLocationDbRef.Number}")
@@ -171,7 +171,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.");
+			.Notify(executor, $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.");
 	}
 
 	[Test]
@@ -310,7 +310,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -353,7 +353,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -375,7 +375,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular") || TestHelpers.MessageContains(s, "itself")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular") || TestHelpers.MessageContains(s, "itself")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -416,7 +416,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -450,7 +450,7 @@ public class BuildingCommandTests
 		// Verify command executed without permission error
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "PERMISSION DENIED")));
 	}
 
@@ -470,7 +470,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Zoned")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -486,7 +486,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Marked for destruction")));
 	}
 
@@ -644,7 +644,7 @@ public class BuildingCommandTests
 		// Verify look displayed "10" (the evaluated result of [mul(2,5)])
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "10")));
 	}
 
@@ -661,7 +661,7 @@ public class BuildingCommandTests
 		// The locate service sends the error with a sender parameter
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "don't see") ||
 				TestHelpers.MessageContains(msg, "can't see") ||
 				TestHelpers.MessageContains(msg, "not found") ||

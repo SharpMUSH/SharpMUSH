@@ -45,6 +45,7 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask UnsetFlag_PartialMatch_NoCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a thing to test with
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing2"));
 
@@ -57,7 +58,7 @@ public class FlagWildcardMatchingTests
 		// Verify using notification - the DebugVerboseTests style doesn't query back
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						s => s.ToPlainText()!.Contains("Unset", StringComparison.OrdinalIgnoreCase),
@@ -86,6 +87,7 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask UnsetFlag_PartialMatch_Visual()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a thing to test with
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing4"));
 
@@ -98,7 +100,7 @@ public class FlagWildcardMatchingTests
 		// Verify using notification - the DebugVerboseTests style doesn't query back
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						s => s.ToPlainText()!.Contains("Unset", StringComparison.OrdinalIgnoreCase),
