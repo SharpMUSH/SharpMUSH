@@ -1,4 +1,8 @@
+using NSubstitute;
 using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Tests;
@@ -36,4 +40,20 @@ public static class TestHelpers
 		msg.Match(
 			ms => ms.ToString() == expected,
 			s => s == expected);
+
+	/// <summary>
+	/// Returns an NSubstitute argument matcher for <see cref="AnySharpObject"/> that matches
+	/// any object whose DBRef equals that of <paramref name="expected"/>.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static AnySharpObject MatchingObject(AnySharpObject expected) =>
+		Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object().DBRef == expected.Object().DBRef);
+
+	/// <summary>
+	/// Returns an NSubstitute argument matcher for <see cref="AnySharpObject"/> that matches
+	/// any object whose DBRef equals <paramref name="dbRef"/>.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static AnySharpObject MatchingObject(DBRef dbRef) =>
+		Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object().DBRef == dbRef);
 }

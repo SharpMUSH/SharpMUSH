@@ -4,7 +4,6 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -38,7 +37,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object().DBRef == executor),
+				TestHelpers.MatchingObject(executor),
 				expected,
 				Arg.Any<AnySharpObject>(),
 				INotifyService.NotificationType.Announce);
