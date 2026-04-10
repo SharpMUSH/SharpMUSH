@@ -575,8 +575,8 @@ public class DebugVerboseTests
 
 		var firstArg = debugCalls.First().GetArguments()[0] as AnySharpObject;
 		await Assert.That(firstArg).IsNotNull().Because("Debug should be sent to an object");
-		await Assert.That(firstArg!.Object().DBRef.Number).IsEqualTo(1)
-			.Because("Debug output should go to owner (#1), not executor object");
+		await Assert.That(firstArg!.Object().DBRef.Number).IsEqualTo(executor.Number)
+			.Because("Debug output should go to owner (testPlayer), not executor object");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugOwnerObj"));
 	}

@@ -89,4 +89,27 @@ public static class TestHelpers
 		}
 		// Timeout reached — let the caller's assertion produce the diagnostic message
 	}
+
+	/// <summary>
+	/// Polls the attribute service until the specified attribute exists on the target object,
+	/// or until <paramref name="timeoutMs"/> elapses.  This replaces fragile <c>Task.Delay</c>
+	/// waits for asynchronously-queued operations like @wait callbacks that set attributes.
+	/// </summary>
+	public static async Task WaitForAttribute(
+		IAttributeService attributeService,
+		AnySharpObject target,
+		string attributeName,
+		int timeoutMs = 10000)
+	{
+		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+		while (DateTime.UtcNow < deadline)
+		{
+			var attr = await attributeService.GetAttributeAsync(
+				target, target, attributeName,
+				IAttributeService.AttributeMode.Read, false);
+			if (attr.IsAttribute) return;
+			await Task.Delay(100);
+		}
+		// Timeout reached — let the caller's assertion produce the diagnostic message
+	}
 }

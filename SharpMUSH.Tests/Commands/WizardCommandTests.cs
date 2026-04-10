@@ -237,10 +237,11 @@ public class WizardCommandTests
 
 		// Allow the scheduler to fire and the command-list consumer to execute.
 		// [NotInParallel] ensures the queue consumer isn't saturated by other tests.
-		await Task.Delay(3000);
+		// Poll for the attribute to be set instead of using a fragile fixed delay.
+		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, resultAttr);
 
 		// Assert - the attribute should contain the pattern-matched value, not @wait's arg
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, resultAttr,
 			IAttributeService.AttributeMode.Read, false);
 

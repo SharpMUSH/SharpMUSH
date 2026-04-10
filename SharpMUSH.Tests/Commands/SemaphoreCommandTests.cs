@@ -357,10 +357,10 @@ public class SemaphoreCommandTests
 			MModule.single($"+waitstore_{uniqueId.ToLower()} {targetName}"));
 
 		// Wait for @create to complete and @wait callback to fire
-		await Task.Delay(3000);
+		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
+		await TestHelpers.WaitForAttribute(AttributeService, storeObjNode.Known, uniqueAttr);
 
 		// Assert - the attribute should contain the dbref of the created object (not empty, not literal)
-		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
 		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, uniqueAttr,
 			IAttributeService.AttributeMode.Read, false);
 
@@ -401,8 +401,11 @@ public class SemaphoreCommandTests
 
 		await Task.Delay(3000);
 
-		// Assert - the groups attribute on storeObj should contain the dbref of the created object
+		// Poll for the attribute to be set by the @wait callback
 		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
+		await TestHelpers.WaitForAttribute(AttributeService, storeObjNode.Known, grpAttr);
+
+		// Assert - the groups attribute on storeObj should contain the dbref of the created object
 		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, grpAttr,
 			IAttributeService.AttributeMode.Read, false);
 
