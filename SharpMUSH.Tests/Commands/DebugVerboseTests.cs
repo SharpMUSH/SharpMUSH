@@ -123,7 +123,7 @@ public class DebugVerboseTests
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => mstr.ToString().Contains("] ") && mstr.ToString().Contains("@pemit me=UniqueTestMessage789"),
-						str => str.Contains("] ") && str.Contains("@pemit me=UniqueTestMessage789"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+						str => str.Contains("] ") && str.Contains("@pemit me=UniqueTestMessage789"))), null, INotifyService.NotificationType.Announce);
 
 		// Cleanup
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseObj"));
@@ -441,7 +441,7 @@ public class DebugVerboseTests
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] @pemit me=VerbFmtTest444$"),
-						str => Regex.IsMatch(str, @"^#\d+\] @pemit me=VerbFmtTest444$"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+						str => Regex.IsMatch(str, @"^#\d+\] @pemit me=VerbFmtTest444$"))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy VerboseFmtObj"));
 	}
