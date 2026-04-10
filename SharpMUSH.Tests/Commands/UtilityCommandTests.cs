@@ -28,7 +28,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains("ThinkBasic Test output")));
+				=> x.Value.ToString()!.Contains("ThinkBasic Test output")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -41,7 +41,7 @@ public class UtilityCommandTests
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(x
-					=> x.Value.ToString()!.Contains("ThinkWithFunction 5")));
+					=> x.Value.ToString()!.Contains("ThinkWithFunction 5")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -55,7 +55,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains($"This is a comment {guid}")));
+				=> x.Value.ToString()!.Contains($"This is a comment {guid}")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -66,7 +66,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -77,7 +77,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -92,7 +92,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "God(#1")));
+				TestHelpers.MessagePlainTextContains(msg, "God(#1")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -105,7 +105,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Owner: ")));
+				TestHelpers.MessagePlainTextContains(msg, "Owner: ")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -118,11 +118,11 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Zone: *NOTHING*")));
+				TestHelpers.MessagePlainTextContains(msg, "Zone: *NOTHING*")), null, INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Powers: ")));
+				TestHelpers.MessagePlainTextContains(msg, "Powers: ")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -135,7 +135,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Warnings checked:")));
+				TestHelpers.MessagePlainTextContains(msg, "Warnings checked:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -148,7 +148,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Last modified:")));
+				TestHelpers.MessagePlainTextContains(msg, "Last modified:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -161,7 +161,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Quota:")));
+				TestHelpers.MessagePlainTextContains(msg, "Quota:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -182,7 +182,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Exits:")));
+				TestHelpers.MessagePlainTextContains(msg, "Exits:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -195,7 +195,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Last modified:")));
+				TestHelpers.MessagePlainTextContains(msg, "Last modified:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -219,14 +219,14 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText")));
+				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText")), null, INotifyService.NotificationType.Announce);
 
 		// The ANSI-rendered output must contain actual ANSI escape codes
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText") &&
-				msg.IsT0 && msg.AsT0.ToString().Contains("\x1b[")));
+				msg.IsT0 && msg.AsT0.ToString().Contains("\x1b[")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -246,13 +246,13 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Owner: ")));
+				TestHelpers.MessagePlainTextContains(msg, "Owner: ")), null, INotifyService.NotificationType.Announce);
 
 		// Brief must NOT show description text
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "BriefShouldNotSeeThis")));
+				TestHelpers.MessagePlainTextContains(msg, "BriefShouldNotSeeThis")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -264,7 +264,7 @@ public class UtilityCommandTests
 		// /opaque should still show header
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -277,7 +277,7 @@ public class UtilityCommandTests
 		// Should display matching attributes
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -290,7 +290,7 @@ public class UtilityCommandTests
 		// Should display current location
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -303,7 +303,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -316,7 +316,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -329,7 +329,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -342,7 +342,7 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -354,9 +354,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH version 0")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SharpMUSH version 0")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -399,9 +397,7 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Any<OneOf.OneOf<MString, string>>(),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Any<OneOf.OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -414,6 +410,6 @@ public class UtilityCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 }

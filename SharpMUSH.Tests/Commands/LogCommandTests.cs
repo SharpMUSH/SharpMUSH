@@ -26,7 +26,7 @@ public class LogCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message logged to Command log.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Message logged to Command log.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -38,7 +38,7 @@ public class LogCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message logged to Command log.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Message logged to Command log.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -50,7 +50,7 @@ public class LogCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message logged to Wizard log.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Message logged to Wizard log.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -62,7 +62,7 @@ public class LogCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Message logged to Error log.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Message logged to Error log.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -74,7 +74,7 @@ public class LogCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -85,7 +85,7 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -98,7 +98,7 @@ public class LogCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

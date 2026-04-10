@@ -32,9 +32,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Flags:")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Flags:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_power with SWITCH_LIST calls do_list_flags("POWER", ..., FLAG_LIST_NAMECHAR, T("Powers"))
@@ -48,9 +46,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Powers:")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Powers:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_hook with SWITCH_LIST calls do_hook_list(executor, arg_left, 1).
@@ -64,9 +60,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "No hooks set for command '@EMIT'.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "No hooks set for command '@EMIT'.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_function with no args calls do_function(executor, NULL, NULL, 0)
@@ -80,9 +74,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Global user-defined functions:")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Global user-defined functions:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: @command with no arg returns an error.
@@ -111,9 +103,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")), null, INotifyService.NotificationType.Announce);
 
 		// Restore to visible state.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
@@ -133,9 +123,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "That player is not connected.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "That player is not connected.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: do_attribute_access outputs:
@@ -153,9 +141,7 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageEquals(msg, $"{uniqueAttr} -- Attribute permissions now: wizard")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+					TestHelpers.MessageEquals(msg, $"{uniqueAttr} -- Attribute permissions now: wizard")), null, INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: do_atrlock on success outputs "Attribute locked." (attrib.c).
@@ -177,9 +163,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute locked.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute locked.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: do_atrchown on success outputs "Attribute owner changed." (attrib.c).
@@ -202,9 +186,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute owner changed.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute owner changed.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: do_firstexit re-links an exit to move it to the front of the room's exit list.

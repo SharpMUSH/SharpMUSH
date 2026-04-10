@@ -29,7 +29,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -40,7 +40,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "One", Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "One", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -53,7 +53,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -66,7 +66,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -79,7 +79,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -90,11 +90,11 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "SkipCommand False", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "SkipCommand False", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "SkipCommand Rest", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "SkipCommand Rest", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -107,7 +107,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -118,7 +118,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "IfElseCommand True", Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "IfElseCommand True", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -138,7 +138,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeDollarPrefix_Executed_71934")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "IncludeDollarPrefix_Executed_71934")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -158,7 +158,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeCaretPrefix_Executed_82045")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "IncludeCaretPrefix_Executed_82045")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -178,7 +178,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeNoPrefix_Executed_93156")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "IncludeNoPrefix_Executed_93156")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -198,13 +198,13 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeNobreak_Before_14267")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "IncludeNobreak_Before_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// The command after @include/nobreak should still execute
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeNobreak_After_14267")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "IncludeNobreak_After_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -224,7 +224,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "IncludeDollarArg_Hello_25378")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "IncludeDollarArg_Hello_25378")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -239,13 +239,13 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "BreakQueued_Before_36489")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "BreakQueued_Before_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// The command after @break should NOT execute (break stops the list)
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "BreakQueued_After_36489")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "BreakQueued_After_36489")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -259,12 +259,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwFirst_A_47592")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwFirst_A_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwFirst_B_47592")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwFirst_B_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -278,12 +278,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwAll_A_58603")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwAll_A_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwAll_B_58603")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwAll_B_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -297,12 +297,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwRegexp_Match_69714")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwRegexp_Match_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwRegexp_NoMatch_69714")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwRegexp_NoMatch_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -316,12 +316,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwRegexpCI_Match_70825")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwRegexpCI_Match_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwRegexpCI_NoMatch_70825")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwRegexpCI_NoMatch_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -335,7 +335,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwHashDollar_hello_81936")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwHashDollar_hello_81936")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -349,7 +349,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwHashDollarDef_goodbye_92047")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwHashDollarDef_goodbye_92047")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -364,11 +364,11 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwNotify_Match_93158")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwNotify_Match_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "SwNotify_Default_93158")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "SwNotify_Default_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

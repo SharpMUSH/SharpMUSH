@@ -24,7 +24,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 200 OK", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 200 OK", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -35,7 +35,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 404 Not Found", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 404 Not Found", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -46,7 +46,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 500", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Status 500", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -57,7 +57,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "Status code must be a 3-digit number.", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "Status code must be a 3-digit number.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -68,7 +68,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "Status code must be a 3-digit number.", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "Status code must be a 3-digit number.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -80,7 +80,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "Status line must be less than 40 characters.", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "Status line must be less than 40 characters.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -91,7 +91,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Content-Type set to application/json", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Content-Type set to application/json", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -102,7 +102,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Content-Type set to text/html", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Content-Type set to text/html", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -113,7 +113,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "Content-Type cannot be empty.", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "Content-Type cannot be empty.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -124,7 +124,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header X-Powered-By: MUSHCode", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header X-Powered-By: MUSHCode", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -136,8 +136,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header Set-Cookie: name=Bob; Max-Age=3600; Version=1",
-				Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header Set-Cookie: name=Bob; Max-Age=3600; Version=1", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -148,7 +147,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "Cannot set Content-Length header.", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "Cannot set Content-Length header.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -159,7 +158,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "Header name cannot be empty.", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "Header name cannot be empty.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -170,7 +169,7 @@ public class HttpCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header X-Custom-Header: ", Arg.Any<AnySharpObject>());
+			.Notify(TestHelpers.MatchingObject(executor), "(HTTP): Header X-Custom-Header: ", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

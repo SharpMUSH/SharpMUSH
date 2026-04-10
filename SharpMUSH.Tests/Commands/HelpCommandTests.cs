@@ -31,7 +31,7 @@ public class HelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("help newbie")) ||
-				(msg.IsT1 && msg.AsT1.Contains("help newbie"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("help newbie"))), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -46,7 +46,7 @@ public class HelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -61,7 +61,7 @@ public class HelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && (msg.AsT0.ToString().Contains("help") || msg.AsT0.ToString().Contains("helpfile"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("help") || msg.AsT1.Contains("helpfile")))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && (msg.AsT1.Contains("help") || msg.AsT1.Contains("helpfile")))), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -76,7 +76,7 @@ public class HelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Matches:")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Matches:"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("Matches:"))), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -91,7 +91,7 @@ public class HelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("No entry for")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No entry for"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("No entry for"))), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -106,6 +106,6 @@ public class HelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("MUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("MUSH"))), null, INotifyService.NotificationType.Announce);
 	}
 }

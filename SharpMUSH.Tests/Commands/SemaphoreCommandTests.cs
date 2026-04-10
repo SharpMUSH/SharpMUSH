@@ -49,15 +49,14 @@ public class SemaphoreCommandTests
 		// Assert - verify the waiting task was executed
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(),
-			testMessage,
-			Arg.Any<AnySharpObject>(),
-			INotifyService.NotificationType.Announce);
+			testMessage, null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DolistInline_ShouldExecuteImmediately()
 	{
 		// Arrange
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueId = Guid.NewGuid().ToString("N");
 
 		// Act - @dolist/inline should execute immediately
@@ -66,10 +65,8 @@ public class SemaphoreCommandTests
 
 		// Assert - all iterations should have executed (checking for at least one to ensure it ran)
 		await NotifyService.Received().Notify(
-			Arg.Any<AnySharpObject>(),
-			$"Inline{uniqueId}",
-			Arg.Any<AnySharpObject>(),
-			INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(executor),
+			$"Inline{uniqueId}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -125,9 +122,7 @@ public class SemaphoreCommandTests
 		await NotifyService.DidNotReceive().Notify(
 			Arg.Any<AnySharpObject>(),
 			Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Value.ToString()!.Contains("must be in pairs")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+				msg.Value.ToString()!.Contains("must be in pairs")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -157,9 +152,7 @@ public class SemaphoreCommandTests
 		// The waiting task should have been executed with %q0 set to our test value
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(),
-			$"QRegValue:{testValue}",
-			Arg.Any<AnySharpObject>(),
-			INotifyService.NotificationType.Announce);
+			$"QRegValue:{testValue}", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

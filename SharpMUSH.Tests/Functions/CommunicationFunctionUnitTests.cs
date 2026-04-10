@@ -19,6 +19,7 @@ public class CommunicationFunctionUnitTests
 	[Test]
 	public async Task PrivateEmit()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		const string uniqueMessage = "Pemit_test_unique_message_for_verification";
 
 		// Execute the function with unique message
@@ -33,9 +34,7 @@ public class CommunicationFunctionUnitTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf.OneOf<MString, string>>(x => x.Value.ToString()!.Contains(uniqueMessage)),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf.OneOf<MString, string>>(x => x.Value.ToString()!.Contains(uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -94,6 +93,7 @@ public class CommunicationFunctionUnitTests
 	[Test]
 	public async Task Nspemit()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		const string uniqueMessage = "Nspemit_test_unique_message_for_verification";
 
 		// Execute the function with unique message
@@ -108,9 +108,7 @@ public class CommunicationFunctionUnitTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
 	}
 
 	[Test]

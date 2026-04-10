@@ -30,7 +30,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -41,7 +41,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "All objects halted")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "All objects halted")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -52,7 +52,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -65,7 +65,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -78,7 +78,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -95,7 +95,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -106,7 +106,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -140,7 +140,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Notified")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Notified")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -152,7 +152,7 @@ public class WizardCommandTests
 		// Note: This test doesn't verify the wait actually happened, just that the command executed
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "#-1")), null, INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -236,7 +236,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -249,7 +249,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -262,7 +262,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -275,7 +275,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -288,7 +288,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -301,7 +301,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -312,7 +312,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -323,7 +323,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -335,7 +335,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "poll") || TestHelpers.MessageContains(s, "Poll")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "poll") || TestHelpers.MessageContains(s, "Poll")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -351,9 +351,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "now hidden")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "now hidden")), null, INotifyService.NotificationType.Announce);
 
 
 
@@ -363,9 +361,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -385,7 +381,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "hidden")));
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "hidden")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -405,7 +401,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("hidden")));
+				=> s.Value.ToString()!.Contains("hidden")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -425,7 +421,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")));
+				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -445,7 +441,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")));
+				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test, NotInParallel]
@@ -465,7 +461,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("already hidden")));
+				=> s.Value.ToString()!.Contains("already hidden")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test, NotInParallel]
@@ -485,7 +481,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("already visible")));
+				=> s.Value.ToString()!.Contains("already visible")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -496,7 +492,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Purge complete") || TestHelpers.MessageContains(s, "GOING_TWICE")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Purge complete") || TestHelpers.MessageContains(s, "GOING_TWICE")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -507,7 +503,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Reindexing text files") || TestHelpers.MessageContains(s, "Text file cache rebuilt")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Reindexing text files") || TestHelpers.MessageContains(s, "Text file cache rebuilt")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -518,7 +514,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SHUTDOWN") || TestHelpers.MessageContains(s, "web") || TestHelpers.MessageContains(s, "orchestration")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "SHUTDOWN") || TestHelpers.MessageContains(s, "web") || TestHelpers.MessageContains(s, "orchestration")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -529,7 +525,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "REBOOT") || TestHelpers.MessageContains(s, "web") || TestHelpers.MessageContains(s, "orchestration")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "REBOOT") || TestHelpers.MessageContains(s, "web") || TestHelpers.MessageContains(s, "orchestration")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -542,7 +538,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Permission denied") || TestHelpers.MessageContains(s, "objects") || TestHelpers.MessageContains(s, "ownership")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Permission denied") || TestHelpers.MessageContains(s, "objects") || TestHelpers.MessageContains(s, "ownership")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -554,7 +550,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Suggestion categories") || TestHelpers.MessageContains(s, "No suggestion categories")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Suggestion categories") || TestHelpers.MessageContains(s, "No suggestion categories")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -566,7 +562,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Added 'testword923' to category 'testcat547'")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Added 'testword923' to category 'testcat547'")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -578,7 +574,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Poll message set") || TestHelpers.MessageContains(s, "Permission")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Poll message set") || TestHelpers.MessageContains(s, "Permission")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -590,7 +586,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Poll message cleared") || TestHelpers.MessageContains(s, "Permission")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Poll message cleared") || TestHelpers.MessageContains(s, "Permission")), null, INotifyService.NotificationType.Announce);
 	}
 
 

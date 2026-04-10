@@ -73,7 +73,7 @@ public class CommunicationCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), expected, Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -90,15 +90,14 @@ public class CommunicationCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
 	[Arguments("@lemit Test local emit", "Test local emit")]
 	public async ValueTask LemitBasic(string command, string expected)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -106,15 +105,14 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
 	[Arguments("@remit #0=Test remote emit", "Test remote emit")]
 	public async ValueTask RemitBasic(string command, string expected)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -122,14 +120,13 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
 	public async ValueTask OemitBasic()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: @oemit");
 
 		// Create a unique thing to omit so that the executor (player #1) still receives the emit.
@@ -144,14 +141,13 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
 	public async ValueTask ZemitBasic()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: @zemit");
 
 		var expectedMsg = "Test zone emit";
@@ -171,9 +167,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 
 		// Clean up: remove the temporary zone from room #0.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
@@ -183,6 +177,7 @@ public class CommunicationCommandTests
 	[Arguments("@nsemit Test nospoof emit")]
 	public async ValueTask NsemitBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -190,15 +185,14 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.NSEmit);
+				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
 	[Arguments("@nslemit Test nospoof local")]
 	public async ValueTask NslemitBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -206,15 +200,14 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.NSEmit);
+				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
 	[Arguments("@nsremit #0=Test nospoof remote")]
 	public async ValueTask NsremitBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -222,15 +215,14 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.NSEmit);
+				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
 	[Arguments("@nsoemit #1=Test nospoof omit")]
 	public async ValueTask NsoemitBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -238,15 +230,14 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
 	[Arguments("@nspemit #1=Test nospoof pemit")]
 	public async ValueTask NspemitBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -254,14 +245,13 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.NSAnnounce);
+				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
 	}
 
 	[Test]
 	public async ValueTask NszemitBasic()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: @nszemit");
 
 		var expectedMsg = "Test nospoof zone";
@@ -281,9 +271,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.NSEmit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 
 		// Clean up: remove the temporary zone from room #0.
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));

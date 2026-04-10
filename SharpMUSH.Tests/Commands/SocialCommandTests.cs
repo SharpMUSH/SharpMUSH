@@ -27,7 +27,7 @@ public class SocialCommandTests
 		// Sender sees "You say, ..." while others see "Name says, ..."
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor), MModule.single("You say, \"Hello world\""), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
+			.Notify(TestHelpers.MatchingObject(executor), MModule.single("You say, \"Hello world\""), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -40,7 +40,7 @@ public class SocialCommandTests
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One waves hello"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Pose);
+			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One waves hello"), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -53,7 +53,7 @@ public class SocialCommandTests
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One's greeting"), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.SemiPose);
+			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One's greeting"), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -66,7 +66,7 @@ public class SocialCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -79,6 +79,6 @@ public class SocialCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<MString>(), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<MString>(), null, INotifyService.NotificationType.Announce);
 	}
 }

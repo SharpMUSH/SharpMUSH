@@ -83,7 +83,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -96,8 +96,7 @@ public class ChannelCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> CemitCommand: Test message") ||
-				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")),
-				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Emit);
+				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -110,8 +109,7 @@ public class ChannelCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("NscemitCommand: Test message")) ||
-				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))),
-				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.NSEmit);
+				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -124,7 +122,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -137,7 +135,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -150,7 +148,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -163,7 +161,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -176,6 +174,6 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 }

@@ -26,9 +26,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Configuration Categories:")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Configuration Categories:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -41,9 +39,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Options in Net:")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Options in Net:")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -56,8 +52,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "mud_name")),
-				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "mud_name")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -70,9 +65,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "No configuration category or option")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "No configuration category or option")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -85,7 +78,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -98,7 +91,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -111,8 +104,7 @@ public class ConfigCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Message of the Day settings")),
-				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Message of the Day settings")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -125,7 +117,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -138,7 +130,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -151,7 +143,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -163,7 +155,7 @@ public class ConfigCommandTests
 		// Should notify with player list - verify we got a notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -175,7 +167,7 @@ public class ConfigCommandTests
 		// Should notify with filtered player list
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf.OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -192,9 +184,7 @@ public class ConfigCommandTests
 				Arg.Is<OneOf.OneOf<MString, string>>(s =>
 					s.Value.ToString()!.Contains("@enable") &&
 					s.Value.ToString()!.Contains("@config/set") &&
-					s.Value.ToString()!.Contains("noisy_whisper")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+					s.Value.ToString()!.Contains("noisy_whisper")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -211,9 +201,7 @@ public class ConfigCommandTests
 				Arg.Is<OneOf.OneOf<MString, string>>(s =>
 					s.Value.ToString()!.Contains("@disable") &&
 					s.Value.ToString()!.Contains("@config/set") &&
-					s.Value.ToString()!.Contains("noisy_whisper")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+					s.Value.ToString()!.Contains("noisy_whisper")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -228,9 +216,7 @@ public class ConfigCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("No configuration option")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+					s.Value.ToString()!.Contains("No configuration option")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -245,9 +231,7 @@ public class ConfigCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("No configuration option")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+					s.Value.ToString()!.Contains("No configuration option")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -262,9 +246,7 @@ public class ConfigCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("not a boolean option")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+					s.Value.ToString()!.Contains("not a boolean option")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -279,9 +261,7 @@ public class ConfigCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s =>
-					s.Value.ToString()!.Contains("not a boolean option")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+					s.Value.ToString()!.Contains("not a boolean option")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -297,9 +277,7 @@ public class ConfigCommandTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s =>
 					s.Value.ToString()!.Contains("Usage:") &&
-					s.Value.ToString()!.Contains("@enable")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+					s.Value.ToString()!.Contains("@enable")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -315,8 +293,6 @@ public class ConfigCommandTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s =>
 					s.Value.ToString()!.Contains("Usage:") &&
-					s.Value.ToString()!.Contains("@disable")),
-				Arg.Any<AnySharpObject>(),
-				Arg.Any<INotifyService.NotificationType>());
+					s.Value.ToString()!.Contains("@disable")), null, INotifyService.NotificationType.Announce);
 	}
 }
