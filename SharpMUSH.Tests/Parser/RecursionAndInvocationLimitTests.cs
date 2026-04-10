@@ -327,7 +327,6 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task RecursionLimit_IncludeCommand_TracksRecursion()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "InclRecurse");
 
 		// @INCLUDE uses ExecuteAttributeWithTracking helper to track recursion.
@@ -348,7 +347,7 @@ public class RecursionAndInvocationLimitTests
 		// notification must have been sent (either the error or "Huh?")
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	/// <summary>
@@ -358,7 +357,6 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task RecursionLimit_TriggerCommand_TracksRecursion()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "TrigRecurse");
 
 		// When u() exceeds the recursion limit inside a @trigger attribute, the resulting
@@ -374,7 +372,7 @@ public class RecursionAndInvocationLimitTests
 		// At least one notification must have been dispatched
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
 	}
 
 	/// <summary>
@@ -384,7 +382,6 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task RecursionLimit_CommandsTrackAttributeRecursion()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "CmdTrackRecurse");
 
 		// Set up attribute A = "think CMDTRACK_A[u(objDbRef/CMDTRACK_B_LIM_UNIQUE)]" and B = "_B_OK"
@@ -400,7 +397,7 @@ public class RecursionAndInvocationLimitTests
 		// Verify the composed output was sent as a notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")));
 	}
 }

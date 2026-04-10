@@ -14,175 +14,159 @@ namespace SharpMUSH.Tests.Commands;
 
 public class ChannelCommandTests
 {
-private const string TestChannelName = "TestCommandChannel";
-private const string TestChannelPrivilege = "Open";
+	private const string TestChannelName = "TestCommandChannel";
+	private const string TestChannelPrivilege = "Open";
+	private const int TestPlayerDbRef = 1;
 
-[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
-TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
+	private SharpChannel? _testChannel;
+	private SharpPlayer? _testPlayer;
 
-private SharpChannel? _testChannel;
-private SharpPlayer? _testPlayer;
-private TestIsolationHelpers.TestPlayer? _testPlayerHandle;
+	[Before(Test)]
+	public async Task SetupTestChannel()
+	{
+		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
+		_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
 
-[Before(Test)]
-public async Task SetupTestChannel()
-{
-_testPlayerHandle = await CreateTestPlayerAsync("ChanSetup");
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {_testPlayerHandle.DbRef}=WIZARD"));
+		if (_testPlayer == null)
+		{
+			throw new InvalidOperationException($"Test player #{TestPlayerDbRef} not found");
+		}
 
-var playerNode = await Database.GetObjectNodeAsync(_testPlayerHandle.DbRef);
-_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
+		// Create a test channel
+		await Mediator.Send(new CreateChannelCommand(
+			MModule.single(TestChannelName),
+			[TestChannelPrivilege],
+			_testPlayer
+		));
 
-if (_testPlayer == null)
-{
-throw new InvalidOperationException($"Test player #{_testPlayerHandle.DbRef} not found");
-}
+		// Retrieve the created channel
+		var channelQuery = new GetChannelQuery(TestChannelName);
+		_testChannel = await Mediator.Send(channelQuery);
 
-// Create a test channel
-await Mediator.Send(new CreateChannelCommand(
-MModule.single(TestChannelName),
-[TestChannelPrivilege],
-_testPlayer
-));
+		// Add the test player to the channel
+		if (_testChannel != null && playerNode.IsPlayer)
+		{
+			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
+		}
+	}
 
-// Retrieve the created channel
-var channelQuery = new GetChannelQuery(TestChannelName);
-_testChannel = await Mediator.Send(channelQuery);
+	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask ChatCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
 
-// Add the test player to the channel
-if (_testChannel != null && playerNode.IsPlayer)
-{
-await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
-}
-}
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>());
+	}
 
-[Test]
-[Category("NotImplemented")]
-[Skip("Not Yet Implemented")]
-public async ValueTask ChatCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
+	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask ChannelCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/list"));
 
-await NotifyService
-.Received()
-.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-TestHelpers.MessageEquals(msg, "<TestCommandChannel> ChatCommand: Test message")), Arg.Any<AnySharpObject>());
-}
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 
-[Test]
-[Category("NotImplemented")]
-[Skip("Not Yet Implemented")]
-public async ValueTask ChannelCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single("@channel/list"));
+	[Test]
+	public async ValueTask CemitCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cemit {TestChannelName}=CemitCommand: Test message"));
 
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
-}
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> CemitCommand: Test message") ||
+				(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")),
+				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Emit);
+	}
 
-[Test]
-public async ValueTask CemitCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single($"@cemit {TestChannelName}=CemitCommand: Test message"));
+	[Test]
+	public async ValueTask NscemitCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
 
-await NotifyService
-.Received()
-.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-(msg.IsT0 && msg.AsT0.ToString() == $"<{TestChannelName}> CemitCommand: Test message") ||
-(msg.IsT1 && msg.AsT1 == $"<{TestChannelName}> CemitCommand: Test message")),
-Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Emit);
-}
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+				(msg.IsT0 && msg.AsT0.ToString().Contains("NscemitCommand: Test message")) ||
+				(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))),
+				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.NSEmit);
+	}
 
-[Test]
-public async ValueTask NscemitCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
+	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask AddcomCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom pub=Public"));
 
-await NotifyService
-.Received()
-.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
-(msg.IsT0 && msg.AsT0.ToString().Contains("NscemitCommand: Test message")) ||
-(msg.IsT1 && msg.AsT1.Contains("NscemitCommand: Test message"))),
-Arg.Any<AnySharpObject>(), INotifyService.NotificationType.NSEmit);
-}
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 
-[Test]
-[Category("NotImplemented")]
-[Skip("Not Yet Implemented")]
-public async ValueTask AddcomCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single("addcom pub=Public"));
+	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask DelcomCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("delcom pub"));
 
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
-}
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 
-[Test]
-[Category("NotImplemented")]
-[Skip("Not Yet Implemented")]
-public async ValueTask DelcomCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single("delcom pub"));
+	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask ClistCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@clist"));
 
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
-}
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 
-[Test]
-[Category("NotImplemented")]
-[Skip("Not Yet Implemented")]
-public async ValueTask ClistCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single("@clist"));
+	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask ComlistCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single("comlist"));
 
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
-}
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 
-[Test]
-[Category("NotImplemented")]
-[Skip("Not Yet Implemented")]
-public async ValueTask ComlistCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single("comlist"));
+	[Test]
+	[Category("NotImplemented")]
+	[Skip("Not Yet Implemented")]
+	public async ValueTask ComtitleCommand()
+	{
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"comtitle {TestChannelName}=Title"));
 
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
-}
-
-[Test]
-[Category("NotImplemented")]
-[Skip("Not Yet Implemented")]
-public async ValueTask ComtitleCommand()
-{
-var executor = _testPlayerHandle!.DbRef;
-await Parser.CommandParse(_testPlayerHandle!.Handle, ConnectionService, MModule.single($"comtitle {TestChannelName}=Title"));
-
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
-}
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+	}
 }

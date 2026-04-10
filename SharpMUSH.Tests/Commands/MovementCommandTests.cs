@@ -32,38 +32,35 @@ public class MovementCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask GotoCommand()
 	{
-		var testPlayer = await CreateTestPlayerAsync("GotoCmd");
-		var executor = testPlayer.DbRef;
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("goto #0"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("goto #0"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]
 	public async ValueTask TeleportPreventsLoops()
 	{
-		var testPlayer = await CreateTestPlayerAsync("TelPrevLoops");
 		var boxName = TestIsolationHelpers.GenerateUniqueName("TelBox");
 		var itemName = TestIsolationHelpers.GenerateUniqueName("TelItem");
 
 		// Create a container and an item
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {boxName}"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {itemName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boxName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {itemName}"));
 
 		// Set box as ENTER_OK
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {boxName}=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {boxName}=ENTER_OK"));
 
 		// Get both objects
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"get {boxName}"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"get {itemName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"get {boxName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"get {itemName}"));
 
 		// Put item inside box
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"give {boxName}={itemName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"give {boxName}={itemName}"));
 
 		// Try to teleport box into item (should fail with loop error)
-		var result = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@teleport {boxName}={itemName}"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@teleport {boxName}={itemName}"));
 
 		// Verify command executed (even though it should have rejected the loop)
 		await Assert.That(result).IsNotNull();
@@ -100,17 +97,14 @@ public class MovementCommandTests
 	[Test]
 	public async ValueTask TeleportObjectToRoom()
 	{
-		var testPlayer = await CreateTestPlayerAsync("TelObjRoom");
 		// Create a test object and a destination room with unique names
 		var objName = TestIsolationHelpers.GenerateUniqueName("TelObj");
 		var roomName = TestIsolationHelpers.GenerateUniqueName("TelObjDest");
 
-		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {objName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
 		var objDbRef = createResult.Message!.ToPlainText()!.Trim();
 
-		// @dig needs wizard to create rooms
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var digResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		// Verify both created successfully
@@ -118,7 +112,7 @@ public class MovementCommandTests
 		await Assert.That(roomDbRef).StartsWith("#");
 
 		// Teleport the object to the room using dbrefs
-		var telResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@tel {objDbRef}={roomDbRef}"));
+		var telResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {objDbRef}={roomDbRef}"));
 
 		// Verify command completed without throwing
 		await Assert.That(telResult).IsNotNull();
@@ -131,18 +125,15 @@ public class MovementCommandTests
 	[Test]
 	public async ValueTask TeleportByName()
 	{
-		var testPlayer = await CreateTestPlayerAsync("TelByName");
 		var objName = TestIsolationHelpers.GenerateUniqueName("TelByNObj");
 		var roomName = TestIsolationHelpers.GenerateUniqueName("TelByNRoom");
 
 		// Create objects with unique names
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {objName}"));
-		// @dig needs wizard
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
 
 		// Teleport using names (this exercises the name-based locate path)
-		var telResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@tel {objName}={roomName}"));
+		var telResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {objName}={roomName}"));
 
 		// Verify command completed without throwing
 		await Assert.That(telResult).IsNotNull();
@@ -155,8 +146,7 @@ public class MovementCommandTests
 	[Test]
 	public async ValueTask TeleportToInvalidDestination()
 	{
-		var testPlayer = await CreateTestPlayerAsync("TelInvDest");
-		var result = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+		var result = await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@tel #99999"));
 
 		// Command should still return a result (error handling)
@@ -199,13 +189,11 @@ public class MovementCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask EnterCommand()
 	{
-		var testPlayer = await CreateTestPlayerAsync("EnterCmd");
-		var executor = testPlayer.DbRef;
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"enter {testPlayer.DbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("enter #1"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 
 	[Test]

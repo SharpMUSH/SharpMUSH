@@ -10,177 +10,146 @@ namespace SharpMUSH.Tests.Commands;
 
 public class AtListCommandTests
 {
-[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
-private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
-TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
+	[Test]
+	public async ValueTask List_NoSwitch_DisplaysHelpMessage()
+	{
+		// Execute @list without switches
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list"));
 
-[Test]
-public async ValueTask List_NoSwitch_DisplaysHelpMessage()
-{
-var testPlayer = await CreateTestPlayerAsync("LstNS");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list without switches
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list"));
+		// Verify that a notification was sent with help message
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "You must specify what to list")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 
-// Verify that a notification was sent with help message
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "You must specify what to list")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+	[Test]
+	public async ValueTask List_Flags_DisplaysFlagList()
+	{
+		// Execute @list/flags
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/flags"));
 
-[Test]
-public async ValueTask List_Flags_DisplaysFlagList()
-{
-var testPlayer = await CreateTestPlayerAsync("LstFlg");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list/flags
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list/flags"));
+		// Verify that a notification was sent with the flag list
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "OBJECT FLAGS:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 
-// Verify that a notification was sent with the flag list
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "OBJECT FLAGS:")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+	[Test]
+	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
+	{
+		// Execute @list/lowercase/flags (note: switch order matters)
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/lowercase/flags"));
 
-[Test]
-public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
-{
-var testPlayer = await CreateTestPlayerAsync("LstFlgLC");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list/lowercase/flags (note: switch order matters)
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list/lowercase/flags"));
+		// Verify that a notification was sent with lowercase flag list
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 
-// Verify that a notification was sent with lowercase flag list
-await NotifyService
-.Received()
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+	[Test]
+	public async ValueTask List_Powers_DisplaysPowerList()
+	{
+		// Execute @list/powers
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/powers"));
 
-[Test]
-public async ValueTask List_Powers_DisplaysPowerList()
-{
-var testPlayer = await CreateTestPlayerAsync("LstPwr");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list/powers
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list/powers"));
+		// Verify that a notification was sent with the power list
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "OBJECT POWERS:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 
-// Verify that a notification was sent with the power list
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "OBJECT POWERS:")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+	[Test]
+	public async ValueTask List_Locks_DisplaysLockTypes()
+	{
+		// Execute @list/locks
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/locks"));
 
-[Test]
-public async ValueTask List_Locks_DisplaysLockTypes()
-{
-var testPlayer = await CreateTestPlayerAsync("LstLck");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list/locks
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list/locks"));
+		// Verify that a notification was sent with lock types
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "LOCK TYPES:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 
-// Verify that a notification was sent with lock types
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "LOCK TYPES:")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+	[Test]
+	public async ValueTask List_Attribs_DisplaysStandardAttributes()
+	{
+		// Execute @list/attribs
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/attribs"));
 
-[Test]
-public async ValueTask List_Attribs_DisplaysStandardAttributes()
-{
-var testPlayer = await CreateTestPlayerAsync("LstAttr");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list/attribs
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list/attribs"));
+		// Verify that a notification was sent with standard attributes
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "STANDARD ATTRIBUTES:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 
-// Verify that a notification was sent with standard attributes
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "STANDARD ATTRIBUTES:")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+	[Test]
+	public async ValueTask List_Commands_DisplaysCommandList()
+	{
+		// Execute @list/commands
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/commands"));
 
-[Test]
-public async ValueTask List_Commands_DisplaysCommandList()
-{
-var testPlayer = await CreateTestPlayerAsync("LstCmd");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list/commands
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list/commands"));
+		// Verify that a notification was sent with commands
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "COMMANDS:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 
-// Verify that a notification was sent with commands
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "COMMANDS:")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+	[Test]
+	public async ValueTask List_Functions_DisplaysFunctionList()
+	{
+		// Execute @list/functions
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/functions"));
 
-[Test]
-public async ValueTask List_Functions_DisplaysFunctionList()
-{
-var testPlayer = await CreateTestPlayerAsync("LstFn");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list/functions
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list/functions"));
+		// Verify that a notification was sent with functions
+		await NotifyService
+			.Received(Quantity.Exactly(1))
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "FUNCTIONS:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 
-// Verify that a notification was sent with functions
-await NotifyService
-.Received(Quantity.Exactly(1))
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "FUNCTIONS:")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+	[Test]
+	public async ValueTask List_Motd_DisplaysMotdSettings()
+	{
+		// Execute @list/motd
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/motd"));
 
-[Test]
-public async ValueTask List_Motd_DisplaysMotdSettings()
-{
-var testPlayer = await CreateTestPlayerAsync("LstMotd");
-var executor = testPlayer.DbRef;
-await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-// Execute @list/motd
-await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@list/motd"));
-
-// Verify that a notification was sent with MOTD settings
-await NotifyService
-.Received()
-.Notify(TestHelpers.MatchingObject(executor),
-Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Current Message of the Day settings:")),
-Arg.Any<AnySharpObject>(),
-Arg.Any<INotifyService.NotificationType>());
-}
+		// Verify that a notification was sent with MOTD settings
+		await NotifyService
+			.Received()
+			.Notify(Arg.Any<AnySharpObject>(),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Current Message of the Day settings:")),
+				Arg.Any<AnySharpObject>(),
+				Arg.Any<INotifyService.NotificationType>());
+	}
 }

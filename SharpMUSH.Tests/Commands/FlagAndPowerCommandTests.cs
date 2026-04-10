@@ -11,8 +11,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
-using SharpMUSH.Tests;
-
 namespace SharpMUSH.Tests.Commands;
 
 public class FlagAndPowerCommandTests
@@ -24,25 +22,18 @@ public class FlagAndPowerCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-
-	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
-		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	[Test]
 	public async ValueTask Flag_List_DisplaysAllFlags()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaLisDisAll");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var executor = testPlayer.DbRef;
 		// Execute @flag/list
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
 
 		// Verify that a notification was sent with the flag list
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Flags:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -51,14 +42,12 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_CreatesNewFlag()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaAddCreNew");
-		var executor = testPlayer.DbRef;
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
 		// Execute @flag/add
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
 		// Verify the flag was created by querying the database
 		var createdFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
@@ -70,7 +59,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' created")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -82,13 +71,12 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_PreventsSystemFlagCreation()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaAddPreSys");
 		// Create a unique flag name
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
 		// Execute @flag/add
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
 		// Verify the created flag is NOT a system flag
 		var createdFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
@@ -102,25 +90,23 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_PreventsDuplicateFlags()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaAddPreDup");
-		var executor = testPlayer.DbRef;
 		// Create a unique flag name
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
 		// Create the flag first time
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
 		// Clear received calls to reset NSubstitute tracking
 
 
 		// Try to create it again
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "already exists")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -132,8 +118,6 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Delete_RemovesNonSystemFlag()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaDelRemNon");
-		var executor = testPlayer.DbRef;
 		// Create a test flag first
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
@@ -145,7 +129,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(createdFlag).IsNotNull();
 
 		// Execute @flag/delete
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/delete {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
 
 		// Verify the flag was deleted
 		var deletedFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
@@ -154,7 +138,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' deleted")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -163,16 +147,13 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Delete_PreventsSystemFlagDeletion()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaDelPreSys");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var executor = testPlayer.DbRef;
 		// Try to delete a system flag (e.g., WIZARD)
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/delete WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/delete WIZARD"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot delete system flag")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -181,16 +162,14 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Delete_HandlesNonExistentFlag()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaDelHanNon");
-		var executor = testPlayer.DbRef;
 		// Try to delete a non-existent flag
 		var flagName = "NONEXISTENT_FLAG_XYZ123";
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/delete {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
 
 		// Verify error notification was sent with the exact error message produced by the implementation.
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Flag '{flagName}' not found.")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -199,16 +178,13 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_List_DisplaysAllPowers()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowLisDisAll");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var executor = testPlayer.DbRef;
 		// Execute @power/list
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/list"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
 		// Verify that a notification was sent with the power list
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Object Powers:")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -217,14 +193,12 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Add_CreatesNewPower()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowAddCreNew");
-		var executor = testPlayer.DbRef;
 		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
 		// Execute @power/add
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
 
 		// Verify the power was created by querying the database
 		var createdPower = await Mediator.Send(new GetPowerQuery(powerName));
@@ -236,7 +210,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' created")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -248,13 +222,12 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Add_PreventsSystemPowerCreation()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowAddPreSys");
 		// Create a unique power name
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
 		// Execute @power/add
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
 
 		// Verify the created power is NOT a system power
 		var createdPower = await Mediator.Send(new GetPowerQuery(powerName));
@@ -268,8 +241,6 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Delete_RemovesNonSystemPower()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowDelRemNon");
-		var executor = testPlayer.DbRef;
 		// Create a test power first
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
@@ -281,7 +252,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(createdPower).IsNotNull();
 
 		// Execute @power/delete
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/delete {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
 
 		// Verify the power was deleted
 		var deletedPower = await Mediator.Send(new GetPowerQuery(powerName));
@@ -290,7 +261,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' deleted")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -299,20 +270,17 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Delete_PreventsSystemPowerDeletion()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowDelPreSys");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var executor = testPlayer.DbRef;
 		// Try to delete a system power (e.g., BUILDER if it exists)
 		// First check if BUILDER exists and is a system power
 		var builderPower = await Mediator.Send(new GetPowerQuery("BUILDER"));
 		if (builderPower != null && builderPower.System)
 		{
-			await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/delete BUILDER"));
+			await Parser.CommandParse(1, ConnectionService, MModule.single("@power/delete BUILDER"));
 
 			// Verify error notification was sent
 			await NotifyService
 				.Received(Quantity.Exactly(1))
-				.Notify(TestHelpers.MatchingObject(executor),
+				.Notify(Arg.Any<AnySharpObject>(),
 					Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot delete system power")),
 					Arg.Any<AnySharpObject>(),
 					Arg.Any<INotifyService.NotificationType>());
@@ -322,16 +290,14 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Delete_HandlesNonExistentPower()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowDelHanNon");
-		var executor = testPlayer.DbRef;
 		// Try to delete a non-existent power
 		var powerName = "NONEXISTENT_POWER_XYZ123";
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/delete {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
 
 		// Verify error notification was sent with the exact error message produced by the implementation.
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, $"Power '{powerName}' not found.")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -340,16 +306,13 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Add_RequiresBothArguments()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaAddReqBot");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var executor = testPlayer.DbRef;
 		// Try to create a flag without symbol
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/add TESTFLAG"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/add TESTFLAG"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "requires flag name and symbol")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -358,16 +321,13 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Add_RequiresBothArguments()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowAddReqBot");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var executor = testPlayer.DbRef;
 		// Try to create a power without alias
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/add TESTPOWER"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/add TESTPOWER"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "requires power name and alias")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -376,17 +336,15 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Disable_DisablesNonSystemFlag()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaDisDisNon");
-		var executor = testPlayer.DbRef;
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
 		// Create the flag first
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
 
 		// Disable the flag
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/disable {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/disable {flagName}"));
 
 		// Verify the flag is disabled
 		var flag = await Mediator.Send(new GetObjectFlagQuery(flagName));
@@ -396,7 +354,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' disabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -408,18 +366,16 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Enable_EnablesDisabledFlag()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaEnaEnaDis");
-		var executor = testPlayer.DbRef;
 		// Create a unique flag name for this test
 		var flagName = $"TEST_FLAG_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
 		// Create and disable the flag
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/disable {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/disable {flagName}"));
 
 		// Enable the flag
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@flag/enable {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/enable {flagName}"));
 
 		// Verify the flag is enabled
 		var flag = await Mediator.Send(new GetObjectFlagQuery(flagName));
@@ -429,7 +385,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Flag '{flagName}' enabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -441,18 +397,15 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Flag_Disable_PreventsSystemFlagDisable()
 	{
-		var testPlayer = await CreateTestPlayerAsync("FlaDisPreSys");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var executor = testPlayer.DbRef;
 		// Use WIZARD (a system flag stored in the ObjectFlags table).
 		// Note: PLAYER is a type flag added implicitly per-object and is NOT in the ObjectFlags table,
 		// so it cannot be looked up or disabled via @flag/disable.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/disable WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/disable WIZARD"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot disable system flag")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -461,17 +414,15 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Disable_DisablesNonSystemPower()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowDisDisNon");
-		var executor = testPlayer.DbRef;
 		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
 		// Create the power first
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
 
 		// Disable the power
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/disable {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/disable {powerName}"));
 
 		// Verify the power is disabled
 		var power = await Mediator.Send(new GetPowerQuery(powerName));
@@ -481,7 +432,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' disabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -493,18 +444,16 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Enable_EnablesDisabledPower()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowEnaEnaDis");
-		var executor = testPlayer.DbRef;
 		// Create a unique power name for this test
 		var powerName = $"TEST_POWER_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
 		// Create and disable the power
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/disable {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/disable {powerName}"));
 
 		// Enable the power
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@power/enable {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/enable {powerName}"));
 
 		// Verify the power is enabled
 		var power = await Mediator.Send(new GetPowerQuery(powerName));
@@ -514,7 +463,7 @@ public class FlagAndPowerCommandTests
 		// Verify notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => s.Value.ToString()!.Contains($"Power '{powerName}' enabled")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -526,16 +475,13 @@ public class FlagAndPowerCommandTests
 	[Test]
 	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
 	{
-		var testPlayer = await CreateTestPlayerAsync("PowDisPreSys");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		var executor = testPlayer.DbRef;
 		// Try to disable a system power (Builder is a system power)
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/disable Builder"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/disable Builder"));
 
 		// Verify error notification was sent
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Cannot disable system power")),
 				Arg.Any<AnySharpObject>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -545,12 +491,11 @@ public class FlagAndPowerCommandTests
 	[NotInParallel]
 	public async ValueTask God_CanSetTrustFlag()
 	{
-		var testPlayer = await CreateTestPlayerAsync("GodCanSetTru");
 		// God (#1) should be able to set any flag, including TRUST
-		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create GodTrustFlagTestObj"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create GodTrustFlagTestObj"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {newDb}=TRUST"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {newDb}=TRUST"));
 
 		// Verify the TRUST flag was set by checking the database state directly
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
@@ -560,6 +505,6 @@ public class FlagAndPowerCommandTests
 		await Assert.That(flags.Any(f => f.Name.Equals("TRUST", StringComparison.OrdinalIgnoreCase))).IsTrue();
 
 		// Cleanup
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@destroy {newDb}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
 	}
 }

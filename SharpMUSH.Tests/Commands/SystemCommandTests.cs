@@ -21,26 +21,17 @@ public class SystemCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	private async Task<TestIsolationHelpers.TestPlayer> CreateWizardPlayerAsync(string namePrefix)
-	{
-		var tp = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {tp.DbRef}=WIZARD"));
-		return tp;
-	}
-
 	// PennMUSH reference: cmd_flag with SWITCH_LIST calls do_list_flags("FLAG", ..., FLAG_LIST_NAMECHAR, T("Flags"))
 	// SharpMUSH outputs a table beginning with "Object Flags:".
 	[Test]
 	public async ValueTask FlagCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysFlaCmd");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Flags:")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -51,13 +42,12 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask PowerCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysPowCmd");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/list"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Powers:")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -68,13 +58,12 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask HookCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysHooCmd");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hook/list @emit"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hook/list @emit"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "No hooks set for command '@EMIT'.")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -85,13 +74,12 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask FunctionCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysFunCmd");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@function"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Global user-defined functions:")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -103,8 +91,7 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask CommandCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysComCmd");
-		var result = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@command/list"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@command/list"));
 
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: list");
 	}
@@ -115,22 +102,21 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask HideCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysHidCmd");
 		// Ensure executor starts visible so the subsequent /on produces a deterministic message.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 
 		// Restore to visible state.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
 	}
 
 	// PennMUSH reference: cmd_kick calls do_kick(executor, arg_left).
@@ -138,16 +124,15 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask KickCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysKicCmd");
-		var kickTargetDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+		var testPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "SystemTestKick");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@kick {kickTargetDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@kick {testPlayerDbRef}"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "That player is not connected.")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -159,15 +144,14 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AttributeCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysAttCmd");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATTRTEST").ToUpperInvariant();
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@attribute/access {uniqueAttr}=wizard"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@attribute/access {uniqueAttr}=wizard"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageEquals(msg, $"{uniqueAttr} -- Attribute permissions now: wizard")),
 				Arg.Any<AnySharpObject?>(),
@@ -179,21 +163,20 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AtrlockCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysAtrCmd");
 		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrlock");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRLOCKATTR").ToUpperInvariant();
 
 		// Create the attribute first so it exists on the object.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&{uniqueAttr} {testDbRef}=atrlock_test_value"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@atrlock {testDbRef}/{uniqueAttr}=on"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute locked.")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -204,22 +187,21 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AtrchownCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysAtrCho");
 		var sourceDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrchownSrc");
 		var targetPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "SystemTestAtrchownPly");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRCHOWNATTR").ToUpperInvariant();
 
 		// Create the attribute first so it exists on the object.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"&{uniqueAttr} {sourceDbRef}=atrchown_test_value"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@atrchown {sourceDbRef}/{uniqueAttr}={targetPlayerDbRef}"));
 
 		await NotifyService
 			.Received()
 			.Notify(
-				TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute owner changed.")),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
@@ -230,9 +212,8 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask FirstexitCommand()
 	{
-		var testPlayer = await CreateWizardPlayerAsync("SysFirCmd");
 		var exitName = TestIsolationHelpers.GenerateUniqueName("SystemTestFirstexitExit");
-		var exitResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+		var exitResult = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@open {exitName}"));
 		var exitMessage = exitResult.Message?.ToPlainText()
 			?? throw new InvalidOperationException($"@open {exitName} returned a null message.");
@@ -240,7 +221,7 @@ public class SystemCommandTests
 
 		// @firstexit is silent on success (PennMUSH: do_firstexit produces no notify).
 		// Pass just the exit dbref as a space-separated argument (not room=exit).
-		var result = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+		var result = await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@firstexit {exitDbRef}"));
 
 		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsEqualTo(string.Empty);

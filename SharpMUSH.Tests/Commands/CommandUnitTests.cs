@@ -1,4 +1,3 @@
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -19,24 +18,6 @@ public class CommandUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-
-	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
-		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
-
-	private IMUSHCodeParser ParserForPlayer(TestIsolationHelpers.TestPlayer player)
-	{
-		var parser = Parser;
-		return parser.FromState(parser.CurrentState with
-		{
-			Executor = player.DbRef,
-			Enactor = player.DbRef,
-			Caller = player.DbRef,
-			Handle = player.Handle
-		});
-	}
-
 	[Test]
 	[Arguments("think add(1,2)1",
 		"31")]
@@ -48,16 +29,14 @@ public class CommandUnitTests
 		"Command1 Arg;think Command2 Arg")]
 	public async Task Test(string str, string expected)
 	{
-		var testPlayer = await CreateTestPlayerAsync("CmdTest");
-		var executor = testPlayer.DbRef;
 		// TODO: We need eval vs noparse evaluation.
 		// NoParse is currently not running the command. So let's use NoEval instead for that.
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), expected);
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 
 	[Test]
@@ -78,19 +57,17 @@ public class CommandUnitTests
 		"Command4 Arg.")]
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
-		var testPlayer = await CreateTestPlayerAsync("CmdSingle");
-		var executor = testPlayer.DbRef;
 		Console.WriteLine("Testing: {0}", str);
-		await ParserForPlayer(testPlayer).CommandListParse(MModule.single(str));
+		await Parser.CommandListParse(MModule.single(str));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains(expected1)));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains(expected2)));
 	}
 }

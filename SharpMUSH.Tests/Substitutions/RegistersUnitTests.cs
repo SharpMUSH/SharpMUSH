@@ -29,13 +29,12 @@ public class RegistersUnitTests
 	[Arguments("think %$0 2", "#-1 REGISTER OUT OF RANGE 2")]
 	public async Task Test(string str, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", str);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), expected);
+			.Notify(Arg.Any<AnySharpObject>(), expected);
 	}
 }

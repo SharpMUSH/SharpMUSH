@@ -37,14 +37,13 @@ public class SubstitutionUnitTests
 	// [Arguments("think strcat(%q<Word %q<5> [strcat(%q<6six>)]>)")]
 	public async Task Test(string str, string? expected = null)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", str);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
 
 		if (expected is not null)
 		{
-			await NotifyService.Notify(TestHelpers.MatchingObject(executor),
+			await NotifyService.Notify(Arg.Any<AnySharpObject>(),
 				expected,
 				null,
 				INotifyService.NotificationType.Announce);

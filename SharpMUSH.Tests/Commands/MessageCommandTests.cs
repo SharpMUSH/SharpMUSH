@@ -1,11 +1,9 @@
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
-
 namespace SharpMUSH.Tests.Commands;
 
 public class MessageCommandTests
@@ -16,20 +14,14 @@ public class MessageCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-
-	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
-		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Test]
 	public async ValueTask MessageBasic()
 	{
-		var testPlayer = await CreateTestPlayerAsync("MsgBasic");
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgBasic");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&TESTFORMAT_MSGBASIC_93751 {objDbRef}=MessageBasic_UniqueValue_93751"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGBASIC_93751 {objDbRef}=MessageBasic_UniqueValue_93751"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@message {objDbRef}=Default,TESTFORMAT_MSGBASIC_93751"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=Default,TESTFORMAT_MSGBASIC_93751"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -52,11 +44,10 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageWithAttribute()
 	{
-		var testPlayer = await CreateTestPlayerAsync("MsgWithAttr");
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgWithAttr");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&TESTFORMAT_MSGATTR_84729 {objDbRef}=MessageWithAttribute_Result_84729:[add(5,10)]"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGATTR_84729 {objDbRef}=MessageWithAttribute_Result_84729:[add(5,10)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@message {objDbRef}=Default,TESTFORMAT_MSGATTR_84729"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=Default,TESTFORMAT_MSGATTR_84729"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -76,9 +67,8 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageUsesDefaultWhenAttributeMissing()
 	{
-		var testPlayer = await CreateTestPlayerAsync("MsgMissAttr");
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgMissingAttr");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@message {objDbRef}=DefaultMessage_UniqueValue_72914,NONEXISTENT_ATTR_72914"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=DefaultMessage_UniqueValue_72914,NONEXISTENT_ATTR_72914"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -99,9 +89,8 @@ public class MessageCommandTests
 	[NotInParallel]
 	public async ValueTask MessageSilentSwitch()
 	{
-		var testPlayer = await CreateTestPlayerAsync("MsgSilent");
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgSilent");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&TESTFORMAT_MSGSILENT_61829 {objDbRef}=MessageSilent_Value_61829"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGSILENT_61829 {objDbRef}=MessageSilent_Value_61829"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var confirmationCallsBefore = calls.Count(c =>
@@ -113,7 +102,7 @@ public class MessageCommandTests
 			return text == "Message sent to 1 recipient(s).";
 		});
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@message/silent {objDbRef}=Default,TESTFORMAT_MSGSILENT_61829"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message/silent {objDbRef}=Default,TESTFORMAT_MSGSILENT_61829"));
 
 		calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>
@@ -141,11 +130,10 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageNoisySwitch()
 	{
-		var testPlayer = await CreateTestPlayerAsync("MsgNoisy");
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgNoisy");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&TESTFORMAT_MSGNOISY_55193 {objDbRef}=MessageNoisy_Value_55193"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGNOISY_55193 {objDbRef}=MessageNoisy_Value_55193"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@message/noisy {objDbRef}=Default,TESTFORMAT_MSGNOISY_55193"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message/noisy {objDbRef}=Default,TESTFORMAT_MSGNOISY_55193"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 
@@ -195,11 +183,10 @@ public class MessageCommandTests
 	[Test]
 	public async ValueTask MessageNospoofSwitch()
 	{
-		var testPlayer = await CreateTestPlayerAsync("MsgNospoof");
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgNospoof");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&TESTFORMAT_MSGNOSPOOF_48203 {objDbRef}=MessageNospoof_Value_48203"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGNOSPOOF_48203 {objDbRef}=MessageNospoof_Value_48203"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@message/nospoof {objDbRef}=Default,TESTFORMAT_MSGNOSPOOF_48203"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message/nospoof {objDbRef}=Default,TESTFORMAT_MSGNOSPOOF_48203"));
 
 		var calls = NotifyService.ReceivedCalls().ToList();
 		var messageCall = calls.FirstOrDefault(c =>

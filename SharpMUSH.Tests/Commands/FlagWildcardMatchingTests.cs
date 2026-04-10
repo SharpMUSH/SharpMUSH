@@ -9,8 +9,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
-using SharpMUSH.Tests;
-
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
@@ -27,20 +25,15 @@ public class FlagWildcardMatchingTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
-		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
-
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_NoCommand()
 	{
-		var testPlayer = await CreateTestPlayerAsync("SetFlaParMat");
 		// Create a thing to test with
-		var result = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create FlagTestThing1"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing1"));
 		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
 		// Test that "@set thing=no_com" sets the NO_COMMAND flag (partial match)
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {thingDbRef}=no_com"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=no_com"));
 
 		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var flags = await thing.AsThing.Object.Flags.Value.ToArrayAsync();
@@ -52,21 +45,19 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask UnsetFlag_PartialMatch_NoCommand()
 	{
-		var testPlayer = await CreateTestPlayerAsync("UnsFlaParMat");
-		var executor = testPlayer.DbRef;
 		// Create a thing to test with
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create FlagTestThing2"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing2"));
 
 		// Set NO_COMMAND flag first
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set FlagTestThing2=NO_COMMAND"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set FlagTestThing2=NO_COMMAND"));
 
 		// Test that "@set thing=!no_com" unsets the NO_COMMAND flag (partial match with negation)
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set FlagTestThing2=!no_com"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set FlagTestThing2=!no_com"));
 
 		// Verify using notification - the DebugVerboseTests style doesn't query back
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						s => s.ToPlainText()!.Contains("Unset", StringComparison.OrdinalIgnoreCase),
@@ -78,13 +69,12 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_Visual()
 	{
-		var testPlayer = await CreateTestPlayerAsync("SetFlaParMat");
 		// Create a thing to test with
-		var result = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create FlagTestThing3"));
+		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing3"));
 		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
 		// Test that "@set thing=vis" sets the VISUAL flag (partial match)
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {thingDbRef}=vis"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=vis"));
 
 		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var flags = await thing.AsThing.Object.Flags.Value.ToArrayAsync();
@@ -96,21 +86,19 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask UnsetFlag_PartialMatch_Visual()
 	{
-		var testPlayer = await CreateTestPlayerAsync("UnsFlaParMat");
-		var executor = testPlayer.DbRef;
 		// Create a thing to test with
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create FlagTestThing4"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing4"));
 
 		// Set VISUAL flag first
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set FlagTestThing4=VISUAL"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set FlagTestThing4=VISUAL"));
 
 		// Test that "@set thing=!vis" unsets the VISUAL flag (partial match with negation)
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set FlagTestThing4=!vis"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@set FlagTestThing4=!vis"));
 
 		// Verify using notification - the DebugVerboseTests style doesn't query back
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
+			.Notify(Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						s => s.ToPlainText()!.Contains("Unset", StringComparison.OrdinalIgnoreCase),

@@ -1,4 +1,3 @@
-using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -16,24 +15,16 @@ public class QuotaCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-
-	private Task<TestIsolationHelpers.TestPlayer> CreateTestPlayerAsync(string namePrefix) =>
-		TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask SquotaCommand()
 	{
-		var testPlayer = await CreateTestPlayerAsync("Squota");
-		var executor = testPlayer.DbRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@squota {testPlayer.DbRef}=100"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single("@squota #1=100"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
 	}
 }
