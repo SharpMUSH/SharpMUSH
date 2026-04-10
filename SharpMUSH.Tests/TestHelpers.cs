@@ -1,8 +1,10 @@
 using NSubstitute;
+using NSubstitute.Core;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Tests;
@@ -56,4 +58,35 @@ public static class TestHelpers
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static AnySharpObject MatchingObject(DBRef dbRef) =>
 		Arg.Is<AnySharpObject>((AnySharpObject o) => o.Object().DBRef == dbRef);
+
+	/// <summary>
+	/// Polls the NSubstitute <paramref name="notifyService"/> mock until a Notify call matching
+	/// the given <paramref name="executor"/> DBRef and <paramref name="containsText"/> is recorded,
+	/// or until <paramref name="timeoutMs"/> elapses.  This replaces fragile <c>Task.Delay</c>
+	/// waits for asynchronously-queued attribute executions (e.g. @mapsql think callbacks).
+	/// </summary>
+	public static async Task WaitForNotification(
+		INotifyService notifyService,
+		DBRef executor,
+		string containsText,
+		int timeoutMs = 5000)
+	{
+		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+		while (DateTime.UtcNow < deadline)
+		{
+			var calls = notifyService.ReceivedCalls();
+			foreach (var call in calls)
+			{
+				var args = call.GetArguments();
+				if (args.Length < 2) continue;
+				if (args[0] is not AnySharpObject obj) continue;
+				if (obj.Object().DBRef != executor) continue;
+				if (args[1] is not OneOf<MString, string> msg) continue;
+				var text = msg.Match(ms => ms.ToString(), s => s);
+				if (text.Contains(containsText)) return;
+			}
+			await Task.Delay(50);
+		}
+		// Timeout reached — let the caller's assertion produce the diagnostic message
+	}
 }

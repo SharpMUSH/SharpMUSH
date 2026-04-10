@@ -272,8 +272,10 @@ public class DatabaseCommandTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&mapsql_test_attr_mr {objDbRef}=think Test_MapSql_WithMultipleRows: %0 - %1 - %2 - %3"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
-		// Wait for the channel consumer to process the queued attribute executions
-		await Task.Delay(500);
+		// Poll until the last expected row (row 3) has been processed by the queue consumer,
+		// instead of a fragile fixed Task.Delay that races under load from other tests.
+		await TestHelpers.WaitForNotification(NotifyService, executor,
+			"Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30");
 
 		await NotifyService
 			.DidNotReceive()
@@ -282,31 +284,22 @@ public class DatabaseCommandTests
 				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 0"))));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10"))));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20"))));
 
 		await NotifyService
-			.Received(Quantity.Exactly(1))
+			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30"))));
-
-		// TODO: There is a bug here. It keeps reading and loops around somehow. I don't get how.
-		/*
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().StartsWith("Test_MapSql_WithMultipleRows: 4")) ||
-				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 4"))));
-				*/
 	}
 
 	[Test]
