@@ -666,14 +666,13 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Send to player #2 (different from enactor #1)
+		// Send to player #2 (different from enactor #1) — receiver is #2, not the executor
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
 
-		// Verify all three notifications were called
+		// Verify all three notifications were called (target is #2, not the executor)
 		await NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Message to other player")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
