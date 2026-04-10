@@ -65,24 +65,24 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received()
 			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number {newDb.Number}")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number {newDb.Number}")));
 		await NotifyService
 			.Received()
 			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 1}") && mstr.ToString().Contains($"#{newDb.Number}"),
 					str => str.Contains($"Linked exit #{newDb.Number + 1}") && str.Contains($"#{newDb.Number}")
-				)), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				)));
 		await NotifyService
 			.Received()
-			.Notify(executor, "Trying to link...", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(executor, "Trying to link...");
 		await NotifyService
 			.Received()
 			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 2}") && mstr.ToString().Contains($"#{currentLocationDbRef.Number}"),
 					str => str.Contains($"Linked exit #{newDb.Number + 2}") && str.Contains($"#{currentLocationDbRef.Number}")
-				)), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				)));
 	}
 
 	// Something is getting created before this one can trigger...
@@ -103,16 +103,16 @@ public class BuildingCommandTests
 		// that notifications are sent to the correct recipient.
 		await NotifyService
 			.Received()
-			.Notify(executor, $"Foo Room created with room number {newDb.Number}.", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(executor, $"Foo Room created with room number {newDb.Number}.");
 		await NotifyService
 			.Received()
-			.Notify(executor, $"Linked exit #{newDb.Number + 1} to #{newDb.Number}", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(executor, $"Linked exit #{newDb.Number + 1} to #{newDb.Number}");
 		await NotifyService
 			.Received()
-			.Notify(executor, "Trying to link...", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(executor, "Trying to link...");
 		await NotifyService
 			.Received()
-			.Notify(executor, $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(executor, $"Linked exit #{newDb.Number + 2} to #{currentLocationDbRef.Number}");
 	}
 
 
@@ -173,7 +173,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(executor, $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(executor, $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.");
 	}
 
 	[Test]
@@ -199,7 +199,7 @@ public class BuildingCommandTests
 				msg.Match(
 					mstr => mstr.ToString().Contains("Linked") && mstr.ToString().Contains($"#{exitDbRef.Number}") && mstr.ToString().Contains($"#{roomDbRef.Number}"),
 					str => str.Contains("Linked") && str.Contains($"#{exitDbRef.Number}") && str.Contains($"#{roomDbRef.Number}")
-				)), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				)));
 	}
 
 	[Test]
@@ -222,7 +222,7 @@ public class BuildingCommandTests
 				msg.Match(
 					mstr => mstr.ToString().Contains("Cloned") && mstr.ToString().Contains("CloneObjectTestSource"),
 					str => str.Contains("Cloned") && str.Contains("CloneObjectTestSource")
-				)), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				)));
 	}
 
 	[Test]
@@ -443,7 +443,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
@@ -461,7 +461,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "PERMISSION DENIED")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				TestHelpers.MessageContains(msg, "PERMISSION DENIED")));
 	}
 
 	[Test]
@@ -499,7 +499,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Marked for destruction")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				TestHelpers.MessageContains(msg, "Marked for destruction")));
 	}
 
 	[Test]
@@ -519,7 +519,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Unlinked")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				TestHelpers.MessageContains(msg, "Unlinked")));
 	}
 
 	[Test]
@@ -548,7 +548,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Locked.", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), "Locked.");
 	}
 
 	[Test]
@@ -569,7 +569,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Unlocked.", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), "Unlocked.");
 	}
 
 	/// <summary>
@@ -662,7 +662,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "10")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				TestHelpers.MessageContains(msg, "10")));
 	}
 
 	/// <summary>

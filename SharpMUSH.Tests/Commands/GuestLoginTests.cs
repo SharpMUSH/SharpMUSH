@@ -43,7 +43,7 @@ public class GuestLoginTests
 		Arg.Is<OneOf<MString, string>>(s =>
 		TestHelpers.MessageContains(s, "guest") ||
 		TestHelpers.MessageContains(s, "available") ||
-		TestHelpers.MessageContains(s, "find")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		TestHelpers.MessageContains(s, "find")));
 	}
 
 	[Test]

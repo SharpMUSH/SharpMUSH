@@ -348,7 +348,7 @@ public class RecursionAndInvocationLimitTests
 		// notification must have been sent (either the error or "Huh?")
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	/// <summary>
@@ -374,7 +374,7 @@ public class RecursionAndInvocationLimitTests
 		// At least one notification must have been dispatched
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	/// <summary>
@@ -401,6 +401,6 @@ public class RecursionAndInvocationLimitTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")));
 	}
 }
