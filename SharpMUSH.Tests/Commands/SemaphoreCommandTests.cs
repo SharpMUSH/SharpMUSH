@@ -399,8 +399,6 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MModule.single($"+bbsflow_{uniqueId.ToLower()} {targetName}"));
 
-		await Task.Delay(3000);
-
 		// Poll for the attribute to be set by the @wait callback
 		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
 		await TestHelpers.WaitForAttribute(AttributeService, storeObjNode.Known, grpAttr);
