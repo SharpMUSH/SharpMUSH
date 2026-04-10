@@ -30,13 +30,14 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask SetAttributeBasic()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBasic");
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 
 		// Verify attribute was set
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -49,25 +50,27 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask SetAttributeEmpty()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrEmpty");
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	[Test]
 	public async ValueTask SetAttributeComplexValue()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrComplex");
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
 	}
 
 	/// <summary>
@@ -107,6 +110,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_Direct()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object and set attribute directly via database
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrDirect");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
@@ -124,7 +128,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute copied to 1 destination."))
 			);
 
@@ -142,6 +146,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_Basic()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrBasic");
 
@@ -155,7 +160,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				"Attribute copied to 1 destination."
 			);
 
@@ -176,6 +181,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_CopyAttribute_MultipleDestinations()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrMulti");
 
@@ -189,7 +195,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute copied to 2 destinations."))
 			);
 
@@ -210,6 +216,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_MoveAttribute_Basic()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MvAttrBasic");
 
@@ -223,7 +230,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute moved to 1 destination."))
 			);
 
@@ -244,6 +251,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_WipeAttributes_AllAttributes()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WipeAttrs");
 
@@ -264,7 +272,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Wiped attributes matching WIPE*_UNIQUE."))
 			);
 
@@ -281,6 +289,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrLock_LockAndUnlock()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrLock");
 
@@ -294,7 +303,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute locked."))
 			);
 
@@ -315,7 +324,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute unlocked."))
 			);
 
@@ -328,6 +337,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrLock_QueryStatus()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrLockQuery");
 
@@ -341,7 +351,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("That attribute is unlocked."))
 			);
 	}
@@ -349,6 +359,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_AtrChown_InvalidArguments()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrChownInvalid");
 
@@ -358,12 +369,13 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("You need to give an object/attribute pair.")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("You need to give an object/attribute pair.")));
 	}
 
 	[Test]
 	public async ValueTask Test_CopyAttribute_InvalidSource()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrInvalid");
 
@@ -373,12 +385,13 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_ATTR_TEST not found on source object.")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_ATTR_TEST not found on source object.")));
 	}
 
 	[Test]
 	public async ValueTask Test_MoveAttribute_InvalidSource()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MvAttrInvalid");
 
@@ -388,7 +401,7 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_MOVE_TEST not found on source object.")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_MOVE_TEST not found on source object.")));
 	}
 
 	[Test]
@@ -514,6 +527,7 @@ public class AttributeCommandTests
 	[Test]
 	public async ValueTask Test_Edit_NoMatch()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an isolated test object (attribute does not exist on it)
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditNoMatch");
 
@@ -523,6 +537,6 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("No matching attributes found.")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("No matching attributes found.")));
 	}
 }

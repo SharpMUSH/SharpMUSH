@@ -36,6 +36,7 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneSetZone()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique zone master object
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("ZoneMaster");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zoneName}"));
@@ -62,7 +63,7 @@ public class ZoneCommandTests
 		// Verify zone set notification was received with the specific object dbref
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(TestHelpers.MessageContains(msg, $"Zoned to {zoneName}") || TestHelpers.MessageContains(msg, $"{objDbRef}"))), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 
 		// Verify the zone was actually set in the database
@@ -76,6 +77,7 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneClearZone()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create unique zone master object
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("ZoneMasterClear");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zoneName}"));
@@ -104,7 +106,7 @@ public class ZoneCommandTests
 		// Verify zone cleared notification was received with specific text indicating clearing
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Zone cleared")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 
 		// Verify the zone was actually cleared in the database
@@ -117,6 +119,7 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzonePermissionSuccess()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create unique zone master object that player controls
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("PermTestZone");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zoneName}"));
@@ -137,7 +140,7 @@ public class ZoneCommandTests
 		// Verify success notification with specific zone name
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(TestHelpers.MessageContains(msg, $"{zoneName}") || TestHelpers.MessageContains(msg, "Zoned"))), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 
 		// Verify zone was set
@@ -149,19 +152,21 @@ public class ZoneCommandTests
 	[Test]
 	public async ValueTask ChzoneInvalidObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to set zone on non-existent object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #99999=#1"));
 
 		// Should receive an error notification - LocateService handles this with standard error messages
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(TestHelpers.MessageContains(msg, "don't see") || TestHelpers.MessageContains(msg, "can't see") || TestHelpers.MessageContains(msg, "NO SUCH OBJECT"))), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
 	[Test]
 	public async ValueTask ChzoneInvalidZone()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create unique object
 		var objName = TestIsolationHelpers.GenerateUniqueName("InvalidZoneTest");
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
@@ -175,7 +180,7 @@ public class ZoneCommandTests
 		// Should receive an error notification about not being able to see the object
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "don't see") || TestHelpers.MessageContains(msg, "can't see")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
@@ -279,7 +284,7 @@ public class ZoneCommandTests
 		// Verify the command was executed - check for the unique command output
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "ZMR command executed")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
@@ -341,7 +346,7 @@ public class ZoneCommandTests
 		// Verify the command was executed
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Personal zone command executed")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 
@@ -393,7 +398,7 @@ public class ZoneCommandTests
 		// Check that the specific unique error message was not sent
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "This should not execute")), Arg.Any<AnySharpObject>(), Arg.Any<NotificationType>());
 	}
 }

@@ -67,12 +67,13 @@ public class CommunicationCommandTests
 	[Arguments("@pemit #1=Another test", "Another test")]
 	public async ValueTask PemitBasic(string command, string expected)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), expected, Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), expected, Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -80,6 +81,7 @@ public class CommunicationCommandTests
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]
 	public async ValueTask EmitBasic(string command, string expected)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -87,7 +89,7 @@ public class CommunicationCommandTests
 		// Notify(AnySharpObject, ..., NotificationType.Emit)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, expected)),
 				Arg.Any<AnySharpObject?>(),
 				INotifyService.NotificationType.Emit);
@@ -292,6 +294,7 @@ public class CommunicationCommandTests
 	[Arguments("addcom test_alias_ADDCOM2=Public")]
 	public async ValueTask AddComBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
@@ -299,7 +302,7 @@ public class CommunicationCommandTests
 		// Verify notification was sent with message containing the alias and channel
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' added for channel Public")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))),
 				null);
@@ -310,13 +313,14 @@ public class CommunicationCommandTests
 	[Arguments("addcom test_alias_ADDCOM3=NonExistentChannel", "Channel not found.")]
 	public async ValueTask AddComInvalidArgs(string command, string expected)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
 		// Verify error notification was sent containing the expected text
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(expected)) ||
 				(msg.IsT1 && msg.AsT1.Contains(expected))),
 				null, INotifyService.NotificationType.Announce);
@@ -326,6 +330,7 @@ public class CommunicationCommandTests
 	[Arguments("delcom test_alias_DELCOM1")]
 	public async ValueTask DelComBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
 		// First add an alias
@@ -338,7 +343,7 @@ public class CommunicationCommandTests
 		// Check for the specific deletion message (not the addcom message from earlier)
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' deleted")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' deleted"))),
 				null, INotifyService.NotificationType.Announce);
@@ -348,6 +353,7 @@ public class CommunicationCommandTests
 	[Arguments("delcom nonexistent_alias_DELCOM")]
 	public async ValueTask DelComNotFound(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
@@ -355,7 +361,7 @@ public class CommunicationCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
 				null, INotifyService.NotificationType.Announce);
@@ -366,6 +372,7 @@ public class CommunicationCommandTests
 	[Arguments("@clist/full")]
 	public async ValueTask CListBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
@@ -373,7 +380,7 @@ public class CommunicationCommandTests
 		// The exact format depends on ChannelList.Handle, but it should send something
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(),
 				null, INotifyService.NotificationType.Announce);
 	}
 
@@ -381,6 +388,7 @@ public class CommunicationCommandTests
 	[Arguments("comtitle test_alias_COMTITLE=test_title_COMTITLE")]
 	public async ValueTask ComTitleBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var parts = command.Split('=');
 		var alias = parts[0].Split(' ')[1];
@@ -397,7 +405,7 @@ public class CommunicationCommandTests
 		// We check that at least one contains our custom message with alias information
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"for alias '{alias}'")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))),
 				null, INotifyService.NotificationType.Announce);
@@ -407,6 +415,7 @@ public class CommunicationCommandTests
 	[Arguments("comtitle nonexistent_alias_COMTITLE=title")]
 	public async ValueTask ComTitleNotFound(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
@@ -414,7 +423,7 @@ public class CommunicationCommandTests
 		// Verify error notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
 				null, INotifyService.NotificationType.Announce);
@@ -424,6 +433,7 @@ public class CommunicationCommandTests
 	[Arguments("comlist")]
 	public async ValueTask ComListBasic(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		// First add some aliases
 		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
@@ -437,7 +447,7 @@ public class CommunicationCommandTests
 		// Note: Aliases are stored in uppercase but displayed in lowercase
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.IsT0 &&
 				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist1") &&
 				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist2")),
@@ -448,6 +458,7 @@ public class CommunicationCommandTests
 	[Arguments("comlist")]
 	public async ValueTask ComListEmpty(string command)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		// Wipe all channel aliases for the executor to ensure an empty state
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe me/CHANALIAS*"));
@@ -457,7 +468,7 @@ public class CommunicationCommandTests
 		// Verify the empty list message was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains("no channel aliases")) ||
 				(msg.IsT1 && msg.AsT1.Contains("no channel aliases"))),
 				null, INotifyService.NotificationType.Announce);

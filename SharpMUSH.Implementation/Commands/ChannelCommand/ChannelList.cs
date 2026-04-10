@@ -41,6 +41,8 @@ public static class ChannelList
 				: MModule.concat(MModule.single("Name: "), channel.Name))
 			.ToArrayAsync();
 
-		return new CallState(MModule.multiple(channelList));
+		var result = MModule.multiple(channelList);
+		await NotifyService.Notify(executor, result);
+		return new CallState(result);
 	}
 }

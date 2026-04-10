@@ -51,6 +51,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(CreateObjectWithCost))]
 	public async ValueTask DoDigForCommandListCheck()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Get the executor's current location to use in the assertion
 		var currentLocation = await Parser.FunctionParse(MModule.single("%l"));
 		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText()!);
@@ -63,21 +64,21 @@ public class BuildingCommandTests
 		// Use unique room name in assertions to avoid pollution from other tests
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, $"DoDigTestRoom created with room number {newDb.Number}")));
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 1}") && mstr.ToString().Contains($"#{newDb.Number}"),
 					str => str.Contains($"Linked exit #{newDb.Number + 1}") && str.Contains($"#{newDb.Number}")
 				)));
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), "Trying to link...");
+			.Notify(executor, "Trying to link...");
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains($"Linked exit #{newDb.Number + 2}") && mstr.ToString().Contains($"#{currentLocationDbRef.Number}"),
 					str => str.Contains($"Linked exit #{newDb.Number + 2}") && str.Contains($"#{currentLocationDbRef.Number}")
@@ -164,6 +165,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(DigRoom))]
 	public async ValueTask DigRoomWithExits()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Room With Exits=In;I,Out;O"));
 
 		var newDb = DBRef.Parse(result.Message!.ToPlainText()!);
@@ -171,7 +173,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<DBRef>(), $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.");
+			.Notify(executor, $"Room With Exits created with room number {newObject.Object()!.DBRef.Number}.");
 	}
 
 	[Test]
@@ -180,6 +182,7 @@ public class BuildingCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LinkExit()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create room and exit with unique names
 		var roomResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@dig LinkExitTestRoom"));
 		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!);
@@ -192,7 +195,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<DBRef>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor, Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Linked") && mstr.ToString().Contains($"#{exitDbRef.Number}") && mstr.ToString().Contains($"#{roomDbRef.Number}"),
 					str => str.Contains("Linked") && str.Contains($"#{exitDbRef.Number}") && str.Contains($"#{roomDbRef.Number}")
@@ -205,6 +208,7 @@ public class BuildingCommandTests
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask CloneObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object with unique name
 		var sourceResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CloneObjectTestSource"));
 		var sourceDbRef = DBRef.Parse(sourceResult.Message!.ToPlainText()!);
@@ -214,7 +218,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				msg.Match(
 					mstr => mstr.ToString().Contains("Cloned") && mstr.ToString().Contains("CloneObjectTestSource"),
 					str => str.Contains("Cloned") && str.Contains("CloneObjectTestSource")
@@ -283,6 +287,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ParentUnset))]
 	public async ValueTask ParentCycleDetection_DirectCycle()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create two objects A and B
 		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create CycleTest_A"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
@@ -310,13 +315,14 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	[DependsOn(nameof(ParentCycleDetection_DirectCycle))]
 	public async ValueTask ParentCycleDetection_IndirectCycle()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create three objects A, B, and C
 		var objAResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create IndirectCycle_A"));
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
@@ -353,13 +359,14 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	[DependsOn(nameof(ParentCycleDetection_IndirectCycle))]
 	public async ValueTask ParentCycleDetection_SelfParent()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create object
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create SelfParentTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -375,13 +382,14 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular") || TestHelpers.MessageContains(s, "itself")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular") || TestHelpers.MessageContains(s, "itself")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	[DependsOn(nameof(ParentCycleDetection_SelfParent))]
 	public async ValueTask ParentCycleDetection_LongChain()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a long chain of 5 objects
 		var objDbRefs = new List<DBRef>();
 		for (int i = 0; i < 5; i++)
@@ -416,7 +424,7 @@ public class BuildingCommandTests
 		// Verify notification was sent about the cycle
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "loop") || TestHelpers.MessageContains(s, "cycle") || TestHelpers.MessageContains(s, "circular")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -425,6 +433,7 @@ public class BuildingCommandTests
 	[Skip("Not Yet Implemented - replaced by ParentSetAndGet")]
 	public async ValueTask SetParent()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create two objects
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Parent Object"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Child Object"));
@@ -434,13 +443,14 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
 	}
 
 	[Test]
 	[DependsOn(nameof(SetParent))]
 	public async ValueTask ChownObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Chown Test"));
 
@@ -450,7 +460,7 @@ public class BuildingCommandTests
 		// Verify command executed without permission error
 		await NotifyService
 			.DidNotReceive()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "PERMISSION DENIED")));
 	}
 
@@ -458,6 +468,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ChownObject))]
 	public async ValueTask ChzoneObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create objects
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create Zone Object"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
@@ -470,7 +481,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Zoned")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
@@ -478,6 +489,7 @@ public class BuildingCommandTests
 	[DependsOn(nameof(ChzoneObject))]
 	public async ValueTask RecycleObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Recycle Test"));
 
@@ -486,7 +498,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Marked for destruction")));
 	}
 
@@ -496,6 +508,7 @@ public class BuildingCommandTests
 	[Skip("Not Yet Implemented")]
 	public async ValueTask UnlinkExit()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create and link an exit
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dig Unlink Room"));
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@open Unlink Exit=#14"));
@@ -505,7 +518,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Unlinked")));
 	}
 
@@ -526,6 +539,7 @@ public class BuildingCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask LockObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LockObjectTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -534,7 +548,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Locked.");
+			.Notify(TestHelpers.MatchingObject(executor), "Locked.");
 	}
 
 	[Test]
@@ -542,6 +556,7 @@ public class BuildingCommandTests
 	[Skip("Test infrastructure issue - state pollution from other tests")]
 	public async ValueTask UnlockObject()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique object for this test to avoid pollution
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create UnlockObjectTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -554,7 +569,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), "Unlocked.");
+			.Notify(TestHelpers.MatchingObject(executor), "Unlocked.");
 	}
 
 	/// <summary>
@@ -567,6 +582,7 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DescribeCommand_EvaluatesBeforeStoring()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object for testing
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescEvalTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -582,7 +598,7 @@ public class BuildingCommandTests
 		// Verify the notification shows it was set
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "DESCRIBE") && TestHelpers.MessageContains(msg, "Set")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 
 		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
@@ -631,6 +647,7 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask Look_DisplaysStoredDescribe_NoReEvaluation()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object for testing
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LookDescTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -644,7 +661,7 @@ public class BuildingCommandTests
 		// Verify look displayed "10" (the evaluated result of [mul(2,5)])
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "10")));
 	}
 
@@ -654,6 +671,7 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DescribeCommand_InvalidTarget_ShowsError()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Try to @desc an object that doesn't exist
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@desc #99999=test description"));
 
@@ -661,7 +679,7 @@ public class BuildingCommandTests
 		// The locate service sends the error with a sender parameter
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "don't see") ||
 				TestHelpers.MessageContains(msg, "can't see") ||
 				TestHelpers.MessageContains(msg, "not found") ||
@@ -675,6 +693,7 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask DescribeCommand_MissingEquals_ClearsAttribute()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create an object first
 		var objResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create DescClearTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
@@ -688,7 +707,7 @@ public class BuildingCommandTests
 		// Verify "Cleared" notification was sent
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(executor.Number, Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "Cleared")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }
