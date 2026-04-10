@@ -125,7 +125,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/get")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/get")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -147,7 +147,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/post")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/post")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -169,7 +169,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/put")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/put")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -191,7 +191,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/delete")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/delete")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -213,7 +213,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/patch")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/patch")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -240,7 +240,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "gzipped")));
+					TestHelpers.MessageContains(msg, "gzipped")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -267,7 +267,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "deflated")));
+					TestHelpers.MessageContains(msg, "deflated")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -289,7 +289,7 @@ public class PostmanEchoHttpTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, token)));
+					TestHelpers.MessageContains(msg, token)), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -322,7 +322,7 @@ public class PostmanEchoHttpTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "GET requests cannot have a body")));
+					TestHelpers.MessageContains(msg, "GET requests cannot have a body")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -348,7 +348,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "200")));
+					TestHelpers.MessageContains(msg, "200")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -375,7 +375,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "404")));
+					TestHelpers.MessageContains(msg, "404")), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 }
 

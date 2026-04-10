@@ -233,12 +233,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
 		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1a");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2a");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3a");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1a");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2a");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3a");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1a", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2a", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3a", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1a", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2a", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3a", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -248,12 +248,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
 		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1b");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 2b");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 3b");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1b");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2b");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3b");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1b", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 2b", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 3b", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1b", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2b", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3b", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -263,12 +263,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
 		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1c");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2c");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3c");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1c");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2c");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3c");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1c", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2c", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3c", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1c", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2c", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3c", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -278,10 +278,10 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(
 			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1d");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2d");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3d");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1d");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1d", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2d", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3d", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1d", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -291,11 +291,11 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(
 			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1e");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2e");
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3e");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1e");
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 2e");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1e", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2e", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3e", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1e", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 2e", Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]

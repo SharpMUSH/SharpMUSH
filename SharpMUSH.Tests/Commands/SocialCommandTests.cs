@@ -66,7 +66,7 @@ public class SocialCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
