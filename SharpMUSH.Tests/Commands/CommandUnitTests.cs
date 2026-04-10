@@ -29,6 +29,7 @@ public class CommandUnitTests
 		"Command1 Arg;think Command2 Arg")]
 	public async Task Test(string str, string expected)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// TODO: We need eval vs noparse evaluation.
 		// NoParse is currently not running the command. So let's use NoEval instead for that.
 		Console.WriteLine("Testing: {0}", str);
@@ -36,7 +37,7 @@ public class CommandUnitTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), expected);
+			.Notify(TestHelpers.MatchingObject(executor), expected);
 	}
 
 	[Test]
@@ -57,17 +58,18 @@ public class CommandUnitTests
 		"Command4 Arg.")]
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MModule.single(str));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains(expected1)));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf.OneOf<MString, string>>(x
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
 				=> x.Value.ToString()!.Contains(expected2)));
 	}
 }

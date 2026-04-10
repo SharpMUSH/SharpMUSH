@@ -55,41 +55,44 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoListSimple()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=3 This is a test"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "3 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DoListSimple2()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1={4 This is, a test};"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "4 This is, a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DolistDoubleHashReplacement()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=dolist-hash-##"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "dolist-hash-1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "dolist-hash-2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "dolist-hash-3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -97,16 +100,17 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single("@dolist/inline 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "5 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "6 This is also a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -114,21 +118,22 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex2()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "7 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "8 This is also a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "9 Repeat 3 times in this mode.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -136,152 +141,161 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListComplex3()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1={@dolist/inline 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "10 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "11 Repeat 1 times in this mode.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DoListComplex4()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "12 This is a test")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "13 Repeat 2 times in this mode.")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DoListComplex5()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline a b={@dolist/inline 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "14 This is a test 1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "14 This is a test 2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "14 This is a test 3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "15 Repeat 1 times in this mode a")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "15 Repeat 1 times in this mode b")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DoListComplex6()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single(
 				"@dolist/inline a b={@dolist/inline 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "3 is 1, or 3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "1 is 1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "2 is 2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DoBreakSimpleCommandList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
 		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
 
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1a");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 2a");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 3a");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 1a");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "assert 2a");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "assert 3a");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1a");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2a");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3a");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1a");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2a");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3a");
 	}
 
 	[Test]
 	public async ValueTask DoBreakSimpleTruthyCommandList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
 		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
 
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 1b");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 2b");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 3b");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1b");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 2b");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 3b");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1b");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 2b");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 3b");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1b");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2b");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3b");
 	}
 
 	[Test]
 	public async ValueTask DoBreakSimpleFalsyCommandList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
 		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
 
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1c");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 2c");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 3c");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "assert 1c");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "assert 2c");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "assert 3c");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1c");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2c");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3c");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1c");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2c");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3c");
 	}
 
 	[Test]
 	public async ValueTask DoBreakCommandList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(
 			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1d");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 2d");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 3d");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "broken 1d");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1d");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2d");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3d");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1d");
 	}
 
 	[Test]
 	public async ValueTask DoBreakCommandList2()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(
 			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "break 1e");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 2e");
-		await NotifyService.DidNotReceive().Notify(Arg.Any<AnySharpObject>(), "break 3e");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "broken 1e");
-		await NotifyService.Received().Notify(Arg.Any<AnySharpObject>(), "broken 2e");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1e");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2e");
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3e");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1e");
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 2e");
 	}
 
 	[Test]
@@ -299,13 +313,14 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask WhereIs_ValidPlayer_ReportsLocation()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @whereis with a valid player
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
 
 		// Should notify about the location
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "is in")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -313,6 +328,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask WhereIs_NonPlayer_ReturnsError()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// First create a thing (non-player object)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@create test_object_whereis"));
 
@@ -322,7 +338,7 @@ public class GeneralCommandTests
 		// Should notify that it's not a player
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "only @whereis players")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -330,13 +346,14 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @restart with a valid object
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
 
 		// Should notify about restart
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Restarted")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -344,13 +361,14 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Find_SearchesForObjects()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @find command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
 
 		// Should notify about searching
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Searching")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -358,13 +376,14 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Stats_ShowsDatabaseStatistics()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @stats command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
 
 		// Should notify about database statistics
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Database Statistics")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -372,13 +391,14 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Search_PerformsDatabaseSearch()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @search command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
 
 		// Should notify about search
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("database search")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -386,26 +406,28 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Entrances_ShowsLinkedObjects()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @entrances command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
 
 		// Should notify about entrances
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Entrances")),
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Entrances")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	public async ValueTask Command_ShowsCommandInfo()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @command with a command name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@command @emit"));
 
 		// Should notify about command information
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Command:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -413,13 +435,14 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @function with no arguments to list functions
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
 		// Should notify about global functions
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Global user-defined functions")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -427,13 +450,14 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @function with a function name
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
 
 		// Should notify about function information
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Function:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -441,6 +465,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Map_ExecutesAttributeOverList()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @map command — attribute does not exist on the unique object
 		var mapObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapTest");
 		var uniqueAttr = $"MAPATTR_{Guid.NewGuid():N}";
@@ -449,7 +474,7 @@ public class GeneralCommandTests
 		// Should notify about mapping
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@map:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -457,6 +482,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Trigger_QueuesAttribute()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @trigger command — attribute does not exist on the unique object
 		var trigObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TrigTest");
 		var uniqueAttr = $"TRIGATTR_{Guid.NewGuid():N}";
@@ -465,13 +491,14 @@ public class GeneralCommandTests
 		// Should notify with error since the attribute doesn't exist
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "No such attribute")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	public async ValueTask Include_InsertsAttributeInPlace()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @include command — attribute does not exist on the unique object
 		var inclObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclTest");
 		var uniqueAttr = $"INCLATTR_{Guid.NewGuid():N}";
@@ -481,7 +508,7 @@ public class GeneralCommandTests
 		// Since the attribute doesn't exist, it will fail with an error message
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
@@ -489,13 +516,14 @@ public class GeneralCommandTests
 	[Skip("Test infrastructure issue - NotifyService call count mismatch")]
 	public async ValueTask Halt_ClearsQueue()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @halt command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt me"));
 
 		// Should notify about halting
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@halt:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -503,26 +531,28 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask PS_ShowsQueueStatus()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @ps command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
 
 		// Should notify about queue
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageContains(msg, "@ps:")), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
 
 	[Test]
 	public async ValueTask Select_MatchesFirstExpression()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @select command
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
 
 		// Should notify about select
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@select:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -530,6 +560,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create the attribute entry first so it exists in the standard table
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access DESCRIPTION="));
 
@@ -539,7 +570,7 @@ public class GeneralCommandTests
 		// Should notify about attribute info
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(),
+			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@attribute:")),
 				Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
 	}
@@ -613,6 +644,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithDBRefNotificationBatching()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test validates that DBRef-based notifications respect batching scopes.
 		// Before the fix, Notify(DBRef) would bypass batching and send messages immediately.
 		// After the fix, messages should be accumulated and sent as a batch.
@@ -626,7 +658,7 @@ public class GeneralCommandTests
 		// All three should have been batched together internally, but we verify they all went through
 		await NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Batched test message")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -634,13 +666,14 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Send to player #2 (different from enactor #1)
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline a b c=@pemit #2=Message to other player"));
 
 		// Verify all three notifications were called
 		await NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Message to other player")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -648,6 +681,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask NestedDoListBatching()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test validates that nested @dolists properly use ref-counting for batching context.
 		// Messages from both outer and inner loops should be batched together.
 
@@ -657,7 +691,7 @@ public class GeneralCommandTests
 		// Verify 4 notifications were called (2 outer * 2 inner)
 		await NotifyService
 			.Received(Quantity.Exactly(4))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Nested message")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -665,6 +699,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Negative test: Without @break, all loop iterations should send messages
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived"));
@@ -672,7 +707,7 @@ public class GeneralCommandTests
 		// Should receive exactly 3 messages (one per iteration)
 		await NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "DoListWithoutBreak_AllMessagesReceived")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -680,6 +715,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithBreakAfterFirst_OnlyFirstMessageReceived()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Positive test: @break should stop the loop after first iteration
 		// Use @break as a conditional command to stop after first iteration
 
@@ -691,17 +727,17 @@ public class GeneralCommandTests
 		// This is the actual MUSH behavior - @break affects the next iteration, not current
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 2")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 3")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -709,6 +745,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask DoListWithBreakFlushesMessages()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test validates that @break properly flushes batched messages.
 		// Even with @break in the command list, the using statement should
 		// ensure messages are flushed via disposal.
@@ -720,7 +757,7 @@ public class GeneralCommandTests
 		// So we get 3 messages, and batching still works
 		await NotifyService
 			.Received(Quantity.Exactly(3))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Message before break")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -728,6 +765,7 @@ public class GeneralCommandTests
 	[NotInParallel]
 	public async ValueTask NestedDoListWithBreakFlushesMessages()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test validates that @break in a nested @dolist/inline properly handles
 		// the ref-counted batching context and still flushes messages.
 		// Note: With the command structure {@pemit; @break}, both commands execute
@@ -742,13 +780,14 @@ public class GeneralCommandTests
 		// This validates that batching still works and flushes correctly even with @break
 		await NotifyService
 			.Received(Quantity.Exactly(6))
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Inner message")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DoListWithDelimiter()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Test @dolist with /delimit switch
 		// Format: @dolist/delimit <delimiter> <list>=<action>
 		// Delimiter is separated by space from list
@@ -757,15 +796,15 @@ public class GeneralCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Fruit: apple")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Fruit: banana")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
-			.Notify(Arg.Any<AnySharpObject>(), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "Fruit: orange")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
 	}
 }
