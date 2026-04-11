@@ -99,7 +99,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -112,7 +112,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -125,7 +125,7 @@ public class DatabaseCommandTests
 		
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -138,7 +138,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
