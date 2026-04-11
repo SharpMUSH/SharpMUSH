@@ -145,7 +145,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(1, "God/DOING - Set.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
