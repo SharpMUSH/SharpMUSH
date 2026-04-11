@@ -71,7 +71,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "SHUTDOWN initiated.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -84,7 +84,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "All objects restarted.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -97,7 +97,8 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Purge complete.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -126,7 +127,8 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Reindexing text files")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

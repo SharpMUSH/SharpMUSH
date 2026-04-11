@@ -99,7 +99,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Current Message of the Day settings:", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -112,7 +112,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "@UNRECYCLE: Object recovery system not yet implemented.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -125,7 +125,7 @@ public class DatabaseCommandTests
 		
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "No configuration option named 'TestCommand'.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -138,7 +138,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "No configuration option named 'TestCommand'.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

@@ -26,7 +26,7 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "You try to buy 'sword'.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -39,7 +39,7 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "The SCORE command is not supported.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -52,7 +52,7 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Teach what?", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -65,7 +65,7 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "You can't follow yourself.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -78,7 +78,7 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "You aren't following anyone.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -91,7 +91,7 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "You stop following and dismiss all followers.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -104,7 +104,7 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "You dismiss all your followers. (0 dismissed)", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -165,6 +165,6 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Do what with them?", null, INotifyService.NotificationType.Announce);
 	}
 }

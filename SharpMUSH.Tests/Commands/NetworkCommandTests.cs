@@ -26,7 +26,7 @@ public class NetworkCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "What do you want to query?", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -39,7 +39,7 @@ public class NetworkCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "#-1 SQL IS NOT ENABLED", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -52,7 +52,7 @@ public class NetworkCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "#-1 SQL IS NOT ENABLED", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -78,7 +78,7 @@ public class NetworkCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "@SOCKSET: Socket option configuration not yet implemented.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -91,6 +91,6 @@ public class NetworkCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Slave command does nothing for SharpMUSH.", null, INotifyService.NotificationType.Announce);
 	}
 }

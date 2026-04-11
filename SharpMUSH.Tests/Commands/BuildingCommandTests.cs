@@ -443,7 +443,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Huh?  (Type \"help\" for help.)", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Parent set.", null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
