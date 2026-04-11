@@ -496,7 +496,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, $"Attribute {uniqueAttr} is empty.")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, $"Attribute {uniqueAttr} is empty.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

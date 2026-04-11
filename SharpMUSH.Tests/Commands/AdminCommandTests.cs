@@ -29,7 +29,7 @@ public class AdminCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "#")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "#")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -43,7 +43,7 @@ public class AdminCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Set new password for God: newpassNewpassword")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Set new password for God: newpassNewpassword")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -58,7 +58,7 @@ public class AdminCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Password changed.")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Password changed.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -71,7 +71,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -84,7 +84,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -97,7 +97,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -113,7 +113,7 @@ public class AdminCommandTests
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "The quota system is disabled") ||
-				TestHelpers.MessageEquals(msg, "I don't see that here.")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -126,7 +126,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<string>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -141,7 +141,7 @@ public class AdminCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "I don't see that here.")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -156,6 +156,6 @@ public class AdminCommandTests
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "I don't see that here.")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

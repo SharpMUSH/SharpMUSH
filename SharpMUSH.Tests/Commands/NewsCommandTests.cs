@@ -31,7 +31,7 @@ public class NewsCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("news")) ||
-				(msg.IsT1 && msg.AsT1.Contains("news"))), null, INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("news"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -46,7 +46,7 @@ public class NewsCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("SharpMUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH"))), null, INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -61,7 +61,7 @@ public class NewsCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessageEquals(msg, "No news available for '*news*'.") ||
-				TestHelpers.MessagePlainTextStartsWith(msg, "News topics matching '*news*':")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "News topics matching '*news*':")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -76,7 +76,7 @@ public class NewsCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("No news available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No news available"))), null, INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("No news available"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }
 
@@ -103,7 +103,7 @@ public class AhelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && (msg.AsT0.ToString().Contains("ahelp") || msg.AsT0.ToString().Contains("admin"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), null, INotifyService.NotificationType.Announce);
+				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -118,7 +118,7 @@ public class AhelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Security")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Security"))), null, INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("Security"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -133,7 +133,7 @@ public class AhelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && (msg.AsT0.ToString().Contains("ahelp") || msg.AsT0.ToString().Contains("admin"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), null, INotifyService.NotificationType.Announce);
+				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -148,6 +148,6 @@ public class AhelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("No admin help available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No admin help available"))), null, INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1.Contains("No admin help available"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

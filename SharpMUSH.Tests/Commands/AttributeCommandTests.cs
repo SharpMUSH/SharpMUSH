@@ -41,7 +41,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, $"{objName}/TEST_ATTRSET_UNIQUE - Set.")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, $"{objName}/TEST_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify attribute was set
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "TEST_ATTRSET_UNIQUE",
@@ -64,7 +64,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set.")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -80,7 +80,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, $"{objName}/COMPLEX - Set.")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, $"{objName}/COMPLEX - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -379,7 +379,7 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("You need to give an object/attribute pair.")), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("You need to give an object/attribute pair.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -395,7 +395,7 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_ATTR_TEST not found on source object.")), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_ATTR_TEST not found on source object.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -411,7 +411,7 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_MOVE_TEST not found on source object.")), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_MOVE_TEST not found on source object.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -547,6 +547,6 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("No matching attributes found.")), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("No matching attributes found.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

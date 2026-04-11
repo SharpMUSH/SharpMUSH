@@ -374,7 +374,7 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "Name: Public")),
-				null, INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

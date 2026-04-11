@@ -348,7 +348,7 @@ public class RecursionAndInvocationLimitTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -375,7 +375,7 @@ public class RecursionAndInvocationLimitTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -402,6 +402,6 @@ public class RecursionAndInvocationLimitTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }
