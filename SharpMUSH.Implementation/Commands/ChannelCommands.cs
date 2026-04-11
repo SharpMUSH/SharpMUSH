@@ -180,7 +180,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(executor, "Usage: addcom <alias>=<channel>");
+			await NotifyService!.Notify(executor, "Usage: addcom <alias>=<channel>", executor);
 			return new CallState("#-1 Usage: addcom <alias>=<channel>");
 		}
 
@@ -189,7 +189,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, "Alias name cannot be empty.");
+			await NotifyService!.Notify(executor, "Alias name cannot be empty.", executor);
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
@@ -215,11 +215,11 @@ public partial class Commands
 
 		if (result.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"Error setting alias: {result.AsT1.Value}");
+			await NotifyService!.Notify(executor, $"Error setting alias: {result.AsT1.Value}", executor);
 			return new CallState($"#-1 Error setting alias: {result.AsT1.Value}");
 		}
 
-		await NotifyService!.Notify(executor, $"Alias '{alias}' added for channel {channel.Name.ToPlainText()}.");
+		await NotifyService!.Notify(executor, $"Alias '{alias}' added for channel {channel.Name.ToPlainText()}.", executor);
 		return new CallState(string.Empty);
 	}
 
@@ -231,7 +231,7 @@ public partial class Commands
 
 		if (!arg0Check)
 		{
-			await NotifyService!.Notify(executor, "Usage: delcom <alias>");
+			await NotifyService!.Notify(executor, "Usage: delcom <alias>", executor);
 			return new CallState("#-1 Usage: delcom <alias>");
 		}
 
@@ -239,7 +239,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, "Alias name cannot be empty.");
+			await NotifyService!.Notify(executor, "Alias name cannot be empty.", executor);
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
@@ -249,13 +249,13 @@ public partial class Commands
 
 		if (maybeAttribute.IsNone)
 		{
-			await NotifyService!.Notify(executor, $"Alias '{alias}' not found.");
+			await NotifyService!.Notify(executor, $"Alias '{alias}' not found.", executor);
 			return new CallState($"#-1 Alias '{alias}' not found.");
 		}
 
 		if (maybeAttribute.IsError)
 		{
-			await NotifyService!.Notify(executor, $"Error reading alias: {maybeAttribute.AsError.Value}");
+			await NotifyService!.Notify(executor, $"Error reading alias: {maybeAttribute.AsError.Value}", executor);
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
@@ -266,7 +266,7 @@ public partial class Commands
 
 		if (clearResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"Error deleting alias: {clearResult.AsT1.Value}");
+			await NotifyService!.Notify(executor, $"Error deleting alias: {clearResult.AsT1.Value}", executor);
 			return new CallState($"#-1 Error deleting alias: {clearResult.AsT1.Value}");
 		}
 
@@ -288,7 +288,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Alias '{alias}' deleted.");
+		await NotifyService!.Notify(executor, $"Alias '{alias}' deleted.", executor);
 		return new CallState(string.Empty);
 	}
 
@@ -321,7 +321,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(executor, "Usage: comtitle <alias>=<title>");
+			await NotifyService!.Notify(executor, "Usage: comtitle <alias>=<title>", executor);
 			return new CallState("#-1 Usage: comtitle <alias>=<title>");
 		}
 
@@ -330,7 +330,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, "Alias name cannot be empty.");
+			await NotifyService!.Notify(executor, "Alias name cannot be empty.", executor);
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
@@ -340,13 +340,13 @@ public partial class Commands
 
 		if (maybeAttribute.IsNone)
 		{
-			await NotifyService!.Notify(executor, $"Alias '{alias}' not found.");
+			await NotifyService!.Notify(executor, $"Alias '{alias}' not found.", executor);
 			return new CallState($"#-1 Alias '{alias}' not found.");
 		}
 
 		if (maybeAttribute.IsError)
 		{
-			await NotifyService!.Notify(executor, $"Error reading alias: {maybeAttribute.AsError.Value}");
+			await NotifyService!.Notify(executor, $"Error reading alias: {maybeAttribute.AsError.Value}", executor);
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
@@ -367,7 +367,7 @@ public partial class Commands
 		// Send custom notification that includes the alias name
 		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
 		{
-			await NotifyService!.Notify(executor, $"Title set to '{title.ToPlainText()}' for alias '{alias}' (channel {channel.Name.ToPlainText()}).");
+			await NotifyService!.Notify(executor, $"Title set to '{title.ToPlainText()}' for alias '{alias}' (channel {channel.Name.ToPlainText()}).", executor);
 		}
 
 		return result;
@@ -383,7 +383,7 @@ public partial class Commands
 
 		if (allAliases.IsError)
 		{
-			await NotifyService!.Notify(executor, $"Error reading aliases: {allAliases.AsError.Value}");
+			await NotifyService!.Notify(executor, $"Error reading aliases: {allAliases.AsError.Value}", executor);
 			return new CallState($"#-1 Error reading aliases: {allAliases.AsError.Value}");
 		}
 
@@ -391,7 +391,7 @@ public partial class Commands
 
 		if (aliases.Count == 0)
 		{
-			await NotifyService!.Notify(executor, "You have no channel aliases.");
+			await NotifyService!.Notify(executor, "You have no channel aliases.", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -410,7 +410,7 @@ public partial class Commands
 			));
 		}
 
-		await NotifyService!.Notify(executor, MModule.multiple(outputLines.ToArray()));
+		await NotifyService!.Notify(executor, MModule.multiple(outputLines.ToArray()), executor);
 		return new CallState(string.Empty);
 	}
 }

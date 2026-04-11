@@ -26,6 +26,6 @@ public class QuotaCommandTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), "Quota system disabled.", null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), "Quota system disabled.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

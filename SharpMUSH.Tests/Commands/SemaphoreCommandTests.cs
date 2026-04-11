@@ -26,6 +26,7 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - create a unique object and semaphore attribute with underscore separator
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemNotify");
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -49,7 +50,7 @@ public class SemaphoreCommandTests
 		// Assert - verify the waiting task was executed
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(),
-			testMessage, null, INotifyService.NotificationType.Announce);
+			testMessage, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -107,6 +108,7 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test verifies that @notify/setq accepts qreg parameters
 		// Fixed bug where CB.RSArgs was interfering with comma parsing
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQParam");
@@ -122,12 +124,13 @@ public class SemaphoreCommandTests
 		await NotifyService.DidNotReceive().Notify(
 			Arg.Any<AnySharpObject>(),
 			Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Value.ToString()!.Contains("must be in pairs")), null, INotifyService.NotificationType.Announce);
+				msg.Value.ToString()!.Contains("must be in pairs")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - create a unique object and semaphore attribute with a unique test value
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQWait");
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -152,7 +155,7 @@ public class SemaphoreCommandTests
 		// The waiting task should have been executed with %q0 set to our test value
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(),
-			$"QRegValue:{testValue}", null, INotifyService.NotificationType.Announce);
+			$"QRegValue:{testValue}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

@@ -47,10 +47,10 @@ public class CommandFlowUnitTests
 
 		await NotifyService.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "-1")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

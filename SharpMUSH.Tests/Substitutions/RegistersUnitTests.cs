@@ -36,6 +36,6 @@ public class RegistersUnitTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), expected, null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

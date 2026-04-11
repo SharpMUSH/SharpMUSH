@@ -396,13 +396,13 @@ public partial class Commands
 	{
 		var handle = parser.CurrentState.Handle!.Value;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.Notify(executor, MModule.single("GOODBYE."));
+		await NotifyService!.Notify(executor, MModule.single("GOODBYE."), executor);
 
 		// Display quit file if configured
 		var quitText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.QuitFile);
 		if (!string.IsNullOrWhiteSpace(quitText))
 		{
-			await NotifyService!.Notify(executor, quitText);
+			await NotifyService!.Notify(executor, quitText, executor);
 		}
 
 		// Clean up Server-side connection state

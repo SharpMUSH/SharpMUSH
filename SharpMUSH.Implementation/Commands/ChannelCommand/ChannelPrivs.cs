@@ -13,7 +13,7 @@ public static class ChannelPrivs
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -35,7 +35,7 @@ public static class ChannelPrivs
 		if (privilegeList.IsError)
 		{
 			await NotifyService.Notify(executor,
-				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError.Value)}");
+				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError.Value)}", executor);
 		}
 
 		await Mediator.Send(new UpdateChannelCommand(channel,

@@ -213,15 +213,15 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "3 is 1, or 3")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "3 is 1, or 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "1 is 1")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "1 is 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "2 is 2")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "2 is 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -231,12 +231,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
 		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1a", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2a", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3a", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1a", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2a", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3a", null, INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3a", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -246,12 +246,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
 		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1b", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 2b", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 3b", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1b", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2b", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3b", null, INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 2b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 3b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3b", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -261,12 +261,12 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
 		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1c", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2c", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3c", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1c", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2c", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3c", null, INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 2c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 3c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "assert 1c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 2c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "assert 3c", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -276,10 +276,10 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(
 			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1d", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2d", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3d", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1d", null, INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1d", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2d", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3d", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1d", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -289,11 +289,11 @@ public class GeneralCommandTests
 		await Parser.CommandListParse(
 			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1e", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2e", null, INotifyService.NotificationType.Announce);
-		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3e", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1e", null, INotifyService.NotificationType.Announce);
-		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 2e", null, INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "break 1e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 2e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), "break 3e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 1e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await NotifyService.Received().Notify(TestHelpers.MatchingObject(executor), "broken 2e", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -319,7 +319,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "is in")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "is in")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -336,7 +336,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "only @whereis players")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "only @whereis players")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -350,7 +350,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Restarted")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Restarted")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -364,7 +364,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Searching")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Searching")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -378,7 +378,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Database Statistics")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Database Statistics")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -392,7 +392,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("database search")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("database search")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -405,7 +405,7 @@ public class GeneralCommandTests
 		// Should notify about entrances
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Entrances")), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Entrances")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -419,7 +419,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Command:")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("Command:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -433,7 +433,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Global user-defined functions")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Global user-defined functions")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -447,7 +447,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Function:")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Function:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -463,7 +463,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@map:")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@map:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -479,7 +479,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "No such attribute")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "No such attribute")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -512,7 +512,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@halt:")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "@halt:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -526,7 +526,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "@ps:")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "@ps:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -540,7 +540,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@select:")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@select:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -557,7 +557,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@attribute:")), null, INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(s => s.Value.ToString()!.Contains("@attribute:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

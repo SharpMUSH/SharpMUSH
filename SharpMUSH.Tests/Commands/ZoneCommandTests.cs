@@ -64,7 +64,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(TestHelpers.MessageContains(msg, $"Zoned to {zoneName}") || TestHelpers.MessageContains(msg, $"{objDbRef}"))), null, INotifyService.NotificationType.Announce);
+				(TestHelpers.MessageContains(msg, $"Zoned to {zoneName}") || TestHelpers.MessageContains(msg, $"{objDbRef}"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify the zone was actually set in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -107,7 +107,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "Zone cleared")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "Zone cleared")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify the zone was actually cleared in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -141,7 +141,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(TestHelpers.MessageContains(msg, $"{zoneName}") || TestHelpers.MessageContains(msg, "Zoned"))), null, INotifyService.NotificationType.Announce);
+				(TestHelpers.MessageContains(msg, $"{zoneName}") || TestHelpers.MessageContains(msg, "Zoned"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify zone was set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -160,7 +160,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(TestHelpers.MessageContains(msg, "don't see") || TestHelpers.MessageContains(msg, "can't see") || TestHelpers.MessageContains(msg, "NO SUCH OBJECT"))), null, INotifyService.NotificationType.Announce);
+				(TestHelpers.MessageContains(msg, "don't see") || TestHelpers.MessageContains(msg, "can't see") || TestHelpers.MessageContains(msg, "NO SUCH OBJECT"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -181,7 +181,7 @@ public class ZoneCommandTests
 		await NotifyService
 			.Received(Quantity.AtLeastOne())
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageContains(msg, "don't see") || TestHelpers.MessageContains(msg, "can't see")), null, INotifyService.NotificationType.Announce);
+				TestHelpers.MessageContains(msg, "don't see") || TestHelpers.MessageContains(msg, "can't see")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

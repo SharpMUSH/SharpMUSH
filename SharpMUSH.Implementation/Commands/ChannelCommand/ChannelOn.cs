@@ -42,7 +42,7 @@ public static class ChannelOn
 		// Channel join/leave announcements are handled by the channel system
 		await Mediator.Send(new AddUserToChannelCommand(channel, target));
 
-		await NotifyService.Notify(executor, $"CHAT: {target.Object().Name} has been added to {channelName}.");
+		await NotifyService.Notify(executor, $"CHAT: {target.Object().Name} has been added to {channelName}.", executor);
 		return new CallState($"{target.Object().Name} has been added to {channelName}.");
 	}
 }

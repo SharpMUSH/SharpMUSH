@@ -140,7 +140,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute copied to 1 destination."))
-			, null, INotifyService.NotificationType.Announce);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify destination attribute was created
 		var destAttr = Database.GetAttributeAsync(objDbRef, ["DEST_DIRECT_CPATTR"]);
@@ -172,7 +172,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				"Attribute copied to 1 destination."
-			, null, INotifyService.NotificationType.Announce);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify destination attribute was created
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -207,7 +207,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute copied to 2 destinations."))
-			, null, INotifyService.NotificationType.Announce);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -242,7 +242,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute moved to 1 destination."))
-			, null, INotifyService.NotificationType.Announce);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -284,7 +284,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Wiped attributes matching WIPE*_UNIQUE."))
-			, null, INotifyService.NotificationType.Announce);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify they're gone
 		var attr1After = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE1_UNIQUE",
@@ -315,7 +315,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute locked."))
-			, null, INotifyService.NotificationType.Announce);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
@@ -336,7 +336,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute unlocked."))
-			, null, INotifyService.NotificationType.Announce);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
 			IAttributeService.AttributeMode.Read, false);
@@ -363,7 +363,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("That attribute is unlocked."))
-			, null, INotifyService.NotificationType.Announce);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

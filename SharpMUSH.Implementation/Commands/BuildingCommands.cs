@@ -77,7 +77,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Created {name} ({thing}).");
+		await NotifyService!.Notify(executor, $"Created {name} ({thing}).", executor);
 
 		await EventService!.TriggerEventAsync(
 			parser,
@@ -209,8 +209,7 @@ public partial class Commands
 			await NotifyService!.Notify(executor,
 				setResult.Match(
 					_ => $"{realLocated.Object().Name}/{args["0"].Message} - Set.",
-					failure => failure.Value)
-			);
+					failure => failure.Value), executor);
 
 			return new CallState(setResult.Match(
 				_ => $"{realLocated.Object().Name}/{args["0"].Message}",
@@ -385,7 +384,7 @@ public partial class Commands
 		if (await obj.HasFlag("GOING"))
 		{
 			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "GOING_TWICE", false);
-			await NotifyService!.Notify(executor, "Destroyed.");
+			await NotifyService!.Notify(executor, "Destroyed.", executor);
 
 			// NOTE: Actual object deletion from database requires a garbage collection system.
 			// Objects marked GOING_TWICE will be cleaned up by a future purge process.
@@ -406,7 +405,7 @@ public partial class Commands
 		var destroyMsg = obj.IsPlayer
 			? $"{obj.Object().Name} and their possessions are scheduled to be destroyed."
 			: $"{obj.Object().Name} is scheduled to be destroyed.";
-		await NotifyService!.Notify(executor, destroyMsg);
+		await NotifyService!.Notify(executor, destroyMsg, executor);
 
 		try
 		{
@@ -569,13 +568,13 @@ public partial class Commands
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
 						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
-						await NotifyService!.Notify(executor, "Linked to home.");
+						await NotifyService!.Notify(executor, "Linked to home.", executor);
 						return CallState.Empty;
 					}
 					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
 					{
 						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
-						await NotifyService!.Notify(executor, "Linked to variable.");
+						await NotifyService!.Notify(executor, "Linked to variable.", executor);
 						return CallState.Empty;
 					}
 
@@ -660,7 +659,7 @@ public partial class Commands
 
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
-							await NotifyService!.Notify(executor, "Linked.");
+							await NotifyService!.Notify(executor, "Linked.", executor);
 							return CallState.Empty;
 						}
 					);
@@ -683,7 +682,7 @@ public partial class Commands
 							// Convert to AnySharpContent for SetObjectHomeCommand
 							var contentObj = exitObj.AsContent;
 							await Mediator!.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
-							await NotifyService!.Notify(executor, "Home set.");
+							await NotifyService!.Notify(executor, "Home set.", executor);
 							return CallState.Empty;
 						}
 					);
@@ -706,7 +705,7 @@ public partial class Commands
 
 							// Link the room to its drop-to
 							await Mediator!.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
-							await NotifyService!.Notify(executor, "Drop-to set.");
+							await NotifyService!.Notify(executor, "Drop-to set.", executor);
 							return CallState.Empty;
 						}
 					);
@@ -775,7 +774,7 @@ public partial class Commands
 					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!GOING_TWICE", false);
 				}
 
-				await NotifyService!.Notify(executor, $"Spared from destruction: {obj.Object().Name}");
+				await NotifyService!.Notify(executor, $"Spared from destruction: {obj.Object().Name}", executor);
 
 				// Trigger @startup attribute if it exists
 				try
@@ -820,7 +819,7 @@ public partial class Commands
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
 					await Mediator!.Send(new UnsetObjectZoneCommand(obj));
-					await NotifyService!.Notify(executor, "Zone cleared.");
+					await NotifyService!.Notify(executor, "Zone cleared.", executor);
 					return CallState.Empty;
 				}
 
@@ -886,7 +885,7 @@ public partial class Commands
 							}
 						}
 
-						await NotifyService!.Notify(executor, "Zone set.");
+						await NotifyService!.Notify(executor, "Zone set.", executor);
 						return CallState.Empty;
 					}
 				);
@@ -1013,7 +1012,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey));
-				await NotifyService!.Notify(executor, "Locked.");
+				await NotifyService!.Notify(executor, "Locked.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -1048,7 +1047,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), lockType));
-				await NotifyService!.Notify(executor, "Unlocked.");
+				await NotifyService!.Notify(executor, "Unlocked.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -1078,7 +1077,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey));
-				await NotifyService!.Notify(executor, "Enter lock set.");
+				await NotifyService!.Notify(executor, "Enter lock set.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -1107,7 +1106,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Enter"));
-				await NotifyService!.Notify(executor, "Enter lock removed.");
+				await NotifyService!.Notify(executor, "Enter lock removed.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -1137,7 +1136,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey));
-				await NotifyService!.Notify(executor, "Use lock set.");
+				await NotifyService!.Notify(executor, "Use lock set.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -1166,7 +1165,7 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Use"));
-				await NotifyService!.Notify(executor, "Use lock removed.");
+				await NotifyService!.Notify(executor, "Use lock removed.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -1195,7 +1194,7 @@ public partial class Commands
 
 			if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
 			{
-				await NotifyService!.Notify(executor, "Source must be a room.");
+				await NotifyService!.Notify(executor, "Source must be a room.", executor);
 				return new CallState(ErrorMessages.Returns.NotARoom);
 			}
 			sourceRoom = locateResult.AsSharpObject.AsRoom;
@@ -1234,7 +1233,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"Opened exit #{exitDbRef.Number}");
+		await NotifyService!.Notify(executor, $"Opened exit #{exitDbRef.Number}", executor);
 
 		// Link to destination if provided
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
@@ -1247,7 +1246,7 @@ public partial class Commands
 			{
 				var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
 				await Mediator.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsRoom));
-				await NotifyService!.Notify(executor, $"Linked to {destName}.");
+				await NotifyService!.Notify(executor, $"Linked to {destName}.", executor);
 			}
 		}
 
@@ -1367,7 +1366,7 @@ public partial class Commands
 					}
 				}
 
-				await NotifyService!.Notify(executor, $"Cloned. New object: #{cloneDbRef.Number}.");
+				await NotifyService!.Notify(executor, $"Cloned. New object: #{cloneDbRef.Number}.", executor);
 				return new CallState(cloneDbRef.ToString());
 			}
 		);
@@ -1397,13 +1396,13 @@ public partial class Commands
 				if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
 					await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", MModule.single(""));
-					await NotifyService!.Notify(executor, "Moniker cleared.");
+					await NotifyService!.Notify(executor, "Moniker cleared.", executor);
 					return CallState.Empty;
 				}
 
 				var moniker = args["1"].Message!;
 				await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", moniker);
-				await NotifyService!.Notify(executor, "Moniker set.");
+				await NotifyService!.Notify(executor, "Moniker set.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -1474,14 +1473,14 @@ public partial class Commands
 					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
 
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
-					await NotifyService!.Notify(executor, "Unlinked.");
+					await NotifyService!.Notify(executor, "Unlinked.", executor);
 					return CallState.Empty;
 				}
 				else if (obj.IsRoom)
 				{
 					// Remove drop-to
 					await Mediator!.Send(new UnlinkRoomCommand(obj.AsRoom));
-					await NotifyService!.Notify(executor, "Drop-to removed.");
+					await NotifyService!.Notify(executor, "Drop-to removed.", executor);
 					return CallState.Empty;
 				}
 

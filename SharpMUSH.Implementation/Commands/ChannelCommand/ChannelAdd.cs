@@ -23,20 +23,20 @@ public static class ChannelAdd
 		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
 		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, true);
 		if (!maybeChannel.IsError)
 		{
-			await NotifyService.Notify(executor, "CHAT: Channel already exists.");
+			await NotifyService.Notify(executor, "CHAT: Channel already exists.", executor);
 			return new CallState("#-1 Channel already exists.");
 		}
 
 		if (!ChannelHelper.IsValidChannelName(Configuration, channelName))
 		{
-			await NotifyService.Notify(executor, "Invalid channel name.");
+			await NotifyService.Notify(executor, "Invalid channel name.", executor);
 			return new CallState("#-1 Invalid channel name.");
 		}
 
@@ -48,20 +48,20 @@ public static class ChannelAdd
 
 		if (!await executor.IsPriv() && ownedChannels >= Configuration.CurrentValue.Chat.MaxChannels)
 		{
-			await NotifyService.Notify(executor, "#-1 You have too many channels.");
+			await NotifyService.Notify(executor, "#-1 You have too many channels.", executor);
 			return new CallState("#-1 You have too many channels.");
 		}
 
 		var parsedPrivileges = ChannelHelper.StringToChannelPrivileges(privileges);
 		if (parsedPrivileges.IsError)
 		{
-			await NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", parsedPrivileges.AsError.Value)}.");
+			await NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", parsedPrivileges.AsError.Value)}.", executor);
 			return new CallState("#-1 Invalid privileges.");
 		}
 
 		await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));
 
-		await NotifyService.Notify(executor, "Channel has been created.");
+		await NotifyService.Notify(executor, "Channel has been created.", executor);
 		return new CallState("Channel has been created.");
 	}
 }

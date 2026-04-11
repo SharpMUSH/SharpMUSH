@@ -19,7 +19,7 @@ public partial class Commands
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, "News system not initialized.");
+			await NotifyService!.Notify(executor, "News system not initialized.", executor);
 			return new CallState("#-1 NEWS SYSTEM NOT INITIALIZED");
 		}
 
@@ -30,11 +30,11 @@ public partial class Commands
 			if (mainNews != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainNews);
-				await NotifyService!.Notify(executor, rendered);
+				await NotifyService!.Notify(executor, rendered, executor);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "No news available. Type 'news <topic>' for news on a specific topic.");
+				await NotifyService!.Notify(executor, "No news available. Type 'news <topic>' for news on a specific topic.", executor);
 			}
 			return CallState.Empty;
 		}
@@ -47,7 +47,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No news entries found containing '{topic}'.");
+				await NotifyService!.Notify(executor, $"No news entries found containing '{topic}'.", executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -56,14 +56,14 @@ public partial class Commands
 				if (searchContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
-					await NotifyService!.Notify(executor, rendered);
+					await NotifyService!.Notify(executor, rendered, executor);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
 				await NotifyService!.Notify(executor, $"News entries containing '{topic}':", executor);
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
 		}
@@ -74,7 +74,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No news available for '{topic}'.");
+				await NotifyService!.Notify(executor, $"No news available for '{topic}'.", executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -83,14 +83,14 @@ public partial class Commands
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
-					await NotifyService!.Notify(executor, rendered);
+					await NotifyService!.Notify(executor, rendered, executor);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
 				await NotifyService!.Notify(executor, $"News topics matching '{topic}':", executor);
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
 		}
@@ -100,12 +100,12 @@ public partial class Commands
 		if (exactContent != null)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
-			await NotifyService!.Notify(executor, rendered);
+			await NotifyService!.Notify(executor, rendered, executor);
 		}
 		else
 		{
 			await NotifyService!.Notify(executor, $"No news available for '{topic}'.", executor);
-			await NotifyService!.Notify(executor, "Try 'news <pattern>' with wildcards (*) or 'news/search <text>' to search news content.");
+			await NotifyService!.Notify(executor, "Try 'news <pattern>' with wildcards (*) or 'news/search <text>' to search news content.", executor);
 		}
 
 		return CallState.Empty;
@@ -121,13 +121,13 @@ public partial class Commands
 		// Permission check - only wizards and royalty
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied. This command is for administrators only.");
+			await NotifyService!.Notify(executor, "Permission denied. This command is for administrators only.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, "Admin help system not initialized.");
+			await NotifyService!.Notify(executor, "Admin help system not initialized.", executor);
 			return new CallState("#-1 AHELP SYSTEM NOT INITIALIZED");
 		}
 
@@ -138,11 +138,11 @@ public partial class Commands
 			if (mainAhelp != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainAhelp);
-				await NotifyService!.Notify(executor, rendered);
+				await NotifyService!.Notify(executor, rendered, executor);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "No admin help available. Type 'ahelp <topic>' for help on a specific topic.");
+				await NotifyService!.Notify(executor, "No admin help available. Type 'ahelp <topic>' for help on a specific topic.", executor);
 			}
 			return CallState.Empty;
 		}
@@ -155,7 +155,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No admin help entries found containing '{topic}'.");
+				await NotifyService!.Notify(executor, $"No admin help entries found containing '{topic}'.", executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -164,14 +164,14 @@ public partial class Commands
 				if (searchContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(searchContent);
-					await NotifyService!.Notify(executor, rendered);
+					await NotifyService!.Notify(executor, rendered, executor);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
 				await NotifyService!.Notify(executor, $"Admin help entries containing '{topic}':", executor);
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
 		}
@@ -182,7 +182,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.");
+				await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.", executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -191,14 +191,14 @@ public partial class Commands
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent);
-					await NotifyService!.Notify(executor, rendered);
+					await NotifyService!.Notify(executor, rendered, executor);
 				}
 			}
 			else
 			{
 				// Multiple matches, list them
 				await NotifyService!.Notify(executor, $"Admin help topics matching '{topic}':", executor);
-				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
+				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
 		}
@@ -208,12 +208,12 @@ public partial class Commands
 		if (exactContent != null)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(exactContent);
-			await NotifyService!.Notify(executor, rendered);
+			await NotifyService!.Notify(executor, rendered, executor);
 		}
 		else
 		{
 			await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.", executor);
-			await NotifyService!.Notify(executor, "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.");
+			await NotifyService!.Notify(executor, "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.", executor);
 		}
 
 		return CallState.Empty;

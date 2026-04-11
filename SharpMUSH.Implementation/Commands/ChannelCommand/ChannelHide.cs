@@ -18,7 +18,7 @@ public static class ChannelHide
 
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -26,7 +26,7 @@ public static class ChannelHide
 		if (yesNoString is not null && !(yesNoString.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
 																		 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
 		{
-			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.");
+			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.", executor);
 			return new CallState("#-1 INVALID OPTION");
 		}
 
@@ -54,14 +54,14 @@ public static class ChannelHide
 
 			if (maybeMemberStatus is null)
 			{
-				await NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.", executor);
 			}
 
 			var status = maybeMemberStatus?.Status;
 
 			if (status?.Hide ?? false == hideOn)
 			{
-				await NotifyService.Notify(executor, $"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You are already in that hide state on {channel.Name.ToPlainText()}.", executor);
 				continue;
 			}
 
@@ -76,11 +76,11 @@ public static class ChannelHide
 
 			if (hideOn)
 			{
-				await NotifyService.Notify(executor, $"CHAT: You have been hidden on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You have been hidden on {channel.Name.ToPlainText()}.", executor);
 			}
 			else
 			{
-				await NotifyService.Notify(executor, $"CHAT: You have been unhidden on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You have been unhidden on {channel.Name.ToPlainText()}.", executor);
 			}
 		}
 

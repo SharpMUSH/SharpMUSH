@@ -81,7 +81,7 @@ public partial class Commands
 
 		if (!isOwner && !passesModLock && !await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
@@ -97,7 +97,7 @@ public partial class Commands
 
 		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
 		{
-			await NotifyService!.Notify(executor, $"Invalid lock type: {lockType}");
+			await NotifyService!.Notify(executor, $"Invalid lock type: {lockType}", executor);
 			return new CallState("#-1 INVALID LOCK TYPE");
 		}
 
@@ -105,11 +105,11 @@ public partial class Commands
 
 		if (string.IsNullOrEmpty(lockKey))
 		{
-			await NotifyService!.Notify(executor, $"{lockType} lock removed from channel {channel.Name.ToPlainText()}.");
+			await NotifyService!.Notify(executor, $"{lockType} lock removed from channel {channel.Name.ToPlainText()}.", executor);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"{lockType} lock set on channel {channel.Name.ToPlainText()}.");
+			await NotifyService!.Notify(executor, $"{lockType} lock set on channel {channel.Name.ToPlainText()}.", executor);
 		}
 
 		return CallState.Empty;
@@ -135,17 +135,17 @@ public partial class Commands
 			var motdFile = Configuration!.CurrentValue.Message.MessageOfTheDayFile;
 			var motdHtmlFile = Configuration.CurrentValue.Message.MessageOfTheDayHtmlFile;
 
-			await NotifyService!.Notify(executor, "Current Message of the Day settings:");
-			await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}");
-			await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}");
+			await NotifyService!.Notify(executor, "Current Message of the Day settings:", executor);
+			await NotifyService.Notify(executor, $"  Connect MOTD File: {motdFile ?? "(not set)"}", executor);
+			await NotifyService.Notify(executor, $"  Connect MOTD HTML: {motdHtmlFile ?? "(not set)"}", executor);
 
 			if (isWizard)
 			{
 				var wizmotdFile = Configuration.CurrentValue.Message.WizMessageOfTheDayFile;
 				var wizmotdHtmlFile = Configuration.CurrentValue.Message.WizMessageOfTheDayHtmlFile;
 
-				await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}");
-				await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}");
+				await NotifyService.Notify(executor, $"  Wizard MOTD File: {wizmotdFile ?? "(not set)"}", executor);
+				await NotifyService.Notify(executor, $"  Wizard MOTD HTML: {wizmotdHtmlFile ?? "(not set)"}", executor);
 			}
 
 			return CallState.Empty;
@@ -172,7 +172,7 @@ public partial class Commands
 				output.AppendLine($"{flagName,-20} {symbol,-6} {types}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -197,7 +197,7 @@ public partial class Commands
 				output.AppendLine($"{powerName,-20} {alias,-18} {types}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -214,7 +214,7 @@ public partial class Commands
 				output.AppendLine($"  {displayName}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -231,7 +231,7 @@ public partial class Commands
 				output.AppendLine($"  {attrName}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -265,7 +265,7 @@ public partial class Commands
 				output.AppendLine($"  {displayName}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -300,7 +300,7 @@ public partial class Commands
 				output.AppendLine($"  {displayName}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -309,7 +309,7 @@ public partial class Commands
 			var isWizard = await executor.IsWizard();
 			if (!isWizard)
 			{
-				await NotifyService!.Notify(executor, "Permission denied.");
+				await NotifyService!.Notify(executor, "Permission denied.", executor);
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
@@ -320,11 +320,11 @@ public partial class Commands
 			output.AppendLine($"  GC Gen 1 Collections: {GC.CollectionCount(1)}");
 			output.AppendLine($"  GC Gen 2 Collections: {GC.CollectionCount(2)}");
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
-		await NotifyService!.Notify(executor, "You must specify what to list. Use one of: /MOTD /FUNCTIONS /COMMANDS /ATTRIBS /LOCKS /FLAGS /POWERS /ALLOCATIONS");
+		await NotifyService!.Notify(executor, "You must specify what to list. Use one of: /MOTD /FUNCTIONS /COMMANDS /ATTRIBS /LOCKS /FLAGS /POWERS /ALLOCATIONS", executor);
 		return CallState.Empty;
 	}
 
@@ -337,7 +337,7 @@ public partial class Commands
 
 		if (!executor.IsGod())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
@@ -349,20 +349,20 @@ public partial class Commands
 
 		if (specifiedLogType == null && specifiedAction == "CHECK")
 		{
-			await NotifyService!.Notify(executor, "Log Management Status:");
-			await NotifyService!.Notify(executor, "  SharpMUSH uses .NET logging infrastructure");
-			await NotifyService!.Notify(executor, "  Logs are managed by configured logging providers");
-			await NotifyService!.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ");
-			await NotifyService!.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE");
-			await NotifyService!.Notify(executor, "  Note: Direct log file manipulation not yet implemented");
+			await NotifyService!.Notify(executor, "Log Management Status:", executor);
+			await NotifyService!.Notify(executor, "  SharpMUSH uses .NET logging infrastructure", executor);
+			await NotifyService!.Notify(executor, "  Logs are managed by configured logging providers", executor);
+			await NotifyService!.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ", executor);
+			await NotifyService!.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE", executor);
+			await NotifyService!.Notify(executor, "  Note: Direct log file manipulation not yet implemented", executor);
 			Logger?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object().Name);
 		}
 		else
 		{
 			var logDesc = specifiedLogType ?? "all logs";
-			await NotifyService!.Notify(executor, $"@LOGWIPE/{specifiedAction}: Would {specifiedAction.ToLower()} {logDesc}");
-			await NotifyService!.Notify(executor, "Direct log file manipulation not yet implemented.");
-			await NotifyService!.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.");
+			await NotifyService!.Notify(executor, $"@LOGWIPE/{specifiedAction}: Would {specifiedAction.ToLower()} {logDesc}", executor);
+			await NotifyService!.Notify(executor, "Direct log file manipulation not yet implemented.", executor);
+			await NotifyService!.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.", executor);
 			Logger?.LogWarning("@LOGWIPE/{Action} requested for {LogType} by {Executor} - not implemented",
 				specifiedAction, logDesc, executor.Object().Name);
 		}
@@ -383,7 +383,7 @@ public partial class Commands
 		var slashIndex = objectLock.LastIndexOf('/');
 		if (slashIndex == -1)
 		{
-			await NotifyService!.Notify(executor, "Invalid format. Use: @lset <object>/<lock type>=[!]<flag>");
+			await NotifyService!.Notify(executor, "Invalid format. Use: @lset <object>/<lock type>=[!]<flag>", executor);
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
@@ -395,7 +395,7 @@ public partial class Commands
 
 		if (!LockService!.LockPrivileges.TryGetValue(flagName.ToLower(), out var flagInfo))
 		{
-			await NotifyService!.Notify(executor, $"Invalid flag: {flagName}");
+			await NotifyService!.Notify(executor, $"Invalid flag: {flagName}", executor);
 			return new CallState("#-1 INVALID FLAG");
 		}
 
@@ -414,7 +414,7 @@ public partial class Commands
 
 				if (!obj.Object().Locks.TryGetValue(lockType, out var lockData))
 				{
-					await NotifyService!.Notify(executor, $"No such lock: {lockType}");
+					await NotifyService!.Notify(executor, $"No such lock: {lockType}", executor);
 					return new CallState("#-1 NO SUCH LOCK");
 				}
 
@@ -429,7 +429,7 @@ public partial class Commands
 				// Save to database via mediator command
 				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, updatedLockData.LockString));
 
-				await NotifyService!.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.");
+				await NotifyService!.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.", executor);
 				return CallState.Empty;
 			}
 		);
@@ -449,8 +449,8 @@ public partial class Commands
 		// Mail alias system not yet implemented
 		var action = switches.FirstOrDefault() ?? "LIST";
 
-		await NotifyService!.Notify(executor, $"@MALIAS/{action}: Mail alias system not yet implemented.");
-		await NotifyService!.Notify(executor, "This command would manage mail distribution lists and aliases.");
+		await NotifyService!.Notify(executor, $"@MALIAS/{action}: Mail alias system not yet implemented.", executor);
+		await NotifyService!.Notify(executor, "This command would manage mail distribution lists and aliases.", executor);
 
 		return CallState.Empty;
 	}
@@ -464,13 +464,13 @@ public partial class Commands
 		// Check permissions
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
 		// Socket configuration not yet implemented
-		await NotifyService!.Notify(executor, "@SOCKSET: Socket option configuration not yet implemented.");
-		await NotifyService!.Notify(executor, "This command would set options on specific player connections/sockets.");
+		await NotifyService!.Notify(executor, "@SOCKSET: Socket option configuration not yet implemented.", executor);
+		await NotifyService!.Notify(executor, "This command would set options on specific player connections/sockets.", executor);
 
 		return CallState.Empty;
 	}
@@ -480,7 +480,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Slave(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.Notify(executor, "Slave command does nothing for SharpMUSH.");
+		await NotifyService!.Notify(executor, "Slave command does nothing for SharpMUSH.", executor);
 		return new None();
 	}
 
@@ -492,13 +492,13 @@ public partial class Commands
 		// Check permissions
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
 		// Recycle bin / unrecycle system not yet implemented
-		await NotifyService!.Notify(executor, "@UNRECYCLE: Object recovery system not yet implemented.");
-		await NotifyService!.Notify(executor, "This command would restore objects from the recycle bin.");
+		await NotifyService!.Notify(executor, "@UNRECYCLE: Object recovery system not yet implemented.", executor);
+		await NotifyService!.Notify(executor, "This command would restore objects from the recycle bin.", executor);
 
 		return CallState.Empty;
 	}
@@ -512,17 +512,17 @@ public partial class Commands
 		// Parse: @warnings <object>=<warning list>
 		if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToString()))
 		{
-			await NotifyService!.Notify(executor, "Usage: @warnings <object>=<warning list>");
-			await NotifyService!.Notify(executor, "Available warnings: none, serious, normal, extra, all");
-			await NotifyService!.Notify(executor, "Individual: exit-unlinked, exit-oneway, exit-multiple, exit-msgs, exit-desc,");
-			await NotifyService!.Notify(executor, "           thing-msgs, thing-desc, room-desc, my-desc, lock-checks");
-			await NotifyService!.Notify(executor, "Use !warning to negate (e.g., 'all !exit-desc')");
+			await NotifyService!.Notify(executor, "Usage: @warnings <object>=<warning list>", executor);
+			await NotifyService!.Notify(executor, "Available warnings: none, serious, normal, extra, all", executor);
+			await NotifyService!.Notify(executor, "Individual: exit-unlinked, exit-oneway, exit-multiple, exit-msgs, exit-desc,", executor);
+			await NotifyService!.Notify(executor, "           thing-msgs, thing-desc, room-desc, my-desc, lock-checks", executor);
+			await NotifyService!.Notify(executor, "Use !warning to negate (e.g., 'all !exit-desc')", executor);
 			return CallState.Empty;
 		}
 
 		if (!args.TryGetValue("1", out var warningListArg))
 		{
-			await NotifyService!.Notify(executor, "Usage: @warnings <object>=<warning list>");
+			await NotifyService!.Notify(executor, "Usage: @warnings <object>=<warning list>", executor);
 			return CallState.Empty;
 		}
 
@@ -541,7 +541,7 @@ public partial class Commands
 		// Check permissions
 		if (!await PermissionService!.Controls(executor, target.AsSharpObject))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
@@ -553,7 +553,7 @@ public partial class Commands
 		// Report any unknown warnings
 		foreach (var unknown in unknownWarnings)
 		{
-			await NotifyService!.Notify(executor, $"Unknown warning: {unknown}");
+			await NotifyService!.Notify(executor, $"Unknown warning: {unknown}", executor);
 		}
 
 		// Update warnings
@@ -565,11 +565,11 @@ public partial class Commands
 		if (newWarnings != WarningType.None)
 		{
 			var warningString = WarningTypeHelper.UnparseWarnings(newWarnings);
-			await NotifyService!.Notify(executor, $"Warnings set to: {warningString}");
+			await NotifyService!.Notify(executor, $"Warnings set to: {warningString}", executor);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Warnings cleared.");
+			await NotifyService!.Notify(executor, "Warnings cleared.", executor);
 		}
 
 		Logger?.LogInformation("@WARNINGS: {Executor} set warnings on {Target} from {Old} to {New}",
@@ -593,13 +593,13 @@ public partial class Commands
 			// @wcheck/all - check all objects, wizard only
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "You'd better check your wizbit first.");
+				await NotifyService!.Notify(executor, "You'd better check your wizbit first.", executor);
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
-			await NotifyService!.Notify(executor, "Running database topology warning checks...");
+			await NotifyService!.Notify(executor, "Running database topology warning checks...", executor);
 			var checkedCount = await WarningService!.CheckAllObjectsAsync();
-			await NotifyService!.Notify(executor, $"Warning checks complete. Checked {checkedCount} objects.");
+			await NotifyService!.Notify(executor, $"Warning checks complete. Checked {checkedCount} objects.", executor);
 
 			Logger?.LogInformation("@WCHECK/ALL executed by {Executor}, checked {Count} objects",
 				executor.Object().Name, checkedCount);
@@ -607,7 +607,7 @@ public partial class Commands
 		else if (checkMe)
 		{
 			// @wcheck/me - check all objects owned by player
-			await NotifyService!.Notify(executor, "Checking objects you own...");
+			await NotifyService!.Notify(executor, "Checking objects you own...", executor);
 			var warningCount = await WarningService!.CheckOwnedObjectsAsync(executor);
 
 			Logger?.LogInformation("@WCHECK/ME executed by {Executor}, found {Count} warnings",
@@ -618,7 +618,7 @@ public partial class Commands
 			// @wcheck <object> - check specific object
 			if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToString()))
 			{
-				await NotifyService!.Notify(executor, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all");
+				await NotifyService!.Notify(executor, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all", executor);
 				return CallState.Empty;
 			}
 
@@ -638,12 +638,12 @@ public partial class Commands
 			// Check permissions - must own or have see_all
 			if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
 			{
-				await NotifyService!.Notify(executor, "Permission denied.");
+				await NotifyService!.Notify(executor, "Permission denied.", executor);
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 
 			await WarningService!.CheckObjectAsync(executor, target.AsSharpObject);
-			await NotifyService!.Notify(executor, "@wcheck complete.");
+			await NotifyService!.Notify(executor, "@wcheck complete.", executor);
 
 			Logger?.LogInformation("@WCHECK executed by {Executor} on {Target}",
 				executor.Object().Name, targetObj.Name);
@@ -667,9 +667,9 @@ public partial class Commands
 		// 4. Transfer pennies and execute &drink`<item> attribute if exists
 
 		var itemName = args["0"].Message!.ToPlainText();
-		await NotifyService!.Notify(executor, $"You try to buy '{itemName}'.");
-		await NotifyService!.Notify(executor, "The BUY command requires a full economy system implementation.");
-		await NotifyService!.Notify(executor, "Features needed: PRICELIST attribute parsing, @lock/pay checking, penny transfers.");
+		await NotifyService!.Notify(executor, $"You try to buy '{itemName}'.", executor);
+		await NotifyService!.Notify(executor, "The BUY command requires a full economy system implementation.", executor);
+		await NotifyService!.Notify(executor, "Features needed: PRICELIST attribute parsing, @lock/pay checking, penny transfers.", executor);
 
 		return CallState.Empty;
 	}
@@ -725,7 +725,7 @@ public partial class Commands
 		{
 			var limitedObj = viewingKnown.Object();
 			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
-			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.");
+			await NotifyService!.Notify(enactor, $"{limitedObj.Name} is owned by {limitedOwnerObj.Name}.", enactor);
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
@@ -825,16 +825,16 @@ public partial class Commands
 		outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
 
 		// Output header information
-		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
+		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections), enactor);
 
 		// Contents (unless /opaque)
 		if (!switches.Contains("OPAQUE") && contents.Length > 0)
 		{
 			var contentNames = contents.Select(x => x.Object().Name);
-			await NotifyService!.Notify(enactor, $"Contents:");
+			await NotifyService!.Notify(enactor, $"Contents:", enactor);
 			foreach (var contentName in contentNames)
 			{
-				await NotifyService!.Notify(enactor, $"  {contentName}");
+				await NotifyService!.Notify(enactor, $"  {contentName}", enactor);
 			}
 		}
 
@@ -881,7 +881,7 @@ public partial class Commands
 				}
 			}
 
-			await NotifyService!.Notify(executor, "You stop following and dismiss all followers.");
+			await NotifyService!.Notify(executor, "You stop following and dismiss all followers.", executor);
 			return CallState.Empty;
 		}
 
@@ -893,7 +893,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -911,7 +911,7 @@ public partial class Commands
 			{
 				await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
 					IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
-				await NotifyService!.Notify(executor, $"You stop following {target.Object().Name}.");
+				await NotifyService!.Notify(executor, $"You stop following {target.Object().Name}.", executor);
 			}
 		}
 
@@ -926,7 +926,7 @@ public partial class Commands
 			{
 				await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
 					IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
-				await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.");
+				await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
 				await NotifyService!.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
 			}
 		}
@@ -971,7 +971,7 @@ public partial class Commands
 				}
 			}
 
-			await NotifyService!.Notify(executor, $"You dismiss all your followers. ({dismissedCount} dismissed)");
+			await NotifyService!.Notify(executor, $"You dismiss all your followers. ({dismissedCount} dismissed)", executor);
 			return CallState.Empty;
 		}
 
@@ -983,7 +983,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -995,14 +995,14 @@ public partial class Commands
 
 		if (followingAttr.IsNone || followingAttr.IsError)
 		{
-			await NotifyService!.Notify(executor, $"{target.Object().Name} is not following you.");
+			await NotifyService!.Notify(executor, $"{target.Object().Name} is not following you.", executor);
 			return CallState.Empty;
 		}
 
 		var followingDbref = followingAttr.AsAttribute.Last().Value.ToPlainText();
 		if (followingDbref != executor.Object().DBRef.ToString())
 		{
-			await NotifyService!.Notify(executor, $"{target.Object().Name} is not following you.");
+			await NotifyService!.Notify(executor, $"{target.Object().Name} is not following you.", executor);
 			return CallState.Empty;
 		}
 
@@ -1010,7 +1010,7 @@ public partial class Commands
 		await AttributeService!.ClearAttributeAsync(executor, target, "FOLLOWING",
 			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 
-		await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.");
+		await NotifyService!.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
 		await NotifyService!.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
 
 		return CallState.Empty;
@@ -1028,7 +1028,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid() || locateResult.IsRoom || locateResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, "You can't drop that.");
+			await NotifyService!.Notify(executor, "You can't drop that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1055,7 +1055,7 @@ public partial class Commands
 
 		if (!isCarrying)
 		{
-			await NotifyService!.Notify(executor, "You aren't carrying that.");
+			await NotifyService!.Notify(executor, "You aren't carrying that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1065,14 +1065,14 @@ public partial class Commands
 		// Check Drop lock on object
 		if (!LockService!.Evaluate(LockType.Drop, objectToDrop, executor))
 		{
-			await NotifyService!.Notify(executor, "You can't drop that.");
+			await NotifyService!.Notify(executor, "You can't drop that.", executor);
 			return CallState.Empty;
 		}
 
 		// Check DropIn lock on room
 		if (!LockService!.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
 		{
-			await NotifyService!.Notify(executor, "You can't drop that here.");
+			await NotifyService!.Notify(executor, "You can't drop that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -1088,7 +1088,7 @@ public partial class Commands
 
 		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value);
+			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1099,7 +1099,7 @@ public partial class Commands
 			var dropMsg = dropAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, dropMsg);
+				await NotifyService!.Notify(executor, dropMsg, executor);
 			}
 		}
 
@@ -1155,19 +1155,19 @@ public partial class Commands
 					// Check for containment loops before dropping to the destination
 					if (await MoveService!.WouldCreateLoop(contentToDrop, dropToContainer))
 					{
-						await NotifyService!.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.");
+						await NotifyService!.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.", executor);
 						return CallState.Empty;
 					}
 
 					await Mediator!.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
 
-					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.");
+					await NotifyService!.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.", executor);
 					return CallState.Empty;
 				}
 			}
 		}
 
-		await NotifyService!.Notify(executor, "Dropped.");
+		await NotifyService!.Notify(executor, "Dropped.", executor);
 		return CallState.Empty;
 	}
 
@@ -1181,7 +1181,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(objectName))
 		{
-			await NotifyService!.Notify(executor, "Empty what?");
+			await NotifyService!.Notify(executor, "Empty what?", executor);
 			return CallState.Empty;
 		}
 
@@ -1190,7 +1190,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -1199,7 +1199,7 @@ public partial class Commands
 		// Can only empty things and players (containers)
 		if (!objectToEmpty.IsThing && !objectToEmpty.IsPlayer)
 		{
-			await NotifyService!.Notify(executor, "You can't empty that.");
+			await NotifyService!.Notify(executor, "You can't empty that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1231,7 +1231,7 @@ public partial class Commands
 
 		if (!isHolding && !sameLocation)
 		{
-			await NotifyService!.Notify(executor, "You must be holding that object or in the same location as it.");
+			await NotifyService!.Notify(executor, "You must be holding that object or in the same location as it.", executor);
 			return CallState.Empty;
 		}
 
@@ -1241,7 +1241,7 @@ public partial class Commands
 
 		if (!hasEnterOk && !await PermissionService!.Controls(executor, objectToEmpty))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return CallState.Empty;
 		}
 
@@ -1251,7 +1251,7 @@ public partial class Commands
 
 		if (contents.Count == 0)
 		{
-			await NotifyService!.Notify(executor, $"{objectToEmpty.Object().Name} is already empty.");
+			await NotifyService!.Notify(executor, $"{objectToEmpty.Object().Name} is already empty.", executor);
 			return CallState.Empty;
 		}
 
@@ -1317,7 +1317,7 @@ public partial class Commands
 					var successMsg = successAttr.AsT0[0].Value;
 					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 					{
-						await NotifyService!.Notify(executor, successMsg);
+						await NotifyService!.Notify(executor, successMsg, executor);
 					}
 				}
 
@@ -1358,7 +1358,7 @@ public partial class Commands
 					var successMsg = successAttr.AsT0[0].Value;
 					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 					{
-						await NotifyService!.Notify(executor, successMsg);
+						await NotifyService!.Notify(executor, successMsg, executor);
 					}
 				}
 
@@ -1396,7 +1396,7 @@ public partial class Commands
 					var dropMsg = dropAttr.AsT0[0].Value;
 					if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
 					{
-						await NotifyService!.Notify(executor, dropMsg);
+						await NotifyService!.Notify(executor, dropMsg, executor);
 					}
 				}
 
@@ -1421,15 +1421,15 @@ public partial class Commands
 		// Notify the player about the results
 		if (movedCount > 0 && failedCount == 0)
 		{
-			await NotifyService!.Notify(executor, $"Emptied {objectToEmpty.Object().Name}.");
+			await NotifyService!.Notify(executor, $"Emptied {objectToEmpty.Object().Name}.", executor);
 		}
 		else if (movedCount > 0 && failedCount > 0)
 		{
-			await NotifyService!.Notify(executor, $"Emptied {movedCount} item(s) from {objectToEmpty.Object().Name}. {failedCount} item(s) could not be moved.");
+			await NotifyService!.Notify(executor, $"Emptied {movedCount} item(s) from {objectToEmpty.Object().Name}. {failedCount} item(s) could not be moved.", executor);
 		}
 		else if (movedCount == 0 && failedCount > 0)
 		{
-			await NotifyService!.Notify(executor, $"Could not empty {objectToEmpty.Object().Name}.");
+			await NotifyService!.Notify(executor, $"Could not empty {objectToEmpty.Object().Name}.", executor);
 		}
 
 		return CallState.Empty;
@@ -1447,7 +1447,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "You can't see that here.");
+			await NotifyService!.Notify(executor, "You can't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -1456,7 +1456,7 @@ public partial class Commands
 		// Can only enter things and players
 		if (!objectToEnter.IsThing && !objectToEnter.IsPlayer)
 		{
-			await NotifyService!.Notify(executor, "You can't enter that.");
+			await NotifyService!.Notify(executor, "You can't enter that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1471,7 +1471,7 @@ public partial class Commands
 
 			if (!hasEnterOk)
 			{
-				await NotifyService!.Notify(executor, "Permission denied.");
+				await NotifyService!.Notify(executor, "Permission denied.", executor);
 				return CallState.Empty;
 			}
 		}
@@ -1486,12 +1486,12 @@ public partial class Commands
 				var efailMsg = efailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(efailMsg.ToPlainText()))
 				{
-					await NotifyService!.Notify(executor, efailMsg);
+					await NotifyService!.Notify(executor, efailMsg, executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "You can't enter that.");
+				await NotifyService!.Notify(executor, "You can't enter that.", executor);
 			}
 
 			// Trigger @oefail attribute (shown to others in room)
@@ -1549,7 +1549,7 @@ public partial class Commands
 
 		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value);
+			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1560,7 +1560,7 @@ public partial class Commands
 			var enterMsg = enterAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(enterMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, enterMsg);
+				await NotifyService!.Notify(executor, enterMsg, executor);
 			}
 		}
 
@@ -1612,7 +1612,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, $"You enter {objectToEnter.Object().Name}.");
+		await NotifyService!.Notify(executor, $"You enter {objectToEnter.Object().Name}.", executor);
 		return CallState.Empty;
 	}
 
@@ -1625,7 +1625,7 @@ public partial class Commands
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Follow whom?");
+			await NotifyService!.Notify(executor, "Follow whom?", executor);
 			return CallState.Empty;
 		}
 
@@ -1637,7 +1637,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -1646,14 +1646,14 @@ public partial class Commands
 		// Can't follow yourself
 		if (target.Object().DBRef.Equals(executor.Object().DBRef))
 		{
-			await NotifyService!.Notify(executor, "You can't follow yourself.");
+			await NotifyService!.Notify(executor, "You can't follow yourself.", executor);
 			return CallState.Empty;
 		}
 
 		// Can only follow players and things
 		if (!target.IsPlayer && !target.IsThing)
 		{
-			await NotifyService!.Notify(executor, "You can't follow that.");
+			await NotifyService!.Notify(executor, "You can't follow that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1661,7 +1661,7 @@ public partial class Commands
 		await AttributeService!.SetAttributeAsync(executor, executor, "FOLLOWING",
 			MModule.single(target.Object().DBRef.ToString()));
 
-		await NotifyService!.Notify(executor, $"You are now following {target.Object().Name}.");
+		await NotifyService!.Notify(executor, $"You are now following {target.Object().Name}.", executor);
 		await NotifyService!.Notify(target, $"{executor.Object().Name} is now following you.");
 
 		return CallState.Empty;
@@ -1678,7 +1678,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(fullArg))
 		{
-			await NotifyService!.Notify(executor, "Get what?");
+			await NotifyService!.Notify(executor, "Get what?", executor);
 			return CallState.Empty;
 		}
 
@@ -1703,7 +1703,7 @@ public partial class Commands
 
 			if (!containerResult.IsValid() || (!containerResult.IsPlayer && !containerResult.IsThing))
 			{
-				await NotifyService!.Notify(executor, "I don't see that here.");
+				await NotifyService!.Notify(executor, "I don't see that here.", executor);
 				return CallState.Empty;
 			}
 
@@ -1715,7 +1715,7 @@ public partial class Commands
 
 			if (!hasEnterOk && !await PermissionService!.Controls(executor, container))
 			{
-				await NotifyService!.Notify(executor, "Permission denied.");
+				await NotifyService!.Notify(executor, "Permission denied.", executor);
 				return CallState.Empty;
 			}
 
@@ -1737,7 +1737,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid() || locateResult.IsRoom || locateResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -1757,21 +1757,21 @@ public partial class Commands
 
 		if (alreadyCarrying)
 		{
-			await NotifyService!.Notify(executor, "You already have that.");
+			await NotifyService!.Notify(executor, "You already have that.", executor);
 			return CallState.Empty;
 		}
 
 		// Check Basic lock on the object
 		if (!LockService!.Evaluate(LockType.Basic, objectToGet, executor))
 		{
-			await NotifyService!.Notify(executor, "You can't pick that up.");
+			await NotifyService!.Notify(executor, "You can't pick that up.", executor);
 			return CallState.Empty;
 		}
 
 		// Check Take lock on the source location
 		if (!LockService!.Evaluate(LockType.Take, sourceLocation.WithExitOption(), executor))
 		{
-			await NotifyService!.Notify(executor, "You can't take that from there.");
+			await NotifyService!.Notify(executor, "You can't take that from there.", executor);
 			return CallState.Empty;
 		}
 
@@ -1788,7 +1788,7 @@ public partial class Commands
 
 		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value);
+			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1799,12 +1799,12 @@ public partial class Commands
 			var successMsg = successAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, successMsg);
+				await NotifyService!.Notify(executor, successMsg, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Taken.");
+			await NotifyService!.Notify(executor, "Taken.", executor);
 		}
 
 		// Trigger @osuccess attribute (shown to others in room)
@@ -1855,13 +1855,13 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(recipientName))
 		{
-			await NotifyService!.Notify(executor, "Give to whom?");
+			await NotifyService!.Notify(executor, "Give to whom?", executor);
 			return CallState.Empty;
 		}
 
 		if (string.IsNullOrWhiteSpace(thingToGive))
 		{
-			await NotifyService!.Notify(executor, "Give what?");
+			await NotifyService!.Notify(executor, "Give what?", executor);
 			return CallState.Empty;
 		}
 
@@ -1870,7 +1870,7 @@ public partial class Commands
 
 		if (!recipientResult.IsValid() || recipientResult.IsRoom || recipientResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -1879,7 +1879,7 @@ public partial class Commands
 		// Check if recipient can hold things (must be Player or Thing)
 		if (!recipient.IsPlayer && !recipient.IsThing)
 		{
-			await NotifyService!.Notify(executor, "You can't give things to that.");
+			await NotifyService!.Notify(executor, "You can't give things to that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1888,7 +1888,7 @@ public partial class Commands
 		{
 			// TODO: Money/penny transfer system.
 			// Requires implementing full economy system with balance tracking, transaction logging, etc.
-			await NotifyService!.Notify(executor, "Money transfer not yet implemented.");
+			await NotifyService!.Notify(executor, "Money transfer not yet implemented.", executor);
 			return CallState.Empty;
 		}
 
@@ -1898,7 +1898,7 @@ public partial class Commands
 
 		if (!objectResult.IsValid() || objectResult.IsRoom || objectResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, "You don't have that.");
+			await NotifyService!.Notify(executor, "You don't have that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1918,7 +1918,7 @@ public partial class Commands
 
 		if (!isCarrying)
 		{
-			await NotifyService!.Notify(executor, "You don't have that.");
+			await NotifyService!.Notify(executor, "You don't have that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1928,28 +1928,28 @@ public partial class Commands
 
 		if (!hasEnterOk && !await PermissionService!.Controls(executor, recipient))
 		{
-			await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting things.");
+			await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting things.", executor);
 			return CallState.Empty;
 		}
 
 		// Check @lock/from on recipient
 		if (!LockService!.Evaluate(LockType.From, recipient, executor))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return CallState.Empty;
 		}
 
 		// Check @lock/give on object
 		if (!LockService!.Evaluate(LockType.Give, objectToGive, executor))
 		{
-			await NotifyService!.Notify(executor, "You can't give that away.");
+			await NotifyService!.Notify(executor, "You can't give that away.", executor);
 			return CallState.Empty;
 		}
 
 		// Check @lock/receive on recipient (object must pass this)
 		if (!LockService!.Evaluate(LockType.Receive, recipient, objectToGive))
 		{
-			await NotifyService!.Notify(executor, $"{recipient.Object().Name} doesn't want that.");
+			await NotifyService!.Notify(executor, $"{recipient.Object().Name} doesn't want that.", executor);
 			return CallState.Empty;
 		}
 
@@ -1957,7 +1957,7 @@ public partial class Commands
 		var recipientContainer = recipient.AsContainer;
 		if (await MoveService!.WouldCreateLoop(objectToGive.AsContent, recipientContainer))
 		{
-			await NotifyService!.Notify(executor, "You can't give that - it would create a containment loop.");
+			await NotifyService!.Notify(executor, "You can't give that - it would create a containment loop.", executor);
 			return CallState.Empty;
 		}
 
@@ -1972,12 +1972,12 @@ public partial class Commands
 			var giveMsg = giveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(giveMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, giveMsg);
+				await NotifyService!.Notify(executor, giveMsg, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Given.");
+			await NotifyService!.Notify(executor, "Given.", executor);
 		}
 
 		// Trigger @ogive attribute (shown to others in room)
@@ -2081,7 +2081,7 @@ public partial class Commands
 		// HOME command only works for players and things
 		if (!executor.IsPlayer && !executor.IsThing)
 		{
-			await NotifyService!.Notify(executor, "Only players and things can go home.");
+			await NotifyService!.Notify(executor, "Only players and things can go home.", executor);
 			return CallState.Empty;
 		}
 
@@ -2092,7 +2092,7 @@ public partial class Commands
 		// Check if home is set (not NOTHING)
 		if (homeObj.DBRef.Number < 0)
 		{
-			await NotifyService!.Notify(executor, "You have no home.");
+			await NotifyService!.Notify(executor, "You have no home.", executor);
 			return CallState.Empty;
 		}
 
@@ -2105,14 +2105,14 @@ public partial class Commands
 
 		if (currentLocation.Object().DBRef.Equals(homeObj.DBRef))
 		{
-			await NotifyService!.Notify(executor, "You are already home.");
+			await NotifyService!.Notify(executor, "You are already home.", executor);
 			return CallState.Empty;
 		}
 
 		// Check for containment loops before moving
 		if (await MoveService!.WouldCreateLoop(executor.AsContent, homeLocation))
 		{
-			await NotifyService!.Notify(executor, "You can't go home - it would create a containment loop.");
+			await NotifyService!.Notify(executor, "You can't go home - it would create a containment loop.", executor);
 			return CallState.Empty;
 		}
 
@@ -2120,7 +2120,7 @@ public partial class Commands
 		await Mediator!.Send(new MoveObjectCommand(executor.AsContent, homeLocation));
 
 		// Notify the player
-		await NotifyService!.Notify(executor, "There's no place like home...");
+		await NotifyService!.Notify(executor, "There's no place like home...", executor);
 
 		// Trigger an automatic LOOK command at the new location if the executor is a player
 		if (executor.IsPlayer)
@@ -2139,7 +2139,7 @@ public partial class Commands
 		// Check if the executor can contain things (Player or Thing)
 		if (!executor.IsPlayer && !executor.IsThing)
 		{
-			await NotifyService!.Notify(executor, "You can't carry anything.");
+			await NotifyService!.Notify(executor, "You can't carry anything.", executor);
 			return CallState.Empty;
 		}
 
@@ -2156,14 +2156,14 @@ public partial class Commands
 
 		if (items.Count == 0)
 		{
-			await NotifyService!.Notify(executor, "You aren't carrying anything.");
+			await NotifyService!.Notify(executor, "You aren't carrying anything.", executor);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "You are carrying:");
+			await NotifyService!.Notify(executor, "You are carrying:", executor);
 			foreach (var itemName in items)
 			{
-				await NotifyService!.Notify(executor, itemName);
+				await NotifyService!.Notify(executor, itemName, executor);
 			}
 		}
 
@@ -2178,7 +2178,7 @@ public partial class Commands
 		// LEAVE command only works for players and things
 		if (!executor.IsPlayer && !executor.IsThing)
 		{
-			await NotifyService!.Notify(executor, "Only players and things can leave.");
+			await NotifyService!.Notify(executor, "Only players and things can leave.", executor);
 			return CallState.Empty;
 		}
 
@@ -2192,7 +2192,7 @@ public partial class Commands
 		// Check if we're in a thing or player (not a room)
 		if (!currentLocation.IsThing && !currentLocation.IsPlayer)
 		{
-			await NotifyService!.Notify(executor, "You can't leave a room. Use an exit or HOME.");
+			await NotifyService!.Notify(executor, "You can't leave a room. Use an exit or HOME.", executor);
 			return CallState.Empty;
 		}
 
@@ -2214,12 +2214,12 @@ public partial class Commands
 				var lfailMsg = lfailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(lfailMsg.ToPlainText()))
 				{
-					await NotifyService!.Notify(executor, lfailMsg);
+					await NotifyService!.Notify(executor, lfailMsg, executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "You can't leave.");
+				await NotifyService!.Notify(executor, "You can't leave.", executor);
 			}
 
 			// Trigger @olfail attribute (shown to others inside container)
@@ -2263,7 +2263,7 @@ public partial class Commands
 
 		if (moveResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, moveResult.AsT1.Value);
+			await NotifyService!.Notify(executor, moveResult.AsT1.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -2274,12 +2274,12 @@ public partial class Commands
 			var leaveMsg = leaveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(leaveMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, leaveMsg);
+				await NotifyService!.Notify(executor, leaveMsg, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"You leave {currentLocation.Object().Name}.");
+			await NotifyService!.Notify(executor, $"You leave {currentLocation.Object().Name}.", executor);
 		}
 
 		// Trigger @oleave attribute (shown to others inside the container)
@@ -2365,7 +2365,7 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(recipientsText))
 			{
-				await NotifyService!.Notify(executor, "Who do you want to page?");
+				await NotifyService!.Notify(executor, "Who do you want to page?", executor);
 				return CallState.Empty;
 			}
 		}
@@ -2376,7 +2376,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "What do you want to page?");
+			await NotifyService!.Notify(executor, "What do you want to page?", executor);
 			return CallState.Empty;
 		}
 
@@ -2403,7 +2403,7 @@ public partial class Commands
 				var recipientFlags = recipient.Object().Flags.Value;
 				if (await recipientFlags.AnyAsync(f => f.Name.Equals("HAVEN", StringComparison.OrdinalIgnoreCase)))
 				{
-					await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting pages.");
+					await NotifyService!.Notify(executor, $"{recipient.Object().Name} is not accepting pages.", executor);
 					continue;
 				}
 			}
@@ -2425,7 +2425,7 @@ public partial class Commands
 							}
 						case { IsAttribute: true, AsAttribute: var attr }:
 							{
-								await NotifyService!.Notify(executor, attr.Last().Value);
+								await NotifyService!.Notify(executor, attr.Last().Value, executor);
 								break;
 							}
 					}
@@ -2481,7 +2481,7 @@ public partial class Commands
 		if (successfulRecipients.Count > 0)
 		{
 			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object().DBRef));
-			await NotifyService!.Notify(executor, $"You paged {recipientList} with '{messageArg}'.");
+			await NotifyService!.Notify(executor, $"You paged {recipientList} with '{messageArg}'.", executor);
 
 			// Store LASTPAGED attribute
 			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
@@ -2489,7 +2489,7 @@ public partial class Commands
 		}
 		else if (recipientNames.Length > 0)
 		{
-			await NotifyService!.Notify(executor, "No one to page.");
+			await NotifyService!.Notify(executor, "No one to page.", executor);
 		}
 
 		return CallState.Empty;
@@ -2526,8 +2526,8 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// Money/pennies are not supported in SharpMUSH
-		await NotifyService!.Notify(executor, "The SCORE command is not supported.");
-		await NotifyService!.Notify(executor, "SharpMUSH does not track money or pennies.");
+		await NotifyService!.Notify(executor, "The SCORE command is not supported.", executor);
+		await NotifyService!.Notify(executor, "SharpMUSH does not track money or pennies.", executor);
 
 		return CallState.Empty;
 	}
@@ -2593,7 +2593,7 @@ public partial class Commands
 			// /LIST executes an action list similar to @trigger
 			if (!args.ContainsKey("0"))
 			{
-				await NotifyService!.Notify(executor, "Teach what action list?");
+				await NotifyService!.Notify(executor, "Teach what action list?", executor);
 				return CallState.Empty;
 			}
 
@@ -2614,7 +2614,7 @@ public partial class Commands
 		// Show others the command being taught (unparsed)
 		if (!args.ContainsKey("0"))
 		{
-			await NotifyService!.Notify(executor, "Teach what?");
+			await NotifyService!.Notify(executor, "Teach what?", executor);
 			return CallState.Empty;
 		}
 
@@ -2644,7 +2644,7 @@ public partial class Commands
 
 		if (followingAttr.IsNone || followingAttr.IsError)
 		{
-			await NotifyService!.Notify(executor, "You aren't following anyone.");
+			await NotifyService!.Notify(executor, "You aren't following anyone.", executor);
 			return CallState.Empty;
 		}
 
@@ -2652,7 +2652,7 @@ public partial class Commands
 		await AttributeService!.ClearAttributeAsync(executor, executor, "FOLLOWING",
 			IAttributeService.AttributePatternMode.Exact, IAttributeService.AttributeClearMode.Safe);
 
-		await NotifyService!.Notify(executor, "You stop following.");
+		await NotifyService!.Notify(executor, "You stop following.", executor);
 		return CallState.Empty;
 	}
 
@@ -2664,7 +2664,7 @@ public partial class Commands
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Use what?");
+			await NotifyService!.Notify(executor, "Use what?", executor);
 			return CallState.Empty;
 		}
 
@@ -2676,7 +2676,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -2692,12 +2692,12 @@ public partial class Commands
 				var ufailMsg = ufailAttr.AsT0[0].Value;
 				if (!string.IsNullOrEmpty(ufailMsg.ToPlainText()))
 				{
-					await NotifyService!.Notify(executor, ufailMsg);
+					await NotifyService!.Notify(executor, ufailMsg, executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "You can't use that.");
+				await NotifyService!.Notify(executor, "You can't use that.", executor);
 			}
 
 			// Trigger @OUFAIL attribute (others see this)
@@ -2737,12 +2737,12 @@ public partial class Commands
 			var useMsg = useAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(useMsg.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, useMsg);
+				await NotifyService!.Notify(executor, useMsg, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"You use {objectToUse.Object().Name}.");
+			await NotifyService!.Notify(executor, $"You use {objectToUse.Object().Name}.", executor);
 		}
 
 		// Trigger @OUSE attribute (others see this)
@@ -2802,11 +2802,11 @@ public partial class Commands
 
 			if (players.Count == 0)
 			{
-				await NotifyService!.Notify(executor, "There is no one here to whisper to.");
+				await NotifyService!.Notify(executor, "There is no one here to whisper to.", executor);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"You can whisper to: {string.Join(", ", players)}");
+				await NotifyService!.Notify(executor, $"You can whisper to: {string.Join(", ", players)}", executor);
 			}
 
 			return CallState.Empty;
@@ -2823,13 +2823,13 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(targetArg.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Whisper to whom?");
+			await NotifyService!.Notify(executor, "Whisper to whom?", executor);
 			return CallState.Empty;
 		}
 
 		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Whisper what?");
+			await NotifyService!.Notify(executor, "Whisper what?", executor);
 			return CallState.Empty;
 		}
 
@@ -2845,7 +2845,7 @@ public partial class Commands
 
 			if (!targetResult.IsValid() || !targetResult.IsPlayer)
 			{
-				await NotifyService!.Notify(executor, $"I don't see {targetName} here.");
+				await NotifyService!.Notify(executor, $"I don't see {targetName} here.", executor);
 				continue;
 			}
 
@@ -2854,7 +2854,7 @@ public partial class Commands
 			// Can't whisper to self
 			if (target.Object().DBRef.Equals(executor.Object().DBRef))
 			{
-				await NotifyService!.Notify(executor, "You can't whisper to yourself.");
+				await NotifyService!.Notify(executor, "You can't whisper to yourself.", executor);
 				continue;
 			}
 
@@ -2862,7 +2862,7 @@ public partial class Commands
 			var targetLocation = await target.Where();
 			if (!targetLocation.Object().DBRef.Equals(executorLocation.Object().DBRef))
 			{
-				await NotifyService!.Notify(executor, $"{target.Object().Name} is not here.");
+				await NotifyService!.Notify(executor, $"{target.Object().Name} is not here.", executor);
 				continue;
 			}
 
@@ -2899,7 +2899,7 @@ public partial class Commands
 		if (!isSilent)
 		{
 			var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
-			await NotifyService!.Notify(executor, $"You whisper \"{displayText}\" to {targetList}.");
+			await NotifyService!.Notify(executor, $"You whisper \"{displayText}\" to {targetList}.", executor);
 		}
 
 		// If NOISY, notify others in room
@@ -2935,13 +2935,13 @@ public partial class Commands
 		// Parse: with <target>=<command>
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "With whom?");
+			await NotifyService!.Notify(executor, "With whom?", executor);
 			return CallState.Empty;
 		}
 
 		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace(arg1.Message?.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Do what with them?");
+			await NotifyService!.Notify(executor, "Do what with them?", executor);
 			return CallState.Empty;
 		}
 
@@ -2959,7 +2959,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return CallState.Empty;
 		}
 
@@ -2968,14 +2968,14 @@ public partial class Commands
 		// Check if target can execute commands (Player or Thing with appropriate flags/powers)
 		if (!target.IsPlayer && !target.IsThing)
 		{
-			await NotifyService!.Notify(executor, "You can't do that with that.");
+			await NotifyService!.Notify(executor, "You can't do that with that.", executor);
 			return CallState.Empty;
 		}
 
 		// Check permissions - must control the target
 		if (!await PermissionService!.Controls(executor, target))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return CallState.Empty;
 		}
 
@@ -3041,7 +3041,7 @@ public partial class Commands
 		var footer = $"{playerList.Count} players logged in.";
 		var message = $"{header}\n{string.Join('\n', playerList)}\n{footer}";
 
-		await NotifyService!.Notify(executor, message);
+		await NotifyService!.Notify(executor, message, executor);
 
 		return new None();
 	}
@@ -3095,7 +3095,7 @@ public partial class Commands
 
 		if (connection == null)
 		{
-			await NotifyService!.Notify(executor, "No session information available.");
+			await NotifyService!.Notify(executor, "No session information available.", executor);
 			return CallState.Empty;
 		}
 
@@ -3118,7 +3118,7 @@ public partial class Commands
 			output.AppendLine($"  Host: {connection.HostName}");
 		}
 
-		await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+		await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 		return CallState.Empty;
 	}
 
@@ -3138,7 +3138,7 @@ public partial class Commands
 		SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownEnactorObject(Mediator!);
-		await NotifyService!.Notify(executor, "Huh?  (Type \"help\" for help.)");
+		await NotifyService!.Notify(executor, "Huh?  (Type \"help\" for help.)", executor);
 		return new None();
 	}
 }

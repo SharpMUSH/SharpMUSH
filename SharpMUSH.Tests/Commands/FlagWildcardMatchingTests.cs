@@ -62,7 +62,7 @@ public class FlagWildcardMatchingTests
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						s => s.ToPlainText()!.Contains("Unset", StringComparison.OrdinalIgnoreCase),
-						s => s.Contains("Unset", StringComparison.OrdinalIgnoreCase))), null, INotifyService.NotificationType.Announce);
+						s => s.Contains("Unset", StringComparison.OrdinalIgnoreCase))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -102,7 +102,7 @@ public class FlagWildcardMatchingTests
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
 						s => s.ToPlainText()!.Contains("Unset", StringComparison.OrdinalIgnoreCase),
-						s => s.Contains("Unset", StringComparison.OrdinalIgnoreCase))), null, INotifyService.NotificationType.Announce);
+						s => s.Contains("Unset", StringComparison.OrdinalIgnoreCase))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
