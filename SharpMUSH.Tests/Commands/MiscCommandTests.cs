@@ -62,10 +62,10 @@ public class MiscCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1=pattern"));
 
-		// Verify that Notify was called at least once (could be "No matching attributes" or a list)
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No matching attributes found.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -74,10 +74,10 @@ public class MiscCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/print #1=pattern"));
 
-		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No matching attributes found.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -86,10 +86,10 @@ public class MiscCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/wild #1=*pattern*"));
 
-		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No matching attributes found.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -98,10 +98,10 @@ public class MiscCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/regexp #1=.*pattern.*"));
 
-		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No matching attributes found.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -110,10 +110,10 @@ public class MiscCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/nocase #1=PATTERN"));
 
-		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No matching attributes found.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -122,10 +122,10 @@ public class MiscCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1/DESC*=pattern"));
 
-		// Verify that Notify was called at least once
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No matching attributes found.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

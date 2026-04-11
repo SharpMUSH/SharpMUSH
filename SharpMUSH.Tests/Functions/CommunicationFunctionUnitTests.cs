@@ -108,7 +108,8 @@ public class CommunicationFunctionUnitTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
 	}
 
 	[Test]

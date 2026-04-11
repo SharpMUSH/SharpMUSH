@@ -185,7 +185,8 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, "Test nospoof emit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
@@ -200,7 +201,8 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, "Test nospoof local")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
@@ -215,7 +217,8 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, "Test nospoof remote")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	[Test]
@@ -230,7 +233,8 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, "Test nospoof omit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -245,7 +249,8 @@ public class CommunicationCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Any<OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
+				Arg.Is<OneOf<MString, string>>(msg =>
+					TestHelpers.MessageEquals(msg, "Test nospoof pemit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
 	}
 
 	[Test]
@@ -364,11 +369,11 @@ public class CommunicationCommandTests
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
 
-		// Verify a notification was sent (channel list output)
-		// The exact format depends on ChannelList.Handle, but it should send something
+		// Verify a notification was sent (channel list output contains "Name: Public")
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(),
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Name: Public")),
 				null, INotifyService.NotificationType.Announce);
 	}
 

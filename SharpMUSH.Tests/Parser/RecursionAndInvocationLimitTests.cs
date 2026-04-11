@@ -344,11 +344,11 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService,
 			MModule.single($"@include {objDbRef}/INCLUDETEST_RECUR_LIM_UNIQUE"));
 
-		// The recursion-error string is treated as an unknown command → at least one
-		// notification must have been sent (either the error or "Huh?")
+		// The recursion-error string is treated as an unknown command → "Huh?" notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), null, INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -371,10 +371,11 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService,
 			MModule.single($"@trigger {objDbRef}/SELFCALL_TRIG_LIM_UNIQUE"));
 
-		// At least one notification must have been dispatched
+		// At least one notification must have been dispatched (Huh? from unknown command)
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), null, INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>

@@ -56,10 +56,12 @@ public class NewsCommandTests
 		// Test news with wildcard pattern - should list matching topics
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news *news*"));
 
-		// Verify that NotifyService was called with matching topics
+		// Verify that NotifyService was called with matching topics or "No news available"
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No news available for '*news*'.") ||
+				TestHelpers.MessagePlainTextStartsWith(msg, "News topics matching '*news*':")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

@@ -44,6 +44,26 @@ public static class TestHelpers
 			s => s == expected);
 
 	/// <summary>
+	/// Checks if the plain-text content of a OneOf&lt;MString, string&gt; message equals
+	/// the expected text, ignoring any ANSI escape sequences.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool MessagePlainTextEquals(OneOf<MString, string> msg, string expected) =>
+		msg.Match(
+			ms => ms.ToPlainText() == expected,
+			s => s == expected);
+
+	/// <summary>
+	/// Checks if the plain-text content of a OneOf&lt;MString, string&gt; message starts with
+	/// the expected prefix, ignoring any ANSI escape sequences.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool MessagePlainTextStartsWith(OneOf<MString, string> msg, string expectedPrefix) =>
+		msg.Match(
+			ms => ms.ToPlainText().StartsWith(expectedPrefix),
+			s => s.StartsWith(expectedPrefix));
+
+	/// <summary>
 	/// Returns an NSubstitute argument matcher for <see cref="AnySharpObject"/> that matches
 	/// any object whose DBRef equals that of <paramref name="expected"/>.
 	/// </summary>

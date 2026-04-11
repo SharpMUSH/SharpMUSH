@@ -83,9 +83,12 @@ public class LogCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/recall"));
 
+		// @log/recall retrieves recent log entries — output starts with log header
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No log entries found for category 'Command'.") ||
+				TestHelpers.MessagePlainTextStartsWith(msg, "--- Log entries for Command")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

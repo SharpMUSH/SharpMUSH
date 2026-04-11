@@ -492,10 +492,11 @@ public class GeneralCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@include {inclObj}/{uniqueAttr}=arg1,arg2"));
 
 		// Should attempt to locate the object and get the attribute
-		// Since the attribute doesn't exist, it will fail with an error message
+		// Since the attribute doesn't exist, it outputs "Attribute <name> is empty."
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, $"Attribute {uniqueAttr} is empty.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

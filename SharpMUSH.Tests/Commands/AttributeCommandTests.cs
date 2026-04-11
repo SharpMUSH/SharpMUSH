@@ -5,6 +5,7 @@ using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -32,15 +33,17 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBasic");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objName = obj.Known.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/TEST_ATTRSET_UNIQUE - Set.")), null, INotifyService.NotificationType.Announce);
 
 		// Verify attribute was set
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "TEST_ATTRSET_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 
@@ -52,12 +55,16 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrEmpty");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objName = obj.Known.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
+		// Setting to empty still says "Set." per parser visitor implementation
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -65,12 +72,15 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrComplex");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objName = obj.Known.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), null, INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/COMPLEX - Set.")), null, INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
