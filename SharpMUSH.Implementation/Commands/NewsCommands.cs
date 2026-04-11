@@ -62,7 +62,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"News entries containing '{topic}':");
+				await NotifyService!.Notify(executor, $"News entries containing '{topic}':", executor);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
@@ -89,7 +89,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"News topics matching '{topic}':");
+				await NotifyService!.Notify(executor, $"News topics matching '{topic}':", executor);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
@@ -104,7 +104,7 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"No news available for '{topic}'.");
+			await NotifyService!.Notify(executor, $"No news available for '{topic}'.", executor);
 			await NotifyService!.Notify(executor, "Try 'news <pattern>' with wildcards (*) or 'news/search <text>' to search news content.");
 		}
 
@@ -170,7 +170,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"Admin help entries containing '{topic}':");
+				await NotifyService!.Notify(executor, $"Admin help entries containing '{topic}':", executor);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
@@ -197,7 +197,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"Admin help topics matching '{topic}':");
+				await NotifyService!.Notify(executor, $"Admin help topics matching '{topic}':", executor);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)));
 			}
 			return CallState.Empty;
@@ -212,7 +212,7 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.");
+			await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.", executor);
 			await NotifyService!.Notify(executor, "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.");
 		}
 

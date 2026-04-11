@@ -545,7 +545,7 @@ public partial class Commands
 
 			if (logList.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No log entries found for category '{category}'.");
+				await NotifyService!.Notify(executor, $"No log entries found for category '{category}'.", executor);
 				return CallState.Empty;
 			}
 
@@ -560,7 +560,7 @@ public partial class Commands
 				output.AppendLine($"[{timestamp}] {message}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd());
+			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -569,7 +569,7 @@ public partial class Commands
 
 		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message!.ToPlainText()))
 		{
-			await NotifyService!.Notify(executor, "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]");
+			await NotifyService!.Notify(executor, "Usage: @log[/<switch>] <message> or @log/recall[/<switch>] [<number>]", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -586,7 +586,7 @@ public partial class Commands
 			Logger.LogInformation("{LogMessage}", MModule.serialize(logMessage));
 		}
 
-		await NotifyService!.Notify(executor, $"Message logged to {category} log.");
+		await NotifyService!.Notify(executor, $"Message logged to {category} log.", executor);
 		return CallState.Empty;
 	}
 
@@ -608,14 +608,14 @@ public partial class Commands
 
 		if (parser.CurrentState.Arguments.Count < 1)
 		{
-			await NotifyService!.Notify(executor, "Usage: @poor <player>");
+			await NotifyService!.Notify(executor, "Usage: @poor <player>", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
 		// Check if quota system is enabled
 		if (!Configuration!.CurrentValue.Limit.UseQuota)
 		{
-			await NotifyService!.Notify(executor, "The quota system is disabled on this server.");
+			await NotifyService!.Notify(executor, "The quota system is disabled on this server.", executor);
 			return CallState.Empty;
 		}
 
@@ -632,8 +632,8 @@ public partial class Commands
 		// Set player's quota to 0 (poor status)
 		await Mediator!.Send(new SetPlayerQuotaCommand(player, 0));
 
-		await NotifyService!.Notify(executor, $"{player.Object.Name} has been set to poor status (quota: 0).");
-		await NotifyService.Notify(player.Object.DBRef, $"Your building quota has been set to 0 by {executor.Object().Name}.");
+		await NotifyService!.Notify(executor, $"{player.Object.Name} has been set to poor status (quota: 0).", executor);
+		await NotifyService.Notify(player.Object.DBRef, $"Your building quota has been set to 0 by {executor.Object().Name}.", executor);
 
 		return CallState.Empty;
 	}
@@ -2010,7 +2010,7 @@ public partial class Commands
 		}
 
 		await NotifyService!.Notify(executor,
-			$"Changed ownership of {count} object(s) from {oldOwner.Object.Name} to {newOwner.Object().Name}.");
+			$"Changed ownership of {count} object(s) from {oldOwner.Object.Name} to {newOwner.Object().Name}.", executor);
 
 		return CallState.Empty;
 	}

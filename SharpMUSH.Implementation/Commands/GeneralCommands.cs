@@ -222,7 +222,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.Notify(executor, "Huh?  (Type \"help\" for help.)");
+		await NotifyService!.Notify(executor, "Huh?  (Type \"help\" for help.)", executor);
 		return new CallState("#-1 HUH");
 	}
 
@@ -658,10 +658,10 @@ public partial class Commands
 			AttributeService, parser, executor, realViewing, formatAttrName,
 			descFormatArgs, baseDesc, checkParents: false);
 
-		await NotifyService!.Notify(executor, formattedName);
+		await NotifyService!.Notify(executor, formattedName, executor);
 		if (MModule.getLength(formattedDesc) > 0)
 		{
-			await NotifyService.Notify(executor, formattedDesc);
+			await NotifyService.Notify(executor, formattedDesc, executor);
 		}
 
 		var showInventory = realViewing.IsContainer
@@ -742,7 +742,7 @@ public partial class Commands
 					AttributeService, parser, executor, realViewing, "CONFORMAT",
 					conFormatArgs, defaultContents, checkParents: false);
 
-				await NotifyService.Notify(executor, formattedContents);
+				await NotifyService.Notify(executor, formattedContents, executor);
 			}
 
 			if (visibleExits.Count > 0 && realViewing.IsRoom)
@@ -799,17 +799,17 @@ public partial class Commands
 
 						if (await exit.WithRoomOption().IsOpaque())
 						{
-							await NotifyService.Notify(executor, exitObj.Name);
+							await NotifyService.Notify(executor, exitObj.Name, executor);
 						}
 						else
 						{
-							await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}");
+							await NotifyService.Notify(executor, $"{exitObj.Name} to {destName}", executor);
 						}
 					}
 				}
 				else
 				{
-					await NotifyService.Notify(executor, formattedExits);
+					await NotifyService.Notify(executor, formattedExits, executor);
 				}
 			}
 		}
@@ -900,7 +900,7 @@ public partial class Commands
 				MModule.single(" is owned by "),
 				limitedOwnerObj.Name.Hilight(),
 				MModule.single(".")
-			]));
+			]), enactor);
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
@@ -1032,7 +1032,7 @@ public partial class Commands
 			outputSections.Add(MModule.single($"Quota: {viewingKnown.AsPlayer.Quota}"));
 		}
 
-		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections));
+		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections), enactor);
 
 		if (!switches.Contains("BRIEF"))
 		{
@@ -1080,7 +1080,7 @@ public partial class Commands
 					await NotifyService!.Notify(enactor,
 						MModule.concat(
 							MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight(),
-							attr.Value));
+							attr.Value), enactor);
 				}
 			}
 
@@ -1104,7 +1104,7 @@ public partial class Commands
 					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
 						parser, executor, viewingKnown, "CONFORMAT", formatArgs);
 
-					await NotifyService!.Notify(enactor, formattedContents);
+					await NotifyService!.Notify(enactor, formattedContents, enactor);
 				}
 				else
 				{
@@ -1124,7 +1124,7 @@ public partial class Commands
 						.Prepend(MModule.single(contentsLabel))
 						.ToListAsync();
 					await NotifyService!.Notify(enactor,
-						MModule.multipleWithDelimiter(MModule.single("\n"), contentItems));
+						MModule.multipleWithDelimiter(MModule.single("\n"), contentItems), enactor);
 				}
 			}
 
@@ -1150,7 +1150,7 @@ public partial class Commands
 						.Prepend(MModule.single("Exits:"))
 						.ToListAsync();
 					await NotifyService!.Notify(enactor,
-						MModule.multipleWithDelimiter(MModule.single("\n"), exitLines));
+						MModule.multipleWithDelimiter(MModule.single("\n"), exitLines), enactor);
 				}
 			}
 
@@ -1169,12 +1169,12 @@ public partial class Commands
 					MModule.single("Home: "),
 					homeObject.Name.Hilight(),
 					MModule.single($"(#{homeObject.DBRef.Number}{string.Join(string.Empty, homeFlags.Select(x => x.Symbol))})")
-				]));
+				]), enactor);
 				await NotifyService.Notify(enactor, MModule.multiple([
 					MModule.single("Location: "),
 					locationObject.Name.Hilight(),
 					MModule.single($"(#{locationObject.DBRef.Number}{string.Join(string.Empty, locationFlags.Select(x => x.Symbol))})")
-				]));
+				]), enactor);
 			}
 		}
 
@@ -5535,7 +5535,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var patternArg))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @grep.");
+			await NotifyService!.Notify(executor, "Invalid arguments to @grep.", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -5546,7 +5546,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return new CallState("#-1 INVALID OBJECT");
 		}
 
@@ -5588,7 +5588,7 @@ public partial class Commands
 
 		if (attributes.IsError)
 		{
-			await NotifyService!.Notify(executor, $"Error reading attributes: {attributes.AsError.Value}");
+			await NotifyService!.Notify(executor, $"Error reading attributes: {attributes.AsError.Value}", executor);
 			return new CallState($"#-1 {attributes.AsError.Value}");
 		}
 
@@ -5610,12 +5610,12 @@ public partial class Commands
 				}
 				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 				{
-					await NotifyService!.Notify(executor, $"Regular expression timed out: {pattern}");
+					await NotifyService!.Notify(executor, $"Regular expression timed out: {pattern}", executor);
 					return new CallState("#-1 REGEXP TIMEOUT");
 				}
 				catch
 				{
-					await NotifyService!.Notify(executor, $"Invalid regular expression: {pattern}");
+					await NotifyService!.Notify(executor, $"Invalid regular expression: {pattern}", executor);
 					return new CallState("#-1 INVALID REGEXP");
 				}
 			}
@@ -5630,12 +5630,12 @@ public partial class Commands
 				}
 				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 				{
-					await NotifyService!.Notify(executor, $"Wildcard pattern timed out: {pattern}");
+					await NotifyService!.Notify(executor, $"Wildcard pattern timed out: {pattern}", executor);
 					return new CallState("#-1 PATTERN TIMEOUT");
 				}
 				catch
 				{
-					await NotifyService!.Notify(executor, $"Invalid wildcard pattern: {pattern}");
+					await NotifyService!.Notify(executor, $"Invalid wildcard pattern: {pattern}", executor);
 					return new CallState("#-1 INVALID PATTERN");
 				}
 			}
@@ -5655,7 +5655,7 @@ public partial class Commands
 		// Display results
 		if (matchingAttributes.Count == 0)
 		{
-			await NotifyService!.Notify(executor, "No matching attributes found.");
+			await NotifyService!.Notify(executor, "No matching attributes found.", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -5704,14 +5704,14 @@ public partial class Commands
 				await NotifyService!.Notify(executor,
 					MModule.concat(
 						MModule.single($"{attr.Name}: ").Hilight(),
-						displayValue));
+						displayValue), executor);
 			}
 		}
 		else
 		{
 			// List mode - just show attribute names
 			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Name));
-			await NotifyService!.Notify(executor, attrNames);
+			await NotifyService!.Notify(executor, attrNames, executor);
 		}
 
 		return new CallState(string.Empty);
@@ -5732,7 +5732,7 @@ public partial class Commands
 		var attributePath = args["0"].Message?.ToPlainText();
 		if (string.IsNullOrEmpty(attributePath))
 		{
-			await NotifyService!.Notify(executor, "You must specify an object/attribute to include.");
+			await NotifyService!.Notify(executor, "You must specify an object/attribute to include.", executor);
 			return new CallState("#-1 NO ATTRIBUTE SPECIFIED");
 		}
 
@@ -5740,7 +5740,7 @@ public partial class Commands
 		var parts = attributePath.Split('/', 2);
 		if (parts.Length < 2)
 		{
-			await NotifyService!.Notify(executor, "You must specify an object/attribute path.");
+			await NotifyService!.Notify(executor, "You must specify an object/attribute path.", executor);
 			return new CallState("#-1 INVALID PATH");
 		}
 
@@ -5764,13 +5764,13 @@ public partial class Commands
 
 		if (attributeResult.IsError)
 		{
-			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}");
+			await NotifyService!.Notify(executor, $"No such attribute: {attributeName}", executor);
 			return new CallState("#-1 NO SUCH ATTRIBUTE");
 		}
 
 		if (attributeResult.IsNone)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {attributeName} is empty.");
+			await NotifyService!.Notify(executor, $"Attribute {attributeName} is empty.", executor);
 			return CallState.Empty;
 		}
 

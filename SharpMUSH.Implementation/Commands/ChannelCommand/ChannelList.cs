@@ -42,7 +42,7 @@ public static class ChannelList
 			.ToArrayAsync();
 
 		var result = MModule.multiple(channelList);
-		await NotifyService.Notify(executor, result);
+		await NotifyService.Notify(executor, result, executor);
 		return new CallState(result);
 	}
 }

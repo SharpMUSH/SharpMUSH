@@ -1107,11 +1107,11 @@ public class SharpMUSHParserVisitor(
 			{
 				if (clearResult.TryPickT0(out _, out var clearError))
 				{
-					await NotifyService.Notify(clearHandle.Value, $"{clearTargetObject.Object().Name}/{matchedEntry.Name} - Cleared.");
+					await NotifyService.Notify(clearHandle.Value, $"{clearTargetObject.Object().Name}/{matchedEntry.Name} - Cleared.", clearExecutor);
 				}
 				else
 				{
-					await NotifyService.Notify(clearHandle.Value, $"Error: {clearError.Value}");
+					await NotifyService.Notify(clearHandle.Value, $"Error: {clearError.Value}", clearExecutor);
 				}
 			}
 
@@ -1158,11 +1158,11 @@ public class SharpMUSHParserVisitor(
 		{
 			if (setResult.TryPickT0(out _, out var error))
 			{
-				await NotifyService.Notify(handle2.Value, $"{targetObject.Object().Name}/{matchedEntry.Name} - Set.");
+				await NotifyService.Notify(handle2.Value, $"{targetObject.Object().Name}/{matchedEntry.Name} - Set.", executor);
 			}
 			else
 			{
-				await NotifyService.Notify(handle2.Value, $"Error: {error.Value}");
+				await NotifyService.Notify(handle2.Value, $"Error: {error.Value}", executor);
 			}
 		}
 
