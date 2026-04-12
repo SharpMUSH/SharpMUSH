@@ -1875,7 +1875,7 @@ public partial class Functions
 
 		if (expandedFind.Length != expandedReplace.Length)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorArgRange));
+			return ValueTask.FromResult(new CallState(Errors.ErrorStringLengthsMustBeEqual));
 		}
 
 		// Build translation map - later occurrences override earlier ones
@@ -1936,19 +1936,19 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var arg1 = parser.CurrentState.Arguments.TryGetValue(
 			Configuration!.CurrentValue.Compatibility.TinyTrimFun
-				? "1"
-				: "2", out var arg1Value)
+				? "2"
+				: "1", out var arg1Value)
 			? arg1Value.Message
 			: MModule.single(" ");
 
 		var arg2 = parser.CurrentState.Arguments.TryGetValue(
 			Configuration.CurrentValue.Compatibility.TinyTrimFun
-				? "2"
-				: "1", out var arg2Value)
+				? "1"
+				: "2", out var arg2Value)
 			? arg2Value.Message!.ToPlainText()
 			: "b";
 
-		var trimType = arg2 switch
+		var trimType = arg2.ToLowerInvariant() switch
 		{
 			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
 			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
@@ -1971,7 +1971,7 @@ public partial class Functions
 			? arg2Value.Message!.ToPlainText()
 			: "b";
 
-		var trimType = arg2 switch
+		var trimType = arg2.ToLowerInvariant() switch
 		{
 			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
 			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
@@ -1994,7 +1994,7 @@ public partial class Functions
 			? arg2Value.Message!.ToPlainText()
 			: "b";
 
-		var trimType = arg2 switch
+		var trimType = arg2.ToLowerInvariant() switch
 		{
 			"l" => global::MarkupString.MarkupStringModule.TrimType.TrimStart,
 			"r" => global::MarkupString.MarkupStringModule.TrimType.TrimEnd,
@@ -2131,7 +2131,7 @@ public partial class Functions
 	[GeneratedRegex("^y(b[lor]|cl[ea]|fere|gg|p[ios]|rou|tt)")]
 	private static partial Regex ArticleRegex3();
 
-	[GeneratedRegex("\\s+")]
+	[GeneratedRegex(" +")]
 	private static partial Regex SpacesRegex();
 
 	[GeneratedRegex("^e[uw]")]

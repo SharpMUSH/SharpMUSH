@@ -300,14 +300,23 @@ public partial class Functions
 	[SharpFunction(Name = "firstof", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["object..."])]
 	public static async ValueTask<CallState> FirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		await Task.CompletedTask;
+		var args = parser.CurrentState.ArgumentsOrdered;
 
-		var first = await parser.CurrentState.ArgumentsOrdered
-			.ToAsyncEnumerable()
-			.Select(x => x.Value)
-			.FirstOrDefaultAsync(async (x, _) => (await x.ParsedMessage()).Truthy(), CallState.Empty);
+		// PennMUSH: evaluate each arg in order, return the first truthy one.
+		// If none are truthy, return the value of the last arg.
+		CallState lastValue = CallState.Empty;
+		foreach (var arg in args)
+		{
+			var parsed = await arg.Value.ParsedMessage();
+			lastValue = parsed;
+			if (parsed.Truthy())
+			{
+				return parsed;
+			}
+		}
 
-		return first;
+		// None were truthy: return the last arg's value
+		return lastValue;
 	}
 
 	[SharpFunction(Name = "fold", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "base"])]
@@ -1888,59 +1897,63 @@ public partial class Functions
 
 		if (!int.TryParse(positionArg, out var position))
 		{
-			return new CallState(Errors.ErrorUInteger);
+			return new CallState(Errors.ErrorInteger);
 		}
 
 		var listItems = MModule.splitList(delimiter, listArg).ToList();
 		var count = listItems.Count;
 
-		// Handle empty list edge case
-		if (count == 0)
-		{
-			return new CallState(MModule.multipleWithDelimiter(delimiter, [newItemArg]));
-		}
-
+		// PennMUSH find_list_position logic with insert=true
 		int insertIndex;
-
-		if (position > 0)
+		if (position < 0)
 		{
-			// Positive position: insert BEFORE the item at position (1-indexed)
-			// Convert to 0-indexed: position - 1
-			insertIndex = position - 1;
-
-			// Clamp to valid range [0, count]
-			if (insertIndex > count)
+			// Negative: convert to positive 1-indexed from end
+			// i = (total + 1) - abs(position)
+			var i = (count + 1) - Math.Abs(position);
+			if (i < 1 || i > count)
 			{
-				insertIndex = count;
+				// Special case: inserting into an empty list
+				if (count == 0 && (i == 0 || i == 1))
+				{
+					insertIndex = 0; // Will insert as first (only) element
+				}
+				else
+				{
+					// Out of range: return original list unchanged
+					return new CallState(listArg);
+				}
 			}
-			else if (insertIndex < 0)
+			else
 			{
-				insertIndex = 0;
+				// insert && negative: return i + 1 (1-indexed), then subtract 1 for 0-indexed
+				insertIndex = i; // i+1-1 = i
 			}
 		}
-		else if (position < 0)
+		else if (position > 0)
 		{
-			// Negative position: insert AFTER the item at abs(position) from the RIGHT
-			// Position from right: count - abs(position) + 1
-			// Then insert AFTER means add 1 to that index
-			var posFromRight = Math.Abs(position);
-			var targetIndex = count - posFromRight;
-			insertIndex = targetIndex + 1;
-
-			// Clamp to valid range [0, count]
-			if (insertIndex > count)
+			if (position > count)
 			{
-				insertIndex = count;
+				// Special case: inserting into an empty list
+				if (count == 0 && position == 1)
+				{
+					insertIndex = 0;
+				}
+				else
+				{
+					// Out of range: return original list unchanged
+					return new CallState(listArg);
+				}
 			}
-			else if (insertIndex < 0)
+			else
 			{
-				insertIndex = 0;
+				// Convert 1-indexed to 0-indexed: insert BEFORE this position
+				insertIndex = position - 1;
 			}
 		}
 		else
 		{
-			// Position 0 is invalid in PennMUSH
-			return new CallState(Errors.ErrorUInteger);
+			// Position 0: return original list unchanged (no-op per PennMUSH)
+			return new CallState(listArg);
 		}
 
 		listItems.Insert(insertIndex, newItemArg);

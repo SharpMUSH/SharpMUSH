@@ -25,7 +25,7 @@ public static class CryptoHelpers
 
 		hashAlgorithm.Initialize();
 
-		var data = hashAlgorithm.ComputeHash(Encoding.UTF32.GetBytes(str.ToPlainText()));
+		var data = hashAlgorithm.ComputeHash(Encoding.UTF8.GetBytes(str.ToPlainText()));
 
 		var sBuilder = new StringBuilder();
 

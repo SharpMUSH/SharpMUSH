@@ -32,6 +32,7 @@ mode SUBSTITUTION;
 COLON: ':' -> popMode;
 REG_STARTCARET: [qQ]'<' -> popMode;
 REG_NUM: [qQ][0-9] -> popMode;
+REG_ALPHA: [qQ][a-zA-Z] -> popMode;
 VWX: [vwxVWX][a-zA-Z] -> popMode;
 ARG_NUM: [0-9] -> popMode;
 SPACE: [bB] -> popMode;

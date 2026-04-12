@@ -335,28 +335,124 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("setunion(a b c,c d e)", "a b c d e")]
 	[Arguments("setunion(1 2 3,2 3 4)", "1 2 3 4")]
+	// Penn setunion space-delimited tests
+	[Arguments("setunion(,)", "")]
+	[Arguments("setunion(a,)", "a")]
+	[Arguments("setunion(,a)", "a")]
+	[Arguments("setunion(a a a,)", "a")]
+	[Arguments("setunion(,a a a)", "a")]
+	[Arguments("setunion(a,a)", "a")]
+	[Arguments("setunion(a,b)", "a b")]
+	[Arguments("setunion(a b,b)", "a b")]
+	[Arguments("setunion(b a,b)", "a b")]
+	[Arguments("setunion(c a b a,a b c c)", "a b c")]
+	// Penn setunion ! delimiter tests
+	[Arguments("setunion(,,!)", "")]
+	[Arguments("setunion(!,,!)", "")]
+	[Arguments("setunion(,!,!)", "")]
+	[Arguments("setunion(a,,!)", "a")]
+	[Arguments("setunion(,a,!)", "a")]
+	[Arguments("setunion(a!a!a,,!)", "a")]
+	[Arguments("setunion(,a!a!a,!)", "a")]
+	[Arguments("setunion(a!a!a,!,!)", "!a")]
+	[Arguments("setunion(a!a!a,!a,!)", "!a")]
+	[Arguments("setunion(a,a,!)", "a")]
+	[Arguments("setunion(a,b,!)", "a!b")]
+	[Arguments("setunion(a!b,b,!)", "a!b")]
+	[Arguments("setunion(b!a,b,!)", "a!b")]
+	[Arguments("setunion(b!a,!b,!)", "!a!b")]
+	[Arguments("setunion(!b!a,b,!)", "!a!b")]
+	[Arguments("setunion(b!a!,b,!)", "!a!b")]
+	[Arguments("setunion(!b!a!,b,!)", "!a!b")]
+	[Arguments("setunion(!b!a!,!b,!)", "!a!b")]
+	[Arguments("setunion(c!a!b!a,a!b!c!c,!)", "a!b!c")]
+	[Arguments("setunion(!c!a!b!a,a!b!c!c,!)", "!a!b!c")]
 	public async Task SetUnion(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
-		await Assert.That(result.ToString()).IsEqualTo(expected);
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	[Arguments("setinter(a b c,c d e)", "c")]
 	[Arguments("setinter(1 2 3,2 3 4)", "2 3")]
+	// Penn setinter space-delimited tests
+	[Arguments("setinter(,)", "")]
+	[Arguments("setinter(a,)", "")]
+	[Arguments("setinter(,a)", "")]
+	[Arguments("setinter(a a a,)", "")]
+	[Arguments("setinter(,a a a)", "")]
+	[Arguments("setinter(a,a)", "a")]
+	[Arguments("setinter(a,b)", "")]
+	[Arguments("setinter(a b,b)", "b")]
+	[Arguments("setinter(b a,b)", "b")]
+	[Arguments("setinter(c a b a,a b c c)", "a b c")]
+	// Penn setinter ! delimiter tests
+	[Arguments("setinter(,,!)", "")]
+	[Arguments("setinter(!,,!)", "")]
+	[Arguments("setinter(,!,!)", "")]
+	[Arguments("setinter(a,,!)", "")]
+	[Arguments("setinter(,a,!)", "")]
+	[Arguments("setinter(a!a!a,,!)", "")]
+	[Arguments("setinter(,a!a!a,!)", "")]
+	[Arguments("setinter(a!a!a,!,!)", "")]
+	[Arguments("setinter(a!a!a,!a,!)", "a")]
+	[Arguments("setinter(a,a,!)", "a")]
+	[Arguments("setinter(a,b,!)", "")]
+	[Arguments("setinter(a!b,b,!)", "b")]
+	[Arguments("setinter(b!a,b,!)", "b")]
+	[Arguments("setinter(b!a,!b,!)", "b")]
+	[Arguments("setinter(!b!a,b,!)", "b")]
+	[Arguments("setinter(b!a!,b,!)", "b")]
+	[Arguments("setinter(!b!a!,b,!)", "b")]
+	[Arguments("setinter(!b!a!,!b,!)", "!b")]
+	[Arguments("setinter(c!a!b!a,a!b!c!c,!)", "a!b!c")]
+	[Arguments("setinter(!c!a!b!a,a!b!c!c,!)", "a!b!c")]
 	public async Task SetIntersection(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
-		await Assert.That(result.ToString()).IsEqualTo(expected);
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	[Arguments("setdiff(a b c,c d e)", "a b")]
 	[Arguments("setdiff(1 2 3,2 3 4)", "1")]
+	// Penn setdiff space-delimited tests
+	[Arguments("setdiff(,)", "")]
+	[Arguments("setdiff(a,)", "a")]
+	[Arguments("setdiff(,a)", "")]
+	[Arguments("setdiff(a a a,)", "a")]
+	[Arguments("setdiff(,a a a)", "")]
+	[Arguments("setdiff(a,a)", "")]
+	[Arguments("setdiff(a,b)", "a")]
+	[Arguments("setdiff(a b,b)", "a")]
+	[Arguments("setdiff(b a,b)", "a")]
+	[Arguments("setdiff(c a b a,a b c c)", "")]
+	// Penn setdiff ! delimiter tests
+	[Arguments("setdiff(,,!)", "")]
+	[Arguments("setdiff(!,,!)", "")]
+	[Arguments("setdiff(,!,!)", "")]
+	[Arguments("setdiff(a,,!)", "a")]
+	[Arguments("setdiff(,a,!)", "")]
+	[Arguments("setdiff(a!a!a,,!)", "a")]
+	[Arguments("setdiff(,a!a!a,!)", "")]
+	[Arguments("setdiff(a!a!a,!,!)", "a")]
+	[Arguments("setdiff(a!a!a,!a,!)", "")]
+	[Arguments("setdiff(a,a,!)", "")]
+	[Arguments("setdiff(a,b,!)", "a")]
+	[Arguments("setdiff(a!b,b,!)", "a")]
+	[Arguments("setdiff(b!a,b,!)", "a")]
+	[Arguments("setdiff(b!a,!b,!)", "a")]
+	[Arguments("setdiff(!b!a,b,!)", "!a")]
+	[Arguments("setdiff(b!a!,b,!)", "!a")]
+	[Arguments("setdiff(!b!a!,b,!)", "!a")]
+	[Arguments("setdiff(!b!a!,!b,!)", "a")]
+	[Arguments("setdiff(c!a!b!a,a!b!c!c,!)", "")]
+	[Arguments("setdiff(!c!a!b!a,a!b!c!c,!)", "")]
 	public async Task SetDifference(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
-		await Assert.That(result.ToString()).IsEqualTo(expected);
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -506,6 +602,16 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("linsert(a b c,2,x)", "a x b c")]
+	// Penn insert.1-insert.9 (PennMUSH insert = SharpMUSH linsert)
+	[Arguments("linsert(a b c,0,X)", "a b c")]
+	[Arguments("linsert(a b c,1,X)", "X a b c")]
+	[Arguments("linsert(a b c,2,X)", "a X b c")]
+	[Arguments("linsert(a b c,3,X)", "a b X c")]
+	[Arguments("linsert(a b c,4,X)", "a b c")]
+	[Arguments("linsert(a b c,-1,X)", "a b c X")]
+	[Arguments("linsert(a b c,-2,X)", "a b X c")]
+	[Arguments("linsert(a b c,-3,X)", "a X b c")]
+	[Arguments("linsert(a b c,-4,X)", "a b c")]
 	public async Task ListInsert(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -568,6 +674,40 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("setsymdiff(a b c,b c d)", "a d")]
+	// Penn setsymdiff space-delimited tests
+	[Arguments("setsymdiff(,)", "")]
+	[Arguments("setsymdiff(a,)", "a")]
+	[Arguments("setsymdiff(,a)", "a")]
+	[Arguments("setsymdiff(a a a,)", "a")]
+	[Arguments("setsymdiff(,a a a)", "a")]
+	[Arguments("setsymdiff(a,a)", "")]
+	[Arguments("setsymdiff(a,b)", "a b")]
+	[Arguments("setsymdiff(a b,b)", "a")]
+	[Arguments("setsymdiff(b a,b)", "a")]
+	[Arguments("setsymdiff(c a b a,a b c c)", "")]
+	[Arguments("setsymdiff(a b,c d)", "a b c d")]
+	[Arguments("setsymdiff(a b c,c d)", "a b d")]
+	// Penn setsymdiff ! delimiter tests
+	[Arguments("setsymdiff(,,!)", "")]
+	[Arguments("setsymdiff(!,,!)", "")]
+	[Arguments("setsymdiff(,!,!)", "")]
+	[Arguments("setsymdiff(a,,!)", "a")]
+	[Arguments("setsymdiff(,a,!)", "a")]
+	[Arguments("setsymdiff(a!a!a,,!)", "a")]
+	[Arguments("setsymdiff(,a!a!a,!)", "a")]
+	[Arguments("setsymdiff(a!a!a,!,!)", "!a")]
+	[Arguments("setsymdiff(a!a!a,!a,!)", "")]
+	[Arguments("setsymdiff(a,a,!)", "")]
+	[Arguments("setsymdiff(a,b,!)", "a!b")]
+	[Arguments("setsymdiff(a!b,b,!)", "a")]
+	[Arguments("setsymdiff(b!a,b,!)", "a")]
+	[Arguments("setsymdiff(b!a,!b,!)", "!a")]
+	[Arguments("setsymdiff(!b!a,b,!)", "!a")]
+	[Arguments("setsymdiff(b!a!,b,!)", "!a")]
+	[Arguments("setsymdiff(!b!a!,b,!)", "!a")]
+	[Arguments("setsymdiff(!b!a!,!b,!)", "a")]
+	[Arguments("setsymdiff(c!a!b!a,a!b!c!c,!)", "")]
+	[Arguments("setsymdiff(!c!a!b!a,a!b!c!c,!)", "")]
 	public async Task Setsymdiff(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

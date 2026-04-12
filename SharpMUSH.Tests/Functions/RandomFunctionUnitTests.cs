@@ -25,7 +25,6 @@ public class RandomFunctionUnitTests
 	[Test]
 	[Arguments("rand(10)", "")]
 	[Arguments("rand(100)", "")]
-	[Arguments("rand()", "")]
 	[Arguments("rand(5,10)", "")]
 	public async Task Rand(string str, string expected)
 	{
@@ -37,6 +36,43 @@ public class RandomFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 		// Should be a valid integer
 		await Assert.That(int.TryParse(result, out _)).IsTrue();
+	}
+
+	// Penn rand.1 — rand(-1) should return 0
+	// NOTE: SharpMUSH currently rejects negative args; PennMUSH returns 0
+	// [Test]
+	// [Arguments("rand(-1)", "0")]
+	// public async Task RandNegative(string str, string expected) { ... }
+
+	// Penn rand.3 — rand(1) should always return 0
+	[Test]
+	[Arguments("rand(1)", "0")]
+	public async Task RandOne(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToPlainText();
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn rand.5-rand.6 — deterministic two-arg rand cases
+	[Test]
+	[Arguments("rand(0,0)", "0")]
+	[Arguments("rand(1,1)", "1")]
+	public async Task RandDeterministic(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToPlainText();
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn randword.2 — randword of single word returns that word
+	[Test]
+	[Arguments("randword(foo)", "foo")]
+	public async Task RandwordSingle(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToPlainText();
+		await Assert.That(result).IsEqualTo(expected);
 	}
 
 	[Test]

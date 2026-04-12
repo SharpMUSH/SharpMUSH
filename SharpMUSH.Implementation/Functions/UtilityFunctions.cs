@@ -16,7 +16,6 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Drawing;
 using System.Text.RegularExpressions;
-using XSoundex;
 using static ANSILibrary.ANSI;
 using StringExtensions = ANSILibrary.StringExtensions;
 
@@ -284,40 +283,37 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// If single argument, split it by spaces and check each element
-		if (args.Count == 1)
+		// PennMUSH allof(val1, val2, ..., valN, delimiter):
+		// The last argument is the output delimiter.
+		// Evaluate each of the remaining arguments.
+		// Return all truthy values joined by the delimiter.
+		if (args.Count < 2)
 		{
-			var singleArg = await parser.FunctionParse(args["0"].Message!);
-			var elements = singleArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-			var allTrue = true;
-			foreach (var element in elements)
-			{
-				if (string.IsNullOrEmpty(element) ||
-						element == "0" ||
-						element.StartsWith("#-1") ||
-						element.Equals("false", StringComparison.OrdinalIgnoreCase))
-				{
-					allTrue = false;
-					break;
-				}
-			}
-			return new CallState(allTrue ? "1" : "0");
+			// With 0 or 1 arg, there's no delimiter — just return empty
+			return CallState.Empty;
 		}
 
-		// Multi-argument case: parse each argument and check
-		var allTruthy = await args.ToAsyncEnumerable()
-			.AllAsync(async (arg, _) =>
-			{
-				var result = await parser.FunctionParse(arg.Value.Message!);
-				var resultStr = MModule.plainText(result!.Message).Trim();
-				return !string.IsNullOrEmpty(resultStr) &&
-					resultStr != "0" &&
-					!resultStr.StartsWith("#-1") &&
-					!resultStr.Equals("false", StringComparison.OrdinalIgnoreCase);
-			});
+		// Last arg is the delimiter (evaluate it)
+		var delimArg = args[(args.Count - 1).ToString()];
+		var delimParsed = await parser.FunctionParse(delimArg.Message!);
+		var delimiter = MModule.plainText(delimParsed!.Message);
 
-		return new CallState(allTruthy ? "1" : "0");
+		// Evaluate all args except the last (delimiter)
+		var truthyValues = new List<string>();
+		for (var i = 0; i < args.Count - 1; i++)
+		{
+			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
+			var value = MModule.plainText(parsed!.Message);
+			// Truthy: non-empty, not "0", not starting with "#-"
+			if (!string.IsNullOrEmpty(value) &&
+				value != "0" &&
+				!value.StartsWith("#-"))
+			{
+				truthyValues.Add(value);
+			}
+		}
+
+		return new CallState(string.Join(delimiter, truthyValues));
 	}
 
 	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -800,12 +796,20 @@ public partial class Functions
 	{
 		var everythingIsOkay = true;
 
+		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
+		var npairs = (numberedArguments.Count - 1) / 2;
+
+		// If no pairs, just evaluate the body in the current scope (PE_REGS_LET with empty scope:
+		// all register writes pass up to the caller, nothing is saved/restored).
+		if (npairs == 0)
+		{
+			return (await parser.FunctionParse(numberedArguments.Last().Value.Message!))!;
+		}
+
 		// Note: MarkupString should be immutable - verify this if register behavior issues occur
 		var validPeek = parser.CurrentState.Registers.TryPeek(out var currentRegisters);
 		var newRegisters = currentRegisters!.ToDictionary(k => k.Key, kv => kv.Value);
 		parser.CurrentState.Registers.Push(newRegisters);
-
-		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
 
 		for (var i = 0; i < numberedArguments.Count - 1; i += 2)
 		{
@@ -1485,10 +1489,17 @@ public partial class Functions
 			? val.Message!.ToPlainText().ToLowerInvariant()
 			: "soundex";
 
-		return ValueTask.FromResult<CallState>(
-			arg1 == "soundex"
-				? arg0.ToSoundex()
-				: Errors.NotSupported);
+		if (arg1 != "soundex")
+		{
+			return ValueTask.FromResult<CallState>(Errors.NotSupported);
+		}
+
+		// PennMUSH-specific: leading "ph" is treated as "f" for soundex purposes
+		var soundexInput = arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
+			? "f" + arg0[2..]
+			: arg0;
+
+		return ValueTask.FromResult<CallState>(ComputeSoundex(soundexInput));
 	}
 
 	[SharpFunction(Name = "soundslike", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1501,10 +1512,62 @@ public partial class Functions
 			? val.Message!.ToPlainText().ToLowerInvariant()
 			: "soundex";
 
+		if (arg2 != "soundex")
+		{
+			return ValueTask.FromResult<CallState>(Errors.NotSupported);
+		}
+
+		// PennMUSH-specific: leading "ph" is treated as "f" for soundex purposes
+		var input0 = arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
+			? "f" + arg0[2..]
+			: arg0;
+		var input1 = arg1.StartsWith("ph", StringComparison.OrdinalIgnoreCase)
+			? "f" + arg1[2..]
+			: arg1;
+
 		return ValueTask.FromResult<CallState>(
-			arg2 == "soundex"
-				? arg0.HasTheSameSoundex(arg1)
-				: Errors.NotSupported);
+			ComputeSoundex(input0) == ComputeSoundex(input1) ? "1" : "0");
+	}
+
+	/// <summary>
+	/// Compute the American Soundex code for a string.
+	/// Standard mapping: B/F/P/V=1, C/G/J/K/Q/S/X/Z=2, D/T=3, L=4, M/N=5, R=6
+	/// </summary>
+	private static string ComputeSoundex(string input)
+	{
+		if (string.IsNullOrEmpty(input)) return "0000";
+
+		// Standard American Soundex mapping
+		const string soundexMap = "01230120022455012623010202";
+		// Index:                   A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+
+		var result = new char[4];
+		result[0] = char.ToUpper(input[0]);
+		var lastCode = result[0] >= 'A' && result[0] <= 'Z'
+			? soundexMap[result[0] - 'A']
+			: '0';
+		var count = 1;
+
+		for (var i = 1; i < input.Length && count < 4; i++)
+		{
+			var c = char.ToUpper(input[i]);
+			if (c < 'A' || c > 'Z') continue;
+
+			var code = soundexMap[c - 'A'];
+			if (code != '0' && code != lastCode)
+			{
+				result[count++] = code;
+			}
+			lastCode = code;
+		}
+
+		// Pad with zeros
+		while (count < 4)
+		{
+			result[count++] = '0';
+		}
+
+		return new string(result);
 	}
 
 	[SharpFunction(Name = "suggest", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

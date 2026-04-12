@@ -2095,7 +2095,7 @@ public class SharpMUSHParserVisitor(
 		if (context.ChildCount > 1)
 			return await VisitChildren(context);
 
-		if (context.REG_NUM() is not null || context.ITEXT_NUM() is not null || context.STEXT_NUM() is not null)
+		if (context.REG_NUM() is not null || context.REG_ALPHA() is not null || context.ITEXT_NUM() is not null || context.STEXT_NUM() is not null)
 			return new CallState(
 				MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
 					source), context.Depth());

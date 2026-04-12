@@ -13,7 +13,7 @@ public partial class Functions
 {
 	// Generated regex for parsing duration strings
 	// Matches: number + optional unit (y/year/years, w/week/weeks, d/day/days, h/hour/hours, m/minute/minutes, s/second/seconds)
-	[GeneratedRegex(@"(?<number>[-+]?\d+(?:\.\d+)?)\s*(?<unit>y(?:ears?)?|w(?:eeks?)?|d(?:ays?)?|h(?:ours?)?|m(?:inutes?)?|s(?:econds?)?)", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+	[GeneratedRegex(@"(?<number>[-+]?\d+(?:\.\d+)?)\s*(?<unit>y(?:ears?)?|w(?:eeks?)?|d(?:ays?)?|h(?:ours?)?|m(?:inutes?)?|s(?:econds?)?)?", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
 	private static partial Regex DurationPattern();
 
 	// Generated regex for parsing etimefmt format codes
@@ -723,8 +723,8 @@ public partial class Functions
 			return addSuffix ? valueStr + suffix : valueStr;
 		});
 
-		// Trim leading spaces from space-padded values
-		return ValueTask.FromResult<CallState>(result.TrimStart(' '));
+		// Return the formatted result
+		return ValueTask.FromResult<CallState>(result);
 	}
 
 	[SharpFunction(Name = "CONVSECS", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,

@@ -82,7 +82,49 @@ public partial class Functions
 
 	[SharpFunction(Name = "dec", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public static ValueTask<CallState> Dec(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDecimal(parser.CurrentState.ArgumentsOrdered, x => x - 1);
+	{
+		var text = MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message);
+
+		// Handle pure integer
+		if (int.TryParse(text, out var intVal))
+		{
+			return ValueTask.FromResult<CallState>((intVal - 1).ToString(CultureInfo.InvariantCulture));
+		}
+
+		// Handle empty string
+		if (string.IsNullOrEmpty(text))
+		{
+			return ValueTask.FromResult<CallState>("-1");
+		}
+
+		// Find trailing integer portion
+		var lastIdx = text.Length - 1;
+		if (!char.IsDigit(text[lastIdx]))
+		{
+			return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST END IN AN INTEGER"));
+		}
+
+		var numStart = lastIdx;
+		while (numStart > 0 && (char.IsDigit(text[numStart - 1]) || text[numStart - 1] == '-'))
+		{
+			if (text[numStart - 1] == '-')
+			{
+				numStart--;
+				break;
+			}
+			numStart--;
+		}
+
+		var prefix = text[..numStart];
+		var numPart = text[numStart..];
+
+		if (!int.TryParse(numPart, out var num))
+		{
+			return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST END IN AN INTEGER"));
+		}
+
+		return ValueTask.FromResult<CallState>($"{prefix}{num - 1}");
+	}
 
 	[SharpFunction(Name = "decode64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["encoded-string"])]
 	public static ValueTask<CallState> Decode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -273,7 +315,49 @@ public partial class Functions
 
 	[SharpFunction(Name = "inc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["integer"])]
 	public static ValueTask<CallState> Inc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDecimal(parser.CurrentState.ArgumentsOrdered, x => x + 1);
+	{
+		var text = MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message);
+
+		// Handle pure integer
+		if (int.TryParse(text, out var intVal))
+		{
+			return ValueTask.FromResult<CallState>((intVal + 1).ToString(CultureInfo.InvariantCulture));
+		}
+
+		// Handle empty string
+		if (string.IsNullOrEmpty(text))
+		{
+			return ValueTask.FromResult<CallState>("1");
+		}
+
+		// Find trailing integer portion
+		var lastIdx = text.Length - 1;
+		if (!char.IsDigit(text[lastIdx]))
+		{
+			return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST END IN AN INTEGER"));
+		}
+
+		var numStart = lastIdx;
+		while (numStart > 0 && (char.IsDigit(text[numStart - 1]) || text[numStart - 1] == '-'))
+		{
+			if (text[numStart - 1] == '-')
+			{
+				numStart--;
+				break;
+			}
+			numStart--;
+		}
+
+		var prefix = text[..numStart];
+		var numPart = text[numStart..];
+
+		if (!int.TryParse(numPart, out var num))
+		{
+			return ValueTask.FromResult(new CallState("#-1 ARGUMENT MUST END IN AN INTEGER"));
+		}
+
+		return ValueTask.FromResult<CallState>($"{prefix}{num + 1}");
+	}
 
 	[SharpFunction(Name = "lmath", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["op", "list", "delim"])]
 	public static async ValueTask<CallState> LMath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -315,7 +399,7 @@ public partial class Functions
 			"mul" => values.Aggregate((acc, val) => acc * val).ToString(CultureInfo.InvariantCulture),
 			"div" => values.Aggregate((acc, val) => acc / val).ToString(CultureInfo.InvariantCulture),
 			"fdiv" => values.Aggregate((acc, val) => acc / val).ToString(CultureInfo.InvariantCulture),
-			"modulo" => values.Aggregate((acc, val) => acc % val).ToString(CultureInfo.InvariantCulture),
+			"modulo" => values.Aggregate((acc, val) => ((acc % val) + val) % val).ToString(CultureInfo.InvariantCulture),
 			"remainder" => values.Aggregate((acc, val) => acc % val).ToString(CultureInfo.InvariantCulture),
 
 			// Comparison operations
@@ -375,9 +459,14 @@ public partial class Functions
 
 	private static decimal CalculateStdDev(List<decimal> values)
 	{
+		if (values.Count <= 1)
+		{
+			return 0;
+		}
 		var mean = values.Average();
 		var sumOfSquaredDifferences = values.Select(val => (val - mean) * (val - mean)).Sum();
-		var variance = sumOfSquaredDifferences / values.Count;
+		// PennMUSH uses sample stddev (÷(n-1)), not population stddev (÷n)
+		var variance = sumOfSquaredDifferences / (values.Count - 1);
 		return (decimal)Math.Sqrt((double)variance);
 	}
 
@@ -388,14 +477,27 @@ public partial class Functions
 		// lnum(<start number>, <end number>[, <output separator>[, <step>]])
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (int.TryParse(MModule.plainText(args["0"].Message), out var arg0Val))
+		var arg0Text = MModule.plainText(args["0"].Message);
+		int arg0Val;
+
+		// Try int first, then truncate float
+		if (int.TryParse(arg0Text, out arg0Val))
 		{
-			if (args.Count == 1)
-			{
-				return new CallState(string.Join(" ", Enumerable.Range(0, arg0Val)));
-			}
+			// ok
 		}
-		else return new CallState(Errors.ErrorInteger);
+		else if (double.TryParse(arg0Text, out var arg0Double))
+		{
+			arg0Val = (int)arg0Double;
+		}
+		else
+		{
+			return new CallState(Errors.ErrorInteger);
+		}
+
+		if (args.Count == 1)
+		{
+			return new CallState(string.Join(" ", Enumerable.Range(0, arg0Val)));
+		}
 
 		if (!int.TryParse(MModule.plainText(args["1"].Message), out var arg1Val))
 		{
@@ -476,11 +578,27 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["dividend", "divisor..."])]
 	public static ValueTask<CallState> Modulo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (parser.CurrentState.Arguments.Skip(1).Any(x => decimal.TryParse(MModule.plainText(x.Value.Message), out var num) && num == 0))
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var values = new List<int>();
+
+		foreach (var arg in args)
 		{
-			return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
+			if (!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
+			{
+				return ValueTask.FromResult<CallState>(Errors.ErrorIntegers);
+			}
+
+			if (values.Count > 0 && value == 0)
+			{
+				return ValueTask.FromResult(new CallState(Errors.ErrorDivideByZero));
+			}
+
+			values.Add(value);
 		}
-		return ArgHelpers.AggregateIntegers(parser.CurrentState.ArgumentsOrdered, (acc, mod) => acc % mod);
+
+		// PennMUSH modulo() uses floor-mod: result = ((a % b) + b) % b
+		var result = values.Aggregate((acc, val) => ((acc % val) + val) % val);
+		return ValueTask.FromResult<CallState>(result.ToString(CultureInfo.InvariantCulture));
 	}
 
 	[SharpFunction(Name = "remainder", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["dividend", "divisor..."])]
@@ -519,7 +637,26 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(Errors.ErrorNumbers);
 		}
 
-		return ValueTask.FromResult<CallState>(Math.Pow(value, 1.0 / root));
+		// Handle negative base: odd integer roots of negatives are valid (e.g. root(-27,3) = -3)
+		if (value < 0)
+		{
+			// Check if root is an odd integer
+			if (root == Math.Floor(root) && (int)root % 2 != 0)
+			{
+				var result = -Math.Pow(-value, 1.0 / root);
+				return ValueTask.FromResult<CallState>(result);
+			}
+
+			return ValueTask.FromResult(new CallState(Errors.ErrorImaginaryNumber));
+		}
+
+		var computed = Math.Pow(value, 1.0 / root);
+		if (double.IsNaN(computed))
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorImaginaryNumber));
+		}
+
+		return ValueTask.FromResult<CallState>(computed);
 	}
 
 	[SharpFunction(Name = "sign", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
@@ -544,7 +681,7 @@ public partial class Functions
 			return Errors.ErrorNumber;
 		}
 
-		return AngleTypeMath(angleType, angle, Math.Acos);
+		return InverseAngleTypeMath(angleType, angle, Math.Acos);
 	}
 
 	[SharpFunction(Name = "asin", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["sine", "angle-type"])]
@@ -561,7 +698,7 @@ public partial class Functions
 			return Errors.ErrorNumber;
 		}
 
-		return AngleTypeMath(angleType, angle, Math.Asin);
+		return InverseAngleTypeMath(angleType, angle, Math.Asin);
 	}
 
 	[SharpFunction(Name = "atan", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["tangent", "angle-type"])]
@@ -578,7 +715,7 @@ public partial class Functions
 			return Errors.ErrorNumber;
 		}
 
-		return AngleTypeMath(angleType, angle, Math.Atan);
+		return InverseAngleTypeMath(angleType, angle, Math.Atan);
 	}
 
 	[SharpFunction(Name = "atan2", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number1", "number2", "angle-type"])]
@@ -780,8 +917,21 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Sqrt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.EvaluateDouble(parser.CurrentState.ArgumentsOrdered, Math.Sqrt);
+	public static ValueTask<CallState> Sqrt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var text = ArgHelpers.EmptyStringToZero(MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message));
+		if (!double.TryParse(text, out var value))
+		{
+			return ValueTask.FromResult<CallState>(Errors.ErrorNumber);
+		}
+
+		if (value < 0)
+		{
+			return ValueTask.FromResult(new CallState(Errors.ErrorImaginaryNumber));
+		}
+
+		return ValueTask.FromResult<CallState>(Math.Sqrt(value));
+	}
 
 	[SharpFunction(Name = "stddev", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
@@ -799,14 +949,15 @@ public partial class Functions
 			values.Add(value);
 		}
 
-		if (values.Count == 0)
+		if (values.Count <= 1)
 		{
 			return ValueTask.FromResult<CallState>(0);
 		}
 
 		var mean = values.Average();
 		var sumOfSquaredDifferences = values.Select(val => Math.Pow(val - mean, 2)).Sum();
-		var variance = sumOfSquaredDifferences / values.Count;
+		// PennMUSH uses sample stddev (÷(n-1)), not population stddev (÷n)
+		var variance = sumOfSquaredDifferences / (values.Count - 1);
 		var stdDev = Math.Sqrt(variance);
 
 		return ValueTask.FromResult<CallState>(stdDev);
@@ -1032,6 +1183,47 @@ public partial class Functions
 		if (formatted.Contains('E') || formatted.Contains('e'))
 		{
 			// For very small/large numbers, use fixed-point with appropriate precision
+			formatted = result.ToString("F15", CultureInfo.InvariantCulture).TrimEnd('0').TrimEnd('.');
+		}
+
+		return new CallState(formatted);
+	}
+
+	/// <summary>
+	/// For inverse trig functions (acos, asin, atan), the input is a ratio (not an angle),
+	/// and the output is an angle in radians that should be converted to the requested angle type.
+	/// </summary>
+	private static CallState InverseAngleTypeMath(string? angleType, double ratio, Func<double, double> func)
+	{
+		// Apply the inverse trig function (always operates on the ratio directly)
+		var resultRadians = func(ratio);
+
+		// Convert the output from radians to the requested angle type
+		var result = angleType switch
+		{
+			"d" => resultRadians * (180.0 / double.Pi),
+			"g" => resultRadians * (200.0 / double.Pi),
+			_ => resultRadians // null or "r" = radians (default)
+		};
+
+		// Round very small numbers (floating point errors) to 0
+		if (Math.Abs(result) < 1e-6)
+		{
+			return new CallState("0");
+		}
+
+		// Round to nearby integers if very close
+		var rounded = Math.Round(result);
+		if (Math.Abs(result - rounded) < 1e-10)
+		{
+			return new CallState(((int)rounded).ToString(CultureInfo.InvariantCulture));
+		}
+
+		// Format without scientific notation
+		var formatted = result.ToString(CultureInfo.InvariantCulture);
+
+		if (formatted.Contains('E') || formatted.Contains('e'))
+		{
 			formatted = result.ToString("F15", CultureInfo.InvariantCulture).TrimEnd('0').TrimEnd('.');
 		}
 

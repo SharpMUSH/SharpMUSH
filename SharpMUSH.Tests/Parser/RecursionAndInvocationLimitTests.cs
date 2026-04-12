@@ -371,11 +371,13 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService,
 			MModule.single($"@trigger {objDbRef}/SELFCALL_TRIG_LIM_UNIQUE"));
 
-		// At least one notification must have been dispatched (Huh? from unknown command)
+		// At least one notification must have been dispatched (Huh? from unknown command).
+		// @trigger runs the attribute with the triggered object as executor, so the Huh?
+		// notification goes to the thing (objDbRef), not the player.
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "Huh?  (Type \"help\" for help.)")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>

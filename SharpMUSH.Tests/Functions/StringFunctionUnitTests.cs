@@ -47,7 +47,7 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("digest(md5,rawr)", "56742fd94d4e8f8b22d592186c12a9c5")]
+	[Arguments("digest(md5,rawr)", "6f10ae4af2b1216275234f1b4f4040ef")]
 	public async Task Digest(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -226,6 +226,14 @@ public class StringFunctionUnitTests
 	[Test]
 	[Arguments("tr(hello,el,ip)", "hippo")]
 	[Arguments("tr(abcd,bd,xy)", "axcy")]
+	// Penn tr.1-tr.7
+	[Arguments("tr(test STRING,,)", "test STRING")]
+	[Arguments("tr(test STRING,t,)", "#-1 STRING LENGTHS MUST BE EQUAL")]
+	[Arguments("tr(test STRING,,t)", "#-1 STRING LENGTHS MUST BE EQUAL")]
+	[Arguments("tr(test STRING,t,f)", "fesf STRING")]
+	[Arguments("tr(test STRING,tT,fF)", "fesf SFRING")]
+	[Arguments("tr(test STRING,Tt,Ff)", "fesf SFRING")]
+	[Arguments("tr(test STRING,te,et)", "etse STRING")]
 	public async Task Tr(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -259,6 +267,8 @@ public class StringFunctionUnitTests
 	[Test]
 	[Arguments("decompose(ansi(hr,red))", @"ansi\(hr\,red\)")]
 	[Arguments("decompose(ansi(ub,red))", @"ansi\(ub\,red\)")]
+	// Penn decompose.3: tab and newline characters → %t and %r
+	[Arguments("decompose(tab\treturn\n)", "tab%treturn%r")]
 	public async Task Decompose(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -288,6 +298,9 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("strinsert(hello,3,X)", "helXlo")]
+	// Penn strinsert.1-strinsert.3
+	[Arguments("strinsert(000,1,1)", "0100")]
+	[Arguments("strinsert(000,5,11)", "00011")]
 	public async Task Strinsert(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -296,6 +309,12 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("strreplace(hello world,6,5,universe)", "hello universe")]
+	// Penn strreplace.1-strreplace.6
+	[Arguments("strreplace(0010,2,1,0)", "0000")]
+	[Arguments("strreplace(0010,2,5,011)", "00011")]
+	[Arguments("strreplace(0010,2,2,0)", "000")]
+	[Arguments("strreplace(0010,2,1,010)", "000100")]
+	[Arguments("strreplace(0010,6,1,0)", "0010")]
 	public async Task Strreplace(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -433,6 +452,40 @@ public class StringFunctionUnitTests
 	[Arguments("lalign(10$,single,|)", "single")]
 	[Arguments("lalign(5. 5,a|b,|)", "a     b    ")]
 	public async Task LAlignOptions(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Penn trimpenn.1-trimpenn.4
+	[Test]
+	[Arguments("trimpenn(XXXfooXXX,X,l)", "fooXXX")]
+	[Arguments("trimpenn(XXXfooXXX,X,r)", "XXXfoo")]
+	[Arguments("trimpenn(XXXfooXXX,X,b)", "foo")]
+	[Arguments("trimpenn(XXXfooXXX,Y,l)", "XXXfooXXX")]
+	public async Task Trimpenn(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Penn trimtiny.1-trimtiny.4
+	[Test]
+	[Arguments("trimtiny(XXXfooXXX,L,X)", "fooXXX")]
+	[Arguments("trimtiny(XXXfooXXX,R,X)", "XXXfoo")]
+	[Arguments("trimtiny(XXXfooXXX,B,X)", "foo")]
+	[Arguments("trimtiny(XXXfooXXX,l,Y)", "XXXfooXXX")]
+	public async Task Trimtiny(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Penn trim.2-trim.3 (Penn arg order, tiny_trim_fun=no default)
+	[Test]
+	[Arguments("trim(XXXfooXXX,X,l)", "fooXXX")]
+	[Arguments("trim(%b%bfoo%b%b)", "foo")]
+	public async Task Trim(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

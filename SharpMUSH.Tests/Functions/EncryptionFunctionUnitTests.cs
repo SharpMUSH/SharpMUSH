@@ -9,7 +9,21 @@ public class EncryptionFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	// Penn digest tests (algorithms supported by SharpMUSH)
 	[Test]
+	[Arguments("digest(md5,foo)", "acbd18db4cc2f85cedef654fccc4a4d8")]
+	[Arguments("digest(sha1,foo)", "0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33")]
+	[Arguments("digest(sha256,foo)", "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae")]
+	[Arguments("digest(sha512,foo)", "f7fbba6e0636f890e56fbbf3283e524c6fa3204ae298382d624741d0dc6638326e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7")]
+	public async Task Digest(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Penn base64.1
+	[Test]
+	[Arguments("encode64(test string)", "dGVzdCBzdHJpbmc=")]
 	[Arguments("encode64(test_string_encode64_case1)", "dGVzdF9zdHJpbmdfZW5jb2RlNjRfY2FzZTE=")]
 	[Arguments("encode64(test)", "dGVzdA==")]
 	[Arguments("encode64(hello world)", "aGVsbG8gd29ybGQ=")]
@@ -75,14 +89,6 @@ public class EncryptionFunctionUnitTests
 	[Test]
 	[Arguments("hmac(test,key,sha256)", "")]
 	public async Task Hmac(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
-	}
-
-	[Test]
-	[Arguments("digest(test,sha256)", "")]
-	public async Task Digest(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();

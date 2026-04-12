@@ -103,6 +103,7 @@ public static partial class Substitutions
 		ArgumentNullException.ThrowIfNull(symbol);
 
 		if (context.REG_NUM() is not null) return HandleRegistrySymbol(symbol, parser);
+		if (context.REG_ALPHA() is not null) return HandleRegistrySymbol(symbol, parser);
 		if (context.ITEXT_NUM() is not null) return HandleITextNumber(symbol, parser);
 		if (context.ITEXT_LAST() is not null) return HandleITextTop(symbol, parser);
 		if (context.STEXT_NUM() is not null) return HandleSTextNumber(symbol, parser);

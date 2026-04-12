@@ -66,4 +66,6 @@ public static class Errors
 	public const string ErrorSafeObject = "#-1 OBJECT IS SAFE";
 	public const string ErrorNotGoing = "#-1 OBJECT NOT MARKED FOR DESTRUCTION";
 	public const string ErrorNotARoom = "#-1 OBJECT IS NOT A ROOM";
+	public const string ErrorImaginaryNumber = "#-1 IMAGINARY NUMBER";
+	public const string ErrorStringLengthsMustBeEqual = "#-1 STRING LENGTHS MUST BE EQUAL";
 }

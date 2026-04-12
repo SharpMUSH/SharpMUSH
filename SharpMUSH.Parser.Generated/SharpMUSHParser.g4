@@ -114,6 +114,7 @@ validSubstitution:
 complexSubstitutionSymbol: (
         REG_STARTCARET {lookingForRegisterCaret = true;} explicitEvaluationString CCARET {lookingForRegisterCaret = false;}
         | REG_NUM
+        | REG_ALPHA
         | ITEXT_NUM
         | ITEXT_LAST
         | STEXT_NUM

@@ -311,4 +311,119 @@ public class SearchFunctionUnitTests
 		var results = resultText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(results.Length).IsLessThanOrEqualTo(2);
 	}
+
+	// Penn testgrep.t: grep/wildgrep/regrep/grepi/wildgrepi/regrepi tests
+	// Uses a test object with FIRST=first, SECOND=second, THIRD=third attributes
+	[Test]
+	public async Task GrepFunctions_PennTests()
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepTest");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FIRST {objDbRef}=first"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&SECOND {objDbRef}=second"));
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"&THIRD {objDbRef}=third"));
+
+		// grep.1: grep(obj,*,d) → substring match on 'd' → SECOND THIRD
+		var g1 = (await Parser.FunctionParse(MModule.single($"grep({objDbRef},*,d)")))?.Message!;
+		await Assert.That(g1.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.2: grep(obj,S*,d) → attr name matches S*, value has 'd' → SECOND
+		var g2 = (await Parser.FunctionParse(MModule.single($"grep({objDbRef},S*,d)")))?.Message!;
+		await Assert.That(g2.ToPlainText()).IsEqualTo("SECOND");
+
+		// grep.3: grep(obj,*,*d*) — *d* is a glob, but grep uses substring match, so *d* is literal '*d*' → no match
+		var g3 = (await Parser.FunctionParse(MModule.single($"grep({objDbRef},*,*d*)")))?.Message!;
+		await Assert.That(g3.ToPlainText()).IsNotEqualTo("SECOND THIRD");
+
+		// grep.4: grep(obj,*,D) — case-sensitive, 'D' doesn't appear → no match
+		var g4 = (await Parser.FunctionParse(MModule.single($"grep({objDbRef},*,D)")))?.Message!;
+		await Assert.That(g4.ToPlainText()).IsNotEqualTo("SECOND THIRD");
+
+		// grep.5: wildgrep(obj,*,*d*) → wildcard match with glob → SECOND THIRD
+		var g5 = (await Parser.FunctionParse(MModule.single($"wildgrep({objDbRef},*,*d*)")))?.Message!;
+		await Assert.That(g5.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.6: wildgrep(obj,*,d) → glob 'd' only matches exact 'd' → no match
+		var g6 = (await Parser.FunctionParse(MModule.single($"wildgrep({objDbRef},*,d)")))?.Message!;
+		await Assert.That(g6.ToPlainText()).IsNotEqualTo("SECOND THIRD");
+
+		// grep.7: wildgrep(obj,*,first) → exact value match → FIRST
+		var g7 = (await Parser.FunctionParse(MModule.single($"wildgrep({objDbRef},*,first)")))?.Message!;
+		await Assert.That(g7.ToPlainText()).IsEqualTo("FIRST");
+
+		// grep.8: wildgrep(obj,*,FIRST) → case-sensitive, 'FIRST' != 'first' → no match
+		var g8 = (await Parser.FunctionParse(MModule.single($"wildgrep({objDbRef},*,FIRST)")))?.Message!;
+		await Assert.That(g8.ToPlainText()).IsNotEqualTo("FIRST");
+
+		// grep.9: regrep(obj,*,*d*) → invalid regex '*d*' → error
+		var g9 = (await Parser.FunctionParse(MModule.single($"regrep({objDbRef},*,*d*)")))?.Message!;
+		await Assert.That(g9.ToPlainText()).StartsWith("#-1 REGEXP ERROR");
+
+		// grep.10: regrep(obj,*,d) → regex 'd' matches values with 'd' → SECOND THIRD
+		var g10 = (await Parser.FunctionParse(MModule.single($"regrep({objDbRef},*,d)")))?.Message!;
+		await Assert.That(g10.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.11: regrep(obj,*,d$) → regex 'd$' matches values ending in 'd' → SECOND THIRD
+		var g11 = (await Parser.FunctionParse(MModule.single($"regrep({objDbRef},*,d$)")))?.Message!;
+		await Assert.That(g11.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.12: regrep(obj,*,first) → regex 'first' matches 'first' → FIRST
+		var g12 = (await Parser.FunctionParse(MModule.single($"regrep({objDbRef},*,first)")))?.Message!;
+		await Assert.That(g12.ToPlainText()).IsEqualTo("FIRST");
+
+		// grep.13: regrep(obj,*,FIRST) → case-sensitive, 'FIRST' doesn't match 'first' → no match
+		var g13 = (await Parser.FunctionParse(MModule.single($"regrep({objDbRef},*,FIRST)")))?.Message!;
+		await Assert.That(g13.ToPlainText()).IsNotEqualTo("FIRST");
+
+		// grep.14: grepi(obj,*,d) → case-insensitive substring, 'd' → SECOND THIRD
+		var g14 = (await Parser.FunctionParse(MModule.single($"grepi({objDbRef},*,d)")))?.Message!;
+		await Assert.That(g14.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.15: grepi(obj,S*,d) → attr matches S*, case-insensitive value 'd' → SECOND
+		var g15 = (await Parser.FunctionParse(MModule.single($"grepi({objDbRef},S*,d)")))?.Message!;
+		await Assert.That(g15.ToPlainText()).IsEqualTo("SECOND");
+
+		// grep.16: grepi(obj,*,*d*) → case-insensitive but still substring (not glob) → no match
+		var g16 = (await Parser.FunctionParse(MModule.single($"grepi({objDbRef},*,*d*)")))?.Message!;
+		await Assert.That(g16.ToPlainText()).IsNotEqualTo("SECOND THIRD");
+
+		// grep.17: grepi(obj,*,D) → case-insensitive, 'D' matches 'd' → SECOND THIRD
+		var g17 = (await Parser.FunctionParse(MModule.single($"grepi({objDbRef},*,D)")))?.Message!;
+		await Assert.That(g17.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.18: wildgrepi(obj,*,*d*) → case-insensitive glob → SECOND THIRD
+		var g18 = (await Parser.FunctionParse(MModule.single($"wildgrepi({objDbRef},*,*d*)")))?.Message!;
+		await Assert.That(g18.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.19: wildgrepi(obj,*,d) → case-insensitive exact 'd' → no match
+		var g19 = (await Parser.FunctionParse(MModule.single($"wildgrepi({objDbRef},*,d)")))?.Message!;
+		await Assert.That(g19.ToPlainText()).IsNotEqualTo("SECOND THIRD");
+
+		// grep.20: wildgrepi(obj,*,first) → case-insensitive glob 'first' matches 'first' → FIRST
+		var g20 = (await Parser.FunctionParse(MModule.single($"wildgrepi({objDbRef},*,first)")))?.Message!;
+		await Assert.That(g20.ToPlainText()).IsEqualTo("FIRST");
+
+		// grep.21: wildgrepi(obj,*,FIRST) → case-insensitive, 'FIRST' matches 'first' → FIRST
+		var g21 = (await Parser.FunctionParse(MModule.single($"wildgrepi({objDbRef},*,FIRST)")))?.Message!;
+		await Assert.That(g21.ToPlainText()).IsEqualTo("FIRST");
+
+		// grep.22: regrepi(obj,*,*d*) → invalid regex → error
+		var g22 = (await Parser.FunctionParse(MModule.single($"regrepi({objDbRef},*,*d*)")))?.Message!;
+		await Assert.That(g22.ToPlainText()).StartsWith("#-1 REGEXP ERROR");
+
+		// grep.23: regrepi(obj,*,d) → case-insensitive regex → SECOND THIRD
+		var g23 = (await Parser.FunctionParse(MModule.single($"regrepi({objDbRef},*,d)")))?.Message!;
+		await Assert.That(g23.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.24: regrepi(obj,*,d$) → case-insensitive regex → SECOND THIRD
+		var g24 = (await Parser.FunctionParse(MModule.single($"regrepi({objDbRef},*,d$)")))?.Message!;
+		await Assert.That(g24.ToPlainText()).IsEqualTo("SECOND THIRD");
+
+		// grep.25: regrepi(obj,*,first) → case-insensitive → FIRST
+		var g25 = (await Parser.FunctionParse(MModule.single($"regrepi({objDbRef},*,first)")))?.Message!;
+		await Assert.That(g25.ToPlainText()).IsEqualTo("FIRST");
+
+		// grep.26: regrepi(obj,*,FIRST) → case-insensitive, 'FIRST' matches 'first' → FIRST
+		var g26 = (await Parser.FunctionParse(MModule.single($"regrepi({objDbRef},*,FIRST)")))?.Message!;
+		await Assert.That(g26.ToPlainText()).IsEqualTo("FIRST");
+	}
 }

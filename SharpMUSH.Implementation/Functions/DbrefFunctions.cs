@@ -2328,10 +2328,152 @@ LOCATE()
 			});
 	}
 
+	/// <summary>
+	/// Checks a single-letter flag string (like "Wc!P") against an object.
+	/// Each character is a flag symbol. Preceding '!' negates. 'P','R','T','E' check type.
+	/// Returns null if the string has invalid syntax (e.g. trailing '!').
+	/// orMode=false → AND (all must match). orMode=true → OR (any must match).
+	/// </summary>
+	private static async ValueTask<bool?> FlagLetterCheck(AnySharpObject obj, string flagStr, bool orMode)
+	{
+		// Fetch all object flags once for symbol lookup
+		var allFlags = await Mediator!.CreateStream(new GetAllObjectFlagsQuery()).ToListAsync();
+
+		var ret = !orMode; // AND starts true, OR starts false
+		int i = 0;
+		while (i < flagStr.Length)
+		{
+			bool negate = false;
+			if (flagStr[i] == '!')
+			{
+				negate = true;
+				i++;
+				if (i >= flagStr.Length)
+					return null; // Trailing '!'
+			}
+
+			var c = flagStr[i];
+			i++;
+
+			// Type check letters
+			if (c is 'P' or 'R' or 'T' or 'E')
+			{
+				bool typeMatch = c switch
+				{
+					'P' => obj.IsPlayer,
+					'R' => obj.IsRoom,
+					'T' => obj.IsThing,
+					'E' => obj.IsExit,
+					_ => false
+				};
+				bool effectiveMatch = negate ? !typeMatch : typeMatch;
+				if (orMode)
+				{
+					if (effectiveMatch) return true;
+				}
+				else
+				{
+					if (!effectiveMatch) return false;
+				}
+				continue;
+			}
+
+			// Special pseudo-flag: 'c' = CONNECTED (runtime state, not stored flag)
+			if (c == 'c')
+			{
+				bool connected = await ConnectionService!.IsConnected(obj);
+				bool effectiveConn = negate ? !connected : connected;
+				if (orMode)
+				{
+					if (effectiveConn) return true;
+				}
+				else
+				{
+					if (!effectiveConn) return false;
+				}
+				continue;
+			}
+
+			// Look up flag by symbol (case-sensitive in PennMUSH)
+			var flagDef = allFlags.FirstOrDefault(f => f.Symbol == c.ToString());
+			if (flagDef == null)
+			{
+				// Unknown flag symbol
+				// For AND: unknown required flag → false; negated unknown → true (not set)
+				// For OR: unknown with negate → true; unknown without → false
+				bool effectiveOnUnknown = negate; // !unknown = "not set" = true
+				if (orMode)
+				{
+					if (effectiveOnUnknown) return true;
+				}
+				else
+				{
+					if (!effectiveOnUnknown) return false;
+				}
+				continue;
+			}
+
+			bool hasIt = await obj.HasFlag(flagDef.Name);
+			bool effective = negate ? !hasIt : hasIt;
+			if (orMode)
+			{
+				if (effective) return true;
+			}
+			else
+			{
+				if (!effective) return false;
+			}
+		}
+		return ret;
+	}
+
+	/// <summary>
+	/// Parses space-separated long flag names like "wizard !puppet connected" for andlflags/orlflags.
+	/// Returns null for invalid syntax (e.g. "! puppet" with space between ! and name).
+	/// </summary>
+	private static async ValueTask<bool?> FlagLongNameCheck(AnySharpObject obj, string[] flagTokens, bool orMode)
+	{
+		var ret = !orMode;
+		foreach (var token in flagTokens)
+		{
+			if (token == "!")
+				return null; // Standalone '!' is invalid syntax
+
+			bool negate = token.StartsWith("!");
+			var flagName = negate ? token[1..] : token;
+
+			if (string.IsNullOrEmpty(flagName))
+				return null;
+
+			// Type names and special pseudo-flags
+			bool hasIt;
+			switch (flagName.ToUpperInvariant())
+			{
+				case "PLAYER":    hasIt = obj.IsPlayer; break;
+				case "ROOM":      hasIt = obj.IsRoom; break;
+				case "THING":     hasIt = obj.IsThing; break;
+				case "EXIT":      hasIt = obj.IsExit; break;
+				case "CONNECTED": hasIt = await ConnectionService!.IsConnected(obj); break;
+				default:          hasIt = await obj.HasFlag(flagName); break;
+			}
+
+			bool effective = negate ? !hasIt : hasIt;
+			if (orMode)
+			{
+				if (effective) return true;
+			}
+			else
+			{
+				if (!effective) return false;
+			}
+		}
+		return ret;
+	}
+
 	[SharpFunction(Name = "orflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public static async ValueTask<CallState> OrFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// orflags() checks if object has ANY of the specified flags
+		// orflags() checks if object has ANY of the specified flags (single-letter format)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
@@ -2340,32 +2482,31 @@ LOCATE()
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				return new CallState(await flags.ToAsyncEnumerable()
-					.AnyAsync(async (flag, _) => await found.HasFlag(flag)));
+				var result = await FlagLetterCheck(found, flagsArg, orMode: true);
+				if (result is null)
+					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "orflags"));
+				return new CallState(result.Value);
 			});
 	}
 
 	[SharpFunction(Name = "orlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public static async ValueTask<CallState> OrListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// orlflags() checks a list of objects to see if ANY have ANY of the flags
+		// orlflags() checks if object has ANY of the specified flags (long-name format, space-separated)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-		return new CallState(await objList.ToAsyncEnumerable()
-			.AnyAsync(async (objRef, _) =>
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, objArg, LocateFlags.All,
+			async found =>
 			{
-				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
-				if (!maybeObj.IsValid()) return false;
-				var found = maybeObj.AsAnyObject;
-				return await flags.ToAsyncEnumerable()
-					.AnyAsync(async (flag, _) => await found.HasFlag(flag));
-			}));
+				var tokens = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				var result = await FlagLongNameCheck(found, tokens, orMode: true);
+				if (result is null)
+					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "orlflags"));
+				return new CallState(result.Value);
+			});
 	}
 
 	[SharpFunction(Name = "orlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
@@ -2393,7 +2534,7 @@ LOCATE()
 	[SharpFunction(Name = "andflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public static async ValueTask<CallState> AndFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// andflags() checks if object has ALL of the specified flags
+		// andflags() checks if object has ALL of the specified flags (single-letter format)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
@@ -2402,37 +2543,31 @@ LOCATE()
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				return new CallState(await flags.ToAsyncEnumerable()
-					.AllAsync(async (flag, _) => await found.HasFlag(flag)));
+				var result = await FlagLetterCheck(found, flagsArg, orMode: false);
+				if (result is null)
+					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "andflags"));
+				return new CallState(result.Value);
 			});
 	}
 
 	[SharpFunction(Name = "andlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
 	public static async ValueTask<CallState> AndListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// andlflags() checks if ALL objects in list have ALL of the flags
+		// andlflags() checks if object has ALL of the specified flags (long-name format, space-separated)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		var flags = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-		if (objList.Length == 0)
-		{
-			return new CallState(false);
-		}
-
-		return new CallState(await objList.ToAsyncEnumerable()
-			.AllAsync(async (objRef, _) =>
+		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, objArg, LocateFlags.All,
+			async found =>
 			{
-				var maybeObj = await LocateService!.Locate(parser, executor, executor, objRef, LocateFlags.All);
-				if (!maybeObj.IsValid()) return false;
-				var found = maybeObj.AsAnyObject;
-				return await flags.ToAsyncEnumerable()
-					.AllAsync(async (flag, _) => await found.HasFlag(flag));
-			}));
+				var tokens = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				var result = await FlagLongNameCheck(found, tokens, orMode: false);
+				if (result is null)
+					return new CallState(string.Format(Errors.ErrorBadArgumentFormat, "andlflags"));
+				return new CallState(result.Value);
+			});
 	}
 
 	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]

@@ -176,10 +176,10 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("andflags(%#,PLAYER)", "1")]
-	[Arguments("andflags(%#,PLAYER WIZARD)", "1")]
-	[Arguments("andflags(%#,THING WIZARD)", "0")]
-	[Arguments("andflags(%#,PLAYER ROYALTY)", "0")]
+	[Arguments("andflags(%#,P)", "1")]       // P = player type
+	[Arguments("andflags(%#,PW)", "1")]      // P = player, W = wizard
+	[Arguments("andflags(%#,TW)", "0")]      // T = thing (executor is not a thing)
+	[Arguments("andflags(%#,Pr)", "0")]      // P = player, r = royalty (executor lacks royalty)
 	public async Task Andflags(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

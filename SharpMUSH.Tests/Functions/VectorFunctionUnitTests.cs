@@ -39,4 +39,24 @@ public class VectorFunctionUnitTests
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
+
+	// Penn dist2d.1-dist2d.4
+	[Test]
+	[Arguments("dist2d(0,0,0,0)", "0")]
+	[Arguments("dist2d(0,0,0,1)", "1")]
+	public async Task Dist2d(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Penn dist3d.3-dist3d.4
+	[Test]
+	[Arguments("dist3d(0,0,0,0,0,0)", "0")]
+	[Arguments("dist3d(0,0,0,1,0,0)", "1")]
+	public async Task Dist3d(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }

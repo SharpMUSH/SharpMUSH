@@ -48,6 +48,15 @@ public class MathFunctionUnitTests
 	[Arguments("lnum(0,5,|,2)", "0|2|4")]
 	[Arguments("lnum(0,5,,5)", "05")]
 	[Arguments("lnum(0,5,-,5)", "0-5")]
+	// Penn lnum.2-lnum.14
+	[Arguments("lnum(#1)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments("lnum(foo)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments("lnum(4.5)", "0 1 2 3")]
+	[Arguments("lnum(1,5)", "1 2 3 4 5")]
+	[Arguments("lnum(1,4,@)", "1@2@3@4")]
+	[Arguments("lnum(1,5,@,2)", "1@3@5")]
+	[Arguments("lnum(1,5,,2)", "135")]
+	[Arguments("lnum(-2,2)", "-2 -1 0 1 2")]
 	public async Task LNum(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -78,6 +87,11 @@ public class MathFunctionUnitTests
 	[Arguments("div(-6,2)", "-3")]
 	[Arguments("div(24,2,2)", "6")]
 	[Arguments("div(10,0)", "#-1 DIVIDE BY ZERO")]
+	// Penn div.1-div.4
+	[Arguments("div(13,4)", "3")]
+	[Arguments("div(-13,4)", "-3")]
+	[Arguments("div(13,-4)", "-3")]
+	[Arguments("div(-13,-4)", "3")]
 	public async Task Div(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -90,9 +104,14 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("modulo(7,3)", "1")]
 	[Arguments("modulo(10,3)", "1")]
-	[Arguments("modulo(-7,3)", "-1")]
-	[Arguments("mod(-7,3)", "-1")] // Alias Test
+	[Arguments("modulo(-7,3)", "2")]
+	[Arguments("mod(-7,3)", "2")] // Alias Test
 	[Arguments("modulo(10,0)", "#-1 DIVIDE BY ZERO")]
+	// Penn mod.1-mod.4
+	[Arguments("modulo(13,4)", "1")]
+	[Arguments("modulo(-13,4)", "3")]
+	[Arguments("modulo(13,-4)", "-3")]
+	[Arguments("modulo(-13,-4)", "-1")]
 	public async Task Mod(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -171,6 +190,14 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("round(3.14159,2)", "3.14")]
 	[Arguments("round(3.5,3,1)", "3.500")]
+	// Penn round.0-round.8
+	[Arguments("round(pi(),0)", "3")]
+	[Arguments("round(pi(),1)", "3.1")]
+	[Arguments("round(pi(),2)", "3.14")]
+	[Arguments("round(pi(),3)", "3.142")]
+	[Arguments("round(pi(),4)", "3.1416")]
+	[Arguments("round(pi(),5)", "3.14159")]
+	[Arguments("round(1.2345,2,1)", "1.23")]
 	public async Task Round(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -184,6 +211,14 @@ public class MathFunctionUnitTests
 	[Arguments("abs(5)", "5")]
 	[Arguments("abs(-5)", "5")]
 	[Arguments("abs(-3.14)", "3.14")]
+	// Penn abs.1-abs.7
+	[Arguments("abs(-1)", "1")]
+	[Arguments("abs(-1.5)", "1.5")]
+	[Arguments("abs(1)", "1")]
+	[Arguments("abs(0)", "0")]
+	[Arguments("abs(-0)", "0")]
+	[Arguments("abs(99999999999)", "99999999999")]
+	[Arguments("abs(-99999999999)", "99999999999")]
 	public async Task Abs(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -292,6 +327,8 @@ public class MathFunctionUnitTests
 	[Arguments("sqrt(4)", "2")]
 	[Arguments("sqrt(9)", "3")]
 	[Arguments("sqrt(2)", "1.4142135623730951")]
+	// Penn sqrt.2
+	[Arguments("sqrt(-1)", "#-1 IMAGINARY NUMBER")]
 	public async Task Sqrt(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -316,6 +353,11 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("floordiv(7,2)", "3")]
 	[Arguments("floordiv(-7,2)", "-4")]
+	// Penn floordiv.1-floordiv.4
+	[Arguments("floordiv(13,4)", "3")]
+	[Arguments("floordiv(-13,4)", "-4")]
+	[Arguments("floordiv(13,-4)", "-4")]
+	[Arguments("floordiv(-13,-4)", "3")]
 	public async Task Floordiv(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -328,6 +370,12 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("inc(5)", "6")]
 	[Arguments("inc(-1)", "0")]
+	// Penn inc.1-inc.5
+	[Arguments("inc(0)", "1")]
+	[Arguments("inc(-2)", "-1")]
+	[Arguments("inc(foo1)", "foo2")]
+	[Arguments("inc(1.2)", "1.3")]
+	[Arguments("inc(foo)", "#-1 ARGUMENT MUST END IN AN INTEGER")]
 	public async Task Inc(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -340,6 +388,8 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("mean(1,2,3)", "2")]
 	[Arguments("mean(10,20,30)", "20")]
+	// Penn mean.1
+	[Arguments("mean(1,2,3,4,5)", "3")]
 	public async Task Mean(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -352,6 +402,8 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("median(1,2,3)", "2")]
 	[Arguments("median(1,2,3,4)", "2.5")]
+	// Penn median.1-median.2
+	[Arguments("median(1,2,3,4,5)", "3")]
 	public async Task Median(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -401,6 +453,13 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("log(10)", "1")]
 	[Arguments("log(100)", "2")]
+	// Penn log.1-log.9
+	[Arguments("log(0)", "-Infinity")]
+	[Arguments("log(1)", "0")]
+	[Arguments("log(8,2)", "3")]
+	[Arguments("log(9,3)", "2")]
+	[Arguments("log(9,foo)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments("log(-5)", "NaN")]
 	public async Task Log(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -447,6 +506,8 @@ public class MathFunctionUnitTests
 
 	[Test]
 	[Arguments("tan(0)", "0")]
+	// Penn tan.1-tan.4
+	[Arguments("tan(45,d)", "1")]
 	public async Task Tan(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -468,7 +529,7 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("stddev(1,2,3,4,5)", "1.4142135623730951")]
+	[Arguments("stddev(1,2,3,4,5)", "1.5811388300841898")]
 	public async Task Stddev(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -481,6 +542,11 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("root(8,3)", "2")]
 	[Arguments("root(16,2)", "4")]
+	// Penn root.1-root.4
+	[Arguments("root(4,2)", "2")]
+	[Arguments("root(-1,2)", "#-1 IMAGINARY NUMBER")]
+	[Arguments("root(27,3)", "3")]
+	[Arguments("root(-27,3)", "-3")]
 	public async Task Root(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -495,6 +561,8 @@ public class MathFunctionUnitTests
 	[Arguments("fraction(2)", "2")]
 	[Arguments("fraction(2.75)", "11/4")]
 	[Arguments("fraction(2.75,1)", "2 3/4")]
+	// Penn fraction.6
+	[Arguments("fraction(2,1)", "2")]
 	public async Task Fraction(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -544,6 +612,9 @@ public class MathFunctionUnitTests
 	[Arguments("cos(0)", "1")]
 	[Arguments("cos(90,d)", "0")]
 	[Arguments("cos(1.570796)", "0")]
+	// Penn cos.2-cos.3
+	[Arguments("cos(pi(),r)", "-1")]
+	[Arguments("cos(pi())", "-1")]
 	public async Task Cos(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -556,6 +627,8 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("sin(0)", "0")]
 	[Arguments("sin(1.5707963267948966)", "1")]
+	// Penn sin.1
+	[Arguments("sin(90,d)", "1")]
 	public async Task Sin(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -581,6 +654,8 @@ public class MathFunctionUnitTests
 	[Arguments("ctu(90,d,r)", "1.5707963267948966")]  // 90 degrees to radians
 	[Arguments("ctu(0,d,r)", "0")]  // 0 degrees to radians
 	[Arguments("ctu(180,d,r)", "3.141592653589793")]  // 180 degrees to radians
+	// Penn ctu.2
+	[Arguments("ctu(pi(),r,d)", "180")]  // pi radians to degrees
 	public async Task CTU(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
@@ -596,8 +671,97 @@ public class MathFunctionUnitTests
 	[Arguments("dec(-1)", "-2")]
 	[Arguments("dec(0)", "-1")]
 	[Arguments("dec(100)", "99")]
-	[Arguments("dec(3.5)", "2.5")]
+	[Arguments("dec(3.5)", "3.4")]
+	// Penn dec.1-dec.5
+	[Arguments("dec(-2)", "-3")]
+	[Arguments("dec(foo1)", "foo0")]
+	[Arguments("dec(1.2)", "1.1")]
+	[Arguments("dec(foo)", "#-1 ARGUMENT MUST END IN AN INTEGER")]
 	public async Task Dec(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn remainder.1-remainder.4
+	[Test]
+	[Arguments("remainder(13,4)", "1")]
+	[Arguments("remainder(-13,4)", "-1")]
+	[Arguments("remainder(13,-4)", "1")]
+	[Arguments("remainder(-13,-4)", "-1")]
+	public async Task Remainder(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn atan2.1-atan2.4
+	[Test]
+	[Arguments("atan2(0,-1)", "3.141592653589793")]
+	[Arguments("atan2(0,1)", "0")]
+	[Arguments("atan2(-0.0001,0)", "-1.5707963267948966")]
+	[Arguments("atan2(0.0001,0)", "1.5707963267948966")]
+	public async Task Atan2(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn acos with nested calls
+	[Test]
+	[Arguments("acos(cos(90,d),d)", "90")]
+	[Arguments("acos(cos(1,r))", "1")]
+	[Arguments("acos(cos(1,r),r)", "1")]
+	public async Task AcosNested(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn asin with nested calls
+	[Test]
+	[Arguments("asin(sin(90,d),d)", "90")]
+	[Arguments("asin(sin(1,r))", "1")]
+	[Arguments("asin(sin(1,r),r)", "1")]
+	public async Task AsinNested(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn atan with nested calls
+	[Test]
+	[Arguments("atan(tan(45,d),d)", "45")]
+	[Arguments("atan(tan(1,r))", "1")]
+	[Arguments("atan(tan(1,r),r)", "1")]
+	public async Task AtanNested(string str, string expected)
+	{
+		Console.WriteLine("Testing: {0}", str);
+
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	// Penn ln.1 — ln(10) = natural log of 10
+	[Test]
+	[Arguments("ln(10)", "2.302585092994046")]
+	public async Task LnPenn(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
 

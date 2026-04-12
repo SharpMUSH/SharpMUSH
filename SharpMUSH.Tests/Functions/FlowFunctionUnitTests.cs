@@ -34,4 +34,26 @@ public class FlowFunctionUnitTests
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
+	// Penn null.1-null.3
+	[Test]
+	[Arguments("null()", "")]
+	[Arguments("null(a)", "")]
+	[Arguments("null(a,b,c)", "")]
+	public async Task Null(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// Penn letq.1: letq saves and restores registers around body
+	[Test]
+	[Arguments("setr(A, 1):[letq(A, 2, %qA)]:%qA", "1:2:1")]
+	// Penn letq.2: letq with single arg (body only) does not save/restore
+	[Arguments("setr(A, 1):[letq(setr(A, 2))]:%qA", "1:2:2")]
+	public async Task LetQ(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 }

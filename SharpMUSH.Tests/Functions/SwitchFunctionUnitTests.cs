@@ -27,7 +27,7 @@ public class SwitchFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("reswitchall(abc,a*,1,b*,2)", "1 2")]
+	[Arguments("reswitchall(abc,a*,1,b*,2)", "12")]
 	public async Task Reswitchall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -43,7 +43,7 @@ public class SwitchFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("reswitchalli(ABC,a*,1,b*,2)", "1 2")]
+	[Arguments("reswitchalli(ABC,a*,1,b*,2)", "12")]
 	public async Task Reswitchalli(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

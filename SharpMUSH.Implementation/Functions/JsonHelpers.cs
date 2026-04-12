@@ -1,17 +1,32 @@
-﻿using MoreLinq;
+﻿using Json.Path;
+using MoreLinq;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Collections.Immutable;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace SharpMUSH.Implementation.Functions;
 
 public static class JsonHelpers
 {
+	private static readonly JsonSerializerOptions RelaxedJsonOptions = new()
+	{
+		Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+	};
+
 	public static ValueTask<CallState> NullJSON(ImmutableSortedDictionary<string, CallState> args)
-		=> args.Count > 2
-			? ValueTask.FromResult(new CallState(string.Format(Errors.ErrorTooManyArguments, "json", 2, args.Count)))
-			: ValueTask.FromResult(new CallState("null"));
+	{
+		if (args.Count == 1)
+		{
+			return ValueTask.FromResult(new CallState("null"));
+		}
+		if (args.Count == 2 && MModule.plainText(args["1"].Message).Equals("null", StringComparison.OrdinalIgnoreCase))
+		{
+			return ValueTask.FromResult(new CallState("null"));
+		}
+		return ValueTask.FromResult(new CallState("#-1"));
+	}
 
 	public static ValueTask<CallState> BooleanJSON(ImmutableSortedDictionary<string, CallState> args)
 	{
@@ -24,7 +39,7 @@ public static class JsonHelpers
 
 		return entry switch
 		{
-			not "1" and not "0" and not "false" and not "true" => ValueTask.FromResult(new CallState("#-1 INVALD VALUE")),
+			not "1" and not "0" and not "false" and not "true" => ValueTask.FromResult(new CallState("#-1 INVALID VALUE")),
 			_ => ValueTask.FromResult(new CallState(entry is "1" or "true" ? "true" : "false"))
 		};
 	}
@@ -38,7 +53,7 @@ public static class JsonHelpers
 
 		var entry = args["1"].Message;
 
-		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(entry!.ToString())));
+		return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(entry!.ToString(), RelaxedJsonOptions)));
 	}
 
 	public static ValueTask<CallState> NumberJSON(ImmutableSortedDictionary<string, CallState> args)
@@ -134,8 +149,16 @@ public static class JsonHelpers
 		_ => 0
 	};
 
-	public static bool JsonExists(JsonElement element, string[] path)
+	/// <summary>
+	/// Returns null if the root element is a scalar (not object/array) and a non-empty path is given.
+	/// Returns true/false for path traversal success.
+	/// </summary>
+	public static bool? JsonExists(JsonElement element, string[] path)
 	{
+		// Scalars with a path → error
+		if (path.Length > 0 && element.ValueKind != JsonValueKind.Object && element.ValueKind != JsonValueKind.Array)
+			return null;
+
 		foreach (var segment in path)
 		{
 			if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(segment, out var property))
@@ -154,8 +177,16 @@ public static class JsonHelpers
 		return true;
 	}
 
-	public static string JsonGet(JsonElement element, string[] path)
+	/// <summary>
+	/// Returns null to signal #-1 (scalar root with path, or invalid JSON),
+	/// empty string for missing key/index, or raw JSON text of found element.
+	/// </summary>
+	public static string? JsonGet(JsonElement element, string[] path)
 	{
+		// Scalars with a path → error
+		if (path.Length > 0 && element.ValueKind != JsonValueKind.Object && element.ValueKind != JsonValueKind.Array)
+			return null;
+
 		foreach (var segment in path)
 		{
 			if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty(segment, out var property))
@@ -168,38 +199,49 @@ public static class JsonHelpers
 			}
 			else
 			{
-				return "#-1";
+				// Missing key or out-of-bounds index → empty string (not error)
+				return string.Empty;
 			}
 		}
 		return element.GetRawText();
 	}
 
-	public static string JsonExtract(JsonElement element, string path)
+	/// <summary>
+	/// Evaluates a JSONPath expression (e.g. $.a, $.c[1]) against a JSON element.
+	/// Returns the raw text of the result, empty string if path not found, or null on error.
+	/// Special case: path "$" returns the entire element (as unquoted string for string values).
+	/// </summary>
+	public static string? JsonExtract(JsonElement element, string path)
 	{
-		var currentElement = element;
-		var segments = path.Split('.');
-		foreach (var segment in segments)
+		// "$" alone means the root value itself; for strings, return unquoted value
+		if (path == "$")
 		{
-			if (currentElement.ValueKind == JsonValueKind.Object && currentElement.TryGetProperty(segment, out var property))
-			{
-				currentElement = property;
-			}
-			else if (currentElement.ValueKind == JsonValueKind.Array && int.TryParse(segment, out var index) && index >= 0 && index < currentElement.GetArrayLength())
-			{
-				currentElement = currentElement[index];
-			}
-			else
-			{
-				return "0";
-			}
+			return element.ValueKind == JsonValueKind.String
+				? element.GetString() ?? string.Empty
+				: element.GetRawText();
 		}
 
-		return currentElement.ValueKind switch
+		// Use Json.Path for proper JSONPath evaluation
+		try
 		{
-			JsonValueKind.String => currentElement.GetString() ?? string.Empty,
-			JsonValueKind.True => "1",
-			JsonValueKind.False => "0",
-			_ => currentElement.GetRawText()
-		};
+			var jsonPath = Json.Path.JsonPath.Parse(path);
+			// Need to parse as JsonNode for Json.Path
+			var jsonText = element.GetRawText();
+			var jsonNode = System.Text.Json.Nodes.JsonNode.Parse(jsonText);
+			var result = jsonPath.Evaluate(jsonNode);
+			if (result.Matches == null || result.Matches.Count == 0)
+				return string.Empty;
+			var val = result.Matches[0].Value;
+			if (val is null)
+				return string.Empty;
+			// For strings: return unquoted value; for others: return raw JSON
+			if (val is System.Text.Json.Nodes.JsonValue jv && jv.TryGetValue<string>(out var strVal))
+				return strVal;
+			return val.ToJsonString();
+		}
+		catch
+		{
+			return null;
+		}
 	}
 }

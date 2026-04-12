@@ -198,83 +198,142 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var json = args["0"].Message!.ToString();
 		var action = args["1"].Message!.ToPlainText().ToLower();
-		var path = args["2"].Message!.ToPlainText();
+		var arg2 = args["2"].Message!.ToPlainText();
 		var json2 = args.Count > 3 ? args["3"].Message?.ToString() : null;
 
 		try
 		{
 			var jsonDoc = JsonNode.Parse(json);
-			var jsonPath = JsonPath.Parse(path);
 
-			// Evaluate the JSON Path against the document to find matching locations.
-			// This is the proper way to use JsonPath.Net library instead of directly
-			// converting a path string to a pointer, which can be ambiguous.
-			// The evaluation validates the path and returns actual matches with their locations.
-			var pathResult = jsonPath.Evaluate(jsonDoc);
-			if (pathResult.Matches == null || pathResult.Matches.Count == 0)
+			// patch: arg2 is the merge-patch document applied to the root (no JSONPath needed)
+			if (action == "patch")
 			{
-				return new CallState("#-1 PATH NOT FOUND");
+				if (string.IsNullOrWhiteSpace(arg2))
+				{
+					return new CallState("#-1 MISSING JSON2");
+				}
+				var patchDoc = JsonNode.Parse(arg2);
+				var merged = ApplyMergePatch(jsonDoc, patchDoc!);
+				return new CallState(merged?.ToJsonString() ?? "null");
 			}
 
-			// For modification operations, we need a singular path (single result)
-			if (pathResult.Matches.Count > 1)
+			// sort: arg2 is a JSONPath selector applied to each array element to get the sort key
+			if (action == "sort")
+			{
+				if (jsonDoc is not JsonArray arr)
+				{
+					return new CallState("#-1 NOT AN ARRAY");
+				}
+
+				var selectorPath = JsonPath.Parse(arg2);
+				var sorted = arr
+					.Select(item => item?.DeepClone())
+					.OrderBy(item =>
+					{
+						var evalResult = selectorPath.Evaluate(item);
+						if (evalResult.Matches == null || evalResult.Matches.Count == 0)
+							return (string?)null;
+						var val = evalResult.Matches[0].Value;
+						return val?.ToString();
+					}, StringComparer.Ordinal)
+					.ToList();
+
+				var sortedArray = new JsonArray(sorted.ToArray());
+				return new CallState(sortedArray.ToJsonString());
+			}
+
+			var jsonPath = JsonPath.Parse(arg2);
+
+			// Evaluate path to see if it exists
+			var pathResult = jsonPath.Evaluate(jsonDoc);
+			var pathExists = pathResult.Matches != null && pathResult.Matches.Count > 0;
+
+			// For modification operations with found matches, we need exactly one
+			if (pathExists && pathResult.Matches!.Count > 1)
 			{
 				return new CallState("#-1 PATH MUST BE SINGULAR");
 			}
 
-			var match = pathResult.Matches[0];
-
-			// Extract the JsonPointer from the evaluated match's location.
-			// The Location property is a JsonPath representing the canonical location in bracket notation,
-			// which we convert to a JsonPointer string for use with JsonPatch operations.
-			// Location is guaranteed to be non-null for valid matches from JsonPath.Evaluate().
-			var jsonPointer = JsonPointer.Parse(match.Location!.AsJsonPointer());
 			var jsonDoc2 = json2 is null ? null : JsonNode.Parse(json2);
 
-			if (action is "insert" or "replace" or "set" or "patch" && string.IsNullOrWhiteSpace(json2))
+			if (action is "insert" or "replace" or "set" && string.IsNullOrWhiteSpace(json2))
 			{
 				return new CallState("#-1 MISSING JSON2");
 			}
 
-			if (action == "patch")
+			if (action == "insert")
 			{
-				// Get the target node value from the match.
-				// Note: Value can be a JSON null, which is a valid JsonNode, not a C# null.
-				var target = match.Value;
-				if (target == null)
+				// insert: only add if path does NOT exist
+				if (pathExists)
 				{
-					return new CallState("#-1 PATH NOT FOUND");
+					// Key already exists — return unchanged
+					return new CallState(jsonDoc?.ToJsonString() ?? "null");
 				}
-
-				var mergedNode = ApplyMergePatch(target, jsonDoc2!);
-				var patchOp = new JsonPatch(PatchOperation.Replace(jsonPointer, mergedNode));
-				var patched = patchOp.Apply(jsonDoc);
-
-				return patched.IsSuccess
-					? new CallState(patched.Result!.ToString())
-					: new CallState($"#-1 PATCH FAILED: {patched.Error}");
+				// Path doesn't exist yet — use JSON Pointer derived from JSONPath to add
+				var insertPointer = JsonPathToPointer(arg2);
+				if (insertPointer is null)
+					return new CallState("#-1 PATH NOT FOUND");
+				var insertPatch = new JsonPatch(PatchOperation.Add(insertPointer.Value, jsonDoc2));
+				var insertResult = insertPatch.Apply(jsonDoc);
+				return insertResult.IsSuccess
+					? new CallState(insertResult.Result!.ToJsonString())
+					: new CallState(jsonDoc?.ToJsonString() ?? "null");
 			}
 
-			OneOf<JsonPatch, Error<string>> operation = action switch
+			if (action == "set")
 			{
-				"insert" => new JsonPatch(PatchOperation.Add(jsonPointer, jsonDoc2)),
-				"replace" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc2!)),
-				"set" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc2!)),
-				"remove" => new JsonPatch(PatchOperation.Remove(jsonPointer)),
-				"sort" => new JsonPatch(PatchOperation.Replace(jsonPointer, jsonDoc /* A sorted version! */)),
-				_ => new Error<string>("Invalid Operation"),
-			};
-
-			if (operation.IsT1)
-			{
-				return new CallState("#-1 INVALID OPERATION");
+				// set: add or replace — use JSON Pointer from path (even if new)
+				// If path exists, replace it; if not, add it
+				JsonPointer setPointer;
+				if (pathExists)
+				{
+					setPointer = JsonPointer.Parse(pathResult.Matches![0].Location!.AsJsonPointer());
+				}
+				else
+				{
+				var derived = JsonPathToPointer(arg2);
+				if (derived is null)
+					return new CallState("#-1 PATH NOT FOUND");
+				setPointer = derived.Value;
+				}
+				var setPatch = new JsonPatch(PatchOperation.Add(setPointer, jsonDoc2));
+				var setResult = setPatch.Apply(jsonDoc);
+				return setResult.IsSuccess
+					? new CallState(setResult.Result!.ToJsonString())
+					: new CallState($"#-1 SET FAILED: {setResult.Error}");
 			}
 
-			var patchResult = operation.AsT0.Apply(jsonDoc);
+			if (action == "replace")
+			{
+				if (!pathExists)
+				{
+					// replace of nonexistent key → no-op, return original
+					return new CallState(jsonDoc?.ToJsonString() ?? "null");
+				}
+				var replacePointer = JsonPointer.Parse(pathResult.Matches![0].Location!.AsJsonPointer());
+				var replacePatch = new JsonPatch(PatchOperation.Replace(replacePointer, jsonDoc2!));
+				var replaceResult = replacePatch.Apply(jsonDoc);
+				return replaceResult.IsSuccess
+					? new CallState(replaceResult.Result!.ToJsonString())
+					: new CallState($"#-1 REPLACE FAILED: {replaceResult.Error}");
+			}
 
-			return patchResult.IsSuccess
-				? new CallState(patchResult.Result!.ToString())
-				: new CallState($"#-1 PATCH FAILED: {patchResult.Error}");
+			if (action == "remove")
+			{
+				if (!pathExists)
+				{
+					// remove of nonexistent key → no-op, return original
+					return new CallState(jsonDoc?.ToJsonString() ?? "null");
+				}
+				var removePointer = JsonPointer.Parse(pathResult.Matches![0].Location!.AsJsonPointer());
+				var removePatch = new JsonPatch(PatchOperation.Remove(removePointer));
+				var removeResult = removePatch.Apply(jsonDoc);
+				return removeResult.IsSuccess
+					? new CallState(removeResult.Result!.ToJsonString())
+					: new CallState($"#-1 REMOVE FAILED: {removeResult.Error}");
+			}
+
+			return new CallState("#-1 INVALID OPERATION");
 		}
 		catch (JsonException)
 		{
@@ -320,6 +379,57 @@ public partial class Functions
 		return targetObj;
 	}
 
+	/// <summary>
+	/// Converts a simple JSONPath like $.key, $.key.subkey, $.key[0] to a JSON Pointer like /key, /key/subkey, /key/0.
+	/// Returns null if the path is too complex to convert directly.
+	/// </summary>
+	private static JsonPointer? JsonPathToPointer(string jsonPath)
+	{
+		if (string.IsNullOrEmpty(jsonPath) || jsonPath == "$")
+			return JsonPointer.Parse("/");
+
+		// Must start with "$"
+		if (!jsonPath.StartsWith("$"))
+			return null;
+
+		// Remove leading "$"
+		var rest = jsonPath[1..];
+		var segments = new List<string>();
+
+		var i = 0;
+		while (i < rest.Length)
+		{
+			if (rest[i] == '.')
+			{
+				i++;
+				// Read property name until next '.' or '['
+				var end = rest.IndexOfAny(['.', '['], i);
+				var name = end < 0 ? rest[i..] : rest[i..end];
+				if (string.IsNullOrEmpty(name)) return null;
+				// Escape JSON Pointer special chars
+				segments.Add(name.Replace("~", "~0").Replace("/", "~1"));
+				i = end < 0 ? rest.Length : end;
+			}
+			else if (rest[i] == '[')
+			{
+				i++;
+				var close = rest.IndexOf(']', i);
+				if (close < 0) return null;
+				var index = rest[i..close];
+				segments.Add(index);
+				i = close + 1;
+			}
+			else
+			{
+				return null;
+			}
+		}
+
+		return segments.Count == 0
+			? JsonPointer.Parse("/")
+			: JsonPointer.Parse("/" + string.Join("/", segments));
+	}
+
 	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "path"])]
 	public static async ValueTask<CallState> json_query(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -338,18 +448,50 @@ public partial class Functions
 			using var jsonDoc = JsonDocument.Parse(json);
 			var rootElement = jsonDoc.RootElement;
 
-			return action switch
+			var errorBadArg = string.Format(Errors.ErrorBadArgumentFormat, "json_query");
+
+			if (action == "type")
+				return new CallState(JsonHelpers.GetJsonType(rootElement));
+
+			if (action == "size")
+				return new CallState(JsonHelpers.GetJsonSize(rootElement));
+
+			if (action == "exists")
 			{
-				"type" => new CallState(JsonHelpers.GetJsonType(rootElement)),
-				"size" => new CallState(JsonHelpers.GetJsonSize(rootElement)),
-				"exists" => new CallState(JsonHelpers.JsonExists(rootElement, args.Skip(2).Select(a => a.Value.Message!.ToPlainText()).ToArray()) ? "1" : "0"),
-				"get" => new CallState(JsonHelpers.JsonGet(rootElement, args.Skip(2).Select(a => a.Value.Message!.ToString()).ToArray())),
-				"extract" => new CallState(JsonHelpers.JsonExtract(rootElement, args["2"].Message!.ToString())),
-				"unescape" => rootElement.ValueKind == JsonValueKind.String
-						? new CallState(rootElement.GetString() ?? string.Empty)
-						: new CallState("#-1 INVALID TYPE"),
-				_ => new CallState("#-1 INVALID ACTION")
-			};
+				var existsPath = args.Skip(2).Select(a => a.Value.Message!.ToPlainText()).ToArray();
+				var existsResult = JsonHelpers.JsonExists(rootElement, existsPath);
+				return existsResult switch
+				{
+					null => new CallState(errorBadArg),
+					true => new CallState("1"),
+					false => new CallState("0"),
+				};
+			}
+
+			if (action == "get")
+			{
+				var getPath = args.Skip(2).Select(a => a.Value.Message!.ToPlainText()).ToArray();
+				var getResult = JsonHelpers.JsonGet(rootElement, getPath);
+				return getResult is null
+					? new CallState(errorBadArg)
+					: new CallState(getResult);
+			}
+
+			if (action == "extract")
+			{
+				var extractPath = args.Count > 2 ? args["2"].Message!.ToPlainText() : "$";
+				var extractResult = JsonHelpers.JsonExtract(rootElement, extractPath);
+				return extractResult is null
+					? new CallState(errorBadArg)
+					: new CallState(extractResult);
+			}
+
+			if (action == "unescape")
+				return rootElement.ValueKind == JsonValueKind.String
+					? new CallState(rootElement.GetString() ?? string.Empty)
+					: new CallState("#-1 INVALID TYPE");
+
+			return new CallState("#-1 INVALID ACTION");
 		}
 		catch (JsonException)
 		{

@@ -146,6 +146,10 @@ public class RegexFunctionUnitTests
 	[Arguments("reswitch(test,t.*,match)", "match")]
 	[Arguments("reswitch(test,x.*,nomatch,t.*,match)", "match")]
 	[Arguments("reswitch(test,x.*,nomatch,default)", "default")]
+	// Penn reswitch.1-4
+	[Arguments("reswitch(test STRING,t,1,0)", "1")]
+	[Arguments("reswitch(test STRING,t,1,e,2,0)", "1")]
+	[Arguments("reswitch(test STRING,E,1,0)", "0")]
 	public async Task Reswitch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -153,7 +157,11 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
+	// Penn reswitchi.9-11
 	[Arguments("reswitchi(TEST,t.*,match)", "match")]
+	[Arguments("reswitchi(test STRING,t,1,0)", "1")]
+	[Arguments("reswitchi(test STRING,t,1,e,2,0)", "1")]
+	[Arguments("reswitchi(test STRING,E,1,0)", "1")]
 	public async Task Reswitchi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -161,7 +169,11 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("reswitchall(test,t.*,match1,e.*,match2)", "match1 match2")]
+	[Arguments("reswitchall(test,t.*,match1,e.*,match2)", "match1match2")]
+	// Penn reswitchall.5-7
+	[Arguments("reswitchall(test STRING,t,1,0)", "1")]
+	[Arguments("reswitchall(test STRING,t,1,e,2,0)", "12")]
+	[Arguments("reswitchall(test STRING,E,1,0)", "0")]
 	public async Task Reswitchall(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
@@ -169,7 +181,11 @@ public class RegexFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("reswitchalli(TEST,t.*,match1,e.*,match2)", "match1 match2")]
+	[Arguments("reswitchalli(TEST,t.*,match1,e.*,match2)", "match1match2")]
+	// Penn reswitchalli.13-15
+	[Arguments("reswitchalli(test STRING,t,1,0)", "1")]
+	[Arguments("reswitchalli(test STRING,t,1,e,2,0)", "12")]
+	[Arguments("reswitchalli(test STRING,E,1,0)", "1")]
 	public async Task Reswitchalli(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;

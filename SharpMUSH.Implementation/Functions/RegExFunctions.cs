@@ -375,7 +375,8 @@ public partial class Functions
 			// If we got here and have results (for reswitchall/reswitchalli), return them
 			if (results.Any())
 			{
-				return new CallState(MModule.multipleWithDelimiter(MModule.single(" "), results));
+				// PennMUSH concatenates results with no separator (like appending to a buffer)
+				return new CallState(MModule.multipleWithDelimiter(MModule.empty(), results));
 			}
 
 			// No matches - return default if available
