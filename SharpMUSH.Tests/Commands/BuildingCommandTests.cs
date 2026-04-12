@@ -525,13 +525,15 @@ public class BuildingCommandTests
 	[Test]
 	public async ValueTask SetFlag()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=MONITOR"));
+		// Create a unique thing to set the flag on, instead of modifying shared God (#1).
+		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetFlagTest");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=MONITOR"));
 
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var onePlayer = one.AsPlayer;
-		var flags = await onePlayer.Object.Flags.Value.ToArrayAsync();
+		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
+		var thingObj = thing.AsThing;
+		var flags = await thingObj.Object.Flags.Value.ToArrayAsync();
 
-		await Assert.That(flags.Any(x => x.Name == "MONITOR" || x.Name == "DEBUG")).IsTrue();
+		await Assert.That(flags.Any(x => x.Name == "MONITOR")).IsTrue();
 	}
 
 	[Test]

@@ -93,25 +93,26 @@ public class SystemCommandTests
 	}
 
 	// PennMUSH reference: cmd_hide calls hide_player(executor, status, arg_left).
-	// @HIDE acts on the executor. /off ensures a known starting state, /on then hides the executor.
+	// @HIDE acts on the executor. Use an isolated player to avoid modifying shared God (#1).
 	// Expected: "You are now hidden from the WHO list."
 	[Test]
 	public async ValueTask HideCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideCmd");
 		// Ensure executor starts visible so the subsequent /on produces a deterministic message.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// Restore to visible state.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 	}
 
 	// PennMUSH reference: cmd_kick calls do_kick(executor, arg_left).

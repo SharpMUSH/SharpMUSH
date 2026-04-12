@@ -65,7 +65,7 @@ public class UtilityCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("look"));
 
 		// look shows the current room name with dbref and flag symbols
-		// Use StartsWith because flags on Room Zero may vary due to test ordering (e.g. @hide adds 'h')
+		// Use StartsWith because HALT flag ('h') gets set on Room Zero by other tests in the shared session
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>

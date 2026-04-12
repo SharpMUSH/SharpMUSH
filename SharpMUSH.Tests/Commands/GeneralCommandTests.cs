@@ -299,11 +299,13 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask DoFlagSet()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=DEBUG"));
+		// Create a unique thing to set the flag on, instead of modifying shared God (#1).
+		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "FlagSetTest");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=DEBUG"));
 
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var onePlayer = one.AsPlayer;
-		var flags = await onePlayer.Object.Flags.Value.ToArrayAsync();
+		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
+		var thingObj = thing.AsThing;
+		var flags = await thingObj.Object.Flags.Value.ToArrayAsync();
 
 		await Assert.That(flags.Count(x => x.Name == "DEBUG")).IsEqualTo(1);
 	}
@@ -505,8 +507,9 @@ public class GeneralCommandTests
 	public async ValueTask Halt_ClearsQueue()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test @halt command
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt me"));
+		// Create a unique thing to halt, instead of halting shared God (#1).
+		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HaltQueueTest");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@halt {thingDbRef}"));
 
 		// Should notify about halting
 		await NotifyService

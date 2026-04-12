@@ -27,7 +27,9 @@ public class WizardCommandTests
 	public async ValueTask HaltCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@halt #1"));
+		// Create a unique thing to halt, instead of halting shared God (#1).
+		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HaltTarget");
+		await Parser.CommandParse(1, ConnectionService, MModule.single($"@halt {thingDbRef}"));
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
@@ -346,147 +348,147 @@ public class WizardCommandTests
 	[Test]
 	public async ValueTask Hide_NoSwitch_TogglesHidden()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that @hide without switches toggles the DARK flag
-
+		// Use isolated player to avoid modifying shared God (#1).
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideToggle");
 
 		// First call should hide (set DARK)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "now hidden")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "now hidden")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 
 
 		// Second call should unhide (unset DARK)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Hide_YesSwitch_SetsHidden()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that @hide/yes sets the DARK flag
-
+		// Use isolated player to avoid modifying shared God (#1).
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideYes");
 
 		// Ensure we start unhidden (call @hide/off first)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
 
 		// Now test @hide/yes
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/yes"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/yes"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "hidden")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
+				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "hidden")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Hide_OnSwitch_SetsHidden()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that @hide/on sets the DARK flag
-
+		// Use isolated player to avoid modifying shared God (#1).
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideOn");
 
 		// Ensure we start unhidden
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
 
 		// Now test @hide/on
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("hidden")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
+				=> s.Value.ToString()!.Contains("hidden")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Hide_NoSwitch_UnsetsHidden()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that @hide/no unsets the DARK flag
-
+		// Use isolated player to avoid modifying shared God (#1).
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideNo");
 
 		// Ensure we start hidden
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
 
 		// Now test @hide/no
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/no"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/no"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
+				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask Hide_OffSwitch_UnsetsHidden()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that @hide/off unsets the DARK flag
-
+		// Use isolated player to avoid modifying shared God (#1).
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideOff");
 
 		// Ensure we start hidden
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
 
 		// Now test @hide/off
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
+				=> TestHelpers.MessageContains(s, "no longer hidden") || TestHelpers.MessageContains(s, "visible")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test, NotInParallel]
 	public async ValueTask Hide_AlreadyHidden_ShowsAppropriateMessage()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that @hide/on when already hidden shows appropriate message
-
+		// Use isolated player to avoid modifying shared God (#1).
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideAlready");
 
 		// Set hidden
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
 
 		// Try to set hidden again
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("already hidden")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
+				=> s.Value.ToString()!.Contains("already hidden")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test, NotInParallel]
 	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// Test that @hide/off when already visible shows appropriate message
-
+		// Use isolated player to avoid modifying shared God (#1).
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideVisible");
 
 		// Ensure unhidden
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
 
 		// Try to set visible again
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(s
-				=> s.Value.ToString()!.Contains("already visible")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(s
+				=> s.Value.ToString()!.Contains("already visible")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
