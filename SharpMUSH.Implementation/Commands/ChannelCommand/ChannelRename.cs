@@ -22,7 +22,7 @@ public static class ChannelRename
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -43,7 +43,7 @@ public static class ChannelRename
 		var isValid = ChannelHelper.IsValidChannelName(Configuration, newChannelName);
 		if (!isValid)
 		{
-			await NotifyService.Notify(executor, "CHAT: Invalid channel name.");
+			await NotifyService.Notify(executor, "CHAT: Invalid channel name.", executor);
 			return new CallState("#-1 CHAT: Invalid channel name.");
 		}
 
@@ -60,7 +60,7 @@ public static class ChannelRename
 			null
 		));
 
-		await NotifyService.Notify(executor, "CHAT: Renamed channel.");
+		await NotifyService.Notify(executor, "CHAT: Renamed channel.", executor);
 		return new CallState("Renamed channel.");
 	}
 }

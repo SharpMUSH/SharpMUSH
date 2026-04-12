@@ -18,7 +18,7 @@ public partial class Commands
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, "Help system not initialized.");
+			await NotifyService!.Notify(executor, "Help system not initialized.", executor);
 			return new CallState("#-1 HELP SYSTEM NOT INITIALIZED");
 		}
 
@@ -29,11 +29,11 @@ public partial class Commands
 			if (mainHelp != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(mainHelp, mushParser: parser);
-				await NotifyService!.Notify(executor, rendered);
+				await NotifyService!.Notify(executor, rendered, executor);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "No help available. Type 'help <topic>' for help on a specific topic.");
+				await NotifyService!.Notify(executor, "No help available. Type 'help <topic>' for help on a specific topic.", executor);
 			}
 			return CallState.Empty;
 		}
@@ -48,11 +48,11 @@ public partial class Commands
 				.ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No matches.");
+				await NotifyService!.Notify(executor, $"No matches.", executor);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Matches: {string.Join(", ", matches)}");
+				await NotifyService!.Notify(executor, $"Matches: {string.Join(", ", matches)}", executor);
 			}
 			return CallState.Empty;
 		}
@@ -65,7 +65,7 @@ public partial class Commands
 				.ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No entries matching '{topic}' were found.");
+				await NotifyService!.Notify(executor, $"No entries matching '{topic}' were found.", executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -73,13 +73,13 @@ public partial class Commands
 				if (wildcardContent != null)
 				{
 					var rendered = RecursiveMarkdownHelper.RenderMarkdown(wildcardContent, mushParser: parser);
-					await NotifyService!.Notify(executor, rendered);
+					await NotifyService!.Notify(executor, rendered, executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Here are the entries which match '{topic}':");
-				await NotifyService!.Notify(executor, string.Join(", ", matches));
+				await NotifyService!.Notify(executor, $"Here are the entries which match '{topic}':", executor);
+				await NotifyService!.Notify(executor, string.Join(", ", matches), executor);
 			}
 			return CallState.Empty;
 		}
@@ -98,7 +98,7 @@ public partial class Commands
 			if (prefixContent != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(prefixContent, mushParser: parser);
-				await NotifyService!.Notify(executor, rendered);
+				await NotifyService!.Notify(executor, rendered, executor);
 			}
 			return CallState.Empty;
 		}
@@ -111,7 +111,7 @@ public partial class Commands
 
 		if (fuzzyMatches.Count == 0)
 		{
-			await NotifyService!.Notify(executor, $"No entry for '{topic}'.");
+			await NotifyService!.Notify(executor, $"No entry for '{topic}'.", executor);
 		}
 		else if (fuzzyMatches.Count == 1)
 		{
@@ -119,13 +119,13 @@ public partial class Commands
 			if (fuzzyContent != null)
 			{
 				var rendered = RecursiveMarkdownHelper.RenderMarkdown(fuzzyContent, mushParser: parser);
-				await NotifyService!.Notify(executor, rendered);
+				await NotifyService!.Notify(executor, rendered, executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"Here are the entries which match '{topic}':");
-			await NotifyService!.Notify(executor, string.Join(", ", fuzzyMatches));
+			await NotifyService!.Notify(executor, $"Here are the entries which match '{topic}':", executor);
+			await NotifyService!.Notify(executor, string.Join(", ", fuzzyMatches), executor);
 		}
 
 		return CallState.Empty;

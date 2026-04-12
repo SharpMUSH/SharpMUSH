@@ -33,9 +33,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Boo! a - b")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Boo! a - b")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	// ── Wildcard pattern tests ──────────────────────────────────────────────
@@ -55,9 +53,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Hello, World!")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Hello, World!")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -75,9 +71,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Message from Alice to Bob")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Message from Alice to Bob")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -95,9 +89,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Pong!")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Pong!")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -115,9 +107,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "A=foo B=bar C=baz")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "A=foo B=bar C=baz")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	// ── Regex pattern tests ──────────────────────────────────────────────────
@@ -139,9 +129,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "You said: hello world")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "You said: hello world")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -162,9 +150,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Full: utest_rfull prefix_42, Part: 42")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Full: utest_rfull prefix_42, Part: 42")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -185,9 +171,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Alice messaged Bob")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Alice messaged Bob")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	/// <summary>
@@ -208,9 +192,7 @@ public class UserDefinedCommandsTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Rolling 3d6")),
-				Arg.Any<AnySharpObject?>(),
-				INotifyService.NotificationType.Emit);
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessageContains(s, "Rolling 3d6")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
 	[Test]
@@ -231,11 +213,11 @@ public class UserDefinedCommandsTests
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText() == "Value 1 received") ||
-				(msg.IsT1 && msg.AsT1 == "Value 1 received")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1 == "Value 1 received")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService
 			.Received(Quantity.Exactly(1))
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText() == "Value 2 received") ||
-				(msg.IsT1 && msg.AsT1 == "Value 2 received")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1 == "Value 2 received")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

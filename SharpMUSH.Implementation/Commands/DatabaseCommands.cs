@@ -25,14 +25,14 @@ public partial class Commands
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
 		{
-			await NotifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED");
+			await NotifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED", executor);
 			return new CallState("#-1 SQL IS NOT ENABLED");
 		}
 
 		// Get the query from arguments
 		if (parser.CurrentState.Arguments.Count == 0 || !parser.CurrentState.Arguments.TryGetValue("0", out var queryArg))
 		{
-			await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
+			await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED", executor);
 			return new CallState("#-1 NO QUERY SPECIFIED");
 		}
 
@@ -40,7 +40,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(rawInput))
 		{
-			await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
+			await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED", executor);
 			return new CallState("#-1 NO QUERY SPECIFIED");
 		}
 
@@ -82,7 +82,7 @@ public partial class Commands
 
 				if (parts.Count == 0)
 				{
-					await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED");
+					await NotifyService!.Notify(executor, "#-1 NO QUERY SPECIFIED", executor);
 					return new CallState("#-1 NO QUERY SPECIFIED");
 				}
 
@@ -96,19 +96,19 @@ public partial class Commands
 				result = await SqlService.ExecuteQueryAsStringAsync(rawInput);
 			}
 
-			await NotifyService!.Notify(executor, result);
+			await NotifyService!.Notify(executor, result, executor);
 			return new CallState(MModule.single(result));
 		}
 		catch (DbException ex)
 		{
 			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-			await NotifyService!.Notify(executor, errorMsg);
+			await NotifyService!.Notify(executor, errorMsg, executor);
 			return new CallState(errorMsg);
 		}
 		catch (InvalidOperationException ex)
 		{
 			var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-			await NotifyService!.Notify(executor, errorMsg);
+			await NotifyService!.Notify(executor, errorMsg, executor);
 			return new CallState(errorMsg);
 		}
 	}
@@ -129,7 +129,7 @@ public partial class Commands
 		// Check if SQL is available
 		if (SqlService == null || !SqlService.IsAvailable)
 		{
-			await NotifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED");
+			await NotifyService!.Notify(executor, "#-1 SQL IS NOT ENABLED", executor);
 			return new CallState("#-1 SQL IS NOT ENABLED");
 		}
 
@@ -138,7 +138,7 @@ public partial class Commands
 				!parser.CurrentState.Arguments.TryGetValue("0", out var objAttrArg) ||
 				!parser.CurrentState.Arguments.TryGetValue("1", out var queryArg))
 		{
-			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
+			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -147,14 +147,14 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(rawQueryInput))
 		{
-			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS");
+			await NotifyService!.Notify(executor, "#-1 INVALID ARGUMENTS", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE");
+			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE", executor);
 			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
 		}
 
@@ -295,19 +295,19 @@ public partial class Commands
 					var message = rowNumber == 1
 						? "No rows returned."
 						: $"{rowNumber - 1} row{(rowNumber > 2 ? "s" : "")} queued for execution.";
-					await NotifyService!.Notify(executor, message);
+					await NotifyService!.Notify(executor, message, executor);
 					return new CallState(MModule.single(message));
 				}
 				catch (DbException ex)
 				{
 					var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-					await NotifyService!.Notify(executor, errorMsg);
+					await NotifyService!.Notify(executor, errorMsg, executor);
 					return new CallState(errorMsg);
 				}
 				catch (InvalidOperationException ex)
 				{
 					var errorMsg = $"#-1 SQL ERROR: {ex.Message}";
-					await NotifyService!.Notify(executor, errorMsg);
+					await NotifyService!.Notify(executor, errorMsg, executor);
 					return new CallState(errorMsg);
 				}
 			});

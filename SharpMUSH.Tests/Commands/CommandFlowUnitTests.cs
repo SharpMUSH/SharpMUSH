@@ -36,7 +36,7 @@ public class CommandFlowUnitTests
 		await NotifyService.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				(msg.IsT1 && msg.AsT1 == expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -47,10 +47,10 @@ public class CommandFlowUnitTests
 
 		await NotifyService.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessageEquals(msg, "-1")), Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Announce);
+				TestHelpers.MessageEquals(msg, "-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

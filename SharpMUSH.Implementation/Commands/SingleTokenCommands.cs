@@ -71,8 +71,7 @@ public partial class Commands
 					await NotifyService!.Notify(executor,
 						clearResult.Match(
 							_ => $"Attribute {attrName} SET.",
-							failure => failure.Value)
-					);
+							failure => failure.Value), executor);
 					return new CallState(clearResult.Match(
 						_ => $"{realLocated.Object().Name}/{attrNameParsed}",
 						_ => string.Empty));
@@ -97,8 +96,7 @@ public partial class Commands
 				await NotifyService!.Notify(executor,
 					setResult.Match(
 						_ => $"{realLocated.Object().Name}/{attrNameParsed} - Set.",
-						failure => failure.Value)
-				);
+						failure => failure.Value), executor);
 
 				return new CallState(setResult.Match(
 					_ => $"{realLocated.Object().Name}/{attrNameParsed}",

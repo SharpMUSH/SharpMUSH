@@ -20,7 +20,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var objAttrArg))
 		{
-			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.");
+			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -30,7 +30,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.");
+			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.", executor);
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
@@ -53,7 +53,7 @@ public partial class Commands
 
 		if (!attribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, "No such attribute.");
+			await NotifyService!.Notify(executor, "No such attribute.", executor);
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -61,7 +61,7 @@ public partial class Commands
 		{
 			// Query mode - show lock status
 			var isLocked = attribute.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
-			await NotifyService!.Notify(executor, $"That attribute is {(isLocked ? "locked" : "unlocked")}.");
+			await NotifyService!.Notify(executor, $"That attribute is {(isLocked ? "locked" : "unlocked")}.", executor);
 			return new CallState(string.Empty);
 		}
 
@@ -79,7 +79,7 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Invalid argument.");
+			await NotifyService!.Notify(executor, "Invalid argument.", executor);
 			return new CallState("#-1 INVALID VALUE");
 		}
 
@@ -87,7 +87,7 @@ public partial class Commands
 		var canSet = await PermissionService!.CanSet(executor, targetObject);
 		if (!canSet)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
@@ -104,13 +104,13 @@ public partial class Commands
 				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 			}
 
-			await NotifyService!.Notify(executor, "Attribute locked.");
+			await NotifyService!.Notify(executor, "Attribute locked.", executor);
 		}
 		else
 		{
 			// Unlock the attribute
 			await AttributeService!.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-			await NotifyService!.Notify(executor, "Attribute unlocked.");
+			await NotifyService!.Notify(executor, "Attribute unlocked.", executor);
 		}
 
 		return new CallState(string.Empty);
@@ -127,7 +127,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @cpattr.");
+			await NotifyService!.Notify(executor, "Invalid arguments to @cpattr.", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -137,7 +137,7 @@ public partial class Commands
 
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
-			await NotifyService!.Notify(executor, "Invalid source format. Use: object/attribute");
+			await NotifyService!.Notify(executor, "Invalid source format. Use: object/attribute", executor);
 			return new CallState("#-1 INVALID SOURCE");
 		}
 
@@ -160,7 +160,7 @@ public partial class Commands
 
 		if (!sourceAttribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {sourceAttr} not found on source object.");
+			await NotifyService!.Notify(executor, $"Attribute {sourceAttr} not found on source object.", executor);
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -183,7 +183,7 @@ public partial class Commands
 
 			if (!destSplit.TryPickT0(out var destDetails, out _))
 			{
-				await NotifyService!.Notify(executor, $"Invalid destination format: {dest}");
+				await NotifyService!.Notify(executor, $"Invalid destination format: {dest}", executor);
 				continue;
 			}
 
@@ -197,7 +197,7 @@ public partial class Commands
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.Notify(executor, $"Could not find destination: {destDbref}");
+				await NotifyService!.Notify(executor, $"Could not find destination: {destDbref}", executor);
 				continue;
 			}
 
@@ -207,7 +207,7 @@ public partial class Commands
 			var canSet = await PermissionService!.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.Notify(executor, $"Permission denied to set attribute on {destDbref}.");
+				await NotifyService!.Notify(executor, $"Permission denied to set attribute on {destDbref}.", executor);
 				continue;
 			}
 
@@ -216,7 +216,7 @@ public partial class Commands
 
 			if (setResult.IsT1)
 			{
-				await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}");
+				await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}", executor);
 				continue;
 			}
 
@@ -235,11 +235,11 @@ public partial class Commands
 		if (copiedCount > 0)
 		{
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
-			await NotifyService!.Notify(executor, $"Attribute copied to {copiedCount} {destWord}.");
+			await NotifyService!.Notify(executor, $"Attribute copied to {copiedCount} {destWord}.", executor);
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Failed to copy attribute to any destinations.");
+			await NotifyService!.Notify(executor, "Failed to copy attribute to any destinations.", executor);
 			return new CallState("#-1 COPY FAILED");
 		}
 
@@ -257,7 +257,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var sourceArg) || !args.TryGetValue("1", out _))
 		{
-			await NotifyService!.Notify(executor, "Invalid arguments to @mvattr.");
+			await NotifyService!.Notify(executor, "Invalid arguments to @mvattr.", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -267,7 +267,7 @@ public partial class Commands
 
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
 		{
-			await NotifyService!.Notify(executor, "Invalid source format. Use: object/attribute");
+			await NotifyService!.Notify(executor, "Invalid source format. Use: object/attribute", executor);
 			return new CallState("#-1 INVALID SOURCE");
 		}
 
@@ -290,7 +290,7 @@ public partial class Commands
 
 		if (!sourceAttribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, $"Attribute {sourceAttr} not found on source object.");
+			await NotifyService!.Notify(executor, $"Attribute {sourceAttr} not found on source object.", executor);
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -313,7 +313,7 @@ public partial class Commands
 
 			if (!destSplit.TryPickT0(out var destDetails, out _))
 			{
-				await NotifyService!.Notify(executor, $"Invalid destination format: {dest}");
+				await NotifyService!.Notify(executor, $"Invalid destination format: {dest}", executor);
 				continue;
 			}
 
@@ -327,7 +327,7 @@ public partial class Commands
 
 			if (destLocate.IsError)
 			{
-				await NotifyService!.Notify(executor, $"Could not find destination: {destDbref}");
+				await NotifyService!.Notify(executor, $"Could not find destination: {destDbref}", executor);
 				continue;
 			}
 
@@ -337,7 +337,7 @@ public partial class Commands
 			var canSet = await PermissionService!.CanSet(executor, destObject);
 			if (!canSet)
 			{
-				await NotifyService!.Notify(executor, $"Permission denied to set attribute on {destDbref}.");
+				await NotifyService!.Notify(executor, $"Permission denied to set attribute on {destDbref}.", executor);
 				continue;
 			}
 
@@ -346,7 +346,7 @@ public partial class Commands
 
 			if (setResult.IsT1)
 			{
-				await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}");
+				await NotifyService!.Notify(executor, $"Failed to copy attribute to {destDbref}: {setResult.AsT1.Value}", executor);
 				continue;
 			}
 
@@ -372,16 +372,16 @@ public partial class Commands
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
 			if (clearResult.IsT1)
 			{
-				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} {destWord} but failed to remove source: {clearResult.AsT1.Value}");
+				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} {destWord} but failed to remove source: {clearResult.AsT1.Value}", executor);
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} {destWord}.");
+				await NotifyService!.Notify(executor, $"Attribute moved to {copiedCount} {destWord}.", executor);
 			}
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, "Failed to move attribute to any destinations.");
+			await NotifyService!.Notify(executor, "Failed to move attribute to any destinations.", executor);
 			return new CallState("#-1 MOVE FAILED");
 		}
 
@@ -397,7 +397,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("0", out var objAttrArg) || !args.TryGetValue("1", out var ownerArg))
 		{
-			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.");
+			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.", executor);
 			return new CallState("#-1 INVALID ARGUMENTS");
 		}
 
@@ -407,7 +407,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
 		{
-			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.");
+			await NotifyService!.Notify(executor, "You need to give an object/attribute pair.", executor);
 			return new CallState("#-1 INVALID FORMAT");
 		}
 
@@ -430,7 +430,7 @@ public partial class Commands
 
 		if (!attribute.IsAttribute)
 		{
-			await NotifyService!.Notify(executor, "No such attribute.");
+			await NotifyService!.Notify(executor, "No such attribute.", executor);
 			return new CallState("#-1 NO MATCH");
 		}
 
@@ -441,7 +441,7 @@ public partial class Commands
 
 		if (ownerLocate.IsError)
 		{
-			await NotifyService!.Notify(executor, "I can't find that player");
+			await NotifyService!.Notify(executor, "I can't find that player", executor);
 			return ownerLocate.AsError;
 		}
 
@@ -467,7 +467,7 @@ public partial class Commands
 
 		if (!canSet)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
@@ -476,7 +476,7 @@ public partial class Commands
 			// Mortals can only chown to themselves
 			if (executor.IsPlayer && newOwnerPlayer.Object.DBRef != executor.AsPlayer.Object.DBRef)
 			{
-				await NotifyService!.Notify(executor, "You can only chown an attribute to yourself.");
+				await NotifyService!.Notify(executor, "You can only chown an attribute to yourself.", executor);
 				return new CallState("#-1 PERMISSION DENIED");
 			}
 			else if (!executor.IsPlayer)
@@ -484,7 +484,7 @@ public partial class Commands
 				var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 				if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
 				{
-					await NotifyService!.Notify(executor, "You can only chown an attribute to yourself.");
+					await NotifyService!.Notify(executor, "You can only chown an attribute to yourself.", executor);
 					return new CallState("#-1 PERMISSION DENIED");
 				}
 			}
@@ -496,11 +496,11 @@ public partial class Commands
 
 		if (setResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, $"Failed to change ownership: {setResult.AsT1.Value}");
+			await NotifyService!.Notify(executor, $"Failed to change ownership: {setResult.AsT1.Value}", executor);
 			return new CallState("#-1 FAILED");
 		}
 
-		await NotifyService!.Notify(executor, "Attribute owner changed.");
+		await NotifyService!.Notify(executor, "Attribute owner changed.", executor);
 		return new CallState(string.Empty);
 	}
 
@@ -513,7 +513,7 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.Notify(executor, "Wipe what?");
+			await NotifyService!.Notify(executor, "Wipe what?", executor);
 			return new CallState("#-1 INVALID ARGUMENT");
 		}
 
@@ -522,7 +522,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.");
+			await NotifyService!.Notify(executor, "I don't see that here.", executor);
 			return new CallState("#-1 INVALID OBJECT");
 		}
 
@@ -546,7 +546,7 @@ public partial class Commands
 		var canModify = await PermissionService!.Controls(executor, targetObject);
 		if (!canModify)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.");
+			await NotifyService!.Notify(executor, "Permission denied.", executor);
 			return new CallState("#-1 PERMISSION DENIED");
 		}
 
@@ -554,7 +554,7 @@ public partial class Commands
 		var isSafe = await targetObject.HasFlag("SAFE");
 		if (isSafe)
 		{
-			await NotifyService!.Notify(executor, "That object is protected (SAFE).");
+			await NotifyService!.Notify(executor, "That object is protected (SAFE).", executor);
 			return new CallState("#-1 SAFE");
 		}
 
@@ -565,7 +565,7 @@ public partial class Commands
 			await AttributeService!.ClearAttributeAsync(executor, targetObject, "**",
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
-			await NotifyService!.Notify(executor, "Attributes wiped.");
+			await NotifyService!.Notify(executor, "Attributes wiped.", executor);
 			return new CallState(string.Empty);
 		}
 		else
@@ -574,7 +574,7 @@ public partial class Commands
 			await AttributeService!.ClearAttributeAsync(executor, targetObject, maybeAttribute,
 			IAttributeService.AttributePatternMode.Wildcard,
 			IAttributeService.AttributeClearMode.Safe);
-			await NotifyService!.Notify(executor, $"Wiped attributes matching {maybeAttribute}.");
+			await NotifyService!.Notify(executor, $"Wiped attributes matching {maybeAttribute}.", executor);
 			return new CallState(string.Empty);
 		}
 	}

@@ -19,7 +19,7 @@ public static class ChannelGag
 
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -27,7 +27,7 @@ public static class ChannelGag
 		if (yesNoString is not null && !(yesNoString.Equals("yes", StringComparison.InvariantCultureIgnoreCase) ||
 																		 yesNoString.Equals("no", StringComparison.InvariantCultureIgnoreCase)))
 		{
-			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.");
+			await NotifyService.Notify(executor, "CHAT: Yes or No are the only valid options.", executor);
 			return new CallState("#-1 INVALID OPTION");
 		}
 
@@ -55,7 +55,7 @@ public static class ChannelGag
 
 			if (maybeMemberStatus is null)
 			{
-				await NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You are not a member of {channel.Name.ToPlainText()}.", executor);
 				return new CallState("#-1 YOU ARE NOT A MEMBER OF THAT CHANNEL");
 			}
 
@@ -63,7 +63,7 @@ public static class ChannelGag
 
 			if ((status.Hide ?? false) == gagOn)
 			{
-				await NotifyService.Notify(executor, $"CHAT: You are already in that gag state on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You are already in that gag state on {channel.Name.ToPlainText()}.", executor);
 				continue;
 			}
 
@@ -78,11 +78,11 @@ public static class ChannelGag
 
 			if (gagOn)
 			{
-				await NotifyService.Notify(executor, $"CHAT: You have been gagged on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You have been gagged on {channel.Name.ToPlainText()}.", executor);
 			}
 			else
 			{
-				await NotifyService.Notify(executor, $"CHAT: You have been ungagged on {channel.Name.ToPlainText()}.");
+				await NotifyService.Notify(executor, $"CHAT: You have been ungagged on {channel.Name.ToPlainText()}.", executor);
 			}
 		}
 

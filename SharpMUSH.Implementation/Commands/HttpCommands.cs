@@ -26,13 +26,13 @@ public partial class Commands
 
 		if (objAttrArg is null)
 		{
-			await NotifyService!.Notify(executor, "What do you want to query?");
+			await NotifyService!.Notify(executor, "What do you want to query?", executor);
 			return new CallState("#-1 What do you want to query?");
 		}
 
 		if (uriArg is null)
 		{
-			await NotifyService!.Notify(executor, "Query where?");
+			await NotifyService!.Notify(executor, "Query where?", executor);
 			return new CallState("#-1 Query where?");
 		}
 
@@ -40,7 +40,7 @@ public partial class Commands
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE");
+			await NotifyService!.Notify(executor, "#-1 INVALID OBJECT/ATTRIBUTE", executor);
 			return new CallState("#-1 INVALID OBJECT/ATTRIBUTE");
 		}
 
@@ -66,13 +66,13 @@ public partial class Commands
 
 				if (method == HttpMethod.Get && dataArg is not null)
 				{
-					await NotifyService!.Notify(executor, "GET requests cannot have a body.");
+					await NotifyService!.Notify(executor, "GET requests cannot have a body.", executor);
 					return new CallState("#-1 GET requests cannot have a body.");
 				}
 
 				if (!Uri.TryCreate(uriArg.Message?.ToPlainText() ?? string.Empty, UriKind.Absolute, out var uri))
 				{
-					await NotifyService!.Notify(executor, "Invalid URI format.");
+					await NotifyService!.Notify(executor, "Invalid URI format.", executor);
 					return new CallState("#-1 INVALID URI FORMAT.");
 				}
 
@@ -142,7 +142,7 @@ public partial class Commands
 			parser.CurrentState.Arguments.TryGetValue("0", out var contentTypeArg);
 			if (contentTypeArg is null || string.IsNullOrWhiteSpace(contentTypeArg.Message?.ToPlainText()))
 			{
-				await NotifyService!.Notify(executor, "Content-Type cannot be empty.");
+				await NotifyService!.Notify(executor, "Content-Type cannot be empty.", executor);
 				return new CallState("#-1 CONTENT-TYPE CANNOT BE EMPTY");
 			}
 
@@ -154,7 +154,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"(HTTP): Content-Type set to {contentType}");
+				await NotifyService!.Notify(executor, $"(HTTP): Content-Type set to {contentType}", executor);
 			}
 		}
 		else if (hasHeaderSwitch)
@@ -166,7 +166,7 @@ public partial class Commands
 
 			if (headerNameArg is null)
 			{
-				await NotifyService!.Notify(executor, "Header required.");
+				await NotifyService!.Notify(executor, "Header required.", executor);
 				return new CallState("#-1 HEADER REQUIRED");
 			}
 
@@ -175,14 +175,14 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(headerName))
 			{
-				await NotifyService!.Notify(executor, "Header name cannot be empty.");
+				await NotifyService!.Notify(executor, "Header name cannot be empty.", executor);
 				return new CallState("#-1 HEADER NAME CANNOT BE EMPTY");
 			}
 
 			// Prevent setting Content-Length as per documentation
 			if (headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
 			{
-				await NotifyService!.Notify(executor, "Cannot set Content-Length header.");
+				await NotifyService!.Notify(executor, "Cannot set Content-Length header.", executor);
 				return new CallState("#-1 CANNOT SET CONTENT-LENGTH HEADER");
 			}
 
@@ -192,7 +192,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"(HTTP): Header {headerName}: {headerValue}");
+				await NotifyService!.Notify(executor, $"(HTTP): Header {headerName}: {headerValue}", executor);
 			}
 		}
 		else
@@ -203,7 +203,7 @@ public partial class Commands
 
 			if (statusArg is null)
 			{
-				await NotifyService!.Notify(executor, "Status code required.");
+				await NotifyService!.Notify(executor, "Status code required.", executor);
 				return new CallState("#-1 STATUS CODE REQUIRED");
 			}
 
@@ -228,7 +228,7 @@ public partial class Commands
 			// Validate status code is 3 digits
 			if (!int.TryParse(statusCodeText, out var statusCode) || statusCode < 100 || statusCode > 999)
 			{
-				await NotifyService!.Notify(executor, "Status code must be a 3-digit number.");
+				await NotifyService!.Notify(executor, "Status code must be a 3-digit number.", executor);
 				return new CallState("#-1 STATUS CODE MUST BE A 3-DIGIT NUMBER");
 			}
 
@@ -240,7 +240,7 @@ public partial class Commands
 			// Validate total length < 40 characters as per documentation
 			if (statusLine.Length >= 40)
 			{
-				await NotifyService!.Notify(executor, "Status line must be less than 40 characters.");
+				await NotifyService!.Notify(executor, "Status line must be less than 40 characters.", executor);
 				return new CallState("#-1 STATUS LINE MUST BE LESS THAN 40 CHARACTERS");
 			}
 
@@ -250,7 +250,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, $"(HTTP): Status {statusLine}");
+				await NotifyService!.Notify(executor, $"(HTTP): Status {statusLine}", executor);
 			}
 		}
 

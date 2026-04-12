@@ -37,7 +37,7 @@ public class CommandUnitTests
 
 		await NotifyService
 			.Received(Quantity.Exactly(1))
-			.Notify(TestHelpers.MatchingObject(executor), expected);
+			.Notify(TestHelpers.MatchingObject(executor), expected, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -65,11 +65,11 @@ public class CommandUnitTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains(expected1)));
+				=> x.Value.ToString()!.Contains(expected1)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> x.Value.ToString()!.Contains(expected2)));
+				=> x.Value.ToString()!.Contains(expected2)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

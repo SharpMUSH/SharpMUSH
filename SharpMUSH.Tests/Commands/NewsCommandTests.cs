@@ -31,7 +31,7 @@ public class NewsCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("news")) ||
-				(msg.IsT1 && msg.AsT1.Contains("news"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("news"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -46,7 +46,7 @@ public class NewsCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("SharpMUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -56,10 +56,12 @@ public class NewsCommandTests
 		// Test news with wildcard pattern - should list matching topics
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news *news*"));
 
-		// Verify that NotifyService was called with matching topics
+		// Verify that NotifyService was called with matching topics or "No news available"
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, "No news available for '*news*'.") ||
+				TestHelpers.MessagePlainTextStartsWith(msg, "News topics matching '*news*':")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -74,7 +76,7 @@ public class NewsCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("No news available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No news available"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("No news available"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }
 
@@ -101,7 +103,7 @@ public class AhelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && (msg.AsT0.ToString().Contains("ahelp") || msg.AsT0.ToString().Contains("admin"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -116,7 +118,7 @@ public class AhelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Security")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Security"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("Security"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -131,7 +133,7 @@ public class AhelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && (msg.AsT0.ToString().Contains("ahelp") || msg.AsT0.ToString().Contains("admin"))) ||
-				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && (msg.AsT1.Contains("ahelp") || msg.AsT1.Contains("admin")))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -146,6 +148,6 @@ public class AhelpCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("No admin help available")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No admin help available"))), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+				(msg.IsT1 && msg.AsT1.Contains("No admin help available"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

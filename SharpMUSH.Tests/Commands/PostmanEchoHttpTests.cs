@@ -109,6 +109,7 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpGet_ReturnsJsonWithEchoedUrl()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGET");
 		await SetCallbackAttribute(attrName, token);
@@ -125,12 +126,13 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/get")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/get")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpPost_WithFormData_EchoesFormFields()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPPOST");
 		await SetCallbackAttribute(attrName, token);
@@ -147,12 +149,13 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/post")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/post")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpPut_WithBody_EchoesData()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPPUT");
 		await SetCallbackAttribute(attrName, token);
@@ -169,12 +172,13 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/put")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/put")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpDelete_ReturnsOkResponse()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPDEL");
 		await SetCallbackAttribute(attrName, token);
@@ -191,12 +195,13 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/delete")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/delete")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpPatch_WithBody_EchoesData()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPPATCH");
 		await SetCallbackAttribute(attrName, token);
@@ -213,12 +218,13 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "postman-echo.com/patch")));
+					TestHelpers.MessageContains(msg, "postman-echo.com/patch")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpGet_GzipEndpoint_DecompressesResponse()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGZIP");
 		await SetCallbackAttribute(attrName, token);
@@ -240,12 +246,13 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "gzipped")));
+					TestHelpers.MessageContains(msg, "gzipped")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpGet_DeflateEndpoint_DecompressesResponse()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPDEFL");
 		await SetCallbackAttribute(attrName, token);
@@ -267,12 +274,13 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "deflated")));
+					TestHelpers.MessageContains(msg, "deflated")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpGet_WithQueryParams_EchoesArgsField()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPQP");
 		await SetCallbackAttribute(attrName, token);
@@ -289,7 +297,7 @@ public class PostmanEchoHttpTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, token)));
+					TestHelpers.MessageContains(msg, token)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -309,6 +317,7 @@ public class PostmanEchoHttpTests
 	[Test]
 	public async ValueTask HttpCommand_GetWithBody_RejectsImmediately()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPGERR");
 		await SetCallbackAttribute(attrName, token);
@@ -322,12 +331,13 @@ public class PostmanEchoHttpTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageContains(msg, "GET requests cannot have a body")));
+					TestHelpers.MessageContains(msg, "GET requests cannot have a body")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpGet_StatusRegister_Contains200()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPSTAT");
 
@@ -348,12 +358,13 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "200")));
+					TestHelpers.MessageContains(msg, "200")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask HttpGet_StatusRegister_Contains404ForNotFoundEndpoint()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var token = GenerateUniqueToken();
 		var attrName = GenerateAttributeName("HTTPST4");
 
@@ -375,7 +386,7 @@ public class PostmanEchoHttpTests
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					TestHelpers.MessageContains(msg, token) &&
-					TestHelpers.MessageContains(msg, "404")));
+					TestHelpers.MessageContains(msg, "404")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }
 

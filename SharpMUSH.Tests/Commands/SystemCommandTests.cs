@@ -26,15 +26,14 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask FlagCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/list"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Flags:")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Flags:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_power with SWITCH_LIST calls do_list_flags("POWER", ..., FLAG_LIST_NAMECHAR, T("Powers"))
@@ -42,15 +41,14 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask PowerCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Powers:")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_hook with SWITCH_LIST calls do_hook_list(executor, arg_left, 1).
@@ -58,15 +56,14 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask HookCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hook/list @emit"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "No hooks set for command '@EMIT'.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "No hooks set for command '@EMIT'.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_function with no args calls do_function(executor, NULL, NULL, 0)
@@ -74,15 +71,14 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask FunctionCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Global user-defined functions:")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "Global user-defined functions:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: @command with no arg returns an error.
@@ -97,26 +93,26 @@ public class SystemCommandTests
 	}
 
 	// PennMUSH reference: cmd_hide calls hide_player(executor, status, arg_left).
-	// @HIDE acts on the executor. /off ensures a known starting state, /on then hides the executor.
+	// @HIDE acts on the executor. Use an isolated player to avoid modifying shared God (#1).
 	// Expected: "You are now hidden from the WHO list."
 	[Test]
 	public async ValueTask HideCommand()
 	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideCmd");
 		// Ensure executor starts visible so the subsequent /on produces a deterministic message.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
 		await NotifyService
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "You are now hidden from the WHO list.")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		// Restore to visible state.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 	}
 
 	// PennMUSH reference: cmd_kick calls do_kick(executor, arg_left).
@@ -124,6 +120,7 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask KickCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var testPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "SystemTestKick");
 
@@ -133,9 +130,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "That player is not connected.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "That player is not connected.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: do_attribute_access outputs:
@@ -144,6 +139,7 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AttributeCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATTRTEST").ToUpperInvariant();
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@attribute/access {uniqueAttr}=wizard"));
@@ -153,9 +149,7 @@ public class SystemCommandTests
 			.Notify(
 				Arg.Any<AnySharpObject>(),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageEquals(msg, $"{uniqueAttr} -- Attribute permissions now: wizard")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+					TestHelpers.MessageEquals(msg, $"{uniqueAttr} -- Attribute permissions now: wizard")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: do_atrlock on success outputs "Attribute locked." (attrib.c).
@@ -163,6 +157,7 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AtrlockCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var testDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrlock");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRLOCKATTR").ToUpperInvariant();
 
@@ -177,9 +172,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute locked.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute locked.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: do_atrchown on success outputs "Attribute owner changed." (attrib.c).
@@ -187,6 +180,7 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask AtrchownCommand()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var sourceDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SystemTestAtrchownSrc");
 		var targetPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "SystemTestAtrchownPly");
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATRCHOWNATTR").ToUpperInvariant();
@@ -202,9 +196,7 @@ public class SystemCommandTests
 			.Received()
 			.Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute owner changed.")),
-				Arg.Any<AnySharpObject?>(),
-				Arg.Any<INotifyService.NotificationType>());
+				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessageEquals(msg, "Attribute owner changed.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: do_firstexit re-links an exit to move it to the front of the room's exit list.

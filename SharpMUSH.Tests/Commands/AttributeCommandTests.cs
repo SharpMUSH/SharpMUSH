@@ -5,6 +5,7 @@ using NSubstitute.ReceivedExtensions;
 using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -32,15 +33,17 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBasic");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objName = obj.Known.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/TEST_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify attribute was set
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "TEST_ATTRSET_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 
@@ -52,12 +55,16 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrEmpty");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objName = obj.Known.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
+		// Setting to empty still says "Set." per parser visitor implementation
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -65,12 +72,15 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrComplex");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var objName = obj.Known.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<OneOf<MString, string>>());
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessageEquals(msg, $"{objName}/COMPLEX - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -130,7 +140,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute copied to 1 destination."))
-			);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify destination attribute was created
 		var destAttr = Database.GetAttributeAsync(objDbRef, ["DEST_DIRECT_CPATTR"]);
@@ -162,7 +172,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				"Attribute copied to 1 destination."
-			);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify destination attribute was created
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -197,7 +207,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute copied to 2 destinations."))
-			);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -232,7 +242,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute moved to 1 destination."))
-			);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -274,7 +284,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Wiped attributes matching WIPE*_UNIQUE."))
-			);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		// Verify they're gone
 		var attr1After = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE1_UNIQUE",
@@ -305,7 +315,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute locked."))
-			);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
@@ -326,7 +336,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute unlocked."))
-			);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
 			IAttributeService.AttributeMode.Read, false);
@@ -353,7 +363,7 @@ public class AttributeCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("That attribute is unlocked."))
-			);
+			, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -369,7 +379,7 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("You need to give an object/attribute pair.")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("You need to give an object/attribute pair.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -385,7 +395,7 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_ATTR_TEST not found on source object.")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_ATTR_TEST not found on source object.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -401,7 +411,7 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_MOVE_TEST not found on source object.")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("Attribute NONEXISTENT_MOVE_TEST not found on source object.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -537,6 +547,6 @@ public class AttributeCommandTests
 		// Should receive error notification
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("No matching attributes found.")));
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg => msg.IsT1 && msg.AsT1.Contains("No matching attributes found.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

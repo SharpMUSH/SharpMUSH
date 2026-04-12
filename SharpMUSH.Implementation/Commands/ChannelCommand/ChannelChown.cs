@@ -13,7 +13,7 @@ public static class ChannelChown
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -47,7 +47,7 @@ public static class ChannelChown
 		await Mediator.Send(new UpdateChannelOwnerCommand(channel, newOwnerObject));
 
 		var output = MModule.multiple([MModule.single("CHAT: "), MModule.single(newOwnerObject.Object.Name), MModule.single(" is the new owner of "), channel.Name]);
-		await NotifyService.Notify(executor, output);
+		await NotifyService.Notify(executor, output, executor);
 		return new CallState(string.Empty);
 	}
 }

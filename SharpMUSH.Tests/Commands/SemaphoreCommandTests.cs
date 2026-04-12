@@ -26,6 +26,7 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - create a unique object and semaphore attribute with underscore separator
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemNotify");
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -49,15 +50,14 @@ public class SemaphoreCommandTests
 		// Assert - verify the waiting task was executed
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(),
-			testMessage,
-			Arg.Any<AnySharpObject>(),
-			INotifyService.NotificationType.Announce);
+			testMessage, TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask DolistInline_ShouldExecuteImmediately()
 	{
 		// Arrange
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueId = Guid.NewGuid().ToString("N");
 
 		// Act - @dolist/inline should execute immediately
@@ -66,10 +66,8 @@ public class SemaphoreCommandTests
 
 		// Assert - all iterations should have executed (checking for at least one to ensure it ran)
 		await NotifyService.Received().Notify(
-			Arg.Any<AnySharpObject>(),
-			$"Inline{uniqueId}",
-			Arg.Any<AnySharpObject>(),
-			INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(executor),
+			$"Inline{uniqueId}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -110,6 +108,7 @@ public class SemaphoreCommandTests
 	[Test]
 	public async ValueTask NotifySetQ_CommandShouldAcceptParameters()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// This test verifies that @notify/setq accepts qreg parameters
 		// Fixed bug where CB.RSArgs was interfering with comma parsing
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQParam");
@@ -125,14 +124,13 @@ public class SemaphoreCommandTests
 		await NotifyService.DidNotReceive().Notify(
 			Arg.Any<AnySharpObject>(),
 			Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Value.ToString()!.Contains("must be in pairs")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+				msg.Value.ToString()!.Contains("must be in pairs")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask NotifySetQ_ShouldSetQRegisterForWaitingTask()
 	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Arrange - create a unique object and semaphore attribute with a unique test value
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemSetQWait");
 		var uniqueId = Guid.NewGuid().ToString("N");
@@ -157,9 +155,7 @@ public class SemaphoreCommandTests
 		// The waiting task should have been executed with %q0 set to our test value
 		await NotifyService.Received().Notify(
 			Arg.Any<AnySharpObject>(),
-			$"QRegValue:{testValue}",
-			Arg.Any<AnySharpObject>(),
-			INotifyService.NotificationType.Announce);
+			$"QRegValue:{testValue}", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

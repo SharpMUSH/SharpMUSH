@@ -14,7 +14,7 @@ public static class ChannelMogrifier
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.");
+			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
