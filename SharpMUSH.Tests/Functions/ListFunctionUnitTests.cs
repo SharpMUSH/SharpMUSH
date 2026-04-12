@@ -16,49 +16,18 @@ public class ListFunctionUnitTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	private static bool _testObjectsCreated = false;
-	private static DBRef _testObjectDbRef;
-	// private static readonly SemaphoreSlim Lock = new SemaphoreSlim(1, 1);
-
 	/// <summary>
-	/// Creates test object and attributes needed for list function tests
+	/// Creates a unique test object with a single attribute set on it.
+	/// Each test creates its own object to avoid cross-contamination when running in parallel.
 	/// </summary>
-	private async Task EnsureTestObjectsExist()
+	private async Task<int> CreateObjectWithAttribute(string objectName, string attrName, string attrValue)
 	{
-		if (_testObjectsCreated) return;
-
-		// Create test object and capture its DBRef
-		var createResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create test"));
-		_testObjectDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
-
-		// Set up filter test attribute using DBRef
+		var createResult = await CommandParser.CommandParse(1, ConnectionService,
+			MModule.single($"@create {objectName}"));
+		var dbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&IS_ODD #{_testObjectDbRef.Number}=mod(%0,2)"));
-
-		// Set up fold test attribute
-		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&ADD_FUNC #{_testObjectDbRef.Number}=add(%0,%1)"));
-
-		// Set up mix test attribute  
-		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&CONCAT #{_testObjectDbRef.Number}=%0%b%1"));
-
-		// Set up munge test attribute (sort function)
-		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&SORT #{_testObjectDbRef.Number}=sort(%0,%1)"));
-
-		// Set up sortby test attribute (comparison function)
-		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&COMP #{_testObjectDbRef.Number}=comp(%0,%1)"));
-
-		// Set up sortkey test attribute (key generator)
-		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&KEY #{_testObjectDbRef.Number}=strlen(%0)"));
-
-		// Set up step test attribute
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FIRST #{_testObjectDbRef.Number}=%0"));
-
-		_testObjectsCreated = true;
+			MModule.single($"&{attrName} #{dbRef.Number}={attrValue}"));
+		return dbRef.Number;
 	}
 
 	[Test, NotInParallel]
@@ -224,12 +193,11 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("filter(test/is_odd,1 2 3 4 5 6)", "1 3 5")]
+	[Arguments("filter(test/IS_ODD_FILTER,1 2 3 4 5 6)", "1 3 5")]
 	public async Task Filter(string function, string expected)
 	{
-		await EnsureTestObjectsExist();
-		// Replace "test" with actual DBRef
-		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var objNum = await CreateObjectWithAttribute("filter_obj", "IS_ODD_FILTER", "mod(%0,2)");
+		var functionWithDbRef = function.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -243,13 +211,12 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
-	[Test, NotInParallel]
-	[Arguments("map(test/is_odd,1 2 3 4 5 6)", "1 0 1 0 1 0")]
+	[Test]
+	[Arguments("map(test/IS_ODD_MAP,1 2 3 4 5 6)", "1 0 1 0 1 0")]
 	public async Task Map(string function, string expected)
 	{
-		await EnsureTestObjectsExist();
-		// Replace "test" with actual DBRef
-		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var objNum = await CreateObjectWithAttribute("map_obj", "IS_ODD_MAP", "mod(%0,2)");
+		var functionWithDbRef = function.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -276,12 +243,11 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("fold(test/add_func,1 2 3)", "6")]
+	[Arguments("fold(test/ADD_FUNC_FOLD,1 2 3)", "6")]
 	public async Task Fold(string function, string expected)
 	{
-		await EnsureTestObjectsExist();
-		// Replace "test" with actual DBRef
-		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var objNum = await CreateObjectWithAttribute("fold_obj", "ADD_FUNC_FOLD", "add(%0,%1)");
+		var functionWithDbRef = function.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -464,23 +430,21 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("mix(test/concat,a b c,1 2 3)", "a 1 b 2 c 3")]
+	[Arguments("mix(test/CONCAT_MIX,a b c,1 2 3)", "a 1 b 2 c 3")]
 	public async Task Mix(string function, string expected)
 	{
-		await EnsureTestObjectsExist();
-		// Replace "test" with actual DBRef
-		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var objNum = await CreateObjectWithAttribute("mix_obj", "CONCAT_MIX", "%0%b%1");
+		var functionWithDbRef = function.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Arguments("munge(test/sort,b a c,2 1 3)", "1 2 3")]
+	[Arguments("munge(test/SORT_MUNGE,b a c,2 1 3)", "1 2 3")]
 	public async Task Munge(string function, string expected)
 	{
-		await EnsureTestObjectsExist();
-		// Replace "test" with actual DBRef
-		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var objNum = await CreateObjectWithAttribute("munge_obj", "SORT_MUNGE", "sort(%0,%1)");
+		var functionWithDbRef = function.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -512,12 +476,11 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("step(test/first,a b c d e,2)", "a c e")]
+	[Arguments("step(test/FIRST_STEP,a b c d e,2)", "a c e")]
 	public async Task Step(string function, string expected)
 	{
-		await EnsureTestObjectsExist();
-		// Replace "test" with actual DBRef
-		var functionWithDbRef = function.Replace("test", $"#{_testObjectDbRef.Number}");
+		var objNum = await CreateObjectWithAttribute("step_obj", "FIRST_STEP", "%0");
+		var functionWithDbRef = function.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
@@ -619,23 +582,21 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("sortby(test/comp,c a b)", "a b c")]
+	[Arguments("sortby(test/COMP_SORTBY,c a b)", "a b c")]
 	public async Task SortBy(string str, string expected)
 	{
-		await EnsureTestObjectsExist();
-		// Replace "test" with actual DBRef
-		var functionWithDbRef = str.Replace("test", $"#{_testObjectDbRef.Number}");
+		var objNum = await CreateObjectWithAttribute("sortby_obj", "COMP_SORTBY", "comp(%0,%1)");
+		var functionWithDbRef = str.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Arguments("sortkey(test/key,abc ab a)", "a ab abc")]
+	[Arguments("sortkey(test/KEY_SORTKEY,abc ab a)", "a ab abc")]
 	public async Task SortKey(string str, string expected)
 	{
-		await EnsureTestObjectsExist();
-		// Replace "test" with actual DBRef
-		var functionWithDbRef = str.Replace("test", $"#{_testObjectDbRef.Number}");
+		var objNum = await CreateObjectWithAttribute("sortkey_obj", "KEY_SORTKEY", "strlen(%0)");
+		var functionWithDbRef = str.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MModule.single(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
