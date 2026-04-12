@@ -23,7 +23,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?", executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -44,7 +44,7 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.", executor);
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
@@ -73,7 +73,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?", executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -94,7 +94,7 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.", executor);
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 
@@ -125,7 +125,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "Don't you have anything to say?", executor);
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -146,7 +146,7 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.");
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.", executor);
 			return new CallState("#-1 You are not a member of that channel.");
 		}
 

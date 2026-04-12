@@ -124,8 +124,9 @@ public static class ChannelHelper
 		{
 			case (null, true):
 				{
-					await NotifyService.Notify(await parser.CurrentState.KnownExecutorObject(Mediator),
-						"Channel not found.");
+					var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+					await NotifyService.Notify(executor,
+						"Channel not found.", executor);
 					return new ChannelOrError(new Error<CallState>(new CallState("#-1 Channel not found.")));
 				}
 			case (null, false):

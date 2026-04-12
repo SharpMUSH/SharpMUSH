@@ -681,6 +681,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Could pipe message through SPEAK() function for text processing
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
@@ -691,7 +692,7 @@ public partial class Commands
 
 		await foreach (var handle in handles)
 		{
-			await NotifyService!.Notify(handle, shout);
+			await NotifyService!.Notify(handle, shout, executor);
 		}
 
 		return new CallState(shout);
@@ -702,6 +703,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Could pipe message through SPEAK() function for text processing
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
@@ -712,7 +714,7 @@ public partial class Commands
 
 		await foreach (var handle in handles)
 		{
-			await NotifyService!.Notify(handle, shout);
+			await NotifyService!.Notify(handle, shout, executor);
 		}
 
 		return new CallState(shout);
@@ -2369,6 +2371,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		// TODO: Could pipe message through SPEAK() function for text processing
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
 		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
 
@@ -2379,7 +2382,7 @@ public partial class Commands
 
 		await foreach (var handle in handles)
 		{
-			await NotifyService!.Notify(handle, shout);
+			await NotifyService!.Notify(handle, shout, executor);
 		}
 
 		return new CallState(shout);
@@ -2532,7 +2535,7 @@ public partial class Commands
 		await foreach (var cd in ConnectionService!.Get(targetDbRef))
 		{
 			any = true;
-			await NotifyService!.Notify(cd.Handle, "You have been disconnected.", type: INotifyService.NotificationType.Announce);
+			await NotifyService!.Notify(cd.Handle, "You have been disconnected.", executor, type: INotifyService.NotificationType.Announce);
 			await ConnectionService.Disconnect(cd.Handle);
 		}
 

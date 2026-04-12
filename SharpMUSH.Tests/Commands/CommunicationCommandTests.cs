@@ -298,7 +298,7 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' added for channel Public")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' added for channel Public"))),
-				null);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -316,7 +316,7 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(expected)) ||
 				(msg.IsT1 && msg.AsT1.Contains(expected))),
-				null, INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -339,7 +339,7 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' deleted")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' deleted"))),
-				null, INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -357,7 +357,7 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
-				null, INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -401,7 +401,7 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"for alias '{alias}'")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"for alias '{alias}'"))),
-				null, INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -419,7 +419,7 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains($"Alias '{alias}' not found")) ||
 				(msg.IsT1 && msg.AsT1.Contains($"Alias '{alias}' not found"))),
-				null, INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -444,7 +444,7 @@ public class CommunicationCommandTests
 				msg.IsT0 &&
 				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist1") &&
 				msg.AsT0.ToPlainText().ToLower().Contains("test_alias_comlist2")),
-				null, INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -464,6 +464,6 @@ public class CommunicationCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains("no channel aliases")) ||
 				(msg.IsT1 && msg.AsT1.Contains("no channel aliases"))),
-				null, INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

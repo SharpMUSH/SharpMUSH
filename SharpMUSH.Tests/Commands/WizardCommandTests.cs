@@ -315,7 +315,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(executor.Number, Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test wall message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -326,7 +327,8 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(executor.Number, Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(executor.Number, Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test wizwall message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
