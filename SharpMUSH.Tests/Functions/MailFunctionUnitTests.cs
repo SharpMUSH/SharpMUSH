@@ -20,95 +20,81 @@ public class MailFunctionUnitTests
 
 	// Unique test identifier to ensure we don't conflict with other test runs
 	private static readonly string TestRunId = Guid.NewGuid().ToString("N")[..8];
-	private static int _setupComplete = 0;
-	private static readonly SemaphoreSlim _setupLock = new(1, 1);
+	private static bool _setupComplete;
 
 	[Before(Test)]
 	public async Task EnsureTestMailSetup()
 	{
-		// Only run setup once for all tests
-		if (Interlocked.CompareExchange(ref _setupComplete, 0, 0) == 1) return;
+		// [NotInParallel] on the class guarantees sequential execution — no semaphore needed.
+		if (_setupComplete) return;
 
-		await _setupLock.WaitAsync();
-		try
+		// Get the current player (executor)
+		var executor = await Parser.CurrentState.KnownExecutorObject(Mediator);
+		var testPlayer = executor.AsPlayer;
+
+		// Clear any existing mail to ensure clean state
+		var existingMail = Mediator.CreateStream(new GetAllMailListQuery(testPlayer));
+
+		await foreach (var mail in existingMail)
 		{
-			// Check again after acquiring the lock
-			if (Interlocked.CompareExchange(ref _setupComplete, 0, 0) == 1) return;
-
-			// Perform setup
-			// Get the current player (executor)
-			var executor = await Parser.CurrentState.KnownExecutorObject(Mediator);
-			var testPlayer = executor.AsPlayer;
-
-			// Clear any existing mail to ensure clean state
-			var existingMail = Mediator.CreateStream(new GetAllMailListQuery(testPlayer));
-
-			await foreach (var mail in existingMail)
-			{
-				await Mediator.Send(new DeleteMailCommand(mail));
-			}
-
-			// Create test mail messages with unique content tied to this test run
-			var testMail1 = new SharpMail
-			{
-				DateSent = DateTimeOffset.UtcNow.AddHours(-2),
-				Fresh = false,
-				Read = true,
-				Tagged = false,
-				Urgent = false,
-				Cleared = false,
-				Forwarded = false,
-				Folder = "INBOX",
-				Content = MModule.single($"TESTMAIL-{TestRunId}-MSG1-Content"),
-				Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject1"),
-				From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
-					async _ => await ValueTask.FromResult(executor.WithNoneOption()))
-			};
-
-			var testMail2 = new SharpMail
-			{
-				DateSent = DateTimeOffset.UtcNow.AddHours(-1),
-				Fresh = true,
-				Read = false,
-				Tagged = true,
-				Urgent = true,
-				Cleared = false,
-				Forwarded = false,
-				Folder = "INBOX",
-				Content = MModule.single($"TESTMAIL-{TestRunId}-MSG2-Content with more text"),
-				Subject = MModule.single($"TESTMAIL-{TestRunId}-UrgentSubject2"),
-				From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
-					async _ => await ValueTask.FromResult(executor.WithNoneOption()))
-			};
-
-			var testMail3 = new SharpMail
-			{
-				DateSent = DateTimeOffset.UtcNow.AddMinutes(-30),
-				Fresh = false,
-				Read = false,
-				Tagged = false,
-				Urgent = false,
-				Cleared = true,
-				Forwarded = false,
-				Folder = "INBOX",
-				Content = MModule.single($"TESTMAIL-{TestRunId}-MSG3-Content"),
-				Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject3"),
-				From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
-					async _ => await ValueTask.FromResult(executor.WithNoneOption()))
-			};
-
-			// Send the test mail to the player
-			await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail1));
-			await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail2));
-			await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail3));
-
-			// Mark setup as complete
-			Interlocked.Exchange(ref _setupComplete, 1);
+			await Mediator.Send(new DeleteMailCommand(mail));
 		}
-		finally
+
+		// Create test mail messages with unique content tied to this test run
+		var testMail1 = new SharpMail
 		{
-			_setupLock.Release();
-		}
+			DateSent = DateTimeOffset.UtcNow.AddHours(-2),
+			Fresh = false,
+			Read = true,
+			Tagged = false,
+			Urgent = false,
+			Cleared = false,
+			Forwarded = false,
+			Folder = "INBOX",
+			Content = MModule.single($"TESTMAIL-{TestRunId}-MSG1-Content"),
+			Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject1"),
+			From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
+				async _ => await ValueTask.FromResult(executor.WithNoneOption()))
+		};
+
+		var testMail2 = new SharpMail
+		{
+			DateSent = DateTimeOffset.UtcNow.AddHours(-1),
+			Fresh = true,
+			Read = false,
+			Tagged = true,
+			Urgent = true,
+			Cleared = false,
+			Forwarded = false,
+			Folder = "INBOX",
+			Content = MModule.single($"TESTMAIL-{TestRunId}-MSG2-Content with more text"),
+			Subject = MModule.single($"TESTMAIL-{TestRunId}-UrgentSubject2"),
+			From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
+				async _ => await ValueTask.FromResult(executor.WithNoneOption()))
+		};
+
+		var testMail3 = new SharpMail
+		{
+			DateSent = DateTimeOffset.UtcNow.AddMinutes(-30),
+			Fresh = false,
+			Read = false,
+			Tagged = false,
+			Urgent = false,
+			Cleared = true,
+			Forwarded = false,
+			Folder = "INBOX",
+			Content = MModule.single($"TESTMAIL-{TestRunId}-MSG3-Content"),
+			Subject = MModule.single($"TESTMAIL-{TestRunId}-Subject3"),
+			From = new DotNext.Threading.AsyncLazy<AnyOptionalSharpObject>(
+				async _ => await ValueTask.FromResult(executor.WithNoneOption()))
+		};
+
+		// Send the test mail to the player
+		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail1));
+		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail2));
+		await Mediator.Send(new SendMailCommand(executor.Object(), testPlayer, testMail3));
+
+		_setupComplete = true;
 	}
 
 	[Test]
