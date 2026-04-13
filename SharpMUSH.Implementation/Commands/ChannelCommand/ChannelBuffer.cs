@@ -15,7 +15,7 @@ public static class ChannelBuffer
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantModify, executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChatGuestsCantModify));
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 

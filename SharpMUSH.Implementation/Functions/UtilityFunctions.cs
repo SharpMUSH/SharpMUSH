@@ -1,4 +1,4 @@
-﻿using DotNext;
+using DotNext;
 using DotNext.Collections.Generic;
 using MarkupString;
 using Microsoft.Extensions.Logging;
@@ -423,7 +423,7 @@ public partial class Functions
 		var dbRefConversion = HelperFunctions.ParseDbRef(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
 		if (dbRefConversion.IsNone())
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, ErrorMessages.Notifications.CantSeeThat);
+			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.CantSeeThat));
 			return new CallState("#-1 NO SUCH PLAYER");
 		}
 
@@ -556,13 +556,13 @@ public partial class Functions
 
 		if (location.IsNone || location.IsExit)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DefaultHomeLocationInvalid);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid));
 			return new CallState(Errors.ErrorInvalidRoom);
 		}
 
 		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, name, new None()))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.InvalidNameThing);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidNameThing));
 			return new CallState(Errors.ErrorBadObjectName);
 		}
 

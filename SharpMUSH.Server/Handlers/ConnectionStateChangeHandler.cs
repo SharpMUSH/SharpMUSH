@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text;
 
 namespace SharpMUSH.Server.Handlers;
 
@@ -12,7 +11,8 @@ namespace SharpMUSH.Server.Handlers;
 /// </summary>
 public class ConnectionStateChangeHandler(
 	ILogger<ConnectionStateChangeHandler> logger,
-	IConnectionService connectionService)
+	IConnectionService connectionService,
+	INotifyService notifyService)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
@@ -39,8 +39,7 @@ public class ConnectionStateChangeHandler(
 					logger.LogInformation("[{ConnectionId}] Sending 'Connected!' message to handle {Handle}",
 						connectionId, notification.Handle);
 
-					var welcomeMessage = Encoding.UTF8.GetBytes(ErrorMessages.Notifications.Connected + "\r\n");
-					await connection.OutputFunction(welcomeMessage);
+					await notifyService.NotifyLocalized(notification.Handle, nameof(ErrorMessages.Notifications.Connected));
 
 					logger.LogInformation("[{ConnectionId}] Successfully sent welcome message to handle {Handle}",
 						connectionId, notification.Handle);
@@ -50,8 +49,7 @@ public class ConnectionStateChangeHandler(
 					logger.LogInformation("[{ConnectionId}] Player {Ref} logged in on handle {Handle}",
 						connectionId, notification.PlayerRef, notification.Handle);
 
-					var loginMessage = Encoding.UTF8.GetBytes(string.Format(ErrorMessages.Notifications.WelcomeBackFormat, notification.PlayerRef) + "\r\n");
-					await connection.OutputFunction(loginMessage);
+					await notifyService.NotifyLocalized(notification.Handle, nameof(ErrorMessages.Notifications.WelcomeBackFormat), notification.PlayerRef!);
 
 					logger.LogInformation("[{ConnectionId}] Successfully sent login message to handle {Handle}",
 						connectionId, notification.Handle);

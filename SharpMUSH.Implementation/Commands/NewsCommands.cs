@@ -20,7 +20,7 @@ public partial class Commands
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.NewsSystemNotInitialized, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsSystemNotInitialized));
 			return new CallState("#-1 NEWS SYSTEM NOT INITIALIZED");
 		}
 
@@ -35,7 +35,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, ErrorMessages.Notifications.NewsNoTopicAvailable, executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoTopicAvailable));
 			}
 			return CallState.Empty;
 		}
@@ -48,7 +48,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsNoEntriesFoundContaining, topic), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoEntriesFoundContaining), topic);
 			}
 			else if (matches.Count == 1)
 			{
@@ -63,7 +63,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsEntriesContaining, topic), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsEntriesContaining), topic);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
@@ -75,7 +75,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsNoNewsForTopic, topic), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), topic);
 			}
 			else if (matches.Count == 1)
 			{
@@ -90,7 +90,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsTopicsMatchingFormat, topic), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), topic);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
@@ -105,8 +105,8 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsNoNewsForTopic, topic), executor);
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.NewsTryPattern, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), topic);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTryPattern));
 		}
 
 		return CallState.Empty;
@@ -122,13 +122,13 @@ public partial class Commands
 		// Permission check - only wizards and royalty
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AdminCommandOnly, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AdminCommandOnly));
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AhelpSystemNotInitialized, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpSystemNotInitialized));
 			return new CallState("#-1 AHELP SYSTEM NOT INITIALIZED");
 		}
 
@@ -143,7 +143,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, ErrorMessages.Notifications.AhelpNoHelpAvailable, executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpAvailable));
 			}
 			return CallState.Empty;
 		}
@@ -156,7 +156,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpNoEntriesFoundContaining, topic), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoEntriesFoundContaining), topic);
 			}
 			else if (matches.Count == 1)
 			{
@@ -171,7 +171,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpEntriesContaining, topic), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpEntriesContaining), topic);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
@@ -183,7 +183,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpNoHelpForTopic, topic), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), topic);
 			}
 			else if (matches.Count == 1)
 			{
@@ -198,7 +198,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpTopicsMatchingFormat, topic), executor);
+				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTopicsMatchingFormat), topic);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
@@ -213,8 +213,8 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpNoHelpForTopic, topic), executor);
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AhelpTryPattern, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), topic);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTryPattern));
 		}
 
 		return CallState.Empty;

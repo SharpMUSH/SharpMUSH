@@ -24,7 +24,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, ErrorMessages.Notifications.DontYouHaveAnythingToSay, executor);
+			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay));
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -75,7 +75,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, ErrorMessages.Notifications.DontYouHaveAnythingToSay, executor);
+			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay));
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -128,7 +128,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, ErrorMessages.Notifications.DontYouHaveAnythingToSay, executor);
+			await NotifyService!.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay));
 			return new CallState("#-1 Don't you have anything to say?");
 		}
 
@@ -184,7 +184,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.UsageAddcom, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageAddcom));
 			return new CallState("#-1 Usage: addcom <alias>=<channel>");
 		}
 
@@ -193,7 +193,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AliasNameCannotBeEmpty, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty));
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
@@ -219,11 +219,11 @@ public partial class Commands
 
 		if (result.IsT1)
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.ErrorSettingAliasFormat, result.AsT1.Value), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorSettingAliasFormat), result.AsT1.Value);
 			return new CallState($"#-1 Error setting alias: {result.AsT1.Value}");
 		}
 
-		await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AliasAddedForChannelFormat, alias, channel.Name.ToPlainText()), executor);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), alias, channel.Name.ToPlainText());
 		return new CallState(string.Empty);
 	}
 
@@ -235,7 +235,7 @@ public partial class Commands
 
 		if (!arg0Check)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.UsageDelcom, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageDelcom));
 			return new CallState("#-1 Usage: delcom <alias>");
 		}
 
@@ -243,7 +243,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AliasNameCannotBeEmpty, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty));
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
@@ -253,13 +253,13 @@ public partial class Commands
 
 		if (maybeAttribute.IsNone)
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AliasNotFoundFormat, alias), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), alias);
 			return new CallState($"#-1 Alias '{alias}' not found.");
 		}
 
 		if (maybeAttribute.IsError)
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.ErrorReadingAliasFormat, maybeAttribute.AsError.Value), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), maybeAttribute.AsError.Value);
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
@@ -270,7 +270,7 @@ public partial class Commands
 
 		if (clearResult.IsT1)
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.ErrorDeletingAliasFormat, clearResult.AsT1.Value), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDeletingAliasFormat), clearResult.AsT1.Value);
 			return new CallState($"#-1 Error deleting alias: {clearResult.AsT1.Value}");
 		}
 
@@ -292,7 +292,7 @@ public partial class Commands
 			}
 		}
 
-		await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AliasDeletedFormat, alias), executor);
+		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasDeletedFormat), alias);
 		return new CallState(string.Empty);
 	}
 
@@ -325,7 +325,7 @@ public partial class Commands
 
 		if (!arg0Check || !arg1Check)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.UsageComtitle, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UsageComtitle));
 			return new CallState("#-1 Usage: comtitle <alias>=<title>");
 		}
 
@@ -334,7 +334,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(alias))
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AliasNameCannotBeEmpty, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty));
 			return new CallState("#-1 Alias name cannot be empty.");
 		}
 
@@ -344,13 +344,13 @@ public partial class Commands
 
 		if (maybeAttribute.IsNone)
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AliasNotFoundFormat, alias), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), alias);
 			return new CallState($"#-1 Alias '{alias}' not found.");
 		}
 
 		if (maybeAttribute.IsError)
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.ErrorReadingAliasFormat, maybeAttribute.AsError.Value), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), maybeAttribute.AsError.Value);
 			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
 		}
 
@@ -371,7 +371,7 @@ public partial class Commands
 		// Send custom notification that includes the alias name
 		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.TitleSetForAliasChannelFormat, title.ToPlainText(), alias, channel.Name.ToPlainText()), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TitleSetForAliasChannelFormat), title.ToPlainText(), alias, channel.Name.ToPlainText());
 		}
 
 		return result;
@@ -387,7 +387,7 @@ public partial class Commands
 
 		if (allAliases.IsError)
 		{
-			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.ErrorReadingAliasesFormat, allAliases.AsError.Value), executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasesFormat), allAliases.AsError.Value);
 			return new CallState($"#-1 Error reading aliases: {allAliases.AsError.Value}");
 		}
 
@@ -395,7 +395,7 @@ public partial class Commands
 
 		if (aliases.Count == 0)
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.YouHaveNoChannelAliases, executor);
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases));
 			return new CallState(string.Empty);
 		}
 
