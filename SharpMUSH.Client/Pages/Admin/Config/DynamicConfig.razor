@@ -6,6 +6,7 @@
 @inject AdminConfigService AdminConfigService
 @inject ConfigSchemaService SchemaService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@CategoryTitle - Configuration</PageTitle>
 
@@ -25,9 +26,9 @@
             <MudCard>
                 <MudCardContent>
                     <MudAlert Severity="Severity.Error">
-                        <strong>Routing Error:</strong> The category "@Category" has a custom page that should be rendering instead of DynamicConfig.
+                        <strong>@Loc["RoutingError"]</strong> @string.Format(Loc["RoutingErrorDescription"], Category)
                         <br/>
-                        Expected route: <code>/admin/config/@Category</code>
+                        @Loc["RoutingErrorExpected"] <code>/admin/config/@Category</code>
                         <br/>
                         This message means the custom page is NOT being matched by the router.
                     </MudAlert>
@@ -43,7 +44,7 @@
             <MudCard>
                 <MudCardContent>
                     <MudAlert Severity="Severity.Warning">
-                        Configuration category "@Category" not found in schema.
+                        @string.Format(Loc["CategoryNotFound"], Category)
                     </MudAlert>
                 </MudCardContent>
             </MudCard>
@@ -53,9 +54,9 @@
             <MudCard>
                 <MudCardContent>
                     <MudAlert Severity="Severity.Info">
-                        No configuration properties found for category "@CategoryTitle".
+                        @string.Format(Loc["NoPropertiesFound"], CategoryTitle)
                         <br />
-                        <small>This category may not have been annotated with enhanced schema metadata yet.</small>
+                        <small>@Loc["NoPropertiesHint"]</small>
                     </MudAlert>
                 </MudCardContent>
             </MudCard>
@@ -66,13 +67,12 @@
             <MudCard Outlined="true" Class="mb-4">
                 <MudCardHeader>
                     <CardHeaderContent>
-                        <MudText Typo="Typo.h6">@CategoryTitle Settings</MudText>
+                        <MudText Typo="Typo.h6">@string.Format(Loc["SettingsLabel"], CategoryTitle)</MudText>
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
                     <MudAlert Severity="Severity.Info" Class="mb-4">
-                        <strong>Note:</strong> This category has not been updated with enhanced schema metadata yet.
-                        Properties are displayed without grouping. Only the Network (Net) category currently has the full enhanced UI.
+                        <strong>@Loc["NoGroupingNote"]</strong>
                     </MudAlert>
                     <MudGrid>
                         @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
@@ -116,14 +116,14 @@
             <div class="save-bar-content">
                 <div class="save-bar-info">
                     <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
-                    <MudText Typo="Typo.body1"><strong>Unsaved changes</strong> in this section</MudText>
+                    <MudText Typo="Typo.body1"><strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]</MudText>
                 </div>
                 <div class="save-bar-actions">
                     <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetChanges">
-                        Reset Changes
+                        @Loc["ResetChanges"]
                     </MudButton>
                     <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SaveChanges" StartIcon="@Icons.Material.Filled.Save">
-                        Save Configuration
+                        @Loc["SaveConfiguration"]
                     </MudButton>
                 </div>
             </div>
@@ -251,7 +251,7 @@
             var schema = await SchemaService.GetSchemaAsync();
             if (schema == null)
             {
-                Snackbar.Add("Failed to load configuration schema", Severity.Error);
+                Snackbar.Add(Loc["FailedToLoadSchema"], Severity.Error);
                 return;
             }
 
@@ -266,7 +266,7 @@
 
             if (_categoryMetadata == null)
             {
-                Snackbar.Add($"Category '{categoryName}' not found", Severity.Warning);
+                Snackbar.Add(string.Format(Loc["CategoryNotFoundShort"], categoryName), Severity.Warning);
                 return;
             }
 
@@ -279,7 +279,7 @@
             var result = await AdminConfigService.GetOptionsAsync();
             if (result.IsT1)
             {
-                Snackbar.Add("Failed to load configuration values", Severity.Error);
+                Snackbar.Add(Loc["FailedToLoadValues"], Severity.Error);
                 return;
             }
 
@@ -295,7 +295,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading configuration: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorLoadingConfig"], ex.Message), Severity.Error);
         }
         finally
         {
@@ -448,7 +448,7 @@
 
     private async Task SaveChanges()
     {
-        Snackbar.Add("Save functionality not yet implemented", Severity.Info);
+        Snackbar.Add(Loc["SaveNotImplemented"], Severity.Info);
         // TODO: Implement save to API
         _hasChanges = false;
     }

@@ -1,16 +1,17 @@
 ﻿@page "/weather"
 @inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Weather</PageTitle>
+<PageTitle>@Loc["Weather"]</PageTitle>
 
-<h1>Weather</h1>
+<h1>@Loc["Weather"]</h1>
 
-<p>This component demonstrates fetching data from the server.</p>
+<p>@Loc["WeatherDescription"]</p>
 
 @if (forecasts is null)
 {
     <p>
-        <em>Loading...</em>
+        <em>@Loc["Loading"]</em>
     </p>
 }
 else
@@ -18,10 +19,10 @@ else
     <table class="table">
         <thead>
         <tr>
-            <th>Date</th>
-            <th aria-label="Temperature in Celsius">Temp. (C)</th>
-            <th aria-label="Temperature in Fahrenheit">Temp. (F)</th>
-            <th>Summary</th>
+            <th>@Loc["Date"]</th>
+            <th aria-label="@Loc["TempC"].Value">@Loc["TempC"]</th>
+            <th aria-label="@Loc["TempF"].Value">@Loc["TempF"]</th>
+            <th>@Loc["Summary"]</th>
         </tr>
         </thead>
         <tbody>

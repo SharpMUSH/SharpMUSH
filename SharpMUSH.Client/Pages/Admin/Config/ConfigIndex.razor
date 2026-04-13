@@ -1,17 +1,18 @@
 @page "/admin/config"
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Configuration - SharpMUSH</PageTitle>
+<PageTitle>@Loc["Configuration"] - @Loc["AppTitle"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6 config-section-page">
     <MudStack Spacing="4">
         @* Header *@
         <MudPaper Elevation="0" Class="pa-4">
             <MudText Typo="Typo.h4" Color="Color.Secondary">
-                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" /> Server Configuration
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" /> @Loc["ServerConfiguration"]
             </MudText>
             <MudText Typo="Typo.body1" Class="mt-2">
-                Manage all SharpMUSH server settings from one place
+                @Loc["ManageAllSettings"]
             </MudText>
         </MudPaper>
 
@@ -24,10 +25,10 @@
                         <MudStack Spacing="2">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">Server</MudText>
+                                <MudText Typo="Typo.h6">@Loc["Server"]</MudText>
                             </MudStack>
                             <MudText Typo="Typo.body2">
-                                Network connections, database, and core server settings
+                                @Loc["ServerCategoryDescription"]
                             </MudText>
                             <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="2 settings" />
                         </MudStack>
@@ -42,12 +43,12 @@
                         <MudStack Spacing="2">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">Performance</MudText>
+                                <MudText Typo="Typo.h6">@Loc["Performance"]</MudText>
                             </MudStack>
                             <MudText Typo="Typo.body2">
-                                Resource limits, command queues, and optimization
+                                @Loc["PerformanceCategoryDescription"]
                             </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
                         </MudStack>
                     </MudCardContent>
                 </MudCard>
@@ -60,14 +61,14 @@
                         <MudStack Spacing="2">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">Security</MudText>
+                                <MudText Typo="Typo.h6">@Loc["Security"]</MudText>
                             </MudStack>
                             <MudText Typo="Typo.body2">
-                                Access control, sitelock rules, and banned names
+                                @Loc["SecurityCategoryDescription"]
                             </MudText>
                             <MudStack Row="true" Spacing="2">
-                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
-                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Important" />
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="@Loc["Important"].Value" />
                             </MudStack>
                         </MudStack>
                     </MudCardContent>
@@ -81,12 +82,12 @@
                         <MudStack Spacing="2">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.Article" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">Content</MudText>
+                                <MudText Typo="Typo.h6">@Loc["Content"]</MudText>
                             </MudStack>
                             <MudText Typo="Typo.body2">
-                                Messages, cosmetic options, and chat configuration
+                                @Loc["ContentCategoryDescription"]
                             </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
                         </MudStack>
                     </MudCardContent>
                 </MudCard>
@@ -99,12 +100,12 @@
                         <MudStack Spacing="2">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">Logs & Files</MudText>
+                                <MudText Typo="Typo.h6">@Loc["LogsAndFiles"]</MudText>
                             </MudStack>
                             <MudText Typo="Typo.body2">
-                                Logging, file paths, and database dumps
+                                @Loc["LogsCategoryDescription"]
                             </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
                         </MudStack>
                     </MudCardContent>
                 </MudCard>
@@ -117,12 +118,12 @@
                         <MudStack Spacing="2">
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Secondary" Size="Size.Large" />
-                                <MudText Typo="Typo.h6">Advanced</MudText>
+                                <MudText Typo="Typo.h6">@Loc["Advanced"]</MudText>
                             </MudStack>
                             <MudText Typo="Typo.body2">
-                                Attributes, flags, costs, and specialized settings
+                                @Loc["AdvancedCategoryDescription"]
                             </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Coming soon" />
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@Loc["ComingSoon"].Value" />
                         </MudStack>
                     </MudCardContent>
                 </MudCard>
@@ -131,25 +132,25 @@
 
         @* Quick Actions *@
         <MudPaper Outlined="true" Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-3">Quick Actions</MudText>
+            <MudText Typo="Typo.h6" Class="mb-3">@Loc["QuickActions"]</MudText>
             <MudStack Row="true" Spacing="3" Wrap="Wrap.Wrap">
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Secondary" 
                            StartIcon="@Icons.Material.Filled.Search"
                            Disabled="true">
-                    Search All Settings
+                    @Loc["SearchAllSettings"]
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Default" 
                            StartIcon="@Icons.Material.Filled.Upload"
                            Disabled="true">
-                    Import Config File
+                    @Loc["ImportConfigFile"]
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Default" 
                            StartIcon="@Icons.Material.Filled.Download"
                            Disabled="true">
-                    Export Configuration
+                    @Loc["ExportConfiguration"]
                 </MudButton>
             </MudStack>
         </MudPaper>

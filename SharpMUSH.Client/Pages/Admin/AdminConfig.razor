@@ -4,8 +4,9 @@
 @using SharpMUSH.Client.Services
 @inject AdminConfigService AdminConfigService
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Configuration Management</PageTitle>
+<PageTitle>@Loc["ConfigurationManagement"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudStack Spacing="4">
@@ -14,7 +15,7 @@
                 <CardHeaderContent>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <MudIcon Icon="Icons.Material.Filled.Settings" Style="color: var(--mud-palette-primary);" />
-                        <MudText Typo="Typo.h5">Configuration Management</MudText>
+                        <MudText Typo="Typo.h5">@Loc["ConfigurationManagement"]</MudText>
                     </div>
                 </CardHeaderContent>
                 <CardHeaderActions>
@@ -22,19 +23,19 @@
                                Color="Color.Primary" 
                                StartIcon="Icons.Material.Filled.Upload"
                                OnClick="@(() => Navigation.NavigateTo("/admin/config/import"))">
-                        Import Config
+                        @Loc["ImportConfig"]
                     </MudButton>
                     <MudButton Variant="Variant.Outlined" 
                                Color="Color.Secondary" 
                                StartIcon="Icons.Material.Filled.Refresh"
                                OnClick="ResetToDefault">
-                        Reset to Default
+                        @Loc["ResetToDefault"]
                     </MudButton>
                 </CardHeaderActions>
             </MudCardHeader>
             <MudCardContent>
                 <MudText Typo="Typo.body2" Class="mb-4">
-                    Manage your MUSH configuration settings. You can import configuration files or modify settings directly.
+                    @Loc["ManageConfigDescription"]
                 </MudText>
             </MudCardContent>
         </MudCard>
@@ -42,7 +43,7 @@
         <MudCard>
             <MudCardHeader>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Configuration Sections</MudText>
+                    <MudText Typo="Typo.h6">@Loc["ConfigurationSections"]</MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
@@ -54,7 +55,7 @@
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <MudIcon Icon="@GetSectionIcon(section.Key)" />
                                     <MudText Typo="Typo.h6">@(section.Key)</MudText>
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Info">@(section.Value.Count()) settings</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="@string.Format(Loc["SettingsCount"].Value, section.Value.Count())"></MudChip>
                                 </div>
                             </TitleContent>
                             <ChildContent>
@@ -75,35 +76,35 @@
                                                         @if (config.IsBoolean)
                                                         {
                                                             <MudSwitch Value="@GetBoolValue(config)" 
-                                                                       Label="@(GetBoolValue(config) ? "Enabled" : "Disabled")"
+                                                                       Label="@(GetBoolValue(config) ? Loc["Enabled"].Value : Loc["Disabled"].Value)"
                                                                        Color="Color.Primary"
                                                                        ValueChanged="@((bool value) => UpdateConfigValue(config, value))" />
                                                         }
                                                         else if (config.IsNumber)
                                                         {
-                                                            <MudNumericField T="int" Value="@GetIntValue(config)"
-                                                                             Label="Value"
+                                                             <MudNumericField T="int" Value="@GetIntValue(config)"
+                                                                              Label="@Loc["Value"].Value"
                                                                              Variant="Variant.Outlined"
                                                                              ValueChanged="@((int value) => UpdateConfigValue(config, value))" />
                                                         }
                                                         else if (config.IsDictionary)
                                                         {
                                                             <MudPaper Outlined="true" Class="pa-3">
-                                                                <MudText Typo="Typo.subtitle2" Class="mb-2">Mappings:</MudText>
+                                                                <MudText Typo="Typo.subtitle2" Class="mb-2">@Loc["Mappings"]</MudText>
                                                                 @if (config.RawValue is Dictionary<string, string[]> dict)
                                                                 {
                                                                     @foreach (var kvp in dict)
                                                                     {
                                                                         <MudStack Row="true" Class="mb-2" AlignItems="AlignItems.Center">
                                                                             <MudTextField Value="@kvp.Key" 
-                                                                                          Label="Key" 
+                                                                                          Label="@Loc["Key"].Value" 
                                                                                           Variant="Variant.Outlined"
                                                                                           Margin="Margin.Dense"
                                                                                           ReadOnly="true"
                                                                                           Style="max-width: 200px;" />
                                                                             <MudIcon Icon="Icons.Material.Filled.ArrowForward" />
                                                                             <MudTextField Value="@string.Join(", ", kvp.Value)" 
-                                                                                          Label="Values (comma-separated)" 
+                                                                                          Label="@Loc["ValuesCommaSeparated"].Value" 
                                                                                           Variant="Variant.Outlined"
                                                                                           Margin="Margin.Dense"
                                                                                           FullWidth="true"
@@ -116,13 +117,13 @@
                                                                     }
                                                                     <MudStack Row="true" Class="mt-3" AlignItems="AlignItems.Center">
                                                                         <MudTextField @bind-Value="@_newDictionaryKey" 
-                                                                                      Label="New Key" 
+                                                                                      Label="@Loc["NewKey"].Value" 
                                                                                       Variant="Variant.Outlined"
                                                                                       Margin="Margin.Dense"
                                                                                       Style="max-width: 200px;" />
                                                                         <MudIcon Icon="Icons.Material.Filled.ArrowForward" />
                                                                         <MudTextField @bind-Value="@_newDictionaryValue" 
-                                                                                      Label="Values (comma-separated)" 
+                                                                                      Label="@Loc["ValuesCommaSeparated"].Value" 
                                                                                       Variant="Variant.Outlined"
                                                                                       Margin="Margin.Dense"
                                                                                       FullWidth="true" />
@@ -131,7 +132,7 @@
                                                                                    StartIcon="Icons.Material.Filled.Add"
                                                                                    Size="Size.Small"
                                                                                    OnClick="@(() => AddDictionaryEntry(config))">
-                                                                            Add
+                                                                            @Loc["Add"]
                                                                         </MudButton>
                                                                     </MudStack>
                                                                 }
@@ -139,22 +140,22 @@
                                                         }
                                                         else if (config.IsArray)
                                                         {
-                                                            <MudTextField Value="@config.Value"
-                                                                          Label="Values (comma-separated)"
+                                                             <MudTextField Value="@config.Value"
+                                                                           Label="@Loc["ValuesCommaSeparated"].Value"
                                                                           Variant="Variant.Outlined"
                                                                           Lines="2"
                                                                           ValueChanged="@((string value) => UpdateConfigValue(config, value.Split(',').Select(x => x.Trim())))" />
                                                         }
                                                         else
                                                         {
-                                                            <MudTextField Value="@config.Value"
-                                                                          Label="Value"
+                                                             <MudTextField Value="@config.Value"
+                                                                           Label="@Loc["Value"].Value"
                                                                           Variant="Variant.Outlined"
                                                                           ValueChanged="@((string value) => UpdateConfigValue(config, value))" />
                                                         }
                                                         
                                                         <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                                            Type: @FormatTypeName(config.Type)
+                                                            @string.Format(Loc["Type"].Value, FormatTypeName(config.Type))
                                                         </MudText>
                                                     </MudStack>
                                                 </MudCardContent>
@@ -229,14 +230,14 @@
     {
         return typeName switch
         {
-            "Boolean" => "Yes/No",
-            "String" => "Text",
-            "Int32" => "Number",
-            "UInt32" => "Number",
-            "Double" => "Decimal",
-            "Single" => "Decimal",
-            "String[]" => "List",
-            var t when t.StartsWith("Nullable") => "Optional " + FormatTypeName(t.Replace("Nullable`1", "").Replace("[", "").Replace("]", "")),
+            "Boolean" => Loc["TypeYesNo"].Value,
+            "String" => Loc["TypeText"].Value,
+            "Int32" => Loc["TypeNumber"].Value,
+            "UInt32" => Loc["TypeNumber"].Value,
+            "Double" => Loc["TypeDecimal"].Value,
+            "Single" => Loc["TypeDecimal"].Value,
+            "String[]" => Loc["TypeList"].Value,
+            var t when t.StartsWith("Nullable") => string.Format(Loc["TypeOptional"].Value, FormatTypeName(t.Replace("Nullable`1", "").Replace("[", "").Replace("]", ""))),
             _ => typeName
         };
     }

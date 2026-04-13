@@ -1,0 +1,887 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ======================== -->
+  <!-- App.razor                -->
+  <!-- ======================== -->
+  <data name="NotAuthorized" xml:space="preserve">
+    <value>You are not authorized to access this resource.</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- MainLayout.razor         -->
+  <!-- ======================== -->
+  <data name="Configuration" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- NavMenu.razor            -->
+  <!-- ======================== -->
+  <data name="AppTitle" xml:space="preserve">
+    <value>SharpMUSH</value>
+  </data>
+  <data name="AdminPanel" xml:space="preserve">
+    <value>Admin Panel</value>
+  </data>
+  <data name="Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Counter" xml:space="preserve">
+    <value>Counter</value>
+  </data>
+  <data name="Weather" xml:space="preserve">
+    <value>Weather</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Config" xml:space="preserve">
+    <value>Config</value>
+  </data>
+  <data name="Suggestions" xml:space="preserve">
+    <value>Suggestions</value>
+  </data>
+  <data name="Security" xml:space="preserve">
+    <value>Security</value>
+  </data>
+  <data name="About" xml:space="preserve">
+    <value>About</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- LoginDisplay.razor       -->
+  <!-- ======================== -->
+  <data name="Login" xml:space="preserve">
+    <value>Login</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- ConfigNavDrawer.razor    -->
+  <!-- ======================== -->
+  <data name="ServerSettings" xml:space="preserve">
+    <value>Server Settings</value>
+  </data>
+  <data name="SearchSettings" xml:space="preserve">
+    <value>Search settings...</value>
+  </data>
+  <data name="Server" xml:space="preserve">
+    <value>Server</value>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="Database" xml:space="preserve">
+    <value>Database</value>
+  </data>
+  <data name="Performance" xml:space="preserve">
+    <value>Performance</value>
+  </data>
+  <data name="Limits" xml:space="preserve">
+    <value>Limits</value>
+  </data>
+  <data name="Commands" xml:space="preserve">
+    <value>Commands</value>
+  </data>
+  <data name="Sitelock" xml:space="preserve">
+    <value>Sitelock</value>
+  </data>
+  <data name="Important" xml:space="preserve">
+    <value>Important</value>
+  </data>
+  <data name="BannedNames" xml:space="preserve">
+    <value>Banned Names</value>
+  </data>
+  <data name="Restrictions" xml:space="preserve">
+    <value>Restrictions</value>
+  </data>
+  <data name="Content" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="Messages" xml:space="preserve">
+    <value>Messages</value>
+  </data>
+  <data name="Cosmetic" xml:space="preserve">
+    <value>Cosmetic</value>
+  </data>
+  <data name="Chat" xml:space="preserve">
+    <value>Chat</value>
+  </data>
+  <data name="LogsAndFiles" xml:space="preserve">
+    <value>Logs &amp; Files</value>
+  </data>
+  <data name="Logging" xml:space="preserve">
+    <value>Logging</value>
+  </data>
+  <data name="Files" xml:space="preserve">
+    <value>Files</value>
+  </data>
+  <data name="TextFiles" xml:space="preserve">
+    <value>Text Files</value>
+  </data>
+  <data name="DatabaseDumps" xml:space="preserve">
+    <value>Database Dumps</value>
+  </data>
+  <data name="Advanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="Attributes" xml:space="preserve">
+    <value>Attributes</value>
+  </data>
+  <data name="Flags" xml:space="preserve">
+    <value>Flags</value>
+  </data>
+  <data name="Costs" xml:space="preserve">
+    <value>Costs</value>
+  </data>
+  <data name="Compatibility" xml:space="preserve">
+    <value>Compatibility</value>
+  </data>
+  <data name="Aliases" xml:space="preserve">
+    <value>Aliases</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Debug</value>
+  </data>
+  <data name="Functions" xml:space="preserve">
+    <value>Functions</value>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Warnings</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- WikiDisplay.razor        -->
+  <!-- ======================== -->
+  <data name="WikiPageNotExist" xml:space="preserve">
+    <value>This page does not exist yet. You can create it by clicking the button below.</value>
+  </data>
+  <data name="CreateThisPage" xml:space="preserve">
+    <value>Create this Page!</value>
+  </data>
+  <data name="NothingToSeeHere" xml:space="preserve">
+    <value>Nothing to see here.</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- Counter.razor            -->
+  <!-- ======================== -->
+  <data name="CurrentCount" xml:space="preserve">
+    <value>Current count: {0}</value>
+  </data>
+  <data name="ClickMe" xml:space="preserve">
+    <value>Click me</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- Weather.razor            -->
+  <!-- ======================== -->
+  <data name="WeatherDescription" xml:space="preserve">
+    <value>This component demonstrates fetching data from the server.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="TempC" xml:space="preserve">
+    <value>Temp. (C)</value>
+  </data>
+  <data name="TempF" xml:space="preserve">
+    <value>Temp. (F)</value>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- NotFound.razor           -->
+  <!-- ======================== -->
+  <data name="NotFound" xml:space="preserve">
+    <value>Not Found</value>
+  </data>
+  <data name="NotFoundDescription" xml:space="preserve">
+    <value>Sorry, the content you are looking for does not exist.</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- WebSocketTest.razor      -->
+  <!-- ======================== -->
+  <data name="WebSocketTest" xml:space="preserve">
+    <value>WebSocket Test</value>
+  </data>
+  <data name="WebSocketConnectionTest" xml:space="preserve">
+    <value>WebSocket Connection Test</value>
+  </data>
+  <data name="ServerUri" xml:space="preserve">
+    <value>Server URI</value>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Connect</value>
+  </data>
+  <data name="Disconnect" xml:space="preserve">
+    <value>Disconnect</value>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="SendMessage" xml:space="preserve">
+    <value>Send Message</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- AdminConfig.razor (OLD)  -->
+  <!-- ======================== -->
+  <data name="ConfigurationManagement" xml:space="preserve">
+    <value>Configuration Management</value>
+  </data>
+  <data name="ImportConfig" xml:space="preserve">
+    <value>Import Config</value>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>Reset to Default</value>
+  </data>
+  <data name="ManageConfigDescription" xml:space="preserve">
+    <value>Manage your MUSH configuration settings. You can import configuration files or modify settings directly.</value>
+  </data>
+  <data name="ConfigurationSections" xml:space="preserve">
+    <value>Configuration Sections</value>
+  </data>
+  <data name="SettingsCount" xml:space="preserve">
+    <value>{0} settings</value>
+  </data>
+  <data name="Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Value" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="Mappings" xml:space="preserve">
+    <value>Mappings:</value>
+  </data>
+  <data name="Key" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="ValuesCommaSeparated" xml:space="preserve">
+    <value>Values (comma-separated)</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="NewKey" xml:space="preserve">
+    <value>New Key</value>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Type: {0}</value>
+  </data>
+  <data name="TypeYesNo" xml:space="preserve">
+    <value>Yes/No</value>
+  </data>
+  <data name="TypeText" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="TypeNumber" xml:space="preserve">
+    <value>Number</value>
+  </data>
+  <data name="TypeDecimal" xml:space="preserve">
+    <value>Decimal</value>
+  </data>
+  <data name="TypeList" xml:space="preserve">
+    <value>List</value>
+  </data>
+  <data name="TypeOptional" xml:space="preserve">
+    <value>Optional {0}</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- BannedNames.razor        -->
+  <!-- ======================== -->
+  <data name="BannedPlayerNames" xml:space="preserve">
+    <value>Banned Player Names</value>
+  </data>
+  <data name="BannedNamesDescription" xml:space="preserve">
+    <value>Manage the list of names that players are not allowed to use when creating characters.</value>
+  </data>
+  <data name="AddBannedName" xml:space="preserve">
+    <value>Add Banned Name</value>
+  </data>
+  <data name="NameToBan" xml:space="preserve">
+    <value>Name to Ban</value>
+  </data>
+  <data name="AddName" xml:space="preserve">
+    <value>Add Name</value>
+  </data>
+  <data name="BannedNamesList" xml:space="preserve">
+    <value>Banned Names List</value>
+  </data>
+  <data name="NoBannedNamesConfigured" xml:space="preserve">
+    <value>No banned names configured.</value>
+  </data>
+  <data name="BannedNameAdded" xml:space="preserve">
+    <value>Banned name '{0}' added successfully</value>
+  </data>
+  <data name="BannedNameAddFailed" xml:space="preserve">
+    <value>Failed to add banned name '{0}'</value>
+  </data>
+  <data name="BannedNameRemoved" xml:space="preserve">
+    <value>Banned name '{0}' removed successfully</value>
+  </data>
+  <data name="BannedNameRemoveFailed" xml:space="preserve">
+    <value>Failed to remove banned name '{0}'</value>
+  </data>
+  <data name="ErrorLoadingBannedNames" xml:space="preserve">
+    <value>Error loading banned names: {0}</value>
+  </data>
+  <data name="ErrorAddingBannedName" xml:space="preserve">
+    <value>Error adding banned name: {0}</value>
+  </data>
+  <data name="ErrorRemovingBannedName" xml:space="preserve">
+    <value>Error removing banned name: {0}</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- Sitelock.razor           -->
+  <!-- ======================== -->
+  <data name="SitelockRules" xml:space="preserve">
+    <value>Sitelock Rules</value>
+  </data>
+  <data name="SitelockDescription" xml:space="preserve">
+    <value>Control which sites can connect, create players, or use guest accounts.</value>
+  </data>
+  <data name="SitelockAccessRulesHint" xml:space="preserve">
+    <value>Access rules:</value>
+  </data>
+  <data name="AddSitelockRule" xml:space="preserve">
+    <value>Add Sitelock Rule</value>
+  </data>
+  <data name="HostPattern" xml:space="preserve">
+    <value>Host Pattern</value>
+  </data>
+  <data name="HostPatternHelper" xml:space="preserve">
+    <value>e.g., *.example.com or 192.168.1.*</value>
+  </data>
+  <data name="AccessRulesLabel" xml:space="preserve">
+    <value>Access Rules (comma-separated)</value>
+  </data>
+  <data name="AccessRulesHelper" xml:space="preserve">
+    <value>e.g., !connect, suspect</value>
+  </data>
+  <data name="ConfiguredRules" xml:space="preserve">
+    <value>Configured Rules</value>
+  </data>
+  <data name="NoSitelockRulesConfigured" xml:space="preserve">
+    <value>No sitelock rules configured.</value>
+  </data>
+  <data name="AtLeastOneAccessRule" xml:space="preserve">
+    <value>At least one access rule is required</value>
+  </data>
+  <data name="SitelockRuleAdded" xml:space="preserve">
+    <value>Sitelock rule for '{0}' added successfully</value>
+  </data>
+  <data name="SitelockRuleAddFailed" xml:space="preserve">
+    <value>Failed to add sitelock rule</value>
+  </data>
+  <data name="SitelockRuleRemoved" xml:space="preserve">
+    <value>Sitelock rule for '{0}' removed successfully</value>
+  </data>
+  <data name="SitelockRuleRemoveFailed" xml:space="preserve">
+    <value>Failed to remove sitelock rule</value>
+  </data>
+  <data name="ErrorLoadingSitelockRules" xml:space="preserve">
+    <value>Error loading sitelock rules: {0}</value>
+  </data>
+  <data name="ErrorAddingSitelockRule" xml:space="preserve">
+    <value>Error adding sitelock rule: {0}</value>
+  </data>
+  <data name="ErrorRemovingSitelockRule" xml:space="preserve">
+    <value>Error removing sitelock rule: {0}</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- Restrictions.razor       -->
+  <!-- ======================== -->
+  <data name="CommandAndFunctionRestrictions" xml:space="preserve">
+    <value>Command &amp; Function Restrictions</value>
+  </data>
+  <data name="RestrictionsDescription" xml:space="preserve">
+    <value>Restrict which players can use specific commands or functions based on flags, powers, or attributes.</value>
+  </data>
+  <data name="CommandRestrictions" xml:space="preserve">
+    <value>Command Restrictions</value>
+  </data>
+  <data name="FunctionRestrictions" xml:space="preserve">
+    <value>Function Restrictions</value>
+  </data>
+  <data name="AddCommandRestriction" xml:space="preserve">
+    <value>Add Command Restriction</value>
+  </data>
+  <data name="AddFunctionRestriction" xml:space="preserve">
+    <value>Add Function Restriction</value>
+  </data>
+  <data name="CommandName" xml:space="preserve">
+    <value>Command Name</value>
+  </data>
+  <data name="CommandNameHelper" xml:space="preserve">
+    <value>e.g., pemit, force</value>
+  </data>
+  <data name="FunctionName" xml:space="preserve">
+    <value>Function Name</value>
+  </data>
+  <data name="FunctionNameHelper" xml:space="preserve">
+    <value>e.g., pemit(), sql()</value>
+  </data>
+  <data name="RestrictionsLabel" xml:space="preserve">
+    <value>Restrictions (comma-separated)</value>
+  </data>
+  <data name="RestrictionsHelper" xml:space="preserve">
+    <value>e.g., wizard, royalty, admin</value>
+  </data>
+  <data name="RestrictionsBuilderHelper" xml:space="preserve">
+    <value>e.g., wizard, builder</value>
+  </data>
+  <data name="ConfiguredCommandRestrictions" xml:space="preserve">
+    <value>Configured Command Restrictions</value>
+  </data>
+  <data name="ConfiguredFunctionRestrictions" xml:space="preserve">
+    <value>Configured Function Restrictions</value>
+  </data>
+  <data name="NoCommandRestrictions" xml:space="preserve">
+    <value>No command restrictions configured.</value>
+  </data>
+  <data name="NoFunctionRestrictions" xml:space="preserve">
+    <value>No function restrictions configured.</value>
+  </data>
+  <data name="AtLeastOneRestriction" xml:space="preserve">
+    <value>At least one restriction is required</value>
+  </data>
+  <data name="CommandRestrictionAdded" xml:space="preserve">
+    <value>Command restriction for '{0}' added successfully</value>
+  </data>
+  <data name="CommandRestrictionAddFailed" xml:space="preserve">
+    <value>Failed to add command restriction</value>
+  </data>
+  <data name="CommandRestrictionRemoved" xml:space="preserve">
+    <value>Command restriction for '{0}' removed successfully</value>
+  </data>
+  <data name="CommandRestrictionRemoveFailed" xml:space="preserve">
+    <value>Failed to remove command restriction</value>
+  </data>
+  <data name="FunctionRestrictionAdded" xml:space="preserve">
+    <value>Function restriction for '{0}' added successfully</value>
+  </data>
+  <data name="FunctionRestrictionAddFailed" xml:space="preserve">
+    <value>Failed to add function restriction</value>
+  </data>
+  <data name="FunctionRestrictionRemoved" xml:space="preserve">
+    <value>Function restriction for '{0}' removed successfully</value>
+  </data>
+  <data name="FunctionRestrictionRemoveFailed" xml:space="preserve">
+    <value>Failed to remove function restriction</value>
+  </data>
+  <data name="ErrorLoadingRestrictions" xml:space="preserve">
+    <value>Error loading restrictions: {0}</value>
+  </data>
+  <data name="ErrorAddingCommandRestriction" xml:space="preserve">
+    <value>Error adding command restriction: {0}</value>
+  </data>
+  <data name="ErrorRemovingCommandRestriction" xml:space="preserve">
+    <value>Error removing command restriction: {0}</value>
+  </data>
+  <data name="ErrorAddingFunctionRestriction" xml:space="preserve">
+    <value>Error adding function restriction: {0}</value>
+  </data>
+  <data name="ErrorRemovingFunctionRestriction" xml:space="preserve">
+    <value>Error removing function restriction: {0}</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- SuggestionManagement.razor -->
+  <!-- ======================== -->
+  <data name="SuggestionManagement" xml:space="preserve">
+    <value>Suggestion Management</value>
+  </data>
+  <data name="AddCategory" xml:space="preserve">
+    <value>Add Category</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="SuggestionsDescription" xml:space="preserve">
+    <value>Manage spell-check and suggestion categories used for providing alternatives to misspelled words in help entries, function names, and other user input.</value>
+  </data>
+  <data name="NoSuggestionCategories" xml:space="preserve">
+    <value>No suggestion categories defined. Click "Add Category" to create your first category.</value>
+  </data>
+  <data name="CategoriesCount" xml:space="preserve">
+    <value>Categories ({0})</value>
+  </data>
+  <data name="WordsCount" xml:space="preserve">
+    <value>{0} words</value>
+  </data>
+  <data name="AddNewWord" xml:space="preserve">
+    <value>Add new word</value>
+  </data>
+  <data name="Words" xml:space="preserve">
+    <value>Words:</value>
+  </data>
+  <data name="NoWordsInCategory" xml:space="preserve">
+    <value>No words in this category yet.</value>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Statistics</value>
+  </data>
+  <data name="Categories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="TotalWords" xml:space="preserve">
+    <value>Total Words</value>
+  </data>
+  <data name="AvgWordsPerCategory" xml:space="preserve">
+    <value>Avg. Words/Category</value>
+  </data>
+  <data name="CategoryName" xml:space="preserve">
+    <value>Category Name</value>
+  </data>
+  <data name="CategoryNameHelper" xml:space="preserve">
+    <value>Enter a name for the new suggestion category (e.g., 'commands', 'functions', 'help')</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Create" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="CategoryNameEmpty" xml:space="preserve">
+    <value>Category name cannot be empty</value>
+  </data>
+  <data name="CategoryAlreadyExists" xml:space="preserve">
+    <value>Category '{0}' already exists</value>
+  </data>
+  <data name="CategoryCreated" xml:space="preserve">
+    <value>Category '{0}' created successfully</value>
+  </data>
+  <data name="CategoryCreateFailed" xml:space="preserve">
+    <value>Failed to create category: {0}</value>
+  </data>
+  <data name="ErrorCreatingCategory" xml:space="preserve">
+    <value>Error creating category: {0}</value>
+  </data>
+  <data name="WordEmpty" xml:space="preserve">
+    <value>Word cannot be empty</value>
+  </data>
+  <data name="WordAdded" xml:space="preserve">
+    <value>Added '{0}' to category '{1}'</value>
+  </data>
+  <data name="WordAddFailed" xml:space="preserve">
+    <value>Failed to add word: {0}</value>
+  </data>
+  <data name="ErrorAddingWord" xml:space="preserve">
+    <value>Error adding word: {0}</value>
+  </data>
+  <data name="WordRemoved" xml:space="preserve">
+    <value>Removed '{0}' from category '{1}'</value>
+  </data>
+  <data name="WordRemoveFailed" xml:space="preserve">
+    <value>Failed to delete word: {0}</value>
+  </data>
+  <data name="ErrorDeletingWord" xml:space="preserve">
+    <value>Error deleting word: {0}</value>
+  </data>
+  <data name="CategoryDeleted" xml:space="preserve">
+    <value>Deleted category '{0}'</value>
+  </data>
+  <data name="CategoryDeleteFailed" xml:space="preserve">
+    <value>Failed to delete category: {0}</value>
+  </data>
+  <data name="ErrorDeletingCategory" xml:space="preserve">
+    <value>Error deleting category: {0}</value>
+  </data>
+  <data name="ErrorLoadingSuggestions" xml:space="preserve">
+    <value>Error loading suggestions: {0}</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- ImportConfig.razor       -->
+  <!-- ======================== -->
+  <data name="ImportConfiguration" xml:space="preserve">
+    <value>Import Configuration</value>
+  </data>
+  <data name="ImportConfigDescription" xml:space="preserve">
+    <value>Upload a mush.cnf file to import configuration settings. Supported formats: .cnf, .conf, .txt</value>
+  </data>
+  <data name="DropFilesOrClick" xml:space="preserve">
+    <value>Drop files here or click</value>
+  </data>
+  <data name="SupportedFormatsConfig" xml:space="preserve">
+    <value>Supported formats: .cnf, .conf, .txt (max 1MB)</value>
+  </data>
+  <data name="SelectedFile" xml:space="preserve">
+    <value>Selected File</value>
+  </data>
+  <data name="PreviewFileContent" xml:space="preserve">
+    <value>Preview File Content</value>
+  </data>
+  <data name="ClearSelection" xml:space="preserve">
+    <value>Clear Selection</value>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>Importing...</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- ImportDatabase.razor     -->
+  <!-- ======================== -->
+  <data name="ImportPennMUSHDatabase" xml:space="preserve">
+    <value>Import PennMUSH Database</value>
+  </data>
+  <data name="ImportDatabaseDescription" xml:space="preserve">
+    <value>Upload a PennMUSH database file to convert and import into SharpMUSH. The conversion process will create all objects, establish relationships, and set attributes and locks.</value>
+  </data>
+  <data name="DropDatabaseFile" xml:space="preserve">
+    <value>Drop PennMUSH database file here or click</value>
+  </data>
+  <data name="SupportedFormatsDb" xml:space="preserve">
+    <value>Supported formats: .db, .txt (max 100MB)</value>
+  </data>
+  <data name="Uploading" xml:space="preserve">
+    <value>Uploading...</value>
+  </data>
+  <data name="StartConversion" xml:space="preserve">
+    <value>Start Conversion</value>
+  </data>
+  <data name="ConvertingDatabase" xml:space="preserve">
+    <value>Converting Database</value>
+  </data>
+  <data name="PercentComplete" xml:space="preserve">
+    <value>{0:F1}% Complete - {1}</value>
+  </data>
+  <data name="Progress" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="Phase" xml:space="preserve">
+    <value>Phase:</value>
+  </data>
+  <data name="Elapsed" xml:space="preserve">
+    <value>Elapsed:</value>
+  </data>
+  <data name="EstimatedRemaining" xml:space="preserve">
+    <value>Estimated Remaining:</value>
+  </data>
+  <data name="ObjectsCreated" xml:space="preserve">
+    <value>Objects Created</value>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Players:</value>
+  </data>
+  <data name="Rooms" xml:space="preserve">
+    <value>Rooms:</value>
+  </data>
+  <data name="Things" xml:space="preserve">
+    <value>Things:</value>
+  </data>
+  <data name="Exits" xml:space="preserve">
+    <value>Exits:</value>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>Total:</value>
+  </data>
+  <data name="AdditionalData" xml:space="preserve">
+    <value>Additional Data</value>
+  </data>
+  <data name="AttributesLabel" xml:space="preserve">
+    <value>Attributes:</value>
+  </data>
+  <data name="Locks" xml:space="preserve">
+    <value>Locks:</value>
+  </data>
+  <data name="Issues" xml:space="preserve">
+    <value>Issues</value>
+  </data>
+  <data name="ErrorCount" xml:space="preserve">
+    <value>{0} error(s)</value>
+  </data>
+  <data name="WarningCount" xml:space="preserve">
+    <value>{0} warning(s)</value>
+  </data>
+  <data name="CancelConversion" xml:space="preserve">
+    <value>Cancel Conversion</value>
+  </data>
+  <data name="ConversionSuccess" xml:space="preserve">
+    <value>Conversion Completed Successfully!</value>
+  </data>
+  <data name="ConversionErrors" xml:space="preserve">
+    <value>Conversion Completed with Errors</value>
+  </data>
+  <data name="ObjectsConverted" xml:space="preserve">
+    <value>Objects Converted</value>
+  </data>
+  <data name="TotalObjects" xml:space="preserve">
+    <value>Total Objects:</value>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>Duration:</value>
+  </data>
+  <data name="Errors" xml:space="preserve">
+    <value>Errors ({0})</value>
+  </data>
+  <data name="WarningsLabel" xml:space="preserve">
+    <value>Warnings ({0})</value>
+  </data>
+  <data name="ImportAnotherDatabase" xml:space="preserve">
+    <value>Import Another Database</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- ConfigIndex.razor        -->
+  <!-- ======================== -->
+  <data name="ServerConfiguration" xml:space="preserve">
+    <value>Server Configuration</value>
+  </data>
+  <data name="ManageAllSettings" xml:space="preserve">
+    <value>Manage all SharpMUSH server settings from one place</value>
+  </data>
+  <data name="ServerCategoryDescription" xml:space="preserve">
+    <value>Network connections, database, and core server settings</value>
+  </data>
+  <data name="PerformanceCategoryDescription" xml:space="preserve">
+    <value>Resource limits, command queues, and optimization</value>
+  </data>
+  <data name="SecurityCategoryDescription" xml:space="preserve">
+    <value>Access control, sitelock rules, and banned names</value>
+  </data>
+  <data name="ContentCategoryDescription" xml:space="preserve">
+    <value>Messages, cosmetic options, and chat configuration</value>
+  </data>
+  <data name="LogsCategoryDescription" xml:space="preserve">
+    <value>Logging, file paths, and database dumps</value>
+  </data>
+  <data name="AdvancedCategoryDescription" xml:space="preserve">
+    <value>Attributes, flags, costs, and specialized settings</value>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Coming soon</value>
+  </data>
+  <data name="QuickActions" xml:space="preserve">
+    <value>Quick Actions</value>
+  </data>
+  <data name="SearchAllSettings" xml:space="preserve">
+    <value>Search All Settings</value>
+  </data>
+  <data name="ImportConfigFile" xml:space="preserve">
+    <value>Import Config File</value>
+  </data>
+  <data name="ExportConfiguration" xml:space="preserve">
+    <value>Export Configuration</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- DynamicConfig.razor      -->
+  <!-- ======================== -->
+  <data name="RoutingError" xml:space="preserve">
+    <value>Routing Error:</value>
+  </data>
+  <data name="RoutingErrorDescription" xml:space="preserve">
+    <value>The category "{0}" has a custom page that should be rendering instead of DynamicConfig.</value>
+  </data>
+  <data name="RoutingErrorExpected" xml:space="preserve">
+    <value>This message means the custom page is NOT being matched by the router.</value>
+  </data>
+  <data name="CategoryNotFound" xml:space="preserve">
+    <value>Configuration category "{0}" not found in schema.</value>
+  </data>
+  <data name="NoPropertiesFound" xml:space="preserve">
+    <value>No configuration properties found for category "{0}".</value>
+  </data>
+  <data name="NoPropertiesHint" xml:space="preserve">
+    <value>This category may not have been annotated with enhanced schema metadata yet.</value>
+  </data>
+  <data name="SettingsLabel" xml:space="preserve">
+    <value>{0} Settings</value>
+  </data>
+  <data name="NoGroupingNote" xml:space="preserve">
+    <value>This category has not been updated with enhanced schema metadata yet. Properties are displayed without grouping. Only the Network (Net) category currently has the full enhanced UI.</value>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Unsaved changes</value>
+  </data>
+  <data name="InThisSection" xml:space="preserve">
+    <value>in this section</value>
+  </data>
+  <data name="ResetChanges" xml:space="preserve">
+    <value>Reset Changes</value>
+  </data>
+  <data name="SaveConfiguration" xml:space="preserve">
+    <value>Save Configuration</value>
+  </data>
+  <data name="SaveNotImplemented" xml:space="preserve">
+    <value>Save functionality not yet implemented</value>
+  </data>
+  <data name="FailedToLoadSchema" xml:space="preserve">
+    <value>Failed to load configuration schema</value>
+  </data>
+  <data name="CategoryNotFoundShort" xml:space="preserve">
+    <value>Category '{0}' not found</value>
+  </data>
+  <data name="FailedToLoadValues" xml:space="preserve">
+    <value>Failed to load configuration values</value>
+  </data>
+  <data name="ErrorLoadingConfig" xml:space="preserve">
+    <value>Error loading configuration: {0}</value>
+  </data>
+
+  <!-- ======================== -->
+  <!-- Language Picker          -->
+  <!-- ======================== -->
+  <data name="Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+</root>

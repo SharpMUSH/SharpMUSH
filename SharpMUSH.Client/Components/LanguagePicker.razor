@@ -1,0 +1,48 @@
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<SharedResource> Loc
+
+<MudMenu Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+    @foreach (var lang in _languages)
+    {
+        <MudMenuItem OnClick="@(() => SetLanguageAsync(lang.Code))">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText>@lang.Flag</MudText>
+                <MudText Typo="Typo.body2">@lang.Name</MudText>
+                @if (lang.Code == _currentLocale)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Secondary" />
+                }
+            </MudStack>
+        </MudMenuItem>
+    }
+</MudMenu>
+
+@code {
+    private string _currentLocale = "en";
+
+    private readonly record struct LanguageOption(string Code, string Name, string Flag);
+
+    private static readonly LanguageOption[] _languages =
+    [
+        new("en", "English", "\U0001F1FA\U0001F1F8"),
+        new("fr", "Français", "\U0001F1EB\U0001F1F7")
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var stored = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "locale");
+        _currentLocale = stored ?? "en";
+    }
+
+    private async Task SetLanguageAsync(string locale)
+    {
+        if (locale == _currentLocale) return;
+
+        _currentLocale = locale;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "locale", locale);
+
+        // Reload the app to apply new culture (Blazor WASM requires restart for culture change)
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+}

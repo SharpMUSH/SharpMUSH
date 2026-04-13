@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using SharpMUSH.Client.Components
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Home</PageTitle>
+<PageTitle>@Loc["Home"]</PageTitle>
 
 <WikiView Slug="home"/>

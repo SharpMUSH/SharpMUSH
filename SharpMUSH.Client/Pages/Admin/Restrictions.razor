@@ -3,13 +3,14 @@
 @using SharpMUSH.Client.Services
 @inject RestrictionsService RestrictionsService
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>Restrictions - Configuration</PageTitle>
+<PageTitle>@Loc["Restrictions"] - @Loc["Configuration"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
-    <MudText Typo="Typo.h4" GutterBottom="true">Command & Function Restrictions</MudText>
+    <MudText Typo="Typo.h4" GutterBottom="true">@Loc["CommandAndFunctionRestrictions"]</MudText>
     <MudText Typo="Typo.body1" Class="mb-4">
-        Restrict which players can use specific commands or functions based on flags, powers, or attributes.
+        @Loc["RestrictionsDescription"]
     </MudText>
 
     @if (_loading)
@@ -19,21 +20,21 @@
     else
     {
         <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
-            <MudTabPanel Text="Command Restrictions" Icon="@Icons.Material.Filled.Terminal">
+            <MudTabPanel Text="@Loc["CommandRestrictions"].Value" Icon="@Icons.Material.Filled.Terminal">
                 <MudPaper Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">Add Command Restriction</MudText>
+                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["AddCommandRestriction"]</MudText>
                     <MudGrid>
                         <MudItem xs="12" md="5">
                             <MudTextField @bind-Value="_newCommandName" 
-                                          Label="Command Name" 
+                                          Label="@Loc["CommandName"].Value" 
                                           Variant="Variant.Outlined"
-                                          HelperText="e.g., pemit, force" />
+                                          HelperText="@Loc["CommandNameHelper"].Value" />
                         </MudItem>
                         <MudItem xs="12" md="5">
                             <MudTextField @bind-Value="_newCommandRestrictionsText" 
-                                          Label="Restrictions (comma-separated)" 
+                                          Label="@Loc["RestrictionsLabel"].Value" 
                                           Variant="Variant.Outlined"
-                                          HelperText="e.g., wizard, royalty, admin" />
+                                          HelperText="@Loc["RestrictionsHelper"].Value" />
                         </MudItem>
                         <MudItem xs="12" md="2">
                             <MudButton Variant="Variant.Filled" 
@@ -42,18 +43,18 @@
                                        Disabled="string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText)"
                                        FullWidth="true"
                                        StartIcon="@Icons.Material.Filled.Add">
-                                Add
+                                @Loc["Add"]
                             </MudButton>
                         </MudItem>
                     </MudGrid>
                 </MudPaper>
 
                 <MudPaper Class="pa-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">Configured Command Restrictions</MudText>
+                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["ConfiguredCommandRestrictions"]</MudText>
                     
                     @if (_commandRestrictions == null || !_commandRestrictions.Any())
                     {
-                        <MudAlert Severity="Severity.Info">No command restrictions configured.</MudAlert>
+                        <MudAlert Severity="Severity.Info">@Loc["NoCommandRestrictions"]</MudAlert>
                     }
                     else
                     {
@@ -81,21 +82,21 @@
                 </MudPaper>
             </MudTabPanel>
 
-            <MudTabPanel Text="Function Restrictions" Icon="@Icons.Material.Filled.Functions">
+            <MudTabPanel Text="@Loc["FunctionRestrictions"].Value" Icon="@Icons.Material.Filled.Functions">
                 <MudPaper Class="pa-4 mb-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">Add Function Restriction</MudText>
+                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["AddFunctionRestriction"]</MudText>
                     <MudGrid>
                         <MudItem xs="12" md="5">
                             <MudTextField @bind-Value="_newFunctionName" 
-                                          Label="Function Name" 
+                                          Label="@Loc["FunctionName"].Value" 
                                           Variant="Variant.Outlined"
-                                          HelperText="e.g., pemit(), sql()" />
+                                          HelperText="@Loc["FunctionNameHelper"].Value" />
                         </MudItem>
                         <MudItem xs="12" md="5">
                             <MudTextField @bind-Value="_newFunctionRestrictionsText" 
-                                          Label="Restrictions (comma-separated)" 
+                                          Label="@Loc["RestrictionsLabel"].Value" 
                                           Variant="Variant.Outlined"
-                                          HelperText="e.g., wizard, builder" />
+                                          HelperText="@Loc["RestrictionsBuilderHelper"].Value" />
                         </MudItem>
                         <MudItem xs="12" md="2">
                             <MudButton Variant="Variant.Filled" 
@@ -104,18 +105,18 @@
                                        Disabled="string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText)"
                                        FullWidth="true"
                                        StartIcon="@Icons.Material.Filled.Add">
-                                Add
+                                @Loc["Add"]
                             </MudButton>
                         </MudItem>
                     </MudGrid>
                 </MudPaper>
 
                 <MudPaper Class="pa-4">
-                    <MudText Typo="Typo.h6" GutterBottom="true">Configured Function Restrictions</MudText>
+                    <MudText Typo="Typo.h6" GutterBottom="true">@Loc["ConfiguredFunctionRestrictions"]</MudText>
                     
                     @if (_functionRestrictions == null || !_functionRestrictions.Any())
                     {
-                        <MudAlert Severity="Severity.Info">No function restrictions configured.</MudAlert>
+                        <MudAlert Severity="Severity.Info">@Loc["NoFunctionRestrictions"]</MudAlert>
                     }
                     else
                     {
@@ -176,7 +177,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading restrictions: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorLoadingRestrictions"], ex.Message), Severity.Error);
         }
         finally
         {
@@ -199,26 +200,26 @@
 
             if (restrictions.Length == 0)
             {
-                Snackbar.Add("At least one restriction is required", Severity.Warning);
+                Snackbar.Add(Loc["AtLeastOneRestriction"], Severity.Warning);
                 return;
             }
 
             var success = await RestrictionsService.AddCommandRestrictionAsync(_newCommandName.Trim(), restrictions);
             if (success)
             {
-                Snackbar.Add($"Command restriction for '{_newCommandName}' added successfully", Severity.Success);
+                Snackbar.Add(string.Format(Loc["CommandRestrictionAdded"], _newCommandName), Severity.Success);
                 _newCommandName = string.Empty;
                 _newCommandRestrictionsText = string.Empty;
                 await LoadRestrictions();
             }
             else
             {
-                Snackbar.Add($"Failed to add command restriction", Severity.Error);
+                Snackbar.Add(Loc["CommandRestrictionAddFailed"], Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error adding command restriction: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorAddingCommandRestriction"], ex.Message), Severity.Error);
         }
     }
 
@@ -229,17 +230,17 @@
             var success = await RestrictionsService.DeleteCommandRestrictionAsync(commandName);
             if (success)
             {
-                Snackbar.Add($"Command restriction for '{commandName}' removed successfully", Severity.Success);
+                Snackbar.Add(string.Format(Loc["CommandRestrictionRemoved"], commandName), Severity.Success);
                 await LoadRestrictions();
             }
             else
             {
-                Snackbar.Add($"Failed to remove command restriction", Severity.Error);
+                Snackbar.Add(Loc["CommandRestrictionRemoveFailed"], Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error removing command restriction: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorRemovingCommandRestriction"], ex.Message), Severity.Error);
         }
     }
 
@@ -258,26 +259,26 @@
 
             if (restrictions.Length == 0)
             {
-                Snackbar.Add("At least one restriction is required", Severity.Warning);
+                Snackbar.Add(Loc["AtLeastOneRestriction"], Severity.Warning);
                 return;
             }
 
             var success = await RestrictionsService.AddFunctionRestrictionAsync(_newFunctionName.Trim(), restrictions);
             if (success)
             {
-                Snackbar.Add($"Function restriction for '{_newFunctionName}' added successfully", Severity.Success);
+                Snackbar.Add(string.Format(Loc["FunctionRestrictionAdded"], _newFunctionName), Severity.Success);
                 _newFunctionName = string.Empty;
                 _newFunctionRestrictionsText = string.Empty;
                 await LoadRestrictions();
             }
             else
             {
-                Snackbar.Add($"Failed to add function restriction", Severity.Error);
+                Snackbar.Add(Loc["FunctionRestrictionAddFailed"], Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error adding function restriction: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorAddingFunctionRestriction"], ex.Message), Severity.Error);
         }
     }
 
@@ -288,17 +289,17 @@
             var success = await RestrictionsService.DeleteFunctionRestrictionAsync(functionName);
             if (success)
             {
-                Snackbar.Add($"Function restriction for '{functionName}' removed successfully", Severity.Success);
+                Snackbar.Add(string.Format(Loc["FunctionRestrictionRemoved"], functionName), Severity.Success);
                 await LoadRestrictions();
             }
             else
             {
-                Snackbar.Add($"Failed to remove function restriction", Severity.Error);
+                Snackbar.Add(Loc["FunctionRestrictionRemoveFailed"], Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error removing function restriction: {ex.Message}", Severity.Error);
+            Snackbar.Add(string.Format(Loc["ErrorRemovingFunctionRestriction"], ex.Message), Severity.Error);
         }
     }
 }
