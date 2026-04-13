@@ -206,10 +206,15 @@ public partial class Commands
 			var setResult =
 				await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
 
-		await NotifyService!.Notify(executor,
-			setResult.Match(
-				_ => string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name, args["0"].Message),
-				failure => failure.Value), executor);
+		if (setResult.IsT0)
+		{
+			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet),
+				realLocated.Object().Name, MModule.plainText(attribute));
+		}
+		else
+		{
+			await NotifyService!.Notify(executor, setResult.AsT1.Value, executor);
+		}
 
 		return new CallState(setResult.Match(
 			_ => $"{realLocated.Object().Name}/{args["0"].Message}",

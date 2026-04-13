@@ -39,7 +39,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, string.Format(Definitions.ErrorMessages.Notifications.CannotNameObjectFormat, name));
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.CannotNameObjectFormat), name.ToPlainText());
 			}
 
 			return Errors.ErrorPerm;
@@ -59,7 +59,7 @@ public class ManipulateSharpObjectService(
 				{
 				if (notify)
 				{
-					await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PlayerNameInUse);
+					await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameInUse));
 				}
 
 				return "#-1 PLAYER NAME ALREADY IN USE.";
@@ -83,7 +83,7 @@ public class ManipulateSharpObjectService(
 				{
 				if (notify)
 				{
-					await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PlayerAliasInUse);
+					await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerAliasInUse));
 				}
 
 				return "#-1 PLAYER ALIAS ALREADY IN USE.";
@@ -124,7 +124,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.InvalidPasswordText);
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.InvalidPasswordText));
 			}
 
 			return Errors.ErrorInvalidPassword;

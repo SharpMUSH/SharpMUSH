@@ -3219,13 +3219,28 @@ public partial class Commands
 		if (args.Count == 0)
 		{
 			var current = "en";
-			await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+			var handle = parser.CurrentState.Handle;
+			if (handle.HasValue)
 			{
-				if (conn.State == IConnectionService.ConnectionState.LoggedIn)
+				// Use the specific connection that ran @locale to avoid multi-session ambiguity.
+				var conn = ConnectionService!.Get(handle.Value);
+				if (conn is not null && conn.Metadata.TryGetValue("Locale", out var stored) && !string.IsNullOrEmpty(stored))
 				{
-					conn.Metadata.TryGetValue("Locale", out var stored);
-					current = string.IsNullOrEmpty(stored) ? "en" : stored;
-					break;
+					current = stored;
+				}
+			}
+			else
+			{
+				// No direct handle (e.g. @force context) — fall back to persisted LOCALE attribute.
+				var localeAttrs = Database!.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
+				await foreach (var attr in localeAttrs)
+				{
+					var saved = attr.Value.ToPlainText();
+					if (!string.IsNullOrEmpty(saved))
+					{
+						current = saved;
+						break;
+					}
 				}
 			}
 			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCurrentFormat), current);

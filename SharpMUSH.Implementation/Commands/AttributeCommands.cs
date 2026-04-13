@@ -62,7 +62,10 @@ public partial class Commands
 		{
 			// Query mode - show lock status
 			var isLocked = attribute.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
-			await NotifyService!.Notify(executor, isLocked ? ErrorMessages.Notifications.AttributeIsLocked : ErrorMessages.Notifications.AttributeIsUnlocked, executor);
+			await NotifyService!.NotifyLocalized(executor,
+				isLocked
+					? nameof(ErrorMessages.Notifications.AttributeIsLocked)
+					: nameof(ErrorMessages.Notifications.AttributeIsUnlocked));
 			return new CallState(string.Empty);
 		}
 

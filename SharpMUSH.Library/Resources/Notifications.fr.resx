@@ -65,10 +65,10 @@
 
   <!-- ── @set / attributes ───────────────────────────────────────────── -->
   <data name="AttributeSet" xml:space="preserve">
-    <value>Attribut défini.</value>
+    <value>{0}/{1} - Défini.</value>
   </data>
   <data name="AttributeCleared" xml:space="preserve">
-    <value>Attribut effacé.</value>
+    <value>{0}/{1} - Effacé.</value>
   </data>
 
 </root>

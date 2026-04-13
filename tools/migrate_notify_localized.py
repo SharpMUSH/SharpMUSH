@@ -175,6 +175,12 @@ def transform_content(content: str) -> tuple[str, int]:
         simple_m = SIMPLE_KEY_RE.match(msg_arg)
         if simple_m:
             key = simple_m.group(1)
+            # Guard: only rewrite 2-arg calls — extra args are sender/type and must
+            # not be silently dropped (NotifyLocalized has no sender/type params).
+            if len(args) != 2:
+                result.append(content[i : m.end()])
+                i = m.end()
+                continue
             new_call = (
                 f".NotifyLocalized({target}, nameof(ErrorMessages.Notifications.{key}))"
             )
@@ -189,6 +195,12 @@ def transform_content(content: str) -> tuple[str, int]:
         if fmt_m:
             key = fmt_m.group(1)
             fmt_args = fmt_m.group(2)  # None or the raw args string after the key
+            # Guard: only rewrite when the full call has exactly 2 top-level args —
+            # a 3rd+ arg would be sender/type which NotifyLocalized doesn't accept.
+            if len(args) != 2:
+                result.append(content[i : m.end()])
+                i = m.end()
+                continue
             if fmt_args and fmt_args.strip():
                 new_call = f".NotifyLocalized({target}, nameof(ErrorMessages.Notifications.{key}), {fmt_args.strip()})"
             else:
