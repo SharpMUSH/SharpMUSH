@@ -139,7 +139,7 @@ public static class MessageHelpers
 
 		if (isSpoof && !await permissionService.CanNoSpoof(executor))
 		{
-			await notifyService.Notify(executor, "Permission denied: You lack spoofing permissions.");
+			await notifyService.Notify(executor, ErrorMessages.Notifications.LackSpoofingPermissions);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -226,7 +226,7 @@ public static class MessageHelpers
 
 		if (!isSilent && recipientCount > 0)
 		{
-			await notifyService.Notify(executor, $"Message sent to {recipientCount} recipient(s).");
+			await notifyService.Notify(executor, string.Format(ErrorMessages.Notifications.MessageSentToRecipientsFormat, recipientCount));
 		}
 
 		return CallState.Empty;

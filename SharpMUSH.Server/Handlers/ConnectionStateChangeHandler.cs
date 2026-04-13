@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
@@ -38,7 +39,7 @@ public class ConnectionStateChangeHandler(
 					logger.LogInformation("[{ConnectionId}] Sending 'Connected!' message to handle {Handle}",
 						connectionId, notification.Handle);
 
-					var welcomeMessage = Encoding.UTF8.GetBytes("Connected!\r\n");
+					var welcomeMessage = Encoding.UTF8.GetBytes(ErrorMessages.Notifications.Connected + "\r\n");
 					await connection.OutputFunction(welcomeMessage);
 
 					logger.LogInformation("[{ConnectionId}] Successfully sent welcome message to handle {Handle}",
@@ -49,7 +50,7 @@ public class ConnectionStateChangeHandler(
 					logger.LogInformation("[{ConnectionId}] Player {Ref} logged in on handle {Handle}",
 						connectionId, notification.PlayerRef, notification.Handle);
 
-					var loginMessage = Encoding.UTF8.GetBytes($"Welcome back, {notification.PlayerRef}!\r\n");
+					var loginMessage = Encoding.UTF8.GetBytes(string.Format(ErrorMessages.Notifications.WelcomeBackFormat, notification.PlayerRef) + "\r\n");
 					await connection.OutputFunction(loginMessage);
 
 					logger.LogInformation("[{ConnectionId}] Successfully sent login message to handle {Handle}",

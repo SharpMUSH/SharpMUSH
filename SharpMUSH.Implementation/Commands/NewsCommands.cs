@@ -20,7 +20,7 @@ public partial class Commands
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, "News system not initialized.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.NewsSystemNotInitialized, executor);
 			return new CallState("#-1 NEWS SYSTEM NOT INITIALIZED");
 		}
 
@@ -35,7 +35,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "No news available. Type 'news <topic>' for news on a specific topic.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.NewsNoTopicAvailable, executor);
 			}
 			return CallState.Empty;
 		}
@@ -48,7 +48,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No news entries found containing '{topic}'.", executor);
+				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsNoEntriesFoundContaining, topic), executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -63,7 +63,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"News entries containing '{topic}':", executor);
+				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsEntriesContaining, topic), executor);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
@@ -75,7 +75,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("news", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No news available for '{topic}'.", executor);
+				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsNoNewsForTopic, topic), executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -90,7 +90,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"News topics matching '{topic}':", executor);
+				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsTopicsMatchingFormat, topic), executor);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
@@ -105,8 +105,8 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"No news available for '{topic}'.", executor);
-			await NotifyService!.Notify(executor, "Try 'news <pattern>' with wildcards (*) or 'news/search <text>' to search news content.", executor);
+			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.NewsNoNewsForTopic, topic), executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.NewsTryPattern, executor);
 		}
 
 		return CallState.Empty;
@@ -122,13 +122,13 @@ public partial class Commands
 		// Permission check - only wizards and royalty
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied. This command is for administrators only.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AdminCommandOnly, executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.Notify(executor, "Admin help system not initialized.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AhelpSystemNotInitialized, executor);
 			return new CallState("#-1 AHELP SYSTEM NOT INITIALIZED");
 		}
 
@@ -143,7 +143,7 @@ public partial class Commands
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, "No admin help available. Type 'ahelp <topic>' for help on a specific topic.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.AhelpNoHelpAvailable, executor);
 			}
 			return CallState.Empty;
 		}
@@ -156,7 +156,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No admin help entries found containing '{topic}'.", executor);
+				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpNoEntriesFoundContaining, topic), executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -171,7 +171,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"Admin help entries containing '{topic}':", executor);
+				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpEntriesContaining, topic), executor);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
@@ -183,7 +183,7 @@ public partial class Commands
 			var matches = (await TextFileService.SearchEntriesAsync("ahelp", topic)).ToList();
 			if (matches.Count == 0)
 			{
-				await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.", executor);
+				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpNoHelpForTopic, topic), executor);
 			}
 			else if (matches.Count == 1)
 			{
@@ -198,7 +198,7 @@ public partial class Commands
 			else
 			{
 				// Multiple matches, list them
-				await NotifyService!.Notify(executor, $"Admin help topics matching '{topic}':", executor);
+				await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpTopicsMatchingFormat, topic), executor);
 				await NotifyService!.Notify(executor, string.Join(", ", matches.OrderBy(x => x)), executor);
 			}
 			return CallState.Empty;
@@ -213,8 +213,8 @@ public partial class Commands
 		}
 		else
 		{
-			await NotifyService!.Notify(executor, $"No admin help available for '{topic}'.", executor);
-			await NotifyService!.Notify(executor, "Try 'ahelp <pattern>' with wildcards (*) or 'ahelp/search <text>' to search admin help.", executor);
+			await NotifyService!.Notify(executor, string.Format(ErrorMessages.Notifications.AhelpNoHelpForTopic, topic), executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.AhelpTryPattern, executor);
 		}
 
 		return CallState.Empty;

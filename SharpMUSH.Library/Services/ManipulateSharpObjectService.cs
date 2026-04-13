@@ -39,7 +39,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, $"You cannot name that object {name}.");
+				await notifyService.Notify(executor, string.Format(Definitions.ErrorMessages.Notifications.CannotNameObjectFormat, name));
 			}
 
 			return Errors.ErrorPerm;
@@ -57,12 +57,12 @@ public class ManipulateSharpObjectService(
 				if (tryFindPlayerByName.Any(x =>
 							x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
 				{
-					if (notify)
-					{
-						await notifyService.Notify(executor, "That player name is already in use.");
-					}
+				if (notify)
+				{
+					await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PlayerNameInUse);
+				}
 
-					return "#-1 PLAYER NAME ALREADY IN USE.";
+				return "#-1 PLAYER NAME ALREADY IN USE.";
 				}
 
 				var playerSplit = MModule.split(";", name);
@@ -81,12 +81,12 @@ public class ManipulateSharpObjectService(
 						.Intersect(aliases, StringComparer.InvariantCultureIgnoreCase)
 						.Any())
 				{
-					if (notify)
-					{
-						await notifyService.Notify(executor, "That player alias is already in use.");
-					}
+				if (notify)
+				{
+					await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PlayerAliasInUse);
+				}
 
-					return "#-1 PLAYER ALIAS ALREADY IN USE.";
+				return "#-1 PLAYER ALIAS ALREADY IN USE.";
 				}
 
 				await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
@@ -124,7 +124,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "That password is not a valid password.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.InvalidPasswordText);
 			}
 
 			return Errors.ErrorInvalidPassword;
@@ -460,7 +460,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify && powersCleared > 0)
 		{
-			await notifyService.Notify(executor, $"Cleared {powersCleared} power(s) from {obj.Object().Name}.");
+			await notifyService.Notify(executor, string.Format(Definitions.ErrorMessages.Notifications.ClearedPowersFromFormat, powersCleared, obj.Object().Name));
 		}
 
 		return true;
@@ -513,7 +513,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "Cannot add parent to loop.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ParentLoopCannotAdd);
 			}
 
 			return Errors.ParentLoop;
@@ -523,7 +523,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify)
 		{
-			await notifyService.Notify(executor, $"Parent set.");
+			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ParentSet);
 		}
 
 		return true;
@@ -562,7 +562,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "Cannot add zone: would create a cycle.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ZoneCycleCannotAdd);
 			}
 
 			return Errors.ZoneLoop;
@@ -572,7 +572,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify)
 		{
-			await notifyService.Notify(executor, $"Zone set.");
+			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ZoneSet);
 		}
 
 		return true;
@@ -593,7 +593,7 @@ public class ManipulateSharpObjectService(
 
 		if (notify)
 		{
-			await notifyService.Notify(executor, "Zone cleared.");
+			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.ZoneCleared);
 		}
 
 		return true;

@@ -546,7 +546,7 @@ public class SharpMUSHParserVisitor(
 
 			if (executor.IsGod())
 			{
-				await NotifyService.Notify(executor, $"#-1 INTERNAL SHARPMUSH ERROR:\n{ex}");
+				await NotifyService.Notify(executor, string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
 			}
 
 			return CallState.Empty;
@@ -649,7 +649,7 @@ public class SharpMUSHParserVisitor(
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
-				await NotifyService.Notify(parser.CurrentState.Handle.Value, "No such command available at login.");
+				await NotifyService.Notify(parser.CurrentState.Handle.Value, ErrorMessages.Notifications.NoSuchCommandAtLogin);
 				return new None();
 			}
 
@@ -691,8 +691,8 @@ public class SharpMUSHParserVisitor(
 					// Multiple exact matches - ambiguous
 					if (parser.CurrentState.Handle is not null)
 					{
-						await NotifyService.Notify(parser.CurrentState.Handle.Value,
-							$"Ambiguous channel name '{check}'. Please be more specific.");
+					await NotifyService.Notify(parser.CurrentState.Handle.Value,
+						string.Format(ErrorMessages.Notifications.AmbiguousChannelNameFormat, check));
 					}
 					return new None();
 				}
@@ -701,8 +701,8 @@ public class SharpMUSHParserVisitor(
 					// Multiple partial matches - ambiguous
 					if (parser.CurrentState.Handle is not null)
 					{
-						await NotifyService.Notify(parser.CurrentState.Handle.Value,
-							$"Ambiguous channel name '{check}'. Matches: {string.Join(", ", partialMatches.Select(c => c.Name.ToPlainText()))}");
+					await NotifyService.Notify(parser.CurrentState.Handle.Value,
+						string.Format(ErrorMessages.Notifications.AmbiguousChannelNameMatchesFormat, check, string.Join(", ", partialMatches.Select(c => c.Name.ToPlainText()))));
 					}
 					return new None();
 				}
@@ -1046,7 +1046,7 @@ public class SharpMUSHParserVisitor(
 			var handle = prs.CurrentState.Handle;
 			if (handle.HasValue)
 			{
-				await NotifyService.Notify(handle.Value, $"Usage: @{matchedEntry.Name.ToLower()} <object>=<value>");
+				await NotifyService.Notify(handle.Value, string.Format(ErrorMessages.Notifications.UsageAtCommandFormat, matchedEntry.Name.ToLower()));
 			}
 			return CallState.Empty;
 		}
@@ -1066,7 +1066,7 @@ public class SharpMUSHParserVisitor(
 			var handle = prs.CurrentState.Handle;
 			if (handle.HasValue)
 			{
-				await NotifyService.Notify(handle.Value, $"Usage: @{matchedEntry.Name.ToLower()} <object>=<value>");
+				await NotifyService.Notify(handle.Value, string.Format(ErrorMessages.Notifications.UsageAtCommandFormat, matchedEntry.Name.ToLower()));
 			}
 			return CallState.Empty;
 		}
@@ -1105,14 +1105,14 @@ public class SharpMUSHParserVisitor(
 			var clearHandle = prs.CurrentState.Handle;
 			if (clearHandle.HasValue)
 			{
-				if (clearResult.TryPickT0(out _, out var clearError))
-				{
-					await NotifyService.Notify(clearHandle.Value, $"{clearTargetObject.Object().Name}/{matchedEntry.Name} - Cleared.", clearExecutor);
-				}
-				else
-				{
-					await NotifyService.Notify(clearHandle.Value, $"Error: {clearError.Value}", clearExecutor);
-				}
+			if (clearResult.TryPickT0(out _, out var clearError))
+			{
+				await NotifyService.Notify(clearHandle.Value, string.Format(ErrorMessages.Notifications.AttributeCleared, clearTargetObject.Object().Name, matchedEntry.Name), clearExecutor);
+			}
+			else
+			{
+				await NotifyService.Notify(clearHandle.Value, string.Format(ErrorMessages.Notifications.ErrorDetailFormat, clearError.Value), clearExecutor);
+			}
 			}
 
 			return CallState.Empty;
@@ -1158,11 +1158,11 @@ public class SharpMUSHParserVisitor(
 		{
 			if (setResult.TryPickT0(out _, out var error))
 			{
-				await NotifyService.Notify(handle2.Value, $"{targetObject.Object().Name}/{matchedEntry.Name} - Set.", executor);
+				await NotifyService.Notify(handle2.Value, string.Format(ErrorMessages.Notifications.AttributeSet, targetObject.Object().Name, matchedEntry.Name), executor);
 			}
 			else
 			{
-				await NotifyService.Notify(handle2.Value, $"Error: {error.Value}", executor);
+				await NotifyService.Notify(handle2.Value, string.Format(ErrorMessages.Notifications.ErrorDetailFormat, error.Value), executor);
 			}
 		}
 
