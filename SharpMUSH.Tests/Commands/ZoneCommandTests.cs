@@ -62,10 +62,7 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		// Verify zone set notification was received with the specific object dbref
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ZoneChanged)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ZoneChanged), executor)).IsTrue();
 
 		// Verify the zone was actually set in the database
 		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
@@ -139,10 +136,7 @@ public class ZoneCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {objDbRef}={zoneDbRef}"));
 
 		// Verify success notification with specific zone name
-		await NotifyService
-			.Received(Quantity.AtLeastOne())
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ZoneChanged)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ZoneChanged), executor)).IsTrue();
 
 		// Verify zone was set
 		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));

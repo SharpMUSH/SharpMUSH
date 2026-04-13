@@ -314,10 +314,7 @@ public class BuildingCommandTests
 		await Assert.That(parentOfB.IsNone).IsTrue();
 
 		// Verify notification was sent about the cycle
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ParentLoopCannotAdd)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ParentLoopCannotAdd), executor)).IsTrue();
 	}
 
 	[Test]
@@ -600,10 +597,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}=[add(1,2)]"));
 
 		// Verify the notification shows it was set
-		await NotifyService
-			.Received()
-			.NotifyLocalized(executor.Number,
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeSet)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeSet))).IsTrue();
 
 		// Retrieve the attribute and verify the stored value is "3" (evaluated), not "[add(1,2)]"
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
@@ -709,9 +703,6 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@desc {objDbRef}"));
 
 		// Verify "Cleared" notification was sent
-		await NotifyService
-			.Received()
-			.NotifyLocalized(executor.Number,
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeCleared)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCleared))).IsTrue();
 	}
 }

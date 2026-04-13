@@ -132,4 +132,23 @@ public static class TestHelpers
 		}
 		// Timeout reached — let the caller's assertion produce the diagnostic message
 	}
+
+	/// <summary>
+	/// Checks whether a <c>NotifyLocalized</c> call with the given resource <paramref name="key"/>
+	/// was received on the mock, optionally constrained to a specific <paramref name="executorDbRef"/>.
+	/// This helper bypasses NSubstitute's params-expansion issue by inspecting
+	/// <see cref="ICallRouter.ReceivedCalls"/> directly.
+	/// </summary>
+	public static bool ReceivedNotifyLocalizedWithKey(
+		INotifyService notifyService,
+		string key,
+		DBRef? executorDbRef = null) =>
+		notifyService.ReceivedCalls()
+			.Any(c =>
+				c.GetMethodInfo().Name == "NotifyLocalized" &&
+				c.GetArguments().Length >= 2 &&
+				c.GetArguments()[1] is string k && k == key &&
+				(executorDbRef == null ||
+				 (c.GetArguments()[0] is AnySharpObject obj && obj.Object().DBRef == executorDbRef) ||
+				 (c.GetArguments()[0] is DBRef d && d == executorDbRef)));
 }

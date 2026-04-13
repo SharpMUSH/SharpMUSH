@@ -24,10 +24,7 @@ public class LogCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log Test log entry"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor)).IsTrue();
 	}
 
 	[Test]
@@ -36,10 +33,7 @@ public class LogCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/cmd Test command log entry"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor)).IsTrue();
 	}
 
 	[Test]
@@ -48,10 +42,7 @@ public class LogCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/wiz Test wizard log entry"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor)).IsTrue();
 	}
 
 	[Test]
@@ -60,10 +51,7 @@ public class LogCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/err Test error log entry"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor)).IsTrue();
 	}
 
 	[Test]
@@ -72,10 +60,7 @@ public class LogCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.LogUsage)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.LogUsage), executor)).IsTrue();
 	}
 
 	[Test]
@@ -85,10 +70,7 @@ public class LogCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/recall"));
 
 		// @log/recall retrieves recent log entries — output starts with log header
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat), executor)).IsTrue();
 	}
 
 	[Test]

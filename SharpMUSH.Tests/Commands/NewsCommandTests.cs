@@ -58,10 +58,10 @@ public class NewsCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news *news*"));
 
 		// Verify that NotifyService was called with matching topics or "No news available"
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NewsNoEntriesFoundContaining) || k == nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat)));
+		await Assert.That(
+    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoEntriesFoundContaining), executor) ||
+    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), executor)
+).IsTrue();
 	}
 
 	[Test]
@@ -72,10 +72,7 @@ public class NewsCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("news nonexistenttopicxyz123"));
 
 		// Verify that NotifyService was called with "No news available"
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NewsNoNewsForTopic)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor)).IsTrue();
 	}
 }
 
@@ -143,9 +140,6 @@ public class AhelpCommandTests
 		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp nonexistenttopicxyz123"));
 
 		// Verify that NotifyService was called with "No admin help available"
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AhelpNoHelpAvailable)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AhelpNoHelpAvailable), executor)).IsTrue();
 	}
 }

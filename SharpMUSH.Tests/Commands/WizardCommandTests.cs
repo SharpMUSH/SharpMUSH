@@ -43,10 +43,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@allhalt"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat), executor)).IsTrue();
 	}
 
 	[Test]
@@ -145,10 +142,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@notify #1"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.Notified)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.Notified), executor)).IsTrue();
 	}
 
 	[Test]
@@ -358,20 +352,14 @@ public class WizardCommandTests
 		// First call should hide (set DARK)
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NowHiddenFromWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
 
 
 
 		// Second call should unhide (unset DARK)
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -388,10 +376,7 @@ public class WizardCommandTests
 		// Now test @hide/yes
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/yes"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NowHiddenFromWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -408,10 +393,7 @@ public class WizardCommandTests
 		// Now test @hide/on
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NowHiddenFromWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -428,10 +410,7 @@ public class WizardCommandTests
 		// Now test @hide/no
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/no"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -448,10 +427,7 @@ public class WizardCommandTests
 		// Now test @hide/off
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test, NotInParallel]
@@ -468,10 +444,7 @@ public class WizardCommandTests
 		// Try to set hidden again
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AlreadyHiddenFromWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AlreadyHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test, NotInParallel]
@@ -488,10 +461,7 @@ public class WizardCommandTests
 		// Try to set visible again
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AlreadyVisibleOnWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AlreadyVisibleOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -511,10 +481,10 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.ReadCacheReindexing) || k == nameof(ErrorMessages.Notifications.ReadCacheCompleteFormat)));
+		await Assert.That(
+    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ReadCacheReindexing), executor) ||
+    TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ReadCacheCompleteFormat), executor)
+).IsTrue();
 	}
 
 	[Test]

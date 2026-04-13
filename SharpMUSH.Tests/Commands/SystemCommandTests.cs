@@ -60,11 +60,7 @@ public class SystemCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@hook/list @emit"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.HookNoHooksForCommandFormat)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HookNoHooksForCommandFormat))).IsTrue();
 	}
 
 	// PennMUSH reference: cmd_function with no args calls do_function(executor, NULL, NULL, 0)
@@ -75,11 +71,7 @@ public class SystemCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader))).IsTrue();
 	}
 
 	// PennMUSH reference: @command with no arg returns an error.
@@ -106,11 +98,7 @@ public class SystemCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.NowHiddenFromWho)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho))).IsTrue();
 
 		// Restore to visible state.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
@@ -127,11 +115,7 @@ public class SystemCommandTests
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single($"@kick {testPlayerDbRef}"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(
-				TestHelpers.MatchingObject(executor),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.PlayerNotConnected)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor)).IsTrue();
 	}
 
 	// PennMUSH reference: do_attribute_access outputs:
@@ -169,11 +153,7 @@ public class SystemCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@atrlock {testDbRef}/{uniqueAttr}=on"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeLocked)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeLocked))).IsTrue();
 	}
 
 	// PennMUSH reference: do_atrchown on success outputs "Attribute owner changed." (attrib.c).
@@ -193,11 +173,7 @@ public class SystemCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MModule.single($"@atrchown {sourceDbRef}/{uniqueAttr}={targetPlayerDbRef}"));
 
-		await NotifyService
-			.Received()
-			.NotifyLocalized(
-				Arg.Any<AnySharpObject>(),
-				Arg.Is<string>(k => k == nameof(ErrorMessages.Notifications.AttributeOwnerChanged)));
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeOwnerChanged))).IsTrue();
 	}
 
 	// PennMUSH reference: do_firstexit re-links an exit to move it to the front of the room's exit list.
