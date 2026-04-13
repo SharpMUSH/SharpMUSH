@@ -81,8 +81,8 @@ public partial class Commands
 
 		if (!isOwner && !passesModLock && !await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		UpdateChannelCommand updateCommand = lockType switch
@@ -309,8 +309,8 @@ public partial class Commands
 			var isWizard = await executor.IsWizard();
 			if (!isWizard)
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
-				return new CallState("#-1 PERMISSION DENIED");
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			var output = new System.Text.StringBuilder();
@@ -337,8 +337,8 @@ public partial class Commands
 
 		if (!executor.IsGod())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var logTypes = new[] { "CMD", "CONN", "ERR", "TRACE", "WIZ" };
@@ -464,8 +464,8 @@ public partial class Commands
 		// Check permissions
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// Socket configuration not yet implemented
@@ -492,8 +492,8 @@ public partial class Commands
 		// Check permissions
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// Recycle bin / unrecycle system not yet implemented
@@ -541,8 +541,8 @@ public partial class Commands
 		// Check permissions
 		if (!await PermissionService!.Controls(executor, target.AsSharpObject))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// Parse warning list
@@ -594,7 +594,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				await NotifyService!.Notify(executor, "You'd better check your wizbit first.", executor);
-				return new CallState("#-1 PERMISSION DENIED");
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			await NotifyService!.Notify(executor, "Running database topology warning checks...", executor);
@@ -638,8 +638,8 @@ public partial class Commands
 			// Check permissions - must own or have see_all
 			if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
-				return new CallState("#-1 PERMISSION DENIED");
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			await WarningService!.CheckObjectAsync(executor, target.AsSharpObject);
@@ -893,7 +893,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return CallState.Empty;
 		}
 
@@ -983,7 +983,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return CallState.Empty;
 		}
 
@@ -1072,7 +1072,7 @@ public partial class Commands
 		// Check DropIn lock on room
 		if (!LockService!.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
 		{
-			await NotifyService!.Notify(executor, "You can't drop that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.CantSeemToDropThingsHere, executor);
 			return CallState.Empty;
 		}
 
@@ -1190,7 +1190,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return CallState.Empty;
 		}
 
@@ -1199,7 +1199,7 @@ public partial class Commands
 		// Can only empty things and players (containers)
 		if (!objectToEmpty.IsThing && !objectToEmpty.IsPlayer)
 		{
-			await NotifyService!.Notify(executor, "You can't empty that.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.CantEmptyThatFromHere, executor);
 			return CallState.Empty;
 		}
 
@@ -1241,7 +1241,7 @@ public partial class Commands
 
 		if (!hasEnterOk && !await PermissionService!.Controls(executor, objectToEmpty))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 			return CallState.Empty;
 		}
 
@@ -1471,7 +1471,7 @@ public partial class Commands
 
 			if (!hasEnterOk)
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return CallState.Empty;
 			}
 		}
@@ -1637,7 +1637,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return CallState.Empty;
 		}
 
@@ -1703,7 +1703,7 @@ public partial class Commands
 
 			if (!containerResult.IsValid() || (!containerResult.IsPlayer && !containerResult.IsThing))
 			{
-				await NotifyService!.Notify(executor, "I don't see that here.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 				return CallState.Empty;
 			}
 
@@ -1715,7 +1715,7 @@ public partial class Commands
 
 			if (!hasEnterOk && !await PermissionService!.Controls(executor, container))
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return CallState.Empty;
 			}
 
@@ -1737,7 +1737,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid() || locateResult.IsRoom || locateResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return CallState.Empty;
 		}
 
@@ -1870,7 +1870,7 @@ public partial class Commands
 
 		if (!recipientResult.IsValid() || recipientResult.IsRoom || recipientResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return CallState.Empty;
 		}
 
@@ -1898,7 +1898,7 @@ public partial class Commands
 
 		if (!objectResult.IsValid() || objectResult.IsRoom || objectResult.IsExit)
 		{
-			await NotifyService!.Notify(executor, "You don't have that.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontHaveThat, executor);
 			return CallState.Empty;
 		}
 
@@ -1918,7 +1918,7 @@ public partial class Commands
 
 		if (!isCarrying)
 		{
-			await NotifyService!.Notify(executor, "You don't have that.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontHaveThat, executor);
 			return CallState.Empty;
 		}
 
@@ -1935,7 +1935,7 @@ public partial class Commands
 		// Check @lock/from on recipient
 		if (!LockService!.Evaluate(LockType.From, recipient, executor))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 			return CallState.Empty;
 		}
 
@@ -2508,6 +2508,13 @@ public partial class Commands
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
+		// Enforce Speech lock on the room (PennMUSH src/speech.c).
+		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		{
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.MayNotSpeakHere, executor);
+			return CallState.Empty;
+		}
+
 		var executorName = MModule.single(executor.Object().Name);
 		var poseMessage = isNoSpace
 			? MModule.concat(executorName, MModule.trim(message, " ", MModule.TrimType.TrimStart))
@@ -2543,6 +2550,13 @@ public partial class Commands
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
 
+		// Enforce Speech lock on the room (PennMUSH src/speech.c).
+		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		{
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.MayNotSpeakHere, executor);
+			return CallState.Empty;
+		}
+
 		var executorName = MModule.single(executor.Object().Name);
 		var youSayMessage = MModule.multiple([MModule.single("You say, \""), message, MModule.single("\"")]);
 		var namesSaysMessage = MModule.multiple([executorName, MModule.single(" says, \""), message, MModule.single("\"")]);
@@ -2570,6 +2584,13 @@ public partial class Commands
 		var message = isNoEvaluation
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+
+		// Enforce Speech lock on the room (PennMUSH src/speech.c).
+		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		{
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.MayNotSpeakHere, executor);
+			return CallState.Empty;
+		}
 
 		var executorName = MModule.single(executor.Object().Name);
 		var semiposeMessage = MModule.concat(executorName, message);
@@ -2676,7 +2697,7 @@ public partial class Commands
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return CallState.Empty;
 		}
 
@@ -2959,7 +2980,7 @@ public partial class Commands
 
 		if (!targetResult.IsValid())
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return CallState.Empty;
 		}
 
@@ -2975,7 +2996,7 @@ public partial class Commands
 		// Check permissions - must control the target
 		if (!await PermissionService!.Controls(executor, target))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 			return CallState.Empty;
 		}
 
@@ -3119,6 +3140,64 @@ public partial class Commands
 		}
 
 		await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+		return CallState.Empty;
+	}
+
+	[SharpCommand(Name = "OUTPUTPREFIX", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["prefix"])]
+	public static async ValueTask<Option<CallState>> OutputPrefix(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var prefix = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
+
+		// Find the connection handle for this executor.
+		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+		{
+			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
+			{
+				if (string.IsNullOrEmpty(prefix))
+				{
+					conn.Metadata.TryRemove("OutputPrefix", out _);
+					await NotifyService!.Notify(executor, ErrorMessages.Notifications.OutputPrefixCleared, executor);
+				}
+				else
+				{
+					conn.Metadata["OutputPrefix"] = prefix;
+					await NotifyService!.Notify(executor, ErrorMessages.Notifications.OutputPrefixSet, executor);
+				}
+				break;
+			}
+		}
+
+		return CallState.Empty;
+	}
+
+	[SharpCommand(Name = "OUTPUTSUFFIX", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["suffix"])]
+	public static async ValueTask<Option<CallState>> OutputSuffix(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var suffix = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
+
+		// Find the connection handle for this executor.
+		await foreach (var conn in ConnectionService!.Get(executor.Object().DBRef))
+		{
+			if (conn.State == IConnectionService.ConnectionState.LoggedIn)
+			{
+				if (string.IsNullOrEmpty(suffix))
+				{
+					conn.Metadata.TryRemove("OutputSuffix", out _);
+					await NotifyService!.Notify(executor, ErrorMessages.Notifications.OutputSuffixCleared, executor);
+				}
+				else
+				{
+					conn.Metadata["OutputSuffix"] = suffix;
+					await NotifyService!.Notify(executor, ErrorMessages.Notifications.OutputSuffixSet, executor);
+				}
+				break;
+			}
+		}
+
 		return CallState.Empty;
 	}
 

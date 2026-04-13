@@ -2,6 +2,7 @@ using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
@@ -44,8 +45,9 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.", executor);
-			return new CallState("#-1 You are not a member of that channel.");
+			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
+			return new CallState(notOnMsg);
 		}
 
 		var (_, status) = maybeMemberStatus;
@@ -94,8 +96,9 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.", executor);
-			return new CallState("#-1 You are not a member of that channel.");
+			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
+			return new CallState(notOnMsg);
 		}
 
 		var (_, status) = maybeMemberStatus;
@@ -146,8 +149,9 @@ public partial class Commands
 
 		if (maybeMemberStatus is null)
 		{
-			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, "You are not a member of that channel.", executor);
-			return new CallState("#-1 You are not a member of that channel.");
+			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
+			await NotifyService!.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
+			return new CallState(notOnMsg);
 		}
 
 		var (_, status) = maybeMemberStatus;

@@ -29,7 +29,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "You do not control that object.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
 
 			return Errors.ErrorPerm;
@@ -114,7 +114,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "You do not control that object.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
 
 			return Errors.ErrorPerm;
@@ -143,7 +143,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "You do not control that object.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
 
 			return Errors.ErrorPerm;
@@ -160,7 +160,8 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, $"No such flag exists: {plainFlag}.");
+				await notifyService.Notify(executor,
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizeFlag, obj.Object().Name));
 			}
 
 			return Errors.ErrorNoSuchFlag;
@@ -170,7 +171,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, $"Flag: {realFlag.Name} cannot be set on object type: {obj.TypeString()}.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 
 			return Errors.InvalidFlag;
@@ -188,7 +189,7 @@ public class ManipulateSharpObjectService(
 			{
 				if (notify)
 				{
-					await notifyService.Notify(executor, "Permission denied.");
+					await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 				}
 
 				return Errors.ErrorPerm;
@@ -202,7 +203,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "Permission denied.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 
 			return Errors.ErrorPerm;
@@ -214,7 +215,8 @@ public class ManipulateSharpObjectService(
 				{
 					if (notify)
 					{
-						await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Unset.");
+						await notifyService.Notify(executor,
+							string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadyReset, obj.Object().Name, realFlag.Name));
 					}
 
 					break;
@@ -223,7 +225,8 @@ public class ManipulateSharpObjectService(
 				{
 					if (notify)
 					{
-						await notifyService.Notify(executor, $"Flag: {realFlag.Name} Unset.");
+						await notifyService.Notify(executor,
+							string.Format(Definitions.ErrorMessages.Notifications.FlagReset, obj.Object().Name, realFlag.Name));
 					}
 
 					await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
@@ -242,7 +245,8 @@ public class ManipulateSharpObjectService(
 				{
 					if (notify)
 					{
-						await notifyService.Notify(executor, $"Flag: {realFlag.Name} (Already) Set.");
+						await notifyService.Notify(executor,
+							string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadySet, obj.Object().Name, realFlag.Name));
 					}
 
 					break;
@@ -250,7 +254,8 @@ public class ManipulateSharpObjectService(
 			case false:
 				if (notify)
 				{
-					await notifyService.Notify(executor, $"Flag: {realFlag.Name} Set.");
+					await notifyService.Notify(executor,
+						string.Format(Definitions.ErrorMessages.Notifications.FlagSet, obj.Object().Name, realFlag.Name));
 				}
 
 				await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
@@ -276,7 +281,28 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "You do not control that object.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
+			}
+			return Errors.ErrorPerm;
+		}
+
+		// God protection: non-God cannot modify God's powers (PennMUSH src/flags.c)
+		if (obj.IsGod() && !executor.IsGod())
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.WhoDoYouThinkYouAre);
+			}
+			return Errors.ErrorPerm;
+		}
+
+		// Can't make admin (Wizard/Royalty) into guests (PennMUSH src/flags.c)
+		if (powerOrPowerAlias.Equals("Guest", StringComparison.OrdinalIgnoreCase)
+			&& (await obj.IsWizard() || await obj.IsRoyalty()))
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.CantMakeAdminGuests);
 			}
 			return Errors.ErrorPerm;
 		}
@@ -285,7 +311,8 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, $"Power: {powerOrPowerAlias} (Already) Set.");
+				await notifyService.Notify(executor,
+					string.Format(Definitions.ErrorMessages.Notifications.PowerAlreadySet, obj.Object().Name, powerOrPowerAlias));
 			}
 			return true;
 		}
@@ -301,14 +328,16 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, $"No such power exists: {powerOrPowerAlias}.");
+				await notifyService.Notify(executor,
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object().Name));
 			}
 			return Errors.ErrorNoSuchPower;
 		}
 
 		if (notify)
 		{
-			await notifyService.Notify(executor, $"Power: {powerOrPowerAlias} Set.");
+			await notifyService.Notify(executor,
+				string.Format(Definitions.ErrorMessages.Notifications.PowerSet, obj.Object().Name, powerOrPowerAlias));
 		}
 
 		await mediator.Send(new SetObjectPowerCommand(obj, found));
@@ -331,7 +360,17 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "You do not control that object.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
+			}
+			return Errors.ErrorPerm;
+		}
+
+		// God protection: non-God cannot modify God's powers (PennMUSH src/flags.c)
+		if (obj.IsGod() && !executor.IsGod())
+		{
+			if (notify)
+			{
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.WhoDoYouThinkYouAre);
 			}
 			return Errors.ErrorPerm;
 		}
@@ -340,7 +379,8 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, $"Power: {powerOrPowerAlias} (Already) Unset.");
+				await notifyService.Notify(executor,
+					string.Format(Definitions.ErrorMessages.Notifications.FlagAlreadyReset, obj.Object().Name, powerOrPowerAlias));
 			}
 			return true;
 		}
@@ -356,14 +396,16 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, $"No such power exists: {powerOrPowerAlias}.");
+				await notifyService.Notify(executor,
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizePower, obj.Object().Name));
 			}
 			return Errors.ErrorNoSuchPower;
 		}
 
 		if (notify)
 		{
-			await notifyService.Notify(executor, $"Power: {powerOrPowerAlias} Unset.");
+			await notifyService.Notify(executor,
+				string.Format(Definitions.ErrorMessages.Notifications.FlagReset, obj.Object().Name, powerOrPowerAlias));
 		}
 
 		await mediator.Send(new UnsetObjectPowerCommand(obj, found));
@@ -385,7 +427,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "You do not control that object.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
 			return Errors.ErrorPerm;
 		}
@@ -431,7 +473,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "You do not control that object.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.YouDoNotControlThatObject);
 			}
 			return Errors.ErrorPerm;
 		}
@@ -459,7 +501,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "Permission denied.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 
 			return Errors.ErrorPerm;
@@ -491,7 +533,7 @@ public class ManipulateSharpObjectService(
 	{
 		if (!await permissionService.Controls(executor, obj))
 		{
-			await notifyService.Notify(executor, "Permission denied.");
+			await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			return Errors.ErrorPerm;
 		}
 
@@ -508,7 +550,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "Permission denied.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 
 			return Errors.ErrorPerm;
@@ -542,7 +584,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, "Permission denied.");
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
 			return Errors.ErrorPerm;
 		}
@@ -586,6 +628,10 @@ public class ManipulateSharpObjectService(
 		AnySharpObject executor, AnySharpObject obj, SharpObjectFlag flag, bool negate)
 	{
 		var flagName = flag.Name.ToUpperInvariant();
+
+		// God protection: non-God cannot modify God's flags at all (PennMUSH src/flags.c)
+		if (obj.IsGod() && !executor.IsGod())
+			return true; // deny
 
 		// CHOWN_OK and DESTROY_OK: must own the target or be Wizard
 		if (flagName is "CHOWN_OK" or "DESTROY_OK")

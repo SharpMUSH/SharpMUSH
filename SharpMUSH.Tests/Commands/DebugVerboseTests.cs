@@ -457,8 +457,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("cannot be set"),
-						str => str.Contains("PUPPET") && str.Contains("cannot be set"))), null, INotifyService.NotificationType.Announce);
+						mstr => mstr.ToString().Contains("Permission denied"),
+						str => str.Contains("Permission denied"))), null, INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -473,8 +473,8 @@ public class DebugVerboseTests
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
 					msg.Match(
-						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("Set"),
-						str => str.Contains("PUPPET") && str.Contains("Set"))), null, INotifyService.NotificationType.Announce);
+						mstr => mstr.ToString().Contains("PUPPET") && mstr.ToString().Contains("set."),
+						str => str.Contains("PUPPET") && str.Contains("set."))), null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy PuppetThingObj"));
 	}

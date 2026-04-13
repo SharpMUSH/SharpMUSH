@@ -57,7 +57,7 @@ public static class Errors
 	public const string ExitsCannotContainThings = "#-1 EXITS CANNOT CONTAIN THINGS";
 	public const string ParentLoop = "#-1 PARENT LOOP DETECTED";
 	public const string ZoneLoop = "#-1 ZONE LOOP DETECTED";
-	public const string InvalidFlag = "#-1 INVALID FLAG FOR THIS OBJECT";
+	public const string InvalidFlag = "#-1 INVALID FLAG";
 	public const string NotSupported = "#-1 BEHAVIOR NOT SUPPORTED BY SHARPMUSH";
 	public const string ErrorInvalidPlayer = "#-1 INVALID PLAYER";
 	public const string ErrorInvalidDestination = "#-1 INVALID DESTINATION";

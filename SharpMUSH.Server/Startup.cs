@@ -127,6 +127,7 @@ services.AddSingleton<IConnectionService, ConnectionService>();
 services.AddSingleton<ISqlService, SqlService>();
 services.AddSingleton<ICommunicationService, CommunicationService>();
 services.AddSingleton<ILockService, LockService>();
+services.AddSingleton<IGameBroadcastService, GameBroadcastService>();
 services.AddSingleton<IBooleanExpressionParser, BooleanExpressionParser>();
 services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 services.AddSingleton<ISortService, SortService>();

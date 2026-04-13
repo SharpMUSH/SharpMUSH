@@ -53,4 +53,14 @@ public interface IMoveService
 	/// <param name="destination">The destination container</param>
 	/// <returns>The cost in pennies/quota</returns>
 	ValueTask<int> CalculateMoveCostAsync(AnySharpContent objectToMove, AnySharpContainer destination);
+
+	/// <summary>
+	/// Checks if a player is "in the void" (location has DBRef &lt; 0 or is unresolvable).
+	/// If so, moves the player to their home location, or the fallback if home is also invalid.
+	/// Mirrors PennMUSH's void detection in process_command() (src/bsd.c).
+	/// </summary>
+	/// <param name="player">The player object to check</param>
+	/// <param name="fallbackHome">A fallback DBRef (e.g., PlayerStart) if the player's home is also invalid</param>
+	/// <returns>True if the player was rescued from the void, false if location was valid</returns>
+	ValueTask<bool> RescueFromVoidAsync(AnySharpObject player, DBRef fallbackHome);
 }

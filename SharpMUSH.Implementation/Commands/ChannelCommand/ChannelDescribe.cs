@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -13,7 +14,7 @@ public static class ChannelDescribe
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
 		{
-			await NotifyService.Notify(executor, "CHAT: Guests may not modify channels.", executor);
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantModify, executor);
 			return new CallState("#-1 Guests may not modify channels.");
 		}
 
@@ -43,6 +44,6 @@ public static class ChannelDescribe
 			null,
 			null));
 
-		return new CallState("Channel description has been updated.");
+		return new CallState(string.Format(ErrorMessages.Notifications.ChatChannelDescSet, channel.Name.ToPlainText()));
 	}
 }

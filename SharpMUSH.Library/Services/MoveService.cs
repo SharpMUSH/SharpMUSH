@@ -2,6 +2,7 @@ using Mediator;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -326,6 +327,18 @@ public class MoveService(
 				}
 			}
 		}
+		else
+		{
+			// Default OLEAVE: "{name} has left." (PennMUSH src/move.c)
+			var defaultMsg = $"{objectToMove.Object().Name} {ErrorMessages.Notifications.DefaultOLeave}";
+			await foreach (var content in mediator.CreateStream(new GetContentsQuery(oldLocation.Object().DBRef)))
+			{
+				if (!content.Object().DBRef.Equals(targetDBRef))
+				{
+					await notifyService.Notify(content.Object().DBRef, defaultMsg);
+				}
+			}
+		}
 
 		// @OXLEAVE - message seen by the object leaving (from others' perspective)
 		var oxleaveAttr = await attributeService.GetAttributeAsync(
@@ -419,6 +432,18 @@ public class MoveService(
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
 					await notifyService.Notify(content.Object().DBRef, message);
+				}
+			}
+		}
+		else
+		{
+			// Default OENTER: "{name} has arrived." (PennMUSH src/move.c)
+			var defaultMsg = $"{objectToMove.Object().Name} {ErrorMessages.Notifications.DefaultOEnter}";
+			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object().DBRef)))
+			{
+				if (!content.Object().DBRef.Equals(targetDBRef))
+				{
+					await notifyService.Notify(content.Object().DBRef, defaultMsg);
 				}
 			}
 		}
@@ -562,5 +587,84 @@ public class MoveService(
 					$"You sense that you have moved from {oldLocName} to {newLocName}.");
 			}
 		}
+	}
+
+	/// <inheritdoc />
+	public async ValueTask<bool> RescueFromVoidAsync(AnySharpObject player, DBRef fallbackHome)
+	{
+		// Only players can be rescued from the void
+		if (!player.IsPlayer)
+		{
+			return false;
+		}
+
+		try
+		{
+			var location = await player.AsPlayer.Location.WithCancellation(CancellationToken.None);
+			var locationDbRef = location.Object().DBRef;
+
+			// Valid location - not in the void
+			if (locationDbRef.Number >= 0)
+			{
+				return false;
+			}
+		}
+		catch
+		{
+			// If we can't even resolve the location, player is definitely in the void
+		}
+
+		// Player is in the void - notify them
+		await notifyService.Notify(player, ErrorMessages.Notifications.InTheVoid);
+		await notifyService.Notify(player, ErrorMessages.Notifications.VoidSendingHome);
+
+		// Try to move to home first
+		try
+		{
+			var home = await player.AsPlayer.Home.WithCancellation(CancellationToken.None);
+			var homeDbRef = home.Object().DBRef;
+
+			if (homeDbRef.Number >= 0)
+			{
+				await mediator.Send(new MoveObjectCommand(
+					player.AsContent,
+					home,
+					Enactor: null,
+					IsSilent: true,
+					Cause: "void_rescue"));
+				return true;
+			}
+		}
+		catch
+		{
+			// Home is also invalid - fall through to fallback
+		}
+
+		// Fall back to configured PlayerStart / DefaultHome
+		try
+		{
+			var fallbackResult = await mediator.Send(new GetObjectNodeQuery(fallbackHome));
+			if (!fallbackResult.IsNone)
+			{
+				var fallbackObj = fallbackResult.Known;
+				if (fallbackObj.IsRoom || fallbackObj.IsThing || fallbackObj.IsPlayer)
+				{
+					var fallbackContainer = await fallbackObj.Where();
+					await mediator.Send(new MoveObjectCommand(
+						player.AsContent,
+						fallbackContainer,
+						Enactor: null,
+						IsSilent: true,
+						Cause: "void_rescue"));
+					return true;
+				}
+			}
+		}
+		catch
+		{
+			// Last resort failed - player remains in the void
+		}
+
+		return false;
 	}
 }

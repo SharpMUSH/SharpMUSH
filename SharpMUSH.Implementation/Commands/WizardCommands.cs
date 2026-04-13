@@ -865,7 +865,7 @@ public partial class Commands
 			// Permission check - must be wizard/royalty
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return CallState.Empty;
 			}
 
@@ -911,7 +911,7 @@ public partial class Commands
 			// Need wizard/royalty for other MOTDs
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return CallState.Empty;
 			}
 		}
@@ -1802,6 +1802,7 @@ public partial class Commands
 		// @shutdown/paranoid - Paranoid dump before shutdown
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var switches = parser.CurrentState.Switches;
+		var executorName = executor.Object().Name;
 
 		// Check for panic shutdown (God only)
 		if (switches.Contains("PANIC"))
@@ -1815,29 +1816,36 @@ public partial class Commands
 					shouldNotify: true);
 			}
 
+			await GameBroadcastService!.BroadcastShutdownAsync(executorName, isReboot: false);
 			await NotifyService!.Notify(executor, "PANIC SHUTDOWN initiated by God.", executor);
 			// In a web-based environment, panic shutdown should trigger immediate termination
 			// This would typically be handled by orchestration (Kubernetes, Docker, etc.)
-			Logger!.LogCritical("PANIC SHUTDOWN initiated by {Executor}", executor.Object().Name);
+			Logger!.LogCritical("PANIC SHUTDOWN initiated by {Executor}", executorName);
 		}
 		else if (switches.Contains("REBOOT"))
 		{
+			// Broadcast reboot to all connected players (PennMUSH src/bsd.c).
+			await GameBroadcastService!.BroadcastAsync(
+				string.Format(ErrorMessages.Notifications.GameRebootBy, executorName));
 			await NotifyService!.Notify(executor, "REBOOT initiated. In SharpMUSH's web-based architecture:", executor);
 			await NotifyService!.Notify(executor, "- For Docker/Kubernetes: Update deployment to trigger rolling restart", executor);
 			await NotifyService!.Notify(executor, "- For standalone: Restart the web application", executor);
 			await NotifyService!.Notify(executor, "- Player connections will be preserved via Redis state store", executor);
-			Logger!.LogWarning("REBOOT requested by {Executor}", executor.Object().Name);
+			Logger!.LogWarning("REBOOT requested by {Executor}", executorName);
 		}
 		else if (switches.Contains("PARANOID"))
 		{
+			await GameBroadcastService!.BroadcastAsync(ErrorMessages.Notifications.GameSavingDatabase);
 			await NotifyService!.Notify(executor, "PARANOID SHUTDOWN initiated.", executor);
 			await NotifyService!.Notify(executor, "Database state is continuously persisted in ArangoDB.", executor);
-			Logger!.LogWarning("PARANOID SHUTDOWN requested by {Executor}", executor.Object().Name);
+			Logger!.LogWarning("PARANOID SHUTDOWN requested by {Executor}", executorName);
 		}
 		else
 		{
+			// Broadcast shutdown to all connected players (PennMUSH src/bsd.c).
+			await GameBroadcastService!.BroadcastShutdownAsync(executorName, isReboot: false);
 			await NotifyService!.Notify(executor, "SHUTDOWN initiated.", executor);
-			Logger!.LogWarning("SHUTDOWN requested by {Executor}", executor.Object().Name);
+			Logger!.LogWarning("SHUTDOWN requested by {Executor}", executorName);
 		}
 
 		await NotifyService!.Notify(executor,

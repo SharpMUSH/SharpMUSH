@@ -563,6 +563,17 @@ public partial class Commands
 		var forceOpaque = switches.Contains("OPAQUE");
 		var lookOutside = switches.Contains("OUTSIDE");
 
+		// Void detection: if player's location is invalid, rescue them before LOOK
+		if (executor.IsPlayer)
+		{
+			var fallbackHome = new DBRef((int)Configuration!.CurrentValue.Database.PlayerStart);
+			if (await MoveService!.RescueFromVoidAsync(executor, fallbackHome))
+			{
+				// Player was rescued - refresh executor to get updated location
+				executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+			}
+		}
+
 		AnyOptionalSharpObject viewing = new None();
 
 		if (lookOutside && executor.IsContent)
@@ -1249,7 +1260,7 @@ public partial class Commands
 
 			if (destAttr.IsNone || destAttr.IsError)
 			{
-				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.ExitDestinationInvalid, executor);
 				return CallState.Empty;
 			}
 
@@ -1263,7 +1274,7 @@ public partial class Commands
 
 			if (!located.IsValid())
 			{
-				await NotifyService!.Notify(executor, "That exit doesn't go anywhere.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.ExitDestinationInvalid, executor);
 				return CallState.Empty;
 			}
 
@@ -1384,7 +1395,7 @@ public partial class Commands
 				var locatedObj = located.WithoutError().WithoutNone();
 				if (!locatedObj.IsContainer)
 				{
-					await NotifyService!.Notify(executor, "That exit doesn't go to a valid location.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.ExitDestinationInvalid, executor);
 					return CallState.Empty;
 				}
 
@@ -1406,7 +1417,15 @@ public partial class Commands
 				LocateFlags.All);
 			if (!locateTarget.IsValid() || locateTarget.IsRoom)
 			{
-				await NotifyService!.Notify(executor, Errors.ErrorNotVisible, executor);
+				// Rooms cannot be teleported (PennMUSH src/wiz.c).
+				if (locateTarget.IsRoom)
+				{
+					await NotifyService!.Notify(executor, ErrorMessages.Notifications.CantTeleportRooms, executor);
+				}
+				else
+				{
+					await NotifyService!.Notify(executor, Errors.ErrorNotVisible, executor);
+				}
 				continue;
 			}
 
@@ -1416,6 +1435,68 @@ public partial class Commands
 			{
 				await NotifyService!.Notify(executor, Errors.ErrorCannotTeleport, executor);
 				continue;
+			}
+
+			// Zone teleport restriction: check if the source room blocks teleporting out.
+			// PennMUSH src/wiz.c: NO_TEL flag prevents all non-wizard teleports from the room.
+			// Zone mismatch with Zone lock failure prevents teleporting out of the zone.
+			if (!await executor.IsWizard())
+			{
+				AnySharpContainer? sourceLocation = null;
+				try
+				{
+					sourceLocation = target.IsContent
+						? await target.AsContent.Location()
+						: null;
+				}
+				catch
+				{
+					// If we can't resolve location, skip zone checks
+				}
+
+				if (sourceLocation is not null)
+				{
+					var sourceObj = sourceLocation.WithExitOption();
+
+					// NO_TEL flag on source room blocks teleport
+					if (await sourceObj.HasFlag("NO_TEL"))
+					{
+						await NotifyService!.Notify(executor, ErrorMessages.Notifications.TeleportsNotAllowed, executor);
+						continue;
+					}
+
+					// Zone mismatch check: if source room has a zone that differs from destination's zone,
+					// evaluate the Zone lock on the source room. Failure blocks teleport.
+					var sourceZone = await sourceObj.Object().Zone.WithCancellation(CancellationToken.None);
+					if (!sourceZone.IsNone)
+					{
+						var destObj = destinationContainer.WithExitOption();
+						var destZone = await destObj.Object().Zone.WithCancellation(CancellationToken.None);
+						var sourceZoneDbRef = sourceZone.Known.Object().DBRef;
+						var destZoneDbRef = destZone.IsNone ? new DBRef(-1) : destZone.Known.Object().DBRef;
+
+						if (!sourceZoneDbRef.Equals(destZoneDbRef))
+						{
+							if (!LockService!.Evaluate(LockType.Zone, sourceObj, executor))
+							{
+								await NotifyService!.Notify(executor, ErrorMessages.Notifications.NoZoneTeleport, executor);
+								continue;
+							}
+						}
+					}
+				}
+			}
+
+			// Check TPort lock on the destination (PennMUSH src/wiz.c).
+			// Wizards bypass the TPort lock check.
+			if (!await executor.IsWizard())
+			{
+				var destObj = destinationContainer.WithExitOption();
+				if (!LockService!.Evaluate(LockType.TPort, destObj, executor))
+				{
+					await NotifyService!.Notify(executor, ErrorMessages.Notifications.TeleportsNotAllowed, executor);
+					continue;
+				}
 			}
 
 			// Execute the move using the MoveService which handles:
@@ -1558,7 +1639,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -1639,7 +1720,7 @@ public partial class Commands
 
 		if (!canHalt)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -2509,7 +2590,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -2818,6 +2899,13 @@ public partial class Commands
 		}
 
 		var found = maybeFound.AsSharpObject;
+
+		// God cannot be forced by anyone (PennMUSH src/wiz.c).
+		if (found.IsGod() && !executor.IsGod())
+		{
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.CantForceGod, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		if (!await PermissionService!.Controls(executor, found))
 		{
@@ -3273,7 +3361,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -3396,8 +3484,8 @@ public partial class Commands
 		var canModify = await PermissionService!.Controls(executor, targetObject);
 		if (!canModify)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// Parse search and replace strings (right side of =)
@@ -3428,7 +3516,7 @@ public partial class Commands
 		if (attrList.Count == 0)
 		{
 			await NotifyService!.Notify(executor, "No matching attributes found.", executor);
-			return new CallState("#-1 NO MATCH");
+			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		// Process each attribute
@@ -4060,7 +4148,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -4375,7 +4463,7 @@ public partial class Commands
 		if (!await PermissionService!.Controls(executor, targetObject))
 		{
 			await NotifyService!.Notify(executor, "Permission denied. You do not control that object.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// Get the attribute - must be visible to executor (who controls the object and is issuing @trigger)
@@ -4710,7 +4798,7 @@ public partial class Commands
 		var canExamine = await PermissionService!.CanExamine(executor, targetKnown);
 		if (!canExamine)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -4973,6 +5061,13 @@ public partial class Commands
 				await NotifyService!.Notify(executor, "You do not have permission to spoof emits.", executor);
 				return new CallState(Errors.ErrorPerm);
 			}
+		}
+
+		// Enforce Speech lock on the room (PennMUSH src/speech.c).
+		if (!LockService!.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		{
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.MayNotSpeakHere, executor);
+			return CallState.Empty;
 		}
 
 		await CommunicationService!.SendToRoomAsync(
@@ -5323,7 +5418,7 @@ public partial class Commands
 
 		if (!hasPermission)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -5546,7 +5641,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return new CallState("#-1 INVALID OBJECT");
 		}
 
@@ -6063,7 +6158,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6122,7 +6217,7 @@ public partial class Commands
 		// Check control permissions
 		if (!await PermissionService!.Controls(executor, target))
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 			return new CallState(Errors.ErrorPerm);
 		}
 
@@ -6519,7 +6614,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6587,7 +6682,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6641,7 +6736,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6666,7 +6761,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6704,7 +6799,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 
@@ -6733,7 +6828,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.Notify(executor, "Permission denied.", executor);
+				await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
 				return new CallState(Errors.ErrorPerm);
 			}
 

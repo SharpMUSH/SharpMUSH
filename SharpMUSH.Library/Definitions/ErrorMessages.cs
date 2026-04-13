@@ -56,7 +56,7 @@ public static class ErrorMessages
 		public const string Numbers = "#-1 ARGUMENTS MUST BE NUMBERS";
 		public const string DivideByZero = "#-1 DIVIDE BY ZERO";
 		public const string InvalidPassword = "#-1 INVALID PASSWORD";
-		public const string InvalidFlag = "#-1 INVALID FLAG FOR THIS OBJECT";
+		public const string InvalidFlag = "#-1 INVALID FLAG";
 		public const string ObjectAttributeString = "#-1 INVALID OBJECT/ATTRIBUTE VALUE";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
@@ -163,6 +163,7 @@ public static class ErrorMessages
 		// Permission notifications
 		public const string PermissionDenied = "Permission denied.";
 		public const string NoPermission = "You don't have permission to do that.";
+		public const string YouDoNotControlThatObject = "You do not control that object.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedSetAttribute = "Permission denied to set attribute on {0}.";
 		public const string LackSpoofingPermissions = "Permission denied: You lack spoofing permissions.";
@@ -172,7 +173,7 @@ public static class ErrorMessages
 		public const string CantRemakeWorld = "You can't remake the world in your image.";
 		public const string CannotDoWhileGagged = "You cannot do that while gagged.";
 		public const string CantTeleportToNothing = "You can't teleport to nothing!";
-		public const string HavenFlagSet = "Your HAVEN flag is set. You cannot receive pages.";
+		public const string HavenFlagSet = "You are set HAVEN and cannot receive pages.";
 
 		// Argument and validation notifications
 		public const string InvalidArgument = "Invalid argument.";
@@ -209,8 +210,8 @@ public static class ErrorMessages
 		public const string CouldNotFindDestination = "Could not find destination: {0}";
 
 		// Channel notifications
-		public const string DontRecognizeThatChannel = "I don't recognise that channel.";
-		public const string DontKnowWhichChannel = "I don't know which channel you mean.";
+		public const string DontRecognizeThatChannel = "CHAT: I don't recognize that channel.";
+		public const string DontKnowWhichChannel = "CHAT: I don't know which channel you mean.";
 
 		// Mail and communication notifications
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -231,5 +232,139 @@ public static class ErrorMessages
 
 		// HTTP/Network notifications
 		public const string CannotSetContentLengthHeader = "You cannot set Content-Length header.";
+
+		// --- Destruction edge-case notifications (PennMUSH src/destroy.c) ---
+		public const string GuestCantDestroy = "I'm sorry, Dave, I'm afraid I can't do that.";
+		public const string AlreadyDestroyed = "Destroying that again is hardly necessary.";
+		public const string DestroyGodBlasphemous = "Destroying God would be blasphemous.";
+		public const string TooSpecialToDestroy = "That is too special to be destroyed.";
+
+		// --- Movement default notifications (PennMUSH src/move.c) ---
+		public const string DefaultOLeave = "has left.";
+		public const string DefaultOEnter = "has arrived.";
+		public const string HomeNoPlaceLikeHome = "There's no place like home...";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string HomeGoesHome = "{0} goes home.";
+		public const string AmbiguousExitDirection = "I don't know which way you mean!";
+
+		// --- Speech lock enforcement (PennMUSH src/speech.c) ---
+		public const string MayNotSpeakHere = "You may not speak here!";
+
+		// --- @force guardrails (PennMUSH src/wiz.c) ---
+		public const string CantForceGod = "You can't force God!";
+
+		// --- Admin / Wizard guardrails (PennMUSH src/wiz.c, src/flags.c) ---
+		public const string CantBootOtherPeople = "You can't boot other people!";
+		public const string CantTeleportRooms = "You can't teleport rooms.";
+		public const string TeleportsNotAllowed = "Teleports are not allowed in this room.";
+		public const string NoZoneTeleport = "You may not teleport out of the zone from this room.";
+		public const string InTheVoid = "You're in the Void. This is not a good thing.";
+		public const string VoidSendingHome = "You're in the void - sending you home.";
+		public const string TooManyContainers = "You're in too many containers.";
+		public const string CantGrantPowersUnregistered = "You can't grant powers to unregistered players.";
+		public const string CantMakeAdminGuests = "You can't make admin into guests.";
+		public const string WhoDoYouThinkYouAre = "Who do you think you are, GOD?";
+		public const string NoPowerOverBodyAndMind = "You do not have the power over body and mind!";
+
+		// --- GAME: broadcast notifications (PennMUSH src/bsd.c, src/game.c, src/conf.c) ---
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GameShutdownBy = "GAME: Shutdown by {0}";
+		public const string GameShutdownExternal = "GAME: Shutdown by external signal";
+		public const string GameSavingDatabase = "GAME: Saving database. Game may freeze for a few moments.";
+		public const string GameSaveComplete = "GAME: Save complete.";
+		public const string GameSaveIn1Minute = "GAME: Database save in 1 minute.";
+		public const string GameSaveIn5Minutes = "GAME: Database save in 5 minutes.";
+		public const string GameHasConnected = "has connected.";
+		public const string GameHasReconnected = "has reconnected.";
+		public const string GameHasDisconnected = "has disconnected.";
+		public const string GameHasPartiallyDisconnected = "has partially disconnected.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GameRebootBy = "GAME: Reboot w/o disconnect by {0}, please wait.";
+		public const string GameRebootFinished = "GAME: Reboot finished.";
+		public const string GameRebootFailed = "GAME: Reboot failed.";
+		public const string GameDbSaveFailed = "GAME: ERROR! Database save failed!";
+		public const string GameDbConsistencyCheck = "GAME: Performing database consistency check.";
+		public const string GameDbConsistencyDone = "GAME: Database consistency check complete.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GameSuspectCreated = "GAME: Suspect {0} created.";
+
+		// --- Reboot / shutdown broadcast ---
+		public const string GameRebootNoDisconnect = "GAME: Reboot w/o disconnect from game account, please wait.";
+
+		// --- Pueblo protocol (PennMUSH hdrs/conf.h) ---
+		public const string PuebloHello = "This world is Pueblo 1.10 Enhanced.\r\n";
+
+		// --- OUTPUTPREFIX / OUTPUTSUFFIX (PennMUSH hdrs/conf.h) ---
+		public const string OutputPrefixSet = "OUTPUTPREFIX set.";
+		public const string OutputSuffixSet = "OUTPUTSUFFIX set.";
+		public const string OutputPrefixCleared = "OUTPUTPREFIX cleared.";
+		public const string OutputSuffixCleared = "OUTPUTSUFFIX cleared.";
+
+		// --- Movement messages aligned with PennMUSH src/move.c ---
+		public const string ExitDestinationInvalid = "Exit destination is invalid.";
+		public const string CantSeemToDropThingsHere = "You can't seem to drop things here.";
+		public const string CantEmptyThatFromHere = "You can't empty that from here.";
+		public const string DontHaveThat = "You don't have that!";
+
+		// --- Destruction SAFE messages aligned with PennMUSH src/destroy.c ---
+		/// <summary>PennMUSH: when object is SAFE and REALLY_SAFE is true (strict mode).</summary>
+		public const string SafeObjectMustUnset = "That object is set SAFE. You must set it !SAFE before destroying it.";
+		/// <summary>PennMUSH: when object is marked SAFE (standard mode).</summary>
+		public const string SafeObjectUseNuke = "That object is marked SAFE. Use @nuke to destroy it.";
+
+		// --- Zone messages aligned with PennMUSH src/set.c ---
+		public const string ZoneChanged = "Zone changed.";
+		public const string CantMakeCircularZones = "You can't make circular zones!";
+
+		// --- Channel messages aligned with PennMUSH src/extchat.c (CHAT: prefix) ---
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNotOnChannel = "CHAT: You are not on channel <{0}>.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatChannelDescSet = "CHAT: Channel <{0}> description set.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatChannelDescCleared = "CHAT: Channel <{0}> description cleared.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatResizingBuffer = "CHAT: Resizing buffer of channel <{0}>";
+		public const string ChatGuestsCantModify = "CHAT: Guests may not modify channels.";
+
+		// --- Lock/Unlock messages aligned with PennMUSH src/lock.c ---
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ObjectLocked = "{0}(#{1}) - {2} locked.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ObjectUnlocked = "{0}(#{1}) - {2} unlocked.";
+
+		// --- Link/Unlink messages aligned with PennMUSH src/create.c ---
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string LinkedExitToRoom = "Linked exit #{0} to #{1}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string UnlinkedExit = "Unlinked exit #{0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string OpenedExit = "Opened exit {0}";
+
+		// --- Flag/Power messages aligned with PennMUSH src/flags.c ---
+		// PennMUSH format: "AName(thing) - FLAGNAME set." / "AName(thing) - FLAGNAME reset."
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagSet = "{0} - {1} set.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagAlreadySet = "{0} - {1} (already) set.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagReset = "{0} - {1} reset.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagAlreadyReset = "{0} - {1} (already) reset.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DontRecognizeFlag = "{0} - I don't recognize that flag.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DontRecognizePower = "{0} - I don't recognize that power.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerSet = "{0} - {1} set.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerAlreadySet = "{0} - {1} (already) set.";
+
+		// --- Attribute set messages aligned with PennMUSH src/set.c ---
+		// PennMUSH format: "ObjectName/ATTRNAME - Set."
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeSet = "{0}/{1} - Set.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCleared = "{0}/{1} - Cleared.";
 	}
 }

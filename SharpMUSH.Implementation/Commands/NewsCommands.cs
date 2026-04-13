@@ -1,6 +1,7 @@
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -122,7 +123,7 @@ public partial class Commands
 		if (!await executor.IsWizard())
 		{
 			await NotifyService!.Notify(executor, "Permission denied. This command is for administrators only.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (TextFileService == null)

@@ -316,6 +316,53 @@ public partial class Commands
 		AnySharpObject obj,
 		bool override_)
 	{
+		// --- Edge-case guards (PennMUSH src/destroy.c what_to_destroy) ---
+
+		// Guests may not destroy anything.
+		if (await executor.IsGuest())
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.GuestCantDestroy,
+				shouldNotify: true);
+		}
+
+		// Nobody may destroy God.
+		if (obj.IsGod())
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.DestroyGodBlasphemous,
+				shouldNotify: true);
+		}
+
+		// Objects already marked GOING_TWICE are effectively garbage.
+		if (await obj.HasFlag("GOING_TWICE"))
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.AlreadyDestroyed,
+				shouldNotify: true);
+		}
+
+		// Protect special configuration objects (player_start, master_room, base_room, default_home).
+		var dbConfig = Configuration!.CurrentValue.Database;
+		var objKey = obj.Object().Key;
+		if (objKey == dbConfig.PlayerStart || objKey == dbConfig.MasterRoom
+			|| objKey == dbConfig.BaseRoom || objKey == dbConfig.DefaultHome)
+		{
+			return await NotifyService!.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.TooSpecialToDestroy,
+				shouldNotify: true);
+		}
+
+		// --- Standard permission and safety checks ---
+
 		if (!await PermissionService!.Controls(executor, obj))
 		{
 			return await NotifyService!.NotifyAndReturn(
@@ -330,7 +377,7 @@ public partial class Commands
 			return await NotifyService!.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.SafeObject,
-				notifyMessage: "That object is SAFE. Use @nuke to override.",
+				notifyMessage: ErrorMessages.Notifications.SafeObjectUseNuke,
 				shouldNotify: true);
 		}
 
@@ -659,7 +706,8 @@ public partial class Commands
 
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
 
-							await NotifyService!.Notify(executor, "Linked.", executor);
+							await NotifyService!.Notify(executor,
+								string.Format(ErrorMessages.Notifications.LinkedExitToRoom, exitObj.Object().DBRef.Number, destinationRoom.Object.DBRef.Number), executor);
 							return CallState.Empty;
 						}
 					);
@@ -846,7 +894,7 @@ public partial class Commands
 							return await NotifyService!.NotifyAndReturn(
 								executor.Object().DBRef,
 								errorReturn: Errors.ZoneLoop,
-								notifyMessage: "Cannot add zone: would create a cycle.",
+								notifyMessage: ErrorMessages.Notifications.CantMakeCircularZones,
 								shouldNotify: true);
 						}
 
@@ -885,7 +933,7 @@ public partial class Commands
 							}
 						}
 
-						await NotifyService!.Notify(executor, "Zone set.", executor);
+						await NotifyService!.Notify(executor, ErrorMessages.Notifications.ZoneChanged, executor);
 						return CallState.Empty;
 					}
 				);
@@ -945,7 +993,8 @@ public partial class Commands
 			var toExitResponse = await Mediator.Send(new CreateExitCommand(exitToName.First(),
 				exitToName.Skip(1).ToArray(), await executorBase.Where(),
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{toExitResponse.Number}");
+			await NotifyService!.Notify(executor.DBRef,
+				string.Format(ErrorMessages.Notifications.OpenedExit, $"#{toExitResponse.Number}"));
 			await NotifyService!.Notify(executor.DBRef, "Trying to link...");
 
 			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
@@ -953,7 +1002,8 @@ public partial class Commands
 
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
 
-			await NotifyService!.Notify(executor.DBRef, $"Linked exit #{toExitResponse.Number} to #{response.Number}");
+			await NotifyService!.Notify(executor.DBRef,
+				string.Format(ErrorMessages.Notifications.LinkedExitToRoom, toExitResponse.Number, response.Number));
 		}
 
 		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
@@ -969,14 +1019,15 @@ public partial class Commands
 				await executor.Owner.WithCancellation(CancellationToken.None)));
 			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
 
-			await NotifyService!.Notify(executor.DBRef, $"Opened exit #{fromExitResponse.Number}");
+			await NotifyService!.Notify(executor.DBRef,
+				string.Format(ErrorMessages.Notifications.OpenedExit, $"#{fromExitResponse.Number}"));
 			await NotifyService!.Notify(executor.DBRef, "Trying to link...");
 
 			var where = await executorBase.Where();
 			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
 
 			await NotifyService!.Notify(executor.DBRef,
-				$"Linked exit #{fromExitResponse.Number} to #{where.Object().DBRef.Number}");
+				string.Format(ErrorMessages.Notifications.LinkedExitToRoom, fromExitResponse.Number, where.Object().DBRef.Number));
 		}
 
 		return new CallState(response.ToString());
@@ -1012,7 +1063,8 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), lockType, lockKey));
-				await NotifyService!.Notify(executor, "Locked.", executor);
+				await NotifyService!.Notify(executor,
+					string.Format(ErrorMessages.Notifications.ObjectLocked, obj.Object().Name, obj.Object().DBRef.Number, lockType), executor);
 				return CallState.Empty;
 			}
 		);
@@ -1047,7 +1099,8 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), lockType));
-				await NotifyService!.Notify(executor, "Unlocked.", executor);
+				await NotifyService!.Notify(executor,
+					string.Format(ErrorMessages.Notifications.ObjectUnlocked, obj.Object().Name, obj.Object().DBRef.Number, lockType), executor);
 				return CallState.Empty;
 			}
 		);
@@ -1077,7 +1130,8 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), "Enter", lockKey));
-				await NotifyService!.Notify(executor, "Enter lock set.", executor);
+				await NotifyService!.Notify(executor,
+					string.Format(ErrorMessages.Notifications.ObjectLocked, obj.Object().Name, obj.Object().DBRef.Number, "Enter"), executor);
 				return CallState.Empty;
 			}
 		);
@@ -1106,7 +1160,8 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Enter"));
-				await NotifyService!.Notify(executor, "Enter lock removed.", executor);
+				await NotifyService!.Notify(executor,
+					string.Format(ErrorMessages.Notifications.ObjectUnlocked, obj.Object().Name, obj.Object().DBRef.Number, "Enter"), executor);
 				return CallState.Empty;
 			}
 		);
@@ -1136,7 +1191,8 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new SetLockCommand(obj.Object(), "Use", lockKey));
-				await NotifyService!.Notify(executor, "Use lock set.", executor);
+				await NotifyService!.Notify(executor,
+					string.Format(ErrorMessages.Notifications.ObjectLocked, obj.Object().Name, obj.Object().DBRef.Number, "Use"), executor);
 				return CallState.Empty;
 			}
 		);
@@ -1165,7 +1221,8 @@ public partial class Commands
 				}
 
 				await Mediator!.Send(new UnsetLockCommand(obj.Object(), "Use"));
-				await NotifyService!.Notify(executor, "Use lock removed.", executor);
+				await NotifyService!.Notify(executor,
+					string.Format(ErrorMessages.Notifications.ObjectUnlocked, obj.Object().Name, obj.Object().DBRef.Number, "Use"), executor);
 				return CallState.Empty;
 			}
 		);
@@ -1473,7 +1530,8 @@ public partial class Commands
 					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
 
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
-					await NotifyService!.Notify(executor, "Unlinked.", executor);
+					await NotifyService!.Notify(executor,
+						string.Format(ErrorMessages.Notifications.UnlinkedExit, obj.Object().DBRef.Number), executor);
 					return CallState.Empty;
 				}
 				else if (obj.IsRoom)

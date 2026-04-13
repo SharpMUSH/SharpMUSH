@@ -1,5 +1,6 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -54,7 +55,7 @@ public partial class Commands
 		if (!attribute.IsAttribute)
 		{
 			await NotifyService!.Notify(executor, "No such attribute.", executor);
-			return new CallState("#-1 NO MATCH");
+			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		if (!args.TryGetValue("1", out var valueArg))
@@ -87,8 +88,8 @@ public partial class Commands
 		var canSet = await PermissionService!.CanSet(executor, targetObject);
 		if (!canSet)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (shouldLock)
@@ -161,7 +162,7 @@ public partial class Commands
 		if (!sourceAttribute.IsAttribute)
 		{
 			await NotifyService!.Notify(executor, $"Attribute {sourceAttr} not found on source object.", executor);
-			return new CallState("#-1 NO MATCH");
+			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		var attrValue = sourceAttribute.AsAttribute.Last().Value;
@@ -291,7 +292,7 @@ public partial class Commands
 		if (!sourceAttribute.IsAttribute)
 		{
 			await NotifyService!.Notify(executor, $"Attribute {sourceAttr} not found on source object.", executor);
-			return new CallState("#-1 NO MATCH");
+			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		var attrValue = sourceAttribute.AsAttribute.Last().Value;
@@ -431,7 +432,7 @@ public partial class Commands
 		if (!attribute.IsAttribute)
 		{
 			await NotifyService!.Notify(executor, "No such attribute.", executor);
-			return new CallState("#-1 NO MATCH");
+			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		// Locate new owner
@@ -467,8 +468,8 @@ public partial class Commands
 
 		if (!canSet)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (!isWizard)
@@ -477,7 +478,7 @@ public partial class Commands
 			if (executor.IsPlayer && newOwnerPlayer.Object.DBRef != executor.AsPlayer.Object.DBRef)
 			{
 				await NotifyService!.Notify(executor, "You can only chown an attribute to yourself.", executor);
-				return new CallState("#-1 PERMISSION DENIED");
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 			else if (!executor.IsPlayer)
 			{
@@ -485,7 +486,7 @@ public partial class Commands
 				if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
 				{
 					await NotifyService!.Notify(executor, "You can only chown an attribute to yourself.", executor);
-					return new CallState("#-1 PERMISSION DENIED");
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 			}
 		}
@@ -514,7 +515,7 @@ public partial class Commands
 		if (args.Count == 0)
 		{
 			await NotifyService!.Notify(executor, "Wipe what?", executor);
-			return new CallState("#-1 INVALID ARGUMENT");
+			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
 
 		var objAttr = MModule.plainText(args["0"].Message!);
@@ -522,7 +523,7 @@ public partial class Commands
 
 		if (!split.TryPickT0(out var details, out _))
 		{
-			await NotifyService!.Notify(executor, "I don't see that here.", executor);
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.DontSeeThatHere, executor);
 			return new CallState("#-1 INVALID OBJECT");
 		}
 
@@ -546,8 +547,8 @@ public partial class Commands
 		var canModify = await PermissionService!.Controls(executor, targetObject);
 		if (!canModify)
 		{
-			await NotifyService!.Notify(executor, "Permission denied.", executor);
-			return new CallState("#-1 PERMISSION DENIED");
+			await NotifyService!.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// Check if object has SAFE flag

@@ -49,6 +49,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private static IMessageBus? MessageBus { get; set; }
 
+	private static IGameBroadcastService? GameBroadcastService { get; set; }
+
 	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
 	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
 
@@ -81,6 +83,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IWarningService warningService,
 		ITextFileService textFileService,
 		IMessageBus messageBus,
+		IGameBroadcastService gameBroadcastService,
 		LibraryService<string, FunctionDefinition> functionLibrary)
 	{
 		Mediator = mediator;
@@ -108,6 +111,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		WarningService = warningService;
 		TextFileService = textFileService;
 		MessageBus = messageBus;
+		GameBroadcastService = gameBroadcastService;
 		FunctionLibrary = functionLibrary;
 
 		foreach (var command in Generated.CommandLibrary.Commands)

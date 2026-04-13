@@ -36,6 +36,43 @@ public class NotifyService(
 		return text;
 	}
 
+	/// <summary>
+	/// Wraps text with OUTPUTPREFIX / OUTPUTSUFFIX if set on the connection.
+	/// Mirrors PennMUSH's per-command output wrapping (src/bsd.c).
+	/// The prefix is emitted as a separate line before the output,
+	/// and the suffix as a separate line after.
+	/// </summary>
+	private string ApplyOutputPrefixSuffix(long handle, string text)
+	{
+		var conn = connections.Get(handle);
+		if (conn is null)
+		{
+			return text;
+		}
+
+		var hasPrefix = conn.Metadata.TryGetValue("OutputPrefix", out var prefix);
+		var hasSuffix = conn.Metadata.TryGetValue("OutputSuffix", out var suffix);
+
+		if (!hasPrefix && !hasSuffix)
+		{
+			return text;
+		}
+
+		var sb = new StringBuilder();
+		if (hasPrefix && !string.IsNullOrEmpty(prefix))
+		{
+			sb.Append(NormalizeLineEnding(prefix));
+			sb.Append("\r\n");
+		}
+		sb.Append(text);
+		if (hasSuffix && !string.IsNullOrEmpty(suffix))
+		{
+			sb.Append("\r\n");
+			sb.Append(NormalizeLineEnding(suffix));
+		}
+		return sb.ToString();
+	}
+
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
@@ -81,12 +118,13 @@ public class NotifyService(
 		);
 
 		text = NormalizeLineEnding(text);
-		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Publish directly to Kafka - batching is handled by KafkaFlow producer
-		await foreach (var handle in connections.Get(who).Select(x => x.Handle))
+		// Apply OUTPUTPREFIX/OUTPUTSUFFIX per-connection since each may have different settings
+		await foreach (var conn in connections.Get(who))
 		{
-			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
+			var wrapped = ApplyOutputPrefixSuffix(conn.Handle, text);
+			var bytes = Encoding.UTF8.GetBytes(wrapped);
+			await publishEndpoint.HandlePublish(new TelnetOutputMessage(conn.Handle, bytes));
 		}
 	}
 
@@ -109,6 +147,7 @@ public class NotifyService(
 		);
 
 		text = NormalizeLineEnding(text);
+		text = ApplyOutputPrefixSuffix(handle, text);
 		var bytes = Encoding.UTF8.GetBytes(text);
 
 		// Publish directly to Kafka - batching is handled by KafkaFlow producer
@@ -131,11 +170,12 @@ public class NotifyService(
 		);
 
 		text = NormalizeLineEnding(text);
-		var bytes = Encoding.UTF8.GetBytes(text);
 
-		// Publish directly to Kafka - batching is handled by KafkaFlow producer
+		// Apply OUTPUTPREFIX/OUTPUTSUFFIX per-handle since each may have different settings
 		foreach (var handle in handles)
 		{
+			var wrapped = ApplyOutputPrefixSuffix(handle, text);
+			var bytes = Encoding.UTF8.GetBytes(wrapped);
 			await publishEndpoint.HandlePublish(new TelnetOutputMessage(handle, bytes));
 		}
 	}

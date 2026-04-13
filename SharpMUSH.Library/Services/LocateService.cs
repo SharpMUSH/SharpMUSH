@@ -602,10 +602,29 @@ public partial class LocateService(
 	{
 		var currentLocation = await FriendlyWhereIs(content);
 
-		// REMARKS: This does not protect against loops. Better make sure loops can't happen!
+		// Depth limit to prevent infinite loops from corrupted containment chains.
+		// PennMUSH uses MAX_PARENTS (10) as a depth limit for similar traversals.
+		const int maxDepth = 50;
+		var depth = 0;
+		var visited = new HashSet<string> { currentLocation.Object().DBRef.ToString() };
+
 		while (currentLocation.Id != (await currentLocation.Location()).Id)
 		{
+			depth++;
+			if (depth > maxDepth)
+			{
+				// Hit depth limit - return whatever we have to avoid infinite loop
+				break;
+			}
+
 			currentLocation = await currentLocation.Location();
+
+			// Also guard against cycles via visited set
+			var dbRefStr = currentLocation.Object().DBRef.ToString();
+			if (!visited.Add(dbRefStr))
+			{
+				break;
+			}
 		}
 
 		return currentLocation;
