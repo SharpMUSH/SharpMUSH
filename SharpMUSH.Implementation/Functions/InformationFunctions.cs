@@ -583,6 +583,25 @@ public partial class Functions
 	public static ValueTask<CallState> MudURL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(Configuration!.CurrentValue.Net.MudUrl ?? "");
 
+	/// <summary>
+	/// locale() — returns the BCP-47 locale tag that is active on the executor's current
+	/// connection (e.g. "en", "fr"). Returns "en" when no locale has been set.
+	/// </summary>
+	[SharpFunction(Name = "locale", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
+	public static ValueTask<CallState> LocaleFunc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var handle = parser.CurrentState.Handle;
+		if (handle is null)
+			return ValueTask.FromResult(new CallState("en"));
+
+		var conn = ConnectionService!.Get(handle.Value);
+		if (conn is null)
+			return ValueTask.FromResult(new CallState("en"));
+
+		conn.Metadata.TryGetValue("Locale", out var locale);
+		return ValueTask.FromResult(new CallState(string.IsNullOrEmpty(locale) ? "en" : locale));
+	}
+
 	[SharpFunction(Name = "name", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "new name"])]
 	public static async ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

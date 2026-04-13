@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
@@ -12,7 +13,8 @@ namespace SharpMUSH.Server.Handlers;
 public class ConnectionStateChangeHandler(
 	ILogger<ConnectionStateChangeHandler> logger,
 	IConnectionService connectionService,
-	INotifyService notifyService)
+	INotifyService notifyService,
+	ISharpDatabase database)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
@@ -48,6 +50,20 @@ public class ConnectionStateChangeHandler(
 				case IConnectionService.ConnectionState.LoggedIn:
 					logger.LogInformation("[{ConnectionId}] Player {Ref} logged in on handle {Handle}",
 						connectionId, notification.PlayerRef, notification.Handle);
+
+					// Restore the player's persisted locale preference, if set.
+					if (notification.PlayerRef.HasValue)
+					{
+						var localeAttrs = database.GetAttributeAsync(notification.PlayerRef.Value, ["LOCALE"], cancellationToken);
+						await foreach (var attr in localeAttrs)
+						{
+							var savedLocale = attr.Value.ToPlainText();
+							if (!string.IsNullOrWhiteSpace(savedLocale))
+							{
+								connectionService.Update(notification.Handle, "Locale", savedLocale);
+							}
+						}
+					}
 
 					await notifyService.NotifyLocalized(notification.Handle, nameof(ErrorMessages.Notifications.WelcomeBackFormat), notification.PlayerRef!);
 

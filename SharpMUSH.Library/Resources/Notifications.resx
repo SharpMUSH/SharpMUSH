@@ -2368,5 +2368,17 @@
   <data name="ConfigCurrentValueFormat" xml:space="preserve">
     <value>Current value: {0}={1}</value>
   </data>
+  <data name="LocaleSetFormat" xml:space="preserve">
+    <value>Locale set to {0}.</value>
+  </data>
+  <data name="LocaleCleared" xml:space="preserve">
+    <value>Locale cleared (reset to default).</value>
+  </data>
+  <data name="LocaleInvalidFormat" xml:space="preserve">
+    <value>Invalid locale: {0}.</value>
+  </data>
+  <data name="LocaleCurrentFormat" xml:space="preserve">
+    <value>Current locale: {0}.</value>
+  </data>
 
 </root>

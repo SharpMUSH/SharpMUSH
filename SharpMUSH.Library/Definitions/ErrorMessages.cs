@@ -315,6 +315,12 @@ public static class ErrorMessages
 		public const string OutputPrefixCleared = "OUTPUTPREFIX cleared.";
 		public const string OutputSuffixCleared = "OUTPUTSUFFIX cleared.";
 
+		// --- @LOCALE / locale() ---
+		public const string LocaleSetFormat = "Locale set to {0}.";
+		public const string LocaleCleared = "Locale cleared (reset to default).";
+		public const string LocaleInvalidFormat = "Invalid locale: {0}.";
+		public const string LocaleCurrentFormat = "Current locale: {0}.";
+
 		// --- Movement messages aligned with PennMUSH src/move.c ---
 		public const string ExitDestinationInvalid = "Exit destination is invalid.";
 		public const string CantSeemToDropThingsHere = "You can't seem to drop things here.";
